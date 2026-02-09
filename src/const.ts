@@ -1,0 +1,10 @@
+export const JWT_TOKEN =
+	"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTg2NTc3ZTYxMWU0MmNhYmQwY2ZkM2QiLCJlbWFpbCI6Im9nd3VuZWxzb25kYXZpZEBnbWFpbC5jb20iLCJyb2xlIjoidXNlciIsImlhdCI6MTc3MDU1ODE3NywiZXhwIjoxNzcwNTU5MDc3fQ.oTcmUPHRTSDdKu7ABHREb6q_fM4I7Rt5XyEnOfI1fao";
+
+export const REFRESH_TOKEN =
+	"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTg2NTc3ZTYxMWU0MmNhYmQwY2ZkM2QiLCJ0b2tlbklkIjoiYWU2MTZhMTEtYjc1Mi00MjRjLThhYzctYzQ0N2I2YjdhMTFhIiwiaWF0IjoxNzcwNTU4MTc3LCJleHAiOjE3NzExNjI5Nzd9.HAFQBFb96MN4EG-XxkF9mW_0YHJOurWGdIYDZvM_6GU";
+
+// export const BACKEND_URL = "http://localhost:2500";
+
+export const BACKEND_URL =
+	"https://worldstreetsocialmedia-gateway.onrender.com";

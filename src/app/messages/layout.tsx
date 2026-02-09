@@ -1,7 +1,6 @@
 import { LeftSidebar } from "@/components/layout/LeftSidebar";
-import { RightSidebar } from "@/components/layout/RightSidebar";
 
-export default function MainLayout({
+export default function MessagesLayout({
     children,
 }: {
     children: React.ReactNode;
@@ -9,10 +8,9 @@ export default function MainLayout({
     return (
         <div className="max-w-[1265px] mx-auto flex justify-center min-h-screen">
             <LeftSidebar />
-            <main className="w-full max-w-[600px] border-x border-black/10 min-h-screen">
+            <main className="w-full max-w-[990px] border-x border-border-gray min-h-screen flex">
                 {children}
             </main>
-            <RightSidebar />
         </div>
     );
 }
