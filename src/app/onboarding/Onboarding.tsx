@@ -9,6 +9,8 @@ import GlobeIcon from "@/assets/icons/GlobeIcon";
 import { updateSession } from "@/lib/auth.actions";
 import { useSetAtom } from "jotai";
 import { userAtom } from "@/store/user.atom";
+import { getWhoToFollowAction, followUserAction } from "@/lib/user.actions";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 const AVATARS = [
 	"/avatars/avatar-1.png",
@@ -29,28 +31,6 @@ const INTERESTS = [
 	"Sports",
 ];
 
-// Mock Suggested Users for Step 3
-const SUGGESTED_USERS = [
-	{
-		id: "1",
-		username: "crypto_king",
-		name: "Crypto King",
-		avatar: "/avatars/avatar-1.png",
-	},
-	{
-		id: "2",
-		username: "art_lover",
-		name: "Art Lover",
-		avatar: "/avatars/avatar-2.png",
-	},
-	{
-		id: "3",
-		username: "tech_guru",
-		name: "Tech Guru",
-		avatar: "/avatars/avatar-3.png",
-	},
-];
-
 interface OnboardingProps {
 	accessToken?: string;
 	refreshToken?: string;
@@ -62,10 +42,14 @@ const Onboarding = ({
 	refreshToken,
 	userData,
 }: OnboardingProps) => {
+	console.log("userData", userData);
 	const router = useRouter();
 	const [step, setStep] = useState(1);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
+	const [suggestedUsers, setSuggestedUsers] = useState<any[]>([]);
+	const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+	const [followedUsers, setFollowedUsers] = useState<string[]>([]);
 
 	// Prioritize prop token (from cookie), then constant
 	const [token, setToken] = useState(accessToken || JWT_TOKEN);
@@ -89,6 +73,28 @@ const Onboarding = ({
 			}));
 		}
 	}, [userData]);
+
+	// Fetch suggestions when step 3 is reached
+	useEffect(() => {
+		const fetchSuggestions = async () => {
+			if (step === 3) {
+				setLoadingSuggestions(true);
+				try {
+					const res = await getWhoToFollowAction();
+					if (res.success && Array.isArray(res.data)) {
+						// Limit to 3 users as requested
+						setSuggestedUsers(res.data.slice(0, 3));
+					}
+				} catch (err) {
+					console.error("Failed to fetch suggestions:", err);
+				} finally {
+					setLoadingSuggestions(false);
+				}
+			}
+		};
+
+		fetchSuggestions();
+	}, [step]);
 
 	const toggleInterest = (interest: string) => {
 		setFormData((prev) => {
@@ -170,9 +176,16 @@ const Onboarding = ({
 	};
 
 	const handleFollow = async (userId: string) => {
-		// Optimistic UI update or simple toast could go here
-		console.log("Following", userId);
-		// await axios.post ...
+		// Optimistic UI update
+		const isFollowing = followedUsers.includes(userId);
+
+		if (isFollowing) {
+			setFollowedUsers((prev) => prev.filter((id) => id !== userId));
+			// Call unfollow action if needed
+		} else {
+			setFollowedUsers((prev) => [...prev, userId]);
+			await followUserAction(userId);
+		}
 	};
 
 	const finishOnboarding = () => {
@@ -359,38 +372,59 @@ const Onboarding = ({
 							</div>
 
 							<div className="space-y-4">
-								{SUGGESTED_USERS.map((user) => (
-									<div
-										key={user.id}
-										className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-white transition-all"
-									>
-										<div className="flex items-center gap-3">
-											<div className="relative w-10 h-10 rounded-full overflow-hidden">
-												<Image
-													src={user.avatar}
-													alt={user.username}
-													fill
-													className="object-cover"
-												/>
+								{loadingSuggestions
+									? // Shimmer Loading State
+										Array.from({ length: 3 }).map((_, i) => (
+											<div
+												key={i}
+												className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100"
+											>
+												<div className="flex items-center gap-3">
+													<Skeleton className="w-10 h-10 rounded-full" />
+													<div className="space-y-1">
+														<Skeleton className="h-3 w-24" />
+														<Skeleton className="h-2 w-16" />
+													</div>
+												</div>
+												<Skeleton className="h-8 w-16 rounded-full" />
 											</div>
-											<div>
-												<p className="font-bold text-gray-900 text-sm">
-													{user.name}
-												</p>
-												<p className="text-xs text-gray-500">
-													@{user.username}
-												</p>
+										))
+									: suggestedUsers.map((user) => (
+											<div
+												key={user._id}
+												className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-white transition-all"
+											>
+												<div className="flex items-center gap-3">
+													<div
+														className="relative w-10 h-10 rounded-full bg-cover bg-center"
+														style={{
+															backgroundImage: `url('${user.avatar || "/avatars/avatar-1.png"}')`,
+														}}
+													/>
+													<div>
+														<p className="font-bold text-gray-900 text-sm">
+															{user.firstName} {user.lastName}
+														</p>
+														<p className="text-xs text-gray-500">
+															@{user.username}
+														</p>
+													</div>
+												</div>
+												<button
+													onClick={() => handleFollow(user._id)}
+													className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${
+														followedUsers.includes(user._id)
+															? "bg-black text-white border-black"
+															: "bg-white border-gray-200 text-gray-700 hover:border-primary hover:text-primary"
+													}`}
+													type="button"
+												>
+													{followedUsers.includes(user._id)
+														? "Following"
+														: "Follow"}
+												</button>
 											</div>
-										</div>
-										<button
-											onClick={() => handleFollow(user.id)}
-											className="px-4 py-1.5 rounded-full bg-white border border-gray-200 text-gray-700 text-xs font-bold hover:border-primary hover:text-primary transition-all"
-											type="button"
-										>
-											Follow
-										</button>
-									</div>
-								))}
+										))}
 							</div>
 
 							<button

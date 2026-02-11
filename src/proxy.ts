@@ -73,6 +73,7 @@ export async function proxy(request: NextRequest) {
 			if (data.success) {
 				const response = NextResponse.next();
 				// Pass user data to the app via headers
+				console.log("USER DATA: ", data.data);
 				response.headers.set("x-user-data", JSON.stringify(data.data.user));
 				return response;
 			}
