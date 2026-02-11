@@ -34,11 +34,16 @@ export const TokenVerifier = ({ initialUser }: TokenVerifierProps) => {
 			setUser(initialUser);
 			setLoading(false);
 			return;
-		} else if (initialUser) {
+		} else if (initialUser && !initialUser.username) {
+			// User exists but hasn't completed onboarding - redirect immediately without API call
 			console.log(
-				"TokenVerifier: initialUser incomplete (missing username), forcing sync...",
+				"TokenVerifier: initialUser incomplete (missing username), redirecting to onboarding...",
 				initialUser,
 			);
+			setInitialUser(initialUser);
+			router.push("/onboarding");
+			setLoading(false);
+			return;
 		}
 
 		const verify = async () => {

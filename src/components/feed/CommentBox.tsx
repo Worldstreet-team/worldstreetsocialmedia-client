@@ -9,9 +9,14 @@ import { useRouter } from "next/navigation";
 interface CommentBoxProps {
 	postId: string;
 	onCommentAdded?: () => void;
+	onSubmitting?: (isSubmitting: boolean) => void;
 }
 
-export function CommentBox({ postId, onCommentAdded }: CommentBoxProps) {
+export function CommentBox({
+	postId,
+	onCommentAdded,
+	onSubmitting,
+}: CommentBoxProps) {
 	const [content, setContent] = useState("");
 	const [loading, setLoading] = useState(false);
 	const user = useAtomValue(userAtom);
@@ -22,6 +27,8 @@ export function CommentBox({ postId, onCommentAdded }: CommentBoxProps) {
 		if (!content.trim() || !user) return;
 
 		setLoading(true);
+		if (onSubmitting) onSubmitting(true);
+
 		try {
 			const result = await replyToPostAction(postId, content);
 			if (result.success) {
@@ -38,6 +45,7 @@ export function CommentBox({ postId, onCommentAdded }: CommentBoxProps) {
 			console.error("Failed to post reply:", error);
 		} finally {
 			setLoading(false);
+			if (onSubmitting) onSubmitting(false);
 		}
 	};
 

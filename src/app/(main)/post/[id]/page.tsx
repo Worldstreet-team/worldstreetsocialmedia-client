@@ -17,6 +17,7 @@ export default function PostDetail() {
 	const [post, setPost] = useState<PostProps | null>(null);
 	const [comments, setComments] = useState<PostProps[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
 	const fetchPostData = useCallback(async () => {
 		try {
@@ -130,9 +131,14 @@ export default function PostDetail() {
 				<PostCard post={post} />
 			</div>
 
-			<CommentBox postId={postId} onCommentAdded={fetchPostData} />
+			<CommentBox
+				postId={postId}
+				onCommentAdded={fetchPostData}
+				onSubmitting={setIsSubmittingComment}
+			/>
 
 			<div className="pb-20">
+				{isSubmittingComment && <PostSkeleton />}
 				{comments.map((comment) => (
 					<PostCard key={comment.id} post={comment} />
 				))}
