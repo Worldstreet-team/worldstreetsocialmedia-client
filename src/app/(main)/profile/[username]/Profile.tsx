@@ -213,7 +213,7 @@ export default function UserProfilePage({
 
 			{/* Profile Actions */}
 			<div className="flex justify-end px-4 py-3 gap-2 mt-2">
-				{!isMe && (
+				{/* {!isMe && (
 					<button
 						className="w-9 h-9 border border-border-gray rounded-full flex items-center justify-center hover:bg-black/3 transition-colors cursor-pointer"
 						type="button"
@@ -229,7 +229,7 @@ export default function UserProfilePage({
 					>
 						<span className="material-symbols-outlined text-[20px]">mail</span>
 					</button>
-				)}
+				)} */}
 				{isMe ? (
 					<button
 						className="border border-black/20 rounded-full px-6 h-10 font-bold hover:bg-black/3 transition-colors text-[15px] cursor-pointer"

@@ -1,8 +1,8 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect } from "react";
+import ConfirmModalPortal from "./ConfirmModalPortal";
 
 interface ConfirmModalProps {
 	isOpen: boolean;
@@ -25,10 +25,7 @@ export default function ConfirmModal({
 	cancelText = "Cancel",
 	isDestructive = false,
 }: ConfirmModalProps) {
-	const [mounted, setMounted] = useState(false);
-
 	useEffect(() => {
-		setMounted(true);
 		if (isOpen) {
 			document.body.style.overflow = "hidden";
 		} else {
@@ -39,46 +36,45 @@ export default function ConfirmModal({
 		};
 	}, [isOpen]);
 
-	if (!mounted) return null;
-
-	return createPortal(
-		<AnimatePresence>
-			{isOpen && (
-				<div
-					className="fixed inset-0 z-[9999] flex items-center justify-center px-4"
-					onClick={(e) => e.stopPropagation()}
-				>
-					<motion.div
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						exit={{ opacity: 0 }}
-						onClick={(e) => {
-							e.stopPropagation();
-							onClose();
-						}}
-						className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-					/>
-					<motion.div
-						initial={{ opacity: 0, scale: 0.95, y: 10 }}
-						animate={{ opacity: 1, scale: 1, y: 0 }}
-						exit={{ opacity: 0, scale: 0.95, y: 10 }}
+	return (
+		<ConfirmModalPortal>
+			<AnimatePresence>
+				{isOpen && (
+					<div
+						className="fixed inset-0 z-[9999] flex items-center justify-center px-4"
 						onClick={(e) => e.stopPropagation()}
-						className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden z-[10000]"
 					>
-						<div className="p-6">
-							<h3 className="text-xl font-bold mb-2">{title}</h3>
-							<p className="text-text-light text-[15px] leading-relaxed">
-								{message}
-							</p>
-						</div>
-						<div className="flex flex-col gap-3 p-6 pt-0">
-							<button
-								type="button"
-								onClick={() => {
-									onConfirm();
-									onClose();
-								}}
-								className={`
+						<motion.div
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 0 }}
+							onClick={(e) => {
+								e.stopPropagation();
+								onClose();
+							}}
+							className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+						/>
+						<motion.div
+							initial={{ opacity: 0, scale: 0.95, y: 10 }}
+							animate={{ opacity: 1, scale: 1, y: 0 }}
+							exit={{ opacity: 0, scale: 0.95, y: 10 }}
+							onClick={(e) => e.stopPropagation()}
+							className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden z-[10000]"
+						>
+							<div className="p-6">
+								<h3 className="text-xl font-bold mb-2">{title}</h3>
+								<p className="text-text-light text-[15px] leading-relaxed">
+									{message}
+								</p>
+							</div>
+							<div className="flex flex-col gap-3 p-6 pt-0">
+								<button
+									type="button"
+									onClick={() => {
+										onConfirm();
+										onClose();
+									}}
+									className={`
                                     w-full py-3 rounded-full font-bold transition-colors text-[15px]
                                     ${
 																			isDestructive
@@ -86,21 +82,21 @@ export default function ConfirmModal({
 																				: "bg-black text-white hover:bg-black/80"
 																		}
                                 `}
-							>
-								{confirmText}
-							</button>
-							<button
-								type="button"
-								onClick={onClose}
-								className="w-full py-3 rounded-full font-bold border border-black/10 hover:bg-black/5 transition-colors text-[15px]"
-							>
-								{cancelText}
-							</button>
-						</div>
-					</motion.div>
-				</div>
-			)}
-		</AnimatePresence>,
-		document.body,
+								>
+									{confirmText}
+								</button>
+								<button
+									type="button"
+									onClick={onClose}
+									className="w-full py-3 rounded-full font-bold border border-black/10 hover:bg-black/5 transition-colors text-[15px]"
+								>
+									{cancelText}
+								</button>
+							</div>
+						</motion.div>
+					</div>
+				)}
+			</AnimatePresence>
+		</ConfirmModalPortal>
 	);
 }
