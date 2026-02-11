@@ -2,6 +2,8 @@
 
 import { useState, useEffect, use } from "react";
 import { PostCard, type PostProps } from "@/components/feed/PostCard";
+import { ProfileSkeleton } from "@/components/skeletons/ProfileSkeleton";
+import { PostSkeleton } from "@/components/skeletons/PostSkeleton";
 import {
 	getProfileByUsernameAction,
 	followUserAction,
@@ -142,11 +144,7 @@ export default function UserProfilePage({
 	};
 
 	if (loadingProfile) {
-		return (
-			<div className="flex justify-center items-center h-screen">
-				Loading Profile...
-			</div>
-		);
+		return <ProfileSkeleton />;
 	}
 
 	if (notFound || !profileUser) {
@@ -161,8 +159,6 @@ export default function UserProfilePage({
 		profileUser.firstName && profileUser.lastName
 			? `${profileUser.firstName} ${profileUser.lastName}`
 			: profileUser.username;
-
-
 
 	return (
 		<div className="flex flex-col min-h-screen">
@@ -302,7 +298,13 @@ export default function UserProfilePage({
 						<span className="material-symbols-outlined text-[18px]">
 							calendar_month
 						</span>
-						<span>Joined {new Date(profileUser.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+						<span>
+							Joined{" "}
+							{new Date(profileUser.createdAt || Date.now()).toLocaleDateString(
+								"en-US",
+								{ month: "long", year: "numeric" },
+							)}
+						</span>
 					</div>
 				</div>
 
@@ -344,7 +346,11 @@ export default function UserProfilePage({
 			{/* Content Feed */}
 			<div className="flex flex-col">
 				{loadingFeed ? (
-					<div className="p-8 text-center text-text-light">Loading feed...</div>
+					<div className="flex flex-col">
+						{[...Array(3)].map((_, i) => (
+							<PostSkeleton key={i} />
+						))}
+					</div>
 				) : feedPosts.length > 0 ? (
 					feedPosts.map((post) => <PostCard key={post.id} post={post} />)
 				) : (

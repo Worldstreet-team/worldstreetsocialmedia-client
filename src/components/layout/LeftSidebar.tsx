@@ -6,6 +6,7 @@ import { useAtomValue } from "jotai";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 export function LeftSidebar() {
 	const pathname = usePathname();
@@ -49,23 +50,33 @@ export function LeftSidebar() {
 			>
 				Post
 			</button> */}
-			<div className="mt-auto mb-4 flex items-center gap-3 p-3 rounded-full nav-item cursor-pointer">
-				<div
-					className="w-10 h-10 rounded-full bg-cover bg-center"
-					style={{
-						backgroundImage: `url('${user?.avatar || "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}')`,
-					}}
-				/>
-				<div className="flex flex-col flex-1 min-w-0">
-					<span className="font-bold truncate text-[15px]">
-						{user?.firstName} {user?.lastName}
-					</span>
-					<span className="text-text-light truncate text-[15px]">
-						@{user?.username}
-					</span>
+			{user ? (
+				<div className="mt-auto mb-4 flex items-center gap-3 p-3 rounded-full nav-item cursor-pointer">
+					<div
+						className="w-10 h-10 rounded-full bg-cover bg-center"
+						style={{
+							backgroundImage: `url('${user.avatar || "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}')`,
+						}}
+					/>
+					<div className="flex flex-col flex-1 min-w-0">
+						<span className="font-bold truncate text-[15px]">
+							{user.firstName} {user.lastName}
+						</span>
+						<span className="text-text-light truncate text-[15px]">
+							@{user.username}
+						</span>
+					</div>
+					<span className="material-symbols-outlined text-sm">more_horiz</span>
 				</div>
-				<span className="material-symbols-outlined text-sm">more_horiz</span>
-			</div>
+			) : (
+				<div className="mt-auto mb-4 flex items-center gap-3 p-3 rounded-full nav-item">
+					<Skeleton className="w-10 h-10 rounded-full" />
+					<div className="flex flex-col flex-1 min-w-0 gap-1">
+						<Skeleton className="h-4 w-24" />
+						<Skeleton className="h-3 w-16" />
+					</div>
+				</div>
+			)}
 			{/* <div className="mt-auto mb-4 flex items-center gap-3 p-3 rounded-full nav-item cursor-pointer">
 				<div
 					className="w-10 h-10 rounded-full bg-cover bg-center"

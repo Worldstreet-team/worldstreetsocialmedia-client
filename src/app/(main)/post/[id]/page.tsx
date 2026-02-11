@@ -7,6 +7,8 @@ import { useParams } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { getPostByIdAction, getPostCommentsAction } from "@/lib/post.actions";
 import { GlobalLoader } from "@/components/ui/GlobalLoader";
+import { PostSkeleton } from "@/components/skeletons/PostSkeleton";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function PostDetail() {
 	const params = useParams();
@@ -78,7 +80,25 @@ export default function PostDetail() {
 	}, [postId, fetchPostData]);
 
 	if (loading) {
-		return <GlobalLoader />;
+		return (
+			<div className="flex flex-col min-h-screen">
+				<header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-black/10 px-4 py-3 flex items-center gap-4">
+					<div className="w-12 h-12 flex items-center justify-center -ml-2 rounded-full">
+						<span className="material-symbols-outlined text-[20px]!">
+							arrow_back
+						</span>
+					</div>
+					<h2 className="text-xl font-bold">Post</h2>
+				</header>
+				<PostSkeleton />
+				<div className="p-4 border-b border-black/10">
+					<Skeleton className="h-12 w-full rounded-full" />
+				</div>
+				{[...Array(3)].map((_, i) => (
+					<PostSkeleton key={i} />
+				))}
+			</div>
+		);
 	}
 
 	if (!post) {

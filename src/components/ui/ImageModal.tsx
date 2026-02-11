@@ -75,7 +75,7 @@ export default function ImageModal({
 					<button
 						type="button"
 						onClick={onClose}
-						className="absolute top-4 right-4 w-12 h-12 flex items-center justify-center text-white/70 hover:text-white bg-black/50 hover:bg-black/70 rounded-full transition-colors z-50"
+						className="absolute top-4 right-4 w-12 h-12 flex items-center justify-center text-white/70 hover:text-white bg-black/50 hover:bg-black/70 rounded-full transition-colors z-50 cursor-pointer"
 					>
 						<span className="material-symbols-outlined text-2xl">close</span>
 					</button>
@@ -86,7 +86,7 @@ export default function ImageModal({
 							<button
 								type="button"
 								onClick={handlePrev}
-								className="absolute left-4 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white bg-black/50 hover:bg-black/70 rounded-full transition-all hover:scale-110 z-50"
+								className="absolute left-4 top-1/2 -translate-y-1/2 w-14 h-14 flex items-center justify-center text-white/70 hover:text-white bg-black/50 hover:bg-black/70 rounded-full transition-all hover:scale-110 z-50 cursor-pointer"
 							>
 								<span className="material-symbols-outlined text-3xl">
 									chevron_left
@@ -95,7 +95,7 @@ export default function ImageModal({
 							<button
 								type="button"
 								onClick={handleNext}
-								className="absolute right-4 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white bg-black/50 hover:bg-black/70 rounded-full transition-all hover:scale-110 z-50"
+								className="absolute right-4 top-1/2 -translate-y-1/2 w-14 h-14 flex items-center justify-center text-white/70 hover:text-white bg-black/50 hover:bg-black/70 rounded-full transition-all hover:scale-110 z-50 cursor-pointer"
 							>
 								<span className="material-symbols-outlined text-3xl">
 									chevron_right

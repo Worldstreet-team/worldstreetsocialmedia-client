@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { PostCard, type PostProps } from "@/components/feed/PostCard";
 import { PostComposer } from "@/components/feed/PostComposer";
+import { PostSkeleton } from "@/components/skeletons/PostSkeleton";
 import { getFeedAction } from "@/lib/feed.actions";
 
 export default function UserFeed() {
@@ -130,7 +131,11 @@ export default function UserFeed() {
 					<PostCard key={post.id} post={post} />
 				))}
 				{loading && (
-					<div className="p-4 text-center text-gray-500">Loading posts...</div>
+					<div className="flex flex-col">
+						{[...Array(5)].map((_, i) => (
+							<PostSkeleton key={i} />
+						))}
+					</div>
 				)}
 				{!loading && posts.length === 0 && (
 					<div className="p-8 text-center text-gray-500 font-semibold text-sm">
