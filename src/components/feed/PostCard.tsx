@@ -256,7 +256,9 @@ export function PostCard({ post }: { post: PostProps }) {
 							className="font-bold hover:underline text-inherit decoration-inherit"
 						>
 							{post.author.name ||
-								`${post.author.firstName} ${post.author.lastName}`}
+								(post.author.firstName && post.author.lastName
+									? `${post.author.firstName} ${post.author.lastName}`
+									: post.author.username)}
 						</Link>
 						{post.author.isVerified && <VerifiedIcon />}
 						<span className="text-text-light font-semibold text-sm truncate">

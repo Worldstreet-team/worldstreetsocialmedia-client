@@ -92,3 +92,7 @@ export async function getRefreshToken() {
 
 	return undefined;
 }
+
+export async function logoutAction() {
+	await clearSession();
+}

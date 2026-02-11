@@ -53,21 +53,21 @@ export function RightSidebar() {
 				</div>
 			</div> */}
 			<section className="bg-[#f7f9fa] rounded-2xl overflow-hidden">
-				<h3 className="text-[18px] font-extrabold px-4 py-3">
+				<h3 className="text-[17px] font-extrabold px-4 py-3">
 					What's happening
 				</h3>
 				<div className="flex flex-col">
-					<div className="px-4 py-3 hover:bg-black/[0.03] transition-colors cursor-pointer">
+					<div className="px-4 py-3 hover:bg-black/3 transition-colors cursor-pointer">
 						<div className="flex justify-between text-[13px] text-text-light">
 							<span>Trending in Technology</span>
-							<span className="material-symbols-outlined !text-[18px]">
+							<span className="material-symbols-outlined text-[18px]!">
 								more_horiz
 							</span>
 						</div>
 						<p className="font-bold text-[15px]">#WebDev2024</p>
 						<p className="text-[13px] text-text-light">12.5K posts</p>
 					</div>
-					<div className="px-4 py-3 hover:bg-black/[0.03] transition-colors cursor-pointer">
+					<div className="px-4 py-3 hover:bg-black/3 transition-colors cursor-pointer">
 						<div className="flex justify-between text-[13px] text-text-light">
 							<span>Design · Trending</span>
 							<span className="material-symbols-outlined !text-[18px]">
@@ -78,7 +78,7 @@ export function RightSidebar() {
 						<p className="text-[13px] text-text-light">5,821 posts</p>
 					</div>
 					<button
-						className="text-primary text-[15px] p-4 text-left hover:bg-black/[0.03] transition-colors"
+						className="text-primary text-[15px] p-4 text-left hover:bg-black/3 transition-colors"
 						type="button"
 					>
 						Show more
@@ -88,7 +88,7 @@ export function RightSidebar() {
 
 			{/* Who to Follow Section */}
 			<section className="bg-[#f7f9fa] rounded-2xl overflow-hidden">
-				<h3 className="text-[18px] font-extrabold px-4 py-3">Who to follow</h3>
+				<h3 className="text-[17px] font-extrabold px-4 py-3">Who to follow</h3>
 				<div className="flex flex-col">
 					{loading ? (
 						<div className="px-4 py-4 text-center text-text-light text-sm">
@@ -103,7 +103,7 @@ export function RightSidebar() {
 							<Link
 								href={`/profile/${user.username}`}
 								key={user._id}
-								className="flex items-center gap-3 px-4 py-3 hover:bg-black/[0.03] transition-colors cursor-pointer"
+								className="flex items-center gap-3 px-4 py-3 hover:bg-black/3 transition-colors cursor-pointer"
 							>
 								<div
 									className="w-8 h-8 rounded-full bg-cover bg-center shrink-0"

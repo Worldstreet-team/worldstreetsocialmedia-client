@@ -46,7 +46,7 @@ export function CommentBox({ postId, onCommentAdded }: CommentBoxProps) {
 	return (
 		<div className="flex gap-3 p-4 border-b border-black/10">
 			<div
-				className="w-10 h-10 mt-3 rounded-full bg-cover bg-center shrink-0"
+				className="w-9 h-9 mt-3 rounded-full bg-cover bg-center shrink-0"
 				style={{ backgroundImage: `url('${user.avatar}')` }}
 			/>
 			<div className="flex-1">
@@ -60,7 +60,7 @@ export function CommentBox({ postId, onCommentAdded }: CommentBoxProps) {
 							e.target.style.height = `${e.target.scrollHeight}px`;
 						}}
 						placeholder="Post your reply"
-						className="w-full bg-transparent border-none text-[17px] placeholder:text-text-light/80 resize-none outline-none min-h-[40px] py-3"
+						className="w-full bg-transparent border-none text-[15px] placeholder:text-text-light/80 resize-none outline-none min-h-[35px] py-3"
 						disabled={loading}
 					/>
 				</div>
