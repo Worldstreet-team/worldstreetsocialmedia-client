@@ -26,11 +26,16 @@ export const TokenVerifier = ({ initialUser }: TokenVerifierProps) => {
 			return;
 		}
 
-		if (initialUser) {
-			console.log("TokenVerifier: Hydrating from initialUser");
+		if (initialUser && initialUser.username) {
+			console.log("TokenVerifier: Hydrating from initialUser", initialUser);
 			setUser(initialUser);
 			setLoading(false);
 			return;
+		} else if (initialUser) {
+			console.log(
+				"TokenVerifier: initialUser incomplete (missing username), forcing sync...",
+				initialUser,
+			);
 		}
 
 		const verify = async () => {
