@@ -120,7 +120,10 @@ export default function ProfilePage() {
 			</div>
 
 			{isEditProfileOpen && user && (
-				<EditProfileModal user={user} onClose={() => setIsEditProfileOpen(false)} />
+				<EditProfileModal
+					user={user}
+					onClose={() => setIsEditProfileOpen(false)}
+				/>
 			)}
 
 			{/* Profile Info */}
@@ -166,7 +169,13 @@ export default function ProfilePage() {
 						<span className="material-symbols-outlined text-[18px]">
 							calendar_month
 						</span>
-						<span>Joined {new Date(user.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+						<span>
+							Joined{" "}
+							{new Date(user.createdAt || Date.now()).toLocaleDateString(
+								"en-US",
+								{ month: "long", year: "numeric" },
+							)}
+						</span>
 					</div>
 				</div>
 

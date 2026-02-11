@@ -21,11 +21,11 @@ const sidebarList = [
 		link: "/notifications",
 		icon: BellIcon,
 	},
-	{
-		title: "Messages",
-		link: "/messages",
-		icon: MessageIcon,
-	},
+	// {
+	// 	title: "Messages",
+	// 	link: "/messages",
+	// 	icon: MessageIcon,
+	// },
 	{
 		title: "Bookmarks",
 		link: "/bookmarks",
