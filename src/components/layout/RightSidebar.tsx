@@ -75,16 +75,6 @@ export function RightSidebar() {
 						<p className="font-bold text-[15px]">Figma AI</p>
 						<p className="text-[13px] text-text-light">5,821 posts</p>
 					</div>
-					<div className="px-4 py-3 hover:bg-black/[0.03] transition-colors cursor-pointer">
-						<div className="flex justify-between text-[13px] text-text-light">
-							<span>Entertainment · Trending</span>
-							<span className="material-symbols-outlined !text-[18px]">
-								more_horiz
-							</span>
-						</div>
-						<p className="font-bold text-[15px]">#TheLastOfUs</p>
-						<p className="text-[13px] text-text-light">45K posts</p>
-					</div>
 					<button
 						className="text-primary text-[15px] p-4 text-left hover:bg-black/[0.03] transition-colors"
 						type="button"
@@ -107,7 +97,7 @@ export function RightSidebar() {
 							No suggestions available
 						</div>
 					) : (
-						suggestions.map((user) => (
+						suggestions.slice(0, 3).map((user) => (
 							<Link
 								href={`/profile/${user.username}`}
 								key={user._id}
@@ -154,10 +144,10 @@ export function RightSidebar() {
 			<footer className="flex flex-col gap-y-3 px-6 py-8 text-[14px] text-zinc-500 w-fit">
 				<nav className="flex flex-col gap-y-2">
 					<a
-						href="https://social.worldstreetgold.com/"
+						href="https://dashboard.worldstreetgold.com/"
 						className="hover:text-zinc-900 transition-colors duration-200"
 					>
-						World Street Gold
+						WorldStreet Gold
 					</a>
 					<a
 						href="https://academy.worldstreetgold.com/"

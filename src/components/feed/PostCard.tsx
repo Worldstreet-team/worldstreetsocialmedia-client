@@ -406,7 +406,24 @@ export function PostCard({ post }: { post: PostProps }) {
 						{post.content}
 					</p>
 
-					{images.length > 0 && (
+					{images.length === 1 && (
+						<div className="mb-3 w-full">
+							{/* biome-ignore lint/a11y/useKeyWithClickEvents: Interactive image */}
+							<img
+								src={images[0]}
+								alt="Post content"
+								className="w-full h-auto max-h-[600px] object-cover rounded-2xl border border-black/10 cursor-pointer hover:opacity-95 transition-opacity"
+								onClick={(e) => {
+									e.stopPropagation();
+									e.preventDefault();
+									setSelectedImageIndex(0);
+								}}
+								onMouseDown={(e) => e.stopPropagation()}
+							/>
+						</div>
+					)}
+
+					{images.length > 1 && (
 						<div
 							className={`grid gap-0.5 rounded-2xl overflow-hidden mb-3 w-full border border-black/10 ${getImageGridClass(images.length)}`}
 						>
