@@ -93,7 +93,7 @@ export function LeftSidebar() {
 			{user ? (
 				<div className="mt-auto mb-4 relative" ref={menuRef}>
 					{isMenuOpen && (
-						<div className="absolute bottom-full left-0 w-[300px] bg-white rounded-2xl shadow-[0_0_15px_rgba(0,0,0,0.1)] border border-black/5 overflow-hidden mb-4 z-50 py-3">
+						<div className="absolute bottom-full left-0 w-[230px] bg-white rounded-2xl shadow-[0_0_15px_rgba(0,0,0,0.1)] border border-black/5 overflow-hidden mb-4 z-50 py-3">
 							<button
 								type="button"
 								className="w-full text-left px-4 py-3 hover:bg-gray-50 font-bold text-[15px] flex items-center justify-between"
