@@ -11,8 +11,8 @@ interface TokenVerifierProps {
 	initialUser?: User | null;
 }
 
-const loginUrl =
-	"https://www.worldstreetgold.com/login?redirect=https://social.worldstreetgold.com";
+// const loginUrl =
+// 	"https://www.worldstreetgold.com/login?redirect=https://social.worldstreetgold.com";
 
 export const TokenVerifier = ({ initialUser }: TokenVerifierProps) => {
 	const setUser = useSetAtom(userAtom);
