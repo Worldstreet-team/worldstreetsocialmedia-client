@@ -40,6 +40,7 @@ export interface PostProps {
 import { useState, useRef, useEffect } from "react";
 import { useAtomValue } from "jotai";
 import { userAtom } from "@/store/user.atom";
+import { useToast } from "@/store/toast.atom";
 import { motion, AnimatePresence } from "framer-motion";
 import ChatIcon from "@/assets/icons/ChatIcon";
 import ShareIcon from "@/assets/icons/ShareIcon";
@@ -59,6 +60,7 @@ export function PostCard({ post }: { post: PostProps }) {
 	const currentUser = useAtomValue(userAtom);
 	const router = useRouter();
 	const pathname = usePathname();
+	const { showToast } = useToast();
 
 	// Use _id from userAtom (which maps to Mongo ID) or userId if that's what we use for comparison
 	const isOwnPost = currentUser?._id === post.author.id;
@@ -173,11 +175,11 @@ export function PostCard({ post }: { post: PostProps }) {
 			navigator.clipboard
 				.writeText(url)
 				.then(() => {
-					// Optional: Show toast or feedback
-					console.log("Link copied to clipboard");
+					showToast("Link copied to clipboard", { type: "success" });
 				})
 				.catch((err) => {
 					console.error("Failed to copy link: ", err);
+					showToast("Failed to copy link", { type: "error" });
 				});
 		}
 	};
