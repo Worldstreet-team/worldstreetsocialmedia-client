@@ -8,7 +8,7 @@ export async function proxy(request: NextRequest) {
 	const refreshToken =
 		request.cookies.get("refreshToken")?.value || REFRESH_TOKEN;
 	const loginUrl =
-		"https://www.worldstreetgold.com/login?redirect=http://localhost:3000";
+		"https://www.worldstreetgold.com/login?redirect=https://social.worldstreetgold.com";
 
 	// 1. If no access token, go to login
 	if (!accessToken) {
@@ -16,7 +16,6 @@ export async function proxy(request: NextRequest) {
 	}
 
 	try {
-		console.log("ACT: ", accessToken);
 		// 2. Try to verify the token
 		const verifyRes = await fetch(
 			`https://api.worldstreetgold.com/api/auth/verify`,
@@ -52,12 +51,9 @@ export async function proxy(request: NextRequest) {
 					secure: true,
 				});
 
-				console.log("DONE HERE");
-
 				return response;
 			} else {
-				console.log("REFRESH: ", refreshData);
-				// return NextResponse.redirect(loginUrl);
+				return NextResponse.redirect(loginUrl);
 			}
 		} else {
 			console.log("HIT THE ELSE");
@@ -72,7 +68,7 @@ export async function proxy(request: NextRequest) {
 		}
 	} catch (error) {
 		console.log("ERROR: ", error);
-		// return NextResponse.redirect(loginUrl);
+		return NextResponse.redirect(loginUrl);
 	}
 
 	// return NextResponse.next();
