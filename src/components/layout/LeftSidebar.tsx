@@ -14,7 +14,7 @@ export function LeftSidebar() {
 	return (
 		<header className="w-[275px] hidden md:flex flex-col sticky top-0 h-screen px-2 overflow-y-auto">
 			<div className="py-1 px-3 mb-1">
-				<div className="flex items-center justify-center cursor-pointer transition-colors">
+				<div className="flex items-center justify-center cursor-pointer transition-colors py-4">
 					<h1 className="text-xl font-semibold">WorldStreet</h1>
 				</div>
 			</div>
