@@ -30,7 +30,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 	// 		const token = await getAccessToken();
 
 	// 		if (token) {
-	// 			const socketInstance = io("http://localhost:2500", {
+	// 			const socketInstance = io("BACKEND_URL", {
 	// 				auth: {
 	// 					token: token,
 	// 				},

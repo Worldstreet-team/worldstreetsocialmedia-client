@@ -58,14 +58,14 @@ export async function getAccessToken() {
 	if (token) return token;
 
 	// Fallback to hardcoded token and set it in cookie
-	if (JWT_TOKEN) {
-		cookieStore.set("accessToken", JWT_TOKEN, {
-			httpOnly: true,
-			secure: true,
-			path: "/",
-		});
-		return JWT_TOKEN;
-	}
+	// if (JWT_TOKEN) {
+	// 	cookieStore.set("accessToken", JWT_TOKEN, {
+	// 		httpOnly: true,
+	// 		secure: true,
+	// 		path: "/",
+	// 	});
+	// 	return JWT_TOKEN;
+	// }
 
 	return undefined;
 }
@@ -77,14 +77,14 @@ export async function getRefreshToken() {
 	if (token) return token;
 
 	// Fallback to hardcoded token and set it in cookie
-	if (REFRESH_TOKEN) {
-		cookieStore.set("refreshToken", REFRESH_TOKEN, {
-			httpOnly: true,
-			secure: true,
-			path: "/",
-		});
-		return REFRESH_TOKEN;
-	}
+	// if (REFRESH_TOKEN) {
+	// 	cookieStore.set("refreshToken", REFRESH_TOKEN, {
+	// 		httpOnly: true,
+	// 		secure: true,
+	// 		path: "/",
+	// 	});
+	// 	return REFRESH_TOKEN;
+	// }
 
 	return undefined;
 }
