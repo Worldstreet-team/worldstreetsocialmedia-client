@@ -48,6 +48,7 @@ import Bookmark2Icon from "@/assets/icons/Bookmark2Icon";
 import HeartFill2Icon from "@/assets/icons/HeartFill2Icon";
 
 import ConfirmModal from "@/components/ui/ConfirmModal";
+import ImageModal from "@/components/ui/ImageModal";
 import { deletePostAction } from "@/lib/post.actions";
 import { useRouter, usePathname } from "next/navigation";
 
@@ -74,6 +75,11 @@ export function PostCard({ post }: { post: PostProps }) {
 	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [isDeleted, setIsDeleted] = useState(false);
+
+	// Image Modal State
+	const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(
+		null,
+	);
 
 	const handleLike = async (e: React.MouseEvent) => {
 		e.stopPropagation();
@@ -226,6 +232,13 @@ export function PostCard({ post }: { post: PostProps }) {
 				message="This can’t be undone and it will be removed from your profile, the timeline of any accounts that follow you, and from search results."
 				confirmText={isDeleting ? "Deleting..." : "Delete"}
 				isDestructive={true}
+			/>
+
+			<ImageModal
+				isOpen={selectedImageIndex !== null}
+				onClose={() => setSelectedImageIndex(null)}
+				images={images}
+				initialIndex={selectedImageIndex || 0}
 			/>
 
 			<article className="flex gap-3">
@@ -403,7 +416,7 @@ export function PostCard({ post }: { post: PostProps }) {
 									style={{ backgroundImage: `url('${src}')` }}
 									onClick={(e) => {
 										e.stopPropagation();
-										// Handle image click (e.g. open lightbox)
+										setSelectedImageIndex(index);
 									}}
 								/>
 							))}
