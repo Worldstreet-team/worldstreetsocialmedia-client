@@ -97,7 +97,7 @@ export default function PostDetail() {
 			<header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-black/10 px-4 py-3 flex items-center gap-4">
 				<Link
 					href="/"
-					className="p-2 -ml-2 hover:bg-black/10 rounded-full transition-colors"
+					className="w-12 h-12 flex items-center justify-center -ml-2 hover:bg-black/10 rounded-full transition-colors"
 				>
 					<span className="material-symbols-outlined text-[20px]!">
 						arrow_back

@@ -75,9 +75,9 @@ export default function ImageModal({
 					<button
 						type="button"
 						onClick={onClose}
-						className="absolute top-4 right-4 p-2 text-white/70 hover:text-white bg-black/50 hover:bg-black/70 rounded-full transition-colors z-50"
+						className="absolute top-4 right-4 w-12 h-12 flex items-center justify-center text-white/70 hover:text-white bg-black/50 hover:bg-black/70 rounded-full transition-colors z-50"
 					>
-						<span className="material-symbols-outlined text-3xl">close</span>
+						<span className="material-symbols-outlined text-2xl">close</span>
 					</button>
 
 					{/* Navigation Arrows */}

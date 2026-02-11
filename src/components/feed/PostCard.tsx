@@ -416,8 +416,10 @@ export function PostCard({ post }: { post: PostProps }) {
 									style={{ backgroundImage: `url('${src}')` }}
 									onClick={(e) => {
 										e.stopPropagation();
+										e.preventDefault();
 										setSelectedImageIndex(index);
 									}}
+									onMouseDown={(e) => e.stopPropagation()}
 								/>
 							))}
 						</div>
