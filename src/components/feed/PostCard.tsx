@@ -3,9 +3,19 @@
 import EllipsisIcon from "@/assets/icons/EllipsisIcon";
 import VerifiedIcon from "@/assets/icons/VerifiedIcon";
 
+import {
+	likePostAction,
+	unlikePostAction,
+	bookmarkPostAction,
+	unbookmarkPostAction,
+} from "@/lib/post.actions";
+import { useSetAtom } from "jotai";
+
 export interface PostProps {
 	author: {
-		name: string;
+		id: string; // Added ID for ownership check
+		firstName: string;
+		lastName: string;
 		username: string;
 		avatar: string;
 		isVerified?: boolean;
@@ -19,10 +29,97 @@ export interface PostProps {
 	};
 	images?: string[];
 	id: string;
+	isLiked?: boolean; // Optional: If server checks for us
 }
+
+import { useState, useRef, useEffect } from "react";
+import { useAtomValue } from "jotai";
+import { userAtom } from "@/store/user.atom";
+import { motion, AnimatePresence } from "framer-motion";
+import ChatIcon from "@/assets/icons/ChatIcon";
+import ShareIcon from "@/assets/icons/ShareIcon";
+import Heart2Icon from "@/assets/icons/Heart2Icon";
+import Bookmark2Icon from "@/assets/icons/Bookmark2Icon";
+import HeartFill2Icon from "@/assets/icons/HeartFill2Icon";
 
 export function PostCard({ post }: { post: PostProps }) {
 	const images = post.images || [];
+	const [isMenuOpen, setIsMenuOpen] = useState(false);
+	const menuRef = useRef<HTMLDivElement>(null);
+	const currentUser = useAtomValue(userAtom);
+
+	// Use _id from userAtom (which maps to Mongo ID) or userId if that's what we use for comparison
+	const isOwnPost = currentUser?._id === post.author.id;
+	const setUser = useSetAtom(userAtom);
+
+	const [isLiked, setIsLiked] = useState(post.isLiked || false);
+	const [likesCount, setLikesCount] = useState(post.stats.likes);
+	const isBookmarked = currentUser?.bookmarks?.includes(post.id) || false;
+
+	const handleLike = async (e: React.MouseEvent) => {
+		e.stopPropagation();
+		if (!currentUser) return; // Or trigger auth modal
+
+		// Optimistic update
+		const newIsLiked = !isLiked;
+		setIsLiked(newIsLiked);
+		setLikesCount((prev) => (newIsLiked ? prev + 1 : Math.max(0, prev - 1)));
+		setLikesCount((prev) => (newIsLiked ? prev + 1 : Math.max(0, prev - 1)));
+
+		if (newIsLiked) {
+			await likePostAction(post.id);
+		} else {
+			await unlikePostAction(post.id);
+		}
+	};
+
+	const handleBookmark = async (e: React.MouseEvent) => {
+		e.stopPropagation();
+		if (!currentUser) return;
+
+		// Optimistic update via Atom
+		const newIsBookmarked = !isBookmarked;
+
+		if (newIsBookmarked) {
+			setUser((prev) =>
+				prev
+					? { ...prev, bookmarks: [...(prev.bookmarks || []), post.id] }
+					: null,
+			);
+			await bookmarkPostAction(post.id);
+		} else {
+			setUser((prev) =>
+				prev
+					? {
+							...prev,
+							bookmarks: (prev.bookmarks || []).filter((id) => id !== post.id),
+						}
+					: null,
+			);
+			await unbookmarkPostAction(post.id);
+		}
+	};
+
+	useEffect(() => {
+		const handleClickOutside = (event: MouseEvent) => {
+			if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+				setIsMenuOpen(false);
+			}
+		};
+
+		if (isMenuOpen) {
+			document.addEventListener("mousedown", handleClickOutside);
+		}
+		return () => {
+			document.removeEventListener("mousedown", handleClickOutside);
+		};
+	}, [isMenuOpen]);
+
+	const handleMenuAction = (action: string) => {
+		console.log(`Action triggered: ${action} on post ${post.id}`);
+		setIsMenuOpen(false);
+		// Implement actual logic later
+	};
 
 	const getImageGridClass = (count: number) => {
 		switch (count) {
@@ -47,24 +144,137 @@ export function PostCard({ post }: { post: PostProps }) {
 	};
 
 	return (
-		<article className="p-4 border-b border-black/10 cursor-pointer transition-colors">
+		<article className="p-4 border-b border-black/10 cursor-pointer transition-colors relative">
 			<div className="flex gap-3">
 				<div
-					className="w-10 h-10 rounded-full bg-cover bg-center flex-shrink-0"
+					className="w-10 h-10 rounded-full bg-cover bg-center shrink-0"
 					style={{ backgroundImage: `url('${post.author.avatar}')` }}
 				/>
 				<div className="flex-1 min-w-0">
-					<div className="flex items-center gap-1">
+					<div className="flex items-center gap-1 relative">
 						<span className="font-bold hover:underline">
-							{post.author.name}
+							{post.author.name ||
+								`${post.author.firstName} ${post.author.lastName}`}
 						</span>
 						{post.author.isVerified && <VerifiedIcon />}
 						<span className="text-text-light font-semibold text-sm truncate">
 							@{post.author.username} · {post.timestamp}
 						</span>
-						<button className="ml-auto text-text-light hover:text-primary hover:bg-primary/10 rounded-full p-1 hover:bg-black/5 transition-all ease-in-out duration-300 cursor-pointer border-black/10 border-[0.5px]">
-							<EllipsisIcon />
-						</button>
+
+						<div className="ml-auto relative" ref={menuRef}>
+							<button
+								type="button"
+								onClick={(e) => {
+									e.stopPropagation();
+									setIsMenuOpen(!isMenuOpen);
+								}}
+								className="text-text-light hover:text-primary hover:bg-primary/10 rounded-full p-1 hover:bg-black/5 transition-all ease-in-out duration-300 cursor-pointer border-black/10 border-[0.5px]"
+							>
+								<EllipsisIcon />
+							</button>
+
+							<AnimatePresence>
+								{isMenuOpen && (
+									<motion.div
+										initial={{ opacity: 0, scale: 0.95, y: -10 }}
+										animate={{ opacity: 1, scale: 1, y: 0 }}
+										exit={{ opacity: 0, scale: 0.95, y: -10 }}
+										transition={{ duration: 0.2, ease: "easeOut" }}
+										className="absolute right-0 top-8 w-64 bg-white rounded-xl shadow-[0_0_10px_rgba(0,0,0,0.1)] border border-black/5 z-50 overflow-hidden py-2"
+										onClick={(e) => e.stopPropagation()}
+										role="menu"
+									>
+										{isOwnPost ? (
+											<>
+												<button
+													type="button"
+													onClick={() => handleMenuAction("copy_link")}
+													className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 font-semibold text-[15px]"
+												>
+													<span className="material-symbols-outlined text-[20px]!">
+														link
+													</span>
+													Copy link
+												</button>
+												<button
+													type="button"
+													onClick={() => handleMenuAction("pin")}
+													className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 font-semibold text-[15px]"
+												>
+													<span className="material-symbols-outlined text-[20px]!">
+														push_pin
+													</span>
+													Pin to profile
+												</button>
+												<button
+													type="button"
+													onClick={() => handleMenuAction("activity")}
+													className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 font-semibold text-[15px]"
+												>
+													<span className="material-symbols-outlined text-[20px]!">
+														bar_chart
+													</span>
+													View post activity
+												</button>
+												<button
+													type="button"
+													onClick={() => handleMenuAction("delete")}
+													className="w-full text-left px-4 py-3 hover:bg-red-50 text-red-600 flex items-center gap-3 font-semibold text-[15px]"
+												>
+													<span className="material-symbols-outlined text-[20px]!">
+														delete
+													</span>
+													Delete
+												</button>
+											</>
+										) : (
+											<>
+												<button
+													type="button"
+													onClick={() => handleMenuAction("not_interested")}
+													className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 font-semibold text-[15px]"
+												>
+													<span className="material-symbols-outlined text-[20px]!">
+														sentiment_dissatisfied
+													</span>
+													Not interested in this post
+												</button>
+												<button
+													type="button"
+													onClick={() => handleMenuAction("copy_link")}
+													className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 font-semibold text-[15px]"
+												>
+													<span className="material-symbols-outlined text-[20px]!">
+														link
+													</span>
+													Copy link
+												</button>
+												<button
+													type="button"
+													onClick={() => handleMenuAction("block")}
+													className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 font-semibold text-[15px]"
+												>
+													<span className="material-symbols-outlined text-[20px]!">
+														block
+													</span>
+													Block @{post.author.username}
+												</button>
+												<button
+													type="button"
+													onClick={() => handleMenuAction("report")}
+													className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 font-semibold text-[15px]"
+												>
+													<span className="material-symbols-outlined text-[20px]!">
+														flag
+													</span>
+													Report post
+												</button>
+											</>
+										)}
+									</motion.div>
+								)}
+							</AnimatePresence>
+						</div>
 					</div>
 					<p className="text-[14px] text-black/75 font-semibold leading-normal mb-3 whitespace-pre-wrap">
 						{post.content}
@@ -75,9 +285,10 @@ export function PostCard({ post }: { post: PostProps }) {
 							className={`grid gap-0.5 rounded-2xl overflow-hidden mb-3 w-full border border-black/10 ${getImageGridClass(images.length)}`}
 						>
 							{images.slice(0, 4).map((src, index) => (
-								<div
-									key={index}
-									className={`relative w-full h-full bg-cover bg-center ${getImageStyle(index, images.length)}`}
+								<button
+									key={src}
+									type="button"
+									className={`relative w-full h-full bg-cover bg-center ${getImageStyle(index, images.length)} cursor-pointer outline-none focus:opacity-80 transition-opacity`}
 									style={{ backgroundImage: `url('${src}')` }}
 									onClick={(e) => {
 										e.stopPropagation();
@@ -91,41 +302,65 @@ export function PostCard({ post }: { post: PostProps }) {
 					<div className="flex items-center justify-between text-text-light max-w-md mt-2">
 						<div className="flex items-center gap-1 group">
 							<div className="p-2 group-hover:bg-primary/10 group-hover:text-primary rounded-full transition-colors">
-								<span className="material-symbols-outlined !text-[18px]">
-									chat_bubble
-								</span>
+								<ChatIcon />
 							</div>
 							<span className="text-[13px] group-hover:text-primary">
-								{post.stats.replies}
+								{post.stats.replies !== 0 && post.stats.replies}
 							</span>
 						</div>
 						<div className="flex items-center gap-1 group">
 							<div className="p-2 group-hover:bg-green-500/10 group-hover:text-green-500 rounded-full transition-colors">
-								<span className="material-symbols-outlined !text-[18px]">
-									repeat
-								</span>
+								<ShareIcon />
 							</div>
 							<span className="text-[13px] group-hover:text-green-500">
-								{post.stats.reposts}
+								{post.stats.reposts !== 0 && post.stats.reposts}
 							</span>
 						</div>
-						<div className="flex items-center gap-1 group">
-							<div className="p-2 group-hover:bg-pink-500/10 group-hover:text-pink-500 rounded-full transition-colors">
-								<span className="material-symbols-outlined !text-[18px]">
-									favorite
-								</span>
+						<motion.button
+							className="flex items-center gap-1 group"
+							onClick={handleLike}
+							whileTap={{ scale: 0.8 }}
+						>
+							<div
+								className={`
+									p-2 rounded-full transition-colors relative cursor-pointer
+									${
+										isLiked
+											? "text-pink-600 bg-pink-50"
+											: "text-text-light group-hover:bg-pink-50 group-hover:text-pink-500"
+									}
+								`}
+							>
+								{isLiked ? <HeartFill2Icon color="red" /> : <Heart2Icon />}
 							</div>
-							<span className="text-[13px] group-hover:text-pink-500">
-								{post.stats.likes}
+							<span
+								className={`text-[13px] ${
+									isLiked
+										? "text-pink-600"
+										: "text-text-light group-hover:text-pink-500"
+								}`}
+							>
+								{likesCount !== 0 && likesCount}
 							</span>
-						</div>
-						<div className="flex items-center gap-1 group">
-							<div className="p-2 group-hover:bg-primary/10 group-hover:text-primary rounded-full transition-colors">
-								<span className="material-symbols-outlined !text-[18px]">
-									ios_share
-								</span>
+						</motion.button>
+						<motion.button
+							className="flex items-center gap-1 group"
+							onClick={handleBookmark}
+							whileTap={{ scale: 0.8 }}
+						>
+							<div
+								className={`
+									p-2 rounded-full transition-colors relative cursor-pointer
+									${
+										isBookmarked
+											? "bg-black/5"
+											: "text-text-light group-hover:bg-blue-50 group-hover:text-blue-500"
+									}
+								`}
+							>
+								<Bookmark2Icon isActive={isBookmarked} />
 							</div>
-						</div>
+						</motion.button>
 					</div>
 				</div>
 			</div>

@@ -1,15 +1,15 @@
 import { IconProps } from "@/app/types";
 
-const BookmarkIcon = ({ color, size, isActive }: IconProps) => {
+const Bookmark2Icon = ({ color, size, isActive }: IconProps) => {
 	return (
 		<svg
-			width={size ? size.width : "23"}
-			height={size ? size.height : "23"}
+			width={size ? size.width : "20"}
+			height={size ? size.height : "20"}
 			viewBox="0 0 24 24"
 			fill="none"
 			xmlns="http://www.w3.org/2000/svg"
 		>
-			<title>Bookmark 1</title>
+			<title>Bookmark 2</title>
 			{isActive ? (
 				<path
 					fillRule="evenodd"
@@ -35,4 +35,4 @@ const BookmarkIcon = ({ color, size, isActive }: IconProps) => {
 	);
 };
 
-export default BookmarkIcon;
+export default Bookmark2Icon;

@@ -1,16 +1,22 @@
-import { LeftSidebar } from "@/components/layout/LeftSidebar";
+"use client";
+
+import { SocketProvider } from "@/context/SocketContext";
+import ConversationList from "@/components/messages/ConversationList";
 
 export default function MessagesLayout({
-    children,
+	children,
 }: {
-    children: React.ReactNode;
+	children: React.ReactNode;
 }) {
-    return (
-        <div className="max-w-[1265px] mx-auto flex justify-center min-h-screen">
-            <LeftSidebar />
-            <main className="w-full max-w-[990px] border-x border-border-gray min-h-screen flex">
-                {children}
-            </main>
-        </div>
-    );
+	return (
+		<SocketProvider>
+			<div className="flex h-screen w-full">
+				{/* Conversation List is included within the layout so it persists */}
+				<ConversationList />
+
+				{/* The 'children' will be the chat window or the empty state */}
+				<main className="flex-1 hidden md:flex h-full">{children}</main>
+			</div>
+		</SocketProvider>
+	);
 }

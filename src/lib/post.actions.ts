@@ -2,13 +2,12 @@
 
 import { BACKEND_URL } from "@/const";
 import axios from "axios";
-import { cookies } from "next/headers";
+import { getAccessToken } from "./auth.actions";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || BACKEND_URL;
+const API_URL = BACKEND_URL;
 
 export async function createPostAction(formData: FormData) {
-	const cookieStore = await cookies();
-	const accessToken = cookieStore.get("accessToken")?.value;
+	const accessToken = await getAccessToken();
 
 	if (!accessToken) {
 		return { success: false, message: "Unauthorized: No access token found" };
@@ -39,5 +38,105 @@ export async function createPostAction(formData: FormData) {
 
 		console.error("Unexpected Error:", error);
 		return { success: false, message: "Something went wrong" };
+	}
+}
+
+export async function likePostAction(postId: string) {
+	const accessToken = await getAccessToken();
+	if (!accessToken) return { success: false, message: "Unauthorized" };
+
+	try {
+		const res = await axios.post(
+			`${API_URL}/api/posts/${postId}/like`,
+			{},
+			{
+				headers: { Authorization: `Bearer ${accessToken}` },
+			},
+		);
+		return { success: true, likes: res.data.likes };
+	} catch (error: any) {
+		console.error("Like Post Error:", error.response?.data || error.message);
+		return { success: false, message: "Failed to like post" };
+	}
+}
+
+export async function unlikePostAction(postId: string) {
+	const accessToken = await getAccessToken();
+	if (!accessToken) return { success: false, message: "Unauthorized" };
+
+	try {
+		const res = await axios.post(
+			`${API_URL}/api/posts/${postId}/unlike`,
+			{},
+			{
+				headers: { Authorization: `Bearer ${accessToken}` },
+			},
+		);
+		return { success: true, likes: res.data.likes };
+	} catch (error: any) {
+		console.error("Unlike Post Error:", error.response?.data || error.message);
+		return { success: false, message: "Failed to unlike post" };
+	}
+}
+
+export async function bookmarkPostAction(postId: string) {
+	const accessToken = await getAccessToken();
+	if (!accessToken) return { success: false, message: "Unauthorized" };
+
+	try {
+		await axios.post(
+			`${API_URL}/api/posts/${postId}/bookmark`,
+			{},
+			{
+				headers: { Authorization: `Bearer ${accessToken}` },
+			},
+		);
+		return { success: true };
+	} catch (error: any) {
+		console.error(
+			"Bookmark Post Error:",
+			error.response?.data || error.message,
+		);
+		return { success: false, message: "Failed to bookmark post" };
+	}
+}
+
+export async function unbookmarkPostAction(postId: string) {
+	const accessToken = await getAccessToken();
+	if (!accessToken) return { success: false, message: "Unauthorized" };
+
+	try {
+		await axios.post(
+			`${API_URL}/api/posts/${postId}/unbookmark`,
+			{},
+			{
+				headers: { Authorization: `Bearer ${accessToken}` },
+			},
+		);
+		return { success: true };
+	} catch (error: any) {
+		console.error(
+			"Unbookmark Post Error:",
+			error.response?.data || error.message,
+		);
+		return { success: false, message: "Failed to unbookmark post" };
+	}
+}
+
+export async function getBookmarksAction() {
+	const accessToken = await getAccessToken();
+	if (!accessToken) return { success: false, message: "Unauthorized" };
+
+	try {
+		const res = await axios.get(`${API_URL}/api/posts/bookmarks`, {
+			headers: { Authorization: `Bearer ${accessToken}` },
+		});
+		return { success: true, data: res.data };
+	} catch (error: any) {
+		console.error(
+			"Get Bookmarks Error:",
+			error.response?.data || error.message,
+		);
+		return { success: false, message: "Failed to fetch bookmarks" };
 	}
 }

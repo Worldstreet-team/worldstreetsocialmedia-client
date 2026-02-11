@@ -3,6 +3,10 @@
 import { useRef, useState, useEffect } from "react";
 import EmojiPicker, { type EmojiClickData } from "emoji-picker-react";
 import { createPostAction } from "@/lib/post.actions";
+import ImageIcon from "@/assets/icons/ImageIcon";
+import GifIcon from "@/assets/icons/GifIcon";
+import EmojiIcon from "@/assets/icons/EmojiIcon";
+import NoteIcon from "@/assets/icons/NoteIcon";
 
 interface MediaItem {
 	url: string;
@@ -132,10 +136,10 @@ export function PostComposer({
 	};
 
 	return (
-		<div className="px-4 py-3 border-b border-black/10">
+		<div className="px-4 py-3 border-b border-black/5">
 			<div className="flex gap-3">
 				<div
-					className="w-10 h-10 rounded-full bg-cover bg-center flex-shrink-0"
+					className="w-9 h-9 mt-2 rounded-full bg-cover bg-center shrink-0"
 					style={{
 						backgroundImage:
 							"url('https://lh3.googleusercontent.com/aida-public/AB6AXuDd-evzsvivS30hlWWhs8NK4GS34z0MFLA5ys1E3Xi1Ze3ANPr33B0eo21EVy-ojF_5DOaAZE0B3oFNEkrr_Mg7yUw5MjBFBPl9K0FqUaqfg7kRqt7THyQOFiT-26kEOsmd3DLbSysRcKBwH-ceObCR6X9heUYmSw5DotEK-maSeeV0OdOCRtH8RLjgLjOwwYcT5GKk3JH4tOlCxbirUsuCk5Kikl9XBPwJXR8-J_VDkcTSowSNq6G-XXTq53J7jarGjNf4ml9v8hFW')",
@@ -146,7 +150,7 @@ export function PostComposer({
 						ref={textareaRef}
 						value={content}
 						onChange={(e) => setContent(e.target.value)}
-						className="w-full border-none focus:ring-0 text-xl placeholder-text-light resize-none py-2 min-h-[50px] overflow-hidden bg-transparent focus:outline-none"
+						className="w-full border-none focus:ring-0 text-base text-black tracking-tight font-medium placeholder-text-light resize-none py-2 min-h-[40px] overflow-hidden bg-transparent focus:outline-none"
 						placeholder="Happening now!"
 						rows={2}
 						disabled={loading}
@@ -169,7 +173,7 @@ export function PostComposer({
 										className="absolute top-2 right-2 bg-black/70 hover:bg-black/80 text-white rounded-full p-1 transition-colors"
 										disabled={loading}
 									>
-										<span className="material-symbols-outlined !text-[18px]">
+										<span className="material-symbols-outlined text-[18px]!">
 											close
 										</span>
 									</button>
@@ -178,8 +182,8 @@ export function PostComposer({
 						</div>
 					)}
 
-					<div className="flex items-center justify-between pt-3 border-t border-black/10 mt-2">
-						<div className="flex gap-0 relative">
+					<div className="flex items-center justify-between pt-3 border-t border-black/5 mt-2">
+						<div className="flex gap-2 relative">
 							<input
 								type="file"
 								ref={fileInputRef}
@@ -193,39 +197,31 @@ export function PostComposer({
 								type="button"
 								onClick={() => fileInputRef.current?.click()}
 								disabled={mediaItems.length >= 4 || loading}
-								className={`p-2 rounded-full transition-colors ${mediaItems.length >= 4 || loading ? "text-primary/50 cursor-not-allowed" : "text-primary hover:bg-primary/10"}`}
+								className={`p-2 rounded-full transition-colors ${mediaItems.length >= 4 || loading ? "text-primary/50 cursor-not-allowed" : "text-primary hover:bg-primary/10"} cursor-pointer`}
 							>
-								<span className="material-symbols-outlined !text-[20px]">
-									image
-								</span>
+								<ImageIcon />
 							</button>
 							<button
 								type="button"
-								className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors"
+								className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors cursor-pointer"
 								disabled={loading}
 							>
-								<span className="material-symbols-outlined !text-[20px]">
-									gif_box
-								</span>
+								<GifIcon />
 							</button>
 							<button
 								type="button"
-								className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors"
+								className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors cursor-pointer"
 								disabled={loading}
 							>
-								<span className="material-symbols-outlined !text-[20px]">
-									ballot
-								</span>
+								<NoteIcon />
 							</button>
 							<button
 								type="button"
 								onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-								className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors"
+								className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors cursor-pointer"
 								disabled={loading}
 							>
-								<span className="material-symbols-outlined !text-[20px]">
-									sentiment_satisfied
-								</span>
+								<EmojiIcon />
 							</button>
 							{showEmojiPicker && (
 								<div
@@ -239,21 +235,12 @@ export function PostComposer({
 									/>
 								</div>
 							)}
-							<button
-								type="button"
-								className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors"
-								disabled={loading}
-							>
-								<span className="material-symbols-outlined !text-[20px]">
-									pending_actions
-								</span>
-							</button>
 						</div>
 						<button
 							type="button"
 							onClick={handlePost}
 							disabled={(!content && mediaItems.length === 0) || loading}
-							className={`bg-black px-4 py-1.5 text-white font-bold rounded-full text-[15px] transition-opacity ${(!content && mediaItems.length === 0) || loading ? "opacity-50 cursor-not-allowed" : "opacity-100 hover:bg-primary-dark"}`}
+							className={`bg-black px-8 py-2 text-white font-bold rounded-full text-[15px] transition-opacity ${(!content && mediaItems.length === 0) || loading ? "opacity-35 cursor-not-allowed" : "opacity-100 hover:bg-primary-dark cursor-pointer"}`}
 						>
 							{loading ? "Posting..." : "Post"}
 						</button>

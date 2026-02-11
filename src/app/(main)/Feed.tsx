@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { PostCard, type PostProps } from "@/components/feed/PostCard";
 import { PostComposer } from "@/components/feed/PostComposer";
+import { getFeedAction } from "@/lib/feed.actions";
 
 export default function UserFeed() {
 	const [uploadStatus, setUploadStatus] = useState<
@@ -19,7 +20,7 @@ export default function UserFeed() {
 
 	const fetchFeed = async () => {
 		try {
-			const { getFeedAction } = await import("@/lib/feed.actions");
+			console.log("CALLING FETCH FEED");
 			const result = await getFeedAction(page);
 
 			if (result.success && result.data) {
@@ -27,6 +28,7 @@ export default function UserFeed() {
 				const mappedPosts: PostProps[] = apiPosts.map((post: any) => ({
 					id: post._id,
 					author: {
+						id: post.author._id,
 						name:
 							post.author.firstName && post.author.lastName
 								? `${post.author.firstName} ${post.author.lastName}`
@@ -98,7 +100,7 @@ export default function UserFeed() {
 						)}
 					</div>
 				)}
-				<div className="flex">
+				{/* <div className="flex">
 					<button
 						type="button"
 						className="flex-1 px-4 py-4 hover:bg-hover-gray transition-colors relative"
@@ -114,7 +116,7 @@ export default function UserFeed() {
 							Following
 						</span>
 					</button>
-				</div>
+				</div> */}
 			</header>
 			{/* <StoryRail /> */}
 			<PostComposer
@@ -129,7 +131,7 @@ export default function UserFeed() {
 					<div className="p-4 text-center text-gray-500">Loading posts...</div>
 				)}
 				{!loading && posts.length === 0 && (
-					<div className="p-8 text-center text-gray-500">
+					<div className="p-8 text-center text-gray-500 font-semibold text-sm">
 						No posts found. Follow some users to see their updates!
 					</div>
 				)}

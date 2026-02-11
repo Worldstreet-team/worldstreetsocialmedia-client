@@ -1,40 +1,68 @@
-import { redirect } from "next/navigation";
-import { cookies, headers } from "next/headers";
-import axios from "axios";
-import { BACKEND_URL } from "@/const";
+"use client";
 
-export const TokenVerifier = async () => {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("accessToken")?.value;    
+import { useEffect, useState } from "react";
+import { useSetAtom } from "jotai";
+import { userAtom, User } from "@/store/user.atom";
+import { GlobalLoader } from "@/components/ui/GlobalLoader";
+import { syncUser } from "@/lib/auth.actions";
+import { usePathname, useRouter } from "next/navigation";
 
-    if (!token) return null;
+interface TokenVerifierProps {
+	initialUser?: User | null;
+}
 
-    const headerList = await headers();
-    const pathname =
-        headerList.get("x-pathname") ||
-        headerList.get("referer") ||
-        "";
+export const TokenVerifier = ({ initialUser }: TokenVerifierProps) => {
+	const setUser = useSetAtom(userAtom);
+	const pathname = usePathname();
+	const router = useRouter();
+	const [loading, setLoading] = useState(!initialUser);
 
-    if (pathname.includes("/onboarding")) {
-        return null;
-    }
+	useEffect(() => {
+		if (pathname.includes("/onboarding")) {
+			setLoading(false);
+			return;
+		}
 
-    try {
-        const syncRes = await axios.get(`${BACKEND_URL}/api/users/sync`, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
+		// if (initialUser) {
+		// 	console.log("TokenVerifier: Hydrating from initialUser");
+		// 	setUser(initialUser);
+		// 	setLoading(false);
+		// 	return;
+		// }
 
-        console.log("RES: ", syncRes.data)
-        
-        if (syncRes.data.status === "not_found") {
-            redirect("/onboarding");
-        }
-    } catch (error: any) {
-        if (error?.digest?.startsWith("NEXT_REDIRECT")) { 
-            throw error;
-        }
-        console.error("Sync error:", error);
-    }
+		const verify = async () => {
+			console.log("TokenVerifier: Syncing user...");
+			setLoading(true);
+			try {
+				const data = await syncUser();
 
-    return null;
+				console.log("DATA: ", data);
+
+				if (data?.status === "not_found") {
+					console.log("TokenVerifier: User not found, redirecting...");
+					router.push("/onboarding");
+					return;
+				}
+
+				if (data) {
+					console.log("TokenVerifier: User synced", data);
+					setUser(data.profile);
+				} else {
+					console.log("TokenVerifier: No user data returned");
+				}
+			} catch (err) {
+				console.error("TokenVerifier Error:", err);
+			} finally {
+				setLoading(false);
+			}
+		};
+
+		verify();
+	}, [pathname, router, setUser]);
+
+	if (loading && !pathname.includes("/onboarding")) {
+		return <GlobalLoader />;
+	}
+
+	return null;
 };
