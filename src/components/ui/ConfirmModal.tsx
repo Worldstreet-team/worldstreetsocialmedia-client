@@ -67,7 +67,14 @@ export default function ConfirmModal({
 									{message}
 								</p>
 							</div>
-							<div className="flex flex-col gap-3 p-6 pt-0">
+							<div className="flex flex-row gap-3 p-6 pt-0">
+								<button
+									type="button"
+									onClick={onClose}
+									className="flex-1 py-3 rounded-full font-bold border border-black/10 hover:bg-black/5 transition-colors text-[15px]"
+								>
+									{cancelText}
+								</button>
 								<button
 									type="button"
 									onClick={() => {
@@ -75,7 +82,7 @@ export default function ConfirmModal({
 										onClose();
 									}}
 									className={`
-                                    w-full py-3 rounded-full font-bold transition-colors text-[15px]
+                                    flex-1 py-3 rounded-full font-bold transition-colors text-[15px]
                                     ${
 																			isDestructive
 																				? "bg-red-600 text-white hover:bg-red-700 from-red-500 to-red-600"
@@ -84,13 +91,6 @@ export default function ConfirmModal({
                                 `}
 								>
 									{confirmText}
-								</button>
-								<button
-									type="button"
-									onClick={onClose}
-									className="w-full py-3 rounded-full font-bold border border-black/10 hover:bg-black/5 transition-colors text-[15px]"
-								>
-									{cancelText}
 								</button>
 							</div>
 						</motion.div>

@@ -51,7 +51,7 @@ export function LeftSidebar() {
 				onClose={() => setIsLogoutModalOpen(false)}
 				onConfirm={handleLogout}
 				title="Log out of WorldStreet?"
-				message="You can always log back in at any time. If you just want to switch accounts, you can do that by adding an existing account."
+				message="You can always log back in at any time."
 				confirmText="Log out"
 			/>
 			<div className="py-1 mb-1">
