@@ -412,7 +412,7 @@ export function PostCard({ post }: { post: PostProps }) {
 							<img
 								src={images[0]}
 								alt="Post content"
-								className="w-full h-auto max-h-[600px] object-cover rounded-2xl border border-black/10 cursor-pointer hover:opacity-95 transition-opacity"
+								className="block h-auto w-auto max-w-full max-h-[500px] object-cover rounded-2xl border border-black/10 cursor-pointer hover:opacity-95 transition-all"
 								onClick={(e) => {
 									e.stopPropagation();
 									e.preventDefault();

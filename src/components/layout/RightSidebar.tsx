@@ -40,7 +40,7 @@ export function RightSidebar() {
 
 	return (
 		<aside className="w-[350px] hidden lg:flex flex-col gap-4 p-3 sticky top-0 h-screen overflow-y-auto no-scrollbar">
-			<div className="sticky top-0 bg-white pb-2 z-10">
+			{/* <div className="sticky top-0 bg-white pb-2 z-10">
 				<div className="relative group">
 					<span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-text-light !text-[20px] group-focus-within:text-primary">
 						search
@@ -51,9 +51,11 @@ export function RightSidebar() {
 						type="text"
 					/>
 				</div>
-			</div>
+			</div> */}
 			<section className="bg-[#f7f9fa] rounded-2xl overflow-hidden">
-				<h3 className="text-xl font-extrabold px-4 py-3">What's happening</h3>
+				<h3 className="text-[18px] font-extrabold px-4 py-3">
+					What's happening
+				</h3>
 				<div className="flex flex-col">
 					<div className="px-4 py-3 hover:bg-black/[0.03] transition-colors cursor-pointer">
 						<div className="flex justify-between text-[13px] text-text-light">
@@ -86,7 +88,7 @@ export function RightSidebar() {
 
 			{/* Who to Follow Section */}
 			<section className="bg-[#f7f9fa] rounded-2xl overflow-hidden">
-				<h3 className="text-xl font-extrabold px-4 py-3">Who to follow</h3>
+				<h3 className="text-[18px] font-extrabold px-4 py-3">Who to follow</h3>
 				<div className="flex flex-col">
 					{loading ? (
 						<div className="px-4 py-4 text-center text-text-light text-sm">
@@ -104,18 +106,18 @@ export function RightSidebar() {
 								className="flex items-center gap-3 px-4 py-3 hover:bg-black/[0.03] transition-colors cursor-pointer"
 							>
 								<div
-									className="w-10 h-10 rounded-full bg-cover bg-center shrink-0"
+									className="w-8 h-8 rounded-full bg-cover bg-center shrink-0"
 									style={{
 										backgroundImage: `url('${user.avatar || "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}')`,
 									}}
 								/>
 								<div className="flex flex-col flex-1 min-w-0">
-									<span className="font-bold truncate text-[15px] hover:underline">
+									<span className="font-bold truncate text-[14px] hover:underline">
 										{user.firstName && user.lastName
 											? `${user.firstName} ${user.lastName}`
 											: user.username}
 									</span>
-									<span className="text-text-light text-[15px] truncate">
+									<span className="text-text-light text-[12px] truncate">
 										@{user.username}
 									</span>
 								</div>
