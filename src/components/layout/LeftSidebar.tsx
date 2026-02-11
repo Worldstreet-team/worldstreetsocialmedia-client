@@ -15,7 +15,7 @@ export function LeftSidebar() {
 		<header className="w-[275px] hidden md:flex flex-col sticky top-0 h-screen px-2 overflow-y-auto">
 			<div className="py-1 mb-1">
 				<div className="flex items-center justify-center cursor-pointer transition-colors py-4">
-					<h1 className="text-2xl font-semibold">WorldStreet</h1>
+					<h1 className="text-2xl font-semibold font-cuturila">WorldStreet</h1>
 				</div>
 			</div>
 			<nav className="flex flex-col gap-5">
@@ -43,12 +43,12 @@ export function LeftSidebar() {
                     <span className="text-xl pr-4">More</span>
                 </button> */}
 			</nav>
-			<button
+			{/* <button
 				className="mt-8 cursor-pointer bg-black text-white font-bold py-3.5 rounded-full text-[17px] shadow-sm transition-all mt-4 w-[85%]"
 				type="button"
 			>
 				Post
-			</button>
+			</button> */}
 			<div className="mt-auto mb-4 flex items-center gap-3 p-3 rounded-full nav-item cursor-pointer">
 				<div
 					className="w-10 h-10 rounded-full bg-cover bg-center"

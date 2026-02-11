@@ -200,7 +200,7 @@ export function PostCard({ post }: { post: PostProps }) {
 
 	const handlePostClick = () => {
 		// Navigate to post detail
-		window.location.href = `/post/${post.id}`;
+		router.push(`/post/${post.id}`);
 	};
 
 	if (isDeleted) return null;

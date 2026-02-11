@@ -24,6 +24,11 @@ const sfPro = localFont({
 	variable: "--font-sf",
 });
 
+const cuturila = localFont({
+	src: "../assets/fonts/cuturila/cuturilla.ttf",
+	variable: "--font-cuturila",
+});
+
 export const metadata: Metadata = {
 	title: "World Street - Social Media",
 	description: "This is world street media platform",
@@ -63,7 +68,7 @@ export default async function RootLayout({
 			</head>
 			{/* ADD suppressHydrationWarning HERE */}
 			<body
-				className={`${sfPro.variable} antialiased font-sans`}
+				className={`${sfPro.variable} ${cuturila.variable} antialiased font-sans`}
 				suppressHydrationWarning
 			>
 				<NextTopLoader />

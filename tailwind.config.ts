@@ -18,6 +18,9 @@ const config: Config = {
 				"hover-gray": "#EFF3F4",
 				"text-light": "#536471",
 			},
+			fontFamily: {
+				cuturila: ["var(--font-cuturila)"],
+			},
 			keyframes: {
 				loading: {
 					"0%": { transform: "translateX(-100%) scaleX(0.2)" },
