@@ -59,11 +59,6 @@ const trendingTopics = [
 		posts: "540K posts",
 	},
 	{
-		category: "Entertainment • Trending",
-		title: "#NewMovieRelease",
-		posts: "85K posts",
-	},
-	{
 		category: "Business • Trending",
 		title: "Stock Market Rally",
 		posts: "22K posts",
@@ -74,7 +69,7 @@ export default function ExplorePage() {
 	return (
 		<div className="flex flex-col min-h-screen">
 			{/* Search Header */}
-			<div className="sticky top-0 z-20 bg-white/80 backdrop-blur-md px-4 py-2 border-b border-border-gray">
+			<div className="sticky top-0 z-20 bg-white/80 backdrop-blur-md px-4 py-2 border-b border-black/10">
 				<div className="relative group">
 					<div className="absolute left-3 top-1/2 -translate-y-1/2 text-search-icon group-focus-within:text-primary transition-colors">
 						<SearchIcon
@@ -91,7 +86,7 @@ export default function ExplorePage() {
 			</div>
 
 			{/* Trending Topics */}
-			<div className="py-3 border-b border-border-gray">
+			<div className="py-3 border-b border-black/10">
 				<h2 className="px-4 py-2 text-xl font-extrabold">Trends for you</h2>
 				<div className="flex flex-col">
 					{trendingTopics.map((topic, i) => (
@@ -125,7 +120,7 @@ export default function ExplorePage() {
 
 			{/* Posts Feed for Explore */}
 			<div className="flex flex-col">
-				<h2 className="px-4 py-4 text-xl font-extrabold border-b border-border-gray">
+				<h2 className="px-4 py-4 text-xl font-extrabold border-b border-black/10">
 					Popular Tweets
 				</h2>
 				{mockPosts.map((post) => (

@@ -132,3 +132,45 @@ export async function updateMyProfileAction(formData: FormData) {
 		return { success: false, message: "Something went wrong" };
 	}
 }
+
+export async function getFollowersAction(userId: string) {
+	const accessToken = await getAccessToken();
+	if (!accessToken) return { success: false, message: "Unauthorized" };
+
+	try {
+		const res = await axios.get(`${API_URL}/api/users/${userId}/followers`, {
+			headers: { Authorization: `Bearer ${accessToken}` },
+		});
+		return { success: true, data: res.data.data };
+	} catch (error: any) {
+		console.error(
+			"Get Followers Error:",
+			error.response?.data || error.message,
+		);
+		return {
+			success: false,
+			message: error.response?.data?.message || "Failed to fetch followers",
+		};
+	}
+}
+
+export async function getFollowingAction(userId: string) {
+	const accessToken = await getAccessToken();
+	if (!accessToken) return { success: false, message: "Unauthorized" };
+
+	try {
+		const res = await axios.get(`${API_URL}/api/users/${userId}/following`, {
+			headers: { Authorization: `Bearer ${accessToken}` },
+		});
+		return { success: true, data: res.data.data };
+	} catch (error: any) {
+		console.error(
+			"Get Following Error:",
+			error.response?.data || error.message,
+		);
+		return {
+			success: false,
+			message: error.response?.data?.message || "Failed to fetch following",
+		};
+	}
+}
