@@ -70,10 +70,8 @@ export default function UserProfilePage({
 					id: post._id,
 					author: {
 						id: post.author._id || post.author,
-						name:
-							post.author.firstName && post.author.lastName
-								? `${post.author.firstName} ${post.author.lastName}`
-								: post.author.username || "Unknown",
+						firstName: post.author.firstName || "Unknown",
+						lastName: post.author.lastName || "",
 						username: post.author.username || "unknown",
 						avatar:
 							post.author.avatar ||

@@ -7,7 +7,9 @@ const mockPosts: PostProps[] = [
 	{
 		id: "explore-1",
 		author: {
-			name: "Tech Insider",
+			id: "explore-1",
+			firstName: "Tech",
+			lastName: "Insider",
 			username: "techinsider",
 			avatar:
 				"https://lh3.googleusercontent.com/aida-public/AB6AXuCrp34VmESHTo261MN1Rc3zBWkEtk09VIjrBp8j8OVmuRKK6ceIlRLRVCMVyjwYBU4a87Tz6vikc-Mk2NAh1dx5pzPCgbrva_agHBP3bm7gfy0eJ8ZvwnUFIvuslrOZbbibFsif7CPsuyV5q2IhY26-0HHFkS8qQ1CN3rHz_yThZB0NXZKeT5T0w9tjWuc1akfU15v2RkpkvCKrVbWfjyduXU8Onn7VjgT-gK2mjXoh9-hLe3YL10NQSRntESIK-qU6pd6OI599Py9n",
@@ -25,7 +27,9 @@ const mockPosts: PostProps[] = [
 	{
 		id: "explore-2",
 		author: {
-			name: "Travel Diaries",
+			id: "explore-2",
+			firstName: "Travel",
+			lastName: "Diaries",
 			username: "traveldiaries",
 			avatar:
 				"https://lh3.googleusercontent.com/aida-public/AB6AXuCXdk5dh86NTCbKe4uLLFK5NqhYzhGpxA4AKvVrCW_HKiw-9qxPrPfb9laqZrDl8Lo2e97tBII8c03MKmx2qk0kVMiqVnvpdSPZda5BIs5KPxs0uwVkNA8ciklAYsXYTHEmVVzTOmFeESPrOyBKl4tq8Wt0JAVkLoLq6-nwtSYAMOqgIpMtKivBasXLe2DdhG4CuUANRO0XlW-a6E9NLpobOgevAw5yu-vRVem1WIBOU-XMHrf2j_liJ5z8--zw8cWW0OzCdxfUuwlF",
@@ -93,7 +97,7 @@ export default function ExplorePage() {
 					{trendingTopics.map((topic, i) => (
 						<div
 							key={i}
-							className="px-4 py-3 hover:bg-black/[0.03] transition-colors cursor-pointer flex justify-between items-start"
+							className="px-4 py-3 hover:bg-black/3 transition-colors cursor-pointer flex justify-between items-start"
 						>
 							<div>
 								<div className="text-[13px] text-text-light font-medium">

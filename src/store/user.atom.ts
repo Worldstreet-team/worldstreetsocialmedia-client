@@ -15,6 +15,7 @@ export interface User {
 	bookmarks: string[];
 	followersCount: number;
 	followingCount: number;
+	postsCount: number;
 	isVerified: boolean;
 	onboardingCompleted: boolean;
 }

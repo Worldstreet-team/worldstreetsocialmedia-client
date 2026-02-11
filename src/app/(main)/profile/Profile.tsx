@@ -1,58 +1,60 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PostCard, type PostProps } from "@/components/feed/PostCard";
-import MoreIcon from "@/assets/icons/MoreIcon";
 import { useAtomValue } from "jotai";
 import { userAtom } from "@/store/user.atom";
-
-const userPosts: PostProps[] = [
-	{
-		id: "explore-1",
-		author: {
-			name: "David", // Placeholder, will be updated in component
-			username: "david",
-			avatar:
-				"https://lh3.googleusercontent.com/aida-public/AB6AXuCVh8p3iIVB6V8SmlrlYhTYWcYKtbi1qAwIQl3p699QnBtz2ery9QBZekmokbzjOXzYF5frjM8R7ARMtmQB6nxSZi64f7NerLQ7qGEcIt2yl8HmIOmElLD9vvPsDgz-rHHV64QlGEJ_EV4xpBfyYCx1qBycp3FL959LShnq007ra5467_vkjYyUqisNvZKv3m86lX1dZoj63dTuvEzUFto3QRrPkMAK8WMEZAxi0JbbFowvF9pBwhC7djdOs5EkUd44L02u8cE66tM0",
-			isVerified: true,
-			id: "user-1", // Added ID
-		},
-		timestamp: "5h",
-		content: "Just deployed the new feature! 🚀 #coding #webdev",
-		images: [
-			"https://lh3.googleusercontent.com/aida-public/AB6AXuDd-evzsvivS30hlWWhs8NK4GS34z0MFLA5ys1E3Xi1Ze3ANPr33B0eo21EVy-ojF_5DOaAZE0B3oFNEkrr_Mg7yUw5MjBFBPl9K0FqUaqfg7kRqt7THyQOFiT-26kEOsmd3DLbSysRcKBwH-ceObCR6X9heUYmSw5DotEK-maSeeV0OdOCRtH8RLjgLjOwwYcT5GKk3JH4tOlCxbirUsuCk5Kikl9XBPwJXR8-J_VDkcTSowSNq6G-XXTq53J7jarGjNf4ml9v8hFW",
-		],
-		stats: {
-			replies: 10,
-			reposts: 5,
-			likes: 45,
-		},
-	},
-	{
-		id: "explore-2",
-		author: {
-			name: "David",
-			username: "david",
-			avatar:
-				"https://lh3.googleusercontent.com/aida-public/AB6AXuCVh8p3iIVB6V8SmlrlYhTYWcYKtbi1qAwIQl3p699QnBtz2ery9QBZekmokbzjOXzYF5frjM8R7ARMtmQB6nxSZi64f7NerLQ7qGEcIt2yl8HmIOmElLD9vvPsDgz-rHHV64QlGEJ_EV4xpBfyYCx1qBycp3FL959LShnq007ra5467_vkjYyUqisNvZKv3m86lX1dZoj63dTuvEzUFto3QRrPkMAK8WMEZAxi0JbbFowvF9pBwhC7djdOs5EkUd44L02u8cE66tM0",
-			isVerified: true,
-			id: "user-1",
-		},
-		timestamp: "1d",
-		content: "Learning new things every day.",
-		stats: {
-			replies: 2,
-			reposts: 1,
-			likes: 20,
-		},
-	},
-];
+import { getUserFeedAction } from "@/lib/feed.actions";
 
 export default function ProfilePage() {
 	const user = useAtomValue(userAtom);
 	const [activeTab, setActiveTab] = useState<"posts" | "media" | "likes">(
 		"posts",
 	);
+	const [feedPosts, setFeedPosts] = useState<PostProps[]>([]);
+	const [loadingFeed, setLoadingFeed] = useState(false);
+
+	const fullName = user
+		? user.firstName && user.lastName
+			? `${user.firstName} ${user.lastName}`
+			: user.username
+		: "";
+
+	useEffect(() => {
+		const fetchFeed = async () => {
+			if (!user?._id) return;
+			setLoadingFeed(true);
+			const result = await getUserFeedAction(user._id, activeTab);
+
+			console.log("RESULT: ", result);
+
+			if (result.success && Array.isArray(result.data)) {
+				const mappedPosts: PostProps[] = result.data.map((post: any) => ({
+					id: post._id,
+					author: {
+						id: post.author._id || post.author,
+						firstName: post.author.firstName || "Unknown",
+						lastName: post.author.lastName || "",
+						username: post.author.username || "unknown",
+						avatar:
+							post.author.avatar ||
+							"https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png",
+						isVerified: post.author.isVerified || false,
+					},
+					content: post.content,
+					timestamp: new Date(post.createdAt).toLocaleDateString(),
+					images: post.images,
+					stats: post.stats || { replies: 0, reposts: 0, likes: 0 },
+				}));
+				setFeedPosts(mappedPosts);
+			} else {
+				setFeedPosts([]);
+			}
+			setLoadingFeed(false);
+		};
+
+		fetchFeed();
+	}, [user?._id, activeTab]);
 
 	if (!user) {
 		return (
@@ -61,24 +63,6 @@ export default function ProfilePage() {
 			</div>
 		);
 	}
-
-	const fullName =
-		user.firstName && user.lastName
-			? `${user.firstName} ${user.lastName}`
-			: user.username;
-
-	// Enhance mock posts with real user data for consistent "Own Post" behavior
-	const displayingPosts = userPosts.map((post) => ({
-		...post,
-		author: {
-			...post.author,
-			id: user._id,
-			name: fullName,
-			username: user.username,
-			avatar: user.avatar,
-			isVerified: user.isVerified,
-		},
-	}));
 
 	return (
 		<div className="flex flex-col min-h-screen">
@@ -94,7 +78,9 @@ export default function ProfilePage() {
 				</button>
 				<div className="flex flex-col">
 					<h1 className="text-lg font-bold leading-5">{fullName}</h1>
-					<span className="text-[12px] text-text-light">25 Posts</span>
+					<span className="text-[12px] text-text-light">
+						{user.postsCount || 0} Posts
+					</span>
 				</div>
 			</header>
 
@@ -120,19 +106,7 @@ export default function ProfilePage() {
 			{/* Profile Actions */}
 			<div className="flex justify-end px-4 py-3 gap-2 mt-2">
 				<button
-					className="w-9 h-9 border border-border-gray rounded-full flex items-center justify-center hover:bg-black/3 transition-colors cursor-pointer"
-					type="button"
-				>
-					<MoreIcon />
-				</button>
-				<button
-					className="w-9 h-9 border border-border-gray rounded-full flex items-center justify-center hover:bg-black/3 transition-colors cursor-pointer"
-					type="button"
-				>
-					<span className="material-symbols-outlined text-[20px]">mail</span>
-				</button>
-				<button
-					className="border border-border-gray rounded-full px-4 font-bold hover:bg-black/3 transition-colors text-[15px] cursor-pointer"
+					className="border border-black/20 rounded-full px-6 h-10  font-bold hover:bg-black/3 transition-colors text-[15px] cursor-pointer"
 					type="button"
 				>
 					Edit profile
@@ -221,18 +195,20 @@ export default function ProfilePage() {
 
 			{/* Content Feed */}
 			<div className="flex flex-col">
-				{activeTab === "posts" ? (
-					displayingPosts.map((post) => <PostCard key={post.id} post={post} />)
+				{loadingFeed ? (
+					<div className="p-8 text-center text-text-light">Loading feed...</div>
+				) : feedPosts.length > 0 ? (
+					feedPosts.map((post) => <PostCard key={post.id} post={post} />)
 				) : (
 					<div className="p-12 text-center">
 						<h2 className="text-xl font-bold mb-2 wrap-break-word">
-							@
+							you
 							{activeTab === "likes"
-								? `${user.username} haven't liked any tweets`
-								: `${user.username} hasn't posted any ${activeTab} yet`}
+								? ` haven't liked any items`
+								: ` haven't made any ${activeTab} yet`}
 						</h2>
 						<p className="text-text-light text-sm tracking-tight">
-							When they do, they will show up here.
+							When you do, they will show up here.
 						</p>
 					</div>
 				)}
