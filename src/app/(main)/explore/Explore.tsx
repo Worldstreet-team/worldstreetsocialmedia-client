@@ -92,9 +92,11 @@ export default function ExplorePage() {
 						</div>
 					)}
 				</div>
-				<div className="px-4 py-3 text-primary text-[15px] hover:bg-black/5 cursor-pointer transition-colors text-left">
-					Show more
-				</div>
+				{trends.length !== 0 && (
+					<div className="px-4 py-3 text-primary text-[15px] hover:bg-black/5 cursor-pointer transition-colors text-left">
+						Show more
+					</div>
+				)}
 			</div>
 
 			{/* Posts Feed for Explore */}

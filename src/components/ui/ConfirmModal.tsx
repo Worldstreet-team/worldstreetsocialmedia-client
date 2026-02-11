@@ -1,6 +1,8 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 interface ConfirmModalProps {
 	isOpen: boolean;
@@ -23,7 +25,23 @@ export default function ConfirmModal({
 	cancelText = "Cancel",
 	isDestructive = false,
 }: ConfirmModalProps) {
-	return (
+	const [mounted, setMounted] = useState(false);
+
+	useEffect(() => {
+		setMounted(true);
+		if (isOpen) {
+			document.body.style.overflow = "hidden";
+		} else {
+			document.body.style.overflow = "unset";
+		}
+		return () => {
+			document.body.style.overflow = "unset";
+		};
+	}, [isOpen]);
+
+	if (!mounted) return null;
+
+	return createPortal(
 		<AnimatePresence>
 			{isOpen && (
 				<div
@@ -45,7 +63,7 @@ export default function ConfirmModal({
 						animate={{ opacity: 1, scale: 1, y: 0 }}
 						exit={{ opacity: 0, scale: 0.95, y: 10 }}
 						onClick={(e) => e.stopPropagation()}
-						className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden"
+						className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden z-[10000]"
 					>
 						<div className="p-6">
 							<h3 className="text-xl font-bold mb-2">{title}</h3>
@@ -82,6 +100,7 @@ export default function ConfirmModal({
 					</motion.div>
 				</div>
 			)}
-		</AnimatePresence>
+		</AnimatePresence>,
+		document.body,
 	);
 }

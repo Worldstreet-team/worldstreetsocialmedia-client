@@ -215,17 +215,7 @@ export function PostCard({ post }: { post: PostProps }) {
 
 	return (
 		// biome-ignore lint/a11y/useSemanticElements: Card is complex and contains other interactive elements
-		<div
-			className="p-4 border-b border-black/10 cursor-pointer transition-colors relative hover:bg-black/5"
-			onClick={handlePostClick}
-			onKeyDown={(e) => {
-				if (e.key === "Enter" || e.key === " ") {
-					handlePostClick();
-				}
-			}}
-			role="button"
-			tabIndex={0}
-		>
+		<div className="p-4 border-b border-black/10 cursor-pointer transition-colors relative hover:bg-black/5">
 			<ConfirmModal
 				isOpen={isDeleteModalOpen}
 				onClose={() => setIsDeleteModalOpen(false)}
@@ -245,7 +235,7 @@ export function PostCard({ post }: { post: PostProps }) {
 
 			<article className="flex gap-3">
 				<div
-					className="w-10 h-10 rounded-full bg-cover bg-center shrink-0"
+					className="w-10 h-10 rounded-full bg-cover bg-center shrink-0 relative z-10"
 					style={{ backgroundImage: `url('${post.author.avatar}')` }}
 				/>
 				<div className="flex-1 min-w-0">
@@ -253,7 +243,7 @@ export function PostCard({ post }: { post: PostProps }) {
 						<Link
 							href={`/profile/${post.author.username}`}
 							onClick={(e) => e.stopPropagation()}
-							className="font-bold hover:underline text-inherit decoration-inherit"
+							className="font-bold hover:underline text-inherit decoration-inherit relative z-10"
 						>
 							{post.author.name ||
 								(post.author.firstName && post.author.lastName
@@ -272,7 +262,7 @@ export function PostCard({ post }: { post: PostProps }) {
 									e.stopPropagation();
 									setIsMenuOpen(!isMenuOpen);
 								}}
-								className="text-text-light hover:text-primary hover:bg-primary/10 rounded-full p-1 hover:bg-black/5 transition-all ease-in-out duration-300 cursor-pointer border-black/10 border-[0.5px]"
+								className="text-text-light hover:text-primary hover:bg-primary/10 rounded-full p-1 hover:bg-black/5 transition-all ease-in-out duration-300 cursor-pointer border-black/10 border-[0.5px] relative z-10"
 							>
 								<EllipsisIcon />
 							</button>
@@ -414,7 +404,7 @@ export function PostCard({ post }: { post: PostProps }) {
 							<img
 								src={images[0]}
 								alt="Post content"
-								className="block h-auto w-auto max-w-full max-h-[500px] object-cover rounded-2xl border border-black/10 cursor-pointer hover:opacity-95 transition-all"
+								className="block h-auto w-auto max-w-full max-h-[500px] object-cover rounded-2xl border border-black/10 cursor-pointer hover:opacity-95 transition-all relative z-10"
 								onClick={(e) => {
 									e.stopPropagation();
 									e.preventDefault();
@@ -433,7 +423,7 @@ export function PostCard({ post }: { post: PostProps }) {
 								<button
 									key={src}
 									type="button"
-									className={`relative w-full h-full bg-cover bg-center ${getImageStyle(index, images.length)} cursor-pointer outline-none focus:opacity-80 transition-opacity`}
+									className={`relative z-10 w-full h-full bg-cover bg-center ${getImageStyle(index, images.length)} cursor-pointer outline-none focus:opacity-80 transition-opacity`}
 									style={{ backgroundImage: `url('${src}')` }}
 									onClick={(e) => {
 										e.stopPropagation();
@@ -451,7 +441,7 @@ export function PostCard({ post }: { post: PostProps }) {
 							<video
 								src={post.videos[0]}
 								controls
-								className="w-full h-full object-contain"
+								className="w-full h-full object-contain relative z-10"
 								controlsList="nodownload"
 								poster={post.images?.[0]} // Optional: use first image as poster if available
 								onClick={(e) => e.stopPropagation()}
@@ -462,7 +452,7 @@ export function PostCard({ post }: { post: PostProps }) {
 					<div className="flex items-center justify-between text-text-light max-w-md mt-2">
 						<button
 							type="button"
-							className="flex items-center gap-1 group cursor-pointer bg-transparent border-none outline-none p-0"
+							className="flex items-center gap-1 group cursor-pointer bg-transparent border-none outline-none p-0 relative z-10"
 							onClick={(e) => e.stopPropagation()}
 						>
 							<div className="p-2 group-hover:bg-primary/10 group-hover:text-primary rounded-full transition-colors">
@@ -485,7 +475,7 @@ export function PostCard({ post }: { post: PostProps }) {
 							</span>
 						</button> */}
 						<motion.button
-							className="flex items-center gap-1 group"
+							className="flex items-center gap-1 group relative z-10"
 							onClick={handleLike}
 							whileTap={{ scale: 0.8 }}
 						>
@@ -512,7 +502,7 @@ export function PostCard({ post }: { post: PostProps }) {
 							</span>
 						</motion.button>
 						<motion.button
-							className="flex items-center gap-1 group"
+							className="flex items-center gap-1 group relative z-10"
 							onClick={handleBookmark}
 							whileTap={{ scale: 0.8 }}
 						>
@@ -536,6 +526,11 @@ export function PostCard({ post }: { post: PostProps }) {
 					</div>
 				</div>
 			</article>
+			<Link
+				href={`/post/${post.id}`}
+				className="absolute inset-0 z-0"
+				aria-label="View post"
+			/>
 		</div>
 	);
 }
