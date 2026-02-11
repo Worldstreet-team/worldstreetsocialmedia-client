@@ -107,24 +107,35 @@ export function PostCard({ post }: { post: PostProps }) {
 		const newIsBookmarked = !isBookmarked;
 		setIsBookmarked(newIsBookmarked);
 
-		// Also update global user atom so other instances reflect change if needed (though local state takes precedence)
-		if (newIsBookmarked) {
-			setUser((prev) =>
-				prev
-					? { ...prev, bookmarks: [...(prev.bookmarks || []), post.id] }
-					: null,
-			);
-			await bookmarkPostAction(post.id);
-		} else {
-			setUser((prev) =>
-				prev
-					? {
-							...prev,
-							bookmarks: (prev.bookmarks || []).filter((id) => id !== post.id),
-						}
-					: null,
-			);
-			await unbookmarkPostAction(post.id);
+		try {
+			// Also update global user atom so other instances reflect change if needed (though local state takes precedence)
+			if (newIsBookmarked) {
+				setUser((prev) =>
+					prev
+						? { ...prev, bookmarks: [...(prev.bookmarks || []), post.id] }
+						: null,
+				);
+				await bookmarkPostAction(post.id);
+				showToast("Post added to your bookmarks", { type: "success" });
+			} else {
+				setUser((prev) =>
+					prev
+						? {
+								...prev,
+								bookmarks: (prev.bookmarks || []).filter(
+									(id) => id !== post.id,
+								),
+							}
+						: null,
+				);
+				await unbookmarkPostAction(post.id);
+				showToast("Post removed from your bookmarks", { type: "success" });
+			}
+		} catch (error) {
+			console.error("Bookmark Error:", error);
+			// Revert optimistic update
+			setIsBookmarked(!newIsBookmarked);
+			showToast("Failed to update bookmark", { type: "error" });
 		}
 	};
 
