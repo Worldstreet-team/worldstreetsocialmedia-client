@@ -41,6 +41,10 @@ export default function UserProfilePage({
 	const [isFollowing, setIsFollowing] = useState(false);
 	const [followersCount, setFollowersCount] = useState(0);
 	const [followLoading, setFollowLoading] = useState(false);
+	const [isFollowsModalOpen, setIsFollowsModalOpen] = useState(false);
+	const [followsInitialTab, setFollowsInitialTab] = useState<
+		"followers" | "following"
+	>("followers");
 
 	const isMe = currentUser?.userId === profileUser?.userId;
 
@@ -264,9 +268,7 @@ export default function UserProfilePage({
 						@{profileUser.username}
 					</div>
 				</div>
-
 				<div className="text-[15px]">{profileUser.bio || "No bio yet."}</div>
-
 				<div className="flex gap-4 text-text-light text-[15px] flex-wrap mt-2">
 					{profileUser.location && (
 						<div className="flex items-center gap-1">
@@ -308,63 +310,47 @@ export default function UserProfilePage({
 						</span>
 					</div>
 				</div>
-
-	const [isFollowsModalOpen, setIsFollowsModalOpen] = useState(false);
-	const [followsInitialTab, setFollowsInitialTab] = useState<
-		"followers" | "following"
-	>("followers");
-
-
-	// ... existing code
-
-    return (
-        // ... existing JSX
-        	{isEditProfileOpen && currentUser && (
-				<EditProfileModal
-					user={currentUser}
-					onClose={() => setIsEditProfileOpen(false)}
-				/>
-			)}
-            {profileUser && (
-                <FollowsModal 
-                    isOpen={isFollowsModalOpen}
-                    onClose={() => setIsFollowsModalOpen(false)}
-                    userId={profileUser.userId || profileUser._id} 
-                    initialTab={followsInitialTab}
-                />
-            )}
-            
-            // ...
-            
+				{isEditProfileOpen && currentUser && (
+					<EditProfileModal
+						user={currentUser}
+						onClose={() => setIsEditProfileOpen(false)}
+					/>
+				)}
+				{profileUser && (
+					<FollowsModal
+						isOpen={isFollowsModalOpen}
+						onClose={() => setIsFollowsModalOpen(false)}
+						userId={profileUser.userId || profileUser._id}
+						initialTab={followsInitialTab}
+					/>
+				)}
 				<div className="flex gap-5 text-[15px]">
-					<button 
-                        type="button"
-                        className="hover:underline cursor-pointer bg-transparent border-none p-0"
-                        onClick={() => {
-                            setFollowsInitialTab("following");
-                            setIsFollowsModalOpen(true);
-                        }}
-                    >
+					<button
+						type="button"
+						className="hover:underline cursor-pointer bg-transparent border-none p-0"
+						onClick={() => {
+							setFollowsInitialTab("following");
+							setIsFollowsModalOpen(true);
+						}}
+					>
 						<span className="font-bold text-black">
 							{profileUser.followingCount}
 						</span>{" "}
 						<span className="text-text-light">Following</span>
 					</button>
-					<button 
-                        type="button"
-                        className="hover:underline cursor-pointer bg-transparent border-none p-0"
-                        onClick={() => {
-                            setFollowsInitialTab("followers");
-                            setIsFollowsModalOpen(true);
-                        }}
-                    >
+					<button
+						type="button"
+						className="hover:underline cursor-pointer bg-transparent border-none p-0"
+						onClick={() => {
+							setFollowsInitialTab("followers");
+							setIsFollowsModalOpen(true);
+						}}
+					>
 						<span className="font-bold text-black">{followersCount}</span>{" "}
 						<span className="text-text-light">Followers</span>
 					</button>
 				</div>
-        //...
-    )
-
+				//... )
 			</div>
 
 			{/* Tabs */}

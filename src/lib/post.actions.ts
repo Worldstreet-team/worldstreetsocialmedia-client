@@ -210,3 +210,21 @@ export async function deletePostAction(postId: string) {
 		return { success: false, message: "Failed to delete post" };
 	}
 }
+
+export async function getExploreDataAction() {
+	const accessToken = await getAccessToken();
+	if (!accessToken) return { success: false, message: "Unauthorized" };
+
+	try {
+		const res = await axios.get(`${API_URL}/api/posts/explore`, {
+			headers: { Authorization: `Bearer ${accessToken}` },
+		});
+		return { success: true, data: res.data };
+	} catch (error: any) {
+		console.error(
+			"Get Explore Data Error:",
+			error.response?.data || error.message,
+		);
+		return { success: false, message: "Failed to fetch explore data" };
+	}
+}
