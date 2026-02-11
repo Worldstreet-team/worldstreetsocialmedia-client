@@ -26,18 +26,25 @@ export default function ConfirmModal({
 	return (
 		<AnimatePresence>
 			{isOpen && (
-				<div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+				<div
+					className="fixed inset-0 z-50 flex items-center justify-center px-4"
+					onClick={(e) => e.stopPropagation()}
+				>
 					<motion.div
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
-						onClick={onClose}
+						onClick={(e) => {
+							e.stopPropagation();
+							onClose();
+						}}
 						className="absolute inset-0 bg-black/40 backdrop-blur-sm"
 					/>
 					<motion.div
 						initial={{ opacity: 0, scale: 0.95, y: 10 }}
 						animate={{ opacity: 1, scale: 1, y: 0 }}
 						exit={{ opacity: 0, scale: 0.95, y: 10 }}
+						onClick={(e) => e.stopPropagation()}
 						className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden"
 					>
 						<div className="p-6">

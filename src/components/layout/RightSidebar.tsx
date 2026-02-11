@@ -151,29 +151,37 @@ export function RightSidebar() {
 					</button> */}
 				</div>
 			</section>
-			<footer className="flex flex-wrap gap-x-3 gap-y-1 px-4 py-2 text-[13px] text-text-light">
-				<a
-					className="hover:underline"
-					href="https://social.worldstreetgold.com/"
-				>
-					World street gold
-				</a>
-				<a
-					className="hover:underline"
-					href="https://academy.worldstreetgold.com/"
-				>
-					Academy
-				</a>
-				<a className="hover:underline" href="https://shop.worldstreetgold.com/">
-					Shop
-				</a>
-				<a
-					className="hover:underline"
-					href="https://xtreme.worldstreetgold.com/"
-				>
-					XTreme
-				</a>
-				<span>© 2026 World Street Group.</span>
+			<footer className="flex flex-col gap-y-3 px-6 py-8 text-[14px] text-zinc-500 w-fit">
+				<nav className="flex flex-col gap-y-2">
+					<a
+						href="https://social.worldstreetgold.com/"
+						className="hover:text-zinc-900 transition-colors duration-200"
+					>
+						World Street Gold
+					</a>
+					<a
+						href="https://academy.worldstreetgold.com/"
+						className="hover:text-zinc-900 transition-colors duration-200"
+					>
+						Academy
+					</a>
+					<a
+						href="https://shop.worldstreetgold.com/"
+						className="hover:text-zinc-900 transition-colors duration-200"
+					>
+						Shop
+					</a>
+					<a
+						href="https://xtreme.worldstreetgold.com/"
+						className="hover:text-zinc-900 transition-colors duration-200"
+					>
+						XTreme
+					</a>
+				</nav>
+
+				<div className="mt-4 pt-4 border-t border-zinc-100 text-[12px] text-zinc-400">
+					© 2026 World Street Group
+				</div>
 			</footer>
 		</aside>
 	);
