@@ -15,7 +15,7 @@ export function LeftSidebar() {
 		<header className="w-[275px] hidden md:flex flex-col sticky top-0 h-screen px-2 overflow-y-auto">
 			<div className="py-1 px-3 mb-1">
 				<div className="flex items-center justify-center hover:bg-blue-50 rounded-full cursor-pointer transition-colors">
-					<h1 className="text-xl">WorldStreet</h1>
+					<h1 className="text-xl font-semibold">WorldStreet</h1>
 				</div>
 			</div>
 			<nav className="flex flex-col gap-5">
