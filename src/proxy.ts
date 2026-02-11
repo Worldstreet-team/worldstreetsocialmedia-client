@@ -1,82 +1,70 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { REFRESH_TOKEN } from "./const";
-import { getAccessToken } from "./lib/auth.actions";
+import { getAccessToken, getRefreshToken } from "./lib/auth.actions";
 
 export async function proxy(request: NextRequest) {
-	const accessToken = await getAccessToken();
-	const refreshToken =
-		request.cookies.get("refreshToken")?.value || REFRESH_TOKEN;
-	const loginUrl =
-		"https://www.worldstreetgold.com/login?redirect=https://social.worldstreetgold.com";
+    const { pathname, href } = request.nextUrl;
+    
+    // Create a dynamic login URL that remembers where the user wanted to go
+    const loginUrl = new URL("https://www.worldstreetgold.com/login");
+    loginUrl.searchParams.set("redirect", href);
 
-	// 1. If no access token, go to login
-	if (!accessToken) {
-		return NextResponse.redirect(loginUrl);
-	}
+    // 1. Get tokens from cookies
+    const accessToken = await getAccessToken();
+    const refreshToken = await getRefreshToken();
 
-	try {
-		// 2. Try to verify the token
-		const verifyRes = await fetch(
-			`https://api.worldstreetgold.com/api/auth/verify`,
-			{
-				headers: { Authorization: `Bearer ${accessToken}` },
-			},
-		);
+    // 2. If no access token, check if we can refresh immediately, otherwise login
+    if (!accessToken && !refreshToken) {
+        return NextResponse.redirect(loginUrl);
+    }
 
-		if (verifyRes.status === 401 && refreshToken) {
-			// 3. Token expired, try to refresh
-			const refreshRes = await fetch(
-				"https://api.worldstreetgold.com/api/auth/refresh-token",
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ refreshToken }),
-				},
-			);
+    try {
+        // 3. Verify the token with Central Auth
+        const verifyRes = await fetch("https://api.worldstreetgold.com/api/auth/verify", {
+            headers: { Authorization: `Bearer ${accessToken}` },
+        });
 
-			const refreshData = await refreshRes.json();
+        // 4. Handle Expired Token
+        if (verifyRes.status === 401 && refreshToken) {
+            const refreshRes = await fetch("https://api.worldstreetgold.com/api/auth/refresh-token", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ refreshToken }),
+            });
 
-			if (refreshData.success && refreshData.data?.tokens) {
-				const newTokens = refreshData.data.tokens;
-				const response = NextResponse.next();
+            const refreshData = await refreshRes.json();
 
-				// 4. SET THE COOKIES (Allowed here!)
-				response.cookies.set("accessToken", newTokens.accessToken, {
-					httpOnly: true,
-					secure: true,
-				});
-				response.cookies.set("refreshToken", newTokens.refreshToken, {
-					httpOnly: true,
-					secure: true,
-				});
+            if (refreshData.success) {
+                const response = NextResponse.next();
+                // Ensure cookies are set for the ENTIRE domain
+                const cookieOptions = { httpOnly: true, secure: true, domain: ".worldstreetgold.com", path: "/" };
+                
+                response.cookies.set("accessToken", refreshData.data.tokens.accessToken, cookieOptions);
+                response.cookies.set("refreshToken", refreshData.data.tokens.refreshToken, cookieOptions);
+                return response;
+            }
+        }
 
-				console.log("HERE oooo");
+        console.log("VRRRR: ", verifyRes)
 
-				return response;
-			} else {
-				return NextResponse.redirect(loginUrl);
-			}
-		} else {
-			console.log("HIT THE ELSE");
+		// 5. Handle Valid Token
+		if (verifyRes.ok) {
 			const data = await verifyRes.json();
-			const response = NextResponse.next();
 			if (data.success) {
-				console.log("DATA INIT: ", data);
+				const response = NextResponse.next();
+				// Pass user data to the app via headers
 				response.headers.set("x-user-data", JSON.stringify(data.data.user));
 				return response;
 			}
-			return;
 		}
-	} catch (error) {
-		console.log("ERROR: ", error);
-		return NextResponse.redirect(loginUrl);
-	}
 
-	// return NextResponse.next();
+		return NextResponse.redirect(loginUrl);
+    } catch (error) {
+        return NextResponse.redirect(loginUrl);
+    }
 }
 
-// Limit middleware to specific paths so it doesn't run on images/assets
 export const config = {
-	matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+    matcher: ["/((?!api|_next/static|_next/image|favicon.ico|login|onboarding).*)"],
 };

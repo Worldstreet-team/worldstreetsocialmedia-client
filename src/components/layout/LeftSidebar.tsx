@@ -3,6 +3,7 @@
 import { sidebarList } from "@/app/data/sidebarlist";
 import { userAtom } from "@/store/user.atom";
 import { useAtomValue } from "jotai";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -14,9 +15,7 @@ export function LeftSidebar() {
 		<header className="w-[275px] hidden md:flex flex-col sticky top-0 h-screen px-2 overflow-y-auto">
 			<div className="py-1 px-3 mb-1">
 				<div className="w-12 h-12 flex items-center justify-center hover:bg-blue-50 rounded-full cursor-pointer transition-colors">
-					{/* <span className="material-symbols-outlined text-primary text-3xl filled-icon">
-						flutter_dash
-					</span> */}
+					<Image src={require("@/assets/images/logo.jpeg")} alt="logo" width={48} height={48} className="rounded-full object-center object-cover h-12 w-12" />
 				</div>
 			</div>
 			<nav className="flex flex-col gap-5">

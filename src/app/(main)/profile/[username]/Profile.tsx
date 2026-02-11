@@ -12,6 +12,7 @@ import { useAtomValue } from "jotai";
 import { userAtom } from "@/store/user.atom";
 import { useRouter } from "next/navigation";
 import { startConversationAction } from "@/lib/conversation.actions";
+import EditProfileModal from "@/components/profile/EditProfileModal";
 
 export default function UserProfilePage({
 	params,
@@ -25,6 +26,7 @@ export default function UserProfilePage({
 	const [profileUser, setProfileUser] = useState<any>(null);
 	const [loadingProfile, setLoadingProfile] = useState(true);
 	const [notFound, setNotFound] = useState(false);
+	const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
 	const [activeTab, setActiveTab] = useState<"posts" | "media" | "likes">(
 		"posts",
@@ -36,6 +38,15 @@ export default function UserProfilePage({
 	const [isFollowing, setIsFollowing] = useState(false);
 	const [followersCount, setFollowersCount] = useState(0);
 	const [followLoading, setFollowLoading] = useState(false);
+
+	const isMe = currentUser?.userId === profileUser?.userId;
+
+	// Sync profileUser with currentUser if isMe (after edit)
+	useEffect(() => {
+		if (isMe && currentUser) {
+			setProfileUser((prev: any) => ({ ...prev, ...currentUser }));
+		}
+	}, [currentUser, isMe]);
 
 	// Fetch Profile
 	useEffect(() => {
@@ -82,6 +93,8 @@ export default function UserProfilePage({
 					timestamp: new Date(post.createdAt).toLocaleDateString(),
 					images: post.images,
 					stats: post.stats || { replies: 0, reposts: 0, likes: 0 },
+					isLiked: post.isLiked,
+					isBookmarked: post.isBookmarked,
 				}));
 				setFeedPosts(mappedPosts);
 			} else {
@@ -149,10 +162,16 @@ export default function UserProfilePage({
 			? `${profileUser.firstName} ${profileUser.lastName}`
 			: profileUser.username;
 
-	const isMe = currentUser?.userId === profileUser.userId;
+
 
 	return (
 		<div className="flex flex-col min-h-screen">
+			{isEditProfileOpen && currentUser && (
+				<EditProfileModal
+					user={currentUser}
+					onClose={() => setIsEditProfileOpen(false)}
+				/>
+			)}
 			<header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-black/5 px-4 py-1 flex items-center gap-6">
 				<button
 					className="rounded-full w-9 h-9 hover:bg-black/10 flex items-center justify-center transition-colors cursor-pointer"
@@ -174,10 +193,11 @@ export default function UserProfilePage({
 			{/* Hero Section */}
 			<div className="relative">
 				<div
-					className="h-[200px] bg-sky-200 w-full"
+					className="h-[200px] w-full bg-cover bg-center bg-no-repeat bg-gray-200"
 					style={{
-						backgroundImage:
-							"linear-gradient(to right, #a18cd1 0%, #fbc2eb 100%)",
+						backgroundImage: profileUser.banner
+							? `url('${profileUser.banner}')`
+							: "linear-gradient(to right, #a18cd1 0%, #fbc2eb 100%)",
 					}}
 				></div>
 				<div className="absolute -bottom-[70px] left-4 border-4 border-white rounded-full">
@@ -213,6 +233,7 @@ export default function UserProfilePage({
 					<button
 						className="border border-black/20 rounded-full px-6 h-10 font-bold hover:bg-black/3 transition-colors text-[15px] cursor-pointer"
 						type="button"
+						onClick={() => setIsEditProfileOpen(true)}
 					>
 						Edit profile
 					</button>
@@ -248,6 +269,42 @@ export default function UserProfilePage({
 				</div>
 
 				<div className="text-[15px]">{profileUser.bio || "No bio yet."}</div>
+
+				<div className="flex gap-4 text-text-light text-[15px] flex-wrap mt-2">
+					{profileUser.location && (
+						<div className="flex items-center gap-1">
+							<span className="material-symbols-outlined text-[18px]">
+								location_on
+							</span>
+							<span>{profileUser.location}</span>
+						</div>
+					)}
+					{profileUser.website && (
+						<div className="flex items-center gap-1">
+							<span className="material-symbols-outlined text-[18px]">
+								link
+							</span>
+							<a
+								href={
+									profileUser.website.startsWith("http")
+										? profileUser.website
+										: `https://${profileUser.website}`
+								}
+								className="text-primary hover:underline"
+								target="_blank"
+								rel="noopener noreferrer"
+							>
+								{profileUser.website.replace(/^https?:\/\//, "")}
+							</a>
+						</div>
+					)}
+					<div className="flex items-center gap-1">
+						<span className="material-symbols-outlined text-[18px]">
+							calendar_month
+						</span>
+						<span>Joined {new Date(profileUser.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+					</div>
+				</div>
 
 				<div className="flex gap-5 text-[15px]">
 					<div className="hover:underline cursor-pointer">

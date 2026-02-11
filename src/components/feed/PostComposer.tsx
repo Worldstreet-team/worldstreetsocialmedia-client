@@ -7,10 +7,13 @@ import ImageIcon from "@/assets/icons/ImageIcon";
 import GifIcon from "@/assets/icons/GifIcon";
 import EmojiIcon from "@/assets/icons/EmojiIcon";
 import NoteIcon from "@/assets/icons/NoteIcon";
+import { useAtomValue } from "jotai";
+import { userAtom } from "@/store/user.atom";
 
 interface MediaItem {
 	url: string;
 	file: File;
+	type: "image" | "video";
 }
 
 interface PostComposerProps {
@@ -22,12 +25,14 @@ export function PostComposer({
 	onPostStart,
 	onPostSuccess,
 }: PostComposerProps) {
+	const user = useAtomValue(userAtom)
 	const [content, setContent] = useState("");
 	const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
 	const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 	const [loading, setLoading] = useState(false);
 
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const videoInputRef = useRef<HTMLInputElement>(null);
 	const emojiPickerRef = useRef<HTMLDivElement>(null);
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -50,19 +55,51 @@ export function PostComposer({
 	const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
 		if (e.target.files) {
 			const files = Array.from(e.target.files);
+			// Filter out if any videos are already selected (assuming mixed media logic or just enforcing limits)
+			// For now, let's allow basic mixing but maybe limit total count.
 			const remainingSlots = 4 - mediaItems.length;
 			const filesToProcess = files.slice(0, remainingSlots);
 
-			const newItems = filesToProcess.map((file) => ({
+			const newItems: MediaItem[] = filesToProcess.map((file) => ({
 				url: URL.createObjectURL(file),
 				file: file,
+				type: "image",
 			}));
 
 			setMediaItems((prev) => [...prev, ...newItems]);
 
-			// Reset input so same file can be selected again if removed
 			if (fileInputRef.current) {
 				fileInputRef.current.value = "";
+			}
+		}
+	};
+
+	const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+		if (e.target.files && e.target.files[0]) {
+			const file = e.target.files[0];
+			
+			// Check if we already have a video or max items
+			const hasVideo = mediaItems.some(item => item.type === "video");
+			if (hasVideo) {
+				alert("Only one video allowed per post");
+				return;
+			}
+            
+            if (mediaItems.length >= 4) {
+                 alert("Max 4 media items allowed");
+                 return;
+            }
+
+			const newItem: MediaItem = {
+				url: URL.createObjectURL(file),
+				file: file,
+				type: "video",
+			};
+
+			setMediaItems((prev) => [...prev, newItem]);
+
+			if (videoInputRef.current) {
+				videoInputRef.current.value = "";
 			}
 		}
 	};
@@ -91,7 +128,11 @@ export function PostComposer({
 		formData.append("content", content);
 
 		mediaItems.forEach((item) => {
-			formData.append("images", item.file);
+			if (item.type === "image") {
+				formData.append("images", item.file);
+			} else if (item.type === "video") {
+				formData.append("video", item.file);
+			}
 		});
 
 		try {
@@ -142,7 +183,7 @@ export function PostComposer({
 					className="w-9 h-9 mt-2 rounded-full bg-cover bg-center shrink-0"
 					style={{
 						backgroundImage:
-							"url('https://lh3.googleusercontent.com/aida-public/AB6AXuDd-evzsvivS30hlWWhs8NK4GS34z0MFLA5ys1E3Xi1Ze3ANPr33B0eo21EVy-ojF_5DOaAZE0B3oFNEkrr_Mg7yUw5MjBFBPl9K0FqUaqfg7kRqt7THyQOFiT-26kEOsmd3DLbSysRcKBwH-ceObCR6X9heUYmSw5DotEK-maSeeV0OdOCRtH8RLjgLjOwwYcT5GKk3JH4tOlCxbirUsuCk5Kikl9XBPwJXR8-J_VDkcTSowSNq6G-XXTq53J7jarGjNf4ml9v8hFW')",
+							`url('${user?.avatar}')`,
 					}}
 				/>
 				<div className="flex-1 flex flex-col relative">
@@ -164,13 +205,24 @@ export function PostComposer({
 							{mediaItems.map((item, index) => (
 								<div
 									key={item.url}
-									className={`relative w-full h-full bg-cover bg-center ${getImageStyle(index, mediaItems.length)}`}
-									style={{ backgroundImage: `url(${item.url})` }}
+									className={`relative w-full h-full bg-black ${getImageStyle(index, mediaItems.length)}`}
 								>
+									{item.type === "video" ? (
+										<video
+											src={item.url}
+											className="w-full h-full object-cover"
+											controls
+										/>
+									) : (
+										<div
+											className="w-full h-full bg-cover bg-center"
+											style={{ backgroundImage: `url(${item.url})` }}
+										/>
+									)}
 									<button
 										type="button"
 										onClick={() => removeImage(index)}
-										className="absolute top-2 right-2 bg-black/70 hover:bg-black/80 text-white rounded-full p-1 transition-colors"
+										className="absolute top-2 right-2 bg-black/70 hover:bg-black/80 text-white rounded-full p-1 transition-colors z-10"
 										disabled={loading}
 									>
 										<span className="material-symbols-outlined text-[18px]!">
@@ -193,6 +245,14 @@ export function PostComposer({
 								onChange={handleImageSelect}
 								disabled={loading}
 							/>
+							<input
+								type="file"
+								ref={videoInputRef}
+								className="hidden"
+								accept="video/*"
+								onChange={handleVideoSelect}
+								disabled={loading}
+							/>
 							<button
 								type="button"
 								onClick={() => fileInputRef.current?.click()}
@@ -205,6 +265,7 @@ export function PostComposer({
 								type="button"
 								className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors cursor-pointer"
 								disabled={loading}
+								onClick={() => videoInputRef.current?.click()}
 							>
 								<GifIcon />
 							</button>

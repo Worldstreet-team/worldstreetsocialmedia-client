@@ -106,3 +106,29 @@ export async function getWhoToFollowAction() {
 		};
 	}
 }
+
+export async function updateMyProfileAction(formData: FormData) {
+	const accessToken = await getAccessToken();
+	if (!accessToken) return { success: false, message: "Unauthorized" };
+
+	try {
+		const res = await fetch(`${API_URL}/api/users/me`, {
+			method: "PUT",
+			headers: {
+				Authorization: `Bearer ${accessToken}`,
+			},
+			body: formData,
+		});
+
+		const data = await res.json();
+
+		if (!res.ok) {
+			return { success: false, message: data.message || "Failed to update" };
+		}
+
+		return { success: true, data };
+	} catch (error: any) {
+		console.error("Update Profile Error:", error);
+		return { success: false, message: "Something went wrong" };
+	}
+}

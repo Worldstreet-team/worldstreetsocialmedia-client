@@ -69,18 +69,38 @@ export async function getMessagesAction(conversationId: string) {
 
 export async function sendMessageAction(
 	conversationId: string,
-	content: string,
-	type: "text" | "image" | "audio" = "text",
-	mediaUrl?: string,
+	content: string | null,
+	type: "text" | "image" | "audio" | "video" | "call" = "text",
+	file?: File | Blob,
 ) {
 	try {
 		const headers = await getAuthHeader();
+		// If file is present, we need to use FormData and NOT set Content-Type header
+		// (browser sets it with boundary for multipart/form-data)
+
+		let body: FormData | string;
+		const requestHeaders: any = {
+			Authorization: headers.Authorization,
+		};
+
+		if (file) {
+			const formData = new FormData();
+			if (content) formData.append("content", content);
+			formData.append("type", type);
+			formData.append("file", file);
+			body = formData;
+			// delete Content-Type to let browser set it
+		} else {
+			requestHeaders["Content-Type"] = "application/json";
+			body = JSON.stringify({ content, type });
+		}
+
 		const res = await fetch(
 			`${API_URL}/api/conversations/${conversationId}/messages`,
 			{
 				method: "POST",
-				headers,
-				body: JSON.stringify({ content, type, mediaUrl }),
+				headers: requestHeaders,
+				body,
 			},
 		);
 

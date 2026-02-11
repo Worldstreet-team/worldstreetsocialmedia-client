@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, use } from "react";
 import { useSocket } from "@/context/SocketContext";
+import { useCall } from "@/context/CallContext";
 import { useAtomValue } from "jotai";
 import { userAtom } from "@/store/user.atom";
 import {
@@ -25,7 +26,8 @@ interface MessageType {
 	sender: UserType;
 	content: string;
 	createdAt: string;
-	type: "text" | "image" | "audio";
+	type: "text" | "image" | "audio" | "video" | "call";
+	mediaUrl?: string; // Add mediaUrl
 	isOptimistic?: boolean;
 }
 
@@ -37,6 +39,7 @@ export default function ChatWindow({
 	const { conversationId } = use(params);
 	const router = useRouter();
 	const { socket } = useSocket();
+	const { startCall } = useCall();
 	const user = useAtomValue(userAtom);
 	const [messages, setMessages] = useState<MessageType[]>([]);
 	const [newMessage, setNewMessage] = useState("");
@@ -45,6 +48,15 @@ export default function ChatWindow({
 		string | null
 	>(null);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
+	
+	// Media & Recording State
+	const [mediaFile, setMediaFile] = useState<File | null>(null);
+	const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+	const [isRecording, setIsRecording] = useState(false);
+	const [recordingTime, setRecordingTime] = useState(0);
+	const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+	const audioChunksRef = useRef<Blob[]>([]);
+	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	// Resolve conversationId/username
 	useEffect(() => {
@@ -116,9 +128,71 @@ export default function ChatWindow({
 		}
 	}, [socket, activeConversationId]);
 
+	// --- Media Helpers ---
+
+	const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+		if (e.target.files && e.target.files[0]) {
+			const file = e.target.files[0];
+			setMediaFile(file);
+			setPreviewUrl(URL.createObjectURL(file));
+		}
+	};
+
+	const startRecording = async () => {
+		try {
+			const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+			const mediaRecorder = new MediaRecorder(stream);
+			mediaRecorderRef.current = mediaRecorder;
+			audioChunksRef.current = [];
+
+			mediaRecorder.ondataavailable = (e) => {
+				if (e.data.size > 0) {
+					audioChunksRef.current.push(e.data);
+				}
+			};
+
+			mediaRecorder.onstop = () => {
+				const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+				const audioFile = new File([audioBlob], "voice_note.webm", {
+					type: "audio/webm",
+				});
+				setMediaFile(audioFile);
+				setPreviewUrl(URL.createObjectURL(audioBlob));
+				stream.getTracks().forEach((track) => track.stop());
+			};
+
+			mediaRecorder.start();
+			setIsRecording(true);
+		} catch (err) {
+			console.error("Error accessing microphone:", err);
+			alert("Could not access microphone");
+		}
+	};
+
+	const stopRecording = () => {
+		if (mediaRecorderRef.current && isRecording) {
+			mediaRecorderRef.current.stop();
+			setIsRecording(false);
+		}
+	};
+
+	const cancelMedia = () => {
+		setMediaFile(null);
+		setPreviewUrl(null);
+		if (fileInputRef.current) fileInputRef.current.value = "";
+	};
+
 	const handleSendMessage = async (e: React.FormEvent) => {
 		e.preventDefault();
-		if (!newMessage.trim() || !activeConversationId) return;
+		if ((!newMessage.trim() && !mediaFile) || !activeConversationId) return;
+
+		// Determine type
+		let type: "text" | "image" | "audio" | "video" = "text";
+		if (mediaFile) {
+			if (mediaFile.type.startsWith("image/")) type = "image";
+			else if (mediaFile.type.startsWith("audio/")) type = "audio";
+			else if (mediaFile.type.startsWith("video/")) type = "video";
+		}
 
 		// Optimistic update
 		const tempId = Date.now().toString();
@@ -132,15 +206,29 @@ export default function ChatWindow({
 			},
 			content: newMessage,
 			createdAt: new Date().toISOString(),
-			type: "text",
+			type,
+			mediaUrl: previewUrl || undefined, // Use preview for optimistic
 			isOptimistic: true,
 		};
 
 		setMessages((prev) => [...prev, optimisticMessage]);
+		
 		const contentToSend = newMessage;
+		const fileToSend = mediaFile; // Capture ref
+		
+		// Reset UI
 		setNewMessage("");
+		setMediaFile(null);
+		setPreviewUrl(null);
+		if (fileInputRef.current) fileInputRef.current.value = "";
 
-		const res = await sendMessageAction(activeConversationId, contentToSend);
+		// Send
+		const res = await sendMessageAction(
+			activeConversationId, 
+			contentToSend, 
+			type, 
+			fileToSend || undefined
+		);
 
 		if (res.success) {
 			setMessages((prev) => prev.map((m) => (m._id === tempId ? res.data : m)));
@@ -162,12 +250,28 @@ export default function ChatWindow({
 			{/* Header */}
 			<div className="px-4 py-3 h-[53px] flex items-center justify-between sticky top-0 bg-white/90 backdrop-blur-sm z-10 border-b border-gray-100">
 				<h1 className="text-lg font-bold">Chat</h1>
-				<button
-					className="material-symbols-outlined text-[22px] text-gray-500 hover:text-black transition-colors"
-					type="button"
-				>
-					info
-				</button>
+				<div className="flex gap-4 items-center">
+					<button
+						className="material-symbols-outlined text-[24px] text-gray-500 hover:text-black transition-colors"
+						type="button"
+						onClick={() => activeConversationId && startCall(activeConversationId, false)}
+					>
+						call
+					</button>
+					<button
+						className="material-symbols-outlined text-[24px] text-gray-500 hover:text-black transition-colors"
+						type="button"
+						onClick={() => activeConversationId && startCall(activeConversationId, true)}
+					>
+						videocam
+					</button>
+					<button
+						className="material-symbols-outlined text-[22px] text-gray-500 hover:text-black transition-colors"
+						type="button"
+					>
+						info
+					</button>
+				</div>
 			</div>
 
 			{/* Messages Area */}
@@ -203,7 +307,35 @@ export default function ChatWindow({
 										: "bg-[#EFF3F4] text-black rounded-bl-sm"
 								} ${!isLastFromUser ? (isMe ? "rounded-br-3xl mb-0.5" : "rounded-bl-3xl mb-0.5") : "mb-2"}`}
 							>
-								<p>{msg.content}</p>
+								{/* Content Rendering */}
+								{msg.type === "text" && <p>{msg.content}</p>}
+								{msg.type === "image" && (
+									<div className="mb-1">
+										<Image
+											src={msg.mediaUrl || ""}
+											alt="Image"
+											width={200}
+											height={200}
+											className="rounded-lg object-cover"
+										/>
+										{msg.content && <p className="mt-1">{msg.content}</p>}
+									</div>
+								)}
+								{msg.type === "video" && (
+									<div className="mb-1">
+										<video
+											src={msg.mediaUrl}
+											controls
+											className="rounded-lg max-w-[240px] max-h-[300px]"
+										/>
+										{msg.content && <p className="mt-1">{msg.content}</p>}
+									</div>
+								)}
+								{msg.type === "audio" && (
+									<div className="min-w-[200px] flex items-center gap-2">
+										<audio src={msg.mediaUrl} controls className="w-full h-8" />
+									</div>
+								)}
 								{/* Tooltip timestamp could act here, but simple one for now */}
 								<span
 									className={`text-[10px] absolute -bottom-4 ${isMe ? "right-1 text-gray-400" : "left-1 text-gray-400"} opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap`}
@@ -222,26 +354,74 @@ export default function ChatWindow({
 
 			{/* Input Area */}
 			<div className="p-3 border-t border-gray-100 bg-white pb-6">
+				{/* Media Preview */}
+				{previewUrl && (
+					<div className="mb-2 relative w-fit">
+						{mediaFile?.type.startsWith("image/") ? (
+							<Image
+								src={previewUrl}
+								alt="Preview"
+								width={100}
+								height={100}
+								className="rounded-lg object-cover"
+							/>
+						) : mediaFile?.type.startsWith("video/") ? (
+							<video
+								src={previewUrl}
+								className="w-32 h-32 rounded-lg object-cover"
+								controls
+							/>
+						) : (
+							<audio src={previewUrl} controls className="w-60" />
+						)}
+						<button
+							onClick={cancelMedia}
+							className="absolute -top-2 -right-2 bg-black text-white rounded-full p-1 w-6 h-6 flex items-center justify-center text-xs"
+							type="button"
+						>
+							✕
+						</button>
+					</div>
+				)}
+
 				<form
 					onSubmit={handleSendMessage}
 					className="flex gap-2 items-center bg-[#EFF3F4] rounded-full px-4 py-1"
 				>
+					<input
+						type="file"
+						accept="image/*,video/*,audio/*"
+						className="hidden"
+						ref={fileInputRef}
+						onChange={handleFileSelect}
+					/>
 					<button
 						type="button"
+						onClick={() => fileInputRef.current?.click()}
 						className="text-primary p-2 hover:bg-blue-50 rounded-full transition-colors shrink-0"
 					>
 						<span className="material-symbols-outlined text-[20px]">image</span>
 					</button>
+
 					<button
 						type="button"
-						className="text-primary p-2 hover:bg-blue-50 rounded-full transition-colors shrink-0"
+						onClick={isRecording ? stopRecording : startRecording}
+						className={`${
+							isRecording ? "text-red-500 animate-pulse" : "text-primary"
+						} p-2 hover:bg-blue-50 rounded-full transition-colors shrink-0`}
 					>
-						<span className="material-symbols-outlined text-[20px]">mic</span>
+						<span className="material-symbols-outlined text-[20px]">
+							{isRecording ? "stop_circle" : "mic"}
+						</span>
 					</button>
+
 					<input
 						value={newMessage}
 						onChange={(e) => setNewMessage(e.target.value)}
-						placeholder="Start a new message"
+						placeholder={
+							isRecording ? "Recording..." : "Start a new message"
+						}
+						disabled={isRecording}
 						className="flex-1 bg-transparent outline-none py-3 text-[15px] placeholder-gray-500 text-black min-w-0"
 						onKeyDown={(e) => {
 							if (e.key === "Enter" && !e.shiftKey) {
@@ -253,9 +433,9 @@ export default function ChatWindow({
 					/>
 					<button
 						type="submit"
-						disabled={!newMessage.trim()}
+						disabled={(!newMessage.trim() && !mediaFile) || isRecording}
 						className={`p-2 rounded-full transition-colors shrink-0 flex items-center justify-center ${
-							newMessage.trim()
+							newMessage.trim() || mediaFile
 								? "text-primary hover:bg-blue-50"
 								: "text-gray-400"
 						}`}

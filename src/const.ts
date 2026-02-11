@@ -6,7 +6,7 @@ export const REFRESH_TOKEN =
 	"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OThjMGNjYmJkNjg3OWNmZDhjYzliN2EiLCJ0b2tlbklkIjoiMWIyNTkyODgtNDUxYS00M2M3LThkOGUtNjVlOGJmYTkwNTA0IiwiaWF0IjoxNzcwNzg2MDI2LCJleHAiOjE3NzEzOTA4MjZ9.e1HGs6v0mTk_WhY38CJq9na-II1wsmEX8Unvbg5kHbE";
 // "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OThhZTBkOTI1NmZhNWY3MmVkNzUxODQiLCJ0b2tlbklkIjoiYzVkNTVlNDktMDdkNC00MjBjLTg2OTgtOTQ0ODg3NWU4YjkxIiwiaWF0IjoxNzcwNzQ1MjIxLCJleHAiOjE3NzEzNTAwMjF9.KePWI79flMXKQA0K65zUE4DT6-sQNPQkhpeRU_D4B9E";
 
-// export const BACKEND_URL = "http://localhost:2500";
+export const BACKEND_URL = "http://localhost:2500";
 
-export const BACKEND_URL =
-	"https://worldstreetsocialmedia-gateway.onrender.com";
+// export const BACKEND_URL =
+// 	"https://worldstreetsocialmedia-gateway.onrender.com";

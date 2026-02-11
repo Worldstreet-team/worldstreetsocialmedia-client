@@ -1,6 +1,6 @@
 "use server";
 
-import { BACKEND_URL, JWT_TOKEN } from "@/const";
+import { BACKEND_URL, JWT_TOKEN, REFRESH_TOKEN } from "@/const";
 import { cookies } from "next/headers";
 
 const API_URL = BACKEND_URL;
@@ -65,6 +65,25 @@ export async function getAccessToken() {
 			path: "/",
 		});
 		return JWT_TOKEN;
+	}
+
+	return undefined;
+}
+
+export async function getRefreshToken() {
+	const cookieStore = await cookies();
+	const token = cookieStore.get("refreshToken")?.value;
+
+	if (token) return token;
+
+	// Fallback to hardcoded token and set it in cookie
+	if (REFRESH_TOKEN) {
+		cookieStore.set("refreshToken", REFRESH_TOKEN, {
+			httpOnly: true,
+			secure: true,
+			path: "/",
+		});
+		return REFRESH_TOKEN;
 	}
 
 	return undefined;

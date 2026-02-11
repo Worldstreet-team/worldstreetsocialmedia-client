@@ -31,6 +31,7 @@ export const metadata: Metadata = {
 import { Suspense } from "react";
 import { TokenVerifier } from "@/components/auth/TokenVerifier";
 import { GlobalLoader } from "@/components/ui/GlobalLoader";
+import { Providers } from "@/components/providers/Providers";
 
 import { headers } from "next/headers";
 
@@ -67,7 +68,7 @@ export default async function RootLayout({
 				<Suspense fallback={<GlobalLoader />}>
 					<TokenVerifier initialUser={initialUser} />
 				</Suspense>
-				{children}
+				<Providers>{children}</Providers>
 			</body>
 		</html>
 	);

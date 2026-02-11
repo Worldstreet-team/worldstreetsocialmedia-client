@@ -26,12 +26,12 @@ export const TokenVerifier = ({ initialUser }: TokenVerifierProps) => {
 			return;
 		}
 
-		// if (initialUser) {
-		// 	console.log("TokenVerifier: Hydrating from initialUser");
-		// 	setUser(initialUser);
-		// 	setLoading(false);
-		// 	return;
-		// }
+		if (initialUser) {
+			console.log("TokenVerifier: Hydrating from initialUser");
+			setUser(initialUser);
+			setLoading(false);
+			return;
+		}
 
 		const verify = async () => {
 			console.log("TokenVerifier: Syncing user...");

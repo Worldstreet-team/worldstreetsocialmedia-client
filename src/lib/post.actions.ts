@@ -140,3 +140,58 @@ export async function getBookmarksAction() {
 		return { success: false, message: "Failed to fetch bookmarks" };
 	}
 }
+
+export async function getPostByIdAction(postId: string) {
+	const accessToken = await getAccessToken();
+	if (!accessToken) return { success: false, message: "Unauthorized" };
+
+	try {
+		const res = await axios.get(`${API_URL}/api/posts/${postId}`, {
+			headers: { Authorization: `Bearer ${accessToken}` },
+		});
+		return { success: true, data: res.data };
+	} catch (error: any) {
+		console.error(
+			"Get Post By ID Error:",
+			error.response?.data || error.message,
+		);
+		return { success: false, message: "Failed to fetch post" };
+	}
+}
+
+export async function getPostCommentsAction(postId: string) {
+	const accessToken = await getAccessToken();
+	if (!accessToken) return { success: false, message: "Unauthorized" };
+
+	try {
+		const res = await axios.get(`${API_URL}/api/posts/${postId}/comments`, {
+			headers: { Authorization: `Bearer ${accessToken}` },
+		});
+		return { success: true, data: res.data };
+	} catch (error: any) {
+		console.error(
+			"Get Post Comments Error:",
+			error.response?.data || error.message,
+		);
+		return { success: false, message: "Failed to fetch comments" };
+	}
+}
+
+export async function replyToPostAction(postId: string, content: string) {
+	const accessToken = await getAccessToken();
+	if (!accessToken) return { success: false, message: "Unauthorized" };
+
+	try {
+		const res = await axios.post(
+			`${API_URL}/api/posts/${postId}/reply`,
+			{ content },
+			{
+				headers: { Authorization: `Bearer ${accessToken}` },
+			},
+		);
+		return { success: true, data: res.data };
+	} catch (error: any) {
+		console.error("Reply Post Error:", error.response?.data || error.message);
+		return { success: false, message: "Failed to reply to post" };
+	}
+}

@@ -5,6 +5,7 @@ import { PostCard, type PostProps } from "@/components/feed/PostCard";
 import { useAtomValue } from "jotai";
 import { userAtom } from "@/store/user.atom";
 import { getUserFeedAction } from "@/lib/feed.actions";
+import EditProfileModal from "@/components/profile/EditProfileModal";
 
 export default function ProfilePage() {
 	const user = useAtomValue(userAtom);
@@ -13,6 +14,7 @@ export default function ProfilePage() {
 	);
 	const [feedPosts, setFeedPosts] = useState<PostProps[]>([]);
 	const [loadingFeed, setLoadingFeed] = useState(false);
+	const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
 	const fullName = user
 		? user.firstName && user.lastName
@@ -45,6 +47,8 @@ export default function ProfilePage() {
 					timestamp: new Date(post.createdAt).toLocaleDateString(),
 					images: post.images,
 					stats: post.stats || { replies: 0, reposts: 0, likes: 0 },
+					isLiked: post.isLiked,
+					isBookmarked: post.isBookmarked,
 				}));
 				setFeedPosts(mappedPosts);
 			} else {
@@ -87,10 +91,11 @@ export default function ProfilePage() {
 			{/* Hero Section */}
 			<div className="relative">
 				<div
-					className="h-[200px] bg-sky-200 w-full"
+					className="h-[200px] w-full bg-cover bg-center bg-no-repeat bg-gray-200"
 					style={{
-						backgroundImage:
-							"linear-gradient(to right, #a18cd1 0%, #fbc2eb 100%)",
+						backgroundImage: user.banner
+							? `url('${user.banner}')`
+							: "linear-gradient(to right, #a18cd1 0%, #fbc2eb 100%)",
 					}}
 				></div>
 				<div className="absolute -bottom-[70px] left-4 border-4 border-white rounded-full">
@@ -108,10 +113,15 @@ export default function ProfilePage() {
 				<button
 					className="border border-black/20 rounded-full px-6 h-10  font-bold hover:bg-black/3 transition-colors text-[15px] cursor-pointer"
 					type="button"
+					onClick={() => setIsEditProfileOpen(true)}
 				>
 					Edit profile
 				</button>
 			</div>
+
+			{isEditProfileOpen && user && (
+				<EditProfileModal user={user} onClose={() => setIsEditProfileOpen(false)} />
+			)}
 
 			{/* Profile Info */}
 			<div className="px-4 mt-8 flex flex-col gap-3">
@@ -123,13 +133,14 @@ export default function ProfilePage() {
 				<div className="text-[15px]">{user.bio || "No bio yet."}</div>
 
 				<div className="flex gap-4 text-text-light text-[15px] flex-wrap">
-					{/* Location placeholder - not in atom yet */}
-					<div className="flex items-center gap-1">
-						<span className="material-symbols-outlined text-[18px]">
-							location_on
-						</span>
-						<span>San Francisco, CA</span>
-					</div>
+					{user.location && (
+						<div className="flex items-center gap-1">
+							<span className="material-symbols-outlined text-[18px]">
+								location_on
+							</span>
+							<span>{user.location}</span>
+						</div>
+					)}
 
 					{user.website && (
 						<div className="flex items-center gap-1">
@@ -151,12 +162,11 @@ export default function ProfilePage() {
 						</div>
 					)}
 
-					{/* Joined date placeholder - not in atom yet */}
 					<div className="flex items-center gap-1">
 						<span className="material-symbols-outlined text-[18px]">
 							calendar_month
 						</span>
-						<span>Joined September 2018</span>
+						<span>Joined {new Date(user.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
 					</div>
 				</div>
 

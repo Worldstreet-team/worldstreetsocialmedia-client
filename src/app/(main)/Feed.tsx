@@ -43,6 +43,8 @@ export default function UserFeed() {
 					timestamp: formatTimeAgo(post.createdAt),
 					images: post.images,
 					stats: post.stats || { replies: 0, reposts: 0, likes: 0 },
+					isLiked: post.isLiked,
+					isBookmarked: post.isBookmarked,
 				}));
 
 				setPosts((prev) =>

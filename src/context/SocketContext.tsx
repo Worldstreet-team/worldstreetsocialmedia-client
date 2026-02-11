@@ -18,49 +18,49 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 	const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 	const user = useAtomValue(userAtom);
 
-	useEffect(() => {
-		const initSocket = async () => {
-			if (!user) {
-				if (socket) {
-					socket.close();
-					setSocket(null);
-				}
-				return;
-			}
-			const token = await getAccessToken();
+	// useEffect(() => {
+	// 	const initSocket = async () => {
+	// 		if (!user) {
+	// 			if (socket) {
+	// 				socket.close();
+	// 				setSocket(null);
+	// 			}
+	// 			return;
+	// 		}
+	// 		const token = await getAccessToken();
 
-			if (token) {
-				const socketInstance = io("http://localhost:2500", {
-					auth: {
-						token: token,
-					},
-				});
+	// 		if (token) {
+	// 			const socketInstance = io("http://localhost:2500", {
+	// 				auth: {
+	// 					token: token,
+	// 				},
+	// 			});
 
-				socketInstance.on("connect", () => {
-					console.log("Socket connected:", socketInstance.id);
-				});
+	// 			// socketInstance.on("connect", () => {
+	// 			// 	console.log("Socket connected:", socketInstance.id);
+	// 			// });
 
-				socketInstance.on("get_online_users", (users: string[]) => {
-					setOnlineUsers(users);
-				});
+	// 			socketInstance.on("get_online_users", (users: string[]) => {
+	// 				setOnlineUsers(users);
+	// 			});
 
-				setSocket(socketInstance);
+	// 			setSocket(socketInstance);
 
-				return () => {
-					socketInstance.close();
-					setSocket(null);
-				};
-			}
-		};
+	// 			return () => {
+	// 				socketInstance.close();
+	// 				setSocket(null);
+	// 			};
+	// 		}
+	// 	};
 
-		initSocket();
+	// 	initSocket();
 
-		return () => {
-			if (socket) {
-				socket.close();
-			}
-		};
-	}, [user, socket]);
+	// 	return () => {
+	// 		if (socket) {
+	// 			socket.close();
+	// 		}
+	// 	};
+	// }, [user, socket]);
 
 	return (
 		<SocketContext.Provider value={{ socket, onlineUsers }}>

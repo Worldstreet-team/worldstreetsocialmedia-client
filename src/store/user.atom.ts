@@ -9,7 +9,9 @@ export interface User {
 	lastName?: string;
 	role?: string;
 	avatar: string;
+	banner?: string;
 	bio: string;
+	location?: string;
 	website: string;
 	interests: string[];
 	bookmarks: string[];
@@ -18,6 +20,7 @@ export interface User {
 	postsCount: number;
 	isVerified: boolean;
 	onboardingCompleted: boolean;
+	createdAt?: string;
 }
 
 export const userAtom = atom<User | null>(null);
