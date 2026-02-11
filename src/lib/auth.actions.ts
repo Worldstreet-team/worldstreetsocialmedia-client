@@ -39,6 +39,10 @@ export async function syncUser() {
 		console.log("RES ISH SYNC: ", res);
 
 		if (!res.ok) {
+			console.error(`Sync user failed: ${res.status} ${res.statusText}`);
+			const text = await res.text();
+			console.error("Error body:", text);
+
 			if (res.status === 404) return { status: "not_found" };
 			return null;
 		}

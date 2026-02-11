@@ -56,11 +56,22 @@ export const TokenVerifier = ({ initialUser }: TokenVerifierProps) => {
 					console.log("TokenVerifier: User synced", data);
 					setUser(data.profile);
 				} else {
-					// router.push(loginUrl);
-					console.log("TokenVerifier: No user data returned");
+					console.error("TokenVerifier: No user data returned from sync");
+					if (initialUser) {
+						console.warn(
+							"TokenVerifier: Falling back to incomplete initialUser",
+						);
+						setUser(initialUser);
+					}
 				}
 			} catch (err) {
 				console.error("TokenVerifier Error:", err);
+				if (initialUser) {
+					console.warn(
+						"TokenVerifier: Error occurred, falling back to initialUser",
+					);
+					setUser(initialUser);
+				}
 			} finally {
 				setLoading(false);
 			}
