@@ -24,7 +24,7 @@ export function LeftSidebar() {
 					return (
 						<Link
 							key={index}
-							className={`flex items-center gap-2 px-3.5 py-2 rounded-full nav-item w-fit hover:bg-black/10 border-none transition-all duration-500 ease-in-out ${isActive ? "font-bold" : ""}`}
+							className={`flex items-center gap-2 px-3.5 py-2 rounded-full nav-item w-fit hover:bg-black/10 border-none transition-all duration-500 ease-in-out ${isActive ? "font-bold" : "font-semibold"}`}
 							href={item.link}
 						>
 							<span className="inline-flex w-10 h-10 items-center justify-center">
