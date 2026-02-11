@@ -30,7 +30,7 @@ const cuturila = localFont({
 });
 
 export const metadata: Metadata = {
-	title: "World Street - Social Media",
+	title: "WorldStreet - Social Media",
 	description: "This is world street media platform",
 };
 

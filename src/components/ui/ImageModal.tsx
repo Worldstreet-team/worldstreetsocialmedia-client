@@ -69,12 +69,18 @@ export default function ImageModal({
 					exit={{ opacity: 0 }}
 					transition={{ duration: 0.2 }}
 					className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
-					onClick={onClose}
+					onClick={(e) => {
+						e.stopPropagation();
+						onClose();
+					}}
 				>
 					{/* Close Button */}
 					<button
 						type="button"
-						onClick={onClose}
+						onClick={(e) => {
+							e.stopPropagation();
+							onClose();
+						}}
 						className="absolute top-4 right-4 w-12 h-12 flex items-center justify-center text-white/70 hover:text-white bg-black/50 hover:bg-black/70 rounded-full transition-colors z-50 cursor-pointer"
 					>
 						<span className="material-symbols-outlined text-2xl">close</span>
