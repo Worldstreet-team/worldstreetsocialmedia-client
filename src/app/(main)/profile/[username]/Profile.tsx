@@ -350,7 +350,6 @@ export default function UserProfilePage({
 						<span className="text-text-light">Followers</span>
 					</button>
 				</div>
-				//... )
 			</div>
 
 			{/* Tabs */}
