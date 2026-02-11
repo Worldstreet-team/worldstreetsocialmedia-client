@@ -14,6 +14,7 @@ import { useSetAtom } from "jotai";
 export interface PostProps {
 	author: {
 		id: string; // Added ID for ownership check
+		name?: string;
 		firstName: string;
 		lastName: string;
 		username: string;
@@ -153,7 +154,8 @@ export function PostCard({ post }: { post: PostProps }) {
 				<div className="flex-1 min-w-0">
 					<div className="flex items-center gap-1 relative">
 						<span className="font-bold hover:underline">
-							${post.author.firstName} ${post.author.lastName}
+							{post.author.name ||
+								`${post.author.firstName} ${post.author.lastName}`}
 						</span>
 						{post.author.isVerified && <VerifiedIcon />}
 						<span className="text-text-light font-semibold text-sm truncate">

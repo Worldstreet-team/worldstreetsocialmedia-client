@@ -26,7 +26,6 @@ export async function clearSession() {
 }
 
 export async function syncUser() {
-	const cookieStore = await cookies();
 	const token = await getAccessToken();
 
 	if (!token) return null;
@@ -37,7 +36,7 @@ export async function syncUser() {
 			cache: "no-store",
 		});
 
-		console.log("RES: ", res);
+		console.log("RES ISH SYNC: ", res);
 
 		if (!res.ok) {
 			if (res.status === 404) return { status: "not_found" };

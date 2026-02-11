@@ -11,6 +11,9 @@ interface TokenVerifierProps {
 	initialUser?: User | null;
 }
 
+const loginUrl =
+	"https://www.worldstreetgold.com/login?redirect=https://social.worldstreetgold.com";
+
 export const TokenVerifier = ({ initialUser }: TokenVerifierProps) => {
 	const setUser = useSetAtom(userAtom);
 	const pathname = usePathname();
@@ -36,7 +39,7 @@ export const TokenVerifier = ({ initialUser }: TokenVerifierProps) => {
 			try {
 				const data = await syncUser();
 
-				console.log("DATA: ", data);
+				console.log("DATADDDDD: ", data);
 
 				if (data?.status === "not_found") {
 					console.log("TokenVerifier: User not found, redirecting...");
@@ -48,6 +51,7 @@ export const TokenVerifier = ({ initialUser }: TokenVerifierProps) => {
 					console.log("TokenVerifier: User synced", data);
 					setUser(data.profile);
 				} else {
+					// router.push(loginUrl);
 					console.log("TokenVerifier: No user data returned");
 				}
 			} catch (err) {

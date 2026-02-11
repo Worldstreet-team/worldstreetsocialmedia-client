@@ -51,6 +51,8 @@ export async function proxy(request: NextRequest) {
 					secure: true,
 				});
 
+				console.log("HERE oooo");
+
 				return response;
 			} else {
 				return NextResponse.redirect(loginUrl);
@@ -60,7 +62,7 @@ export async function proxy(request: NextRequest) {
 			const data = await verifyRes.json();
 			const response = NextResponse.next();
 			if (data.success) {
-				console.log("DATA: ", data);
+				console.log("DATA INIT: ", data);
 				response.headers.set("x-user-data", JSON.stringify(data.data.user));
 				return response;
 			}
