@@ -25,7 +25,7 @@ export function PostComposer({
 	onPostStart,
 	onPostSuccess,
 }: PostComposerProps) {
-	const user = useAtomValue(userAtom)
+	const user = useAtomValue(userAtom);
 	const [content, setContent] = useState("");
 	const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
 	const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -77,18 +77,18 @@ export function PostComposer({
 	const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
 		if (e.target.files && e.target.files[0]) {
 			const file = e.target.files[0];
-			
+
 			// Check if we already have a video or max items
-			const hasVideo = mediaItems.some(item => item.type === "video");
+			const hasVideo = mediaItems.some((item) => item.type === "video");
 			if (hasVideo) {
 				alert("Only one video allowed per post");
 				return;
 			}
-            
-            if (mediaItems.length >= 4) {
-                 alert("Max 4 media items allowed");
-                 return;
-            }
+
+			if (mediaItems.length >= 4) {
+				alert("Max 4 media items allowed");
+				return;
+			}
 
 			const newItem: MediaItem = {
 				url: URL.createObjectURL(file),
@@ -182,8 +182,7 @@ export function PostComposer({
 				<div
 					className="w-9 h-9 mt-2 rounded-full bg-cover bg-center shrink-0"
 					style={{
-						backgroundImage:
-							`url('${user?.avatar}')`,
+						backgroundImage: `url('${user?.avatar}')`,
 					}}
 				/>
 				<div className="flex-1 flex flex-col relative">
@@ -261,7 +260,7 @@ export function PostComposer({
 							>
 								<ImageIcon />
 							</button>
-							<button
+							{/* <button
 								type="button"
 								className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors cursor-pointer"
 								disabled={loading}
@@ -275,7 +274,7 @@ export function PostComposer({
 								disabled={loading}
 							>
 								<NoteIcon />
-							</button>
+							</button> */}
 							<button
 								type="button"
 								onClick={() => setShowEmojiPicker(!showEmojiPicker)}

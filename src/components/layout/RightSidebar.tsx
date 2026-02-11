@@ -152,20 +152,26 @@ export function RightSidebar() {
 				</div>
 			</section>
 			<footer className="flex flex-wrap gap-x-3 gap-y-1 px-4 py-2 text-[13px] text-text-light">
-				<a className="hover:underline" href="/app">
-					Terms of Service
+				<a
+					className="hover:underline"
+					href="https://social.worldstreetgold.com/"
+				>
+					World street gold
 				</a>
-				<a className="hover:underline" href="/app">
-					Privacy Policy
+				<a
+					className="hover:underline"
+					href="https://academy.worldstreetgold.com/"
+				>
+					Academy
 				</a>
-				<a className="hover:underline" href="/app">
-					Cookie Policy
+				<a className="hover:underline" href="https://shop.worldstreetgold.com/">
+					Shop
 				</a>
-				<a className="hover:underline" href="/app">
-					Accessibility
-				</a>
-				<a className="hover:underline" href="/app">
-					Ads info
+				<a
+					className="hover:underline"
+					href="https://xtreme.worldstreetgold.com/"
+				>
+					XTreme
 				</a>
 				<span>© 2026 World Street Group.</span>
 			</footer>

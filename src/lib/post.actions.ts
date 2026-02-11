@@ -195,3 +195,18 @@ export async function replyToPostAction(postId: string, content: string) {
 		return { success: false, message: "Failed to reply to post" };
 	}
 }
+
+export async function deletePostAction(postId: string) {
+	const accessToken = await getAccessToken();
+	if (!accessToken) return { success: false, message: "Unauthorized" };
+
+	try {
+		const res = await axios.delete(`${API_URL}/api/posts/${postId}`, {
+			headers: { Authorization: `Bearer ${accessToken}` },
+		});
+		return { success: true, data: res.data };
+	} catch (error: any) {
+		console.error("Delete Post Error:", error.response?.data || error.message);
+		return { success: false, message: "Failed to delete post" };
+	}
+}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import NextTopLoader from "nextjs-toploader";
 
 const sfPro = localFont({
 	src: [
@@ -65,6 +66,7 @@ export default async function RootLayout({
 				className={`${sfPro.variable} antialiased font-sans`}
 				suppressHydrationWarning
 			>
+				<NextTopLoader />
 				<Suspense fallback={<GlobalLoader />}>
 					<TokenVerifier initialUser={initialUser} />
 				</Suspense>

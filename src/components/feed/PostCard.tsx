@@ -47,11 +47,17 @@ import Heart2Icon from "@/assets/icons/Heart2Icon";
 import Bookmark2Icon from "@/assets/icons/Bookmark2Icon";
 import HeartFill2Icon from "@/assets/icons/HeartFill2Icon";
 
+import ConfirmModal from "@/components/ui/ConfirmModal";
+import { deletePostAction } from "@/lib/post.actions";
+import { useRouter, usePathname } from "next/navigation";
+
 export function PostCard({ post }: { post: PostProps }) {
 	const images = post.images || [];
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
 	const menuRef = useRef<HTMLDivElement>(null);
 	const currentUser = useAtomValue(userAtom);
+	const router = useRouter();
+	const pathname = usePathname();
 
 	// Use _id from userAtom (which maps to Mongo ID) or userId if that's what we use for comparison
 	const isOwnPost = currentUser?._id === post.author.id;
@@ -63,6 +69,11 @@ export function PostCard({ post }: { post: PostProps }) {
 	const [isBookmarked, setIsBookmarked] = useState(
 		post.isBookmarked ?? (currentUser?.bookmarks?.includes(post.id) || false),
 	);
+
+	// Delete Modal State
+	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+	const [isDeleting, setIsDeleting] = useState(false);
+	const [isDeleted, setIsDeleted] = useState(false);
 
 	const handleLike = async (e: React.MouseEvent) => {
 		e.stopPropagation();
@@ -109,6 +120,27 @@ export function PostCard({ post }: { post: PostProps }) {
 		}
 	};
 
+	const handleDelete = async () => {
+		setIsDeleting(true);
+		try {
+			const res = await deletePostAction(post.id);
+			if (res.success) {
+				setIsDeleted(true);
+
+				// If we are on the post detail page, redirect to home
+				if (pathname === `/post/${post.id}`) {
+					router.push("/");
+				}
+			} else {
+				console.error("Failed to delete post");
+			}
+		} catch (err) {
+			console.error(err);
+		} finally {
+			setIsDeleting(false);
+		}
+	};
+
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
 			if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -127,7 +159,10 @@ export function PostCard({ post }: { post: PostProps }) {
 	const handleMenuAction = (action: string) => {
 		console.log(`Action triggered: ${action} on post ${post.id}`);
 		setIsMenuOpen(false);
-		// Implement actual logic later
+
+		if (action === "delete") {
+			setIsDeleteModalOpen(true);
+		}
 	};
 
 	const getImageGridClass = (count: number) => {
@@ -157,6 +192,8 @@ export function PostCard({ post }: { post: PostProps }) {
 		window.location.href = `/post/${post.id}`;
 	};
 
+	if (isDeleted) return null;
+
 	return (
 		// biome-ignore lint/a11y/useSemanticElements: Card is complex and contains other interactive elements
 		<div
@@ -170,6 +207,16 @@ export function PostCard({ post }: { post: PostProps }) {
 			role="button"
 			tabIndex={0}
 		>
+			<ConfirmModal
+				isOpen={isDeleteModalOpen}
+				onClose={() => setIsDeleteModalOpen(false)}
+				onConfirm={handleDelete}
+				title="Delete Post?"
+				message="This can’t be undone and it will be removed from your profile, the timeline of any accounts that follow you, and from search results."
+				confirmText={isDeleting ? "Deleting..." : "Delete"}
+				isDestructive={true}
+			/>
+
 			<article className="flex gap-3">
 				<div
 					className="w-10 h-10 rounded-full bg-cover bg-center shrink-0"
@@ -360,7 +407,7 @@ export function PostCard({ post }: { post: PostProps }) {
 								className="w-full h-full object-contain"
 								controlsList="nodownload"
 								poster={post.images?.[0]} // Optional: use first image as poster if available
-								onClick={(e) => e.stopPropagation()} 
+								onClick={(e) => e.stopPropagation()}
 							/>
 						</div>
 					)}
@@ -400,7 +447,7 @@ export function PostCard({ post }: { post: PostProps }) {
 									p-2 rounded-full transition-colors relative cursor-pointer
 									${
 										isLiked
-											? "text-pink-600 bg-pink-50"
+											? "text-pink-600"
 											: "text-text-light group-hover:bg-pink-50 group-hover:text-pink-500"
 									}
 								`}
@@ -427,7 +474,7 @@ export function PostCard({ post }: { post: PostProps }) {
 									p-2 rounded-full transition-colors relative cursor-pointer
 									${
 										isBookmarked
-											? "bg-black/5"
+											? ""
 											: "text-text-light group-hover:bg-blue-50 group-hover:text-blue-500"
 									}
 								`}
