@@ -162,6 +162,17 @@ export function PostCard({ post }: { post: PostProps }) {
 
 		if (action === "delete") {
 			setIsDeleteModalOpen(true);
+		} else if (action === "copy_link") {
+			const url = `${window.location.origin}/post/${post.id}`;
+			navigator.clipboard
+				.writeText(url)
+				.then(() => {
+					// Optional: Show toast or feedback
+					console.log("Link copied to clipboard");
+				})
+				.catch((err) => {
+					console.error("Failed to copy link: ", err);
+				});
 		}
 	};
 
