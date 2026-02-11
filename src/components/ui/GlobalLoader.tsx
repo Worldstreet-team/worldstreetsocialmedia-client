@@ -17,7 +17,7 @@ export const GlobalLoader = () => {
 					</div>
 				</div>
 				<div className="text-primary font-bold text-lg animate-pulse">
-					Verifying...
+					Loading...
 				</div>
 			</div>
 		</div>
