@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSetAtom } from "jotai";
-import { userAtom, User } from "@/store/user.atom";
+import { userAtom, User, initialUserAtom } from "@/store/user.atom";
 import { GlobalSkeleton } from "@/components/skeletons/GlobalSkeleton";
 import { syncUser } from "@/lib/auth.actions";
 import { usePathname, useRouter } from "next/navigation";
@@ -19,9 +19,12 @@ export const TokenVerifier = ({ initialUser }: TokenVerifierProps) => {
 	const pathname = usePathname();
 	const router = useRouter();
 	const [loading, setLoading] = useState(!initialUser);
+	const setInitialUser = useSetAtom(initialUserAtom);
 
 	useEffect(() => {
 		if (pathname.includes("/onboarding")) {
+			// initialUser
+			setInitialUser(initialUser);
 			setLoading(false);
 			return;
 		}

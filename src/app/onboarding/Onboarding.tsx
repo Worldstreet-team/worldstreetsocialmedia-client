@@ -7,8 +7,8 @@ import axios from "axios";
 import { BACKEND_URL, JWT_TOKEN, REFRESH_TOKEN } from "@/const";
 import GlobeIcon from "@/assets/icons/GlobeIcon";
 import { updateSession } from "@/lib/auth.actions";
-import { useSetAtom } from "jotai";
-import { userAtom } from "@/store/user.atom";
+import { useAtomValue, useSetAtom } from "jotai";
+import { initialUserAtom, userAtom } from "@/store/user.atom";
 import { getWhoToFollowAction, followUserAction } from "@/lib/user.actions";
 import { Skeleton } from "@/components/ui/Skeleton";
 
@@ -42,7 +42,7 @@ const Onboarding = ({
 	refreshToken,
 	userData,
 }: OnboardingProps) => {
-	console.log("userData", userData);
+	const initialUser = useAtomValue(initialUserAtom);
 	const router = useRouter();
 	const [step, setStep] = useState(1);
 	const [loading, setLoading] = useState(false);
@@ -64,12 +64,13 @@ const Onboarding = ({
 	});
 
 	useEffect(() => {
-		if (userData) {
+		console.log("INITIAL DATA: ", initialUser);
+		if (initialUser) {
 			setFormData((prev) => ({
 				...prev,
-				firstName: userData.firstName,
-				lastName: userData.lastName,
-				role: userData.role,
+				firstName: initialUser.firstName,
+				lastName: initialUser.lastName,
+				role: initialUser.role,
 			}));
 		}
 	}, [userData]);

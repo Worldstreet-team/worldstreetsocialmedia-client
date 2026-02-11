@@ -24,3 +24,4 @@ export interface User {
 }
 
 export const userAtom = atom<User | null>(null);
+export const initialUserAtom = atom<any | null>(null);
