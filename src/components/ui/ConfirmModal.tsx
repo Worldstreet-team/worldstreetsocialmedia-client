@@ -27,7 +27,7 @@ export default function ConfirmModal({
 		<AnimatePresence>
 			{isOpen && (
 				<div
-					className="fixed inset-0 z-50 flex items-center justify-center px-4"
+					className="fixed inset-0 z-[9999] flex items-center justify-center px-4"
 					onClick={(e) => e.stopPropagation()}
 				>
 					<motion.div
