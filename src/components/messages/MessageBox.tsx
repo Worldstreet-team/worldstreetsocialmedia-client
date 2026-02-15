@@ -17,6 +17,7 @@ import {
 	Plus,
 	UserPlus,
 	ArrowLeft,
+	MessageSquarePlus,
 } from "lucide-react";
 import clsx from "clsx";
 import axios from "axios";
@@ -214,6 +215,7 @@ export const MessageBox = ({
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const activeIdRef = useRef<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const searchInputRef = useRef<HTMLInputElement>(null);
 	const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 	const audioChunksRef = useRef<Blob[]>([]);
 
@@ -666,6 +668,7 @@ export const MessageBox = ({
 							placeholder="Search Direct Messages"
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
+							ref={searchInputRef}
 							className="w-full bg-zinc-900 border border-zinc-800 rounded-full pl-10 pr-4 py-2 text-sm focus:border-yellow-500 outline-none"
 						/>
 					</div>
@@ -728,6 +731,26 @@ export const MessageBox = ({
 									</div>
 								</button>
 							))
+					)}
+
+					{!isLoadingConversations && conversations.length === 0 && (
+						<div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-zinc-500">
+							<div className="w-16 h-16 bg-zinc-900 rounded-full flex items-center justify-center mb-4">
+								<MessageSquarePlus className="w-8 h-8 text-zinc-400" />
+							</div>
+							<h3 className="text-lg font-bold text-white mb-2">
+								No conversations yet
+							</h3>
+							<p className="text-sm mb-6 max-w-[200px]">
+								Start chatting with your friends!
+							</p>
+							<button
+								onClick={() => searchInputRef.current?.focus()}
+								className="px-6 py-2.5 bg-white text-black font-bold rounded-full text-sm hover:bg-zinc-200 transition-colors"
+							>
+								Start a Conversation
+							</button>
+						</div>
 					)}
 				</div>
 			</div>
