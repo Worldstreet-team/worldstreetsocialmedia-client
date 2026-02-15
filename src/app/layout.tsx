@@ -5,7 +5,7 @@ import {
 	// SignUpButton,
 	// SignedOut,
 } from "@clerk/nextjs";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Public_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ToastProvider } from "@/components/ui/Toast/ToastContext";
@@ -15,8 +15,8 @@ import { headers } from "next/headers";
 import RealtimeProvider from "@/components/providers/RealtimeProvider";
 import { CallProvider } from "@/providers/CallProvider";
 
-const geistSans = Geist({
-	variable: "--font-geist-sans",
+const publicSans = Public_Sans({
+	variable: "--font-public-sans",
 	subsets: ["latin"],
 });
 
@@ -51,7 +51,7 @@ export default async function RootLayout({
 		>
 			<html lang="en" suppressHydrationWarning>
 				<body
-					className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+					className={`${publicSans.variable} ${geistMono.variable} antialiased`}
 				>
 					<NextTopLoader />
 
