@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useClerk, useUser } from "@clerk/nextjs";
+import { useClerk } from "@clerk/nextjs";
 import { LogOut, MoreHorizontal } from "lucide-react";
 import clsx from "clsx";
 import Image from "next/image";
