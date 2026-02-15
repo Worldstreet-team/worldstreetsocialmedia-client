@@ -11,6 +11,8 @@ import { BACKEND_URL } from "@/const";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { useToast } from "@/components/ui/Toast/ToastContext";
+import { useSetAtom } from "jotai";
+import { userAtom } from "@/store/user.atom";
 
 export default function Onboarding({ initialUser }: { initialUser: any }) {
 	const { getToken } = useAuth();
@@ -19,11 +21,12 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 	const [bio, setBio] = useState("");
 	const router = useRouter();
 	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState("");
+	const [_, setError] = useState("");
 	const [suggestedUsers, setSuggestedUsers] = useState<any[]>([]);
 	const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 	const { toast } = useToast();
 	const [followedUsers, setFollowedUsers] = useState<string[]>([]);
+	const setActiveUser = useSetAtom(userAtom);
 
 	const [formData, setFormData] = useState({
 		id: "",
@@ -100,6 +103,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 			);
 
 			if (res.data) {
+				setActiveUser(res.data);
 				console.log("ONBOARDED: ", res.data);
 				toast("Welcome to WorldStreet!", { type: "success" });
 			}
