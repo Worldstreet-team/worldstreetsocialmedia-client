@@ -5,7 +5,7 @@ import {
 	// SignUpButton,
 	// SignedOut,
 } from "@clerk/nextjs";
-import { Geist, Geist_Mono, Space_Mono } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ToastProvider } from "@/components/ui/Toast/ToastContext";
@@ -25,12 +25,6 @@ const geistMono = Geist_Mono({
 	subsets: ["latin"],
 });
 
-const spaceMono = Space_Mono({
-	variable: "--font-space-mono",
-	subsets: ["latin"],
-	weight: ["400", "700"],
-});
-
 export const metadata: Metadata = {
 	title: "WorldStreet - Social Media",
 	description: "This is world street media platform",
@@ -47,10 +41,17 @@ export default async function RootLayout({
 	const parsedUser = userData ? JSON.parse(userData) : null;
 
 	return (
-		<ClerkProvider>
+		<ClerkProvider
+			appearance={{
+				captcha: {
+					theme: "dark",
+					size: "flexible",
+				},
+			}}
+		>
 			<html lang="en" suppressHydrationWarning>
 				<body
-					className={`${geistSans.variable} ${geistMono.variable} ${spaceMono.variable} antialiased`}
+					className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 				>
 					<NextTopLoader />
 
