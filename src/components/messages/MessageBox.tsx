@@ -16,6 +16,7 @@ import {
 	X,
 	Plus,
 	UserPlus,
+	ArrowLeft,
 } from "lucide-react";
 import clsx from "clsx";
 import axios from "axios";
@@ -635,7 +636,7 @@ export const MessageBox = ({
 	}, [activeConversation?._id]); // Only trigger when ID changes
 
 	return (
-		<div className="flex h-[calc(100vh-2px)] bg-black text-white font-space-mono">
+		<div className="flex h-[calc(100vh-2px)] bg-black text-white">
 			{myProfileId && isConnected && (
 				<UserMessageSubscription
 					channelName={`user:${myProfileId}`}
@@ -650,7 +651,12 @@ export const MessageBox = ({
 			/>
 
 			{/* Sidebar */}
-			<div className="w-[400px] border-r border-zinc-800 flex flex-col">
+			<div
+				className={clsx(
+					"w-full md:w-[400px] border-r border-zinc-800 flex flex-col transition-all",
+					activeConversation ? "hidden md:flex" : "flex",
+				)}
+			>
 				<div className="p-4 border-b border-zinc-800">
 					<h1 className="text-xl font-bold mb-4">Messages</h1>
 					<div className="relative">
@@ -728,9 +734,15 @@ export const MessageBox = ({
 
 			{/* Chat Area */}
 			{activeConversation ? (
-				<div className="flex-1 flex flex-col">
-					<div className="h-16 border-b border-zinc-800 flex items-center justify-between px-6">
+				<div className={clsx("flex-1 flex flex-col", "flex")}>
+					<div className="h-16 border-b border-zinc-800 flex items-center justify-between px-4 md:px-6">
 						<div className="flex items-center gap-3">
+							<button
+								onClick={() => setActiveConversation(null)}
+								className="md:hidden text-zinc-400 hover:text-white"
+							>
+								<ArrowLeft className="w-5 h-5" />
+							</button>
 							<Image
 								src={activeConversation.otherParticipant.avatar}
 								alt="avatar"
