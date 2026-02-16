@@ -19,6 +19,7 @@ import {
 	ArrowLeft,
 	MessageSquarePlus,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import axios from "axios";
 import { useUser, useAuth } from "@clerk/nextjs";
@@ -203,6 +204,7 @@ export const MessageBox = ({
 	const { user } = useUser();
 	const { getToken } = useAuth();
 	const { isConnected } = useRealtime();
+	const router = useRouter();
 
 	const [myProfileId, setMyProfileId] = useState<string | null>(null);
 	const [conversations, setConversations] =
@@ -742,7 +744,10 @@ export const MessageBox = ({
 							.map((conv) => (
 								<button
 									key={conv._id}
-									onClick={() => setActiveConversation(conv)}
+									onClick={() => {
+										setActiveConversation(conv);
+										router.push(`/messages/${conv._id}`);
+									}}
 									className={clsx(
 										"w-full p-4 flex gap-3 hover:bg-zinc-900/50 border-b border-zinc-800/50 transition-all",
 										activeConversation?._id === conv._id &&
