@@ -37,6 +37,8 @@ const API_URL = (process.env.NEXT_PUBLIC_API_URL || BACKEND_URL).replace(
 	/\/api\/?$/,
 	"",
 );
+import { useAtom } from "jotai";
+import { messageCacheAtom } from "@/store/messageCache";
 
 // Helper component for conditional channel subscription
 const UserMessageSubscription = ({
@@ -204,7 +206,10 @@ export const MessageBox = ({
 	const [conversations, setConversations] = useState<Conversation[]>([]);
 	const [activeConversation, setActiveConversation] =
 		useState<Conversation | null>(null);
-	const [messages, setMessages] = useState<Message[]>([]);
+	const [messageCache, setMessageCache] = useAtom(messageCacheAtom);
+	const messages = activeConversation
+		? messageCache[activeConversation._id] || []
+		: [];
 	const [messageInput, setMessageInput] = useState("");
 	const [searchQuery, setSearchQuery] = useState("");
 	const [isLoadingConversations, setIsLoadingConversations] = useState(true);
@@ -349,7 +354,13 @@ export const MessageBox = ({
 				createdAt: new Date().toISOString(),
 			};
 
-			setMessages((prev) => [...prev, optimisticMessage]);
+			setMessageCache((prev) => ({
+				...prev,
+				[activeConversation._id]: [
+					...(prev[activeConversation._id] || []),
+					optimisticMessage,
+				],
+			}));
 			scrollToBottom();
 
 			const response = await axios.post(
@@ -363,9 +374,12 @@ export const MessageBox = ({
 				{ headers: { Authorization: `Bearer ${token}` } },
 			);
 
-			setMessages((prev) =>
-				prev.map((m) => (m._id === tempId ? response.data : m)),
-			);
+			setMessageCache((prev) => ({
+				...prev,
+				[activeConversation._id]: (prev[activeConversation._id] || []).map(
+					(m) => (m._id === tempId ? response.data : m),
+				),
+			}));
 		} catch (error) {
 			console.error("Failed to send audio", error);
 			toast.error("Failed to send voice note");
@@ -450,9 +464,16 @@ export const MessageBox = ({
 	};
 
 	const fetchMessages = async (conversationId: string) => {
+		// Use cache if available
+		if (messageCache[conversationId]?.length > 0) {
+			scrollToBottom("auto");
+			// Optional: Background refresh could go here if needed
+			return;
+		}
+
 		try {
 			setIsLoadingMessages(true);
-			setMessages([]); // Clear immediately to avoid "ghosting"
+			// setMessages([]); // No longer needed with cache
 			const token = await getToken();
 			const response = await axios.get(
 				`${API_URL}/api/messages/${conversationId}`,
@@ -460,7 +481,10 @@ export const MessageBox = ({
 					headers: { Authorization: `Bearer ${token}` },
 				},
 			);
-			setMessages(response.data);
+			setMessageCache((prev) => ({
+				...prev,
+				[conversationId]: response.data,
+			}));
 			scrollToBottom("auto");
 		} catch (error) {
 			toast.error("Failed to load messages");
@@ -477,13 +501,18 @@ export const MessageBox = ({
 			const { message: newMessage, conversationId } = ablyMessage.data;
 			const currentActiveId = activeIdRef.current;
 
-			// 1. Update Messages if current chat is open
+			// 1. Update Messages if current chat is open (or even if not, update cache!)
+			// Update cache for the conversationId regardless of active state
+			setMessageCache((prev) => {
+				const currentMessages = prev[conversationId] || [];
+				if (currentMessages.find((m) => m._id === newMessage._id)) return prev;
+				return {
+					...prev,
+					[conversationId]: [...currentMessages, newMessage],
+				};
+			});
+
 			if (currentActiveId === conversationId) {
-				setMessages((prev) => {
-					// Deduplicate by ID
-					if (prev.find((m) => m._id === newMessage._id)) return prev;
-					return [...prev, newMessage];
-				});
 				scrollToBottom();
 				markAsRead(conversationId);
 			}
@@ -549,7 +578,13 @@ export const MessageBox = ({
 			createdAt: new Date().toISOString(),
 		};
 
-		setMessages((prev) => [...prev, optimisticMessage]);
+		setMessageCache((prev) => ({
+			...prev,
+			[activeConversation._id]: [
+				...(prev[activeConversation._id] || []),
+				optimisticMessage,
+			],
+		}));
 		scrollToBottom();
 		setMessageInput("");
 		clearSelectedFile();
@@ -595,21 +630,33 @@ export const MessageBox = ({
 				{ headers: { Authorization: `Bearer ${token}` } },
 			);
 
-			setMessages((prev) => {
-				// If the real message logic (Ably) already added the real message,
-				// we should remove the temp message to avoid duplicates,
-				// rather than matching temp -> real.
-				const realExists = prev.find((m) => m._id === response.data._id);
+			setMessageCache((prev) => {
+				const currentMsgs = prev[activeConversation._id] || [];
+				const realExists = currentMsgs.find((m) => m._id === response.data._id);
 				if (realExists) {
-					return prev.filter((m) => m._id !== tempId);
+					return {
+						...prev,
+						[activeConversation._id]: currentMsgs.filter(
+							(m) => m._id !== tempId,
+						),
+					};
 				}
-				// Otherwise, replace temp with real
-				return prev.map((m) => (m._id === tempId ? response.data : m));
+				return {
+					...prev,
+					[activeConversation._id]: currentMsgs.map((m) =>
+						m._id === tempId ? response.data : m,
+					),
+				};
 			});
 		} catch (error) {
 			console.error("Failed to send", error);
 			toast.error("Failed to send message");
-			setMessages((prev) => prev.filter((m) => m._id !== tempId));
+			setMessageCache((prev) => ({
+				...prev,
+				[activeConversation._id]: (prev[activeConversation._id] || []).filter(
+					(m) => m._id !== tempId,
+				),
+			}));
 		} finally {
 			setIsUploading(false);
 		}
