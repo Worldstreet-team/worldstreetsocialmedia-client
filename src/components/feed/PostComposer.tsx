@@ -10,7 +10,7 @@ import EmojiPicker, { type EmojiClickData, Theme } from "emoji-picker-react";
 import clsx from "clsx";
 
 interface PostComposerProps {
-	onPostSuccess?: () => void;
+	onPostSuccess?: (post?: any) => void;
 	onPostStart?: () => void;
 }
 
@@ -168,7 +168,8 @@ export const PostComposer = ({
 				lastCheckedUrl.current = null;
 				setShowEmojiPicker(false);
 				toast("Post published!", { type: "success" });
-				onPostSuccess?.();
+				toast("Post published!", { type: "success" });
+				onPostSuccess?.(result.data);
 			} else {
 				toast(result.message || "Failed to post", { type: "error" });
 			}

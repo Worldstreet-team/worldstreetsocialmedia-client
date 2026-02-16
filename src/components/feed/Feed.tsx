@@ -97,9 +97,38 @@ export default function Feed() {
 		setIsPosting(true);
 	};
 
-	const handlePostSuccess = () => {
+	const handlePostSuccess = (newPost: any) => {
 		setIsPosting(false);
-		fetchFeed(true);
+		if (newPost) {
+			const mappedPost: PostProps = {
+				id: newPost._id,
+				author: {
+					id: newPost.author._id,
+					name:
+						newPost.author.firstName && newPost.author.lastName
+							? `${newPost.author.firstName} ${newPost.author.lastName}`
+							: newPost.author.username,
+					username: newPost.author.username,
+					avatar:
+						newPost.author.avatar ||
+						"https://ui-avatars.com/api/?name=User&background=random",
+					isVerified: newPost.author.isVerified,
+				},
+				content: newPost.content,
+				timestamp: "Just now",
+				images: newPost.images,
+				stats: newPost.stats || { replies: 0, reposts: 0, likes: 0 },
+				isLiked: false,
+				isBookmarked: false,
+			};
+
+			setFeedState((prev) => ({
+				...prev,
+				posts: [mappedPost, ...prev.posts],
+			}));
+		} else {
+			fetchFeed(true);
+		}
 	};
 
 	const formatTimeAgo = (dateString: string) => {
