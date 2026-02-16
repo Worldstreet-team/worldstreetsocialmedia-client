@@ -25,6 +25,12 @@ import {
 	Mail,
 } from "lucide-react";
 import clsx from "clsx";
+import { useAtom } from "jotai";
+import {
+	profileCacheAtom,
+	userPostsCacheAtom,
+	ProfileData,
+} from "@/store/profileCache";
 
 interface ProfileProps {
 	username?: string;
@@ -38,6 +44,9 @@ export default function Profile({ username }: ProfileProps) {
 	// But we still track "profileUser" separately to handle the case where
 	// we view our own profile via /profile/[myUsername]
 	const [profileUser, setProfileUser] = useState<any>(null);
+	const [profileCache, setProfileCache] = useAtom(profileCacheAtom);
+	const [userPostsCache, setUserPostsCache] = useAtom(userPostsCacheAtom);
+
 	const [loadingProfile, setLoadingProfile] = useState(true);
 	const [notFound, setNotFound] = useState(false);
 
@@ -83,22 +92,35 @@ export default function Profile({ username }: ProfileProps) {
 					setProfileUser(currentUser);
 					setFollowersCount(currentUser.followersCount || 0);
 				}
-				// If currentUser is null (not loaded yet), we wait.
-				// But usually if protected route, it should be there.
-				// If not logged in, middleware handles it?
 			} else {
+				// Check Cache First
+				if (profileCache[username]) {
+					const cached = profileCache[username];
+					setProfileUser(cached);
+					setFollowersCount(cached.followersCount || 0);
+					if (currentUser && cached.followers) {
+						setIsFollowing(cached.followers.includes(currentUser._id));
+					}
+					setLoadingProfile(false);
+					// return; // Optional: return here to skip fetch completely, or fetch in background
+				}
+
 				// /profile/[username] route
 				const result = await getProfileByUsernameAction(username);
 				if (result.success) {
 					console.log("Fetched Profile Data:", result.data);
 					setProfileUser(result.data);
+					setProfileCache((prev) => ({
+						...prev,
+						[username]: result.data,
+					}));
 					setFollowersCount(result.data.followersCount || 0);
 					// Check if current user is following
 					if (currentUser && result.data.followers) {
 						setIsFollowing(result.data.followers.includes(currentUser._id));
 					}
 				} else {
-					setNotFound(true);
+					if (!profileCache[username]) setNotFound(true);
 				}
 			}
 			setLoadingProfile(false);
@@ -114,6 +136,12 @@ export default function Profile({ username }: ProfileProps) {
 		if (!profileUser?.userId) return;
 
 		const fetchFeed = async () => {
+			const cacheKey = `${profileUser.userId}-${activeTab}`;
+			if (userPostsCache[cacheKey]) {
+				setFeedPosts(userPostsCache[cacheKey]);
+				return;
+			}
+
 			setLoadingFeed(true);
 			const result = await getUserFeedAction(profileUser.userId, activeTab);
 
@@ -140,6 +168,10 @@ export default function Profile({ username }: ProfileProps) {
 					isBookmarked: post.isBookmarked,
 				}));
 				setFeedPosts(mappedPosts);
+				setUserPostsCache((prev) => ({
+					...prev,
+					[cacheKey]: mappedPosts,
+				}));
 			} else {
 				setFeedPosts([]);
 			}
@@ -173,6 +205,27 @@ export default function Profile({ username }: ProfileProps) {
 				setIsFollowing(previousIsFollowing);
 				setFollowersCount(previousCount);
 				console.error(res.message);
+			} else {
+				// Update Cache on success
+				if (username) {
+					setProfileCache((prev) => {
+						const cached = prev[username];
+						if (!cached) return prev;
+						// Update followers logic in cache if needed, broadly updating count
+						return {
+							...prev,
+							[username]: {
+								...cached,
+								followersCount: isFollowing
+									? previousCount - 1
+									: previousCount + 1,
+								followers: isFollowing
+									? cached.followers?.filter((id) => id !== currentUser._id)
+									: [...(cached.followers || []), currentUser._id],
+							},
+						};
+					});
+				}
 			}
 		} catch (error) {
 			setIsFollowing(previousIsFollowing);

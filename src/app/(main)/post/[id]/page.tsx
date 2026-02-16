@@ -9,6 +9,11 @@ import { getPostByIdAction, getPostCommentsAction } from "@/lib/post.actions";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/components/ui/Toast/ToastContext";
+import { useAtom } from "jotai";
+import {
+	singlePostCacheAtom,
+	updateSinglePostCacheAtom,
+} from "@/store/postCache";
 
 export default function PostPage() {
 	const params = useParams();
@@ -16,9 +21,22 @@ export default function PostPage() {
 	const postId = params.id as string;
 	const { toast } = useToast();
 
-	const [post, setPost] = useState<PostProps | null>(null);
+	const [postCache] = useAtom(singlePostCacheAtom);
+	const [, updatePostCache] = useAtom(updateSinglePostCacheAtom);
+
+	// Initialize from cache if available
+	const cachedPost = postCache[postId];
+	const [post, setPost] = useState<PostProps | null>(cachedPost || null);
 	const [comments, setComments] = useState<PostProps[]>([]);
-	const [loading, setLoading] = useState(true);
+	const [loading, setLoading] = useState(!cachedPost);
+
+	// Update local state if cache updates (e.g. from background fetch elsewhere)
+	useEffect(() => {
+		if (cachedPost) {
+			setPost(cachedPost);
+			if (loading) setLoading(false);
+		}
+	}, [cachedPost]);
 
 	const fetchPostData = useCallback(async () => {
 		try {
@@ -50,6 +68,33 @@ export default function PostPage() {
 					isLiked: p.isLiked,
 					isBookmarked: p.isBookmarked,
 					isDetail: true,
+				});
+
+				// Update Cache
+				updatePostCache({
+					postId: p._id,
+					post: {
+						id: p._id,
+						author: {
+							id: p.author._id || p.author.userId,
+							name:
+								p.author.firstName && p.author.lastName
+									? `${p.author.firstName} ${p.author.lastName}`
+									: p.author.username || "Unknown",
+							username: p.author.username,
+							avatar:
+								p.author.avatar ||
+								"https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png",
+							isVerified: p.author.isVerified,
+						},
+						content: p.content,
+						images: p.images,
+						timestamp: new Date(p.createdAt).toLocaleDateString(),
+						stats: p.stats,
+						isLiked: p.isLiked,
+						isBookmarked: p.isBookmarked,
+						isDetail: true,
+					},
 				});
 			} else {
 				toast("Post not found", { type: "error" });
@@ -85,7 +130,7 @@ export default function PostPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [postId, toast]);
+	}, [postId, toast, updatePostCache]);
 
 	useEffect(() => {
 		if (postId) {
