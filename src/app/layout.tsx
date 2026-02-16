@@ -15,6 +15,7 @@ import { headers } from "next/headers";
 import RealtimeProvider from "@/components/providers/RealtimeProvider";
 import { CallProvider } from "@/providers/CallProvider";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
+import GlobalMessageListener from "@/components/providers/GlobalMessageListener";
 
 import { Space_Mono } from "next/font/google";
 
@@ -69,6 +70,7 @@ export default async function RootLayout({
 							<RealtimeProvider>
 								<CallProvider>
 									<ToastProvider>
+										<GlobalMessageListener />
 										{children}
 										<MobileBottomNav />
 									</ToastProvider>

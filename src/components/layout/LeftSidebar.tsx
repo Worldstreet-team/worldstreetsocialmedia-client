@@ -10,10 +10,12 @@ import { useState, useRef, useEffect } from "react";
 import { sidebarList } from "@/data/sidebar";
 import { useAtomValue } from "jotai";
 import { userAtom } from "@/store/user.atom";
+import { unreadMessagesCountAtom } from "@/store/messageCache";
 
 export function LeftSidebar() {
 	const pathname = usePathname();
 	const user = useAtomValue(userAtom);
+	const unreadCount = useAtomValue(unreadMessagesCountAtom);
 	const { signOut } = useClerk();
 	const router = useRouter();
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -59,15 +61,22 @@ export function LeftSidebar() {
 							key={index}
 							href={href}
 							className={clsx(
-								"flex items-center gap-3 px-4 py-3.5 rounded-full transition-all duration-300 group hover:bg-zinc-900",
+								"flex items-center gap-3 px-4 py-3.5 rounded-full transition-all duration-300 group hover:bg-zinc-900 relative",
 								isActive
 									? "font-bold text-white"
 									: "text-zinc-400 hover:text-white",
 							)}
 						>
-							<span className="inline-flex w-8 h-8 items-center justify-center">
-								<item.icon isActive={isActive} />
-							</span>
+							<div className="relative">
+								<span className="inline-flex w-8 h-8 items-center justify-center">
+									<item.icon isActive={isActive} />
+								</span>
+								{item.title === "Messages" && unreadCount > 0 && (
+									<span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 text-[10px] font-bold text-black bg-yellow-500 rounded-full border-2 border-black animate-in zoom-in font-space-mono">
+										{unreadCount > 9 ? "9+" : unreadCount}
+									</span>
+								)}
+							</div>
 
 							<span className="text-base font-medium font-space-mono tracking-tight">
 								{item.title}

@@ -12,8 +12,11 @@ import Link from "next/link";
 import { sidebarList } from "@/data/sidebar";
 import clsx from "clsx";
 
+import { unreadMessagesCountAtom } from "@/store/messageCache";
+
 export function MobileNavigation() {
 	const user = useAtomValue(userAtom);
+	const unreadCount = useAtomValue(unreadMessagesCountAtom);
 	const { signOut } = useClerk();
 	const router = useRouter();
 	const pathname = usePathname();
@@ -136,14 +139,21 @@ export function MobileNavigation() {
 											key={index}
 											href={href}
 											className={clsx(
-												"flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-space-mono",
+												"flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-space-mono relative",
 												isActive
 													? "bg-zinc-900 text-white font-bold"
 													: "text-zinc-400 hover:text-white hover:bg-zinc-900/50",
 											)}
 											onClick={() => setIsOpen(false)}
 										>
-											<item.icon isActive={isActive} />
+											<div className="relative">
+												<item.icon isActive={isActive} />
+												{item.title === "Messages" && unreadCount > 0 && (
+													<span className="absolute -top-2 -right-2 flex items-center justify-center w-4 h-4 text-[9px] font-bold text-black bg-yellow-500 rounded-full border border-black animate-in zoom-in font-space-mono">
+														{unreadCount > 9 ? "9+" : unreadCount}
+													</span>
+												)}
+											</div>
 											<span>{item.title}</span>
 										</Link>
 									);

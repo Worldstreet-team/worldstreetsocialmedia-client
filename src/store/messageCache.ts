@@ -44,6 +44,8 @@ export const updateConversationCacheAtom = atom(
 	},
 );
 
+export const unreadMessagesCountAtom = atom(0);
+
 // Helper to append a single message
 export const addMessageToCacheAtom = atom(
 	null,
