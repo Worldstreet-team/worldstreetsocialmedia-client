@@ -14,6 +14,7 @@ import JotaiHydrator from "./JotaiHydrator";
 import { headers } from "next/headers";
 import RealtimeProvider from "@/components/providers/RealtimeProvider";
 import { CallProvider } from "@/providers/CallProvider";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 
 const geistMono = Geist_Mono({
 	variable: "--font-geist-mono",
@@ -64,7 +65,10 @@ export default async function RootLayout({
 						<JotaiHydrator user={parsedUser}>
 							<RealtimeProvider>
 								<CallProvider>
-									<ToastProvider>{children}</ToastProvider>
+									<ToastProvider>
+										{children}
+										<MobileBottomNav />
+									</ToastProvider>
 								</CallProvider>
 							</RealtimeProvider>
 						</JotaiHydrator>
