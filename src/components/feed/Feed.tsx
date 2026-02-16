@@ -17,11 +17,18 @@ export default function Feed() {
 	const { toast } = useToast();
 
 	useEffect(() => {
+		// Disable browser's automatic scroll restoration to handle it manually
+		if (typeof window !== "undefined") {
+			window.history.scrollRestoration = "manual";
+		}
+
 		if (feedState.posts.length > 0) {
 			setLoading(false);
-			// Restore scroll position
+			// Restore scroll position with a slight delay to ensure DOM is ready
 			if (feedState.scrollPosition > 0) {
-				window.scrollTo(0, feedState.scrollPosition);
+				setTimeout(() => {
+					window.scrollTo(0, feedState.scrollPosition);
+				}, 10);
 			}
 		} else {
 			fetchFeed();
@@ -29,7 +36,10 @@ export default function Feed() {
 
 		// Save scroll position on unmount
 		return () => {
-			setFeedState((prev) => ({ ...prev, scrollPosition: window.scrollY }));
+			if (typeof window !== "undefined") {
+				window.history.scrollRestoration = "auto";
+				setFeedState((prev) => ({ ...prev, scrollPosition: window.scrollY }));
+			}
 		};
 	}, []);
 

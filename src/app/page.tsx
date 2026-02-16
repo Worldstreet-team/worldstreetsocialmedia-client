@@ -11,7 +11,7 @@ export default async function Home() {
 		<main className="min-h-screen bg-black text-white">
 			<div className="max-w-[1265px] mx-auto flex justify-center min-h-screen">
 				<LeftSidebar />
-				<div className="w-full max-w-[600px] border-x border-zinc-800 min-h-screen">
+				<div className="w-full max-w-[600px] sm:border-x border-zinc-800 min-h-screen">
 					<Feed />
 				</div>
 				<RightSidebar />
