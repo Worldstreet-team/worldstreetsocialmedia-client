@@ -40,7 +40,14 @@ export const MobileBottomNav = () => {
 	];
 
 	// Don't show on auth pages or if not logged in (handled by parent layout logic usually, but here checking path)
+	// Don't show on auth pages or if not logged in (handled by parent layout logic usually, but here checking path)
 	if (pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up")) {
+		return null;
+	}
+
+	// Hide on message detail screens (when deep in a conversation)
+	// Assuming /messages is the list, and /messages/[id] is the chat
+	if (pathname.startsWith("/messages/") && pathname.split("/").length > 2) {
 		return null;
 	}
 
