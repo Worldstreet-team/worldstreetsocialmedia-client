@@ -16,17 +16,12 @@ import RealtimeProvider from "@/components/providers/RealtimeProvider";
 import { CallProvider } from "@/providers/CallProvider";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 
-import localFont from "next/font/local";
+import { Space_Mono } from "next/font/google";
 
-const satoshi = localFont({
-	src: [
-		{ path: "../assets/fonts/satoshi/Satoshi-Light.otf", weight: "300" },
-		{ path: "../assets/fonts/satoshi/Satoshi-Regular.otf", weight: "400" },
-		{ path: "../assets/fonts/satoshi/Satoshi-Medium.otf", weight: "500" },
-		{ path: "../assets/fonts/satoshi/Satoshi-Bold.otf", weight: "700" },
-		{ path: "../assets/fonts/satoshi/Satoshi-Black.otf", weight: "900" },
-	],
-	variable: "--font-satoshi",
+const spaceMono = Space_Mono({
+	subsets: ["latin"],
+	weight: ["400", "700"],
+	variable: "--font-space-mono",
 });
 
 export const viewport: Viewport = {
@@ -61,7 +56,7 @@ export default async function RootLayout({
 			}}
 		>
 			<html lang="en" suppressHydrationWarning>
-				<body className={`${satoshi.variable} antialiased`}>
+				<body className={`${spaceMono.variable} antialiased`}>
 					<NextTopLoader />
 
 					<ThemeProvider

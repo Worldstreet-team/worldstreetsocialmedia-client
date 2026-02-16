@@ -210,7 +210,15 @@ export const MessageBox = ({
 	const [conversations, setConversations] =
 		useState<Conversation[]>(initialConversations);
 	const [activeConversation, setActiveConversation] =
-		useState<Conversation | null>(null);
+		useState<Conversation | null>(() => {
+			if (initialConversationId && initialConversations.length > 0) {
+				return (
+					initialConversations.find((c) => c._id === initialConversationId) ||
+					null
+				);
+			}
+			return null;
+		});
 	const [messageCache, setMessageCache] = useAtom(messageCacheAtom);
 	const messages = activeConversation
 		? messageCache[activeConversation._id] || []

@@ -184,3 +184,27 @@ export async function getFollowingAction(userId: string) {
 		};
 	}
 }
+
+export async function blockUserAction(targetUserId: string) {
+	const { getToken } = await auth();
+	const accessToken = await getToken();
+
+	if (!accessToken) return { success: false, message: "Unauthorized" };
+
+	try {
+		const res = await axios.post(
+			`${API_URL}/api/users/${targetUserId}/block`,
+			{},
+			{
+				headers: { Authorization: `Bearer ${accessToken}` },
+			},
+		);
+		return { success: true, data: res.data };
+	} catch (error: any) {
+		console.error("Block User Error:", error.response?.data || error.message);
+		return {
+			success: false,
+			message: error.response?.data?.message || "Failed to block user",
+		};
+	}
+}

@@ -34,7 +34,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --font-sans: var(--font-satoshi);
+  --font-sans: var(--font-space-mono);
   --font-mono: var(--font-geist-mono);
   --font-space-mono: var(--font-space-mono);
 }

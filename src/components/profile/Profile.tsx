@@ -8,7 +8,10 @@ import {
 	getProfileByUsernameAction,
 	followUserAction,
 	unfollowUserAction,
+	blockUserAction,
 } from "@/lib/user.actions";
+import ConfirmModal from "@/components/ui/ConfirmModal";
+import { toast } from "sonner";
 import { getUserFeedAction } from "@/lib/feed.actions";
 import { useAtomValue } from "jotai";
 import { userAtom } from "@/store/user.atom";
@@ -23,6 +26,7 @@ import {
 	Link as LinkIcon,
 	Calendar,
 	Mail,
+	MoreHorizontal,
 } from "lucide-react";
 import clsx from "clsx";
 import { useAtom } from "jotai";
@@ -52,6 +56,8 @@ export default function Profile({ username }: ProfileProps) {
 
 	const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 	const [isFollowsModalOpen, setIsFollowsModalOpen] = useState(false);
+	const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
+	const [showMoreMenu, setShowMoreMenu] = useState(false);
 	const [followsInitialTab, setFollowsInitialTab] = useState<
 		"followers" | "following"
 	>("followers");
@@ -236,6 +242,18 @@ export default function Profile({ username }: ProfileProps) {
 		}
 	};
 
+	const handleBlockUser = async () => {
+		if (!profileUser?.userId) return;
+		const res = await blockUserAction(profileUser.userId);
+		if (res.success) {
+			toast.success("User blocked");
+			// Optional: Redirect or update UI
+			router.push("/");
+		} else {
+			toast.error(res.message);
+		}
+	};
+
 	if (loadingProfile && !profileUser) {
 		return <ProfileSkeleton />;
 	}
@@ -329,6 +347,30 @@ export default function Profile({ username }: ProfileProps) {
 					>
 						<Mail className="w-5 h-5 text-zinc-400" />
 					</button>
+				)}
+				{!isMe && (
+					<div className="relative">
+						<button
+							className="w-9 h-9 border border-zinc-700 rounded-full flex items-center justify-center hover:bg-zinc-800 transition-colors cursor-pointer text-white"
+							type="button"
+							onClick={() => setShowMoreMenu(!showMoreMenu)}
+						>
+							<MoreHorizontal className="w-5 h-5 text-zinc-400" />
+						</button>
+						{showMoreMenu && (
+							<div className="absolute top-full right-0 mt-2 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl overflow-hidden z-30 flex flex-col py-1">
+								<button
+									className="w-full text-left px-4 py-3 text-red-500 hover:bg-zinc-800 text-sm font-bold font-space-mono transition-colors"
+									onClick={() => {
+										setShowMoreMenu(false);
+										setIsBlockModalOpen(true);
+									}}
+								>
+									Block @{profileUser.username}
+								</button>
+							</div>
+						)}
+					</div>
 				)}
 				{isMe ? (
 					<button
@@ -425,6 +467,16 @@ export default function Profile({ username }: ProfileProps) {
 						initialTab={followsInitialTab}
 					/>
 				)}
+
+				<ConfirmModal
+					isOpen={isBlockModalOpen}
+					onClose={() => setIsBlockModalOpen(false)}
+					onConfirm={handleBlockUser}
+					title={`Block @${profileUser.username}?`}
+					message="They will not be able to message you or see your posts. This action cannot be easily undone."
+					confirmText="Block"
+					isDestructive={true}
+				/>
 
 				<div className="flex gap-5 text-[15px] mt-1 font-space-mono">
 					<button

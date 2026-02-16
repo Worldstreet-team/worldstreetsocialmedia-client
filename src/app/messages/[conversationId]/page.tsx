@@ -1,4 +1,5 @@
 import { MessageBox } from "@/components/messages/MessageBox";
+import { getConversationsAction } from "@/lib/conversation.actions";
 
 interface PageProps {
 	params: Promise<{
@@ -8,5 +9,12 @@ interface PageProps {
 
 export default async function ConversationPage({ params }: PageProps) {
 	const { conversationId } = await params;
-	return <MessageBox initialConversationId={conversationId} />;
+	const { data: conversations } = await getConversationsAction();
+
+	return (
+		<MessageBox
+			initialConversationId={conversationId}
+			initialConversations={conversations || []}
+		/>
+	);
 }
