@@ -29,3 +29,23 @@ export async function startConversationAction(recipientId: string) {
 		return { success: false, error: "Failed to start conversation" };
 	}
 }
+
+export async function getConversationsAction() {
+	try {
+		const { getToken } = await auth();
+		const token = await getToken();
+
+		if (!token) return { success: false, message: "Unauthorized" };
+
+		const response = await axios.get(`${API_URL}/api/messages/conversations`, {
+			headers: {
+				Authorization: `Bearer ${token}`,
+			},
+		});
+
+		return { success: true, data: response.data };
+	} catch (error) {
+		console.error("Error fetching conversations:", error);
+		return { success: false, error: "Failed to fetch conversations" };
+	}
+}

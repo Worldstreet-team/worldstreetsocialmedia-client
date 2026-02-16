@@ -1,5 +1,8 @@
 import { MessageBox } from "@/components/messages/MessageBox";
+import { getConversationsAction } from "@/lib/conversation.actions";
 
-export default function MessagesPage() {
-	return <MessageBox />;
+export default async function MessagesPage() {
+	const { data: conversations } = await getConversationsAction();
+
+	return <MessageBox initialConversations={conversations || []} />;
 }

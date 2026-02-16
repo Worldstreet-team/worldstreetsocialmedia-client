@@ -195,15 +195,18 @@ const Attachment = ({
 
 export const MessageBox = ({
 	initialConversationId,
+	initialConversations = [],
 }: {
 	initialConversationId?: string;
+	initialConversations?: Conversation[];
 }) => {
 	const { user } = useUser();
 	const { getToken } = useAuth();
 	const { isConnected } = useRealtime();
 
 	const [myProfileId, setMyProfileId] = useState<string | null>(null);
-	const [conversations, setConversations] = useState<Conversation[]>([]);
+	const [conversations, setConversations] =
+		useState<Conversation[]>(initialConversations);
 	const [activeConversation, setActiveConversation] =
 		useState<Conversation | null>(null);
 	const [messageCache, setMessageCache] = useAtom(messageCacheAtom);
@@ -212,7 +215,9 @@ export const MessageBox = ({
 		: [];
 	const [messageInput, setMessageInput] = useState("");
 	const [searchQuery, setSearchQuery] = useState("");
-	const [isLoadingConversations, setIsLoadingConversations] = useState(true);
+	const [isLoadingConversations, setIsLoadingConversations] = useState(
+		initialConversations.length === 0,
+	);
 	const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 	const [showAttachMenu, setShowAttachMenu] = useState(false);
 	const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -674,7 +679,9 @@ export const MessageBox = ({
 		};
 		if (user) {
 			fetchMe();
-			fetchConversations();
+			if (initialConversations.length === 0) {
+				fetchConversations();
+			}
 		}
 	}, [user]);
 
