@@ -441,8 +441,6 @@ export const MessageBox = ({
 					(c: Conversation) => c._id === initialConversationId,
 				);
 				if (target) setActiveConversation(target);
-			} else if (!activeConversation && response.data.length > 0) {
-				setActiveConversation(response.data[0]);
 			}
 		} catch (error) {
 			toast.error("Failed to load conversations");
