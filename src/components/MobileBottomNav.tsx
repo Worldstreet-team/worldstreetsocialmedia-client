@@ -45,8 +45,8 @@ export const MobileBottomNav = () => {
 	}
 
 	return (
-		<div className="fixed bottom-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-md border-t border-zinc-800 md:hidden pb-safe">
-			<div className="flex justify-between items-center h-16 px-2">
+		<div className="fixed bottom-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-md border-t  md:hidden pb-safe border border-green-500">
+			<div className="flex justify-between items-center h-16 px-2 border border-red-500">
 				{navItems.map((item) => {
 					const isActive = pathname === item.href;
 					return (
