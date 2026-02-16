@@ -656,7 +656,10 @@ export const MessageBox = ({
 			<div
 				className={clsx(
 					"w-full md:w-[400px] border-r border-zinc-800 flex flex-col transition-all",
-					activeConversation ? "hidden md:flex" : "flex",
+					activeConversation ||
+						(conversations.length === 0 && !isLoadingConversations)
+						? "hidden md:flex"
+						: "flex",
 				)}
 			>
 				<div className="p-4 border-b border-zinc-800">
@@ -731,26 +734,6 @@ export const MessageBox = ({
 									</div>
 								</button>
 							))
-					)}
-
-					{!isLoadingConversations && conversations.length === 0 && (
-						<div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-zinc-500">
-							<div className="w-16 h-16 bg-zinc-900 rounded-full flex items-center justify-center mb-4">
-								<MessageSquarePlus className="w-8 h-8 text-zinc-400" />
-							</div>
-							<h3 className="text-lg font-bold text-white mb-2">
-								No conversations yet
-							</h3>
-							<p className="text-sm mb-6 max-w-[200px]">
-								Start chatting with your friends!
-							</p>
-							<button
-								onClick={() => searchInputRef.current?.focus()}
-								className="px-6 py-2.5 bg-white text-black font-bold rounded-full text-sm hover:bg-zinc-200 transition-colors"
-							>
-								Start a Conversation
-							</button>
-						</div>
 					)}
 				</div>
 			</div>
@@ -1064,7 +1047,12 @@ export const MessageBox = ({
 					</div>
 				</div>
 			) : (
-				<div className="flex-1 flex flex-col items-center justify-center text-zinc-500 p-8">
+				<div
+					className={clsx(
+						"flex-1 flex flex-col items-center justify-center text-zinc-500 p-8",
+						conversations.length > 0 ? "hidden md:flex" : "flex",
+					)}
+				>
 					<div className="max-w-md flex flex-col items-center text-center space-y-6">
 						<img
 							src="/images/messages-empty-state.png"
@@ -1079,7 +1067,10 @@ export const MessageBox = ({
 								Choose from your existing conversations or start a new chat
 							</p>
 						</div>
-						<button className="flex items-center gap-2 px-6 py-3 bg-yellow-500 text-black font-bold rounded-full hover:bg-yellow-400 transition-colors">
+						<button
+							onClick={() => searchInputRef.current?.focus()}
+							className="flex items-center gap-2 px-6 py-3 bg-yellow-500 text-black font-bold rounded-full hover:bg-yellow-400 transition-colors"
+						>
 							<UserPlus className="w-5 h-5" />
 							New Conversation
 						</button>
