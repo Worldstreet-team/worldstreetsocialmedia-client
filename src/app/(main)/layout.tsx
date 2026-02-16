@@ -9,7 +9,7 @@ export default function MainLayout({
 	return (
 		<div className="max-w-[1265px] mx-auto flex justify-center min-h-screen">
 			<LeftSidebar />
-			<main className="w-full max-w-[600px] border-x border-zinc-800 min-h-screen">
+			<main className="w-full max-w-[600px] md:border-x border-zinc-800 min-h-screen">
 				{children}
 			</main>
 			<RightSidebar />
