@@ -5,7 +5,7 @@ import {
 	// SignUpButton,
 	// SignedOut,
 } from "@clerk/nextjs";
-import { Geist_Mono } from "next/font/google";
+
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ToastProvider } from "@/components/ui/Toast/ToastContext";
@@ -16,9 +16,17 @@ import RealtimeProvider from "@/components/providers/RealtimeProvider";
 import { CallProvider } from "@/providers/CallProvider";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 
-const geistMono = Geist_Mono({
-	variable: "--font-geist-mono",
-	subsets: ["latin"],
+import localFont from "next/font/local";
+
+const satoshi = localFont({
+	src: [
+		{ path: "../assets/fonts/satoshi/Satoshi-Light.otf", weight: "300" },
+		{ path: "../assets/fonts/satoshi/Satoshi-Regular.otf", weight: "400" },
+		{ path: "../assets/fonts/satoshi/Satoshi-Medium.otf", weight: "500" },
+		{ path: "../assets/fonts/satoshi/Satoshi-Bold.otf", weight: "700" },
+		{ path: "../assets/fonts/satoshi/Satoshi-Black.otf", weight: "900" },
+	],
+	variable: "--font-satoshi",
 });
 
 export const viewport: Viewport = {
@@ -53,7 +61,7 @@ export default async function RootLayout({
 			}}
 		>
 			<html lang="en" suppressHydrationWarning>
-				<body className={`${geistMono.variable} antialiased`}>
+				<body className={`${satoshi.variable} antialiased`}>
 					<NextTopLoader />
 
 					<ThemeProvider
