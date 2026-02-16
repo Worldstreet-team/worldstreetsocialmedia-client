@@ -19,9 +19,18 @@ export default function Feed() {
 	useEffect(() => {
 		if (feedState.posts.length > 0) {
 			setLoading(false);
+			// Restore scroll position
+			if (feedState.scrollPosition > 0) {
+				window.scrollTo(0, feedState.scrollPosition);
+			}
 		} else {
 			fetchFeed();
 		}
+
+		// Save scroll position on unmount
+		return () => {
+			setFeedState((prev) => ({ ...prev, scrollPosition: window.scrollY }));
+		};
 	}, []);
 
 	const fetchFeed = async (reset = false) => {
