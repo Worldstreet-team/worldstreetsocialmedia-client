@@ -8,7 +8,6 @@ import HomeIcon from "@/assets/icons/HomeIcon";
 import SearchIcon from "@/assets/icons/SearchIcon";
 import MessageIcon from "@/assets/icons/MessageIcon";
 import BellIcon from "@/assets/icons/BellIcon";
-import BookmarkIcon from "@/assets/icons/BookmarkIcon";
 
 export const MobileBottomNav = () => {
 	const pathname = usePathname();
@@ -37,12 +36,6 @@ export const MobileBottomNav = () => {
 			icon: MessageIcon,
 			label: "Messages",
 			active: pathname.startsWith("/messages"),
-		},
-		{
-			href: "/bookmarks",
-			icon: BookmarkIcon,
-			label: "Bookmarks",
-			active: pathname === "/bookmarks",
 		},
 	];
 
