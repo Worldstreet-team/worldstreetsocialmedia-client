@@ -268,7 +268,7 @@ export const PostCard = ({ post }: { post: PostProps }) => {
 	if (isDeleted) return null;
 
 	return (
-		<article className="relative block p-6 border-b border-zinc-800 hover:bg-zinc-900/30 transition-colors">
+		<article className="relative block p-3 sm:p-6 border-b border-zinc-800/60 hover:bg-zinc-900/30 transition-colors">
 			{/* Overlay Link for the entire card */}
 			<Link
 				href={`/post/${post.id}`}
