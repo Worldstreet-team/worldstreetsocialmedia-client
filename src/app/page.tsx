@@ -14,7 +14,7 @@ export default async function Home() {
 			<MobileNavigation />
 			<div className="max-w-[1265px] mx-auto flex justify-center min-h-screen">
 				<LeftSidebar />
-				<div className="w-full max-w-[600px] sm:border-x border-zinc-800 min-h-screen">
+				<div className="w-full max-w-[600px] sm:border-x border-zinc-800 min-h-screen pt-14 md:pt-0">
 					<Feed />
 				</div>
 				<RightSidebar />

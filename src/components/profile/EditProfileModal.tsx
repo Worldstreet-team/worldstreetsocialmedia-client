@@ -216,7 +216,7 @@ export default function EditProfileModal({
 
 							{/* Form Fields */}
 							<div className="px-4 pb-8 space-y-5">
-								<div className="grid grid-cols-2 gap-4">
+								<div className="grid sm:grid-cols-2 gap-4">
 									{/* First Name */}
 									<div className="relative border border-zinc-800 focus-within:border-white focus-within:ring-1 focus-within:ring-white transition-all p-3">
 										<label className="block text-xs uppercase font-bold text-zinc-500 mb-1 font-space-mono">
