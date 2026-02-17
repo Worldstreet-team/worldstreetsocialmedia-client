@@ -260,7 +260,7 @@ export default function Profile({ username }: ProfileProps) {
 
 	if (notFound) {
 		return (
-			<div className="flex flex-col justify-center items-center h-[50vh] text-zinc-500 font-space-mono">
+			<div className="flex flex-col justify-center items-center h-[50vh] text-zinc-500 font-sans">
 				<h2 className="text-xl font-bold mb-2 text-white">User not found</h2>
 				<p>@{username}</p>
 				<button
@@ -298,11 +298,11 @@ export default function Profile({ username }: ProfileProps) {
 					<ArrowLeft className="w-5 h-5" />
 				</button>
 				<div className="flex flex-col">
-					<h1 className="text-lg font-bold leading-5 flex items-center gap-1 font-space-mono text-white">
+					<h1 className="text-lg font-bold leading-5 flex items-center gap-1 font-sans text-white">
 						{fullName}
 						{profileUser.isVerified && <VerifiedIcon color="blue" />}
 					</h1>
-					<span className="text-xs text-zinc-500 font-space-mono">
+					<span className="text-xs text-zinc-500 font-sans">
 						{profileUser.postsCount || 0} Posts
 					</span>
 				</div>
@@ -360,7 +360,7 @@ export default function Profile({ username }: ProfileProps) {
 						{showMoreMenu && (
 							<div className="absolute top-full right-0 mt-2 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl overflow-hidden z-30 flex flex-col py-1">
 								<button
-									className="w-full text-left px-4 py-3 text-red-500 hover:bg-zinc-800 text-sm font-bold font-space-mono transition-colors"
+									className="w-full text-left px-4 py-3 text-red-500 hover:bg-zinc-800 text-sm font-bold font-sans transition-colors"
 									onClick={() => {
 										setShowMoreMenu(false);
 										setIsBlockModalOpen(true);
@@ -374,7 +374,7 @@ export default function Profile({ username }: ProfileProps) {
 				)}
 				{isMe ? (
 					<button
-						className="border border-zinc-700 bg-black text-white rounded-full px-5 h-9 font-bold hover:bg-zinc-900 transition-colors text-sm cursor-pointer font-space-mono shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)] active:translate-x-px active:translate-y-px active:shadow-none"
+						className="border border-zinc-700 bg-black text-white rounded-full px-5 h-9 font-bold hover:bg-zinc-900 transition-colors text-sm cursor-pointer font-sans shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)] active:translate-x-px active:translate-y-px active:shadow-none"
 						type="button"
 						onClick={() => setIsEditProfileOpen(true)}
 					>
@@ -383,7 +383,7 @@ export default function Profile({ username }: ProfileProps) {
 				) : (
 					<button
 						className={clsx(
-							"rounded-full px-5 py-1.5 font-bold transition-all text-sm cursor-pointer min-w-[100px] font-space-mono shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)] active:translate-x-px active:translate-y-px active:shadow-none border border-zinc-700",
+							"rounded-full px-5 py-1.5 font-bold transition-all text-sm cursor-pointer min-w-[100px] font-sans shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)] active:translate-x-px active:translate-y-px active:shadow-none border border-zinc-700",
 							isFollowing
 								? "bg-transparent text-white hover:border-red-600 hover:text-red-500"
 								: "bg-white text-black hover:bg-zinc-200",
@@ -406,11 +406,11 @@ export default function Profile({ username }: ProfileProps) {
 			{/* Profile Info */}
 			<div className="px-4 mt-6 flex flex-col gap-3">
 				<div>
-					<h1 className="text-xl sm:text-2xl font-black leading-6 font-space-mono flex items-center gap-1 text-white">
+					<h1 className="text-xl sm:text-2xl font-black leading-6 font-sans flex items-center gap-1 text-white">
 						{fullName}
 						{profileUser.isVerified && <VerifiedIcon color="blue" />}
 					</h1>
-					<div className="text-sm text-zinc-500 font-space-mono">
+					<div className="text-sm text-zinc-500 font-sans">
 						@{profileUser.username}
 					</div>
 				</div>
@@ -421,7 +421,7 @@ export default function Profile({ username }: ProfileProps) {
 					)}
 				</div>
 
-				<div className="flex gap-x-4 gap-y-2 text-zinc-500 text-[14px] flex-wrap mt-1 font-space-mono">
+				<div className="flex gap-x-4 gap-y-2 text-zinc-500 text-[14px] flex-wrap mt-1 font-sans">
 					{profileUser.location && (
 						<div className="flex items-center gap-1">
 							<MapPin className="w-4 h-4" />
@@ -478,7 +478,7 @@ export default function Profile({ username }: ProfileProps) {
 					isDestructive={true}
 				/>
 
-				<div className="flex gap-5 text-[15px] mt-1 font-space-mono">
+				<div className="flex gap-5 text-[15px] mt-1 font-sans">
 					<button
 						type="button"
 						className="hover:underline cursor-pointer bg-transparent border-none p-0 flex gap-1 items-baseline"
@@ -512,7 +512,7 @@ export default function Profile({ username }: ProfileProps) {
 					<button
 						key={tab}
 						onClick={() => setActiveTab(tab as typeof activeTab)}
-						className="flex-1 min-w-fit px-4 py-3 hover:bg-zinc-900 transition-colors relative cursor-pointer font-space-mono text-sm uppercase tracking-wide"
+						className="flex-1 min-w-fit px-4 py-3 hover:bg-zinc-900 transition-colors relative cursor-pointer font-sans text-sm uppercase tracking-wide"
 						type="button"
 					>
 						<span
@@ -542,7 +542,7 @@ export default function Profile({ username }: ProfileProps) {
 				) : feedPosts.length > 0 ? (
 					feedPosts.map((post) => <PostCard key={post.id} post={post} />)
 				) : (
-					<div className="p-12 text-center flex flex-col items-center justify-center text-zinc-500 font-space-mono">
+					<div className="p-12 text-center flex flex-col items-center justify-center text-zinc-500 font-sans">
 						<h2 className="text-lg font-bold mb-2 wrap-break-word text-white">
 							{isMe ? "You" : `@${profileUser.username}`}
 							{activeTab === "likes"

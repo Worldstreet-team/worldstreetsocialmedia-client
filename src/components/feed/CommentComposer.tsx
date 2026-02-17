@@ -145,7 +145,7 @@ export const CommentComposer = ({
 						value={content}
 						onChange={(e) => setContent(e.target.value)}
 						placeholder="Post your reply"
-						className="w-full bg-transparent text-lg text-white placeholder:text-zinc-600 outline-none resize-none min-h-[60px] font-medium leading-relaxed overflow-hidden font-space-mono"
+						className="w-full bg-transparent text-lg text-white placeholder:text-zinc-600 outline-none resize-none min-h-[60px] font-medium leading-relaxed overflow-hidden font-sans"
 						rows={1}
 					/>
 
@@ -189,7 +189,7 @@ export const CommentComposer = ({
 								className="p-2 hover:bg-yellow-500/10 rounded-full transition-colors relative group cursor-pointer"
 							>
 								<ImageIcon className="w-5 h-5" />
-								<span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] bg-zinc-800 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-space-mono">
+								<span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] bg-zinc-800 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
 									Media
 								</span>
 							</button>
@@ -211,7 +211,7 @@ export const CommentComposer = ({
 								)}
 							>
 								<Smile className="w-5 h-5" />
-								<span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] bg-zinc-800 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-space-mono">
+								<span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] bg-zinc-800 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
 									Emoji
 								</span>
 							</button>
@@ -239,7 +239,7 @@ export const CommentComposer = ({
 								(!content.trim() && mediaItems.length === 0) || isPosting
 							}
 							className={clsx(
-								"px-6 py-2 rounded-full font-bold text-sm font-space-mono transition-all flex items-center gap-2 cursor-pointer",
+								"px-6 py-2 rounded-full font-bold text-sm font-sans transition-all flex items-center gap-2 cursor-pointer",
 								(!content.trim() && mediaItems.length === 0) || isPosting
 									? "bg-zinc-800 text-zinc-500 cursor-not-allowed opacity-50"
 									: "bg-white text-black hover:bg-yellow-500 hover:scale-105 active:scale-95 shadow-[2px_2px_0px_rgba(255,255,255,0.2)] hover:shadow-none",

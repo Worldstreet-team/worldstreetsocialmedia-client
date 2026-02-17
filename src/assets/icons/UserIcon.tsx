@@ -3,8 +3,8 @@ import { IconProps } from "@/app/types";
 const UserIcon = ({ color, size, isActive }: IconProps) => {
 	return (
 		<svg
-			width={size ? size.width : "30"}
-			height={size ? size.height : "30"}
+			width={size ? size.width : "27"}
+			height={size ? size.height : "27"}
 			viewBox="0 0 24 24"
 			fill="none"
 			xmlns="http://www.w3.org/2000/svg"

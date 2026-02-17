@@ -34,9 +34,8 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --font-sans: var(--font-space-mono);
+  --font-sans: var(--font-google-sans);
   --font-mono: var(--font-geist-mono);
-  --font-space-mono: var(--font-space-mono);
 }
 
 @media (prefers-color-scheme: dark) {

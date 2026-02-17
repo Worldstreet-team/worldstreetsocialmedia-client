@@ -312,18 +312,18 @@ export const PostCard = ({ post }: { post: PostProps }) => {
 						<div className="flex items-center gap-2 overflow-hidden pointer-events-auto">
 							<Link
 								href={`/profile/${post.author.username}`}
-								className="font-bold text-white truncate font-space-mono hover:underline decoration-yellow-500 underline-offset-4"
+								className="font-bold text-white truncate font-sans hover:underline decoration-yellow-500 underline-offset-4"
 							>
 								{post.author.name}
 							</Link>
 							<Link
 								href={`/profile/${post.author.username}`}
-								className="text-zinc-500 text-sm truncate font-space-mono hover:text-zinc-300"
+								className="text-zinc-500 text-sm truncate font-sans hover:text-zinc-300"
 							>
 								@{post.author.username}
 							</Link>
 							<span className="text-zinc-700 text-xs">•</span>
-							<span className="text-zinc-500 text-sm font-space-mono hover:text-zinc-400">
+							<span className="text-zinc-500 text-sm font-sans hover:text-zinc-400">
 								{post.timestamp}
 							</span>
 						</div>
@@ -359,7 +359,7 @@ export const PostCard = ({ post }: { post: PostProps }) => {
 														e.stopPropagation();
 														handleMenuAction("copy_link");
 													}}
-													className="w-full text-left px-4 py-3 hover:bg-zinc-800 flex items-center gap-3 text-sm text-zinc-300 hover:text-white transition-colors font-space-mono"
+													className="w-full text-left px-4 py-3 hover:bg-zinc-800 flex items-center gap-3 text-sm text-zinc-300 hover:text-white transition-colors font-sans"
 												>
 													<Link2 className="w-4 h-4" />
 													Copy link
@@ -369,7 +369,7 @@ export const PostCard = ({ post }: { post: PostProps }) => {
 														e.stopPropagation();
 														handleMenuAction("pin");
 													}}
-													className="w-full text-left px-4 py-3 hover:bg-zinc-800 flex items-center gap-3 text-sm text-zinc-300 hover:text-white transition-colors font-space-mono"
+													className="w-full text-left px-4 py-3 hover:bg-zinc-800 flex items-center gap-3 text-sm text-zinc-300 hover:text-white transition-colors font-sans"
 												>
 													<Pin className="w-4 h-4" />
 													Pin to profile
@@ -379,7 +379,7 @@ export const PostCard = ({ post }: { post: PostProps }) => {
 														e.stopPropagation();
 														handleMenuAction("activity");
 													}}
-													className="w-full text-left px-4 py-3 hover:bg-zinc-800 flex items-center gap-3 text-sm text-zinc-300 hover:text-white transition-colors font-space-mono"
+													className="w-full text-left px-4 py-3 hover:bg-zinc-800 flex items-center gap-3 text-sm text-zinc-300 hover:text-white transition-colors font-sans"
 												>
 													<BarChart2 className="w-4 h-4" />
 													View activity
@@ -390,7 +390,7 @@ export const PostCard = ({ post }: { post: PostProps }) => {
 														e.stopPropagation();
 														handleMenuAction("delete");
 													}}
-													className="w-full text-left px-4 py-3 hover:bg-red-500/10 text-red-500 flex items-center gap-3 text-sm transition-colors font-space-mono font-bold"
+													className="w-full text-left px-4 py-3 hover:bg-red-500/10 text-red-500 flex items-center gap-3 text-sm transition-colors font-sans font-bold"
 												>
 													<Trash2 className="w-4 h-4" />
 													Delete post
@@ -403,7 +403,7 @@ export const PostCard = ({ post }: { post: PostProps }) => {
 														e.stopPropagation();
 														handleMenuAction("not_interested");
 													}}
-													className="w-full text-left px-4 py-3 hover:bg-zinc-800 flex items-center gap-3 text-sm text-zinc-300 hover:text-white transition-colors font-space-mono"
+													className="w-full text-left px-4 py-3 hover:bg-zinc-800 flex items-center gap-3 text-sm text-zinc-300 hover:text-white transition-colors font-sans"
 												>
 													<Ban className="w-4 h-4" />
 													Not interested
@@ -413,7 +413,7 @@ export const PostCard = ({ post }: { post: PostProps }) => {
 														e.stopPropagation();
 														handleMenuAction("copy_link");
 													}}
-													className="w-full text-left px-4 py-3 hover:bg-zinc-800 flex items-center gap-3 text-sm text-zinc-300 hover:text-white transition-colors font-space-mono"
+													className="w-full text-left px-4 py-3 hover:bg-zinc-800 flex items-center gap-3 text-sm text-zinc-300 hover:text-white transition-colors font-sans"
 												>
 													<Link2 className="w-4 h-4" />
 													Copy link
@@ -424,7 +424,7 @@ export const PostCard = ({ post }: { post: PostProps }) => {
 														e.stopPropagation();
 														handleMenuAction("block");
 													}}
-													className="w-full text-left px-4 py-3 hover:bg-zinc-800 flex items-center gap-3 text-sm text-zinc-300 hover:text-white transition-colors font-space-mono"
+													className="w-full text-left px-4 py-3 hover:bg-zinc-800 flex items-center gap-3 text-sm text-zinc-300 hover:text-white transition-colors font-sans"
 												>
 													<Ban className="w-4 h-4" />
 													Block @{post.author.username}
@@ -434,7 +434,7 @@ export const PostCard = ({ post }: { post: PostProps }) => {
 														e.stopPropagation();
 														handleMenuAction("report");
 													}}
-													className="w-full text-left px-4 py-3 hover:bg-zinc-800 flex items-center gap-3 text-sm text-zinc-300 hover:text-white transition-colors font-space-mono"
+													className="w-full text-left px-4 py-3 hover:bg-zinc-800 flex items-center gap-3 text-sm text-zinc-300 hover:text-white transition-colors font-sans"
 												>
 													<Flag className="w-4 h-4" />
 													Report post
@@ -447,7 +447,7 @@ export const PostCard = ({ post }: { post: PostProps }) => {
 						</div>
 					</div>
 					{/* Post Content - Text is clickable via overlay, but interaction passes through due to pointer-events-none */}
-					<p className="text-zinc-100 whitespace-pre-wrap mb-4 font-normal leading-relaxed text-[14px] font-space-mono tracking-tight pointer-events-none">
+					<p className="text-zinc-100 whitespace-pre-wrap mb-4 font-normal leading-relaxed text-[14px] font-sans tracking-tight pointer-events-none">
 						{formatContent(displayedContent)}
 						{shouldTruncate && (
 							<span className="text-zinc-500 pointer-events-auto">
@@ -483,13 +483,13 @@ export const PostCard = ({ post }: { post: PostProps }) => {
 								</div>
 							)}
 							<div className="p-3">
-								<h3 className="text-sm font-bold text-zinc-200 line-clamp-1 font-space-mono mb-0.5 group-hover:text-yellow-500 transition-colors">
+								<h3 className="text-sm font-bold text-zinc-200 line-clamp-1 font-sans mb-0.5 group-hover:text-yellow-500 transition-colors">
 									{post.linkPreview.title}
 								</h3>
-								<p className="text-xs text-zinc-500 line-clamp-2 font-space-mono mb-1">
+								<p className="text-xs text-zinc-500 line-clamp-2 font-sans mb-1">
 									{post.linkPreview.description}
 								</p>
-								<div className="flex items-center gap-1 text-[10px] text-zinc-600 font-space-mono">
+								<div className="flex items-center gap-1 text-[10px] text-zinc-600 font-sans">
 									<Link2 className="w-3 h-3" />
 									<span>{post.linkPreview.domain}</span>
 								</div>
@@ -543,7 +543,7 @@ export const PostCard = ({ post }: { post: PostProps }) => {
 							<div className="p-2 rounded-full group-hover:bg-blue-400/10 transition-colors">
 								<MessageSquare className="w-4 h-4" />
 							</div>
-							<span className="text-xs font-space-mono group-hover:text-blue-400">
+							<span className="text-xs font-sans group-hover:text-blue-400">
 								{post.stats.replies || ""}
 							</span>
 						</button>
@@ -554,7 +554,7 @@ export const PostCard = ({ post }: { post: PostProps }) => {
 							<div className="p-2 rounded-full group-hover:bg-green-400/10 transition-colors">
 								<Repeat className="w-4 h-4" />
 							</div>
-							<span className="text-xs font-space-mono group-hover:text-green-400">
+							<span className="text-xs font-sans group-hover:text-green-400">
 								{post.stats.reposts || ""}
 							</span>
 						</button>
@@ -573,7 +573,7 @@ export const PostCard = ({ post }: { post: PostProps }) => {
 							</div>
 							<span
 								className={clsx(
-									"text-xs font-space-mono",
+									"text-xs font-sans",
 									isLiked && "text-pink-500",
 									"group-hover:text-pink-500",
 								)}

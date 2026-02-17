@@ -129,14 +129,14 @@ export default function EditProfileModal({
 								>
 									<X className="w-5 h-5" />
 								</button>
-								<h2 className="text-xl font-bold font-space-mono tracking-tight">
+								<h2 className="text-xl font-bold font-sans tracking-tight">
 									Edit Profile
 								</h2>
 							</div>
 							<button
 								onClick={handleSave}
 								disabled={isLoading}
-								className="bg-white text-black px-6 py-2 rounded-full font-bold text-sm hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-space-mono"
+								className="bg-white text-black px-6 py-2 rounded-full font-bold text-sm hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-sans"
 							>
 								{isLoading ? "Saving..." : "Save"}
 							</button>
@@ -219,7 +219,7 @@ export default function EditProfileModal({
 								<div className="grid sm:grid-cols-2 gap-4">
 									{/* First Name */}
 									<div className="relative border border-zinc-800 focus-within:border-white focus-within:ring-1 focus-within:ring-white transition-all p-3">
-										<label className="block text-xs uppercase font-bold text-zinc-500 mb-1 font-space-mono">
+										<label className="block text-xs uppercase font-bold text-zinc-500 mb-1 font-sans">
 											First Name
 										</label>
 										<div className="flex items-center gap-2">
@@ -229,14 +229,14 @@ export default function EditProfileModal({
 												name="firstName"
 												value={formData.firstName}
 												onChange={handleInputChange}
-												className="w-full outline-none text-sm font-space-mono bg-transparent placeholder:text-zinc-700 text-white"
+												className="w-full outline-none text-sm font-sans bg-transparent placeholder:text-zinc-700 text-white"
 												placeholder="First Name"
 											/>
 										</div>
 									</div>
 									{/* Last Name */}
 									<div className="relative border border-zinc-800 focus-within:border-white focus-within:ring-1 focus-within:ring-white transition-all p-3">
-										<label className="block text-xs uppercase font-bold text-zinc-500 mb-1 font-space-mono">
+										<label className="block text-xs uppercase font-bold text-zinc-500 mb-1 font-sans">
 											Last Name
 										</label>
 										<div className="flex items-center gap-2">
@@ -246,7 +246,7 @@ export default function EditProfileModal({
 												name="lastName"
 												value={formData.lastName}
 												onChange={handleInputChange}
-												className="w-full outline-none text-sm font-space-mono bg-transparent placeholder:text-zinc-700 text-white"
+												className="w-full outline-none text-sm font-sans bg-transparent placeholder:text-zinc-700 text-white"
 												placeholder="Last Name"
 											/>
 										</div>
@@ -254,20 +254,20 @@ export default function EditProfileModal({
 								</div>
 
 								<div className="relative border border-zinc-800 focus-within:border-white focus-within:ring-1 focus-within:ring-white transition-all p-3">
-									<label className="block text-xs uppercase font-bold text-zinc-500 mb-1 font-space-mono">
+									<label className="block text-xs uppercase font-bold text-zinc-500 mb-1 font-sans">
 										Bio
 									</label>
 									<textarea
 										name="bio"
 										value={formData.bio}
 										onChange={handleInputChange}
-										className="w-full outline-none text-sm font-space-mono resize-none min-h-[80px] bg-transparent placeholder:text-zinc-700 text-white"
+										className="w-full outline-none text-sm font-sans resize-none min-h-[80px] bg-transparent placeholder:text-zinc-700 text-white"
 										placeholder="Tell us about yourself"
 									/>
 								</div>
 
 								<div className="relative border border-zinc-800 focus-within:border-white focus-within:ring-1 focus-within:ring-white transition-all p-3">
-									<label className="block text-xs uppercase font-bold text-zinc-500 mb-1 font-space-mono">
+									<label className="block text-xs uppercase font-bold text-zinc-500 mb-1 font-sans">
 										Location
 									</label>
 									<div className="flex items-center gap-2">
@@ -277,14 +277,14 @@ export default function EditProfileModal({
 											name="location"
 											value={formData.location}
 											onChange={handleInputChange}
-											className="w-full outline-none text-sm font-space-mono bg-transparent placeholder:text-zinc-700 text-white"
+											className="w-full outline-none text-sm font-sans bg-transparent placeholder:text-zinc-700 text-white"
 											placeholder="Add your location"
 										/>
 									</div>
 								</div>
 
 								<div className="relative border border-zinc-800 focus-within:border-white focus-within:ring-1 focus-within:ring-white transition-all p-3">
-									<label className="block text-xs uppercase font-bold text-zinc-500 mb-1 font-space-mono">
+									<label className="block text-xs uppercase font-bold text-zinc-500 mb-1 font-sans">
 										Website
 									</label>
 									<div className="flex items-center gap-2">
@@ -294,7 +294,7 @@ export default function EditProfileModal({
 											name="website"
 											value={formData.website}
 											onChange={handleInputChange}
-											className="w-full outline-none text-sm font-space-mono bg-transparent placeholder:text-zinc-700 text-white"
+											className="w-full outline-none text-sm font-sans bg-transparent placeholder:text-zinc-700 text-white"
 											placeholder="Add your website"
 										/>
 									</div>

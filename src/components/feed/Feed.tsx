@@ -175,7 +175,7 @@ export default function Feed() {
 
 				{!loading && feedState.posts.length === 0 && (
 					<div className="text-center py-12">
-						<p className="text-zinc-500 font-space-mono">
+						<p className="text-zinc-500 font-sans">
 							No posts yet. Be the first to post!
 						</p>
 					</div>
@@ -185,7 +185,7 @@ export default function Feed() {
 					<div className="flex justify-center py-8">
 						<button
 							onClick={() => fetchFeed()}
-							className="text-zinc-500 hover:text-white font-space-mono text-sm underline decoration-dotted underline-offset-4"
+							className="text-zinc-500 hover:text-white font-sans text-sm underline decoration-dotted underline-offset-4"
 						>
 							Load more
 						</button>

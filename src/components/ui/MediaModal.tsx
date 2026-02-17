@@ -147,7 +147,7 @@ export default function MediaModal({
 
 						{/* Counter */}
 						{media.length > 1 && (
-							<div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm font-medium backdrop-blur-md border border-white/10 font-space-mono z-110">
+							<div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm font-medium backdrop-blur-md border border-white/10 font-sans z-110">
 								{currentIndex + 1} / {media.length}
 							</div>
 						)}

@@ -192,10 +192,10 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 					{step === 1 && (
 						<div className="space-y-8 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
 							<div className="space-y-2">
-								<h1 className="text-3xl font-black text-white font-space-mono">
+								<h1 className="text-3xl font-black text-white font-sans">
 									Who are you?
 								</h1>
-								<p className="text-zinc-400 text-sm font-space-mono tracking-tight">
+								<p className="text-zinc-400 text-sm font-sans tracking-tight">
 									Choose an avatar and set up your identity.
 								</p>
 							</div>
@@ -227,12 +227,12 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 								<div className="space-y-2 text-left">
 									<label
 										htmlFor="username"
-										className="font-space-mono text-xs font-bold tracking-wider text-zinc-500 uppercase ml-1"
+										className="font-sans text-xs font-bold tracking-wider text-zinc-500 uppercase ml-1"
 									>
 										Username
 									</label>
 									<div className="relative">
-										<span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-medium font-space-mono">
+										<span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-medium font-sans">
 											@
 										</span>
 										<input
@@ -247,7 +247,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 												}
 											}}
 											placeholder="sarah_codes"
-											className="w-full bg-white text-zinc-900 rounded-full py-3 h-14 pl-8 pr-4 font-medium focus:outline-none placeholder:text-zinc-300 font-space-mono text-base"
+											className="w-full bg-white text-zinc-900 rounded-full py-3 h-14 pl-8 pr-4 font-medium focus:outline-none placeholder:text-zinc-300 font-sans text-base"
 										/>
 									</div>
 								</div>
@@ -255,7 +255,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 								<div className="space-y-2 text-left">
 									<label
 										htmlFor="bio"
-										className="font-space-mono text-xs font-bold tracking-wider text-zinc-500 uppercase ml-1"
+										className="font-sans text-xs font-bold tracking-wider text-zinc-500 uppercase ml-1"
 									>
 										Bio
 									</label>
@@ -265,7 +265,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 										onChange={(e) => setBio(e.target.value)}
 										placeholder="Frontend wizard. Pixel perfectionist. Coffee addict ☕"
 										rows={3}
-										className="w-full bg-zinc-800/50 text-white rounded-2xl p-3.5 font-medium focus:outline-none focus:ring-2 focus:ring-yellow-500/50 placeholder:text-zinc-500 resize-none border border-zinc-700/50 font-space-mono text-sm"
+										className="w-full bg-zinc-800/50 text-white rounded-2xl p-3.5 font-medium focus:outline-none focus:ring-2 focus:ring-yellow-500/50 placeholder:text-zinc-500 resize-none border border-zinc-700/50 font-sans text-sm"
 										style={{
 											boxShadow: "inset 0 2px 4px 0 rgba(0, 0, 0, 0.3)",
 										}}
@@ -275,7 +275,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 
 							<button
 								onClick={handleContinue}
-								className="group relative w-full bg-white text-black h-14 cursor-pointer py-3.5 px-6 rounded-full flex items-center justify-center gap-2 hover:bg-zinc-100 transition-all active:scale-[0.98] font-space-mono text-sm tracking-tight font-bold"
+								className="group relative w-full bg-white text-black h-14 cursor-pointer py-3.5 px-6 rounded-full flex items-center justify-center gap-2 hover:bg-zinc-100 transition-all active:scale-[0.98] font-sans text-sm tracking-tight font-bold"
 								style={{
 									boxShadow: "0 0 0 2px #eab308",
 								}}
@@ -292,10 +292,10 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 					{step === 2 && (
 						<div className="space-y-8 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
 							<div className="space-y-2">
-								<h1 className="text-3xl font-black text-white font-space-mono">
+								<h1 className="text-3xl font-black text-white font-sans">
 									What are you into?
 								</h1>
-								<p className="text-zinc-400 text-sm font-space-mono tracking-tight">
+								<p className="text-zinc-400 text-sm font-sans tracking-tight">
 									Select topics to personalize your feed.
 								</p>
 							</div>
@@ -306,7 +306,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 										key={interest}
 										onClick={() => toggleInterest(interest)}
 										className={clsx(
-											"px-4 py-3 rounded-xl font-bold text-xs transition-all duration-300 border font-space-mono cursor-pointer",
+											"px-4 py-3 rounded-xl font-bold text-xs transition-all duration-300 border font-sans cursor-pointer",
 											formData.interests.includes(interest)
 												? "bg-white text-black border-yellow-500 shadow-[2px_2px_0px_#eab308]"
 												: "bg-zinc-800/50 text-zinc-400 border-zinc-700/50 hover:bg-zinc-800 hover:border-zinc-600",
@@ -321,14 +321,14 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 							<div className="flex gap-3 pt-4">
 								<button
 									onClick={() => setStep(1)}
-									className="flex-1 py-3.5 rounded-full bg-zinc-800 text-zinc-400 font-bold hover:bg-zinc-700 transition-all cursor-pointer font-space-mono text-sm"
+									className="flex-1 py-3.5 rounded-full bg-zinc-800 text-zinc-400 font-bold hover:bg-zinc-700 transition-all cursor-pointer font-sans text-sm"
 								>
 									Back
 								</button>
 								<button
 									onClick={handleCreateProfile}
 									disabled={loading}
-									className="flex-2 group relative bg-white text-black h-14 cursor-pointer py-3.5 px-6 rounded-full flex items-center justify-center gap-2 hover:bg-zinc-100 transition-all active:scale-[0.98] font-space-mono text-sm tracking-tight font-bold disabled:opacity-70 disabled:cursor-not-allowed"
+									className="flex-2 group relative bg-white text-black h-14 cursor-pointer py-3.5 px-6 rounded-full flex items-center justify-center gap-2 hover:bg-zinc-100 transition-all active:scale-[0.98] font-sans text-sm tracking-tight font-bold disabled:opacity-70 disabled:cursor-not-allowed"
 									style={{
 										boxShadow: "0 0 0 2px #eab308",
 									}}
@@ -349,10 +349,10 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 					{step === 3 && (
 						<div className="space-y-8 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
 							<div className="space-y-2">
-								<h1 className="text-3xl font-black text-white font-space-mono">
+								<h1 className="text-3xl font-black text-white font-sans">
 									Follow People
 								</h1>
-								<p className="text-zinc-400 text-sm font-space-mono tracking-tight">
+								<p className="text-zinc-400 text-sm font-sans tracking-tight">
 									Build your community.
 								</p>
 							</div>
@@ -389,10 +389,10 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 														/>
 													</div>
 													<div className="text-left">
-														<p className="font-bold text-white text-sm font-space-mono">
+														<p className="font-bold text-white text-sm font-sans">
 															{user.firstName}
 														</p>
-														<p className="text-xs text-zinc-500 font-space-mono">
+														<p className="text-xs text-zinc-500 font-sans">
 															@{user.username}
 														</p>
 													</div>
@@ -400,7 +400,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 												<button
 													onClick={() => handleFollow(user._id)}
 													className={clsx(
-														"px-4 py-1.5 rounded-full text-xs font-bold border transition-all font-space-mono cursor-pointer",
+														"px-4 py-1.5 rounded-full text-xs font-bold border transition-all font-sans cursor-pointer",
 														followedUsers.includes(user._id)
 															? "bg-white text-black border-white"
 															: "bg-transparent text-white border-zinc-600 hover:border-yellow-500 hover:text-yellow-500",
@@ -417,7 +417,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 
 							<button
 								onClick={finishOnboarding}
-								className="group relative w-full bg-white text-black h-14 cursor-pointer py-3.5 px-6 rounded-full flex items-center justify-center gap-2 hover:bg-zinc-100 transition-all active:scale-[0.98] font-space-mono text-sm tracking-tight font-bold"
+								className="group relative w-full bg-white text-black h-14 cursor-pointer py-3.5 px-6 rounded-full flex items-center justify-center gap-2 hover:bg-zinc-100 transition-all active:scale-[0.98] font-sans text-sm tracking-tight font-bold"
 								style={{
 									boxShadow: "0 0 0 2px #eab308",
 								}}

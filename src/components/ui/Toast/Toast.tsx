@@ -69,7 +69,7 @@ export const ToastItem = ({ toast, removeToast }: ToastProps) => {
 		>
 			<div className="shrink-0">{icons[toast.type]}</div>
 			<div className="flex-1">
-				<p className="text-sm font-bold font-space-mono text-black">
+				<p className="text-sm font-bold font-sans text-black">
 					{toast.message}
 				</p>
 			</div>

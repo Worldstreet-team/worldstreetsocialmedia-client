@@ -48,12 +48,14 @@ export function RightSidebar() {
 
 			// Fetch Trends if needed
 			if (!isTrendsLoaded) {
-				const res = await getExploreDataAction();
-				if (res.success) {
-					// Map API response to TrendingTopic if needed, or if it matches
-					// API returns: { trendsForYou: [{ title, startVolume, category, posts }] }
-					// Atom expects: TrendingTopic[]
-					setTrends(res.data.trendsForYou);
+				try {
+					const res = await getExploreDataAction();
+					if (res.success) {
+						setTrends(res.data.trendsForYou);
+					}
+				} catch (error) {
+					console.error("Failed to fetch trends", error);
+				} finally {
 					setIsTrendsLoaded(true);
 				}
 			}
@@ -94,43 +96,54 @@ export function RightSidebar() {
 				<input
 					type="text"
 					placeholder="Search Feed..."
-					className="w-full bg-zinc-900 border-none text-white rounded-full py-3.5 pl-14 pr-6 font-space-mono text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all placeholder:text-zinc-600 shadow-inner"
+					className="w-full bg-zinc-900 border-none text-white rounded-full py-3.5 pl-14 pr-6 font-sans text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all placeholder:text-zinc-600 shadow-inner"
 				/>
 			</div>
 
 			{/* Trending Section - Card */}
 			<section className="bg-zinc-900 rounded-3xl overflow-hidden p-2">
-				<h3 className="font-black text-white px-4 py-4 font-space-mono text-lg">
+				<h3 className="font-black text-white px-4 py-4 font-sans text-lg">
 					What's happening
 				</h3>
 				<div className="flex flex-col gap-1">
-					{trends.length > 0 ? (
+					{!isTrendsLoaded ? (
+						// Shimmer Loading State
+						[1, 2, 3].map((i) => (
+							<div key={i} className="px-4 py-3 animate-pulse">
+								<div className="flex justify-between mb-1">
+									<div className="h-3 bg-zinc-800 rounded w-24" />
+								</div>
+								<div className="h-4 bg-zinc-800 rounded w-3/4 mb-1.5" />
+								<div className="h-3 bg-zinc-800 rounded w-12" />
+							</div>
+						))
+					) : trends.length > 0 ? (
 						trends.slice(0, 3).map((trend, i) => (
 							<Link
 								href={`/explore?q=${trend.title.replace("#", "")}`}
 								key={i}
 								className="px-4 py-3 hover:bg-zinc-800 rounded-2xl transition-all cursor-pointer group block"
 							>
-								<div className="flex justify-between text-[11px] text-zinc-500 font-space-mono mb-1">
+								<div className="flex justify-between text-[11px] text-zinc-500 font-sans mb-1">
 									<span>{trend.category} · Trending</span>
 									<MoreHorizontal className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
 								</div>
 								<p className="font-bold text-white text-[15px] mb-0.5">
 									{trend.title}
 								</p>
-								<p className="text-[11px] text-zinc-500 font-space-mono">
+								<p className="text-[11px] text-zinc-500 font-sans">
 									{trend.posts}
 								</p>
 							</Link>
 						))
 					) : (
-						<div className="px-4 py-3 text-sm text-zinc-500 font-space-mono">
+						<div className="px-4 py-3 text-sm text-zinc-500 font-sans">
 							No trends available
 						</div>
 					)}
 					<Link
 						href="/explore"
-						className="text-pink-500 text-xs font-bold font-space-mono hover:underline px-4 py-3 text-left block"
+						className="text-pink-500 text-xs font-bold font-sans hover:underline px-4 py-3 text-left block"
 					>
 						Show more
 					</Link>
@@ -139,7 +152,7 @@ export function RightSidebar() {
 
 			{/* Who to Follow Section - Card */}
 			<section className="bg-zinc-900 rounded-3xl overflow-hidden p-2">
-				<h3 className="font-black text-white px-4 py-4 font-space-mono text-lg">
+				<h3 className="font-black text-white px-4 py-4 font-sans text-lg">
 					Who to follow
 				</h3>
 				<div className="flex flex-col gap-2 -mt-1.5">
@@ -156,7 +169,7 @@ export function RightSidebar() {
 							))}
 						</div>
 					) : visibleSuggestions.length === 0 ? (
-						<div className="px-5 py-6 text-center text-zinc-500 text-sm font-space-mono">
+						<div className="px-5 py-6 text-center text-zinc-500 text-sm font-sans">
 							No suggestions available
 						</div>
 					) : (
@@ -181,7 +194,7 @@ export function RightSidebar() {
 									<span className="font-bold text-white text-sm truncate group-hover:text-yellow-500 transition-colors">
 										{user.firstName} {user.lastName}
 									</span>
-									<span className="text-zinc-600 text-[11px] truncate font-space-mono group-hover:text-zinc-500">
+									<span className="text-zinc-600 text-[11px] truncate font-sans group-hover:text-zinc-500">
 										@{user.username}
 									</span>
 								</div>
@@ -191,7 +204,7 @@ export function RightSidebar() {
 										e.stopPropagation();
 										handleFollow(user._id);
 									}}
-									className="px-4 py-2 bg-white text-black text-xs font-bold rounded-full font-space-mono hover:scale-105 active:scale-95 transition-all shadow-lg hover:shadow-xl"
+									className="px-4 py-2 bg-white text-black text-xs font-bold rounded-full font-sans hover:scale-105 active:scale-95 transition-all shadow-lg hover:shadow-xl"
 									type="button"
 								>
 									Follow
@@ -203,7 +216,7 @@ export function RightSidebar() {
 			</section>
 
 			<footer className="px-4 mt-2">
-				<nav className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-zinc-600 font-space-mono">
+				<nav className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-zinc-600 font-sans">
 					{["Terms", "Privacy", "Cookies", "More", "© 2026 RetroFeed"].map(
 						(item) => (
 							<a

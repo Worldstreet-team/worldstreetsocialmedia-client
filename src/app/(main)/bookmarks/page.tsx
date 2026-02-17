@@ -36,10 +36,10 @@ export default function BookmarksPage() {
 		<div className="flex flex-col min-h-screen pb-20">
 			<header className="sticky top-0 z-20 bg-black/80 backdrop-blur-md border-b border-zinc-800">
 				<div className="px-4 py-3">
-					<h1 className="text-xl font-bold font-space-mono text-white">
+					<h1 className="text-xl font-bold font-sans text-white">
 						Bookmarks
 					</h1>
-					<div className="text-zinc-500 text-[13px] font-space-mono">
+					<div className="text-zinc-500 text-[13px] font-sans">
 						@{user?.username}
 					</div>
 				</div>
@@ -63,10 +63,10 @@ export default function BookmarksPage() {
 						<div className="w-16 h-16 bg-zinc-900 rounded-full flex items-center justify-center mb-4">
 							<Bookmark className="w-8 h-8 text-zinc-500" />
 						</div>
-						<h2 className="text-xl font-bold mb-2 text-white font-space-mono">
+						<h2 className="text-xl font-bold mb-2 text-white font-sans">
 							Save posts for later
 						</h2>
-						<p className="text-zinc-500 text-sm max-w-sm font-space-mono">
+						<p className="text-zinc-500 text-sm max-w-sm font-sans">
 							Bookmark posts to easily find them again in the future.
 						</p>
 					</div>

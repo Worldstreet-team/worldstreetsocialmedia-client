@@ -6,7 +6,7 @@ const isProtectedRoute = createRouteMatcher(["/(.*)"]);
 const isOnboardingRoute = createRouteMatcher(["/onboarding(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
-	const { userId, getToken } = await auth();
+	const { userId, getToken, isAuthenticated } = await auth();
 
 	if (isProtectedRoute(req)) {
 		await auth.protect();
@@ -27,6 +27,11 @@ export default clerkMiddleware(async (auth, req) => {
 		const userExistsInDb = await syncUser(token);
 
 		console.log("EXISTS IN DB: ", userExistsInDb);
+
+		// if (userExistsInDb == null) {
+		// 	console.log("FAILED HERE");
+		// 	return;
+		// }
 
 		if (userExistsInDb?.status === "not_found") {
 			// Redirect to onboarding if they don't exist in your DB

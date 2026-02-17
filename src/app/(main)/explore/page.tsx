@@ -71,14 +71,14 @@ export default function ExplorePage() {
 					<input
 						type="text"
 						placeholder="Search WorldStreet"
-						className="w-full bg-zinc-900 border border-zinc-800 rounded-full py-2.5 pl-10 pr-4 text-white focus:outline-none focus:border-white focus:ring-1 focus:ring-white placeholder:text-zinc-500 font-space-mono text-sm transition-all"
+						className="w-full bg-zinc-900 border border-zinc-800 rounded-full py-2.5 pl-10 pr-4 text-white focus:outline-none focus:border-white focus:ring-1 focus:ring-white placeholder:text-zinc-500 font-sans text-sm transition-all"
 					/>
 				</div>
 			</div>
 
 			{/* Trending Topics */}
 			<div className="border-b border-zinc-800 pb-2">
-				<h2 className="px-4 py-3 text-xl font-bold font-space-mono text-white">
+				<h2 className="px-4 py-3 text-xl font-bold font-sans text-white">
 					Trends for you
 				</h2>
 				<div className="flex flex-col">
@@ -101,29 +101,29 @@ export default function ExplorePage() {
 								className="px-4 py-3 hover:bg-zinc-900/50 cursor-pointer transition-colors border-b border-zinc-800/50 last:border-0"
 							>
 								<div className="flex justify-between items-start">
-									<div className="text-xs text-zinc-500 font-space-mono">
+									<div className="text-xs text-zinc-500 font-sans">
 										{topic.category}
 									</div>
 									{/* <button className="text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-full p-1 -mr-2 transition-colors">
 										...
 									</button> */}
 								</div>
-								<div className="font-bold text-[15px] my-0.5 text-white font-space-mono tracking-tight">
+								<div className="font-bold text-[15px] my-0.5 text-white font-sans tracking-tight">
 									{topic.title}
 								</div>
-								<div className="text-xs text-zinc-500 font-space-mono">
+								<div className="text-xs text-zinc-500 font-sans">
 									{topic.posts}
 								</div>
 							</div>
 						))
 					) : (
-						<div className="px-4 py-8 text-zinc-500 text-center font-space-mono text-sm">
+						<div className="px-4 py-8 text-zinc-500 text-center font-sans text-sm">
 							No trending topics yet.
 						</div>
 					)}
 				</div>
 				{!loading && trends.length > 0 && (
-					<div className="px-4 py-3 text-yellow-500 text-[15px] hover:bg-zinc-900/50 cursor-pointer transition-colors text-left font-space-mono font-bold">
+					<div className="px-4 py-3 text-yellow-500 text-[15px] hover:bg-zinc-900/50 cursor-pointer transition-colors text-left font-sans font-bold">
 						Show more
 					</div>
 				)}
@@ -131,7 +131,7 @@ export default function ExplorePage() {
 
 			{/* Popular Posts */}
 			<div className="flex flex-col">
-				<h2 className="px-4 py-4 text-xl font-bold border-b border-zinc-800 font-space-mono text-white">
+				<h2 className="px-4 py-4 text-xl font-bold border-b border-zinc-800 font-sans text-white">
 					Popular
 				</h2>
 				{loading ? (
@@ -143,7 +143,7 @@ export default function ExplorePage() {
 						</div>
 					))
 				) : (
-					<div className="p-12 text-center text-zinc-500 font-space-mono text-sm">
+					<div className="p-12 text-center text-zinc-500 font-sans text-sm">
 						No popular posts found.
 					</div>
 				)}

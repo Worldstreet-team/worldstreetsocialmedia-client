@@ -68,7 +68,7 @@ export function MobileNavigation() {
 					{/* Placeholder for center logo if needed, currently aligned left/right */}
 				</div>
 
-				<div className="w-8 h-8 flex items-center justify-center bg-yellow-500 rounded-lg text-black font-black font-space-mono text-lg">
+				<div className="w-8 h-8 flex items-center justify-center bg-yellow-500 rounded-lg text-black font-black font-sans text-lg">
 					W
 				</div>
 			</header>
@@ -109,10 +109,10 @@ export function MobileNavigation() {
 										/>
 									</div>
 									<div className="flex flex-col">
-										<span className="font-bold text-white text-sm truncate font-space-mono">
+										<span className="font-bold text-white text-sm truncate font-sans">
 											{fullName}
 										</span>
-										<span className="text-zinc-500 text-xs truncate font-space-mono">
+										<span className="text-zinc-500 text-xs truncate font-sans">
 											@{user.username}
 										</span>
 									</div>
@@ -139,7 +139,7 @@ export function MobileNavigation() {
 											key={index}
 											href={href}
 											className={clsx(
-												"flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-space-mono relative",
+												"flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-sans relative",
 												isActive
 													? "bg-zinc-900 text-white font-bold"
 													: "text-zinc-400 hover:text-white hover:bg-zinc-900/50",
@@ -149,7 +149,7 @@ export function MobileNavigation() {
 											<div className="relative">
 												<item.icon isActive={isActive} />
 												{item.title === "Messages" && unreadCount > 0 && (
-													<span className="absolute -top-2 -right-2 flex items-center justify-center w-4 h-4 text-[9px] font-bold text-black bg-yellow-500 rounded-full border border-black animate-in zoom-in font-space-mono">
+													<span className="absolute -top-2 -right-2 flex items-center justify-center w-4 h-4 text-[9px] font-bold text-black bg-yellow-500 rounded-full border border-black animate-in zoom-in font-sans">
 														{unreadCount > 9 ? "9+" : unreadCount}
 													</span>
 												)}
@@ -164,7 +164,7 @@ export function MobileNavigation() {
 							<div className="p-4 border-t border-zinc-800">
 								<button
 									onClick={() => signOut(() => router.push("/sign-in"))}
-									className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-zinc-900 rounded-xl transition-colors font-space-mono font-bold text-sm cursor-pointer"
+									className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-zinc-900 rounded-xl transition-colors font-sans font-bold text-sm cursor-pointer"
 								>
 									<LogOut className="w-5 h-5" />
 									Log out

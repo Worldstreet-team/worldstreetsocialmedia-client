@@ -149,7 +149,7 @@ export default function PostPage() {
 					>
 						<ArrowLeft className="w-5 h-5" />
 					</button>
-					<h1 className="text-lg font-bold leading-5 font-space-mono text-white">
+					<h1 className="text-lg font-bold leading-5 font-sans text-white">
 						Post
 					</h1>
 				</header>
@@ -166,7 +166,7 @@ export default function PostPage() {
 
 	if (!post) {
 		return (
-			<div className="flex flex-col justify-center items-center h-[50vh] text-zinc-500 font-space-mono">
+			<div className="flex flex-col justify-center items-center h-[50vh] text-zinc-500 font-sans">
 				<h2 className="text-xl font-bold mb-2 text-white">Post not found</h2>
 				<button
 					onClick={() => router.back()}
@@ -188,7 +188,7 @@ export default function PostPage() {
 				>
 					<ArrowLeft className="w-5 h-5" />
 				</button>
-				<h1 className="text-lg font-bold leading-5 font-space-mono text-white">
+				<h1 className="text-lg font-bold leading-5 font-sans text-white">
 					Post
 				</h1>
 			</header>
@@ -207,7 +207,7 @@ export default function PostPage() {
 						</div>
 					))
 				) : (
-					<div className="p-12 text-center text-zinc-500 font-space-mono text-sm">
+					<div className="p-12 text-center text-zinc-500 font-sans text-sm">
 						No comments yet. Be the first to reply!
 					</div>
 				)}

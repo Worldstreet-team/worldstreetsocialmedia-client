@@ -17,12 +17,11 @@ import { CallProvider } from "@/providers/CallProvider";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import GlobalMessageListener from "@/components/providers/GlobalMessageListener";
 
-import { Space_Mono } from "next/font/google";
+import localFont from "next/font/local";
 
-const spaceMono = Space_Mono({
-	subsets: ["latin"],
-	weight: ["400", "700"],
-	variable: "--font-space-mono",
+const googleSans = localFont({
+	src: "../assets/fonts/google-sans/GoogleSansFlex-VariableFont_GRAD,ROND,opsz,slnt,wdth,wght.ttf",
+	variable: "--font-google-sans",
 });
 
 export const viewport: Viewport = {
@@ -57,7 +56,7 @@ export default async function RootLayout({
 			}}
 		>
 			<html lang="en" suppressHydrationWarning>
-				<body className={`${spaceMono.variable} antialiased`}>
+				<body className={`${googleSans.variable} antialiased`}>
 					<NextTopLoader />
 
 					<ThemeProvider

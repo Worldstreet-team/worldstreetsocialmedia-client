@@ -98,7 +98,7 @@ export default function NotificationsPage() {
 		<div className="flex flex-col min-h-screen pb-20">
 			<header className="sticky top-0 z-20 bg-black/80 backdrop-blur-md border-b border-zinc-800">
 				<div className="px-4 py-3">
-					<h1 className="text-xl font-bold font-space-mono text-white">
+					<h1 className="text-xl font-bold font-sans text-white">
 						Notifications
 					</h1>
 				</div>
@@ -112,7 +112,7 @@ export default function NotificationsPage() {
 						>
 							<span
 								className={clsx(
-									"text-[15px] capitalize font-space-mono",
+									"text-[15px] capitalize font-sans",
 									activeTab === tab
 										? "font-bold text-white"
 										: "font-medium text-zinc-500",
@@ -164,7 +164,7 @@ export default function NotificationsPage() {
 										backgroundImage: `url('${notification.sender.avatar}')`,
 									}}
 								/>
-								<div className="text-white text-[15px] font-space-mono">
+								<div className="text-white text-[15px] font-sans">
 									<span className="font-bold hover:underline cursor-pointer mr-1">
 										{notification.sender.firstName}{" "}
 										{notification.sender.lastName}
@@ -193,7 +193,7 @@ export default function NotificationsPage() {
 						</Link>
 					))
 				) : (
-					<div className="p-12 text-center text-zinc-500 font-space-mono text-sm">
+					<div className="p-12 text-center text-zinc-500 font-sans text-sm">
 						No notifications yet.
 					</div>
 				)}

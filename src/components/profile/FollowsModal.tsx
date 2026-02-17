@@ -126,7 +126,7 @@ export default function FollowsModal({
 									type="button"
 									onClick={() => setActiveTab("followers")}
 									className={clsx(
-										"flex-1 py-4 text-[15px] font-bold text-center relative hover:bg-zinc-800 transition-colors font-space-mono cursor-pointer",
+										"flex-1 py-4 text-[15px] font-bold text-center relative hover:bg-zinc-800 transition-colors font-sans cursor-pointer",
 										activeTab === "followers" ? "text-white" : "text-zinc-500",
 									)}
 								>
@@ -139,7 +139,7 @@ export default function FollowsModal({
 									type="button"
 									onClick={() => setActiveTab("following")}
 									className={clsx(
-										"flex-1 py-4 text-[15px] font-bold text-center relative hover:bg-zinc-800 transition-colors font-space-mono cursor-pointer",
+										"flex-1 py-4 text-[15px] font-bold text-center relative hover:bg-zinc-800 transition-colors font-sans cursor-pointer",
 										activeTab === "following" ? "text-white" : "text-zinc-500",
 									)}
 								>
@@ -192,7 +192,7 @@ export default function FollowsModal({
 												<div className="flex flex-col flex-1 min-w-0">
 													<Link
 														href={`/profile/${user.username}`}
-														className="font-bold text-[15px] truncate flex items-center gap-1 hover:underline font-space-mono text-white"
+														className="font-bold text-[15px] truncate flex items-center gap-1 hover:underline font-sans text-white"
 													>
 														{user.firstName} {user.lastName}
 														{user.isVerified && (
@@ -201,7 +201,7 @@ export default function FollowsModal({
 													</Link>
 													<Link
 														href={`/profile/${user.username}`}
-														className="text-zinc-500 text-[14px] truncate font-space-mono"
+														className="text-zinc-500 text-[14px] truncate font-sans"
 													>
 														@{user.username}
 													</Link>
@@ -219,7 +219,7 @@ export default function FollowsModal({
 															handleFollowToggle(user);
 														}}
 														className={clsx(
-															"rounded-full px-4 py-1.5 font-bold text-[13px] transition-all min-w-[90px] border font-space-mono shadow-[2px_2px_0px_0px_rgba(255,255,255,0.1)] active:translate-x-px active:translate-y-px active:shadow-none",
+															"rounded-full px-4 py-1.5 font-bold text-[13px] transition-all min-w-[90px] border font-sans shadow-[2px_2px_0px_0px_rgba(255,255,255,0.1)] active:translate-x-px active:translate-y-px active:shadow-none",
 															user.isFollowing
 																? "border-zinc-600 bg-transparent text-white hover:border-red-600 hover:text-red-600"
 																: "bg-white text-black border-transparent hover:bg-zinc-200",
@@ -240,7 +240,7 @@ export default function FollowsModal({
 										))}
 									</div>
 								) : (
-									<div className="flex flex-col items-center justify-center h-full p-8 text-center text-zinc-500 font-space-mono">
+									<div className="flex flex-col items-center justify-center h-full p-8 text-center text-zinc-500 font-sans">
 										<UserX className="w-12 h-12 mb-2 opacity-50" />
 										<p>No {activeTab} yet.</p>
 									</div>

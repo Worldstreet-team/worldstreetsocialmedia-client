@@ -41,9 +41,7 @@ export function LeftSidebar() {
 			<div className="py-8 px-2">
 				<Link href="/" className="flex items-center gap-3 group">
 					<div className="w-10 h-10 bg-yellow-500 rounded-xl flex items-center justify-center border-2 border-transparent group-hover:border-white transition-all shadow-[4px_4px_0px_rgba(255,255,255,0.2)]">
-						<span className="font-black text-black font-space-mono text-2xl">
-							W
-						</span>
+						<span className="font-black text-black font-sans text-2xl">W</span>
 					</div>
 				</Link>
 			</div>
@@ -61,7 +59,7 @@ export function LeftSidebar() {
 							key={index}
 							href={href}
 							className={clsx(
-								"flex items-center gap-3 px-4 py-3.5 rounded-full transition-all duration-300 group hover:bg-zinc-900 relative",
+								"flex items-center gap-2 px-4 py-3.5 rounded-full transition-all duration-300 group hover:bg-zinc-900 relative",
 								isActive
 									? "font-bold text-white"
 									: "text-zinc-400 hover:text-white",
@@ -72,20 +70,20 @@ export function LeftSidebar() {
 									<item.icon isActive={isActive} />
 								</span>
 								{item.title === "Messages" && unreadCount > 0 && (
-									<span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 text-[10px] font-bold text-black bg-yellow-500 rounded-full border-2 border-black animate-in zoom-in font-space-mono">
+									<span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 text-[10px] font-bold text-black bg-yellow-500 rounded-full border-2 border-black animate-in zoom-in font-sans">
 										{unreadCount > 9 ? "9+" : unreadCount}
 									</span>
 								)}
 							</div>
 
-							<span className="text-base font-medium font-space-mono tracking-tight">
+							<span className="text-base font-medium font-sans tracking-tight">
 								{item.title}
 							</span>
 						</Link>
 					);
 				})}
 
-				{/* <button className="mt-8 w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black py-4 rounded-full text-lg shadow-[4px_4px_0px_#fff] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none flex items-center justify-center gap-2 font-space-mono transform hover:-translate-y-1">
+				{/* <button className="mt-8 w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black py-4 rounded-full text-lg shadow-[4px_4px_0px_#fff] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none flex items-center justify-center gap-2 font-sans transform hover:-translate-y-1">
 					<PenSquare className="w-5 h-5" />
 					<span className="hidden xl:inline">POST</span>
 				</button> */}
@@ -97,7 +95,7 @@ export function LeftSidebar() {
 						<div className="absolute bottom-full left-0 w-full bg-zinc-900 border border-zinc-800 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.5)] overflow-hidden mb-4 z-50 animate-in slide-in-from-bottom-2 fade-in duration-200">
 							<button
 								type="button"
-								className="w-full text-left px-5 py-4 hover:bg-zinc-800 font-bold text-sm text-red-400 font-space-mono flex items-center gap-3 transition-colors cursor-pointer"
+								className="w-full text-left px-5 py-4 hover:bg-zinc-800 font-bold text-sm text-red-400 font-sans flex items-center gap-3 transition-colors cursor-pointer"
 								onClick={() => signOut(() => router.push("/sign-in"))}
 							>
 								<LogOut className="w-4 h-4" />
@@ -120,10 +118,10 @@ export function LeftSidebar() {
 							/>
 						</div>
 						<div className="flex flex-col flex-1 min-w-0">
-							<span className="font-bold text-sm text-white truncate font-space-mono group-hover:text-yellow-500 transition-colors">
+							<span className="font-bold text-sm text-white truncate font-sans group-hover:text-yellow-500 transition-colors">
 								{user.firstName + " " + user.lastName || user.username}
 							</span>
-							<span className="text-zinc-500 text-xs truncate font-space-mono">
+							<span className="text-zinc-500 text-xs truncate font-sans">
 								@{user.username}
 							</span>
 						</div>
