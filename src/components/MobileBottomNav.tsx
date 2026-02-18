@@ -50,8 +50,12 @@ export const MobileBottomNav = () => {
 	}
 
 	// Hide on message detail screens (when deep in a conversation)
-	// Assuming /messages is the list, and /messages/[id] is the chat
 	if (pathname.startsWith("/messages/") && pathname.split("/").length > 2) {
+		return null;
+	}
+
+	// Hide on post detail screens
+	if (pathname.startsWith("/post/")) {
 		return null;
 	}
 
