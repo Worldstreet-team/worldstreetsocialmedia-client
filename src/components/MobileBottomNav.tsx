@@ -41,7 +41,11 @@ export const MobileBottomNav = () => {
 
 	// Don't show on auth pages or if not logged in (handled by parent layout logic usually, but here checking path)
 	// Don't show on auth pages or if not logged in (handled by parent layout logic usually, but here checking path)
-	if (pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up")) {
+	if (
+		pathname.startsWith("/sign-in") ||
+		pathname.startsWith("/sign-up") ||
+		pathname.startsWith("/onboarding")
+	) {
 		return null;
 	}
 

@@ -9,6 +9,7 @@ import {
 	followUserAction,
 	unfollowUserAction,
 	blockUserAction,
+	unblockUserAction,
 } from "@/lib/user.actions";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import { toast } from "sonner";
@@ -247,8 +248,26 @@ export default function Profile({ username }: ProfileProps) {
 		const res = await blockUserAction(profileUser.userId);
 		if (res.success) {
 			toast.success("User blocked");
-			// Optional: Redirect or update UI
 			router.push("/");
+		} else {
+			toast.error(res.message);
+		}
+	};
+
+	const handleUnblockUser = async () => {
+		if (!profileUser?.userId) return;
+		const res = await unblockUserAction(profileUser.userId);
+		if (res.success) {
+			toast.success("User unblocked");
+			// Refresh profile data manually
+			setProfileUser((prev: any) => ({ ...prev, isBlockedByYou: false }));
+			// Also update cache
+			if (username) {
+				setProfileCache((prev) => ({
+					...prev,
+					[username]: { ...prev[username], isBlockedByYou: false },
+				}));
+			}
 		} else {
 			toast.error(res.message);
 		}
@@ -335,7 +354,7 @@ export default function Profile({ username }: ProfileProps) {
 						You blocked this user.
 					</span>
 					<button
-						onClick={handleBlockUser}
+						onClick={handleUnblockUser}
 						className="text-white text-xs bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded-lg font-bold transition-colors"
 					>
 						Unblock
@@ -411,7 +430,7 @@ export default function Profile({ username }: ProfileProps) {
 					<button
 						className="rounded-full px-5 py-1.5 font-bold transition-all text-sm cursor-pointer min-w-[100px] font-sans shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)] active:translate-x-px active:translate-y-px active:shadow-none border border-red-900 bg-red-600 text-white hover:bg-red-700"
 						type="button"
-						onClick={handleBlockUser}
+						onClick={handleUnblockUser}
 					>
 						Unblock
 					</button>

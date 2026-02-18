@@ -217,17 +217,21 @@ export function RightSidebar() {
 
 			<footer className="px-4 mt-2">
 				<nav className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-zinc-600 font-sans">
-					{["Terms", "Privacy", "Cookies", "More", "© 2026 RetroFeed"].map(
-						(item) => (
-							<a
-								key={item}
-								href="#"
-								className="hover:text-zinc-400 transition-colors"
-							>
-								{item}
-							</a>
-						),
-					)}
+					{[
+						"Terms",
+						"Privacy",
+						"Cookies",
+						"More",
+						"© 2026 WorldStreet Group",
+					].map((item) => (
+						<a
+							key={item}
+							href="#"
+							className="hover:text-zinc-400 transition-colors"
+						>
+							{item}
+						</a>
+					))}
 				</nav>
 			</footer>
 		</aside>

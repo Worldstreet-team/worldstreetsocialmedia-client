@@ -208,3 +208,49 @@ export async function blockUserAction(targetUserId: string) {
 		};
 	}
 }
+
+export async function unblockUserAction(targetUserId: string) {
+	const { getToken } = await auth();
+	const accessToken = await getToken();
+
+	if (!accessToken) return { success: false, message: "Unauthorized" };
+
+	try {
+		const res = await axios.post(
+			`${API_URL}/api/users/${targetUserId}/unblock`,
+			{},
+			{
+				headers: { Authorization: `Bearer ${accessToken}` },
+			},
+		);
+		return { success: true, data: res.data };
+	} catch (error: any) {
+		console.error("Unblock User Error:", error.response?.data || error.message);
+		return {
+			success: false,
+			message: error.response?.data?.message || "Failed to unblock user",
+		};
+	}
+}
+
+export async function searchUsersAction(query: string) {
+	const { getToken } = await auth();
+	const accessToken = await getToken();
+
+	// Search can be public? Maybe not for now.
+	if (!accessToken) return { success: false, message: "Unauthorized" };
+
+	try {
+		const res = await axios.get(`${API_URL}/api/users/search`, {
+			params: { q: query },
+			headers: { Authorization: `Bearer ${accessToken}` },
+		});
+		return { success: true, data: res.data.data };
+	} catch (error: any) {
+		console.error("Search Users Error:", error.response?.data || error.message);
+		return {
+			success: false,
+			message: error.response?.data?.message || "Failed to search users",
+		};
+	}
+}
