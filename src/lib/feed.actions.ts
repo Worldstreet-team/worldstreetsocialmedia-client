@@ -27,6 +27,7 @@ export async function getFeedAction(page: number = 1, limit: number = 10) {
 
 		return { success: true, data: response.data };
 	} catch (error: any) {
+		console.log("ERROR: ", error);
 		console.log("Feed API Error: ", error.response?.data || error.message);
 
 		if (axios.isAxiosError(error)) {
