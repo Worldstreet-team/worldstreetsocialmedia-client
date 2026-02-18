@@ -328,50 +328,77 @@ export default function Profile({ username }: ProfileProps) {
 				</div>
 			</div>
 
+			{/* Blocked Status Banners */}
+			{profileUser.isBlockedByYou && (
+				<div className="mx-4 mt-2 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-between">
+					<span className="text-red-500 text-sm font-bold font-sans">
+						You blocked this user.
+					</span>
+					<button
+						onClick={handleBlockUser}
+						className="text-white text-xs bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded-lg font-bold transition-colors"
+					>
+						Unblock
+					</button>
+				</div>
+			)}
+
+			{profileUser.isBlockedByThem && (
+				<div className="mx-4 mt-2 p-3 bg-zinc-800 border border-zinc-700 rounded-xl">
+					<span className="text-zinc-400 text-sm font-bold font-sans">
+						You have been blocked by this user.
+					</span>
+				</div>
+			)}
+
 			{/* Profile Actions */}
 			<div className="flex justify-end px-4 py-3 gap-2 mt-2 min-h-[50px]">
-				{!isMe && (
-					<button
-						className="w-9 h-9 border border-zinc-700 rounded-full flex items-center justify-center hover:bg-zinc-800 transition-colors cursor-pointer"
-						type="button"
-						onClick={async () => {
-							if (!profileUser?.userId) return;
-							// Implement start conversation
-							const res = await startConversationAction(profileUser.userId);
-							if (res.success || res._id) {
-								router.push(`/messages/${res._id || res.data?._id}`);
-							} else {
-								console.error("Failed to start conversation");
-							}
-						}}
-					>
-						<Mail className="w-5 h-5 text-zinc-400" />
-					</button>
-				)}
-				{!isMe && (
-					<div className="relative">
+				{!isMe &&
+					!profileUser.isBlockedByThem &&
+					!profileUser.isBlockedByYou && (
 						<button
-							className="w-9 h-9 border border-zinc-700 rounded-full flex items-center justify-center hover:bg-zinc-800 transition-colors cursor-pointer text-white"
+							className="w-9 h-9 border border-zinc-700 rounded-full flex items-center justify-center hover:bg-zinc-800 transition-colors cursor-pointer"
 							type="button"
-							onClick={() => setShowMoreMenu(!showMoreMenu)}
+							onClick={async () => {
+								if (!profileUser?.userId) return;
+								// Implement start conversation
+								const res = await startConversationAction(profileUser.userId);
+								if (res.success || res._id) {
+									router.push(`/messages/${res._id || res.data?._id}`);
+								} else {
+									console.error("Failed to start conversation");
+								}
+							}}
 						>
-							<MoreHorizontal className="w-5 h-5 text-zinc-400" />
+							<Mail className="w-5 h-5 text-zinc-400" />
 						</button>
-						{showMoreMenu && (
-							<div className="absolute top-full right-0 mt-2 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl overflow-hidden z-30 flex flex-col py-1">
-								<button
-									className="w-full text-left px-4 py-3 text-red-500 hover:bg-zinc-800 text-sm font-bold font-sans transition-colors"
-									onClick={() => {
-										setShowMoreMenu(false);
-										setIsBlockModalOpen(true);
-									}}
-								>
-									Block @{profileUser.username}
-								</button>
-							</div>
-						)}
-					</div>
-				)}
+					)}
+				{!isMe &&
+					!profileUser.isBlockedByThem &&
+					!profileUser.isBlockedByYou && (
+						<div className="relative">
+							<button
+								className="w-9 h-9 border border-zinc-700 rounded-full flex items-center justify-center hover:bg-zinc-800 transition-colors cursor-pointer text-white"
+								type="button"
+								onClick={() => setShowMoreMenu(!showMoreMenu)}
+							>
+								<MoreHorizontal className="w-5 h-5 text-zinc-400" />
+							</button>
+							{showMoreMenu && (
+								<div className="absolute top-full right-0 mt-2 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl overflow-hidden z-30 flex flex-col py-1">
+									<button
+										className="w-full text-left px-4 py-3 text-red-500 hover:bg-zinc-800 text-sm font-bold font-sans transition-colors"
+										onClick={() => {
+											setShowMoreMenu(false);
+											setIsBlockModalOpen(true);
+										}}
+									>
+										Block @{profileUser.username}
+									</button>
+								</div>
+							)}
+						</div>
+					)}
 				{isMe ? (
 					<button
 						className="border border-zinc-700 bg-black text-white rounded-full px-5 h-9 font-bold hover:bg-zinc-900 transition-colors text-sm cursor-pointer font-sans shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)] active:translate-x-px active:translate-y-px active:shadow-none"
@@ -379,6 +406,22 @@ export default function Profile({ username }: ProfileProps) {
 						onClick={() => setIsEditProfileOpen(true)}
 					>
 						Edit profile
+					</button>
+				) : profileUser.isBlockedByYou ? (
+					<button
+						className="rounded-full px-5 py-1.5 font-bold transition-all text-sm cursor-pointer min-w-[100px] font-sans shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)] active:translate-x-px active:translate-y-px active:shadow-none border border-red-900 bg-red-600 text-white hover:bg-red-700"
+						type="button"
+						onClick={handleBlockUser}
+					>
+						Unblock
+					</button>
+				) : profileUser.isBlockedByThem ? (
+					<button
+						className="rounded-full px-5 py-1.5 font-bold transition-all text-sm cursor-not-allowed min-w-[100px] font-sans border border-zinc-700 bg-zinc-800 text-zinc-500"
+						type="button"
+						disabled
+					>
+						Blocked
 					</button>
 				) : (
 					<button

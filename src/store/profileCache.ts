@@ -19,6 +19,8 @@ export interface ProfileData {
 	followers?: string[]; // IDs of followers
 	following?: string[]; // IDs of following
 	createdAt?: string;
+	isBlockedByYou?: boolean;
+	isBlockedByThem?: boolean;
 }
 
 // Map username -> ProfileData
