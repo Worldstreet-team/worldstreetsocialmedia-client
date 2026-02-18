@@ -50,6 +50,13 @@ export default function ExploreClient({
 		};
 	}, [query]);
 
+	// Sync state with props when navigating via URL (e.g. clicking trend)
+	useEffect(() => {
+		setQuery(initialQuery);
+		setDebouncedQuery(initialQuery);
+		setResults(initialResults);
+	}, [initialQuery, initialResults]);
+
 	const handleSearch = async (q: string) => {
 		if (!q) {
 			setResults([]);

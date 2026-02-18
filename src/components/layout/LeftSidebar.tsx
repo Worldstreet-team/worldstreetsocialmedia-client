@@ -11,6 +11,7 @@ import { sidebarList } from "@/data/sidebar";
 import { useAtomValue } from "jotai";
 import { userAtom } from "@/store/user.atom";
 import { unreadMessagesCountAtom } from "@/store/messageCache";
+import { handleSignOut } from "@/lib/utils";
 
 export function LeftSidebar() {
 	const pathname = usePathname();
@@ -18,7 +19,7 @@ export function LeftSidebar() {
 	const unreadCount = useAtomValue(unreadMessagesCountAtom);
 	const { signOut } = useClerk();
 	const router = useRouter();
-	const [isMenuOpen, setIsMenuOpen] = useState(false);
+	const [isMenuOpen, setIsMenuOpen] = useState<boolean | "more">(false);
 	const menuRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
@@ -49,10 +50,58 @@ export function LeftSidebar() {
 			<nav className="flex flex-col gap-4 mt-2 flex-1 px-2">
 				{sidebarList.map((item, index) => {
 					const isActive = pathname === item.link;
+					// Handle "More" dropdown state
+					const isMore = item.title === "More";
+					const isMoreOpen = isMenuOpen === "more"; // modifying string state logic below
+
 					const href =
 						item.title === "Profile" && user?.username
 							? `/profile/${user.username}`
 							: item.link;
+
+					if (item.isDropdown) {
+						return (
+							<div key={index} className="relative">
+								<button
+									onClick={() =>
+										setIsMenuOpen(isMenuOpen === "more" ? false : "more")
+									}
+									className={clsx(
+										"flex items-center gap-2 px-4 py-3.5 rounded-full transition-all duration-300 group hover:bg-zinc-900 relative w-full text-left",
+										isMoreOpen
+											? "font-bold text-white"
+											: "text-zinc-400 hover:text-white",
+									)}
+								>
+									<div className="relative">
+										<span className="inline-flex w-8 h-8 items-center justify-center">
+											<item.icon isActive={isMoreOpen} />
+										</span>
+									</div>
+									<span className="text-base font-medium font-sans tracking-tight">
+										{item.title}
+									</span>
+								</button>
+
+								{isMenuOpen === "more" && (
+									<div className="absolute bottom-full left-0 w-64 bg-black border border-zinc-800 rounded-xl shadow-xl overflow-hidden mb-2 z-50 animate-in slide-in-from-bottom-2 fade-in duration-200 py-2">
+										{item.dropdownItems?.map((subItem, subIndex) => (
+											<Link
+												key={subIndex}
+												href={subItem.link}
+												target="_blank"
+												rel="noopener noreferrer"
+												className="block px-4 py-3 text-white hover:bg-zinc-900 transition-colors font-sans text-sm font-medium"
+												onClick={() => setIsMenuOpen(false)}
+											>
+												{subItem.title}
+											</Link>
+										))}
+									</div>
+								)}
+							</div>
+						);
+					}
 
 					return (
 						<Link
@@ -96,7 +145,7 @@ export function LeftSidebar() {
 							<button
 								type="button"
 								className="w-full text-left px-5 py-4 hover:bg-zinc-800 font-bold text-sm text-red-400 font-sans flex items-center gap-3 transition-colors cursor-pointer"
-								onClick={() => signOut(() => router.push("/sign-in"))}
+								onClick={() => handleSignOut(signOut)}
 							>
 								<LogOut className="w-4 h-4" />
 								Log out @{user.username}

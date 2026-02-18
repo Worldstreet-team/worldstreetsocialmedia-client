@@ -97,8 +97,7 @@ export default function Feed() {
 		setIsPosting(true);
 	};
 
-	const handlePostSuccess = (newPost: any) => {
-		setIsPosting(false);
+	const handlePostSuccess = async (newPost: any) => {
 		if (newPost) {
 			const mappedPost: PostProps = {
 				id: newPost._id,
@@ -126,8 +125,11 @@ export default function Feed() {
 				...prev,
 				posts: [mappedPost, ...prev.posts],
 			}));
+			setIsPosting(false);
 		} else {
-			fetchFeed(true);
+			// Keep isPosting true while fetching
+			await fetchFeed(true);
+			setIsPosting(false);
 		}
 	};
 

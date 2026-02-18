@@ -178,6 +178,17 @@ export default function PostPage() {
 		);
 	}
 
+	const [isAddingComment, setIsAddingComment] = useState(false);
+
+	const handleCommentStart = () => {
+		setIsAddingComment(true);
+	};
+
+	const handleCommentSuccess = async () => {
+		await fetchPostData();
+		setIsAddingComment(false);
+	};
+
 	return (
 		<div className="flex flex-col min-h-screen pb-20">
 			<header className="sticky top-0 z-20 bg-black/80 backdrop-blur-md border-b border-zinc-800 px-4 py-2 flex items-center gap-6">
@@ -197,20 +208,29 @@ export default function PostPage() {
 				<PostCard post={post} />
 			</div>
 
-			<CommentComposer postId={postId} onCommentSuccess={fetchPostData} />
+			<CommentComposer
+				postId={postId}
+				onCommentStart={handleCommentStart}
+				onCommentSuccess={handleCommentSuccess}
+			/>
 
 			<div className="flex flex-col">
-				{comments.length > 0 ? (
-					comments.map((comment) => (
-						<div key={comment.id} className="border-b border-zinc-800">
-							<PostCard post={comment} />
-						</div>
-					))
-				) : (
-					<div className="p-12 text-center text-zinc-500 font-sans text-sm">
-						No comments yet. Be the first to reply!
+				{isAddingComment && (
+					<div className="border-b border-zinc-800">
+						<PostSkeleton />
 					</div>
 				)}
+				{comments.length > 0
+					? comments.map((comment) => (
+							<div key={comment.id} className="border-b border-zinc-800">
+								<PostCard post={comment} />
+							</div>
+						))
+					: !isAddingComment && (
+							<div className="p-12 text-center text-zinc-500 font-sans text-sm">
+								No comments yet. Be the first to reply!
+							</div>
+						)}
 			</div>
 		</div>
 	);

@@ -5,7 +5,19 @@ import MessageIcon from "@/assets/icons/MessageIcon";
 import SearchIcon from "@/assets/icons/SearchIcon";
 import UserIcon from "@/assets/icons/UserIcon";
 
-const sidebarList = [
+import MoreCircleIcon from "@/assets/icons/MoreCircleIcon";
+
+import { IconProps } from "@/app/types";
+
+interface SidebarItem {
+	title: string;
+	link: string;
+	icon: React.FC<IconProps>;
+	isDropdown?: boolean;
+	dropdownItems?: { title: string; link: string }[];
+}
+
+const sidebarList: SidebarItem[] = [
 	{
 		title: "Home",
 		link: "/",
@@ -35,6 +47,18 @@ const sidebarList = [
 		title: "Profile",
 		link: "/profile",
 		icon: UserIcon,
+	},
+	{
+		title: "More",
+		link: "#", // Handled programmatically
+		icon: MoreCircleIcon,
+		isDropdown: true,
+		dropdownItems: [
+			{ title: "Academy", link: "https://academy.worldstreetgold.com" },
+			{ title: "XTreme", link: "https://xtreme.worldstreetgold.com" },
+			{ title: "Ecommerce", link: "https://shop.worldstreetgold.com" },
+			{ title: "Dashboard", link: "https://dashboard.worldstreetgold.com" },
+		],
 	},
 ];
 

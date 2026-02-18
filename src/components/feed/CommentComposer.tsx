@@ -12,6 +12,7 @@ import clsx from "clsx";
 interface CommentComposerProps {
 	postId: string;
 	onCommentSuccess?: () => void;
+	onCommentStart?: () => void;
 }
 
 interface MediaItem {
@@ -23,6 +24,7 @@ interface MediaItem {
 export const CommentComposer = ({
 	postId,
 	onCommentSuccess,
+	onCommentStart,
 }: CommentComposerProps) => {
 	const { user } = useUser();
 	const [content, setContent] = useState("");
@@ -92,6 +94,7 @@ export const CommentComposer = ({
 	const handleSubmit = async () => {
 		if ((!content.trim() && mediaItems.length === 0) || isPosting) return;
 
+		onCommentStart?.();
 		setIsPosting(true);
 		try {
 			// currently replyToPostAction only supports text content in the signature

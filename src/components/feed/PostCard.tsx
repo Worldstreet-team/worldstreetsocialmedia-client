@@ -536,7 +536,8 @@ export const PostCard = ({ post }: { post: PostProps }) => {
 						</div>
 					)}
 					<div className="flex items-center justify-between text-zinc-500 mt-2 max-w-md pointer-events-auto">
-						<button
+						<Link
+							href={`/post/${post.id}`}
 							onClick={(e) => e.stopPropagation()}
 							className="flex items-center gap-2 hover:text-blue-400 transition-colors group cursor-pointer"
 						>
@@ -546,8 +547,8 @@ export const PostCard = ({ post }: { post: PostProps }) => {
 							<span className="text-xs font-sans group-hover:text-blue-400">
 								{post.stats.replies || ""}
 							</span>
-						</button>
-						<button
+						</Link>
+						{/* <button
 							onClick={(e) => e.stopPropagation()}
 							className="flex items-center gap-2 hover:text-green-400 transition-colors group cursor-pointer"
 						>
@@ -557,7 +558,7 @@ export const PostCard = ({ post }: { post: PostProps }) => {
 							<span className="text-xs font-sans group-hover:text-green-400">
 								{post.stats.reposts || ""}
 							</span>
-						</button>
+						</button> */}
 						<button
 							onClick={(e) => {
 								e.stopPropagation();
