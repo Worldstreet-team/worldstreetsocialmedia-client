@@ -12,7 +12,6 @@ import VerifiedIcon from "@/assets/icons/VerifiedIcon";
 import { Search } from "lucide-react";
 import { LeftSidebar } from "@/components/layout/LeftSidebar";
 import { RightSidebar } from "@/components/layout/RightSidebar";
-import { MobileNavigation } from "@/components/layout/MobileNavigation";
 import { useAtom } from "jotai";
 import {
 	trendsAtom,
@@ -146,7 +145,6 @@ export default function ExploreClient({
 
 	return (
 		<main className="min-h-screen bg-black text-white">
-			<MobileNavigation />
 			<div className="max-w-[1265px] mx-auto flex justify-center min-h-screen">
 				<LeftSidebar />
 

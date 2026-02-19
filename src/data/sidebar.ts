@@ -57,7 +57,7 @@ const sidebarList: SidebarItem[] = [
 			{ title: "Academy", link: "https://academy.worldstreetgold.com" },
 			{ title: "XTreme", link: "https://xtreme.worldstreetgold.com" },
 			{ title: "Ecommerce", link: "https://shop.worldstreetgold.com" },
-			{ title: "Dashboard", link: "https://dashboard.worldstreetgold.com" },
+			{ title: "Dashboard", link: "https://worldstreetgold.com" },
 		],
 	},
 ];
