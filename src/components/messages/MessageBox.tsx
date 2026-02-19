@@ -40,6 +40,7 @@ const API_URL = (process.env.NEXT_PUBLIC_API_URL || BACKEND_URL).replace(
 );
 import { useAtom } from "jotai";
 import { messageCacheAtom } from "@/store/messageCache";
+import NewConversationModal from "./NewConversationModal";
 
 // Helper component for conditional channel subscription
 const UserMessageSubscription = ({
@@ -231,6 +232,7 @@ export const MessageBox = ({
 	const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 	const [showAttachMenu, setShowAttachMenu] = useState(false);
 	const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+	const [showNewConversationModal, setShowNewConversationModal] = useState(false);
 
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const activeIdRef = useRef<string | null>(null);
@@ -1133,7 +1135,7 @@ export const MessageBox = ({
 							</p>
 						</div>
 						<button
-							onClick={() => searchInputRef.current?.focus()}
+							onClick={() => setShowNewConversationModal(true)}
 							className="flex items-center gap-2 px-6 py-3 bg-yellow-500 text-black font-bold rounded-full hover:bg-yellow-400 transition-colors"
 						>
 							<UserPlus className="w-5 h-5" />
@@ -1142,6 +1144,17 @@ export const MessageBox = ({
 					</div>
 				</div>
 			)}
+
+			{/* New Conversation Modal */}
+			<NewConversationModal
+				isOpen={showNewConversationModal}
+				onClose={() => setShowNewConversationModal(false)}
+				currentUserId={user?.id || ""}
+				onConversationStarted={(conversationId) => {
+					fetchConversations();
+					router.push(`/messages/${conversationId}`);
+				}}
+			/>
 		</div>
 	);
 };
