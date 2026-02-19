@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { searchUsersAction } from "@/lib/user.actions";
 import { getExploreDataAction } from "@/lib/post.actions";
@@ -58,26 +58,6 @@ export default function ExploreClient({
 		!isTrendsLoaded || !isPopularPostsLoaded,
 	);
 
-	// Manual debounce for search
-	const [debouncedQuery, setDebouncedQuery] = useState(query);
-
-	useEffect(() => {
-		const handler = setTimeout(() => {
-			setDebouncedQuery(query);
-		}, 500);
-
-		return () => {
-			clearTimeout(handler);
-		};
-	}, [query]);
-
-	// Sync state with props when navigating via URL (e.g. clicking trend)
-	useEffect(() => {
-		setQuery(initialQuery);
-		setDebouncedQuery(initialQuery);
-		setResults(initialResults);
-	}, [initialQuery, initialResults]);
-
 	// Fetch explore data (trends + popular posts)
 	useEffect(() => {
 		const fetchExploreData = async () => {
@@ -113,35 +93,55 @@ export default function ExploreClient({
 		setIsPopularPostsLoaded,
 	]);
 
-	const handleSearch = async (q: string) => {
-		if (!q) {
+	// Search function
+	const handleSearch = useCallback(async (q: string) => {
+		if (!q || !q.trim()) {
 			setResults([]);
+			setSearchLoading(false);
 			return;
 		}
 		setSearchLoading(true);
-		const res = await searchUsersAction(q);
-		if (res.success) {
-			setResults(res.data);
-		}
-		setSearchLoading(false);
-	};
-
-	// Update URL on debounce
-	useEffect(() => {
-		if (debouncedQuery !== initialQuery) {
-			const params = new URLSearchParams();
-			if (debouncedQuery) {
-				params.set("q", debouncedQuery);
-				router.replace(`/explore?${params.toString()}`);
-				handleSearch(debouncedQuery);
+		try {
+			const res = await searchUsersAction(q.trim());
+			if (res.success) {
+				setResults(res.data);
 			} else {
-				router.replace("/explore");
 				setResults([]);
 			}
+		} catch (error) {
+			console.error("Search error:", error);
+			setResults([]);
+		} finally {
+			setSearchLoading(false);
 		}
-	}, [debouncedQuery, router, initialQuery]);
+	}, []);
 
-	const isSearching = query.length > 0;
+	// Debounced search: when user types, wait 400ms then search
+	useEffect(() => {
+		const trimmed = query.trim();
+
+		if (!trimmed) {
+			setResults([]);
+			setSearchLoading(false);
+			// Update URL to remove query param
+			window.history.replaceState(null, "", "/explore");
+			return;
+		}
+
+		setSearchLoading(true);
+
+		const handler = setTimeout(() => {
+			// Update URL without triggering Next.js server re-render
+			window.history.replaceState(null, "", `/explore?q=${encodeURIComponent(trimmed)}`);
+			handleSearch(trimmed);
+		}, 400);
+
+		return () => {
+			clearTimeout(handler);
+		};
+	}, [query, handleSearch]);
+
+	const isSearching = query.trim().length > 0;
 
 	return (
 		<main className="min-h-screen bg-black text-white">
@@ -174,10 +174,10 @@ export default function ExploreClient({
 								</div>
 							)}
 
-							{!searchLoading && results.length === 0 && query && (
+							{!searchLoading && results.length === 0 && query.trim() && (
 								<div className="p-8 text-center flex flex-col items-center">
 									<span className="text-zinc-500 mb-2">
-										No results for &quot;{query}&quot;
+										No results for &quot;{query.trim()}&quot;
 									</span>
 									<span className="text-zinc-600 text-sm">
 										Try searching for people or topics
@@ -185,7 +185,7 @@ export default function ExploreClient({
 								</div>
 							)}
 
-							{results.map((user) => (
+							{!searchLoading && results.map((user) => (
 								<Link
 									key={user.userId}
 									href={`/profile/${user.username}`}
@@ -240,27 +240,14 @@ export default function ExploreClient({
 										))
 									) : trends.length > 0 ? (
 										trends.map((topic, i) => (
-											<Link href={`/explore?q=${topic.title.replace("#", "")}`} key={i}
+											<Link
+												href={`/explore?q=${topic.title.replace("#", "")}`}
+												key={i}
 												className="px-4 py-3 hover:bg-zinc-900/50 cursor-pointer transition-colors border-b border-zinc-800/50 last:border-0"
-												onClick={() =>
-													setQuery(
-														topic.title.replace(
-															"#",
-															"",
-														),
-													)
-												}
-												onKeyDown={(e) => {
-													if (e.key === "Enter")
-														setQuery(
-															topic.title.replace(
-																"#",
-																"",
-															),
-														);
+												onClick={(e) => {
+													e.preventDefault();
+													setQuery(topic.title.replace("#", ""));
 												}}
-												role="button"
-												tabIndex={0}
 											>
 												<div className="flex justify-between items-start">
 													<div className="text-xs text-zinc-500 font-sans">
