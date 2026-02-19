@@ -21,10 +21,15 @@ export function LeftSidebar() {
 	const router = useRouter();
 	const [isMenuOpen, setIsMenuOpen] = useState<boolean | "more">(false);
 	const menuRef = useRef<HTMLDivElement>(null);
+	const moreMenuRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
-			if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+			const target = event.target as Node;
+			if (
+				menuRef.current && !menuRef.current.contains(target) &&
+				moreMenuRef.current && !moreMenuRef.current.contains(target)
+			) {
 				setIsMenuOpen(false);
 			}
 		};
@@ -41,8 +46,14 @@ export function LeftSidebar() {
 		<header className="w-[275px] hidden md:flex flex-col sticky top-0 h-screen pl-4 pr-6 border-r border-zinc-800">
 			<div className="py-8 px-2">
 				<Link href="/" className="flex items-center gap-3 group">
-					<div className="w-10 h-10 bg-yellow-500 rounded-xl flex items-center justify-center border-2 border-transparent group-hover:border-white transition-all shadow-[4px_4px_0px_rgba(255,255,255,0.2)]">
-						<span className="font-black text-black font-sans text-2xl">W</span>
+					<div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden">
+						<Image
+							src="/images/logo.png"
+							alt="WorldStreet"
+							width={40}
+							height={40}
+							className="object-contain"
+						/>
 					</div>
 				</Link>
 			</div>
@@ -61,13 +72,13 @@ export function LeftSidebar() {
 
 					if (item.isDropdown) {
 						return (
-							<div key={index} className="relative">
+							<div key={index} className="relative" ref={moreMenuRef}>
 								<button
 									onClick={() =>
 										setIsMenuOpen(isMenuOpen === "more" ? false : "more")
 									}
 									className={clsx(
-										"flex items-center gap-2 px-4 py-3.5 rounded-full transition-all duration-300 group hover:bg-zinc-900 relative w-full text-left",
+										"flex items-center gap-2 px-4 py-3.5 rounded-full transition-all duration-300 group hover:bg-zinc-900 relative w-full text-left cursor-pointer",
 										isMoreOpen
 											? "font-bold text-white"
 											: "text-zinc-400 hover:text-white",
@@ -90,7 +101,6 @@ export function LeftSidebar() {
 												key={subIndex}
 												href={subItem.link}
 												target="_blank"
-												rel="noopener noreferrer"
 												className="block px-4 py-3 text-white hover:bg-zinc-900 transition-colors font-sans text-sm font-medium"
 												onClick={() => setIsMenuOpen(false)}
 											>

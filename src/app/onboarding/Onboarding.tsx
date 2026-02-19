@@ -7,7 +7,7 @@ import clsx from "clsx";
 import { AVATARS, INTERESTS } from "@/data/onboarding";
 import { followUserAction, getWhoToFollowAction } from "@/lib/user.actions";
 import axios from "axios";
-import { BACKEND_URL } from "@/const";
+import { BACKEND_URL, DEFAULT_AVATAR } from "@/const";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { useToast } from "@/components/ui/Toast/ToastContext";
@@ -45,7 +45,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 			setFormData((prev) => ({
 				...prev,
 				id: initialUser?.id || "",
-				avatar: initialUser?.avatar || "",
+				avatar: initialUser?.avatar || DEFAULT_AVATAR,
 				firstName: initialUser?.firstName || "",
 				lastName: initialUser?.lastName || "",
 				email: initialUser?.email || "",
@@ -104,7 +104,6 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 
 			if (res.data) {
 				setActiveUser(res.data);
-				console.log("ONBOARDED: ", res.data);
 				toast("Welcome to WorldStreet!", { type: "success" });
 			}
 
@@ -200,7 +199,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 								</p>
 							</div>
 
-							<div className="flex gap-4 justify-center">
+							{/* <div className="flex gap-4 justify-center">
 								{AVATARS.map((avatar: string, index) => (
 									<button
 										key={index}
@@ -221,7 +220,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 										/>
 									</button>
 								))}
-							</div>
+							</div> */}
 
 							<div className="w-full space-y-6">
 								<div className="space-y-2 text-left">
