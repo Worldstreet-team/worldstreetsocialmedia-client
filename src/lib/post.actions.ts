@@ -262,3 +262,27 @@ export async function getLinkPreviewAction(url: string) {
 		return { success: false, message: "Failed to fetch link preview" };
 	}
 }
+
+export async function searchPostsAction(query: string) {
+	const { getToken } = await auth();
+	const accessToken = await getToken();
+
+	if (!accessToken) return { success: false, message: "Unauthorized" };
+
+	try {
+		const res = await axios.get(`${API_URL}/api/posts/search`, {
+			params: { q: query },
+			headers: { Authorization: `Bearer ${accessToken}` },
+		});
+		return { success: true, data: res.data.data };
+	} catch (error: any) {
+		console.error(
+			"Search Posts Error:",
+			error.response?.data || error.message,
+		);
+		return {
+			success: false,
+			message: error.response?.data?.message || "Failed to search posts",
+		};
+	}
+}
