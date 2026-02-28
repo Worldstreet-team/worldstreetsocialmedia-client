@@ -14,7 +14,8 @@ import {
     Pin,
 } from "lucide-react";
 import clsx from "clsx";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo, useCallback, useMemo } from "react";
+
 import { useAtomValue, useSetAtom } from "jotai";
 import { motion, AnimatePresence } from "framer-motion";
 import { userAtom } from "@/store/user.atom";
@@ -59,8 +60,7 @@ export interface PostProps {
     };
 }
 
-export const PostCard = ({ post }: { post: PostProps }) => {
-    // ... existing state hooks ...
+export const PostCard = memo(({ post }: { post: PostProps }) => {
     const [isLiked, setIsLiked] = useState(post.isLiked);
     const [likeCount, setLikeCount] = useState(post.stats.likes);
     const [isBookmarked, setIsBookmarked] = useState(post.isBookmarked);
@@ -84,9 +84,12 @@ export const PostCard = ({ post }: { post: PostProps }) => {
         null,
     );
 
-    const isOwnPost =
-        currentUser?.userId === post.author.id ||
-        currentUser?._id === post.author.id;
+    const isOwnPost = useMemo(
+        () =>
+            currentUser?.userId === post.author.id ||
+            currentUser?._id === post.author.id,
+        [currentUser, post.author.id],
+    );
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -106,16 +109,17 @@ export const PostCard = ({ post }: { post: PostProps }) => {
         };
     }, [isMenuOpen]);
 
-    const handleLike = async () => {
+    const handleLike = useCallback(async () => {
         if (!currentUser) {
             toast("Please login to like posts", { type: "error" });
             return;
         }
 
-        // Optimistic update
         const newIsLiked = !isLiked;
         setIsLiked(newIsLiked);
-        setLikeCount((prev) => (newIsLiked ? prev + 1 : Math.max(0, prev - 1)));
+        setLikeCount((prev: number) =>
+            newIsLiked ? prev + 1 : Math.max(0, prev - 1),
+        );
 
         try {
             if (newIsLiked) {
@@ -125,27 +129,24 @@ export const PostCard = ({ post }: { post: PostProps }) => {
             }
         } catch (error) {
             console.error("Like error:", error);
-            // Revert on error
             setIsLiked(!newIsLiked);
             setLikeCount((prev) => (newIsLiked ? prev - 1 : prev + 1));
             toast("Failed to update like", { type: "error" });
         }
-    };
+    }, [currentUser, isLiked, post.id, toast]);
 
-    const handleBookmark = async () => {
+    const handleBookmark = useCallback(async () => {
         if (!currentUser) {
             toast("Please login to bookmark posts", { type: "error" });
             return;
         }
 
-        // Optimistic update
         const newIsBookmarked = !isBookmarked;
         setIsBookmarked(newIsBookmarked);
 
         try {
             if (newIsBookmarked) {
-                // Update user atom for global consistency
-                setUser((prev) =>
+                setUser((prev: any) =>
                     prev
                         ? {
                               ...prev,
@@ -153,8 +154,7 @@ export const PostCard = ({ post }: { post: PostProps }) => {
                           }
                         : null,
                 );
-                // Update bookmarks atom
-                setBookmarks((prev) => [
+                setBookmarks((prev: any) => [
                     { ...post, isBookmarked: true },
                     ...prev,
                 ]);
@@ -162,32 +162,31 @@ export const PostCard = ({ post }: { post: PostProps }) => {
                 await bookmarkPostAction(post.id);
                 toast("Post added to bookmarks", { type: "success" });
             } else {
-                setUser((prev) =>
+                setUser((prev: any) =>
                     prev
                         ? {
                               ...prev,
                               bookmarks: (prev.bookmarks || []).filter(
-                                  (id) => id !== post.id,
+                                  (id: string) => id !== post.id,
                               ),
                           }
                         : null,
                 );
-                // Update bookmarks atom
-                setBookmarks((prev) => prev.filter((p) => p.id !== post.id));
+                setBookmarks((prev: any) =>
+                    prev.filter((p: any) => p.id !== post.id),
+                );
 
                 await unbookmarkPostAction(post.id);
                 toast("Post removed from bookmarks", { type: "success" });
             }
         } catch (error) {
             console.error("Bookmark error:", error);
-            // Revert
             setIsBookmarked(!newIsBookmarked);
-            // Revert atom changes if necessary (complex, skipping for simple optimistic UI)
             toast("Failed to update bookmark", { type: "error" });
         }
-    };
+    }, [currentUser, isBookmarked, post, setUser, setBookmarks, toast]);
 
-    const handleDelete = async () => {
+    const handleDelete = useCallback(async () => {
         setIsDeleting(true);
         try {
             const res = await deletePostAction(post.id);
@@ -204,36 +203,46 @@ export const PostCard = ({ post }: { post: PostProps }) => {
         } finally {
             setIsDeleting(false);
         }
-    };
+    }, [post.id, toast]);
 
-    const handleMenuAction = (action: string) => {
-        setIsMenuOpen(false);
+    const handleMenuAction = useCallback(
+        (action: string) => {
+            setIsMenuOpen(false);
 
-        if (action === "delete") {
-            setIsDeleteModalOpen(true);
-        } else if (action === "copy_link") {
-            const url = `${window.location.origin}/post/${post.id}`;
-            navigator.clipboard
-                .writeText(url)
-                .then(() => {
-                    toast("Link copied to clipboard", { type: "success" });
-                })
-                .catch((err) => {
-                    console.error("Failed to copy link: ", err);
-                    toast("Failed to copy link", { type: "error" });
-                });
-        }
-    };
+            if (action === "delete") {
+                setIsDeleteModalOpen(true);
+            } else if (action === "copy_link") {
+                const url = `${window.location.origin}/post/${post.id}`;
+                navigator.clipboard
+                    .writeText(url)
+                    .then(() => {
+                        toast("Link copied to clipboard", { type: "success" });
+                    })
+                    .catch((err) => {
+                        console.error("Failed to copy link: ", err);
+                        toast("Failed to copy link", { type: "error" });
+                    });
+            }
+        },
+        [post.id, toast],
+    );
 
     const MAX_LENGTH = 280;
-    const shouldTruncate = !post.isDetail && post.content.length > MAX_LENGTH;
-    const displayedContent = shouldTruncate
-        ? post.content.slice(0, MAX_LENGTH)
-        : post.content;
+    const shouldTruncate = useMemo(
+        () => !post.isDetail && post.content.length > MAX_LENGTH,
+        [post.isDetail, post.content.length],
+    );
 
-    const formatContent = (text: string) => {
+    const displayedContent = useMemo(
+        () =>
+            shouldTruncate ? post.content.slice(0, MAX_LENGTH) : post.content,
+        [shouldTruncate, post.content],
+    );
+
+    const formattedContent = useMemo(() => {
+        const text = displayedContent;
         const urlRegex = /(https?:\/\/[^\s]+)/g;
-        return text.split(urlRegex).map((part, index) => {
+        return text.split(urlRegex).map((part: string, index: number) => {
             if (part.match(urlRegex)) {
                 return (
                     <a
@@ -242,7 +251,7 @@ export const PostCard = ({ post }: { post: PostProps }) => {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-yellow-500 hover:underline relative z-10 pointer-events-auto"
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
                     >
                         {part}
                     </a>
@@ -250,12 +259,12 @@ export const PostCard = ({ post }: { post: PostProps }) => {
             }
             return part;
         });
-    };
+    }, [displayedContent]);
 
-    const getImageGridClass = (count: number) => {
+    const getImageGridClass = useCallback((count: number) => {
         switch (count) {
             case 1:
-                return "grid-cols-1 grid-rows-1 h-auto aspect-video"; // Default fallback if needed
+                return "grid-cols-1 grid-rows-1 h-auto aspect-video";
             case 2:
                 return "grid-cols-2 grid-rows-1 h-[290px]";
             case 3:
@@ -265,20 +274,18 @@ export const PostCard = ({ post }: { post: PostProps }) => {
             default:
                 return "grid-cols-1";
         }
-    };
+    }, []);
 
-    const getImageStyle = (index: number, total: number) => {
-        if (total === 3) {
-            if (index === 0) return "row-span-2";
-        }
+    const getImageStyle = useCallback((index: number, total: number) => {
+        if (total === 3 && index === 0) return "row-span-2";
         return "";
-    };
+    }, []);
 
     if (isDeleted) return null;
 
     return (
         <article className="relative block p-2.5 sm:p-4 border-b border-zinc-800/60 hover:bg-zinc-900/30 transition-colors">
-            {/* Overlay Link for the entire card */}
+            {/* ... Rest of the component remains the same ... */}
             <Link
                 href={`/post/${post.id}`}
                 className="absolute inset-0 z-0"
@@ -492,9 +499,9 @@ export const PostCard = ({ post }: { post: PostProps }) => {
                             </AnimatePresence>
                         </div>
                     </div>
-                    {/* Post Content - Text is clickable via overlay, but interaction passes through due to pointer-events-none */}
+                    {/* Post Content */}
                     <p className="text-zinc-100 whitespace-pre-wrap mb-4 font-normal leading-relaxed text-[14px] font-sans tracking-tight pointer-events-none">
-                        {formatContent(displayedContent)}
+                        {formattedContent}
                         {shouldTruncate && (
                             <span className="text-zinc-500 pointer-events-auto">
                                 ...{" "}
@@ -565,21 +572,28 @@ export const PostCard = ({ post }: { post: PostProps }) => {
                                 getImageGridClass(post.images.length),
                             )}
                         >
-                            {post.images.slice(0, 4).map((src, i) => (
-                                <div
-                                    key={i}
-                                    className={clsx(
-                                        "relative z-10 w-full h-full bg-cover bg-center cursor-zoom-in hover:opacity-95 transition-opacity",
-                                        getImageStyle(i, post.images!.length),
-                                    )}
-                                    style={{ backgroundImage: `url('${src}')` }}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        e.preventDefault();
-                                        setSelectedImageIndex(i);
-                                    }}
-                                />
-                            ))}
+                            {post.images
+                                .slice(0, 4)
+                                .map((src: string, i: number) => (
+                                    <div
+                                        key={i}
+                                        className={clsx(
+                                            "relative z-10 w-full h-full bg-cover bg-center cursor-zoom-in hover:opacity-95 transition-opacity",
+                                            getImageStyle(
+                                                i,
+                                                post.images!.length,
+                                            ),
+                                        )}
+                                        style={{
+                                            backgroundImage: `url('${src}')`,
+                                        }}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            e.preventDefault();
+                                            setSelectedImageIndex(i);
+                                        }}
+                                    />
+                                ))}
                         </div>
                     )}
                     <div className="flex items-center justify-between text-zinc-500 mt-2 max-w-md pointer-events-auto">
@@ -595,17 +609,6 @@ export const PostCard = ({ post }: { post: PostProps }) => {
                                 {post.stats.replies || ""}
                             </span>
                         </Link>
-                        {/* <button
-							onClick={(e) => e.stopPropagation()}
-							className="flex items-center gap-2 hover:text-green-400 transition-colors group cursor-pointer"
-						>
-							<div className="p-2 rounded-full group-hover:bg-green-400/10 transition-colors">
-								<Repeat className="w-4 h-4" />
-							</div>
-							<span className="text-xs font-sans group-hover:text-green-400">
-								{post.stats.reposts || ""}
-							</span>
-						</button> */}
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -662,4 +665,6 @@ export const PostCard = ({ post }: { post: PostProps }) => {
             </div>
         </article>
     );
-};
+});
+
+PostCard.displayName = "PostCard";
