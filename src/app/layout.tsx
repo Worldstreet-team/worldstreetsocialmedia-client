@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import {
-	ClerkProvider,
-	// SignInButton,
-	// SignUpButton,
-	// SignedOut,
+    ClerkProvider,
+    // SignInButton,
+    // SignUpButton,
+    // SignedOut,
 } from "@clerk/nextjs";
 
 import "./globals.css";
@@ -17,68 +17,68 @@ import { CallProvider } from "@/providers/CallProvider";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import GlobalMessageListener from "@/components/providers/GlobalMessageListener";
 
-import localFont from "next/font/local";
+import { Public_Sans } from "next/font/google";
 
-const googleSans = localFont({
-	src: "../assets/fonts/google-sans/GoogleSansFlex-VariableFont_GRAD,ROND,opsz,slnt,wdth,wght.ttf",
-	variable: "--font-google-sans",
+const publicSans = Public_Sans({
+    subsets: ["latin"],
+    variable: "--font-public-sans",
 });
 
 export const viewport: Viewport = {
-	width: "device-width",
-	initialScale: 1,
-	maximumScale: 1,
-	userScalable: false,
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
 };
 
 export const metadata: Metadata = {
-	title: "WorldStreet - Social Media",
-	description: "This is world street media platform",
+    title: "WorldStreet - Social Media",
+    description: "This is world street media platform",
 };
 
 export default async function RootLayout({
-	children,
+    children,
 }: Readonly<{
-	children: React.ReactNode;
+    children: React.ReactNode;
 }>) {
-	const headersList = await headers(); // ✅ now valid
-	const userData = headersList.get("x-user-data");
+    const headersList = await headers(); // ✅ now valid
+    const userData = headersList.get("x-user-data");
 
-	const parsedUser = userData ? JSON.parse(userData) : null;
+    const parsedUser = userData ? JSON.parse(userData) : null;
 
-	return (
-		<ClerkProvider
-			appearance={{
-				captcha: {
-					theme: "dark",
-					size: "flexible",
-				},
-			}}
-		>
-			<html lang="en" suppressHydrationWarning>
-				<body className={`${googleSans.variable} antialiased`}>
-					<NextTopLoader />
+    return (
+        <ClerkProvider
+            appearance={{
+                captcha: {
+                    theme: "dark",
+                    size: "flexible",
+                },
+            }}
+        >
+            <html lang="en" suppressHydrationWarning>
+                <body className={`${publicSans.variable} antialiased`}>
+                    <NextTopLoader />
 
-					<ThemeProvider
-						attribute="class"
-						defaultTheme="system"
-						enableSystem
-						disableTransitionOnChange
-					>
-						<JotaiHydrator user={parsedUser}>
-							<RealtimeProvider>
-								<CallProvider>
-									<ToastProvider>
-										<GlobalMessageListener />
-										{children}
-										<MobileBottomNav />
-									</ToastProvider>
-								</CallProvider>
-							</RealtimeProvider>
-						</JotaiHydrator>
-					</ThemeProvider>
-				</body>
-			</html>
-		</ClerkProvider>
-	);
+                    <ThemeProvider
+                        attribute="class"
+                        defaultTheme="system"
+                        enableSystem
+                        disableTransitionOnChange
+                    >
+                        <JotaiHydrator user={parsedUser}>
+                            <RealtimeProvider>
+                                <CallProvider>
+                                    <ToastProvider>
+                                        <GlobalMessageListener />
+                                        {children}
+                                        <MobileBottomNav />
+                                    </ToastProvider>
+                                </CallProvider>
+                            </RealtimeProvider>
+                        </JotaiHydrator>
+                    </ThemeProvider>
+                </body>
+            </html>
+        </ClerkProvider>
+    );
 }
