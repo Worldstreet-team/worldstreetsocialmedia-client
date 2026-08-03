@@ -10,10 +10,13 @@ export async function syncUser(token: string | null) {
 			},
 		});
 
-		// No request-level logging here: proxy.ts calls syncUser on EVERY
-		// matched request, so anything logged in this path runs per-request in
-		// production (and the auth'd Response/body can carry user data).
+		console.log("RES ISH SYNC: ", res);
+
 		if (!res.ok) {
+			console.error(`Sync user failed: ${res.status} ${res.statusText}`);
+			const text = await res.text();
+			console.error("Error body:", text);
+
 			if (res.status === 404) return { status: "not_found" };
 			return null;
 		}
