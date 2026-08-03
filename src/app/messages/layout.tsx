@@ -8,7 +8,7 @@ export default function MessagesLayout({
 	return (
 		<div className="max-w-[1600px] mx-auto flex min-h-screen">
 			<LeftSidebar />
-			<main className="flex-1 min-h-screen border-r border-zinc-800">
+			<main id="main-content" className="flex-1 min-h-screen border-r border-hairline">
 				{children}
 			</main>
 		</div>

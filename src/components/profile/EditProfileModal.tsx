@@ -7,6 +7,7 @@ import { useSetAtom } from "jotai";
 import { userAtom } from "@/store/user.atom";
 import { motion, AnimatePresence } from "framer-motion";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
+import { DEFAULT_AVATAR } from "@/const";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import {
 	X,
@@ -15,7 +16,6 @@ import {
 	MapPin,
 	User as UserIcon,
 } from "lucide-react";
-import clsx from "clsx";
 
 interface EditProfileModalProps {
 	user: any;
@@ -106,46 +106,47 @@ export default function EditProfileModal({
 	return (
 		<ConfirmModalPortal>
 			<AnimatePresence>
-				<div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+				<div className="fixed inset-0 z-modal flex items-center justify-center p-4">
 					<motion.div
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
 						onClick={onClose}
-						className="absolute inset-0 bg-zinc-900/80 backdrop-blur-sm"
+						className="absolute inset-0 bg-scrim"
 					/>
 					<motion.div
-						initial={{ opacity: 0, scale: 0.95, y: 10 }}
+						initial={{ opacity: 0, scale: 0.98, y: 8 }}
 						animate={{ opacity: 1, scale: 1, y: 0 }}
-						exit={{ opacity: 0, scale: 0.95, y: 10 }}
-						className="relative w-full max-w-lg bg-black border border-zinc-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-50 text-white"
+						exit={{ opacity: 0, scale: 0.98, y: 8 }}
+						transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+						className="relative w-full max-w-lg bg-surface border border-hairline rounded-xl shadow-nav overflow-hidden flex flex-col max-h-[90vh] text-primary"
 					>
 						{/* Header */}
-						<div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+						<div className="flex items-center justify-between px-4 py-3 border-b border-hairline">
 							<div className="flex items-center gap-4">
 								<button
 									onClick={onClose}
-									className="p-2 -ml-2 rounded-full hover:bg-zinc-900 transition-colors text-zinc-400 hover:text-white cursor-pointer"
+									className="p-2 -ml-2 rounded-pill hover:bg-raised transition-colors text-muted hover:text-primary cursor-pointer"
 								>
 									<X className="w-5 h-5" />
 								</button>
-								<h2 className="text-xl font-bold font-sans tracking-tight">
+								<h2 className="font-display text-lg font-semibold tracking-tight">
 									Edit Profile
 								</h2>
 							</div>
 							<button
 								onClick={handleSave}
 								disabled={isLoading}
-								className="bg-white text-black px-6 py-2 rounded-full font-bold text-sm hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-sans"
+								className="bg-primary text-page px-6 py-2 rounded-pill font-semibold text-sm hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-sans"
 							>
 								{isLoading ? "Saving..." : "Save"}
 							</button>
 						</div>
 
 						{/* Scrollable Content */}
-						<div className="overflow-y-auto flex-1 bg-black">
+						<div className="overflow-y-auto flex-1">
 							{/* Banner */}
-							<div className="relative h-32 sm:h-48 bg-zinc-900 w-full group">
+							<div className="relative h-32 sm:h-48 bg-sunken w-full group">
 								{bannerPreview ? (
 									<Image
 										src={bannerPreview}
@@ -154,12 +155,13 @@ export default function EditProfileModal({
 										className="object-cover"
 									/>
 								) : (
-									<div className="w-full h-full bg-linear-to-r from-zinc-900 to-zinc-800" />
+									// Flat sunken band — gradient placeholders are off-system.
+									<div className="w-full h-full bg-sunken" />
 								)}
-								<div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity gap-4">
+								<div className="absolute inset-0 bg-page/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity gap-4">
 									<button
 										onClick={() => bannerInputRef.current?.click()}
-										className="w-10 h-10 flex items-center justify-center cursor-pointer bg-black/50 rounded-full text-white hover:bg-white/20 transition-colors backdrop-blur-sm"
+										className="w-10 h-10 flex items-center justify-center cursor-pointer bg-page/60 rounded-pill text-primary hover:bg-raised transition-colors"
 									>
 										<Camera className="w-5 h-5" />
 									</button>
@@ -169,7 +171,7 @@ export default function EditProfileModal({
 												setBannerFile(null);
 												setBannerPreview(user.banner || "");
 											}}
-											className="w-10 h-10 flex items-center justify-center cursor-pointer bg-black/50 rounded-full text-white hover:bg-white/20 transition-colors backdrop-blur-sm"
+											className="w-10 h-10 flex items-center justify-center cursor-pointer bg-page/60 rounded-pill text-primary hover:bg-raised transition-colors"
 										>
 											<X className="w-5 h-5" />
 										</button>
@@ -186,20 +188,17 @@ export default function EditProfileModal({
 
 							{/* Avatar */}
 							<div className="px-4 relative mb-6">
-								<div className="w-[80px] sm:w-[112px] h-[80px] sm:h-[112px] rounded-full border-4 border-black -mt-[40px] sm:-mt-[56px] relative bg-black group overflow-hidden shadow-sm">
+								<div className="w-[80px] sm:w-[112px] h-[80px] sm:h-[112px] rounded-full border-4 border-surface -mt-[40px] sm:-mt-[56px] relative bg-sunken group overflow-hidden">
 									<Image
-										src={
-											avatarPreview ||
-											"https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"
-										}
+										src={avatarPreview || DEFAULT_AVATAR}
 										alt="Avatar"
 										fill
 										className="object-cover"
 									/>
-									<div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+									<div className="absolute inset-0 bg-page/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
 										<button
 											onClick={() => avatarInputRef.current?.click()}
-											className="w-10 h-10 flex items-center justify-center bg-black/50 rounded-full text-white hover:bg-white/20 transition-colors backdrop-blur-sm"
+											className="w-10 h-10 flex items-center justify-center bg-page/60 rounded-pill text-primary hover:bg-raised transition-colors"
 										>
 											<Camera className="w-5 h-5" />
 										</button>
@@ -218,83 +217,83 @@ export default function EditProfileModal({
 							<div className="px-4 pb-8 space-y-5">
 								<div className="grid sm:grid-cols-2 gap-4">
 									{/* First Name */}
-									<div className="relative border border-zinc-800 focus-within:border-white focus-within:ring-1 focus-within:ring-white transition-all p-3">
-										<label className="block text-xs uppercase font-bold text-zinc-500 mb-1 font-sans">
+									<div className="relative rounded-md border border-hairline focus-within:border-brand/60 transition-colors p-3">
+										<label className="block text-[11px] uppercase tracking-[1px] font-medium text-muted mb-1 font-sans">
 											First Name
 										</label>
 										<div className="flex items-center gap-2">
-											<UserIcon className="w-4 h-4 text-zinc-500" />
+											<UserIcon className="w-4 h-4 text-subtle" />
 											<input
 												type="text"
 												name="firstName"
 												value={formData.firstName}
 												onChange={handleInputChange}
-												className="w-full outline-none text-sm font-sans bg-transparent placeholder:text-zinc-700 text-white"
+												className="w-full outline-none text-sm font-sans bg-transparent placeholder:text-subtle text-primary"
 												placeholder="First Name"
 											/>
 										</div>
 									</div>
 									{/* Last Name */}
-									<div className="relative border border-zinc-800 focus-within:border-white focus-within:ring-1 focus-within:ring-white transition-all p-3">
-										<label className="block text-xs uppercase font-bold text-zinc-500 mb-1 font-sans">
+									<div className="relative rounded-md border border-hairline focus-within:border-brand/60 transition-colors p-3">
+										<label className="block text-[11px] uppercase tracking-[1px] font-medium text-muted mb-1 font-sans">
 											Last Name
 										</label>
 										<div className="flex items-center gap-2">
-											<UserIcon className="w-4 h-4 text-zinc-500" />
+											<UserIcon className="w-4 h-4 text-subtle" />
 											<input
 												type="text"
 												name="lastName"
 												value={formData.lastName}
 												onChange={handleInputChange}
-												className="w-full outline-none text-sm font-sans bg-transparent placeholder:text-zinc-700 text-white"
+												className="w-full outline-none text-sm font-sans bg-transparent placeholder:text-subtle text-primary"
 												placeholder="Last Name"
 											/>
 										</div>
 									</div>
 								</div>
 
-								<div className="relative border border-zinc-800 focus-within:border-white focus-within:ring-1 focus-within:ring-white transition-all p-3">
-									<label className="block text-xs uppercase font-bold text-zinc-500 mb-1 font-sans">
+								<div className="relative rounded-md border border-hairline focus-within:border-brand/60 transition-colors p-3">
+									<label className="block text-[11px] uppercase tracking-[1px] font-medium text-muted mb-1 font-sans">
 										Bio
 									</label>
 									<textarea
 										name="bio"
 										value={formData.bio}
 										onChange={handleInputChange}
-										className="w-full outline-none text-sm font-sans resize-none min-h-[80px] bg-transparent placeholder:text-zinc-700 text-white"
+										className="w-full outline-none text-sm font-sans resize-none min-h-[80px] bg-transparent placeholder:text-subtle text-primary"
 										placeholder="Tell us about yourself"
 									/>
 								</div>
 
-								<div className="relative border border-zinc-800 focus-within:border-white focus-within:ring-1 focus-within:ring-white transition-all p-3">
-									<label className="block text-xs uppercase font-bold text-zinc-500 mb-1 font-sans">
+								<div className="relative rounded-md border border-hairline focus-within:border-brand/60 transition-colors p-3">
+									<label className="block text-[11px] uppercase tracking-[1px] font-medium text-muted mb-1 font-sans">
 										Location
 									</label>
 									<div className="flex items-center gap-2">
-										<MapPin className="w-4 h-4 text-zinc-500" />
+										<MapPin className="w-4 h-4 text-subtle" />
 										<input
 											type="text"
 											name="location"
 											value={formData.location}
 											onChange={handleInputChange}
-											className="w-full outline-none text-sm font-sans bg-transparent placeholder:text-zinc-700 text-white"
+											className="w-full outline-none text-sm font-sans bg-transparent placeholder:text-subtle text-primary"
 											placeholder="Add your location"
 										/>
 									</div>
 								</div>
 
-								<div className="relative border border-zinc-800 focus-within:border-white focus-within:ring-1 focus-within:ring-white transition-all p-3">
-									<label className="block text-xs uppercase font-bold text-zinc-500 mb-1 font-sans">
+								<div className="relative rounded-md border border-hairline focus-within:border-brand/60 transition-colors p-3">
+									<label className="block text-[11px] uppercase tracking-[1px] font-medium text-muted mb-1 font-sans">
 										Website
 									</label>
 									<div className="flex items-center gap-2">
-										<LinkIcon className="w-4 h-4 text-zinc-500" />
+										<LinkIcon className="w-4 h-4 text-subtle" />
 										<input
 											type="text"
 											name="website"
 											value={formData.website}
 											onChange={handleInputChange}
-											className="w-full outline-none text-sm font-sans bg-transparent placeholder:text-zinc-700 text-white"
+											className="w-full outline-none text-sm font-sans bg-transparent placeholder:text-subtle text-primary"
 											placeholder="Add your website"
 										/>
 									</div>

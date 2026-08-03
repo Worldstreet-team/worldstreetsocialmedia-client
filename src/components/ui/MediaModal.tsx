@@ -75,8 +75,8 @@ export default function MediaModal({
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
 					exit={{ opacity: 0 }}
-					transition={{ duration: 0.2 }}
-					className="fixed inset-0 z-100 flex items-center justify-center bg-black/95 backdrop-blur-md"
+					transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+					className="fixed inset-0 z-modal flex items-center justify-center bg-page"
 					onClick={(e) => {
 						e.stopPropagation();
 						onClose();
@@ -89,7 +89,7 @@ export default function MediaModal({
 							e.stopPropagation();
 							onClose();
 						}}
-						className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center text-white/70 hover:text-white bg-black/50 hover:bg-zinc-800 rounded-full transition-colors z-110 cursor-pointer"
+						className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
 					>
 						<X className="w-6 h-6" />
 					</button>
@@ -100,14 +100,14 @@ export default function MediaModal({
 							<button
 								type="button"
 								onClick={handlePrev}
-								className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-white/70 hover:text-white bg-black/50 hover:bg-zinc-800 rounded-full transition-all hover:scale-110 z-110 cursor-pointer"
+								className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
 							>
 								<ChevronLeft className="w-8 h-8" />
 							</button>
 							<button
 								type="button"
 								onClick={handleNext}
-								className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-white/70 hover:text-white bg-black/50 hover:bg-zinc-800 rounded-full transition-all hover:scale-110 z-110 cursor-pointer"
+								className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
 							>
 								<ChevronRight className="w-8 h-8" />
 							</button>
@@ -124,11 +124,11 @@ export default function MediaModal({
 								key={`image-${currentIndex}`}
 								src={currentItem.url}
 								alt={`Media ${currentIndex + 1}`}
-								initial={{ opacity: 0, scale: 0.95 }}
+								initial={{ opacity: 0, scale: 0.98 }}
 								animate={{ opacity: 1, scale: 1 }}
-								exit={{ opacity: 0, scale: 0.95 }}
-								transition={{ type: "spring", stiffness: 300, damping: 30 }}
-								className="max-h-full max-w-full object-contain shadow-2xl rounded-sm select-none"
+								exit={{ opacity: 0, scale: 0.98 }}
+								transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+								className="max-h-full max-w-full object-contain rounded-lg select-none"
 								draggable={false}
 							/>
 						) : (
@@ -137,17 +137,17 @@ export default function MediaModal({
 								src={currentItem.url}
 								controls
 								autoPlay
-								initial={{ opacity: 0, scale: 0.95 }}
+								initial={{ opacity: 0, scale: 0.98 }}
 								animate={{ opacity: 1, scale: 1 }}
-								exit={{ opacity: 0, scale: 0.95 }}
-								transition={{ type: "spring", stiffness: 300, damping: 30 }}
-								className="max-h-full max-w-full object-contain shadow-2xl rounded-sm"
+								exit={{ opacity: 0, scale: 0.98 }}
+								transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+								className="max-h-full max-w-full object-contain rounded-lg"
 							/>
 						)}
 
 						{/* Counter */}
 						{media.length > 1 && (
-							<div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm font-medium backdrop-blur-md border border-white/10 font-sans z-110">
+							<div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-raised text-primary px-3 py-1 rounded-pill text-[13px] font-medium border border-hairline font-sans tabular-nums">
 								{currentIndex + 1} / {media.length}
 							</div>
 						)}

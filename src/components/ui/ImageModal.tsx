@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 
 interface ImageModalProps {
 	isOpen: boolean;
@@ -11,6 +11,11 @@ interface ImageModalProps {
 	initialIndex?: number;
 }
 
+/**
+ * Lightbox, on-token: z-modal, near-opaque page fill (a lightbox needs more
+ * than overlay/scrim's 60%), controls on the surface ladder with color-only
+ * hovers (never scale), counter in tabular numerals.
+ */
 export default function ImageModal({
 	isOpen,
 	onClose,
@@ -68,8 +73,8 @@ export default function ImageModal({
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
 					exit={{ opacity: 0 }}
-					transition={{ duration: 0.2 }}
-					className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md"
+					transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+					className="fixed inset-0 z-modal flex items-center justify-center bg-page"
 					onClick={(e) => {
 						e.stopPropagation();
 						onClose();
@@ -78,13 +83,14 @@ export default function ImageModal({
 					{/* Close Button */}
 					<button
 						type="button"
+						aria-label="Close image viewer"
 						onClick={(e) => {
 							e.stopPropagation();
 							onClose();
 						}}
-						className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center text-white/70 hover:text-white bg-black/50 hover:bg-zinc-800 rounded-full transition-colors z-60 cursor-pointer"
+						className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
 					>
-						<X className="w-6 h-6" />
+						<X className="w-5 h-5" />
 					</button>
 
 					{/* Navigation Arrows */}
@@ -92,17 +98,19 @@ export default function ImageModal({
 						<>
 							<button
 								type="button"
+								aria-label="Previous image"
 								onClick={handlePrev}
-								className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-white/70 hover:text-white bg-black/50 hover:bg-zinc-800 rounded-full transition-all hover:scale-110 z-60 cursor-pointer"
+								className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
 							>
-								<ChevronLeft className="w-8 h-8" />
+								<ChevronLeft className="w-6 h-6" />
 							</button>
 							<button
 								type="button"
+								aria-label="Next image"
 								onClick={handleNext}
-								className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-white/70 hover:text-white bg-black/50 hover:bg-zinc-800 rounded-full transition-all hover:scale-110 z-60 cursor-pointer"
+								className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
 							>
-								<ChevronRight className="w-8 h-8" />
+								<ChevronRight className="w-6 h-6" />
 							</button>
 						</>
 					)}
@@ -115,18 +123,18 @@ export default function ImageModal({
 						<motion.img
 							key={currentIndex}
 							src={images[currentIndex]}
-							alt={`Image ${currentIndex + 1}`}
-							initial={{ opacity: 0, scale: 0.95 }}
+							alt={`Attachment ${currentIndex + 1} of ${images.length}`}
+							initial={{ opacity: 0, scale: 0.98 }}
 							animate={{ opacity: 1, scale: 1 }}
-							exit={{ opacity: 0, scale: 0.95 }}
-							transition={{ type: "spring", stiffness: 300, damping: 30 }}
-							className="max-h-full max-w-full object-contain shadow-2xl rounded-sm select-none"
+							exit={{ opacity: 0, scale: 0.98 }}
+							transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+							className="max-h-full max-w-full object-contain rounded-lg select-none"
 							draggable={false}
 						/>
 
 						{/* Image Counter */}
 						{images.length > 1 && (
-							<div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm font-medium backdrop-blur-md border border-white/10 font-sans">
+							<div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-raised/90 text-primary px-3 py-1 rounded-pill text-[13px] font-medium font-sans tabular-nums border border-hairline">
 								{currentIndex + 1} / {images.length}
 							</div>
 						)}

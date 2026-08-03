@@ -1,5 +1,8 @@
 import { currentUser } from "@clerk/nextjs/server";
 import Onboarding from "./Onboarding";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Welcome" };
 
 export default async function OnboardingPage() {
 	const user = await currentUser();

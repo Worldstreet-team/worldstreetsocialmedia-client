@@ -1,0 +1,269 @@
+/* ---------------------------------------------------------------------------
+   VENDORED FILE - do not hand-edit.
+   Source of truth: <workspace>/design-tokens/tokens.css
+   Re-sync with:    cp ../design-tokens/tokens.css src/styles/ws-tokens.css
+   Copied in because Next/PostCSS can't import CSS from outside the project root.
+   This app renders the "platform" theme (see <html data-ws-theme> in layout.tsx).
+   --------------------------------------------------------------------------- */
+/* WorldStreet Design Tokens — generated from the Figma design system
+   https://www.figma.com/design/DOkdLhK3pJ9fEwglOwSJfN
+   One semantic vocabulary, six modes. Set data-ws-theme on <html> or any subtree:
+     "shell"    — wallet/auth/dashboard surfaces (dark, stone + gold #EAB308)
+     "platform" — Academy · Social · Vision · Arcade · Shop (near-black + gold #FFCC29)
+     "platform-light" — user-toggled light inversion of platform (paper + gold)
+     "shop"       — legacy espresso + coral (Shop moved to platform 2026-08-03)
+     "shop-light" — Shop's original light paper palette, legacy opt-in
+     "xstream"    — Xstream only (pure black + antique gold #C9A24B)
+   Never hardcode a platform hex in app code — use the variables. */
+
+:root, [data-ws-theme="shell"] {
+  --ws-bg-page: #0C0A09;
+  --ws-bg-sunken: #141110;
+  --ws-bg-surface: #1C1917;
+  --ws-bg-raised: #292524;
+  --ws-bg-chip: #292524;
+  --ws-bg-track: rgba(255, 255, 255, 0.06);
+  --ws-border-hairline: rgba(255, 255, 255, 0.10);
+  --ws-text-primary: #FAFAF9;
+  --ws-text-muted: #A8A29E;
+  --ws-text-subtle: #78716C;
+  --ws-brand-primary: #EAB308;
+  --ws-brand-active: #FACC15;
+  --ws-brand-dim: #CA8A04;
+  --ws-brand-on-primary: #0C0A09;
+  --ws-brand-gold-text: #EAB308;
+  --ws-status-success: #10B981;
+  --ws-status-warning: #F59E0B;
+  --ws-status-warning-chip: rgba(245, 158, 11, 0.14);
+  --ws-status-danger: #EF4444;
+  --ws-money-credit: #10B981;
+  --ws-money-credit-chip: rgba(16, 185, 129, 0.14);
+  --ws-money-debit: #EF4444;
+  --ws-money-debit-chip: rgba(239, 68, 68, 0.14);
+  --ws-money-convert: #EAB308;
+  --ws-money-convert-chip: rgba(234, 179, 8, 0.14);
+  --ws-overlay-scrim: rgba(0, 0, 0, 0.60);
+  --ws-focus-ring: #EAB308;
+  --ws-font-display: "Poppins", system-ui, sans-serif;
+  --ws-font-ui: "Public Sans", system-ui, sans-serif;
+}
+
+[data-ws-theme="platform"] {
+  --ws-bg-page: #0B0B0F;
+  --ws-bg-sunken: #08080A;
+  --ws-bg-surface: #15151A;
+  --ws-bg-raised: #1F1F26;
+  --ws-bg-chip: #1F1F26;
+  --ws-bg-track: #26262E;
+  --ws-border-hairline: #26262E;
+  --ws-text-primary: #FAFAFA;
+  --ws-text-muted: #8E8E97;
+  --ws-text-subtle: #64646C;
+  --ws-brand-primary: #FFCC29;
+  --ws-brand-active: #FFD75C;
+  --ws-brand-dim: #D4A917;
+  --ws-brand-on-primary: #0B0B0F;
+  --ws-brand-gold-text: #FFCC29;
+  --ws-status-success: #10B981;
+  --ws-status-danger: #EF4444;
+  --ws-money-credit: #10B981;
+  --ws-money-credit-chip: rgba(16, 185, 129, 0.14);
+  --ws-money-debit: #EF4444;
+  --ws-money-debit-chip: rgba(239, 68, 68, 0.14);
+  --ws-money-convert: #FFCC29;
+  --ws-money-convert-chip: rgba(255, 204, 41, 0.14);
+  --ws-status-warning: #F59E0B;
+  --ws-status-warning-chip: rgba(245, 158, 11, 0.14);
+  --ws-overlay-scrim: rgba(0, 0, 0, 0.60);
+  --ws-focus-ring: #FFCC29;
+  --ws-accent-star: #F97316; /* ratings (Academy) */
+}
+
+/* Platform Light — opt-in inversion of Platform for user-toggled light mode
+   (added 2026-08-03 for Shop's theme switch; any Platform app may use it).
+   Same cool-neutral family and gold brand. Gold FILLS keep #FFCC29 with
+   near-black ink (contrast comes from the ink); gold TEXT darkens to #8A6C00
+   because raw #FFCC29 on white is unreadable (1.6:1). Status hues darken one
+   step for white surfaces. */
+[data-ws-theme="platform-light"] {
+  --ws-bg-page: #FAFAFA;
+  --ws-bg-sunken: #F0F0F2;
+  --ws-bg-surface: #FFFFFF;
+  --ws-bg-raised: #F4F4F6;
+  --ws-bg-chip: #EFEFF2;
+  --ws-bg-track: #E4E4E9;
+  --ws-border-hairline: #E4E4E9;
+  --ws-text-primary: #18181B;
+  --ws-text-muted: #6E6E78;
+  --ws-text-subtle: #9A9AA3;
+  --ws-brand-primary: #FFCC29;
+  --ws-brand-active: #F0BC0F;
+  --ws-brand-dim: #D4A917;
+  --ws-brand-on-primary: #0B0B0F;
+  --ws-brand-gold-text: #8A6C00;
+  --ws-status-success: #059669;
+  --ws-status-danger: #DC2626;
+  --ws-money-credit: #059669;
+  --ws-money-credit-chip: rgba(5, 150, 105, 0.12);
+  --ws-money-debit: #DC2626;
+  --ws-money-debit-chip: rgba(220, 38, 38, 0.12);
+  --ws-money-convert: #8A6C00;
+  --ws-money-convert-chip: rgba(255, 204, 41, 0.20);
+  --ws-status-warning: #D97706;
+  --ws-status-warning-chip: rgba(217, 119, 6, 0.14);
+  --ws-overlay-scrim: rgba(24, 24, 27, 0.45);
+  --ws-focus-ring: #D4A917;
+  --ws-accent-star: #F97316; /* ratings */
+}
+
+/* Shop — dark-first, the app default. A warm espresso ladder rather than
+   Shell's neutral stone, so Shop reads as its own sub-brand at night. Coral,
+   Space Grotesk and Inter are unchanged from the light mode; only the surface
+   ladder and the ink invert. */
+[data-ws-theme="shop"] {
+  --ws-bg-page: #0F0C0A;
+  --ws-bg-sunken: #171310;
+  --ws-bg-surface: #201B17;
+  --ws-bg-raised: #2C2621;
+  --ws-bg-chip: #2C2621;
+  --ws-bg-track: rgba(255, 255, 255, 0.06);
+  --ws-border-hairline: rgba(255, 255, 255, 0.10);
+  /* Shop Light's bg/page reused as ink — the two modes share an off-white. */
+  --ws-text-primary: #FAF9F5;
+  --ws-text-muted: #ABA398;
+  --ws-text-subtle: #7C7367;
+  --ws-brand-primary: #F0502F;
+  --ws-brand-active: #FF6A47;
+  --ws-brand-dim: #C73E22;
+  /* Ink on coral, not white: 5.4:1 vs white's 3.6:1, and it matches how every
+     other dark theme resolves on-primary to its own bg/page. */
+  --ws-brand-on-primary: #0F0C0A;
+  /* Mirror of the light mode's darker coral, same reason in reverse: raw coral
+     as *text* on espresso is thin, so it lightens. 7.6:1. */
+  --ws-brand-gold-text: #FF7A5A;
+  --ws-status-success: #10B981;
+  --ws-status-danger: #EF4444;
+  --ws-money-credit: #10B981;
+  --ws-money-credit-chip: rgba(16, 185, 129, 0.14);
+  --ws-money-debit: #EF4444;
+  --ws-money-debit-chip: rgba(239, 68, 68, 0.14);
+  --ws-money-convert: #F0502F;
+  --ws-money-convert-chip: rgba(240, 80, 47, 0.14);
+  --ws-status-warning: #F59E0B;
+  --ws-status-warning-chip: rgba(245, 158, 11, 0.14);
+  --ws-overlay-scrim: rgba(0, 0, 0, 0.60);
+  --ws-focus-ring: #F0502F;
+  --ws-font-display: "Space Grotesk", system-ui, sans-serif;
+  --ws-font-ui: "Inter", system-ui, sans-serif;
+}
+
+/* Shop Light — the original paper palette. No longer Shop's default, retained
+   for surfaces that need a light treatment (print views, embeds, opt-in). */
+[data-ws-theme="shop-light"] {
+  --ws-bg-page: #FAF9F5;
+  --ws-bg-sunken: #F1EFE8;
+  --ws-bg-surface: #FFFFFF;
+  --ws-bg-raised: #F5F3EC;
+  --ws-bg-chip: #F1EFE8;
+  --ws-bg-track: #EAE7E0;
+  --ws-border-hairline: #EAE7E0;
+  --ws-text-primary: #1B1A16;
+  --ws-text-muted: #6F6B61;
+  --ws-text-subtle: #9A958A;
+  --ws-brand-primary: #F0502F;
+  --ws-brand-active: #FF6A47;
+  --ws-brand-dim: #C73E22;
+  --ws-brand-on-primary: #FFFFFF;
+  --ws-brand-gold-text: #C73E22;
+  --ws-status-success: #047857;
+  --ws-status-danger: #B91C1C;
+  --ws-money-credit: #047857;
+  --ws-money-credit-chip: rgba(4, 120, 87, 0.10);
+  --ws-money-debit: #B91C1C;
+  --ws-money-debit-chip: rgba(185, 28, 28, 0.10);
+  --ws-money-convert: #C73E22;
+  --ws-money-convert-chip: rgba(240, 80, 47, 0.12);
+  --ws-status-warning: #B45309;
+  --ws-status-warning-chip: rgba(180, 83, 9, 0.10);
+  --ws-overlay-scrim: rgba(0, 0, 0, 0.40);
+  --ws-focus-ring: #F0502F;
+  --ws-font-display: "Space Grotesk", system-ui, sans-serif;
+  --ws-font-ui: "Inter", system-ui, sans-serif;
+}
+
+[data-ws-theme="xstream"] {
+  --ws-bg-page: #000000;
+  --ws-bg-sunken: #060607;
+  --ws-bg-surface: #0C0C0D;
+  --ws-bg-raised: #141416;
+  --ws-bg-chip: #141416;
+  --ws-bg-track: #1F1F21;
+  --ws-border-hairline: rgba(255, 255, 255, 0.10);
+  --ws-text-primary: #F7F5F1;
+  --ws-text-muted: #7C7A76;
+  --ws-text-subtle: #55534F;
+  --ws-brand-primary: #C9A24B;
+  --ws-brand-active: #DDB55E;
+  --ws-brand-dim: #A8823A;
+  --ws-brand-on-primary: #000000;
+  --ws-brand-gold-text: #C9A24B;
+  --ws-status-success: #10B981;
+  --ws-status-danger: #E5484D; /* doubles as the LIVE red */
+  --ws-money-credit: #10B981;
+  --ws-money-credit-chip: rgba(16, 185, 129, 0.14);
+  --ws-money-debit: #E5484D;
+  --ws-money-debit-chip: rgba(229, 72, 77, 0.14);
+  --ws-money-convert: #C9A24B;
+  --ws-money-convert-chip: rgba(201, 162, 75, 0.14);
+  --ws-status-warning: #F59E0B;
+  --ws-status-warning-chip: rgba(245, 158, 11, 0.14);
+  --ws-overlay-scrim: rgba(0, 0, 0, 0.70);
+  --ws-focus-ring: #C9A24B;
+  --ws-font-display: "Space Grotesk", system-ui, sans-serif;
+  --ws-font-ui: "Inter", system-ui, sans-serif;
+}
+
+/* Shared, theme-independent */
+:root {
+  /* Motion — pair with ease; honor prefers-reduced-motion */
+  --ws-motion-fast: 120ms;   /* hovers, toggles, icon states */
+  --ws-motion-base: 200ms;   /* menus, toasts, tab underlines */
+  --ws-motion-slow: 320ms;   /* modals, sheets, page sections */
+  --ws-ease: cubic-bezier(0.2, 0, 0, 1); /* standard ease-out */
+  /* Elevation — rare; the surface ladder does most depth work. Never on cards. */
+  --ws-shadow-nav: 0 3px 8px rgba(0, 0, 0, 0.45);    /* floating nav pill, menus, toasts */
+  --ws-shadow-sheet: 0 -2px 12px rgba(0, 0, 0, 0.35); /* bottom sheets — casts upward */
+  /* Z-index scale */
+  --ws-z-sticky: 100;   /* sticky nav */
+  --ws-z-dropdown: 400; /* menus, selects, tooltips */
+  --ws-z-modal: 800;    /* scrim + modal/sheet */
+  --ws-z-toast: 1200;   /* always on top */
+  /* Breakpoints (min-width) & containers */
+  --ws-bp-sm: 640px;
+  --ws-bp-lg: 1024px;
+  --ws-bp-xl: 1280px;
+  --ws-container-max: 1280px;
+  --ws-feed-width: 620px; /* Social center column */
+  --ws-space-1: 4px;
+  --ws-space-2: 8px;
+  --ws-space-3: 12px;
+  --ws-space-4: 16px;
+  --ws-space-6: 24px;
+  --ws-space-8: 32px;
+  --ws-radius-sm: 4px;
+  --ws-radius-md: 7px;
+  --ws-radius-lg: 10px;
+  --ws-radius-xl: 13px;
+  --ws-radius-pill: 999px;
+  /* 10 platform accents — used ONLY as ~13% washes behind icons/chips, never as large fills */
+  --ws-accent-forex: #3B82F6;
+  --ws-accent-crypto: #8B5CF6;
+  --ws-accent-community: #10B981;
+  --ws-accent-academy: #10B981;
+  --ws-accent-vivid: #EAB308;
+  --ws-accent-vision: #F43F5E;
+  --ws-accent-xtreme: #F97316;
+  --ws-accent-shop: #F59E0B;
+  --ws-accent-social: #6366F1;
+  --ws-accent-prediction: #14B8A6;
+}

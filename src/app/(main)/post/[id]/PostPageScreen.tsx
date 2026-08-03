@@ -6,7 +6,10 @@ import { PostCard, type PostProps } from "@/components/feed/PostCard";
 import { CommentComposer } from "@/components/feed/CommentComposer";
 import { PostSkeleton } from "@/components/feed/PostSkeleton";
 import { getPostByIdAction, getPostCommentsAction } from "@/lib/post.actions";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Search } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { formatTimeAgo } from "@/lib/utils";
+import { DEFAULT_AVATAR } from "@/const";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { useAtom } from "jotai";
 import {
@@ -57,13 +60,12 @@ export default function PostPageScreen() {
 								: p.author.username || "Unknown",
 						username: p.author.username,
 						avatar:
-							p.author.avatar ||
-							"https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png",
+							p.author.avatar || DEFAULT_AVATAR,
 						isVerified: p.author.isVerified,
 					},
 					content: p.content,
 					images: p.images,
-					timestamp: new Date(p.createdAt).toLocaleDateString(),
+					timestamp: formatTimeAgo(p.createdAt),
 					stats: p.stats,
 					isLiked: p.isLiked,
 					isBookmarked: p.isBookmarked,
@@ -83,13 +85,12 @@ export default function PostPageScreen() {
 									: p.author.username || "Unknown",
 							username: p.author.username,
 							avatar:
-								p.author.avatar ||
-								"https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png",
+								p.author.avatar || DEFAULT_AVATAR,
 							isVerified: p.author.isVerified,
 						},
 						content: p.content,
 						images: p.images,
-						timestamp: new Date(p.createdAt).toLocaleDateString(),
+						timestamp: formatTimeAgo(p.createdAt),
 						stats: p.stats,
 						isLiked: p.isLiked,
 						isBookmarked: p.isBookmarked,
@@ -111,13 +112,12 @@ export default function PostPageScreen() {
 								: c.author.username || "Unknown",
 						username: c.author.username,
 						avatar:
-							c.author.avatar ||
-							"https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png",
+							c.author.avatar || DEFAULT_AVATAR,
 						isVerified: c.author.isVerified,
 					},
 					content: c.content,
 					images: c.images,
-					timestamp: new Date(c.createdAt).toLocaleDateString(),
+					timestamp: formatTimeAgo(c.createdAt),
 					stats: c.stats || { replies: 0, reposts: 0, likes: 0 },
 					isLiked: c.isLiked,
 					isBookmarked: c.isBookmarked,
@@ -141,19 +141,19 @@ export default function PostPageScreen() {
 	if (loading) {
 		return (
 			<div className="flex flex-col min-h-screen pb-20">
-				<header className="sticky top-0 z-20 bg-black/80 backdrop-blur-md border-b border-zinc-800 px-4 py-2 flex items-center gap-6">
+				<header className="sticky top-0 z-sticky bg-page border-b border-hairline px-4 py-2 flex items-center gap-6">
 					<button
-						className="rounded-full w-9 h-9 hover:bg-zinc-800 flex items-center justify-center transition-colors cursor-pointer text-white"
+						className="rounded-pill w-9 h-9 hover:bg-raised flex items-center justify-center transition-colors cursor-pointer text-primary"
 						type="button"
 						onClick={() => router.back()}
 					>
 						<ArrowLeft className="w-5 h-5" />
 					</button>
-					<h1 className="text-lg font-bold leading-5 font-sans text-white">
+					<h1 className="font-display text-lg font-semibold leading-5 text-primary">
 						Post
 					</h1>
 				</header>
-				<div className="p-4 border-b border-zinc-800">
+				<div className="p-4 border-b border-hairline">
 					<PostSkeleton />
 				</div>
 				<div className="p-4">
@@ -166,14 +166,13 @@ export default function PostPageScreen() {
 
 	if (!post) {
 		return (
-			<div className="flex flex-col justify-center items-center h-[50vh] text-zinc-500 font-sans">
-				<h2 className="text-xl font-bold mb-2 text-white">Post not found</h2>
-				<button
-					onClick={() => router.back()}
-					className="mt-4 text-sm underline hover:text-white cursor-pointer"
-				>
-					Go back
-				</button>
+			<div className="flex flex-col justify-center items-center h-[50vh]">
+				<EmptyState
+					icon={Search}
+					title="This post doesn't exist"
+					caption="It may have been deleted, or the link is wrong."
+					action={{ label: "Go back", onClick: () => router.back() }}
+				/>
 			</div>
 		);
 	}
@@ -189,20 +188,20 @@ export default function PostPageScreen() {
 
 	return (
 		<div className="flex flex-col min-h-screen pb-20">
-			<header className="sticky top-0 z-20 bg-black/80 backdrop-blur-md border-b border-zinc-800 px-4 py-2 flex items-center gap-6">
+			<header className="sticky top-0 z-sticky bg-page border-b border-hairline px-4 py-2 flex items-center gap-6">
 				<button
-					className="rounded-full w-9 h-9 hover:bg-zinc-800 flex items-center justify-center transition-colors cursor-pointer text-white"
+					className="rounded-pill w-9 h-9 hover:bg-raised flex items-center justify-center transition-colors cursor-pointer text-primary"
 					type="button"
 					onClick={() => router.back()}
 				>
 					<ArrowLeft className="w-5 h-5" />
 				</button>
-				<h1 className="text-lg font-bold leading-5 font-sans text-white">
+				<h1 className="font-display text-lg font-semibold leading-5 text-primary">
 					Post
 				</h1>
 			</header>
 
-			<div className="border-b border-zinc-800">
+			<div className="border-b border-hairline">
 				<PostCard post={post} />
 			</div>
 
@@ -214,18 +213,18 @@ export default function PostPageScreen() {
 
 			<div className="flex flex-col">
 				{isAddingComment && (
-					<div className="border-b border-zinc-800">
+					<div className="border-b border-hairline">
 						<PostSkeleton />
 					</div>
 				)}
 				{comments.length > 0
 					? comments.map((comment) => (
-							<div key={comment.id} className="border-b border-zinc-800">
+							<div key={comment.id} className="border-b border-hairline">
 								<PostCard post={comment} />
 							</div>
 						))
 					: !isAddingComment && (
-							<div className="p-12 text-center text-zinc-500 font-sans text-sm">
+							<div className="p-12 text-center text-muted font-sans text-sm">
 								No comments yet. Be the first to reply!
 							</div>
 						)}

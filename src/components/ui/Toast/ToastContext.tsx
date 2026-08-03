@@ -51,11 +51,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 			} = {},
 		) => {
 			const id = Math.random().toString(36).substring(2, 9);
-			const {
-				type = "info",
-				duration = 3000,
-				position = "bottom-right",
-			} = options;
+			const { type = "info", position = "bottom-right" } = options;
+			// 04-components: auto-dismiss 4s, except Danger which waits for the
+			// user. Callers can still pass an explicit duration.
+			const duration =
+				options.duration ?? (type === "error" ? 0 : 4000);
 
 			const newToast: Toast = { id, message, type, duration, position };
 			setToasts((prev) => [...prev, newToast]);

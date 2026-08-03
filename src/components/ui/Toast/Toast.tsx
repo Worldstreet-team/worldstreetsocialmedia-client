@@ -2,86 +2,84 @@
 
 import React, { useEffect, useState } from "react";
 import clsx from "clsx";
-import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from "lucide-react";
-import { Toast, ToastType } from "./ToastContext";
+// 03-icons: `check`, `x`, `bell` are in-set. `alert-triangle` is a justified
+// deviation — the standardized set has no warning glyph.
+import { X, Check, Bell, AlertTriangle } from "lucide-react";
+import { Toast } from "./ToastContext";
 
 interface ToastProps {
 	toast: Toast;
 	removeToast: (id: string) => void;
 }
 
+/**
+ * 04-components "Toast": horizontal pill-card, padding 12/14, gap 10,
+ * radius 10, fill bg/raised, hairline border, Shadow/Nav. Leading 16px icon in
+ * the tone color, message Medium 14 text/primary, trailing 13px x in
+ * text/subtle.
+ *
+ * Tone -> token: success = status/success, error = status/danger,
+ * warning = status/warning, info = text/muted (the spec's neutral bell).
+ */
 const icons = {
-	success: <CheckCircle className="w-5 h-5 text-green-600" />,
-	error: <AlertCircle className="w-5 h-5 text-red-600" />,
-	info: <Info className="w-5 h-5 text-blue-600" />,
-	warning: <AlertTriangle className="w-5 h-5 text-yellow-600" />,
-};
-
-const borderColors = {
-	success: "border-green-600",
-	error: "border-red-600",
-	info: "border-blue-600",
-	warning: "border-yellow-600",
-};
-
-const shadowColors = {
-	success: "shadow-[4px_4px_0px_0px_rgba(22,163,74,1)]", // green-600
-	error: "shadow-[4px_4px_0px_0px_rgba(220,38,38,1)]", // red-600
-	info: "shadow-[4px_4px_0px_0px_rgba(37,99,235,1)]", // blue-600
-	warning: "shadow-[4px_4px_0px_0px_rgba(202,138,4,1)]", // yellow-600
+	success: <Check className="w-4 h-4 text-success" />,
+	error: <X className="w-4 h-4 text-danger" />,
+	warning: <AlertTriangle className="w-4 h-4 text-warning" />,
+	info: <Bell className="w-4 h-4 text-muted" />,
 };
 
 export const ToastItem = ({ toast, removeToast }: ToastProps) => {
 	const [isVisible, setIsVisible] = useState(false);
 
 	useEffect(() => {
-		// Trigger enter animation
 		requestAnimationFrame(() => setIsVisible(true));
 	}, []);
 
 	const handleDismiss = () => {
 		setIsVisible(false);
-		// Wait for exit animation to finish before removing from DOM
-		setTimeout(() => removeToast(toast.id), 300);
+		// Exits are a fast fade (06-motion-accessibility); ~fast token.
+		setTimeout(() => removeToast(toast.id), 120);
 	};
 
+	// Danger interrupts; everything else is polite.
+	const isDanger = toast.type === "error";
+
+	// Enter translates in from the nearest edge, kept to the spec's small
+	// transform budget rather than a full-width slide.
+	const offscreen = toast.position?.includes("right")
+		? "translate-x-2"
+		: toast.position?.includes("left")
+			? "-translate-x-2"
+			: toast.position?.includes("bottom")
+				? "translate-y-2"
+				: "-translate-y-2";
+
 	return (
-		<div
+		<output
 			className={clsx(
-				"flex items-center gap-3 px-4 py-3 min-w-[300px] max-w-md bg-white border-2 transition-all duration-300 ease-out transform pointer-events-auto cursor-pointer",
-				borderColors[toast.type],
-				shadowColors[toast.type],
-				isVisible
-					? "translate-x-0 opacity-100 scale-100"
-					: clsx(
-							"opacity-0 scale-95",
-							toast.position?.includes("right")
-								? "translate-x-full"
-								: toast.position?.includes("left")
-									? "-translate-x-full"
-									: toast.position?.includes("bottom")
-										? "translate-y-full"
-										: "-translate-y-full",
-						),
+				"flex items-center gap-2.5 px-3.5 py-3 min-w-[280px] max-w-md rounded-lg bg-raised border border-hairline shadow-nav pointer-events-auto cursor-pointer",
+				"transition-[opacity,transform] duration-[var(--ws-motion-base)] ease-ws",
+				isVisible ? "opacity-100 translate-x-0 translate-y-0" : clsx("opacity-0", offscreen),
 			)}
 			onClick={handleDismiss}
-			role="alert"
+			role={isDanger ? "alert" : "status"}
+			aria-live={isDanger ? "assertive" : "polite"}
 		>
-			<div className="shrink-0">{icons[toast.type]}</div>
-			<div className="flex-1">
-				<p className="text-sm font-bold font-sans text-black">
-					{toast.message}
-				</p>
-			</div>
+			<span className="shrink-0">{icons[toast.type]}</span>
+			<p className="flex-1 text-sm font-medium font-sans text-primary">
+				{toast.message}
+			</p>
 			<button
+				type="button"
+				aria-label="Dismiss notification"
 				onClick={(e) => {
 					e.stopPropagation();
 					handleDismiss();
 				}}
-				className="shrink-0 text-zinc-400 hover:text-black transition-colors"
+				className="shrink-0 flex h-10 w-10 -my-2 -mr-2 items-center justify-center rounded-pill text-subtle hover:text-primary transition-colors cursor-pointer"
 			>
-				<X className="w-4 h-4" />
+				<X className="w-[13px] h-[13px]" />
 			</button>
-		</div>
+		</output>
 	);
 };

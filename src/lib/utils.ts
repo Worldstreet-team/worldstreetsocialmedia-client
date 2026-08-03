@@ -5,6 +5,54 @@ export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
 
+/**
+ * Safe detail to log from a caught request error.
+ *
+ * Never log a raw axios error: it carries `config.headers`, which holds the
+ * user's `Authorization: Bearer <clerk jwt>`. Logging the object verbatim
+ * writes live session tokens into the server logs. Narrow to the server's
+ * message or the status instead.
+ */
+export const errorDetail = (error: unknown): unknown => {
+	const e = error as {
+		response?: { data?: unknown; status?: number };
+		message?: string;
+	};
+	return e?.response?.data ?? e?.response?.status ?? e?.message ?? "unknown error";
+};
+
+/**
+ * X-style compact timestamps, used everywhere a post shows its age:
+ * seconds/minutes/hours/days ("42s", "7m", "22h", "3d"), then "Aug 2"
+ * past a week, then "Aug 2, 2025" past a year. Falls back to "now".
+ */
+export const formatTimeAgo = (dateString: string) => {
+	try {
+		const date = new Date(dateString);
+		const diffInSeconds = Math.floor((Date.now() - date.getTime()) / 1000);
+
+		if (diffInSeconds < 60) return `${Math.max(0, diffInSeconds)}s`;
+
+		const diffInMinutes = Math.floor(diffInSeconds / 60);
+		if (diffInMinutes < 60) return `${diffInMinutes}m`;
+
+		const diffInHours = Math.floor(diffInMinutes / 60);
+		if (diffInHours < 24) return `${diffInHours}h`;
+
+		const diffInDays = Math.floor(diffInHours / 24);
+		if (diffInDays < 7) return `${diffInDays}d`;
+
+		const sameYear = date.getFullYear() === new Date().getFullYear();
+		return date.toLocaleDateString("en-US", {
+			month: "short",
+			day: "numeric",
+			...(sameYear ? {} : { year: "numeric" }),
+		});
+	} catch {
+		return "now";
+	}
+};
+
 export const handleSignOut = async (
 	signOut: (callback?: () => void) => Promise<void>,
 ) => {

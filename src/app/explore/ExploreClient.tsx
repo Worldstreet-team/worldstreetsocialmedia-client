@@ -12,6 +12,9 @@ import Image from "next/image";
 import Link from "next/link";
 import VerifiedIcon from "@/assets/icons/VerifiedIcon";
 import { Search } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { formatTimeAgo } from "@/lib/utils";
+import { DEFAULT_AVATAR } from "@/const";
 import { LeftSidebar } from "@/components/layout/LeftSidebar";
 import { RightSidebar } from "@/components/layout/RightSidebar";
 import { useAtom } from "jotai";
@@ -20,7 +23,6 @@ import {
 	trendsLoadedAtom,
 	popularPostsAtom,
 	popularPostsLoadedAtom,
-	type TrendingTopic,
 } from "@/store/trends.atom";
 
 interface UserResult {
@@ -80,7 +82,7 @@ export default function ExploreClient({
 			const res = await getExploreDataAction();
 			if (res.success) {
 				setTrends(res.data.trendsForYou);
-				const mappedPopularPosts = res.data.popularTweets.map(
+				const mappedPopularPosts = (res.data.popularTweets ?? []).map(
 					(post: any) => ({
 						...post,
 						id: post._id,
@@ -135,13 +137,12 @@ export default function ExploreClient({
 								: post.author.username || "Unknown",
 						username: post.author.username,
 						avatar:
-							post.author.avatar ||
-							"https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png",
+							post.author.avatar || DEFAULT_AVATAR,
 						isVerified: post.author.isVerified,
 					},
 					content: post.content,
 					images: post.images,
-					timestamp: new Date(post.createdAt).toLocaleDateString(),
+					timestamp: formatTimeAgo(post.createdAt),
 					stats: post.stats,
 					isLiked: post.isLiked,
 					isBookmarked: post.isBookmarked,
@@ -191,21 +192,21 @@ export default function ExploreClient({
 	const isSearching = query.trim().length > 0;
 
 	return (
-		<main className="min-h-screen bg-black text-white">
+		<main className="min-h-screen bg-page text-primary">
 			<div className="max-w-[1265px] mx-auto flex justify-center min-h-screen">
 				<LeftSidebar />
 
-				<div className="w-full max-w-[600px] sm:border-x border-zinc-800 min-h-screen pt-4 md:pt-0">
+				<div className="w-full max-w-[600px] sm:border-x border-hairline min-h-screen pt-4 md:pt-0">
 					{/* Search Header */}
-					<div className="sticky top-0 bg-black/80 backdrop-blur-md z-10">
-						<div className="p-4 border-b border-zinc-800">
+					<div className="sticky top-0 bg-page z-sticky">
+						<div className="p-4 border-b border-hairline">
 							<div className="relative group">
 								<div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-									<Search className="h-5 w-5 text-zinc-500 group-focus-within:text-primary transition-colors" />
+									<Search className="h-5 w-5 text-subtle group-focus-within:text-primary transition-colors" />
 								</div>
 								<input
 									type="text"
-									className="block w-full pl-10 pr-3 py-3 rounded-full bg-zinc-900 border-none text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-sans"
+									className="block w-full pl-10 pr-3 py-3 rounded-pill bg-surface border border-hairline text-primary placeholder:text-subtle focus:outline-none focus:border-brand/60 transition-colors font-sans text-[15px]"
 									placeholder="Search WorldStreet"
 									value={query}
 									onChange={(e) => setQuery(e.target.value)}
@@ -215,31 +216,31 @@ export default function ExploreClient({
 
 						{/* Tabs - only show when searching */}
 						{isSearching && (
-							<div className="flex border-b border-zinc-800">
+							<div className="flex border-b border-hairline">
 								<button
 									onClick={() => setActiveTab("users")}
 									className={`flex-1 py-3 text-sm font-bold font-sans transition-colors relative cursor-pointer ${
 										activeTab === "users"
-											? "text-white"
-											: "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/50"
+											? "text-primary"
+											: "text-muted hover:text-primary hover:bg-surface"
 									}`}
 								>
 									Users
 									{activeTab === "users" && (
-										<div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-yellow-500 rounded-full" />
+										<div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-0.5 bg-brand rounded-pill" />
 									)}
 								</button>
 								<button
 									onClick={() => setActiveTab("posts")}
 									className={`flex-1 py-3 text-sm font-bold font-sans transition-colors relative cursor-pointer ${
 										activeTab === "posts"
-											? "text-white"
-											: "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/50"
+											? "text-primary"
+											: "text-muted hover:text-primary hover:bg-surface"
 									}`}
 								>
 									Posts
 									{activeTab === "posts" && (
-										<div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-yellow-500 rounded-full" />
+										<div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-0.5 bg-brand rounded-pill" />
 									)}
 								</button>
 							</div>
@@ -253,7 +254,7 @@ export default function ExploreClient({
 								/* Users Tab */
 								<>
 									{usersLoading && (
-										<div className="p-8 text-center text-zinc-500 font-sans">
+										<div className="p-8 text-center text-muted font-sans">
 											Searching users...
 										</div>
 									)}
@@ -261,14 +262,11 @@ export default function ExploreClient({
 									{!usersLoading &&
 										userResults.length === 0 &&
 										query.trim() && (
-											<div className="p-8 text-center flex flex-col items-center">
-												<span className="text-zinc-500 mb-2 font-sans">
-													No users found for &quot;{query.trim()}&quot;
-												</span>
-												<span className="text-zinc-600 text-sm font-sans">
-													Try a different name or username
-												</span>
-											</div>
+											<EmptyState
+												icon={Search}
+												title={`No people match "${query.trim()}"`}
+												caption="Check the spelling, or try a name or username."
+											/>
 										)}
 
 									{!usersLoading &&
@@ -276,13 +274,13 @@ export default function ExploreClient({
 											<Link
 												key={user.userId}
 												href={`/profile/${user.username}`}
-												className="flex items-center gap-3 px-4 py-4 hover:bg-zinc-900/50 transition-colors border-b border-zinc-800/50"
+												className="flex items-center gap-3 px-4 py-4 hover:bg-surface transition-colors border-b border-hairline/50"
 											>
-												<div className="relative w-10 h-10 rounded-full overflow-hidden shrink-0 bg-zinc-800">
+												<div className="relative w-10 h-10 rounded-full overflow-hidden shrink-0 bg-raised">
 													<Image
 														src={
 															user.avatar ||
-															"https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"
+															DEFAULT_AVATAR
 														}
 														alt={user.username}
 														fill
@@ -291,15 +289,15 @@ export default function ExploreClient({
 												</div>
 												<div className="flex flex-col">
 													<div className="flex items-center gap-1">
-														<span className="font-bold text-white text-[15px] hover:underline font-sans">
+														<span className="font-semibold text-primary text-[15px] hover:underline font-sans">
 															{user.firstName}{" "}
 															{user.lastName}
 														</span>
 														{user.isVerified && (
-															<VerifiedIcon color="blue" />
+															<VerifiedIcon size={{ width: "16", height: "16" }} />
 														)}
 													</div>
-													<span className="text-zinc-500 text-[14px] leading-4">
+													<span className="text-muted text-[14px] leading-4">
 														@{user.username}
 													</span>
 												</div>
@@ -320,21 +318,18 @@ export default function ExploreClient({
 									{!postsLoading &&
 										postResults.length === 0 &&
 										query.trim() && (
-											<div className="p-8 text-center flex flex-col items-center">
-												<span className="text-zinc-500 mb-2 font-sans">
-													No posts found for &quot;{query.trim()}&quot;
-												</span>
-												<span className="text-zinc-600 text-sm font-sans">
-													Try different keywords
-												</span>
-											</div>
+											<EmptyState
+												icon={Search}
+												title={`No posts match "${query.trim()}"`}
+												caption="Try different keywords, a $ticker or a #hashtag."
+											/>
 										)}
 
 									{!postsLoading &&
 										postResults.map((post) => (
 											<div
 												key={post.id}
-												className="border-b border-zinc-800"
+												className="border-b border-hairline"
 											>
 												<PostCard post={post} />
 											</div>
@@ -346,8 +341,8 @@ export default function ExploreClient({
 						/* ── Default Explore View: Trends + Popular Posts ── */
 						<div className="flex flex-col">
 							{/* Trending Topics */}
-							<div className="border-b border-zinc-800 pb-2">
-								<h2 className="px-4 py-3 text-xl font-bold font-sans text-white">
+							<div className="border-b border-hairline pb-2">
+								<h2 className="px-4 py-3 font-display text-lg font-semibold text-primary">
 									Trends for you
 								</h2>
 								<div className="flex flex-col">
@@ -355,11 +350,11 @@ export default function ExploreClient({
 										[...Array(5)].map((_, i) => (
 											<div
 												key={i}
-												className="px-4 py-3 border-b border-zinc-800/50 last:border-0"
+												className="px-4 py-3 border-b border-hairline/50 last:border-0"
 											>
-												<div className="h-3 w-24 bg-zinc-800 rounded mb-2 animate-pulse" />
-												<div className="h-4 w-40 bg-zinc-800 rounded mb-1 animate-pulse" />
-												<div className="h-3 w-16 bg-zinc-800 rounded animate-pulse" />
+												<div className="h-3 w-24 skeleton rounded-sm mb-2" />
+												<div className="h-4 w-40 skeleton rounded-sm mb-1" />
+												<div className="h-3 w-16 skeleton rounded-sm" />
 											</div>
 										))
 									) : trends.length > 0 ? (
@@ -367,7 +362,7 @@ export default function ExploreClient({
 											<Link
 												href={`/explore?q=${topic.title.replace("#", "")}`}
 												key={i}
-												className="px-4 py-3 hover:bg-zinc-900/50 cursor-pointer transition-colors border-b border-zinc-800/50 last:border-0"
+												className="px-4 py-3 hover:bg-surface cursor-pointer transition-colors border-b border-hairline/50 last:border-0"
 												onClick={(e) => {
 													e.preventDefault();
 													setQuery(
@@ -380,34 +375,29 @@ export default function ExploreClient({
 												}}
 											>
 												<div className="flex justify-between items-start">
-													<div className="text-xs text-zinc-500 font-sans">
+													<div className="text-xs text-muted font-sans">
 														{topic.category}
 													</div>
 												</div>
-												<div className="font-bold text-[15px] my-0.5 text-white font-sans tracking-tight">
+												<div className="font-semibold text-[15px] my-0.5 text-primary font-sans tracking-tight">
 													{topic.title}
 												</div>
-												<div className="text-xs text-zinc-500 font-sans">
+												<div className="text-xs text-muted font-sans">
 													{topic.posts}
 												</div>
 											</Link>
 										))
 									) : (
-										<div className="px-4 py-8 text-zinc-500 text-center font-sans text-sm">
+										<div className="px-4 py-8 text-muted text-center font-sans text-sm">
 											No trending topics yet.
 										</div>
 									)}
 								</div>
-								{!exploreLoading && trends.length > 0 && (
-									<div className="px-4 py-3 text-yellow-500 text-[15px] hover:bg-zinc-900/50 cursor-pointer transition-colors text-left font-sans font-bold">
-										Show more
-									</div>
-								)}
 							</div>
 
 							{/* Popular Posts */}
 							<div className="flex flex-col">
-								<h2 className="px-4 py-4 text-xl font-bold border-b border-zinc-800 font-sans text-white">
+								<h2 className="px-4 py-4 font-display text-lg font-semibold border-b border-hairline text-primary">
 									Popular
 								</h2>
 								{exploreLoading ? (
@@ -418,13 +408,13 @@ export default function ExploreClient({
 									popularPosts.map((post) => (
 										<div
 											key={post.id}
-											className="border-b border-zinc-800"
+											className="border-b border-hairline"
 										>
 											<PostCard post={post} />
 										</div>
 									))
 								) : (
-									<div className="p-12 text-center text-zinc-500 font-sans text-sm">
+									<div className="p-12 text-center text-muted font-sans text-sm">
 										No popular posts found.
 									</div>
 								)}

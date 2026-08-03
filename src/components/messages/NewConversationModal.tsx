@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getFollowersAction, getFollowingAction } from "@/lib/user.actions";
 import { startConversationAction } from "@/lib/conversation.actions";
 import VerifiedIcon from "@/assets/icons/VerifiedIcon";
+import { DEFAULT_AVATAR } from "@/const";
 import { toast } from "sonner";
 
 interface UserItem {
@@ -130,43 +131,43 @@ export default function NewConversationModal({
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
 						onClick={onClose}
-						className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+						className="fixed inset-0 bg-scrim z-modal"
 					/>
 
 					{/* Modal */}
 					<motion.div
-						initial={{ opacity: 0, scale: 0.95, y: 20 }}
+						initial={{ opacity: 0, scale: 0.98, y: 8 }}
 						animate={{ opacity: 1, scale: 1, y: 0 }}
-						exit={{ opacity: 0, scale: 0.95, y: 20 }}
-						transition={{ type: "spring", damping: 25, stiffness: 300 }}
-						className="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[480px] md:max-h-[600px] md:rounded-2xl bg-black border border-zinc-800 z-50 flex flex-col overflow-hidden"
+						exit={{ opacity: 0, scale: 0.98, y: 8 }}
+						transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+						className="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[480px] md:max-h-[600px] md:rounded-xl bg-surface border border-hairline shadow-nav z-modal flex flex-col overflow-hidden"
 					>
 						{/* Header */}
-						<div className="flex items-center justify-between p-4 border-b border-zinc-800">
+						<div className="flex items-center justify-between p-4 border-b border-hairline">
 							<div className="flex items-center gap-4">
 								<button
 									onClick={onClose}
-									className="p-1 rounded-full hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-white"
+									className="p-1 rounded-pill hover:bg-raised transition-colors text-muted hover:text-primary"
 								>
 									<X className="w-5 h-5" />
 								</button>
-								<h2 className="text-lg font-bold text-white">
+								<h2 className="font-display text-lg font-semibold text-primary">
 									New Conversation
 								</h2>
 							</div>
 						</div>
 
 						{/* Search */}
-						<div className="p-4 border-b border-zinc-800">
+						<div className="p-4 border-b border-hairline">
 							<div className="relative">
-								<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+								<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle" />
 								<input
 									type="text"
 									placeholder="Search people"
 									value={searchQuery}
 									onChange={(e) => setSearchQuery(e.target.value)}
 									autoFocus
-									className="w-full bg-zinc-900 border border-zinc-800 rounded-full pl-10 pr-4 py-2.5 text-sm text-white placeholder-zinc-500 focus:border-yellow-500/50 focus:ring-1 focus:ring-yellow-500/20 outline-none transition-all"
+									className="w-full bg-sunken border border-hairline rounded-pill pl-10 pr-4 py-2.5 text-sm text-primary placeholder:text-subtle focus:border-brand/60 outline-none transition-colors"
 								/>
 							</div>
 						</div>
@@ -174,12 +175,12 @@ export default function NewConversationModal({
 						{/* User List */}
 						<div className="flex-1 overflow-y-auto">
 							{loading ? (
-								<div className="flex flex-col items-center justify-center py-12 text-zinc-500">
+								<div className="flex flex-col items-center justify-center py-12 text-muted">
 									<Loader2 className="w-6 h-6 animate-spin mb-3" />
 									<span className="text-sm">Loading contacts...</span>
 								</div>
 							) : filteredUsers.length === 0 ? (
-								<div className="flex flex-col items-center justify-center py-12 text-zinc-500">
+								<div className="flex flex-col items-center justify-center py-12 text-muted">
 									<span className="text-sm">
 										{searchQuery.trim()
 											? `No results for "${searchQuery}"`
@@ -192,14 +193,11 @@ export default function NewConversationModal({
 										key={user._id}
 										onClick={() => handleSelectUser(user)}
 										disabled={startingWith !== null}
-										className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-900/70 transition-colors border-b border-zinc-800/30 disabled:opacity-50 cursor-pointer"
+										className="w-full flex items-center gap-3 px-4 py-3 hover:bg-raised transition-colors border-b border-hairline/50 disabled:opacity-50 cursor-pointer"
 									>
-										<div className="relative w-11 h-11 rounded-full overflow-hidden shrink-0 bg-zinc-800">
+										<div className="relative w-11 h-11 rounded-full overflow-hidden shrink-0 bg-raised">
 											<Image
-												src={
-													user.avatar ||
-													"https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"
-												}
+												src={user.avatar || DEFAULT_AVATAR}
 												alt={user.username || "User"}
 												fill
 												className="object-cover"
@@ -207,20 +205,20 @@ export default function NewConversationModal({
 										</div>
 										<div className="flex-1 text-left min-w-0">
 											<div className="flex items-center gap-1">
-												<span className="font-bold text-[15px] text-white truncate">
+												<span className="font-semibold text-[15px] text-primary truncate">
 													{user.firstName}{" "}
 													{user.lastName}
 												</span>
 												{user.isVerified && (
-													<VerifiedIcon color="blue" />
+													<VerifiedIcon size={{ width: "16", height: "16" }} />
 												)}
 											</div>
-											<span className="text-zinc-500 text-[13px] truncate block">
+											<span className="text-muted text-[13px] truncate block">
 												@{user.username}
 											</span>
 										</div>
 										{startingWith === user._id && (
-											<Loader2 className="w-4 h-4 text-yellow-500 animate-spin shrink-0" />
+											<Loader2 className="w-4 h-4 text-gold animate-spin shrink-0" />
 										)}
 									</button>
 								))

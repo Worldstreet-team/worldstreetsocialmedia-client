@@ -36,7 +36,6 @@ export default function RealtimeProvider({ children }: PropsWithChildren) {
 	useEffect(() => {
 		if (!isLoaded || !user) return;
 
-		console.warn("Initializing Ably Client...");
 		const ablyClient = new Ably.Realtime({
 			authUrl: `${API_URL}/api/messages/auth/token`,
 			authHeaders: {

@@ -11,12 +11,12 @@ import {
 	Phone,
 	Video,
 	Mic,
-	Trash2,
 	StopCircle,
 	X,
 	Plus,
 	UserPlus,
 	ArrowLeft,
+	MessageCircle,
 	MessageSquarePlus,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -25,6 +25,7 @@ import axios from "axios";
 import { useUser, useAuth } from "@clerk/nextjs";
 import { useChannel, ChannelProvider } from "ably/react";
 import EmojiPicker, { Theme } from "emoji-picker-react";
+import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useRealtime } from "../providers/RealtimeProvider";
@@ -160,10 +161,10 @@ const Attachment = ({
 
 	if (!loaded && !isMe) {
 		return (
-			<div className="relative w-64 h-64 rounded-lg overflow-hidden mb-1 bg-zinc-900 flex items-center justify-center border border-zinc-800">
+			<div className="relative w-64 h-64 rounded-lg overflow-hidden mb-1 bg-sunken flex items-center justify-center border border-hairline">
 				<div className="flex flex-col items-center gap-2">
-					<div className="w-8 h-8 rounded-full border-2 border-zinc-700 border-t-yellow-500 animate-spin" />
-					<span className="text-xs font-mono text-zinc-400">{progress}%</span>
+					<div className="w-8 h-8 rounded-full border-2 border-raised border-t-brand animate-spin" />
+					<span className="text-xs font-sans tabular-nums text-muted">{progress}%</span>
 				</div>
 			</div>
 		);
@@ -173,12 +174,12 @@ const Attachment = ({
 		<div
 			onClick={onClick}
 			className={clsx(
-				"relative w-64 mb-1 rounded-lg overflow-hidden cursor-zoom-in hover:opacity-95 transition-all",
+				"relative w-64 mb-1 rounded-lg overflow-hidden cursor-zoom-in hover:opacity-95 transition-opacity",
 				isTemp && "opacity-70",
 			)}
 		>
 			{isTemp && (
-				<div className="absolute inset-0 z-10 bg-black/20 animate-pulse" />
+				<div className="absolute inset-0 z-10 bg-page/20 animate-pulse" />
 			)}
 			{type === "image" ? (
 				<div className="relative w-64 h-64">
@@ -232,6 +233,8 @@ export const MessageBox = ({
 	const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 	const [showAttachMenu, setShowAttachMenu] = useState(false);
 	const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+	// Picker follows the app theme instead of hardcoding dark.
+	const { resolvedTheme } = useTheme();
 	const [showNewConversationModal, setShowNewConversationModal] = useState(false);
 
 	const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -702,7 +705,7 @@ export const MessageBox = ({
 	}, [activeConversation?._id]); // Only trigger when ID changes
 
 	return (
-		<div className="flex h-[calc(100vh-2px)] bg-black text-white">
+		<div className="flex h-[calc(100vh-2px)] bg-page text-primary">
 			{myProfileId && isConnected && (
 				<UserMessageSubscription
 					channelName={`user:${myProfileId}`}
@@ -719,31 +722,37 @@ export const MessageBox = ({
 			{/* Sidebar */}
 			<div
 				className={clsx(
-					"w-full md:w-[400px] border-r border-zinc-800 flex flex-col transition-all",
+					// Pane swap is a display toggle — width animation is a layout
+					// property, off the opacity/transform motion budget.
+					"w-full md:w-[400px] border-r border-hairline flex flex-col",
 					activeConversation ||
 						(conversations.length === 0 && !isLoadingConversations)
 						? "hidden md:flex"
 						: "flex",
 				)}
 			>
-				<div className="p-4 border-b border-zinc-800">
-					<h1 className="text-xl font-bold mb-4">Messages</h1>
+				<div className="p-4 border-b border-hairline">
+					<h1 className="font-display text-lg font-semibold mb-4">Messages</h1>
 					<div className="relative">
-						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle" />
 						<input
 							type="text"
 							placeholder="Search Direct Messages"
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
 							ref={searchInputRef}
-							className="w-full bg-zinc-900 border border-zinc-800 rounded-full pl-10 pr-4 py-2 text-sm focus:border-yellow-500 outline-none"
+							className="w-full bg-surface border border-hairline rounded-pill pl-10 pr-4 py-2 text-sm text-primary placeholder:text-subtle focus:border-brand/60 outline-none transition-colors"
 						/>
 					</div>
 				</div>
 
 				<div className="flex-1 overflow-y-auto">
 					{isLoadingConversations ? (
-						<div className="p-4 text-center text-zinc-500">Loading...</div>
+						<div className="p-4 text-center text-muted font-sans text-sm">Loading conversations...</div>
+					) : conversations.length === 0 ? (
+						<div className="p-6 text-center text-muted font-sans text-sm">
+							No conversations yet. Start one and it lands here.
+						</div>
 					) : (
 						conversations
 							.filter((c) =>
@@ -759,9 +768,9 @@ export const MessageBox = ({
 										router.push(`/messages/${conv._id}`);
 									}}
 									className={clsx(
-										"w-full p-4 flex gap-3 hover:bg-zinc-900/50 border-b border-zinc-800/50 transition-all",
+										"w-full p-4 flex gap-3 hover:bg-surface border-b border-hairline/50 transition-colors cursor-pointer",
 										activeConversation?._id === conv._id &&
-											"bg-zinc-900 border-l-2 border-l-yellow-500",
+											"bg-surface border-l-2 border-l-brand",
 									)}
 								>
 									<div className="relative">
@@ -773,16 +782,16 @@ export const MessageBox = ({
 											className="rounded-full"
 										/>
 										{conv.unreadCount > 0 && (
-											<div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-500 rounded-full border-2 border-black" />
+											<div className="absolute -top-1 -right-1 w-3 h-3 bg-brand rounded-full border-2 border-page" />
 										)}
 									</div>
 									<div className="flex-1 text-left truncate">
 										<div className="flex justify-between items-center">
-											<span className="font-bold text-sm truncate">
+											<span className="font-semibold text-sm truncate">
 												{conv.otherParticipant.firstName}{" "}
 												{conv.otherParticipant.lastName}
 											</span>
-											<span className="text-xs text-zinc-500">
+											<span className="text-xs text-muted tabular-nums">
 												{conv.lastMessageAt
 													? format(new Date(conv.lastMessageAt), "MMM d")
 													: ""}
@@ -792,8 +801,8 @@ export const MessageBox = ({
 											className={clsx(
 												"text-sm truncate",
 												conv.unreadCount > 0
-													? "text-white font-bold"
-													: "text-zinc-500",
+													? "text-primary font-semibold"
+													: "text-muted",
 											)}
 										>
 											{conv.lastMessage?.content || "No messages yet"}
@@ -808,11 +817,11 @@ export const MessageBox = ({
 			{/* Chat Area */}
 			{activeConversation ? (
 				<div className={clsx("flex-1 flex flex-col", "flex")}>
-					<div className="h-16 border-b border-zinc-800 flex items-center justify-between px-4 md:px-6">
+					<div className="h-16 border-b border-hairline flex items-center justify-between px-4 md:px-6">
 						<div className="flex items-center gap-3">
 							<button
 								onClick={() => setActiveConversation(null)}
-								className="md:hidden text-zinc-400 hover:text-white"
+								className="md:hidden w-10 h-10 -ml-2 flex items-center justify-center rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors"
 							>
 								<ArrowLeft className="w-5 h-5" />
 							</button>
@@ -824,18 +833,20 @@ export const MessageBox = ({
 								className="rounded-full"
 							/>
 							<div>
-								<h2 className="font-bold text-sm">
+								<h2 className="font-semibold text-sm">
 									{activeConversation.otherParticipant.firstName}{" "}
 									{activeConversation.otherParticipant.lastName}
 								</h2>
-								<p className="text-xs text-zinc-500">
+								<p className="text-xs text-muted">
 									@{activeConversation.otherParticipant.username}
 								</p>
 							</div>
 						</div>
-						<div className="flex gap-4 text-zinc-400">
-							<Phone
-								className="w-5 h-5 cursor-pointer hover:text-white"
+						<div className="flex gap-1 text-muted">
+							<button
+								type="button"
+								aria-label="Start voice call"
+								className="w-10 h-10 flex items-center justify-center rounded-pill hover:bg-raised hover:text-primary transition-colors cursor-pointer"
 								onClick={() =>
 									startCall(
 										false,
@@ -851,9 +862,13 @@ export const MessageBox = ({
 										},
 									)
 								}
-							/>
-							<Video
-								className="w-5 h-5 cursor-pointer hover:text-white"
+							>
+								<Phone className="w-5 h-5" />
+							</button>
+							<button
+								type="button"
+								aria-label="Start video call"
+								className="w-10 h-10 flex items-center justify-center rounded-pill hover:bg-raised hover:text-primary transition-colors cursor-pointer"
 								onClick={() =>
 									startCall(
 										true,
@@ -869,14 +884,22 @@ export const MessageBox = ({
 										},
 									)
 								}
-							/>
-							<Info className="w-5 h-5 cursor-pointer hover:text-white" />
+							>
+								<Video className="w-5 h-5" />
+							</button>
+							<button
+							type="button"
+							aria-label="Conversation info"
+							className="w-10 h-10 flex items-center justify-center rounded-pill hover:bg-raised hover:text-primary transition-colors cursor-pointer"
+						>
+							<Info className="w-5 h-5" />
+						</button>
 						</div>
 					</div>
 
-					<div className="flex-1 overflow-y-auto p-6 space-y-4 bg-zinc-950/30">
+					<div className="flex-1 overflow-y-auto p-6 space-y-4 bg-sunken/30">
 						{isLoadingMessages && (
-							<div className="text-center text-zinc-500">
+							<div className="text-center text-muted font-sans text-sm">
 								Loading history...
 							</div>
 						)}
@@ -893,10 +916,10 @@ export const MessageBox = ({
 								>
 									<div
 										className={clsx(
-											"max-w-[70%] rounded-2xl px-4 py-2",
+											"max-w-[70%] rounded-xl px-4 py-2",
 											isMe
-												? "bg-yellow-500 text-black"
-												: "bg-zinc-800 text-white",
+												? "bg-brand text-brand-on"
+												: "bg-raised text-primary",
 										)}
 									>
 										{m.type === "image" && m.mediaUrl && (
@@ -933,7 +956,7 @@ export const MessageBox = ({
 											</p>
 										)}
 									</div>
-									<span className="text-[10px] text-zinc-500 mt-1 block opacity-60">
+									<span className="text-xs text-muted mt-1 block tabular-nums">
 										{format(new Date(m.createdAt), "h:mm a")}
 									</span>
 								</div>
@@ -942,11 +965,11 @@ export const MessageBox = ({
 						<div ref={messagesEndRef} />
 					</div>
 
-					<div className="p-4 border-t border-zinc-800 bg-black">
+					<div className="p-4 border-t border-hairline bg-page">
 						{/* Preview Area */}
 						{selectedFile && previewUrl && (
 							<div className="mb-2 relative inline-block">
-								<div className="relative rounded-lg overflow-hidden border border-zinc-700">
+								<div className="relative rounded-lg overflow-hidden border border-hairline">
 									{selectedFile.type.startsWith("image") ? (
 										<img
 											src={previewUrl}
@@ -963,7 +986,7 @@ export const MessageBox = ({
 								</div>
 								<button
 									onClick={clearSelectedFile}
-									className="absolute -top-2 -right-2 bg-zinc-800 rounded-full p-1 text-zinc-400 hover:text-white border border-zinc-700"
+									className="absolute -top-2 -right-2 bg-raised rounded-pill p-1 text-muted hover:text-primary border border-hairline transition-colors"
 								>
 									<X className="w-3 h-3" />
 								</button>
@@ -975,10 +998,11 @@ export const MessageBox = ({
 							<AnimatePresence>
 								{showAttachMenu && (
 									<motion.div
-										initial={{ opacity: 0, y: 10, scale: 0.95 }}
+										initial={{ opacity: 0, y: 8, scale: 0.98 }}
 										animate={{ opacity: 1, y: 0, scale: 1 }}
-										exit={{ opacity: 0, y: 10, scale: 0.95 }}
-										className="absolute bottom-16 left-0 bg-zinc-900 border border-zinc-800 rounded-2xl p-2 flex gap-4 shadow-2xl z-50"
+										exit={{ opacity: 0, y: 8, scale: 0.98 }}
+										transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+										className="absolute bottom-16 left-0 bg-surface border border-hairline rounded-xl p-2 flex gap-4 shadow-nav z-dropdown"
 									>
 										<button
 											onClick={() => {
@@ -988,12 +1012,12 @@ export const MessageBox = ({
 												}
 												setShowAttachMenu(false);
 											}}
-											className="flex flex-col items-center gap-2 p-3 hover:bg-zinc-800 rounded-xl transition-colors min-w-[80px]"
+											className="flex flex-col items-center gap-2 p-3 hover:bg-raised rounded-lg transition-colors min-w-[80px] cursor-pointer"
 										>
-											<div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center border border-zinc-700">
-												<ImageIcon className="w-5 h-5 text-purple-400" />
+											<div className="w-10 h-10 rounded-pill bg-raised flex items-center justify-center border border-hairline">
+												<ImageIcon className="w-5 h-5 text-primary" />
 											</div>
-											<span className="text-xs text-zinc-400">Photo</span>
+											<span className="text-xs text-muted">Photo</span>
 										</button>
 										<button
 											onClick={() => {
@@ -1003,12 +1027,12 @@ export const MessageBox = ({
 												}
 												setShowAttachMenu(false);
 											}}
-											className="flex flex-col items-center gap-2 p-3 hover:bg-zinc-800 rounded-xl transition-colors min-w-[80px]"
+											className="flex flex-col items-center gap-2 p-3 hover:bg-raised rounded-lg transition-colors min-w-[80px] cursor-pointer"
 										>
-											<div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center border border-zinc-700">
-												<Video className="w-5 h-5 text-green-400" />
+											<div className="w-10 h-10 rounded-pill bg-raised flex items-center justify-center border border-hairline">
+												<Video className="w-5 h-5 text-primary" />
 											</div>
-											<span className="text-xs text-zinc-400">Video</span>
+											<span className="text-xs text-muted">Video</span>
 										</button>
 									</motion.div>
 								)}
@@ -1018,10 +1042,11 @@ export const MessageBox = ({
 							<button
 								onClick={() => setShowAttachMenu(!showAttachMenu)}
 								className={clsx(
-									"p-3 rounded-full transition-all duration-300",
+									// Colors + the 45° rotate only (transform is in-budget).
+									"p-3 rounded-pill transition-[transform,background-color,color]",
 									showAttachMenu
-										? "bg-white text-black rotate-45"
-										: "bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700",
+										? "bg-primary text-page rotate-45"
+										: "bg-surface text-muted border border-hairline hover:text-primary hover:bg-raised",
 								)}
 							>
 								<Plus className="w-6 h-6" />
@@ -1038,28 +1063,30 @@ export const MessageBox = ({
 
 							{/* Recording UI */}
 							{isRecording ? (
-								<div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-3xl h-[56px] flex items-center px-6 gap-4">
-									<div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
-									<div className="flex-1 font-mono text-white">
+								<div className="flex-1 bg-surface border border-hairline rounded-pill h-[56px] flex items-center px-6 gap-4">
+									{/* Recording dot — sanctioned live-state loop (06-motion):
+										    opacity-only pulse while recording is active. */}
+										<div className="w-3 h-3 rounded-full bg-danger animate-pulse" />
+									<div className="flex-1 font-sans tabular-nums text-primary">
 										{Math.floor(recordingDuration / 60)}:
 										{(recordingDuration % 60).toString().padStart(2, "0")}
 									</div>
 									<button
 										onClick={cancelRecording}
-										className="text-zinc-500 hover:text-white transition-colors"
+										className="text-muted hover:text-primary transition-colors cursor-pointer"
 									>
 										Cancel
 									</button>
 									<button
 										onClick={stopRecording}
-										className="p-2 bg-white text-black rounded-full hover:scale-105 transition-transform"
+										className="p-2 bg-primary text-page rounded-pill hover:bg-muted transition-colors cursor-pointer"
 									>
 										<Send className="w-4 h-4" />
 									</button>
 								</div>
 							) : (
 								/* Text Input Pill */
-								<div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-3xl flex items-center px-4 py-2 gap-2 focus-within:border-zinc-700 transition-colors">
+								<div className="flex-1 bg-surface border border-hairline rounded-xl flex items-center px-4 py-2 gap-2 focus-within:border-brand/60 transition-colors">
 									<textarea
 										value={messageInput}
 										onChange={(e) => setMessageInput(e.target.value)}
@@ -1069,7 +1096,7 @@ export const MessageBox = ({
 											(e.preventDefault(), sendMessage())
 										}
 										placeholder="Type a message..."
-										className="flex-1 bg-transparent border-none outline-none text-white placeholder-zinc-500 resize-none max-h-[100px] py-3"
+										className="flex-1 bg-transparent border-none outline-none text-primary placeholder:text-subtle resize-none max-h-[100px] py-3"
 										rows={1}
 										style={{ minHeight: "24px" }}
 									/>
@@ -1079,12 +1106,16 @@ export const MessageBox = ({
 										<div className="relative">
 											<Smile
 												onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-												className="w-6 h-6 text-zinc-400 cursor-pointer hover:text-white transition-colors"
+												className="w-6 h-6 text-muted cursor-pointer hover:text-primary transition-colors"
 											/>
 											{showEmojiPicker && (
-												<div className="absolute bottom-12 right-0 z-50">
+												<div className="absolute bottom-12 right-0 z-dropdown animate-rise ws-emoji-picker">
 													<EmojiPicker
-														theme={Theme.DARK}
+														theme={
+															resolvedTheme === "light"
+																? Theme.LIGHT
+																: Theme.DARK
+														}
 														onEmojiClick={(e) =>
 															setMessageInput((p) => p + e.emoji)
 														}
@@ -1097,14 +1128,14 @@ export const MessageBox = ({
 											<button
 												onClick={sendMessage}
 												disabled={isUploading}
-												className="p-2 bg-yellow-500 text-black rounded-full hover:bg-yellow-400 transition-colors disabled:opacity-50"
+												className="p-2 bg-brand text-brand-on rounded-pill hover:bg-brand-active transition-colors disabled:opacity-50 cursor-pointer"
 											>
 												<Send className="w-4 h-4" />
 											</button>
 										) : (
 											<Mic
 												onClick={startRecording}
-												className="w-6 h-6 text-zinc-400 cursor-pointer hover:text-white transition-colors"
+												className="w-6 h-6 text-muted cursor-pointer hover:text-primary transition-colors"
 											/>
 										)}
 									</div>
@@ -1116,27 +1147,29 @@ export const MessageBox = ({
 			) : (
 				<div
 					className={clsx(
-						"flex-1 flex flex-col items-center justify-center text-zinc-500 p-8",
+						"flex-1 flex flex-col items-center justify-center text-muted p-8",
 						conversations.length > 0 ? "hidden md:flex" : "flex",
 					)}
 				>
 					<div className="max-w-md flex flex-col items-center text-center space-y-6">
-						<img
-							src="/images/messages-empty-state.png"
-							alt="No messages"
-							className="w-48 h-48 object-contain opacity-80"
-						/>
+						<div className="flex h-16 w-16 items-center justify-center rounded-pill bg-raised">
+							<MessageCircle
+								className="h-[26px] w-[26px] text-muted"
+								strokeWidth={2}
+							/>
+						</div>
 						<div className="space-y-2">
-							<h3 className="text-xl font-bold text-zinc-300">
+							<h3 className="font-display text-lg font-semibold text-primary">
 								Select a conversation or start a new one
 							</h3>
-							<p className="text-sm text-zinc-500">
+							<p className="text-sm text-muted">
 								Choose from your existing conversations or start a new chat
 							</p>
 						</div>
 						<button
+							type="button"
 							onClick={() => setShowNewConversationModal(true)}
-							className="flex items-center gap-2 px-6 py-3 bg-yellow-500 text-black font-bold rounded-full hover:bg-yellow-400 transition-colors"
+							className="flex items-center gap-2 px-6 py-3 bg-brand text-brand-on font-semibold rounded-pill hover:bg-brand-active transition-colors cursor-pointer"
 						>
 							<UserPlus className="w-5 h-5" />
 							New Conversation

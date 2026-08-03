@@ -1,6 +1,7 @@
 "use server";
 
 import { BACKEND_URL } from "@/const";
+import { errorDetail } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import axios from "axios";
 
@@ -25,7 +26,9 @@ export async function startConversationAction(recipientId: string) {
 
 		return response.data;
 	} catch (error) {
-		console.error("Error starting conversation:", error);
+		// Narrowed, never the raw axios error — it carries the bearer JWT in
+		// `config.headers`.
+		console.error("Error starting conversation:", errorDetail(error));
 		return { success: false, error: "Failed to start conversation" };
 	}
 }
@@ -45,7 +48,7 @@ export async function getConversationsAction() {
 
 		return { success: true, data: response.data };
 	} catch (error) {
-		console.error("Error fetching conversations:", error);
+		console.error("Error fetching conversations:", errorDetail(error));
 		return { success: false, error: "Failed to fetch conversations" };
 	}
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { formatTimeAgo } from "@/lib/utils";
+
 import { useState, useEffect } from "react";
 import { PostCard, type PostProps } from "@/components/feed/PostCard";
 import { ProfileSkeleton } from "@/components/skeletons/ProfileSkeleton";
@@ -21,14 +23,21 @@ import { startConversationAction } from "@/lib/conversation.actions";
 import EditProfileModal from "@/components/profile/EditProfileModal";
 import FollowsModal from "@/components/profile/FollowsModal";
 import VerifiedIcon from "@/assets/icons/VerifiedIcon";
+import { DEFAULT_AVATAR } from "@/const";
 import {
 	ArrowLeft,
 	MapPin,
 	Link as LinkIcon,
 	Calendar,
+	Grid3x3,
+	Heart,
 	Mail,
 	MoreHorizontal,
+	Plus,
+	Search,
 } from "lucide-react";
+import { motion } from "framer-motion";
+import { EmptyState } from "@/components/ui/EmptyState";
 import clsx from "clsx";
 import { useAtom } from "jotai";
 import {
@@ -115,7 +124,6 @@ export default function Profile({ username }: ProfileProps) {
 				// /profile/[username] route
 				const result = await getProfileByUsernameAction(username);
 				if (result.success) {
-					console.log("Fetched Profile Data:", result.data);
 					setProfileUser(result.data);
 					setProfileCache((prev) => ({
 						...prev,
@@ -162,13 +170,11 @@ export default function Profile({ username }: ProfileProps) {
 								? `${post.author.firstName} ${post.author.lastName}`
 								: post.author.username || "Unknown",
 						username: post.author.username || "unknown",
-						avatar:
-							post.author.avatar ||
-							"https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png",
+						avatar: post.author.avatar || DEFAULT_AVATAR,
 						isVerified: post.author.isVerified || false,
 					},
 					content: post.content,
-					timestamp: new Date(post.createdAt).toLocaleDateString(), // Use short format if needed
+					timestamp: formatTimeAgo(post.createdAt),
 					images: post.images,
 					stats: post.stats || { replies: 0, reposts: 0, likes: 0 },
 					isLiked: post.isLiked,
@@ -279,15 +285,13 @@ export default function Profile({ username }: ProfileProps) {
 
 	if (notFound) {
 		return (
-			<div className="flex flex-col justify-center items-center h-[50vh] text-zinc-500 font-sans">
-				<h2 className="text-xl font-bold mb-2 text-white">User not found</h2>
-				<p>@{username}</p>
-				<button
-					onClick={() => router.back()}
-					className="mt-4 text-sm underline hover:text-white"
-				>
-					Go back
-				</button>
+			<div className="flex flex-col justify-center items-center min-h-[60vh]">
+				<EmptyState
+					icon={Search}
+					title="This account doesn't exist"
+					caption={`@${username} isn't on WorldStreet Social. Try searching for another account.`}
+					action={{ label: "Go back", onClick: () => router.back() }}
+				/>
 			</div>
 		);
 	}
@@ -308,21 +312,22 @@ export default function Profile({ username }: ProfileProps) {
 				/>
 			)}
 
-			<header className="sticky top-0 z-20 bg-black/80 backdrop-blur-md border-b border-zinc-800 px-4 py-2 flex items-center gap-6">
+			<header className="sticky top-0 z-sticky bg-page border-b border-hairline px-4 py-2 flex items-center gap-6">
 				<button
-					className="rounded-full w-9 h-9 hover:bg-zinc-800 flex items-center justify-center transition-colors cursor-pointer text-white"
+					className="rounded-full w-9 h-9 hover:bg-raised flex items-center justify-center transition-colors cursor-pointer text-primary"
 					type="button"
 					onClick={() => router.back()}
 				>
 					<ArrowLeft className="w-5 h-5" />
 				</button>
 				<div className="flex flex-col">
-					<h1 className="text-lg font-bold leading-5 flex items-center gap-1 font-sans text-white">
+					<h1 className="text-lg font-bold leading-5 flex items-center gap-1 font-sans text-primary">
 						{fullName}
-						{profileUser.isVerified && <VerifiedIcon color="blue" />}
+						{profileUser.isVerified && <VerifiedIcon />}
 					</h1>
-					<span className="text-xs text-zinc-500 font-sans">
-						{profileUser.postsCount || 0} Posts
+					<span className="text-xs text-muted font-sans tabular-nums">
+						{(profileUser.postsCount || 0).toLocaleString("en-NG")}{" "}
+						{profileUser.postsCount === 1 ? "Post" : "Posts"}
 					</span>
 				</div>
 			</header>
@@ -330,18 +335,29 @@ export default function Profile({ username }: ProfileProps) {
 			{/* Hero Section */}
 			<div className="relative">
 				<div
-					className="h-[150px] sm:h-[200px] w-full bg-cover bg-center bg-no-repeat bg-zinc-800"
-					style={{
-						backgroundImage: profileUser.banner
-							? `url('${profileUser.banner}')`
-							: "linear-gradient(to right, #18181b 0%, #27272a 100%)",
-					}}
-				/>
-				<div className="absolute -bottom-[50px] sm:-bottom-[67px] left-4 border-4 border-black rounded-full bg-black">
+					className="relative h-[150px] sm:h-[200px] w-full bg-cover bg-center bg-no-repeat bg-sunken"
+					style={
+						profileUser.banner
+							? { backgroundImage: `url('${profileUser.banner}')` }
+							: undefined
+					}
+				>
+					{/* No banner: quiet sunken band with a faint centered brand
+					    mark — imagery rules ban gradient placeholder surfaces. */}
+					{!profileUser.banner && (
+						<img
+							src="/images/logo.png"
+							alt=""
+							aria-hidden="true"
+							className="absolute left-1/2 top-1/2 w-12 -translate-x-1/2 -translate-y-1/2 opacity-[0.08] pointer-events-none select-none"
+						/>
+					)}
+				</div>
+				<div className="absolute -bottom-[50px] sm:-bottom-[67px] left-4 border-4 border-page rounded-full bg-page">
 					<div
-						className="w-[100px] h-[100px] sm:w-[134px] sm:h-[134px] rounded-full bg-cover bg-center border border-zinc-800"
+						className="w-[100px] h-[100px] sm:w-[134px] sm:h-[134px] rounded-full bg-cover bg-center border border-hairline"
 						style={{
-							backgroundImage: `url('${profileUser.avatar || "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}')`,
+							backgroundImage: `url('${profileUser.avatar || DEFAULT_AVATAR}')`,
 						}}
 					/>
 				</div>
@@ -349,13 +365,13 @@ export default function Profile({ username }: ProfileProps) {
 
 			{/* Blocked Status Banners */}
 			{profileUser.isBlockedByYou && (
-				<div className="mx-4 mt-2 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-between">
-					<span className="text-red-500 text-sm font-bold font-sans">
+				<div className="mx-4 mt-2 p-3 bg-danger/10 border border-danger/20 rounded-xl flex items-center justify-between">
+					<span className="text-danger text-sm font-semibold font-sans">
 						You blocked this user.
 					</span>
 					<button
 						onClick={handleUnblockUser}
-						className="text-white text-xs bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded-lg font-bold transition-colors"
+						className="text-primary text-xs bg-danger hover:opacity-90 px-3 py-1.5 rounded-md font-semibold transition-colors cursor-pointer"
 					>
 						Unblock
 					</button>
@@ -363,8 +379,8 @@ export default function Profile({ username }: ProfileProps) {
 			)}
 
 			{profileUser.isBlockedByThem && (
-				<div className="mx-4 mt-2 p-3 bg-zinc-800 border border-zinc-700 rounded-xl">
-					<span className="text-zinc-400 text-sm font-bold font-sans">
+				<div className="mx-4 mt-2 p-3 bg-surface border border-hairline rounded-xl">
+					<span className="text-muted text-sm font-semibold font-sans">
 						You have been blocked by this user.
 					</span>
 				</div>
@@ -376,7 +392,7 @@ export default function Profile({ username }: ProfileProps) {
 					!profileUser.isBlockedByThem &&
 					!profileUser.isBlockedByYou && (
 						<button
-							className="w-9 h-9 border border-zinc-700 rounded-full flex items-center justify-center hover:bg-zinc-800 transition-colors cursor-pointer"
+							className="w-10 h-10 border border-hairline rounded-pill flex items-center justify-center hover:bg-raised transition-colors cursor-pointer"
 							type="button"
 							onClick={async () => {
 								if (!profileUser?.userId) return;
@@ -389,7 +405,7 @@ export default function Profile({ username }: ProfileProps) {
 								}
 							}}
 						>
-							<Mail className="w-5 h-5 text-zinc-400" />
+							<Mail className="w-[18px] h-[18px] text-muted" />
 						</button>
 					)}
 				{!isMe &&
@@ -397,16 +413,16 @@ export default function Profile({ username }: ProfileProps) {
 					!profileUser.isBlockedByYou && (
 						<div className="relative">
 							<button
-								className="w-9 h-9 border border-zinc-700 rounded-full flex items-center justify-center hover:bg-zinc-800 transition-colors cursor-pointer text-white"
+								className="w-10 h-10 border border-hairline rounded-pill flex items-center justify-center hover:bg-raised transition-colors cursor-pointer text-primary"
 								type="button"
 								onClick={() => setShowMoreMenu(!showMoreMenu)}
 							>
-								<MoreHorizontal className="w-5 h-5 text-zinc-400" />
+								<MoreHorizontal className="w-[18px] h-[18px] text-muted" />
 							</button>
 							{showMoreMenu && (
-								<div className="absolute top-full right-0 mt-2 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl overflow-hidden z-30 flex flex-col py-1">
+								<div className="absolute top-full right-0 mt-2 w-[220px] bg-surface border border-hairline rounded-lg shadow-nav overflow-hidden z-dropdown flex flex-col py-1.5">
 									<button
-										className="w-full text-left px-4 py-3 text-red-500 hover:bg-zinc-800 text-sm font-bold font-sans transition-colors"
+										className="w-full text-left px-3.5 py-2.5 text-danger hover:bg-raised text-sm font-medium font-sans transition-colors cursor-pointer"
 										onClick={() => {
 											setShowMoreMenu(false);
 											setIsBlockModalOpen(true);
@@ -420,7 +436,7 @@ export default function Profile({ username }: ProfileProps) {
 					)}
 				{isMe ? (
 					<button
-						className="border border-zinc-700 bg-black text-white rounded-full px-5 h-9 font-bold hover:bg-zinc-900 transition-colors text-sm cursor-pointer font-sans shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)] active:translate-x-px active:translate-y-px active:shadow-none"
+						className="border border-hairline text-primary rounded-pill px-5 h-9 font-semibold hover:bg-raised transition-colors text-sm cursor-pointer font-sans"
 						type="button"
 						onClick={() => setIsEditProfileOpen(true)}
 					>
@@ -428,7 +444,7 @@ export default function Profile({ username }: ProfileProps) {
 					</button>
 				) : profileUser.isBlockedByYou ? (
 					<button
-						className="rounded-full px-5 py-1.5 font-bold transition-all text-sm cursor-pointer min-w-[100px] font-sans shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)] active:translate-x-px active:translate-y-px active:shadow-none border border-red-900 bg-red-600 text-white hover:bg-red-700"
+						className="rounded-pill px-5 h-9 font-semibold transition-colors text-sm cursor-pointer min-w-[100px] font-sans bg-danger text-primary hover:opacity-90"
 						type="button"
 						onClick={handleUnblockUser}
 					>
@@ -436,7 +452,7 @@ export default function Profile({ username }: ProfileProps) {
 					</button>
 				) : profileUser.isBlockedByThem ? (
 					<button
-						className="rounded-full px-5 py-1.5 font-bold transition-all text-sm cursor-not-allowed min-w-[100px] font-sans border border-zinc-700 bg-zinc-800 text-zinc-500"
+						className="rounded-pill px-5 h-9 font-semibold transition-colors text-sm cursor-not-allowed min-w-[100px] font-sans border border-hairline bg-raised text-subtle"
 						type="button"
 						disabled
 					>
@@ -445,10 +461,10 @@ export default function Profile({ username }: ProfileProps) {
 				) : (
 					<button
 						className={clsx(
-							"rounded-full px-5 py-1.5 font-bold transition-all text-sm cursor-pointer min-w-[100px] font-sans shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)] active:translate-x-px active:translate-y-px active:shadow-none border border-zinc-700",
+							"rounded-pill px-5 h-9 font-semibold transition-colors text-sm cursor-pointer min-w-[100px] font-sans",
 							isFollowing
-								? "bg-transparent text-white hover:border-red-600 hover:text-red-500"
-								: "bg-white text-black hover:bg-zinc-200",
+								? "border border-hairline bg-transparent text-primary hover:border-danger hover:text-danger"
+								: "bg-primary text-page hover:bg-muted",
 						)}
 						type="button"
 						onClick={handleFollowToggle}
@@ -468,22 +484,22 @@ export default function Profile({ username }: ProfileProps) {
 			{/* Profile Info */}
 			<div className="px-4 mt-6 flex flex-col gap-3">
 				<div>
-					<h1 className="text-xl sm:text-2xl font-black leading-6 font-sans flex items-center gap-1 text-white">
+					<h1 className="font-display text-xl font-semibold leading-6 flex items-center gap-1.5 text-primary">
 						{fullName}
-						{profileUser.isVerified && <VerifiedIcon color="blue" />}
+						{profileUser.isVerified && <VerifiedIcon />}
 					</h1>
-					<div className="text-sm text-zinc-500 font-sans">
+					<div className="text-sm text-muted font-sans">
 						@{profileUser.username}
 					</div>
 				</div>
 
-				<div className="text-[15px] text-zinc-300 leading-relaxed font-sans">
+				<div className="text-[15px] text-primary leading-relaxed font-sans">
 					{profileUser.bio || (
-						<span className="text-zinc-500 italic">No bio yet.</span>
+						<span className="text-subtle">No bio yet.</span>
 					)}
 				</div>
 
-				<div className="flex gap-x-4 gap-y-2 text-zinc-500 text-[14px] flex-wrap mt-1 font-sans">
+				<div className="flex gap-x-4 gap-y-2 text-muted text-[14px] flex-wrap mt-1 font-sans">
 					{profileUser.location && (
 						<div className="flex items-center gap-1">
 							<MapPin className="w-4 h-4" />
@@ -500,7 +516,7 @@ export default function Profile({ username }: ProfileProps) {
 										? profileUser.website
 										: `https://${profileUser.website}`
 								}
-								className="text-primary hover:underline"
+								className="text-gold hover:underline"
 								target="_blank"
 								rel="noopener noreferrer"
 							>
@@ -549,10 +565,10 @@ export default function Profile({ username }: ProfileProps) {
 							setIsFollowsModalOpen(true);
 						}}
 					>
-						<span className="font-bold text-white">
-							{profileUser.followingCount || 0}
+						<span className="font-semibold text-primary tabular-nums">
+							{(profileUser.followingCount || 0).toLocaleString("en-NG")}
 						</span>{" "}
-						<span className="text-zinc-500">Following</span>
+						<span className="text-muted">Following</span>
 					</button>
 					<button
 						type="button"
@@ -562,32 +578,41 @@ export default function Profile({ username }: ProfileProps) {
 							setIsFollowsModalOpen(true);
 						}}
 					>
-						<span className="font-bold text-white">{followersCount}</span>{" "}
-						<span className="text-zinc-500">Followers</span>
+						<span className="font-semibold text-primary tabular-nums">
+							{followersCount.toLocaleString("en-NG")}
+						</span>{" "}
+						<span className="text-muted">Followers</span>
 					</button>
 				</div>
 			</div>
 
 			{/* Tabs */}
-			<div className="flex mt-6 border-b border-zinc-800 overflow-x-auto no-scrollbar">
-				{["posts", "media", "likes"].map((tab) => (
+			<div
+				role="tablist"
+				aria-label="Profile content"
+				className="flex mt-6 border-b border-hairline overflow-x-auto no-scrollbar"
+			>
+				{(["posts", "media", "likes"] as const).map((tab) => (
 					<button
 						key={tab}
-						onClick={() => setActiveTab(tab as typeof activeTab)}
-						className="flex-1 min-w-fit px-4 py-3 hover:bg-zinc-900 transition-colors relative cursor-pointer font-sans text-sm uppercase tracking-wide"
+						role="tab"
+						aria-selected={activeTab === tab}
+						onClick={() => setActiveTab(tab)}
+						className={clsx(
+							"flex-1 min-w-fit h-12 flex items-center justify-center hover:bg-raised/40 transition-colors relative cursor-pointer font-sans text-sm capitalize",
+							activeTab === tab
+								? "font-semibold text-primary"
+								: "font-medium text-muted hover:text-primary",
+						)}
 						type="button"
 					>
-						<span
-							className={clsx(
-								activeTab === tab
-									? "font-bold text-white"
-									: "font-medium text-zinc-500",
-							)}
-						>
-							{tab}
-						</span>
+						{tab}
 						{activeTab === tab && (
-							<div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white" />
+							<motion.span
+								layoutId="profile-tab-underline"
+								transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+								className="absolute bottom-0 h-0.5 w-14 rounded-pill bg-brand"
+							/>
 						)}
 					</button>
 				))}
@@ -604,16 +629,32 @@ export default function Profile({ username }: ProfileProps) {
 				) : feedPosts.length > 0 ? (
 					feedPosts.map((post) => <PostCard key={post.id} post={post} />)
 				) : (
-					<div className="p-12 text-center flex flex-col items-center justify-center text-zinc-500 font-sans">
-						<h2 className="text-lg font-bold mb-2 wrap-break-word text-white">
-							{isMe ? "You" : `@${profileUser.username}`}
-							{activeTab === "likes"
-								? ` haven't liked any posts`
-								: ` haven't posted any ${activeTab} yet`}
-						</h2>
-						<p className="text-sm tracking-tight text-zinc-500">
-							When {isMe ? "you" : "they"} do, they will show up here.
-						</p>
+					<div className="py-10">
+						<EmptyState
+							icon={
+								activeTab === "likes"
+									? Heart
+									: activeTab === "media"
+										? Grid3x3
+										: Plus
+							}
+							title={
+								activeTab === "likes"
+									? "No likes yet"
+									: activeTab === "media"
+										? "No media yet"
+										: "No posts yet"
+							}
+							caption={
+								isMe
+									? activeTab === "posts"
+										? "Your posts land here. Share what's moving today."
+										: activeTab === "likes"
+											? "Posts you like show up here."
+											: "Posts with photos or video show up here."
+									: `When @${profileUser.username} posts, it shows up here.`
+							}
+						/>
 					</div>
 				)}
 			</div>

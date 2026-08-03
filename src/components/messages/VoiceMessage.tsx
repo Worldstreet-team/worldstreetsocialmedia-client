@@ -82,7 +82,7 @@ export const VoiceMessage = ({ src, isMe }: VoiceMessageProps) => {
 		<div
 			className={clsx(
 				"flex items-center gap-3 p-1 rounded-xl min-w-[200px] select-none",
-				isMe ? "text-black" : "text-white",
+				isMe ? "text-brand-on" : "text-primary",
 			)}
 		>
 			<button onClick={togglePlay} className="shrink-0 outline-none">
@@ -104,7 +104,9 @@ export const VoiceMessage = ({ src, isMe }: VoiceMessageProps) => {
 				/>
 			</div>
 
-			<span className="text-xs font-mono tabular-nums opacity-80 shrink-0 min-w-[32px] text-right">
+			{/* tabular-nums does the fixed-width digits; no monospace family
+			    exists in the type system. */}
+			<span className="text-xs font-sans tabular-nums opacity-80 shrink-0 min-w-[32px] text-right">
 				{formatTime(isPlaying ? currentTime : duration)}
 			</span>
 

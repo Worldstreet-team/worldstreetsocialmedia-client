@@ -7,9 +7,14 @@ export default function MainLayout({
 	children: React.ReactNode;
 }) {
 	return (
-		<div className="max-w-[1265px] mx-auto flex justify-center min-h-screen">
+		// Same width tokens as app/page.tsx (--ws-container-max 1280 /
+		// --ws-feed-width 620) so the feed column doesn't jump between routes.
+		<div className="max-w-[var(--ws-container-max)] mx-auto flex justify-center min-h-screen">
 			<LeftSidebar />
-			<main className="w-full max-w-[600px] md:border-x border-zinc-800 min-h-screen">
+			<main
+				id="main-content"
+				className="w-full max-w-[var(--ws-feed-width)] sm:border-x border-hairline min-h-screen"
+			>
 				{children}
 			</main>
 			<RightSidebar />

@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect } from "react";
 import ConfirmModalPortal from "./ConfirmModalPortal";
 
@@ -15,6 +15,12 @@ interface ConfirmModalProps {
 	isDestructive?: boolean;
 }
 
+/**
+ * On-token dialog: overlay/scrim + z-modal, panel bg/surface radius 13 with
+ * shadow-nav. Title Display/H2 (Poppins SemiBold 20), body UI/Body muted.
+ * Destructive confirm uses status/danger; neutral confirm uses the
+ * bg-primary/text-page repeated-action pattern (gold stays reserved).
+ */
 export default function ConfirmModal({
 	isOpen,
 	onClose,
@@ -41,29 +47,36 @@ export default function ConfirmModal({
 			<AnimatePresence>
 				{isOpen && (
 					<div
-						className="fixed inset-0 z-50 flex items-center justify-center px-4"
+						className="fixed inset-0 z-modal flex items-center justify-center px-4"
 						onClick={(e) => e.stopPropagation()}
 					>
 						<motion.div
 							initial={{ opacity: 0 }}
 							animate={{ opacity: 1 }}
 							exit={{ opacity: 0 }}
+							transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
 							onClick={(e) => {
 								e.stopPropagation();
 								onClose();
 							}}
-							className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+							className="absolute inset-0 bg-scrim"
 						/>
 						<motion.div
-							initial={{ opacity: 0, scale: 0.95, y: 10 }}
+							role={isDestructive ? "alertdialog" : "dialog"}
+							aria-modal="true"
+							aria-label={title}
+							initial={{ opacity: 0, scale: 0.98, y: 8 }}
 							animate={{ opacity: 1, scale: 1, y: 0 }}
-							exit={{ opacity: 0, scale: 0.95, y: 10 }}
+							exit={{ opacity: 0, scale: 0.98, y: 8 }}
+							transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
 							onClick={(e) => e.stopPropagation()}
-							className="relative bg-zinc-900 border border-zinc-800 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden z-50"
+							className="relative bg-surface border border-hairline rounded-xl shadow-nav w-full max-w-sm overflow-hidden"
 						>
 							<div className="p-6">
-								<h3 className="text-xl font-bold mb-2 text-white">{title}</h3>
-								<p className="text-zinc-400 text-[15px] leading-relaxed">
+								<h3 className="font-display font-semibold text-xl text-primary mb-2">
+									{title}
+								</h3>
+								<p className="font-sans text-[15px] leading-relaxed text-muted">
 									{message}
 								</p>
 							</div>
@@ -71,7 +84,7 @@ export default function ConfirmModal({
 								<button
 									type="button"
 									onClick={onClose}
-									className="flex-1 py-3 rounded-full font-bold border border-zinc-700 hover:bg-zinc-800 transition-colors text-white text-[15px]"
+									className="flex-1 h-11 rounded-pill font-sans font-semibold text-[15px] border border-hairline text-primary hover:bg-raised transition-colors cursor-pointer"
 								>
 									{cancelText}
 								</button>
@@ -81,14 +94,11 @@ export default function ConfirmModal({
 										onConfirm();
 										onClose();
 									}}
-									className={`
-                                    flex-1 py-3 rounded-full font-bold transition-colors text-[15px]
-                                    ${
-																			isDestructive
-																				? "bg-red-600 text-white hover:bg-red-700"
-																				: "bg-white text-black hover:bg-gray-200"
-																		}
-                                `}
+									className={`flex-1 h-11 rounded-pill font-sans font-semibold text-[15px] transition-colors cursor-pointer ${
+										isDestructive
+											? "bg-danger text-primary hover:opacity-90"
+											: "bg-primary text-page hover:bg-muted"
+									}`}
 								>
 									{confirmText}
 								</button>

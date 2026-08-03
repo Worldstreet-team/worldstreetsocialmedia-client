@@ -39,7 +39,7 @@ export const ToastContainer = ({
 				<div
 					key={position}
 					className={clsx(
-						"fixed z-9999 flex flex-col gap-3 p-4 pointer-events-none",
+						"fixed z-toast flex flex-col gap-3 p-4 pointer-events-none",
 						positionClasses[position],
 					)}
 				>

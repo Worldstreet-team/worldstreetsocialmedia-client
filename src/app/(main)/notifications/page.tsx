@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import {
+	AtSign,
+	Bell,
 	Heart,
-	User as UserIcon,
 	MessageCircle,
 	Repeat,
-	AtSign,
+	User as UserIcon,
 } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
 import {
 	getNotificationsAction,
 	markNotificationsReadAction,
@@ -15,6 +17,8 @@ import {
 import Link from "next/link";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
+import { useSetAtom } from "jotai";
+import { unreadNotificationsCountAtom } from "@/store/ui.atom";
 
 interface Notification {
 	_id: string;
@@ -42,6 +46,7 @@ export default function NotificationsPage() {
 		"all",
 	);
 	const router = useRouter();
+	const setUnreadNotifications = useSetAtom(unreadNotificationsCountAtom);
 
 	useEffect(() => {
 		const fetchNotifications = async () => {
@@ -53,6 +58,7 @@ export default function NotificationsPage() {
 				// Or maybe just mark the unread ones.
 				// For now, let's mark all as read to clear the "badge" concept if we had one.
 				markNotificationsReadAction();
+				setUnreadNotifications(0);
 			}
 			setLoading(false);
 		};
@@ -70,17 +76,17 @@ export default function NotificationsPage() {
 	const getIcon = (type: string) => {
 		switch (type) {
 			case "like":
-				return <Heart className="w-5 h-5 text-pink-600 fill-current" />;
+				return <Heart className="w-5 h-5 text-danger fill-current" />;
 			case "follow":
-				return <UserIcon className="w-5 h-5 text-blue-500 fill-current" />;
+				return <UserIcon className="w-5 h-5 text-primary" />;
 			case "reply":
-				return <MessageCircle className="w-5 h-5 text-green-500" />; // Or another color
+				return <MessageCircle className="w-5 h-5 text-muted" />;
 			case "repost":
-				return <Repeat className="w-5 h-5 text-green-500" />;
+				return <Repeat className="w-5 h-5 text-success" />;
 			case "mention":
-				return <AtSign className="w-5 h-5 text-yellow-500" />;
+				return <AtSign className="w-5 h-5 text-gold" />;
 			default:
-				return <div className="w-5 h-5 bg-zinc-500 rounded-full" />;
+				return <div className="w-5 h-5 bg-raised rounded-pill" />;
 		}
 	};
 
@@ -96,9 +102,9 @@ export default function NotificationsPage() {
 
 	return (
 		<div className="flex flex-col min-h-screen pb-20">
-			<header className="sticky top-0 z-20 bg-black/80 backdrop-blur-md border-b border-zinc-800">
+			<header className="sticky top-0 z-sticky bg-page border-b border-hairline">
 				<div className="px-4 py-3">
-					<h1 className="text-xl font-bold font-sans text-white">
+					<h1 className="font-display text-lg font-semibold text-primary">
 						Notifications
 					</h1>
 				</div>
@@ -107,21 +113,21 @@ export default function NotificationsPage() {
 						<button
 							key={tab}
 							onClick={() => setActiveTab(tab as any)}
-							className="flex-1 px-4 py-4 hover:bg-zinc-900 transition-colors relative cursor-pointer"
+							className="flex-1 h-12 hover:bg-raised/40 transition-colors relative cursor-pointer"
 							type="button"
 						>
 							<span
 								className={clsx(
-									"text-[15px] capitalize font-sans",
+									"text-sm capitalize font-sans",
 									activeTab === tab
-										? "font-bold text-white"
-										: "font-medium text-zinc-500",
+										? "font-semibold text-primary"
+										: "font-medium text-muted",
 								)}
 							>
 								{tab}
 							</span>
 							{activeTab === tab && (
-								<div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-yellow-500 rounded-full transition-all" />
+								<div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-0.5 bg-brand rounded-pill" />
 							)}
 						</button>
 					))}
@@ -133,14 +139,14 @@ export default function NotificationsPage() {
 					[...Array(5)].map((_, i) => (
 						<div
 							key={i}
-							className="p-4 border-b border-zinc-800 flex gap-3 animate-pulse"
+							className="p-4 border-b border-hairline flex gap-3"
 						>
 							<div className="w-8 flex justify-end">
-								<div className="w-5 h-5 bg-zinc-800 rounded-full" />
+								<div className="skeleton w-5 h-5 rounded-pill" />
 							</div>
 							<div className="flex flex-col gap-2 flex-1">
-								<div className="w-10 h-10 bg-zinc-800 rounded-full" />
-								<div className="h-4 w-32 bg-zinc-800 rounded" />
+								<div className="skeleton w-10 h-10 rounded-pill" />
+								<div className="skeleton h-3 w-40 rounded-sm" />
 							</div>
 						</div>
 					))
@@ -150,8 +156,8 @@ export default function NotificationsPage() {
 							href={getRedirectUrl(notification)}
 							key={notification._id}
 							className={clsx(
-								"p-4 border-b border-zinc-800 hover:bg-zinc-900/50 transition-colors cursor-pointer flex gap-3",
-								!notification.read && "bg-zinc-900/20",
+								"p-4 border-b border-hairline hover:bg-surface/60 transition-colors cursor-pointer flex gap-3",
+								!notification.read && "bg-surface/40",
 							)}
 						>
 							<div className="w-8 flex justify-end mt-1">
@@ -159,17 +165,17 @@ export default function NotificationsPage() {
 							</div>
 							<div className="flex flex-col gap-2 flex-1">
 								<div
-									className="w-8 h-8 rounded-full bg-cover bg-center border border-zinc-800"
+									className="w-8 h-8 rounded-full bg-cover bg-center border border-hairline"
 									style={{
 										backgroundImage: `url('${notification.sender.avatar}')`,
 									}}
 								/>
-								<div className="text-white text-[15px] font-sans">
+								<div className="text-primary text-[15px] font-sans">
 									<span className="font-bold hover:underline cursor-pointer mr-1">
 										{notification.sender.firstName}{" "}
 										{notification.sender.lastName}
 									</span>
-									<span className="text-zinc-500">
+									<span className="text-muted">
 										{notification.type === "follow" && "followed you"}
 										{notification.type === "like" && "liked your post"}
 										{notification.type === "reply" && "replied to your post"}
@@ -180,12 +186,12 @@ export default function NotificationsPage() {
 								{(notification.type === "reply" ||
 									notification.type === "mention") &&
 									notification.post && (
-										<p className="text-zinc-400 text-[15px] mt-0.5 line-clamp-2">
+										<p className="text-muted text-[15px] mt-0.5 line-clamp-2">
 											{notification.post.content}
 										</p>
 									)}
 								{notification.type === "like" && notification.post && (
-									<p className="text-zinc-500 text-sm mt-0.5 line-clamp-1">
+									<p className="text-subtle text-sm mt-0.5 line-clamp-1">
 										{notification.post.content}
 									</p>
 								)}
@@ -193,8 +199,12 @@ export default function NotificationsPage() {
 						</Link>
 					))
 				) : (
-					<div className="p-12 text-center text-zinc-500 font-sans text-sm">
-						No notifications yet.
+					<div className="py-10">
+						<EmptyState
+							icon={Bell}
+							title="Nothing yet"
+							caption="Likes, follows, replies and mentions land here as they happen."
+						/>
 					</div>
 				)}
 			</div>

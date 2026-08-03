@@ -6,15 +6,13 @@ const isProtectedRoute = createRouteMatcher(["/(.*)"]);
 const isOnboardingRoute = createRouteMatcher(["/onboarding(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
-	const { userId, getToken, isAuthenticated } = await auth();
+	const { userId, getToken } = await auth();
 
 	if (isProtectedRoute(req)) {
 		await auth.protect();
 	}
-	console.log("USERIDDDD: ", userId);
 
 	const hasProfile = req.cookies.get("has_profile")?.value === "true";
-	console.log("HAS PROFILE: ", hasProfile);
 
 	if (isOnboardingRoute(req) && !hasProfile) return;
 
@@ -23,15 +21,7 @@ export default clerkMiddleware(async (auth, req) => {
 		// Check your custom cookie
 
 		const token = await getToken();
-		console.log("TOKEN: ", token);
 		const userExistsInDb = await syncUser(token);
-
-		console.log("EXISTS IN DB: ", userExistsInDb);
-
-		// if (userExistsInDb == null) {
-		// 	console.log("FAILED HERE");
-		// 	return;
-		// }
 
 		if (userExistsInDb?.status === "not_found") {
 			// Redirect to onboarding if they don't exist in your DB
@@ -45,7 +35,6 @@ export default clerkMiddleware(async (auth, req) => {
 			httpOnly: false,
 		});
 		if (userExistsInDb?.profile) {
-			console.log("GETTING SAVED EXISTS IN DB: ", userExistsInDb.profile);
 			const requestHeaders = new Headers(req.headers);
 			requestHeaders.set("x-user-data", JSON.stringify(userExistsInDb.profile));
 

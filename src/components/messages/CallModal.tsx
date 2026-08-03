@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
 	Phone,
@@ -10,8 +9,6 @@ import {
 	Mic,
 	MicOff,
 	X,
-	Camera,
-	CameraOff,
 } from "lucide-react";
 import Image from "next/image";
 import clsx from "clsx";
@@ -68,11 +65,11 @@ export const CallModal = ({
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
 					exit={{ opacity: 0 }}
-					className="fixed inset-0 z-200 bg-black flex flex-col items-center justify-center p-4"
+					className="fixed inset-0 z-modal bg-page flex flex-col items-center justify-center p-4"
 				>
 					{/* Video Streams */}
 					{callStatus === "connected" && isVideoCall && (
-						<div className="absolute inset-0 w-full h-full bg-zinc-900">
+						<div className="absolute inset-0 w-full h-full bg-sunken">
 							{/* Remote Stream (Full Screen) */}
 							{remoteStream && (
 								<video
@@ -87,7 +84,7 @@ export const CallModal = ({
 
 							{/* Local Stream (PiP) */}
 							{localStream && (
-								<div className="absolute top-4 right-4 w-32 h-48 bg-zinc-800 rounded-xl overflow-hidden border border-zinc-700 shadow-2xl z-10">
+								<div className="absolute top-4 right-4 w-32 h-48 bg-raised rounded-lg overflow-hidden border border-hairline shadow-nav z-10">
 									<video
 										autoPlay
 										playsInline
@@ -116,7 +113,7 @@ export const CallModal = ({
 												repeat: Infinity,
 												ease: "easeOut",
 											}}
-											className="absolute inset-0 bg-zinc-700 rounded-full z-0"
+											className="absolute inset-0 bg-raised rounded-full z-0"
 										/>
 										<motion.div
 											animate={{ scale: [1, 1.2], opacity: [0.5, 0] }}
@@ -126,11 +123,11 @@ export const CallModal = ({
 												ease: "easeOut",
 												delay: 0.5,
 											}}
-											className="absolute inset-0 bg-zinc-600 rounded-full z-0"
+											className="absolute inset-0 bg-raised rounded-full z-0"
 										/>
 									</>
 								)}
-								<div className="relative z-10 w-32 h-32 rounded-full overflow-hidden border-4 border-zinc-800">
+								<div className="relative z-10 w-32 h-32 rounded-full overflow-hidden border-4 border-raised">
 									<Image
 										src={caller.avatar}
 										alt={caller.name}
@@ -139,10 +136,12 @@ export const CallModal = ({
 									/>
 								</div>
 							</div>
-							<h2 className="text-2xl font-bold text-white mb-2">
+							<h2 className="font-display text-2xl font-semibold text-primary mb-2">
 								{caller.name}
 							</h2>
-							<p className="text-zinc-400 animate-pulse">
+							{/* Status text stays still — the transient ripple above carries
+							    the "ringing" motion (no perpetual text pulse). */}
+							<p className="text-muted font-sans">
 								{callStatus === "calling" && "Calling..."}
 								{callStatus === "ringing" && "Incoming Call..."}
 								{callStatus === "connecting" && "Connecting..."}
@@ -158,13 +157,13 @@ export const CallModal = ({
 							<>
 								<button
 									onClick={onReject}
-									className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-all hover:scale-105"
+									className="w-16 h-16 rounded-pill bg-danger hover:opacity-90 flex items-center justify-center text-primary transition-opacity cursor-pointer"
 								>
 									<PhoneOff className="w-8 h-8" />
 								</button>
 								<button
 									onClick={onAccept}
-									className="w-16 h-16 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center text-white transition-all hover:scale-105"
+									className="w-16 h-16 rounded-pill bg-success hover:opacity-90 flex items-center justify-center text-primary transition-opacity cursor-pointer"
 								>
 									<Phone className="w-8 h-8" />
 								</button>
@@ -174,10 +173,10 @@ export const CallModal = ({
 								<button
 									onClick={onToggleMic}
 									className={clsx(
-										"w-12 h-12 rounded-full flex items-center justify-center text-white transition-all hover:scale-105",
+										"w-12 h-12 rounded-pill flex items-center justify-center text-primary transition-colors cursor-pointer",
 										isMicOn
-											? "bg-zinc-800 hover:bg-zinc-700"
-											: "bg-white text-black",
+											? "bg-surface hover:bg-raised border border-hairline"
+											: "bg-primary text-page",
 									)}
 								>
 									{isMicOn ? (
@@ -189,7 +188,7 @@ export const CallModal = ({
 
 								<button
 									onClick={onEnd}
-									className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-all hover:scale-105"
+									className="w-16 h-16 rounded-pill bg-danger hover:opacity-90 flex items-center justify-center text-primary transition-opacity cursor-pointer"
 								>
 									<PhoneOff className="w-8 h-8" />
 								</button>
@@ -198,10 +197,10 @@ export const CallModal = ({
 									<button
 										onClick={onToggleCam}
 										className={clsx(
-											"w-12 h-12 rounded-full flex items-center justify-center text-white transition-all hover:scale-105",
+											"w-12 h-12 rounded-pill flex items-center justify-center text-primary transition-colors cursor-pointer",
 											isCamOn
-												? "bg-zinc-800 hover:bg-zinc-700"
-												: "bg-white text-black",
+												? "bg-surface hover:bg-raised border border-hairline"
+												: "bg-primary text-page",
 										)}
 									>
 										{isCamOn ? (
@@ -218,7 +217,7 @@ export const CallModal = ({
 					{/* Close button for safety if stuck */}
 					<button
 						onClick={onEnd}
-						className="absolute top-6 right-6 p-2 rounded-full bg-zinc-800/50 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
+						className="absolute top-6 right-6 p-2 rounded-pill bg-surface/50 hover:bg-raised text-muted hover:text-primary transition-colors cursor-pointer"
 					>
 						<X className="w-6 h-6" />
 					</button>

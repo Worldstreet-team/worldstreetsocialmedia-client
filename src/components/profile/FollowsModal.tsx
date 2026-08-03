@@ -10,7 +10,9 @@ import { userAtom } from "@/store/user.atom";
 import { followUserAction, unfollowUserAction } from "@/lib/user.actions";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import clsx from "clsx";
-import { VerifiedIcon, UserX } from "lucide-react";
+import { UserX } from "lucide-react";
+import VerifiedIcon from "@/assets/icons/VerifiedIcon";
+import { DEFAULT_AVATAR } from "@/const";
 
 interface FollowsModalProps {
 	isOpen: boolean;
@@ -106,46 +108,47 @@ export default function FollowsModal({
 		<ConfirmModalPortal>
 			<AnimatePresence>
 				{isOpen && (
-					<div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+					<div className="fixed inset-0 z-modal flex items-center justify-center p-4">
 						<motion.div
 							initial={{ opacity: 0 }}
 							animate={{ opacity: 1 }}
 							exit={{ opacity: 0 }}
 							onClick={onClose}
-							className="absolute inset-0 bg-zinc-900/80 backdrop-blur-sm"
+							className="absolute inset-0 bg-scrim"
 						/>
 						<motion.div
-							initial={{ opacity: 0, scale: 0.95, y: 10 }}
+							initial={{ opacity: 0, scale: 0.98, y: 8 }}
 							animate={{ opacity: 1, scale: 1, y: 0 }}
-							exit={{ opacity: 0, scale: 0.95, y: 10 }}
-							className="relative bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl w-full max-w-md overflow-hidden max-h-[80vh] flex flex-col z-50 text-white"
+							exit={{ opacity: 0, scale: 0.98, y: 8 }}
+							transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+							className="relative bg-surface border border-hairline rounded-xl shadow-nav w-full max-w-md overflow-hidden max-h-[80vh] flex flex-col text-primary"
 						>
 							{/* Header with Tabs */}
-							<div className="flex border-b border-zinc-800">
+							<div className="flex border-b border-hairline">
 								<button
 									type="button"
 									onClick={() => setActiveTab("followers")}
 									className={clsx(
-										"flex-1 py-4 text-[15px] font-bold text-center relative hover:bg-zinc-800 transition-colors font-sans cursor-pointer",
-										activeTab === "followers" ? "text-white" : "text-zinc-500",
+										"flex-1 py-4 text-[15px] font-semibold text-center relative hover:bg-raised transition-colors font-sans cursor-pointer",
+										activeTab === "followers" ? "text-primary" : "text-muted",
 									)}
 								>
 									Followers
 									{activeTab === "followers" && (
-										<div className="absolute bottom-0 left-0 right-0 h-1 bg-yellow-500 mx-10" />
+										<div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-14 bg-brand rounded-pill" />
 									)}
 								</button>
 								<button
 									type="button"
 									onClick={() => setActiveTab("following")}
 									className={clsx(
-										"flex-1 py-4 text-[15px] font-bold text-center relative hover:bg-zinc-800 transition-colors font-sans cursor-pointer",
-										activeTab === "following" ? "text-white" : "text-zinc-500",
+										"flex-1 py-4 text-[15px] font-semibold text-center relative hover:bg-raised transition-colors font-sans cursor-pointer",
+										activeTab === "following" ? "text-primary" : "text-muted",
 									)}
 								>
 									Following
 									{activeTab === "following" && (
-										<div className="absolute bottom-0 left-0 right-0 h-1 bg-yellow-500 mx-10" />
+										<div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-14 bg-brand rounded-pill" />
 									)}
 								</button>
 							</div>
@@ -157,14 +160,14 @@ export default function FollowsModal({
 										{[...Array(5)].map((_, i) => (
 											<div
 												key={i}
-												className="flex items-center gap-3 p-4 border-b border-zinc-800 last:border-0"
+												className="flex items-center gap-3 p-4 border-b border-hairline last:border-0"
 											>
-												<Skeleton className="w-10 h-10 rounded-full bg-zinc-800" />
+												<Skeleton className="w-10 h-10 rounded-full" />
 												<div className="flex flex-col gap-1 flex-1">
-													<Skeleton className="h-4 w-32 bg-zinc-800" />
-													<Skeleton className="h-3 w-20 bg-zinc-800" />
+													<Skeleton className="h-4 w-32" />
+													<Skeleton className="h-3 w-20" />
 												</div>
-												<Skeleton className="h-8 w-20 rounded-full bg-zinc-800" />
+												<Skeleton className="h-8 w-20 rounded-pill" />
 											</div>
 										))}
 									</div>
@@ -173,7 +176,7 @@ export default function FollowsModal({
 										{users.map((user) => (
 											<div
 												key={user._id}
-												className="flex items-center gap-3 p-4 hover:bg-zinc-800/50 transition-colors cursor-pointer border-b border-zinc-800 last:border-0"
+												className="flex items-center gap-3 p-4 hover:bg-raised transition-colors cursor-pointer border-b border-hairline last:border-0"
 												onClick={() => {
 													onClose();
 												}}
@@ -183,30 +186,30 @@ export default function FollowsModal({
 													className="shrink-0"
 												>
 													<div
-														className="w-10 h-10 rounded-full bg-cover bg-center border border-zinc-700"
+														className="w-10 h-10 rounded-full bg-cover bg-center border border-hairline"
 														style={{
-															backgroundImage: `url('${user.avatar || "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}')`,
+															backgroundImage: `url('${user.avatar || DEFAULT_AVATAR}')`,
 														}}
 													/>
 												</Link>
 												<div className="flex flex-col flex-1 min-w-0">
 													<Link
 														href={`/profile/${user.username}`}
-														className="font-bold text-[15px] truncate flex items-center gap-1 hover:underline font-sans text-white"
+														className="font-semibold text-[15px] truncate flex items-center gap-1 hover:underline font-sans text-primary"
 													>
 														{user.firstName} {user.lastName}
 														{user.isVerified && (
-															<VerifiedIcon className="w-4 h-4 text-blue-500" />
+															<VerifiedIcon size={{ width: "16", height: "16" }} />
 														)}
 													</Link>
 													<Link
 														href={`/profile/${user.username}`}
-														className="text-zinc-500 text-[14px] truncate font-sans"
+														className="text-muted text-[14px] truncate font-sans"
 													>
 														@{user.username}
 													</Link>
 													{user.bio && (
-														<p className="text-[13px] text-zinc-400 truncate mt-0.5 font-sans">
+														<p className="text-[13px] text-muted truncate mt-0.5 font-sans">
 															{user.bio}
 														</p>
 													)}
@@ -219,10 +222,10 @@ export default function FollowsModal({
 															handleFollowToggle(user);
 														}}
 														className={clsx(
-															"rounded-full px-4 py-1.5 font-bold text-[13px] transition-all min-w-[90px] border font-sans shadow-[2px_2px_0px_0px_rgba(255,255,255,0.1)] active:translate-x-px active:translate-y-px active:shadow-none",
+															"rounded-pill px-4 py-1.5 font-semibold text-[13px] transition-colors min-w-[90px] border font-sans",
 															user.isFollowing
-																? "border-zinc-600 bg-transparent text-white hover:border-red-600 hover:text-red-600"
-																: "bg-white text-black border-transparent hover:bg-zinc-200",
+																? "border-hairline bg-transparent text-primary hover:border-danger hover:text-danger"
+																: "bg-primary text-page border-transparent hover:bg-muted",
 														)}
 														onMouseEnter={(e) => {
 															if (user.isFollowing)
@@ -240,7 +243,7 @@ export default function FollowsModal({
 										))}
 									</div>
 								) : (
-									<div className="flex flex-col items-center justify-center h-full p-8 text-center text-zinc-500 font-sans">
+									<div className="flex flex-col items-center justify-center h-full p-8 text-center text-muted font-sans">
 										<UserX className="w-12 h-12 mb-2 opacity-50" />
 										<p>No {activeTab} yet.</p>
 									</div>

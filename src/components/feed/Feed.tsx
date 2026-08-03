@@ -1,20 +1,92 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useAtom } from "jotai";
+import { formatTimeAgo } from "@/lib/utils";
+
+import { useState, useEffect, useMemo, useRef } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useAtom, useAtomValue } from "jotai";
 import { feedAtom } from "@/store/feed.atom";
+import { feedTabAtom, followingIdsAtom } from "@/store/ui.atom";
 import { PostCard, PostProps } from "@/components/feed/PostCard";
 import { PostComposer } from "@/components/feed/PostComposer";
 import { getFeedAction } from "@/lib/feed.actions";
-import { Loader2 } from "lucide-react";
+// 03-icons: `plus`, `user-plus` and `arrow-up` are all in the standardized set.
+import { ArrowUp, Plus, UserPlus } from "lucide-react";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { PostSkeleton } from "@/components/feed/PostSkeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { DEFAULT_AVATAR } from "@/const";
 
 export default function Feed() {
 	const [feedState, setFeedState] = useAtom(feedAtom);
+	const tab = useAtomValue(feedTabAtom);
+	const followingIds = useAtomValue(followingIdsAtom);
 	const [loading, setLoading] = useState(true);
 	const [isPosting, setIsPosting] = useState(false);
+	const [showBackToTop, setShowBackToTop] = useState(false);
 	const { toast } = useToast();
+
+	// First paint gets the orchestrated stagger; after that, new posts
+	// (pagination, tab switches, prepends) rise in without queueing delays.
+	const introPlayedRef = useRef(false);
+	useEffect(() => {
+		if (!loading && feedState.posts.length > 0) {
+			const timer = setTimeout(() => {
+				introPlayedRef.current = true;
+			}, 700);
+			return () => clearTimeout(timer);
+		}
+	}, [loading, feedState.posts.length]);
+
+	// Infinite scroll: a sentinel above the "Show more" button auto-loads the
+	// next page as it approaches the viewport; the button stays as fallback.
+	const loadMoreRef = useRef<HTMLDivElement>(null);
+	const fetchingMoreRef = useRef(false);
+	const [isFetchingMore, setIsFetchingMore] = useState(false);
+	const loadMore = async () => {
+		if (fetchingMoreRef.current) return;
+		fetchingMoreRef.current = true;
+		setIsFetchingMore(true);
+		try {
+			await fetchFeed();
+		} finally {
+			fetchingMoreRef.current = false;
+			setIsFetchingMore(false);
+		}
+	};
+
+	// Back-to-top pill once the reader is a couple of screens deep.
+	useEffect(() => {
+		const onScroll = () => setShowBackToTop(window.scrollY > 800);
+		window.addEventListener("scroll", onScroll, { passive: true });
+		return () => window.removeEventListener("scroll", onScroll);
+	}, []);
+
+	useEffect(() => {
+		const node = loadMoreRef.current;
+		if (!node) return;
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0].isIntersecting) loadMore();
+			},
+			// Start loading ~one screen before the reader reaches the end.
+			{ rootMargin: "600px 0px" },
+		);
+		observer.observe(node);
+		return () => observer.disconnect();
+	});
+
+	// "Following" filters the loaded timeline by who this session follows
+	// (followingIdsAtom grows as Follow buttons are clicked).
+	const visiblePosts = useMemo(
+		() =>
+			tab === "following"
+				? feedState.posts.filter((p) =>
+						followingIds.includes(p.author.id),
+					)
+				: feedState.posts,
+		[tab, feedState.posts, followingIds],
+	);
 
 	useEffect(() => {
 		// Disable browser's automatic scroll restoration to handle it manually
@@ -63,9 +135,7 @@ export default function Feed() {
 								? `${post.author.firstName} ${post.author.lastName}`
 								: post.author.username,
 						username: post.author.username,
-						avatar:
-							post.author.avatar ||
-							"https://ui-avatars.com/api/?name=User&background=random",
+						avatar: post.author.avatar || DEFAULT_AVATAR,
 						isVerified: post.author.isVerified,
 					},
 					content: post.content,
@@ -76,12 +146,25 @@ export default function Feed() {
 					isBookmarked: post.isBookmarked,
 				}));
 
-				setFeedState((prev) => ({
-					...prev,
-					posts: reset ? mappedPosts : [...prev.posts, ...mappedPosts],
-					page: reset ? 2 : prev.page + 1,
-					hasMore: result.data.page < result.data.totalPages,
-				}));
+				setFeedState((prev) => {
+					// Merge by id. Without this, any repeat fetch of the same
+					// page (StrictMode double-effect, remount, retry) appends
+					// duplicates and React throws "two children with the same key".
+					const merged = reset
+						? mappedPosts
+						: [...prev.posts, ...mappedPosts];
+					const byId = new Map<string, PostProps>();
+					for (const post of merged) {
+						if (!byId.has(post.id)) byId.set(post.id, post);
+					}
+
+					return {
+						...prev,
+						posts: [...byId.values()],
+						page: reset ? 2 : prev.page + 1,
+						hasMore: result.data.page < result.data.totalPages,
+					};
+				});
 			} else {
 				if (result.message) toast(result.message, { type: "error" });
 			}
@@ -108,9 +191,7 @@ export default function Feed() {
 							? `${newPost.author.firstName} ${newPost.author.lastName}`
 							: newPost.author.username,
 					username: newPost.author.username,
-					avatar:
-						newPost.author.avatar ||
-						"https://ui-avatars.com/api/?name=User&background=random",
+					avatar: newPost.author.avatar || DEFAULT_AVATAR,
 					isVerified: newPost.author.isVerified,
 				},
 				content: newPost.content,
@@ -123,7 +204,10 @@ export default function Feed() {
 
 			setFeedState((prev) => ({
 				...prev,
-				posts: [mappedPost, ...prev.posts],
+				posts: [
+					mappedPost,
+					...prev.posts.filter((p) => p.id !== mappedPost.id),
+				],
 			}));
 			setIsPosting(false);
 		} else {
@@ -133,38 +217,50 @@ export default function Feed() {
 		}
 	};
 
-	const formatTimeAgo = (dateString: string) => {
-		try {
-			const date = new Date(dateString);
-			const now = new Date();
-			const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-			if (diffInSeconds < 60) return `${Math.max(0, diffInSeconds)}s`;
-
-			const diffInMinutes = Math.floor(diffInSeconds / 60);
-			if (diffInMinutes < 60) return `${diffInMinutes}m`;
-
-			const diffInHours = Math.floor(diffInMinutes / 60);
-			if (diffInHours < 24) return `${diffInHours}h`;
-
-			const diffInDays = Math.floor(diffInHours / 24);
-			return `${diffInDays}d`;
-		} catch (e) {
-			return "now";
-		}
-	};
-
 	return (
 		<div className="w-full pb-20">
-			<PostComposer
-				onPostStart={handlePostStart}
-				onPostSuccess={handlePostSuccess}
-			/>
+			<AnimatePresence>
+				{showBackToTop && (
+					<motion.button
+						type="button"
+						// Enter rises 8px at motion-base; exit is a fast fade (06-motion).
+						initial={{ opacity: 0, y: 8, x: "-50%" }}
+						animate={{ opacity: 1, y: 0, x: "-50%" }}
+						exit={{ opacity: 0, transition: { duration: 0.12 } }}
+						transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+						onClick={() =>
+							window.scrollTo({ top: 0, behavior: "smooth" })
+						}
+						className="fixed bottom-24 md:bottom-8 left-1/2 z-sticky flex items-center gap-1.5 h-9 pl-3 pr-4 rounded-pill bg-raised border border-hairline shadow-nav font-sans text-[13px] font-medium text-primary hover:bg-track transition-colors cursor-pointer"
+					>
+						<ArrowUp className="w-[14px] h-[14px]" />
+						Top
+					</motion.button>
+				)}
+			</AnimatePresence>
 
-			<div className="">
+			<div className="animate-rise" style={{ animationDelay: "100ms" }}>
+				<PostComposer
+					onPostStart={handlePostStart}
+					onPostSuccess={handlePostSuccess}
+				/>
+			</div>
+
+			{/* Keyed by tab so switching timelines replays the rise (no stagger). */}
+			<div key={tab}>
 				{isPosting && <PostSkeleton />}
-				{feedState.posts.map((post) => (
-					<PostCard key={post.id} post={post} />
+				{visiblePosts.map((post, index) => (
+					<div
+						key={post.id}
+						className="animate-rise"
+						style={{
+							animationDelay: introPlayedRef.current
+								? "0ms"
+								: `${Math.min(160 + index * 60, 520)}ms`,
+						}}
+					>
+						<PostCard post={post} />
+					</div>
 				))}
 
 				{loading && (
@@ -175,22 +271,45 @@ export default function Feed() {
 					</div>
 				)}
 
-				{!loading && feedState.posts.length === 0 && (
-					<div className="text-center py-12">
-						<p className="text-zinc-500 font-sans">
-							No posts yet. Be the first to post!
-						</p>
-					</div>
-				)}
+				{!loading &&
+					visiblePosts.length === 0 &&
+					(tab === "following" ? (
+						<EmptyState
+							icon={UserPlus}
+							title="Nothing here yet"
+							caption="Posts from people you follow land here. Follow someone from the suggestions to fill it up."
+						/>
+					) : (
+						<EmptyState
+							icon={Plus}
+							title="Your timeline is empty"
+							caption="Posts from people you follow show up here. Write the first one."
+							action={{
+								label: "Write a post",
+								onClick: () =>
+									document
+										.querySelector<HTMLTextAreaElement>("#post-composer-input")
+										?.focus(),
+							}}
+						/>
+					))}
 
-				{feedState.hasMore && !loading && feedState.posts.length > 0 && (
-					<div className="flex justify-center py-8">
-						<button
-							onClick={() => fetchFeed()}
-							className="text-zinc-500 hover:text-white font-sans text-sm underline decoration-dotted underline-offset-4"
-						>
-							Load more
-						</button>
+				{feedState.hasMore && !loading && tab === "foryou" && feedState.posts.length > 0 && (
+					<div ref={loadMoreRef} className="flex justify-center py-8">
+						{isFetchingMore ? (
+							<span className="h-9 flex items-center gap-2 font-sans text-[13px] text-muted">
+								<span className="w-4 h-4 rounded-full border-2 border-raised border-t-brand animate-spin" />
+								Loading more posts
+							</span>
+						) : (
+							<button
+								type="button"
+								onClick={loadMore}
+								className="h-9 px-4 rounded-pill border border-hairline bg-surface hover:bg-raised font-sans text-[13px] font-medium text-primary transition-colors cursor-pointer"
+							>
+								Show more posts
+							</button>
+						)}
 					</div>
 				)}
 			</div>

@@ -1,18 +1,26 @@
 import Link from "next/link";
 import Image from "next/image";
+// 03-icons: `copy` for copy-link, `bar-chart-3` for activity (both in-set).
+// Trash2/Ban/Pin have no in-set equivalents — kept as justified deviations.
 import {
-    Heart,
-    MessageSquare,
-    Repeat,
-    Bookmark,
-    MoreHorizontal,
     Trash2,
     Link2,
+    Copy,
     Flag,
     Ban,
-    BarChart2,
+    BarChart3,
     Pin,
 } from "lucide-react";
+import VerifiedIcon from "@/assets/icons/VerifiedIcon";
+// 03-icons: Phosphor is reserved for the Social post-action row + overflow menu.
+import {
+    ChatCircle,
+    Heart,
+    BookmarkSimple,
+    Export,
+    Check,
+    DotsThree,
+} from "@phosphor-icons/react";
 import clsx from "clsx";
 import { useState, useRef, useEffect, memo, useCallback, useMemo } from "react";
 
@@ -30,6 +38,7 @@ import {
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import ImageModal from "@/components/ui/ImageModal";
+import { renderRichText } from "@/components/ui/RichText";
 
 export interface PostProps {
     id: string;
@@ -60,6 +69,15 @@ export interface PostProps {
     };
 }
 
+/* Count formatting per 02-typography number rules: full 1,204 below 10K,
+   K/M abbreviation from 10K up — tabular-nums keeps rolls steady. */
+const formatCount = (n: number) => {
+    if (!n) return "";
+    if (n < 10_000) return n.toLocaleString();
+    if (n < 1_000_000) return `${(n / 1000).toFixed(0)}K`;
+    return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+};
+
 export const PostCard = memo(({ post }: { post: PostProps }) => {
     const [isLiked, setIsLiked] = useState(post.isLiked);
     const [likeCount, setLikeCount] = useState(post.stats.likes);
@@ -82,6 +100,16 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
     // Image Modal State
     const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(
         null,
+    );
+
+    // Share feedback: Export briefly swaps to a success Check after copying.
+    const [linkCopied, setLinkCopied] = useState(false);
+    const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(
+        () => () => {
+            if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+        },
+        [],
     );
 
     const isOwnPost = useMemo(
@@ -222,6 +250,10 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                         console.error("Failed to copy link: ", err);
                         toast("Failed to copy link", { type: "error" });
                     });
+            } else {
+                // Pin/activity/not-interested/block/report have no gateway
+                // support yet — say so instead of silently no-oping.
+                toast("Not available yet — coming soon", { type: "info" });
             }
         },
         [post.id, toast],
@@ -239,27 +271,11 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
         [shouldTruncate, post.content],
     );
 
-    const formattedContent = useMemo(() => {
-        const text = displayedContent;
-        const urlRegex = /(https?:\/\/[^\s]+)/g;
-        return text.split(urlRegex).map((part: string, index: number) => {
-            if (part.match(urlRegex)) {
-                return (
-                    <a
-                        key={index}
-                        href={part}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-yellow-500 hover:underline relative z-10 pointer-events-auto"
-                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                    >
-                        {part}
-                    </a>
-                );
-            }
-            return part;
-        });
-    }, [displayedContent]);
+    // URLs, $cashtags, #hashtags and @mentions become links (RichText).
+    const formattedContent = useMemo(
+        () => renderRichText(displayedContent),
+        [displayedContent],
+    );
 
     const getImageGridClass = useCallback((count: number) => {
         switch (count) {
@@ -284,7 +300,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
     if (isDeleted) return null;
 
     return (
-        <article className="relative block p-2.5 sm:p-4 border-b border-zinc-800/60 hover:bg-zinc-900/30 transition-colors">
+        <article className="relative block px-3 py-3 sm:px-4 sm:py-3.5 border-b border-hairline/60 hover:bg-surface/40 transition-colors">
             {/* ... Rest of the component remains the same ... */}
             <Link
                 href={`/post/${post.id}`}
@@ -313,7 +329,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                 <div className="shrink-0 pointer-events-auto mt-1">
                     <Link
                         href={`/profile/${post.author.username}`}
-                        className="relative block w-10 h-10 rounded-full overflow-hidden border border-zinc-700 hover:border-yellow-500 transition-colors"
+                        className="relative block w-[42px] h-[42px] rounded-pill overflow-hidden border border-hairline hover:border-brand transition-colors"
                     >
                         <Image
                             src={post.author.avatar}
@@ -324,22 +340,26 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                     </Link>
                 </div>
                 <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center justify-between mb-0.5">
                         <div className="flex items-center gap-2 overflow-hidden pointer-events-auto">
                             <Link
                                 href={`/profile/${post.author.username}`}
-                                className="font-bold text-white truncate font-sans hover:underline decoration-yellow-500 underline-offset-4"
+                                className="text-[15px] font-semibold leading-5 text-primary truncate font-sans hover:underline decoration-gold underline-offset-4"
                             >
                                 {post.author.name}
                             </Link>
+                            {/* Gold seal badge — the one VerifiedIcon everywhere. */}
+                            {post.author.isVerified && (
+                                <VerifiedIcon size={{ width: "16", height: "16" }} />
+                            )}
                             <Link
                                 href={`/profile/${post.author.username}`}
-                                className="text-zinc-500 text-sm truncate font-sans hover:text-zinc-300"
+                                className="text-subtle text-[13px] truncate font-sans hover:text-muted"
                             >
                                 @{post.author.username}
                             </Link>
-                            <span className="text-zinc-700 text-xs">•</span>
-                            <span className="text-zinc-500 text-sm font-sans hover:text-zinc-400">
+                            <span className="text-subtle text-xs">•</span>
+                            <span className="text-subtle text-[13px] font-sans whitespace-nowrap">
                                 {post.timestamp}
                             </span>
                         </div>
@@ -349,17 +369,18 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                             ref={menuRef}
                         >
                             <button
+                                type="button"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     setIsMenuOpen(!isMenuOpen);
                                 }}
                                 className={clsx(
-                                    "text-zinc-600 hover:text-yellow-500 transition-colors p-1.5 rounded-full hover:bg-yellow-500/10 cursor-pointer",
+                                    "flex h-10 w-10 items-center justify-center text-subtle hover:text-gold transition-colors rounded-pill hover:bg-brand/10 cursor-pointer",
                                     isMenuOpen &&
-                                        "text-yellow-500 bg-yellow-500/10",
+                                        "text-gold bg-brand/10",
                                 )}
                             >
-                                <MoreHorizontal className="w-5 h-5" />
+                                <DotsThree size={20} weight="bold" />
                             </button>
 
                             <AnimatePresence>
@@ -367,74 +388,74 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                     <motion.div
                                         initial={{
                                             opacity: 0,
-                                            scale: 0.95,
-                                            y: -10,
-                                            x: 10,
+                                            scale: 0.98,
+                                            y: -8,
                                         }}
                                         animate={{
                                             opacity: 1,
                                             scale: 1,
                                             y: 0,
-                                            x: 0,
                                         }}
                                         exit={{
                                             opacity: 0,
-                                            scale: 0.95,
-                                            y: -10,
-                                            x: 10,
+                                            transition: { duration: 0.12 },
                                         }}
                                         transition={{
-                                            duration: 0.15,
-                                            ease: "easeOut",
+                                            duration: 0.2,
+                                            ease: [0.2, 0, 0, 1],
                                         }}
-                                        className="absolute right-0 top-8 w-56 bg-zinc-900 rounded-xl border border-zinc-800 shadow-2xl z-50 overflow-hidden py-1"
+                                        className="absolute right-0 top-8 w-[220px] bg-surface rounded-lg border border-hairline shadow-nav z-dropdown overflow-hidden py-1.5"
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         {isOwnPost ? (
                                             <>
                                                 <button
+                                                    type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleMenuAction(
                                                             "copy_link",
                                                         );
                                                     }}
-                                                    className="w-full text-left px-4 py-3 hover:bg-zinc-800 flex items-center gap-3 text-sm text-zinc-300 hover:text-white transition-colors font-sans"
+                                                    className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
                                                 >
-                                                    <Link2 className="w-4 h-4" />
+                                                    <Copy className="w-4 h-4" />
                                                     Copy link
                                                 </button>
                                                 <button
+                                                    type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleMenuAction("pin");
                                                     }}
-                                                    className="w-full text-left px-4 py-3 hover:bg-zinc-800 flex items-center gap-3 text-sm text-zinc-300 hover:text-white transition-colors font-sans"
+                                                    className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
                                                 >
                                                     <Pin className="w-4 h-4" />
                                                     Pin to profile
                                                 </button>
                                                 <button
+                                                    type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleMenuAction(
                                                             "activity",
                                                         );
                                                     }}
-                                                    className="w-full text-left px-4 py-3 hover:bg-zinc-800 flex items-center gap-3 text-sm text-zinc-300 hover:text-white transition-colors font-sans"
+                                                    className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
                                                 >
-                                                    <BarChart2 className="w-4 h-4" />
+                                                    <BarChart3 className="w-4 h-4" />
                                                     View activity
                                                 </button>
-                                                <div className="my-1 border-t border-zinc-800" />
+                                                <div className="my-1 border-t border-hairline" />
                                                 <button
+                                                    type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleMenuAction(
                                                             "delete",
                                                         );
                                                     }}
-                                                    className="w-full text-left px-4 py-3 hover:bg-red-500/10 text-red-500 flex items-center gap-3 text-sm transition-colors font-sans font-bold"
+                                                    className="w-full text-left px-3.5 py-2.5 hover:bg-raised text-danger flex items-center gap-2.5 text-sm font-medium transition-colors font-sans"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                     Delete post
@@ -443,51 +464,55 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                         ) : (
                                             <>
                                                 <button
+                                                    type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleMenuAction(
                                                             "not_interested",
                                                         );
                                                     }}
-                                                    className="w-full text-left px-4 py-3 hover:bg-zinc-800 flex items-center gap-3 text-sm text-zinc-300 hover:text-white transition-colors font-sans"
+                                                    className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
                                                 >
                                                     <Ban className="w-4 h-4" />
                                                     Not interested
                                                 </button>
                                                 <button
+                                                    type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleMenuAction(
                                                             "copy_link",
                                                         );
                                                     }}
-                                                    className="w-full text-left px-4 py-3 hover:bg-zinc-800 flex items-center gap-3 text-sm text-zinc-300 hover:text-white transition-colors font-sans"
+                                                    className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
                                                 >
-                                                    <Link2 className="w-4 h-4" />
+                                                    <Copy className="w-4 h-4" />
                                                     Copy link
                                                 </button>
-                                                <div className="my-1 border-t border-zinc-800" />
+                                                <div className="my-1 border-t border-hairline" />
                                                 <button
+                                                    type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleMenuAction(
                                                             "block",
                                                         );
                                                     }}
-                                                    className="w-full text-left px-4 py-3 hover:bg-zinc-800 flex items-center gap-3 text-sm text-zinc-300 hover:text-white transition-colors font-sans"
+                                                    className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
                                                 >
                                                     <Ban className="w-4 h-4" />
                                                     Block @
                                                     {post.author.username}
                                                 </button>
                                                 <button
+                                                    type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleMenuAction(
                                                             "report",
                                                         );
                                                     }}
-                                                    className="w-full text-left px-4 py-3 hover:bg-zinc-800 flex items-center gap-3 text-sm text-zinc-300 hover:text-white transition-colors font-sans"
+                                                    className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
                                                 >
                                                     <Flag className="w-4 h-4" />
                                                     Report post
@@ -500,14 +525,15 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                         </div>
                     </div>
                     {/* Post Content */}
-                    <p className="text-zinc-100 whitespace-pre-wrap mb-4 font-normal leading-relaxed text-[14px] font-sans tracking-tight pointer-events-none">
+                    {/* UI/Body: Public Sans Regular 15 — post text size per 02-typography. */}
+                    <p className="text-primary whitespace-pre-wrap mb-1.5 font-normal leading-[1.55] text-[15px] font-sans tracking-tight pointer-events-none">
                         {formattedContent}
                         {shouldTruncate && (
-                            <span className="text-zinc-500 pointer-events-auto">
+                            <span className="text-subtle pointer-events-auto">
                                 ...{" "}
                                 <Link
                                     href={`/post/${post.id}`}
-                                    className="text-yellow-500 hover:underline font-medium relative z-20"
+                                    className="text-gold hover:underline font-medium relative z-20"
                                 >
                                     See more
                                 </Link>
@@ -521,10 +547,10 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                             href={post.linkPreview.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="block mt-2 mb-3 rounded-xl border border-zinc-800 overflow-hidden bg-zinc-900/50 hover:bg-zinc-900 transition-colors pointer-events-auto group"
+                            className="block mt-2 mb-3 rounded-xl border border-hairline overflow-hidden bg-surface/50 hover:bg-surface transition-colors pointer-events-auto group"
                         >
                             {post.linkPreview.image && (
-                                <div className="aspect-video relative w-full bg-zinc-900 border-b border-zinc-800/50">
+                                <div className="aspect-video relative w-full bg-surface border-b border-hairline/50">
                                     <img
                                         src={post.linkPreview.image}
                                         alt={post.linkPreview.title}
@@ -537,13 +563,13 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                 </div>
                             )}
                             <div className="p-3">
-                                <h3 className="text-sm font-bold text-zinc-200 line-clamp-1 font-sans mb-0.5 group-hover:text-yellow-500 transition-colors">
+                                <h3 className="text-sm font-bold text-primary line-clamp-1 font-sans mb-0.5 group-hover:text-gold transition-colors">
                                     {post.linkPreview.title}
                                 </h3>
-                                <p className="text-xs text-zinc-500 line-clamp-2 font-sans mb-1">
+                                <p className="text-[13px] text-muted line-clamp-2 font-sans mb-1">
                                     {post.linkPreview.description}
                                 </p>
-                                <div className="flex items-center gap-1 text-[10px] text-zinc-600 font-sans">
+                                <div className="flex items-center gap-1 text-[11px] text-muted font-sans">
                                     <Link2 className="w-3 h-3" />
                                     <span>{post.linkPreview.domain}</span>
                                 </div>
@@ -556,7 +582,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                             <img
                                 src={post.images[0]}
                                 alt="Post attachment"
-                                className="block h-auto w-auto max-w-full max-h-[500px] object-cover rounded-xl border border-zinc-800 cursor-zoom-in hover:opacity-95 transition-all relative z-10"
+                                className="block h-auto w-auto max-w-full max-h-[500px] object-cover rounded-xl border border-hairline cursor-zoom-in hover:opacity-95 transition-opacity relative z-10"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     e.preventDefault();
@@ -568,7 +594,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                     {post.images && post.images.length > 1 && (
                         <div
                             className={clsx(
-                                "grid gap-0.5 rounded-xl overflow-hidden mb-3 w-full border border-zinc-800 pointer-events-auto",
+                                "grid gap-0.5 rounded-xl overflow-hidden mb-3 w-full border border-hairline pointer-events-auto",
                                 getImageGridClass(post.images.length),
                             )}
                         >
@@ -596,69 +622,196 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                 ))}
                         </div>
                     )}
-                    <div className="flex items-center justify-between text-zinc-500 mt-2 max-w-md pointer-events-auto">
+                    {/* Post actions. 03-icons: this row is the ONE place Phosphor is
+                        used instead of Lucide, matching the mobile app. 15px, text/muted. */}
+                    <div className="flex items-center justify-between max-w-[420px] text-muted mt-1 -mb-1.5 pointer-events-auto">
                         <Link
                             href={`/post/${post.id}`}
                             onClick={(e) => e.stopPropagation()}
-                            className="flex items-center gap-2 hover:text-blue-400 transition-colors group cursor-pointer"
+                            aria-label="Reply"
+                            className="flex items-center gap-0.5 -ml-2 hover:text-primary transition-colors group cursor-pointer"
                         >
-                            <div className="p-2 rounded-full group-hover:bg-blue-400/10 transition-colors">
-                                <MessageSquare className="w-4 h-4" />
-                            </div>
-                            <span className="text-xs font-sans group-hover:text-blue-400">
-                                {post.stats.replies || ""}
+                            <span className="flex h-10 w-10 items-center justify-center rounded-pill group-hover:bg-primary/10 transition group-active:scale-[0.98]">
+                                <ChatCircle size={15} />
+                            </span>
+                            <span className="text-[13px] font-sans tabular-nums">
+                                {formatCount(post.stats.replies)}
                             </span>
                         </Link>
                         <button
+                            type="button"
+                            aria-label={isLiked ? "Unlike" : "Like"}
+                            aria-pressed={isLiked}
                             onClick={(e) => {
                                 e.stopPropagation();
                                 handleLike();
                             }}
                             className={clsx(
-                                "flex items-center gap-2 transition-colors group cursor-pointer",
-                                isLiked
-                                    ? "text-pink-500"
-                                    : "hover:text-pink-500",
+                                "flex items-center gap-0.5 transition-colors group cursor-pointer",
+                                isLiked ? "text-danger" : "hover:text-danger",
                             )}
                         >
-                            <div className="p-2 rounded-full group-hover:bg-pink-500/10 transition-colors">
-                                <Heart
-                                    className={clsx(
-                                        "w-4 h-4",
-                                        isLiked && "fill-current",
+                            <span className="relative flex h-10 w-10 items-center justify-center rounded-pill group-hover:bg-danger/10 transition group-active:scale-[0.98]">
+                                {/* One-shot danger wash on like — opacity-only,
+                                    fades out over motion-slow and stays gone. */}
+                                <AnimatePresence>
+                                    {isLiked && (
+                                        <motion.span
+                                            key="like-wash"
+                                            className="absolute inset-0 rounded-pill bg-danger/20"
+                                            initial={{ opacity: 0.7 }}
+                                            animate={{ opacity: 0 }}
+                                            exit={{ opacity: 0 }}
+                                            transition={{
+                                                duration: 0.32,
+                                                ease: [0.2, 0, 0, 1],
+                                            }}
+                                        />
                                     )}
-                                />
-                            </div>
-                            <span
-                                className={clsx(
-                                    "text-xs font-sans",
-                                    isLiked && "text-pink-500",
-                                    "group-hover:text-pink-500",
-                                )}
-                            >
-                                {likeCount || ""}
+                                </AnimatePresence>
+                                {/* Micro-settle on like: scale stays inside the
+                                    spec's 0.98–1 budget; the fill+color swap is
+                                    the real feedback. */}
+                                <motion.span
+                                    animate={{ scale: isLiked ? [0.98, 1] : 1 }}
+                                    transition={{
+                                        duration: 0.2,
+                                        ease: [0.2, 0, 0, 1],
+                                    }}
+                                    className="flex"
+                                >
+                                    <Heart
+                                        size={15}
+                                        weight={isLiked ? "fill" : "regular"}
+                                    />
+                                </motion.span>
+                            </span>
+                            <span className="relative overflow-hidden text-[13px] font-sans tabular-nums">
+                                <AnimatePresence mode="wait" initial={false}>
+                                    {/* Count rolls 8px in the direction of change. */}
+                                    <motion.span
+                                        key={likeCount}
+                                        initial={{ opacity: 0, y: isLiked ? 8 : -8 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{
+                                            opacity: 0,
+                                            transition: { duration: 0.12 },
+                                        }}
+                                        transition={{
+                                            duration: 0.2,
+                                            ease: [0.2, 0, 0, 1],
+                                        }}
+                                        className="inline-block"
+                                    >
+                                        {formatCount(likeCount)}
+                                    </motion.span>
+                                </AnimatePresence>
                             </span>
                         </button>
                         <button
+                            type="button"
+                            aria-label={isBookmarked ? "Remove bookmark" : "Bookmark"}
+                            aria-pressed={isBookmarked}
                             onClick={(e) => {
                                 e.stopPropagation();
                                 handleBookmark();
                             }}
                             className={clsx(
-                                "flex items-center gap-2 transition-colors group cursor-pointer",
-                                isBookmarked
-                                    ? "text-blue-500"
-                                    : "hover:text-blue-500",
+                                "flex items-center transition-colors group cursor-pointer",
+                                isBookmarked ? "text-gold" : "hover:text-gold",
                             )}
                         >
-                            <div className="p-2 rounded-full group-hover:bg-blue-500/10 transition-colors">
-                                <Bookmark
-                                    className={clsx(
-                                        "w-4 h-4",
-                                        isBookmarked && "fill-current",
+                            <span className="relative flex h-10 w-10 items-center justify-center rounded-pill group-hover:bg-gold/10 transition group-active:scale-[0.98]">
+                                <AnimatePresence>
+                                    {isBookmarked && (
+                                        <motion.span
+                                            key="bookmark-wash"
+                                            className="absolute inset-0 rounded-pill bg-gold/20"
+                                            initial={{ opacity: 0.7 }}
+                                            animate={{ opacity: 0 }}
+                                            exit={{ opacity: 0 }}
+                                            transition={{
+                                                duration: 0.32,
+                                                ease: [0.2, 0, 0, 1],
+                                            }}
+                                        />
                                     )}
-                                />
-                            </div>
+                                </AnimatePresence>
+                                <motion.span
+                                    animate={{ scale: isBookmarked ? [0.98, 1] : 1 }}
+                                    transition={{
+                                        duration: 0.2,
+                                        ease: [0.2, 0, 0, 1],
+                                    }}
+                                    className="flex"
+                                >
+                                    <BookmarkSimple
+                                        size={15}
+                                        weight={isBookmarked ? "fill" : "regular"}
+                                    />
+                                </motion.span>
+                            </span>
+                        </button>
+                        <button
+                            type="button"
+                            aria-label="Copy link to post"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleMenuAction("copy_link");
+                                setLinkCopied(true);
+                                if (copiedTimerRef.current)
+                                    clearTimeout(copiedTimerRef.current);
+                                copiedTimerRef.current = setTimeout(
+                                    () => setLinkCopied(false),
+                                    1500,
+                                );
+                            }}
+                            className={clsx(
+                                "flex items-center transition-colors group cursor-pointer",
+                                linkCopied
+                                    ? "text-success"
+                                    : "hover:text-primary",
+                            )}
+                        >
+                            <span className="flex h-10 w-10 items-center justify-center rounded-pill group-hover:bg-primary/10 transition group-active:scale-[0.98]">
+                                <AnimatePresence mode="wait" initial={false}>
+                                    {linkCopied ? (
+                                        <motion.span
+                                            key="copied"
+                                            initial={{ opacity: 0, y: 4 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{
+                                                opacity: 0,
+                                                transition: { duration: 0.12 },
+                                            }}
+                                            transition={{
+                                                duration: 0.2,
+                                                ease: [0.2, 0, 0, 1],
+                                            }}
+                                            className="flex"
+                                        >
+                                            <Check size={15} weight="bold" />
+                                        </motion.span>
+                                    ) : (
+                                        <motion.span
+                                            key="share"
+                                            initial={{ opacity: 0, y: 4 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{
+                                                opacity: 0,
+                                                transition: { duration: 0.12 },
+                                            }}
+                                            transition={{
+                                                duration: 0.2,
+                                                ease: [0.2, 0, 0, 1],
+                                            }}
+                                            className="flex"
+                                        >
+                                            <Export size={15} />
+                                        </motion.span>
+                                    )}
+                                </AnimatePresence>
+                            </span>
                         </button>
                     </div>
                 </div>

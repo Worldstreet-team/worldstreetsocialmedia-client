@@ -1,42 +1,49 @@
-import clsx from "clsx";
-
 interface PostSkeletonProps {
 	hasMedia?: boolean;
 }
 
+/**
+ * Loading placeholder for a post.
+ *
+ * 04-components "Skeleton": fill bg/raised, Line height 12 radius 4 (widths
+ * varied 40-90%), Card radius 13, white @4% shimmer sweep. The `skeleton`
+ * utility (globals.css) carries the fill + sweep and goes static under
+ * prefers-reduced-motion.
+ *
+ * Geometry mirrors PostCard exactly — 42px avatar, same gaps, 4 action slots —
+ * so nothing shifts when the real post swaps in.
+ */
 export const PostSkeleton = ({ hasMedia = false }: PostSkeletonProps) => {
 	return (
-		<div className="p-6 border-b border-zinc-800 animate-pulse">
+		<div className="p-6 border-b border-hairline">
 			<div className="flex gap-4">
-				{/* Avatar Skeleton */}
 				<div className="shrink-0">
-					<div className="w-12 h-12 rounded-full bg-zinc-800" />
+					<div className="skeleton w-[42px] h-[42px] rounded-pill" />
 				</div>
 
 				<div className="flex-1 min-w-0">
-					{/* Header Skeleton */}
-					<div className="flex items-center gap-2 mb-2">
-						<div className="h-4 w-24 bg-zinc-800 rounded" />
-						<div className="h-3 w-16 bg-zinc-800 rounded" />
+					{/* name + handle */}
+					<div className="flex items-center gap-2 mb-2.5">
+						<div className="skeleton h-3 w-[28%] rounded-sm" />
+						<div className="skeleton h-3 w-[18%] rounded-sm" />
 					</div>
 
-					{/* Content Skeleton */}
+					{/* body lines */}
 					<div className="space-y-2 mb-4">
-						<div className="h-4 w-full bg-zinc-800 rounded" />
-						<div className="h-4 w-3/4 bg-zinc-800 rounded" />
+						<div className="skeleton h-3 w-[90%] rounded-sm" />
+						<div className="skeleton h-3 w-[62%] rounded-sm" />
 					</div>
 
-					{/* Media Skeleton (Optional appearance) */}
 					{hasMedia && (
-						<div className="w-full aspect-video bg-zinc-800 rounded-xl mb-4" />
+						<div className="skeleton w-full aspect-video rounded-xl mb-4" />
 					)}
 
-					{/* Actions Skeleton */}
-					<div className="flex items-center justify-between max-w-md mt-2">
-						<div className="h-8 w-8 bg-zinc-800 rounded-full" />
-						<div className="h-8 w-8 bg-zinc-800 rounded-full" />
-						<div className="h-8 w-8 bg-zinc-800 rounded-full" />
-						<div className="h-8 w-8 bg-zinc-800 rounded-full" />
+					{/* action row — same 48px gap rhythm as the real card */}
+					<div className="flex items-center gap-12 mt-3">
+						<div className="skeleton h-5 w-5 rounded-pill" />
+						<div className="skeleton h-5 w-5 rounded-pill" />
+						<div className="skeleton h-5 w-5 rounded-pill" />
+						<div className="skeleton h-5 w-5 rounded-pill" />
 					</div>
 				</div>
 			</div>

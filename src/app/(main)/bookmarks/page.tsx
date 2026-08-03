@@ -8,6 +8,7 @@ import { useAtom, useAtomValue } from "jotai";
 import { userAtom } from "@/store/user.atom";
 import { bookmarksAtom, bookmarksLoadedAtom } from "@/store/bookmarks.atom";
 import { Bookmark } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default function BookmarksPage() {
 	const [bookmarks, setBookmarks] = useAtom(bookmarksAtom);
@@ -34,12 +35,12 @@ export default function BookmarksPage() {
 
 	return (
 		<div className="flex flex-col min-h-screen pb-20">
-			<header className="sticky top-0 z-20 bg-black/80 backdrop-blur-md border-b border-zinc-800">
+			<header className="sticky top-0 z-sticky bg-page border-b border-hairline">
 				<div className="px-4 py-3">
-					<h1 className="text-xl font-bold font-sans text-white">
+					<h1 className="font-display text-lg font-semibold text-primary">
 						Bookmarks
 					</h1>
-					<div className="text-zinc-500 text-[13px] font-sans">
+					<div className="text-muted text-[13px] font-sans">
 						@{user?.username}
 					</div>
 				</div>
@@ -54,21 +55,15 @@ export default function BookmarksPage() {
 					</div>
 				) : bookmarks.length > 0 ? (
 					bookmarks.map((post) => (
-						<div key={post.id} className="border-b border-zinc-800">
-							<PostCard post={post} />
-						</div>
+						<PostCard key={post.id} post={post} />
 					))
 				) : (
-					<div className="p-12 text-center flex flex-col items-center justify-center">
-						<div className="w-16 h-16 bg-zinc-900 rounded-full flex items-center justify-center mb-4">
-							<Bookmark className="w-8 h-8 text-zinc-500" />
-						</div>
-						<h2 className="text-xl font-bold mb-2 text-white font-sans">
-							Save posts for later
-						</h2>
-						<p className="text-zinc-500 text-sm max-w-sm font-sans">
-							Bookmark posts to easily find them again in the future.
-						</p>
+					<div className="py-10">
+						<EmptyState
+							icon={Bookmark}
+							title="Save posts for later"
+							caption="Tap the bookmark on any post and it lands here — only you can see your bookmarks."
+						/>
 					</div>
 				)}
 			</div>

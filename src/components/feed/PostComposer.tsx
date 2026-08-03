@@ -7,6 +7,7 @@ import { useUser } from "@clerk/nextjs";
 import { createPostAction } from "@/lib/post.actions";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import EmojiPicker, { type EmojiClickData, Theme } from "emoji-picker-react";
+import { useTheme } from "next-themes";
 import clsx from "clsx";
 
 interface PostComposerProps {
@@ -19,6 +20,73 @@ interface MediaItem {
 	file: File;
 	type: "image" | "video";
 }
+
+// Same limit PostCard truncates at.
+const MAX_LENGTH = 280;
+
+/**
+ * Character-budget ring: gold while comfortable, status/warning inside the
+ * last 10%, status/danger at/over the limit. Count (tabular) appears only
+ * once the warning tier starts — quiet until it matters.
+ */
+const CharacterRing = ({ length }: { length: number }) => {
+	const remaining = MAX_LENGTH - length;
+	const pct = Math.min(length / MAX_LENGTH, 1);
+	const radius = 8;
+	const circumference = 2 * Math.PI * radius;
+	const tone =
+		remaining < 0
+			? "text-danger"
+			: remaining <= 28
+				? "text-warning"
+				: "text-gold";
+
+	if (length === 0) return null;
+
+	return (
+		<div className="flex items-center gap-2">
+			{remaining <= 28 && (
+				<span
+					className={clsx(
+						"font-sans text-[13px] font-medium tabular-nums",
+						tone,
+					)}
+					aria-live="polite"
+				>
+					{remaining}
+				</span>
+			)}
+			<svg
+				width="20"
+				height="20"
+				viewBox="0 0 20 20"
+				aria-hidden="true"
+				className={clsx("-rotate-90", tone)}
+			>
+				<circle
+					cx="10"
+					cy="10"
+					r={radius}
+					fill="none"
+					strokeWidth="2"
+					stroke="var(--ws-bg-track)"
+				/>
+				<circle
+					cx="10"
+					cy="10"
+					r={radius}
+					fill="none"
+					strokeWidth="2"
+					stroke="currentColor"
+					strokeLinecap="round"
+					strokeDasharray={circumference}
+					strokeDashoffset={circumference * (1 - pct)}
+					className="transition-[stroke-dashoffset]"
+				/>
+			</svg>
+		</div>
+	);
+};
 
 export const PostComposer = ({
 	onPostSuccess,
@@ -39,6 +107,8 @@ export const PostComposer = ({
 	const emojiPickerRef = useRef<HTMLDivElement>(null);
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
 	const { toast } = useToast();
+	// Picker follows the app theme instead of hardcoding dark.
+	const { resolvedTheme } = useTheme();
 
 	// Detect links in content
 	useEffect(() => {
@@ -94,6 +164,30 @@ export const PostComposer = ({
 		};
 	}, []);
 
+	// Draft persistence — a refresh or accidental navigation shouldn't eat a
+	// half-written post. Text only; object URLs can't survive a reload.
+	// The clear branch is gated on having SEEN content, so the effect's
+	// initial empty-content run (and StrictMode's double-run) can never
+	// delete a stored draft before the restore lands.
+	const DRAFT_KEY = "ws-social-draft";
+	const draftHadContentRef = useRef(false);
+	useEffect(() => {
+		try {
+			const saved = localStorage.getItem(DRAFT_KEY);
+			if (saved) setContent((prev) => prev || saved);
+		} catch {}
+	}, []);
+	useEffect(() => {
+		try {
+			if (content) {
+				draftHadContentRef.current = true;
+				localStorage.setItem(DRAFT_KEY, content);
+			} else if (draftHadContentRef.current) {
+				localStorage.removeItem(DRAFT_KEY);
+			}
+		} catch {}
+	}, [content]);
+
 	// Auto-resize textarea
 	useEffect(() => {
 		if (textareaRef.current) {
@@ -122,6 +216,29 @@ export const PostComposer = ({
 		}
 	};
 
+	// Paste an image (screenshot, copied file) straight into the composer.
+	const handlePaste = (e: React.ClipboardEvent) => {
+		const files = Array.from(e.clipboardData.files).filter((f) =>
+			f.type.startsWith("image/"),
+		);
+		if (files.length === 0 || linkPreview) return;
+		e.preventDefault();
+		const remainingSlots = 4 - mediaItems.length;
+		const newItems: MediaItem[] = files
+			.slice(0, remainingSlots)
+			.map((file) => ({
+				url: URL.createObjectURL(file),
+				file,
+				type: "image",
+			}));
+		if (newItems.length > 0) {
+			setMediaItems((prev) => [...prev, ...newItems]);
+			toast(newItems.length > 1 ? "Images attached" : "Image attached", {
+				type: "success",
+			});
+		}
+	};
+
 	const removeMedia = (index: number) => {
 		setMediaItems((prev) => {
 			const newItems = [...prev];
@@ -140,8 +257,11 @@ export const PostComposer = ({
 		setContent((prev) => prev + emojiData.emoji);
 	};
 
+	const isOverLimit = content.length > MAX_LENGTH;
+
 	const handleSubmit = async () => {
 		if ((!content.trim() && mediaItems.length === 0) || isPosting) return;
+		if (isOverLimit) return;
 
 		onPostStart?.();
 		setIsPosting(true);
@@ -168,7 +288,6 @@ export const PostComposer = ({
 				lastCheckedUrl.current = null;
 				setShowEmojiPicker(false);
 				toast("Post published!", { type: "success" });
-				toast("Post published!", { type: "success" });
 				onPostSuccess?.(result.data);
 			} else {
 				toast(result.message || "Failed to post", { type: "error" });
@@ -181,11 +300,11 @@ export const PostComposer = ({
 	};
 
 	return (
-		<div className="border-b border-zinc-800 p-6 mb-2 relative">
+		<div className="border-b border-hairline p-6 mb-2 relative">
 			<div className="flex gap-4">
 				<div className="shrink-0">
 					{user ? (
-						<div className="relative w-10 h-10 rounded-full overflow-hidden border border-zinc-700">
+						<div className="relative w-10 h-10 rounded-full overflow-hidden border border-hairline">
 							<Image
 								src={user.imageUrl}
 								alt={user.username || "User"}
@@ -194,18 +313,20 @@ export const PostComposer = ({
 							/>
 						</div>
 					) : (
-						<div className="w-12 h-12 rounded-full bg-zinc-800 border items-center justify-center flex border-zinc-700 overflow-hidden">
-							<User className="w-6 h-6 text-zinc-500" />
+						<div className="w-10 h-10 rounded-pill bg-raised border items-center justify-center flex border-hairline overflow-hidden">
+							<User className="w-5 h-5 text-subtle" />
 						</div>
 					)}
 				</div>
 				<div className="flex-1 w-full">
 					<textarea
+						id="post-composer-input"
 						ref={textareaRef}
 						value={content}
 						onChange={(e) => setContent(e.target.value)}
-						placeholder="What's happening?"
-						className="w-full bg-transparent text-lg text-white placeholder:text-zinc-600 outline-none resize-none min-h-[60px] font-medium leading-relaxed overflow-hidden font-sans"
+						onPaste={handlePaste}
+						placeholder="What's moving today?"
+						className="w-full bg-transparent text-lg text-primary placeholder:text-subtle outline-none resize-none min-h-[60px] font-medium leading-relaxed overflow-hidden font-sans"
 						rows={1}
 					/>
 
@@ -221,7 +342,7 @@ export const PostComposer = ({
 								<div
 									key={item.url}
 									className={clsx(
-										"relative bg-zinc-900 border border-zinc-800",
+										"relative bg-surface border border-hairline",
 										mediaItems.length > 1 ? "aspect-square" : "aspect-video",
 									)}
 								>
@@ -233,7 +354,7 @@ export const PostComposer = ({
 									/>
 									<button
 										onClick={() => removeMedia(index)}
-										className="absolute top-2 right-2 p-1 bg-black/50 hover:bg-black/80 rounded-full text-white transition-colors"
+										className="absolute top-2 right-2 p-1 bg-page/50 hover:bg-page/80 rounded-full text-primary transition-colors"
 									>
 										<X className="w-4 h-4" />
 									</button>
@@ -244,15 +365,15 @@ export const PostComposer = ({
 
 					{/* Link Preview Card */}
 					{linkPreview && mediaItems.length === 0 && (
-						<div className="mt-3 mb-2 rounded-xl border border-zinc-800 overflow-hidden bg-zinc-900/50 relative group">
+						<div className="mt-3 mb-2 rounded-xl border border-hairline overflow-hidden bg-surface/50 relative group">
 							<button
 								onClick={removeLinkPreview}
-								className="absolute top-2 right-2 p-1 bg-black/50 hover:bg-black/80 rounded-full text-white transition-colors z-10 opacity-0 group-hover:opacity-100"
+								className="absolute top-2 right-2 p-1 bg-page/50 hover:bg-page/80 rounded-full text-primary transition-colors z-10 opacity-0 group-hover:opacity-100"
 							>
 								<X className="w-4 h-4" />
 							</button>
 							{linkPreview.image && (
-								<div className="aspect-video relative w-full bg-zinc-900 border-b border-zinc-800/50">
+								<div className="aspect-video relative w-full bg-surface border-b border-hairline/50">
 									<img
 										src={linkPreview.image}
 										alt={linkPreview.title}
@@ -264,13 +385,13 @@ export const PostComposer = ({
 								</div>
 							)}
 							<div className="p-3">
-								<h3 className="text-sm font-bold text-zinc-200 line-clamp-1 font-sans mb-0.5">
+								<h3 className="text-sm font-bold text-primary line-clamp-1 font-sans mb-0.5">
 									{linkPreview.title}
 								</h3>
-								<p className="text-xs text-zinc-500 line-clamp-2 font-sans mb-1">
+								<p className="text-[13px] text-muted line-clamp-2 font-sans mb-1">
 									{linkPreview.description}
 								</p>
-								<div className="flex items-center gap-1 text-[10px] text-zinc-600 font-sans">
+								<div className="flex items-center gap-1 text-[11px] text-muted font-sans">
 									<Link2 className="w-3 h-3" />
 									<span>{linkPreview.domain}</span>
 								</div>
@@ -279,26 +400,26 @@ export const PostComposer = ({
 					)}
 
 					{isFetchingPreview && (
-						<div className="mt-3 mb-2 p-4 rounded-xl border border-zinc-800 bg-zinc-900/10 flex items-center justify-center gap-2 text-zinc-500 font-sans text-xs">
-							<div className="w-3 h-3 border-2 border-zinc-500/30 border-t-zinc-500 rounded-full animate-spin" />
+						<div className="mt-3 mb-2 p-4 rounded-xl border border-hairline bg-surface/10 flex items-center justify-center gap-2 text-muted font-sans text-[13px]">
+							<div className="w-3 h-3 border-2 border-subtle/30 border-t-subtle rounded-full animate-spin" />
 							Fetching preview...
 						</div>
 					)}
 
-					<div className="flex items-center justify-between mt-2 pt-2">
-						<div className="flex gap-2 text-yellow-500 relative">
+					<div className="flex items-center justify-between mt-2 pt-3 border-t border-hairline/60">
+						<div className="flex gap-2 text-gold relative">
 							<button
 								onClick={() => !linkPreview && fileInputRef.current?.click()}
 								className={clsx(
 									"p-2 rounded-full transition-colors relative group",
 									linkPreview
-										? "opacity-50 cursor-not-allowed bg-zinc-800/50 text-zinc-600"
-										: "hover:bg-yellow-500/10 cursor-pointer",
+										? "opacity-50 cursor-not-allowed bg-raised/50 text-subtle"
+										: "hover:bg-brand/10 cursor-pointer",
 								)}
 							>
 								<ImageIcon className="w-5 h-5" />
 								{!linkPreview && (
-									<span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] bg-zinc-800 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
+									<span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] bg-raised text-primary px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
 										Media
 									</span>
 								)}
@@ -316,12 +437,12 @@ export const PostComposer = ({
 							<button
 								onClick={() => setShowEmojiPicker(!showEmojiPicker)}
 								className={clsx(
-									"p-2 hover:bg-yellow-500/10 rounded-full transition-colors relative group cursor-pointer",
-									showEmojiPicker && "bg-yellow-500/10",
+									"flex h-10 w-10 items-center justify-center hover:bg-brand/10 rounded-pill transition-colors relative group cursor-pointer",
+									showEmojiPicker && "bg-brand/10",
 								)}
 							>
 								<Smile className="w-5 h-5" />
-								<span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] bg-zinc-800 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
+								<span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] bg-raised text-primary px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
 									Emoji
 								</span>
 							</button>
@@ -329,12 +450,16 @@ export const PostComposer = ({
 							{/* Emoji Picker Popover */}
 							{showEmojiPicker && (
 								<div
-									className="absolute top-12 left-0 z-50 animate-in fade-in zoom-in-95 duration-200"
+									className="absolute top-12 left-0 z-dropdown animate-rise ws-emoji-picker"
 									ref={emojiPickerRef}
 								>
 									<EmojiPicker
 										onEmojiClick={onEmojiClick}
-										theme={Theme.DARK}
+										theme={
+											resolvedTheme === "light"
+												? Theme.LIGHT
+												: Theme.DARK
+										}
 										width={320}
 										height={400}
 										lazyLoadEmojis={true}
@@ -343,27 +468,34 @@ export const PostComposer = ({
 							)}
 						</div>
 
-						<button
+						<div className="flex items-center gap-3">
+							<CharacterRing length={content.length} />
+							<button
 							onClick={handleSubmit}
 							disabled={
-								(!content.trim() && mediaItems.length === 0) || isPosting
+								(!content.trim() && mediaItems.length === 0) ||
+								isPosting ||
+								isOverLimit
 							}
 							className={clsx(
-								"px-6 py-2 rounded-full font-bold text-sm font-sans transition-all flex items-center gap-2 cursor-pointer",
-								(!content.trim() && mediaItems.length === 0) || isPosting
-									? "bg-zinc-800 text-zinc-500 cursor-not-allowed opacity-50"
-									: "bg-white text-black hover:bg-yellow-500 hover:scale-105 active:scale-95 shadow-[2px_2px_0px_rgba(255,255,255,0.2)] hover:shadow-none",
+								"px-[18px] h-9 rounded-pill font-semibold text-[13px] font-sans transition-colors flex items-center gap-2 cursor-pointer",
+								(!content.trim() && mediaItems.length === 0) ||
+									isPosting ||
+									isOverLimit
+									? "bg-raised text-subtle cursor-not-allowed opacity-50"
+									: "bg-brand text-brand-on hover:bg-brand-active",
 							)}
 						>
 							{isPosting ? (
-								<div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+								<div className="w-4 h-4 border-2 border-brand-on/30 border-t-brand-on rounded-full animate-spin" />
 							) : (
 								<>
 									<span className="uppercase">Post</span>
 									<Send className="w-3 h-3" />
 								</>
 							)}
-						</button>
+							</button>
+						</div>
 					</div>
 				</div>
 			</div>

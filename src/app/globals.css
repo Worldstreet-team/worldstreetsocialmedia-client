@@ -1,83 +1,246 @@
 @import "tailwindcss";
+@import "../styles/ws-tokens.css";
 
+/* Map the WorldStreet design tokens onto Tailwind utilities.
+   `inline` keeps the var() reference in the generated CSS, so changing
+   data-ws-theme re-themes the whole app at runtime with no rebuild.
+
+   Vocabulary (identical across all four platform themes):
+     surfaces  bg-page bg-sunken bg-surface bg-raised bg-chip bg-track
+     text      text-primary text-muted text-subtle
+     brand     bg-brand bg-brand-active text-brand-on text-gold
+     status    text-success text-danger
+     border    border-hairline
+*/
+/* next/font emits hashed family names (__Poppins_abc123), so the literal
+   "Poppins" / "Public Sans" in ws-tokens.css would never match a loaded font.
+   Point the token vars at the variables next/font actually generates.
+   Scoped to both platform modes so the shop/xstream font pairings stay intact.
+   (Light mode is the canonical `platform-light` block in ws-tokens.css —
+   next-themes swaps data-ws-theme via the ThemeProvider `value` map; the old
+   hand-rolled html.light palette is gone, do not reintroduce it.) */
+[data-ws-theme="platform"],
+[data-ws-theme="platform-light"] {
+    --ws-font-display: var(--font-poppins), "Poppins", system-ui, sans-serif;
+    --ws-font-ui: var(--font-public-sans), "Public Sans", system-ui, sans-serif;
+}
+
+/* Softer elevation on paper (referenced from @theme inline below). */
 :root {
-    --background: #ffffff;
-    --foreground: #171717;
-    --card: #ffffff;
-    --card-foreground: #171717;
-    --primary: #171717;
-    --primary-foreground: #ffffff;
-    --secondary: #f5f5f5;
-    --secondary-foreground: #171717;
-    --muted: #f5f5f5;
-    --muted-foreground: #737373;
-    --accent: #f5f5f5;
-    --accent-foreground: #171717;
-    --border: #e5e5e5;
-    --input: #e5e5e5;
-    --ring: #171717;
+    --ws-shadow-nav: 0 3px 8px rgb(0 0 0 / 0.45);
+    --ws-shadow-sheet: 0 -2px 12px rgb(0 0 0 / 0.35);
+}
+[data-ws-theme="platform-light"] {
+    --ws-shadow-nav: 0 3px 8px rgb(0 0 0 / 0.12);
+    --ws-shadow-sheet: 0 -2px 12px rgb(0 0 0 / 0.1);
 }
 
 @theme inline {
-    --color-background: var(--background);
-    --color-foreground: var(--foreground);
-    --color-card: var(--card);
-    --color-card-foreground: var(--card-foreground);
-    --color-primary: var(--primary);
-    --color-primary-foreground: var(--primary-foreground);
-    --color-secondary: var(--secondary);
-    --color-secondary-foreground: var(--secondary-foreground);
-    --color-muted: var(--muted);
-    --color-muted-foreground: var(--muted-foreground);
-    --color-accent: var(--accent);
-    --color-accent-foreground: var(--accent-foreground);
-    --color-border: var(--border);
-    --color-input: var(--input);
-    --color-ring: var(--ring);
-    --font-sans: var(--font-public-sans);
-    --font-mono: var(--font-geist-mono);
+    --color-page: var(--ws-bg-page);
+    --color-sunken: var(--ws-bg-sunken);
+    --color-surface: var(--ws-bg-surface);
+    --color-raised: var(--ws-bg-raised);
+    --color-chip: var(--ws-bg-chip);
+    --color-track: var(--ws-bg-track);
+    --color-hairline: var(--ws-border-hairline);
+
+    --color-primary: var(--ws-text-primary);
+    --color-muted: var(--ws-text-muted);
+    --color-subtle: var(--ws-text-subtle);
+
+    --color-brand: var(--ws-brand-primary);
+    --color-brand-active: var(--ws-brand-active);
+    --color-brand-dim: var(--ws-brand-dim);
+    --color-brand-on: var(--ws-brand-on-primary);
+    --color-gold: var(--ws-brand-gold-text);
+
+    --color-success: var(--ws-status-success);
+    --color-danger: var(--ws-status-danger);
+    /* money/* (01-foundations): credit/debit for deltas, convert for the
+       cashtag chip wash. Distinct from status/* even where values coincide. */
+    --color-credit: var(--ws-money-credit);
+    --color-debit: var(--ws-money-debit);
+    --color-convert: var(--ws-money-convert);
+    --color-warning: var(--ws-status-warning);
+    --color-warning-chip: var(--ws-status-warning-chip);
+    --color-scrim: var(--ws-overlay-scrim);
+    --color-focus: var(--ws-focus-ring);
+
+    --color-accent-social: var(--ws-accent-social);
+
+    /* Motion (06-motion-accessibility). --ws-ease is the ONLY easing.
+       Making these the defaults means every `transition-*` is on-token
+       without each call site restating the duration. */
+    --default-transition-duration: var(--ws-motion-fast);
+    --default-transition-timing-function: var(--ws-ease);
+    --ease-ws: var(--ws-ease);
+
+    --radius-sm: var(--ws-radius-sm); /* 4  */
+    --radius-md: var(--ws-radius-md); /* 7  */
+    --radius-lg: var(--ws-radius-lg); /* 10 */
+    --radius-xl: var(--ws-radius-xl); /* 13 */
+    --radius-pill: var(--ws-radius-pill);
+
+    --font-display: var(--ws-font-display);
+    --font-ui: var(--ws-font-ui);
+    --font-sans: var(--ws-font-ui);
+
+    /* The only two sanctioned elevation styles (01-foundations, "Elevation").
+       Everything else gets depth from the surface ladder, not shadow. */
+    --shadow-nav: var(--ws-shadow-nav);
+    --shadow-sheet: var(--ws-shadow-sheet);
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --background: #0a0a0a;
-        --foreground: #ededed;
-        --card: #0a0a0a;
-        --card-foreground: #ededed;
-        --primary: #ededed;
-        --primary-foreground: #0a0a0a;
-        --secondary: #262626;
-        --secondary-foreground: #ededed;
-        --muted: #262626;
-        --muted-foreground: #a3a3a3;
-        --accent: #262626;
-        --accent-foreground: #ededed;
-        --border: #262626;
-        --input: #262626;
-        --ring: #d4d4d4;
+/* Keyboard focus: 2px focus/ring, 2px offset, on every interactive element
+   (06-motion-accessibility). focus-visible only, so pointer users never see it. */
+@layer base {
+    :focus-visible {
+        outline: 2px solid var(--ws-focus-ring);
+        outline-offset: 2px;
+        border-radius: var(--ws-radius-sm);
     }
 }
 
-html[data-theme="dark"] {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --card: #0a0a0a;
-    --card-foreground: #ededed;
-    --primary: #ededed;
-    --primary-foreground: #0a0a0a;
-    --secondary: #262626;
-    --secondary-foreground: #ededed;
-    --muted: #262626;
-    --muted-foreground: #a3a3a3;
-    --accent: #262626;
-    --accent-foreground: #ededed;
-    --border: #262626;
-    --input: #262626;
-    --ring: #d4d4d4;
+/* The z-index scale (06-motion-accessibility). Nothing outside these four
+   values gets a z-index; local stacking uses DOM order. */
+@utility z-sticky {
+    z-index: var(--ws-z-sticky);
+}
+@utility z-dropdown {
+    z-index: var(--ws-z-dropdown);
+}
+@utility z-modal {
+    z-index: var(--ws-z-modal);
+}
+@utility z-toast {
+    z-index: var(--ws-z-toast);
+}
+
+/* prefers-reduced-motion: durations to ~0, shimmer static, no translate.
+   Opacity still changes, which the spec allows. */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+    .animate-pulse {
+        animation: none !important;
+    }
 }
 
 body {
-    background: var(--background);
-    color: var(--foreground);
-    font-family: var(--font-sans);
+    background: var(--ws-bg-page);
+    color: var(--ws-text-primary);
+    font-family: var(--ws-font-ui);
+}
+
+/* The feed is a dark, dense surface; keep scrollbars from punching a bright
+   hole in it on Windows/Chrome. */
+* {
+    scrollbar-color: var(--ws-bg-raised) transparent;
+}
+
+/* Hide the scrollbar entirely on rails that scroll but shouldn't advertise it
+   (right sidebar, profile tab strip). */
+@utility no-scrollbar {
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+/* emoji-picker-react ships its own palette; re-point its CSS variables at the
+   token vocabulary so the popover sits on the surface ladder like every other
+   dropdown. Wrapped class set by the composers' popover container. */
+.ws-emoji-picker .EmojiPickerReact {
+    --epr-bg-color: var(--ws-bg-surface);
+    --epr-category-label-bg-color: var(--ws-bg-surface);
+    --epr-picker-border-color: var(--ws-border-hairline);
+    --epr-search-input-bg-color: var(--ws-bg-sunken);
+    --epr-search-border-color: var(--ws-border-hairline);
+    --epr-text-color: var(--ws-text-primary);
+    --epr-search-input-text-color: var(--ws-text-primary);
+    --epr-search-input-placeholder-color: var(--ws-text-subtle);
+    --epr-category-icon-active-color: var(--ws-brand-primary);
+    --epr-highlight-color: var(--ws-brand-primary);
+    --epr-hover-bg-color: var(--ws-bg-raised);
+    --epr-focus-bg-color: var(--ws-bg-raised);
+    --epr-emoji-hover-color: var(--ws-bg-raised);
+    --epr-active-skin-tone-indicator-border-color: var(--ws-brand-primary);
+    border-radius: var(--ws-radius-xl);
+    box-shadow: var(--ws-shadow-nav);
+    font-family: var(--ws-font-ui);
+}
+
+/* Page-intro reveal (06-motion "page-section reveals"): opacity + 8px rise at
+   motion-slow with the one easing. `backwards` fill so a delayed element stays
+   hidden until its turn — stagger with an inline animation-delay. Goes
+   instant under prefers-reduced-motion via the global block above. */
+@keyframes ws-rise {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@utility animate-rise {
+    animation: ws-rise var(--ws-motion-slow) var(--ws-ease) backwards;
+}
+
+/* Skeleton shimmer (04-components "Skeleton"): white @4% sweep on bg/raised,
+   looping at --ws-motion-slow. Goes static under reduced motion via the
+   prefers-reduced-motion block above. */
+@keyframes ws-shimmer {
+    from {
+        background-position: -150% 0;
+    }
+    to {
+        background-position: 250% 0;
+    }
+}
+
+@utility skeleton {
+    background-color: var(--ws-bg-raised);
+    background-image: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgb(255 255 255 / 0.04) 50%,
+        transparent 100%
+    );
+    background-size: 200% 100%;
+    background-repeat: no-repeat;
+    animation: ws-shimmer var(--ws-motion-slow) var(--ws-ease) infinite;
+    animation-duration: 1.6s;
+}
+
+/* Theme switch (light <-> dark): one motion-slow cross-fade instead of a hard
+   snap. Browsers with the View Transitions API get a whole-page cross-fade;
+   the rest get `.theme-switching`, which src/lib/theme-transition.ts attaches
+   to <html> for the duration of the swap. The helper skips both paths under
+   prefers-reduced-motion, so the reduced-motion block above stays authoritative. */
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: var(--ws-motion-slow);
+    animation-timing-function: var(--ws-ease);
+}
+
+.theme-switching,
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+    transition:
+        background-color var(--ws-motion-slow) var(--ws-ease),
+        color var(--ws-motion-slow) var(--ws-ease),
+        border-color var(--ws-motion-slow) var(--ws-ease),
+        fill var(--ws-motion-slow) var(--ws-ease),
+        stroke var(--ws-motion-slow) var(--ws-ease),
+        box-shadow var(--ws-motion-slow) var(--ws-ease) !important;
 }
