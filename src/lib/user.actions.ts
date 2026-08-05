@@ -1,7 +1,6 @@
 "use server";
 
 import { BACKEND_URL } from "@/const";
-import { errorDetail } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import axios from "axios";
 
@@ -135,7 +134,7 @@ export async function updateMyProfileAction(formData: FormData) {
 
 		return { success: true, data };
 	} catch (error: any) {
-		console.error("Update Profile Error:", errorDetail(error));
+		console.error("Update Profile Error:", error);
 		return { success: false, message: "Something went wrong" };
 	}
 }

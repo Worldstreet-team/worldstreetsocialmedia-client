@@ -106,7 +106,7 @@ export default function EditProfileModal({
 	return (
 		<ConfirmModalPortal>
 			<AnimatePresence>
-				<div className="fixed inset-0 z-modal flex items-center justify-center p-4">
+				<div className="fixed inset-0 z-modal flex items-center justify-center p-3 sm:p-4">
 					<motion.div
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
@@ -119,32 +119,37 @@ export default function EditProfileModal({
 						animate={{ opacity: 1, scale: 1, y: 0 }}
 						exit={{ opacity: 0, scale: 0.98, y: 8 }}
 						transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-						className="relative w-full max-w-lg bg-surface border border-hairline rounded-xl shadow-nav overflow-hidden flex flex-col max-h-[90vh] text-primary"
+						// max-h-[90dvh]: with 100vh the panel was taller than the real
+						// viewport on mobile and the Save button fell off the top.
+						className="relative w-full max-w-lg bg-surface border border-hairline rounded-xl shadow-nav overflow-hidden flex flex-col max-h-[90dvh] text-primary"
 					>
 						{/* Header */}
-						<div className="flex items-center justify-between px-4 py-3 border-b border-hairline">
-							<div className="flex items-center gap-4">
+						<div className="flex shrink-0 items-center justify-between gap-2 px-2 sm:px-4 py-2 sm:py-3 border-b border-hairline">
+							<div className="flex items-center gap-2 sm:gap-4 min-w-0">
 								<button
+									type="button"
 									onClick={onClose}
-									className="p-2 -ml-2 rounded-pill hover:bg-raised transition-colors text-muted hover:text-primary cursor-pointer"
+									aria-label="Close"
+									className="flex h-11 w-11 shrink-0 items-center justify-center rounded-pill hover:bg-raised transition-colors text-muted hover:text-primary cursor-pointer"
 								>
 									<X className="w-5 h-5" />
 								</button>
-								<h2 className="font-display text-lg font-semibold tracking-tight">
+								<h2 className="font-display text-lg font-semibold tracking-tight truncate">
 									Edit Profile
 								</h2>
 							</div>
 							<button
+								type="button"
 								onClick={handleSave}
 								disabled={isLoading}
-								className="bg-primary text-page px-6 py-2 rounded-pill font-semibold text-sm hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-sans"
+								className="shrink-0 bg-primary text-page px-5 sm:px-6 h-11 sm:h-9 rounded-pill font-semibold text-sm hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-sans"
 							>
 								{isLoading ? "Saving..." : "Save"}
 							</button>
 						</div>
 
 						{/* Scrollable Content */}
-						<div className="overflow-y-auto flex-1">
+						<div className="overflow-y-auto overscroll-contain flex-1 min-h-0">
 							{/* Banner */}
 							<div className="relative h-32 sm:h-48 bg-sunken w-full group">
 								{bannerPreview ? (
@@ -158,20 +163,29 @@ export default function EditProfileModal({
 									// Flat sunken band — gradient placeholders are off-system.
 									<div className="w-full h-full bg-sunken" />
 								)}
-								<div className="absolute inset-0 bg-page/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity gap-4">
+								{/* Reveal-on-hover made the banner and avatar pickers
+								    literally unusable on touch — there is no hover to
+								    enter, so you could not change either on a phone.
+								    Below sm the controls are always visible and the
+								    scrim is dropped so the image still reads. */}
+								<div className="absolute inset-0 bg-transparent sm:bg-page/40 flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity gap-4">
 									<button
+										type="button"
 										onClick={() => bannerInputRef.current?.click()}
-										className="w-10 h-10 flex items-center justify-center cursor-pointer bg-page/60 rounded-pill text-primary hover:bg-raised transition-colors"
+										aria-label="Change banner image"
+										className="h-11 w-11 sm:h-10 sm:w-10 flex items-center justify-center cursor-pointer bg-page/70 sm:bg-page/60 rounded-pill text-primary hover:bg-raised transition-colors"
 									>
 										<Camera className="w-5 h-5" />
 									</button>
 									{bannerPreview && bannerPreview !== user.banner && (
 										<button
+											type="button"
 											onClick={() => {
 												setBannerFile(null);
 												setBannerPreview(user.banner || "");
 											}}
-											className="w-10 h-10 flex items-center justify-center cursor-pointer bg-page/60 rounded-pill text-primary hover:bg-raised transition-colors"
+											aria-label="Undo banner change"
+											className="h-11 w-11 sm:h-10 sm:w-10 flex items-center justify-center cursor-pointer bg-page/70 sm:bg-page/60 rounded-pill text-primary hover:bg-raised transition-colors"
 										>
 											<X className="w-5 h-5" />
 										</button>
@@ -195,10 +209,12 @@ export default function EditProfileModal({
 										fill
 										className="object-cover"
 									/>
-									<div className="absolute inset-0 bg-page/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+									<div className="absolute inset-0 bg-page/30 sm:bg-page/40 flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
 										<button
+											type="button"
 											onClick={() => avatarInputRef.current?.click()}
-											className="w-10 h-10 flex items-center justify-center bg-page/60 rounded-pill text-primary hover:bg-raised transition-colors"
+											aria-label="Change profile photo"
+											className="h-11 w-11 sm:h-10 sm:w-10 flex items-center justify-center bg-page/70 sm:bg-page/60 rounded-pill text-primary hover:bg-raised transition-colors"
 										>
 											<Camera className="w-5 h-5" />
 										</button>
@@ -228,7 +244,7 @@ export default function EditProfileModal({
 												name="firstName"
 												value={formData.firstName}
 												onChange={handleInputChange}
-												className="w-full outline-none text-sm font-sans bg-transparent placeholder:text-subtle text-primary"
+												className="w-full outline-none text-base sm:text-sm font-sans bg-transparent placeholder:text-subtle text-primary"
 												placeholder="First Name"
 											/>
 										</div>
@@ -245,7 +261,7 @@ export default function EditProfileModal({
 												name="lastName"
 												value={formData.lastName}
 												onChange={handleInputChange}
-												className="w-full outline-none text-sm font-sans bg-transparent placeholder:text-subtle text-primary"
+												className="w-full outline-none text-base sm:text-sm font-sans bg-transparent placeholder:text-subtle text-primary"
 												placeholder="Last Name"
 											/>
 										</div>
@@ -260,7 +276,7 @@ export default function EditProfileModal({
 										name="bio"
 										value={formData.bio}
 										onChange={handleInputChange}
-										className="w-full outline-none text-sm font-sans resize-none min-h-[80px] bg-transparent placeholder:text-subtle text-primary"
+										className="w-full outline-none text-base sm:text-sm font-sans resize-none min-h-[80px] bg-transparent placeholder:text-subtle text-primary"
 										placeholder="Tell us about yourself"
 									/>
 								</div>
@@ -276,7 +292,7 @@ export default function EditProfileModal({
 											name="location"
 											value={formData.location}
 											onChange={handleInputChange}
-											className="w-full outline-none text-sm font-sans bg-transparent placeholder:text-subtle text-primary"
+											className="w-full outline-none text-base sm:text-sm font-sans bg-transparent placeholder:text-subtle text-primary"
 											placeholder="Add your location"
 										/>
 									</div>
@@ -293,7 +309,7 @@ export default function EditProfileModal({
 											name="website"
 											value={formData.website}
 											onChange={handleInputChange}
-											className="w-full outline-none text-sm font-sans bg-transparent placeholder:text-subtle text-primary"
+											className="w-full outline-none text-base sm:text-sm font-sans bg-transparent placeholder:text-subtle text-primary"
 											placeholder="Add your website"
 										/>
 									</div>

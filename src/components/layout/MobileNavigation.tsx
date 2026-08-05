@@ -52,25 +52,34 @@ export function MobileNavigation() {
 	return (
 		<>
 			{/* Mobile Header */}
-			<header className="fixed top-0 left-0 right-0 h-14 bg-page border-b border-hairline flex items-center justify-between px-4 z-sticky md:hidden">
+			<header className="fixed top-0 left-0 right-0 h-14 bg-page border-b border-hairline flex items-center justify-between px-2 z-sticky md:hidden">
 				<div className="flex items-center gap-3">
+					{/* 44x44 target around a 32px avatar — the glyph stays small,
+					    the tappable box doesn't. */}
 					<button
+						type="button"
 						onClick={() => setIsOpen(true)}
-						className="relative w-8 h-8 rounded-full overflow-hidden border border-hairline"
+						aria-label="Open navigation menu"
+						className="flex h-11 w-11 items-center justify-center rounded-pill active:bg-raised transition-colors"
 					>
-						<Image
-							src={user.avatar || DEFAULT_AVATAR}
-							alt={user.username || "User"}
-							fill
-							className="object-cover"
-						/>
+						<span className="relative block w-8 h-8 rounded-full overflow-hidden border border-hairline">
+							<Image
+								src={user.avatar || DEFAULT_AVATAR}
+								alt={user.username || "User"}
+								fill
+								className="object-cover"
+							/>
+						</span>
 					</button>
-					{/* Placeholder for center logo if needed, currently aligned left/right */}
 				</div>
 
 				{/* Unified ecosystem lockup mark (05-screens): gold wsa-mark 26px,
 				    unboxed, never a typed letter tile. */}
-				<Link href="/" aria-label="WorldStreet Social home">
+				<Link
+					href="/"
+					aria-label="WorldStreet Social home"
+					className="flex h-11 w-11 items-center justify-center rounded-pill active:bg-raised transition-colors"
+				>
 					<Image
 						src="/images/wsa-mark.png"
 						alt="WorldStreet"
@@ -102,12 +111,12 @@ export function MobileNavigation() {
 							// Sheets/drawers slide at motion-slow with the one easing —
 							// no spring physics in the motion system.
 							transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
-							className="fixed top-0 bottom-0 left-0 w-[80%] max-w-[300px] bg-page border-r border-hairline z-dropdown flex flex-col md:hidden"
+							className="fixed top-0 bottom-0 left-0 w-[80%] max-w-[300px] bg-page border-r border-hairline z-dropdown flex flex-col md:hidden pt-safe pb-safe"
 						>
 							{/* Drawer Header */}
-							<div className="p-4 border-b border-hairline flex items-center justify-between">
-								<div className="flex items-center gap-3">
-									<div className="relative w-10 h-10 rounded-full overflow-hidden border border-hairline">
+							<div className="p-4 border-b border-hairline flex items-center justify-between gap-2">
+								<div className="flex items-center gap-3 min-w-0">
+									<div className="relative w-10 h-10 shrink-0 rounded-full overflow-hidden border border-hairline">
 										<Image
 											src={user.avatar || DEFAULT_AVATAR}
 											alt={user.username || "User"}
@@ -115,7 +124,7 @@ export function MobileNavigation() {
 											className="object-cover"
 										/>
 									</div>
-									<div className="flex flex-col">
+									<div className="flex flex-col min-w-0">
 										<span className="font-bold text-primary text-sm truncate font-sans">
 											{fullName}
 										</span>
@@ -125,8 +134,10 @@ export function MobileNavigation() {
 									</div>
 								</div>
 								<button
+									type="button"
 									onClick={() => setIsOpen(false)}
-									className="p-2 hover:bg-surface rounded-full text-muted"
+									aria-label="Close navigation menu"
+									className="flex h-11 w-11 shrink-0 items-center justify-center hover:bg-surface rounded-pill text-muted transition-colors"
 								>
 									<X className="w-5 h-5" />
 								</button>

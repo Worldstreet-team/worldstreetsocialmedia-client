@@ -29,10 +29,29 @@
 :root {
     --ws-shadow-nav: 0 3px 8px rgb(0 0 0 / 0.45);
     --ws-shadow-sheet: 0 -2px 12px rgb(0 0 0 / 0.35);
+
+    /* Mobile chrome geometry. MobileBottomNav is a 64px bar plus the iOS home
+       indicator, and it's `fixed`, so it covers the tail of every scrolling
+       column. Everything that needs to clear it derives from these — never
+       hardcode another magic bottom offset. */
+    --ws-mobile-nav-h: 64px;
+    --ws-safe-bottom: env(safe-area-inset-bottom, 0px);
+    --ws-safe-top: env(safe-area-inset-top, 0px);
+    --ws-nav-clearance: calc(
+        var(--ws-mobile-nav-h) + var(--ws-safe-bottom) + 16px
+    );
 }
 [data-ws-theme="platform-light"] {
     --ws-shadow-nav: 0 3px 8px rgb(0 0 0 / 0.12);
     --ws-shadow-sheet: 0 -2px 12px rgb(0 0 0 / 0.1);
+}
+
+/* One extra breakpoint below Tailwind's `sm`. Small-phone territory (320-399px)
+   is where the dense feed rows run out of room; `xs:` marks the things that are
+   only affordable once there's ~400px to work with. Not `inline` — media
+   queries can't resolve a var(). */
+@theme {
+    --breakpoint-xs: 400px;
 }
 
 @theme inline {
@@ -136,6 +155,46 @@ body {
     background: var(--ws-bg-page);
     color: var(--ws-text-primary);
     font-family: var(--ws-font-ui);
+
+    /* Nothing in this app is meant to scroll sideways. `clip` (not `hidden`)
+       so the many `position: sticky` headers keep working — `hidden` would
+       turn body into a scroll container and break every one of them. */
+    overflow-x: clip;
+}
+
+html {
+    /* iOS inflates text in landscape without this; the design system's type
+       ramp is fixed-size by intent. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+/* Momentum scrolling inside the panes that scroll independently (message
+   list, conversation rail, modal bodies) instead of the document. */
+@media (pointer: coarse) {
+    .overflow-y-auto,
+    .overflow-x-auto {
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* Clear the fixed mobile bottom nav. Applied to the bottom of every scrolling
+   column; `md:` variants turn it off once the nav is gone. */
+@utility pb-nav {
+    padding-bottom: var(--ws-nav-clearance);
+}
+
+/* Sit floating UI (back-to-top pill, toasts) above the same bar. */
+@utility bottom-nav {
+    bottom: var(--ws-nav-clearance);
+}
+
+@utility pt-safe {
+    padding-top: var(--ws-safe-top);
+}
+
+@utility pb-safe {
+    padding-bottom: var(--ws-safe-bottom);
 }
 
 /* The feed is a dark, dense surface; keep scrollbars from punching a bright

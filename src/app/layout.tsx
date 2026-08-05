@@ -44,7 +44,7 @@ export const viewport: Viewport = {
     width: "device-width",
     initialScale: 1,
     // Browser chrome (mobile address bar, PWA title bar) matches the page.
-    themeColor: "#0B0B0F",
+    themeColor: "#0C0A09",
 };
 
 export const metadata: Metadata = {

@@ -140,11 +140,12 @@ export default function PostPageScreen() {
 
 	if (loading) {
 		return (
-			<div className="flex flex-col min-h-screen pb-20">
+			<div className="flex flex-col min-h-dvh pb-20">
 				<header className="sticky top-0 z-sticky bg-page border-b border-hairline px-4 py-2 flex items-center gap-6">
 					<button
-						className="rounded-pill w-9 h-9 hover:bg-raised flex items-center justify-center transition-colors cursor-pointer text-primary"
+						className="rounded-pill h-11 w-11 sm:h-9 sm:w-9 shrink-0 hover:bg-raised flex items-center justify-center transition-colors cursor-pointer text-primary"
 						type="button"
+						aria-label="Go back"
 						onClick={() => router.back()}
 					>
 						<ArrowLeft className="w-5 h-5" />
@@ -166,7 +167,7 @@ export default function PostPageScreen() {
 
 	if (!post) {
 		return (
-			<div className="flex flex-col justify-center items-center h-[50vh]">
+			<div className="flex flex-col justify-center items-center min-h-[50dvh]">
 				<EmptyState
 					icon={Search}
 					title="This post doesn't exist"
@@ -187,8 +188,8 @@ export default function PostPageScreen() {
 	};
 
 	return (
-		<div className="flex flex-col min-h-screen pb-20">
-			<header className="sticky top-0 z-sticky bg-page border-b border-hairline px-4 py-2 flex items-center gap-6">
+		<div className="flex flex-col min-h-dvh pb-20">
+			<header className="sticky top-0 z-sticky bg-page border-b border-hairline px-2 sm:px-4 py-2 flex items-center gap-2 sm:gap-6">
 				<button
 					className="rounded-pill w-9 h-9 hover:bg-raised flex items-center justify-center transition-colors cursor-pointer text-primary"
 					type="button"

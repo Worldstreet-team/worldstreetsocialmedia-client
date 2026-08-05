@@ -92,7 +92,7 @@ export function RightSidebar() {
     );
 
     return (
-        <aside className="w-[350px] hidden lg:flex flex-col gap-6 sticky top-0 h-screen p-4 pl-8 overflow-y-auto no-scrollbar">
+        <aside className="w-[350px] shrink-0 hidden lg:flex flex-col gap-6 sticky top-0 h-dvh p-4 pl-8 overflow-y-auto no-scrollbar">
             {/* Search — opens the Ctrl/Cmd+K command palette. */}
             <button
                 type="button"

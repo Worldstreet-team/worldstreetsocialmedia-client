@@ -81,11 +81,18 @@ export const VoiceMessage = ({ src, isMe }: VoiceMessageProps) => {
 	return (
 		<div
 			className={clsx(
-				"flex items-center gap-3 p-1 rounded-xl min-w-[200px] select-none",
+				// min-w-[200px] was a hard floor inside a bubble that can be ~160px
+				// on a 320px screen — it pushed the bubble past the message pane.
+				"flex items-center gap-2 sm:gap-3 p-1 rounded-xl w-full min-w-0 select-none",
 				isMe ? "text-brand-on" : "text-primary",
 			)}
 		>
-			<button onClick={togglePlay} className="shrink-0 outline-none">
+			<button
+				type="button"
+				onClick={togglePlay}
+				aria-label={isPlaying ? "Pause voice message" : "Play voice message"}
+				className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill outline-none"
+			>
 				{isPlaying ? (
 					<Pause className="w-5 h-5 fill-current" />
 				) : (
@@ -93,14 +100,17 @@ export const VoiceMessage = ({ src, isMe }: VoiceMessageProps) => {
 				)}
 			</button>
 
-			<div className="flex-1 flex flex-col justify-center h-full pt-1">
+			<div className="flex-1 min-w-0 flex flex-col justify-center h-full">
 				<input
 					type="range"
 					min="0"
 					max="100"
 					value={progress}
 					onChange={handleSeek}
-					className="w-full h-1 bg-current/20 rounded-lg appearance-none cursor-pointer accent-current"
+					aria-label="Seek"
+					// py-3 keeps the 4px visual track but gives the thumb a
+					// ~28px tall grab area, which a fingertip can actually hit.
+					className="w-full h-1 py-3 box-content bg-current/20 rounded-lg appearance-none cursor-pointer accent-current touch-none"
 				/>
 			</div>
 

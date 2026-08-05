@@ -5,7 +5,7 @@ import Image from "next/image";
    EmptyState (raised icon circle, title/caption, one primary action). */
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-page flex flex-col items-center justify-center p-6 text-center animate-rise">
+    <div className="min-h-dvh bg-page flex flex-col items-center justify-center p-6 text-center animate-rise">
       <div className="flex items-center gap-2 mb-8">
         <Image
           src="/images/logo.png"

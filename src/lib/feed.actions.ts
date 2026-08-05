@@ -9,12 +9,15 @@ const API_URL = BACKEND_URL;
 export async function getFeedAction(page: number = 1, limit: number = 10) {
 	const { getToken } = await auth();
 	const accessToken = await getToken();
+	console.log("FeedAction: AccessToken present?", !!accessToken);
 
 	if (!accessToken) {
+		console.log("FeedAction: No token");
 		return { success: false, message: "Unauthorized: No access token found" };
 	}
 
 	try {
+		console.log(`Fetching feed page ${page} from ${API_URL}/api/feed`);
 		const response = await axios.get(`${API_URL}/api/feed`, {
 			params: { page, limit },
 			headers: {
@@ -24,9 +27,8 @@ export async function getFeedAction(page: number = 1, limit: number = 10) {
 
 		return { success: true, data: response.data };
 	} catch (error: any) {
-		// Log the message only — the axios error object carries `config.headers`,
-		// i.e. the user's bearer JWT, which must never reach server logs.
-		console.error("Feed API error:", error.response?.status ?? error.message);
+		console.log("ERROR: ", error);
+		console.log("Feed API Error: ", error.response?.data || error.message);
 
 		if (axios.isAxiosError(error)) {
 			return {
@@ -57,6 +59,10 @@ export async function getUserFeedAction(
 		if (type === "media") endpoint += "/media";
 		if (type === "likes") endpoint += "/likes";
 
+		console.log(
+			`Fetching user feed ${type} for ${userId} from ${API_URL}${endpoint}`,
+		);
+
 		const response = await axios.get(`${API_URL}${endpoint}`, {
 			params: { page, limit },
 			headers: {
@@ -66,9 +72,9 @@ export async function getUserFeedAction(
 
 		return { success: true, data: response.data };
 	} catch (error: any) {
-		console.error(
-			`User feed API error (${type}):`,
-			error.response?.status ?? error.message,
+		console.log(
+			`User Feed API Error (${type}): `,
+			error.response?.data || error.message,
 		);
 
 		if (axios.isAxiosError(error)) {

@@ -1,7 +1,6 @@
 "use server";
 
 import { BACKEND_URL } from "@/const";
-import { errorDetail } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import axios from "axios";
 
@@ -26,7 +25,7 @@ export async function createPostAction(formData: FormData) {
 		// Axios automatically parses JSON and puts it in .data
 		return { success: true, data: response.data };
 	} catch (error) {
-		// Never log the raw axios error: `config.headers` holds the bearer JWT.
+		console.log("ERROR: ", error);
 		// Axios catches all non-2xx responses here
 		if (axios.isAxiosError(error)) {
 			const serverMessage = error.response?.data?.message;
@@ -38,7 +37,7 @@ export async function createPostAction(formData: FormData) {
 			};
 		}
 
-		console.error("Unexpected Error:", errorDetail(error));
+		console.error("Unexpected Error:", error);
 		return { success: false, message: "Something went wrong" };
 	}
 }

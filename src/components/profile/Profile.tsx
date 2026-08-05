@@ -285,7 +285,7 @@ export default function Profile({ username }: ProfileProps) {
 
 	if (notFound) {
 		return (
-			<div className="flex flex-col justify-center items-center min-h-[60vh]">
+			<div className="flex flex-col justify-center items-center min-h-[60dvh]">
 				<EmptyState
 					icon={Search}
 					title="This account doesn't exist"
@@ -304,7 +304,7 @@ export default function Profile({ username }: ProfileProps) {
 			: profileUser.username;
 
 	return (
-		<div className="flex flex-col min-h-screen pb-20">
+		<div className="flex flex-col min-h-dvh pb-nav md:pb-20">
 			{isEditProfileOpen && currentUser && (
 				<EditProfileModal
 					user={currentUser}
@@ -312,18 +312,23 @@ export default function Profile({ username }: ProfileProps) {
 				/>
 			)}
 
-			<header className="sticky top-0 z-sticky bg-page border-b border-hairline px-4 py-2 flex items-center gap-6">
+			<header className="sticky top-0 z-sticky bg-page border-b border-hairline px-2 sm:px-4 py-2 flex items-center gap-2 sm:gap-6">
 				<button
-					className="rounded-full w-9 h-9 hover:bg-raised flex items-center justify-center transition-colors cursor-pointer text-primary"
+					className="rounded-pill h-11 w-11 sm:h-9 sm:w-9 shrink-0 hover:bg-raised flex items-center justify-center transition-colors cursor-pointer text-primary"
 					type="button"
+					aria-label="Go back"
 					onClick={() => router.back()}
 				>
 					<ArrowLeft className="w-5 h-5" />
 				</button>
-				<div className="flex flex-col">
-					<h1 className="text-lg font-bold leading-5 flex items-center gap-1 font-sans text-primary">
-						{fullName}
-						{profileUser.isVerified && <VerifiedIcon />}
+				<div className="flex flex-col min-w-0">
+					<h1 className="text-lg font-bold leading-5 flex items-center gap-1 font-sans text-primary min-w-0">
+						<span className="truncate">{fullName}</span>
+						{profileUser.isVerified && (
+							<span className="shrink-0 flex">
+								<VerifiedIcon />
+							</span>
+						)}
 					</h1>
 					<span className="text-xs text-muted font-sans tabular-nums">
 						{(profileUser.postsCount || 0).toLocaleString("en-NG")}{" "}
@@ -392,7 +397,7 @@ export default function Profile({ username }: ProfileProps) {
 					!profileUser.isBlockedByThem &&
 					!profileUser.isBlockedByYou && (
 						<button
-							className="w-10 h-10 border border-hairline rounded-pill flex items-center justify-center hover:bg-raised transition-colors cursor-pointer"
+							className="h-11 w-11 sm:h-10 sm:w-10 shrink-0 border border-hairline rounded-pill flex items-center justify-center hover:bg-raised transition-colors cursor-pointer"
 							type="button"
 							onClick={async () => {
 								if (!profileUser?.userId) return;
@@ -413,7 +418,7 @@ export default function Profile({ username }: ProfileProps) {
 					!profileUser.isBlockedByYou && (
 						<div className="relative">
 							<button
-								className="w-10 h-10 border border-hairline rounded-pill flex items-center justify-center hover:bg-raised transition-colors cursor-pointer text-primary"
+								className="h-11 w-11 sm:h-10 sm:w-10 shrink-0 border border-hairline rounded-pill flex items-center justify-center hover:bg-raised transition-colors cursor-pointer text-primary"
 								type="button"
 								onClick={() => setShowMoreMenu(!showMoreMenu)}
 							>
@@ -436,7 +441,7 @@ export default function Profile({ username }: ProfileProps) {
 					)}
 				{isMe ? (
 					<button
-						className="border border-hairline text-primary rounded-pill px-5 h-9 font-semibold hover:bg-raised transition-colors text-sm cursor-pointer font-sans"
+						className="border border-hairline text-primary rounded-pill px-5 h-11 sm:h-9 shrink-0 font-semibold hover:bg-raised transition-colors text-sm cursor-pointer font-sans"
 						type="button"
 						onClick={() => setIsEditProfileOpen(true)}
 					>
@@ -444,7 +449,7 @@ export default function Profile({ username }: ProfileProps) {
 					</button>
 				) : profileUser.isBlockedByYou ? (
 					<button
-						className="rounded-pill px-5 h-9 font-semibold transition-colors text-sm cursor-pointer min-w-[100px] font-sans bg-danger text-primary hover:opacity-90"
+						className="rounded-pill px-5 h-11 sm:h-9 shrink-0 font-semibold transition-colors text-sm cursor-pointer min-w-[100px] font-sans bg-danger text-primary hover:opacity-90"
 						type="button"
 						onClick={handleUnblockUser}
 					>
@@ -452,7 +457,7 @@ export default function Profile({ username }: ProfileProps) {
 					</button>
 				) : profileUser.isBlockedByThem ? (
 					<button
-						className="rounded-pill px-5 h-9 font-semibold transition-colors text-sm cursor-not-allowed min-w-[100px] font-sans border border-hairline bg-raised text-subtle"
+						className="rounded-pill px-5 h-11 sm:h-9 shrink-0 font-semibold transition-colors text-sm cursor-not-allowed min-w-[100px] font-sans border border-hairline bg-raised text-subtle"
 						type="button"
 						disabled
 					>
@@ -461,7 +466,7 @@ export default function Profile({ username }: ProfileProps) {
 				) : (
 					<button
 						className={clsx(
-							"rounded-pill px-5 h-9 font-semibold transition-colors text-sm cursor-pointer min-w-[100px] font-sans",
+							"rounded-pill px-5 h-11 sm:h-9 shrink-0 font-semibold transition-colors text-sm cursor-pointer min-w-[100px] font-sans",
 							isFollowing
 								? "border border-hairline bg-transparent text-primary hover:border-danger hover:text-danger"
 								: "bg-primary text-page hover:bg-muted",
@@ -483,17 +488,23 @@ export default function Profile({ username }: ProfileProps) {
 
 			{/* Profile Info */}
 			<div className="px-4 mt-6 flex flex-col gap-3">
-				<div>
-					<h1 className="font-display text-xl font-semibold leading-6 flex items-center gap-1.5 text-primary">
-						{fullName}
-						{profileUser.isVerified && <VerifiedIcon />}
+				<div className="min-w-0">
+					<h1 className="font-display text-xl font-semibold leading-6 flex items-center gap-1.5 text-primary min-w-0">
+						<span className="truncate">{fullName}</span>
+						{profileUser.isVerified && (
+							<span className="shrink-0 flex">
+								<VerifiedIcon />
+							</span>
+						)}
 					</h1>
-					<div className="text-sm text-muted font-sans">
+					<div className="text-sm text-muted font-sans truncate">
 						@{profileUser.username}
 					</div>
 				</div>
 
-				<div className="text-[15px] text-primary leading-relaxed font-sans">
+				{/* break-words: a long unbroken bio token (a URL, a wallet address)
+				    used to push the whole profile column past the viewport. */}
+				<div className="text-[15px] text-primary leading-relaxed font-sans break-words">
 					{profileUser.bio || (
 						<span className="text-subtle">No bio yet.</span>
 					)}
@@ -516,7 +527,7 @@ export default function Profile({ username }: ProfileProps) {
 										? profileUser.website
 										: `https://${profileUser.website}`
 								}
-								className="text-gold hover:underline"
+								className="text-gold hover:underline break-all"
 								target="_blank"
 								rel="noopener noreferrer"
 							>

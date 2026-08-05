@@ -180,19 +180,19 @@ export function WelcomeTour() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
             transition={{ duration: 0.2, ease: EASE }}
-            className="relative w-full max-w-[440px] bg-surface border border-hairline rounded-xl shadow-nav overflow-hidden"
+            className="relative w-full max-w-[440px] max-h-[90dvh] overflow-y-auto overscroll-contain bg-surface border border-hairline rounded-xl shadow-nav"
           >
             <button
               type="button"
               aria-label="Skip tour"
               onClick={() => finish()}
-              className="absolute top-2 right-2 z-10 flex h-10 w-10 items-center justify-center rounded-pill text-subtle hover:text-primary hover:bg-raised transition-colors cursor-pointer"
+              className="absolute top-1 right-1 z-10 flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center rounded-pill text-subtle hover:text-primary hover:bg-raised transition-colors cursor-pointer"
             >
               <X className="h-4 w-4" />
             </button>
 
             {/* Hero band */}
-            <div className="h-[150px] bg-sunken border-b border-hairline flex items-center justify-center overflow-hidden">
+            <div className="h-[120px] sm:h-[150px] bg-sunken border-b border-hairline flex items-center justify-center overflow-hidden">
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
                   key={current.key}
@@ -207,7 +207,7 @@ export function WelcomeTour() {
             </div>
 
             {/* Copy */}
-            <div className="px-6 pt-5 pb-4 min-h-[128px]">
+            <div className="px-5 sm:px-6 pt-5 pb-4 min-h-[128px]">
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
                   key={current.key}
@@ -227,8 +227,8 @@ export function WelcomeTour() {
             </div>
 
             {/* Footer: dots + controls */}
-            <div className="flex items-center justify-between px-6 pb-5">
-              <div className="flex items-center gap-1.5" aria-hidden="true">
+            <div className="flex items-center justify-between gap-3 px-5 sm:px-6 pb-5">
+              <div className="flex items-center gap-1.5 shrink-0" aria-hidden="true">
                 {STEPS.map((s, i) => (
                   <span
                     key={s.key}
@@ -239,12 +239,12 @@ export function WelcomeTour() {
                 ))}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 {step > 0 && (
                   <button
                     type="button"
                     onClick={() => setStep((s) => s - 1)}
-                    className="h-9 px-4 rounded-pill font-sans text-[13px] font-semibold text-primary border border-hairline hover:bg-raised transition-colors cursor-pointer"
+                    className="h-11 sm:h-9 px-4 rounded-pill font-sans text-[13px] font-semibold text-primary border border-hairline hover:bg-raised transition-colors cursor-pointer"
                   >
                     Back
                   </button>
@@ -254,7 +254,7 @@ export function WelcomeTour() {
                   onClick={() =>
                     isLast ? finish(true) : setStep((s) => s + 1)
                   }
-                  className="h-9 px-[18px] rounded-pill font-sans text-[13px] font-semibold bg-brand text-brand-on hover:bg-brand-active transition-colors cursor-pointer"
+                  className="h-11 sm:h-9 px-[18px] rounded-pill font-sans text-[13px] font-semibold bg-brand text-brand-on hover:bg-brand-active transition-colors cursor-pointer whitespace-nowrap"
                 >
                   {isLast ? "Start posting" : "Next"}
                 </button>

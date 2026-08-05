@@ -6,9 +6,12 @@ export default function MessagesLayout({
 	children: React.ReactNode;
 }) {
 	return (
-		<div className="max-w-[1600px] mx-auto flex min-h-screen">
+		<div className="max-w-[1600px] mx-auto flex min-h-dvh">
 			<LeftSidebar />
-			<main id="main-content" className="flex-1 min-h-screen border-r border-hairline">
+			<main
+				id="main-content"
+				className="flex-1 min-w-0 min-h-dvh border-r border-hairline"
+			>
 				{children}
 			</main>
 		</div>

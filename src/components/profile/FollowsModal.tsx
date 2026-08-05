@@ -121,7 +121,7 @@ export default function FollowsModal({
 							animate={{ opacity: 1, scale: 1, y: 0 }}
 							exit={{ opacity: 0, scale: 0.98, y: 8 }}
 							transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-							className="relative bg-surface border border-hairline rounded-xl shadow-nav w-full max-w-md overflow-hidden max-h-[80vh] flex flex-col text-primary"
+							className="relative bg-surface border border-hairline rounded-xl shadow-nav w-full max-w-md overflow-hidden max-h-[80dvh] flex flex-col text-primary"
 						>
 							{/* Header with Tabs */}
 							<div className="flex border-b border-hairline">
@@ -154,7 +154,9 @@ export default function FollowsModal({
 							</div>
 
 							{/* List Content */}
-							<div className="overflow-y-auto p-0 flex-1 min-h-[300px]">
+							{/* min-h capped against the viewport: a hard 300px floor
+							    plus header overflowed short phones in landscape. */}
+							<div className="overflow-y-auto overscroll-contain p-0 flex-1 min-h-[min(300px,40dvh)]">
 								{loading ? (
 									<div className="flex flex-col">
 										{[...Array(5)].map((_, i) => (

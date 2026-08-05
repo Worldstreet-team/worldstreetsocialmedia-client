@@ -65,7 +65,7 @@ export const CallModal = ({
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
 					exit={{ opacity: 0 }}
-					className="fixed inset-0 z-modal bg-page flex flex-col items-center justify-center p-4"
+					className="fixed inset-0 h-[100dvh] z-modal bg-page flex flex-col items-center justify-center p-4"
 				>
 					{/* Video Streams */}
 					{callStatus === "connected" && isVideoCall && (
@@ -84,7 +84,8 @@ export const CallModal = ({
 
 							{/* Local Stream (PiP) */}
 							{localStream && (
-								<div className="absolute top-4 right-4 w-32 h-48 bg-raised rounded-lg overflow-hidden border border-hairline shadow-nav z-10">
+								// A 128x192 PiP is 40% of a 320px screen; scaled down on phones.
+								<div className="absolute top-4 right-4 w-24 h-36 sm:w-32 sm:h-48 bg-raised rounded-lg overflow-hidden border border-hairline shadow-nav z-10">
 									<video
 										autoPlay
 										playsInline
@@ -127,7 +128,7 @@ export const CallModal = ({
 										/>
 									</>
 								)}
-								<div className="relative z-10 w-32 h-32 rounded-full overflow-hidden border-4 border-raised">
+								<div className="relative z-10 w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-raised">
 									<Image
 										src={caller.avatar}
 										alt={caller.name}
@@ -136,7 +137,7 @@ export const CallModal = ({
 									/>
 								</div>
 							</div>
-							<h2 className="font-display text-2xl font-semibold text-primary mb-2">
+							<h2 className="font-display text-xl sm:text-2xl font-semibold text-primary mb-2 text-center px-4 break-words">
 								{caller.name}
 							</h2>
 							{/* Status text stays still — the transient ripple above carries
@@ -152,7 +153,9 @@ export const CallModal = ({
 					)}
 
 					{/* Controls */}
-					<div className="absolute bottom-10 left-0 right-0 flex items-center justify-center gap-6 z-20">
+					{/* Lifted clear of the iOS home indicator; gap tightened so three
+					    controls (mic / end / camera) still fit at 320px. */}
+					<div className="absolute bottom-[calc(2.5rem+env(safe-area-inset-bottom,0px))] left-0 right-0 flex items-center justify-center gap-4 sm:gap-6 z-20">
 						{callStatus === "ringing" && isIncoming ? (
 							<>
 								<button

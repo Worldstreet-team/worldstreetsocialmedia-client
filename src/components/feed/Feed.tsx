@@ -218,7 +218,7 @@ export default function Feed() {
 	};
 
 	return (
-		<div className="w-full pb-20">
+		<div className="w-full min-w-0 pb-nav md:pb-20">
 			<AnimatePresence>
 				{showBackToTop && (
 					<motion.button
@@ -231,7 +231,10 @@ export default function Feed() {
 						onClick={() =>
 							window.scrollTo({ top: 0, behavior: "smooth" })
 						}
-						className="fixed bottom-24 md:bottom-8 left-1/2 z-sticky flex items-center gap-1.5 h-9 pl-3 pr-4 rounded-pill bg-raised border border-hairline shadow-nav font-sans text-[13px] font-medium text-primary hover:bg-track transition-colors cursor-pointer"
+						// bottom-nav derives from --ws-nav-clearance, so the pill
+						// tracks the real bar height + home indicator instead of a
+						// guessed 24 (which overlapped it on notched phones).
+						className="fixed bottom-nav md:bottom-8 left-1/2 z-sticky flex items-center gap-1.5 h-10 md:h-9 pl-3.5 pr-4 rounded-pill bg-raised border border-hairline shadow-nav font-sans text-[13px] font-medium text-primary hover:bg-track transition-colors cursor-pointer"
 					>
 						<ArrowUp className="w-[14px] h-[14px]" />
 						Top

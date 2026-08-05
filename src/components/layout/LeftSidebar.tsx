@@ -94,7 +94,7 @@ export function LeftSidebar() {
 	}, [isMenuOpen]);
 
 	return (
-		<header className="w-[260px] hidden md:flex flex-col sticky top-0 h-screen pl-4 pr-6 border-r border-hairline">
+		<header className="w-[260px] shrink-0 hidden md:flex flex-col sticky top-0 h-dvh overflow-y-auto no-scrollbar pl-4 pr-6 border-r border-hairline">
 			{/* Intro: logo leads, nav items cascade after it (animate-rise + delays). */}
 			<div className="py-8 px-2 animate-rise">
 				{/* Unified ecosystem lockup (05-screens): gold wsa-mark 26px, unboxed +

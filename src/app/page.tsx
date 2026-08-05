@@ -11,12 +11,12 @@ export default async function Home() {
 	const user = await currentUser();
 
 	return (
-		<main className="min-h-screen bg-page text-primary">
+		<main className="min-h-dvh bg-page text-primary">
 			<MobileNavigation />
 			{/* Widths come from tokens: --ws-container-max 1280, --ws-feed-width 620 */}
-			<div className="max-w-[var(--ws-container-max)] mx-auto flex justify-center min-h-screen">
+			<div className="max-w-[var(--ws-container-max)] mx-auto flex justify-center min-h-dvh">
 				<LeftSidebar />
-				<div className="w-full max-w-[var(--ws-feed-width)] sm:border-x border-hairline min-h-screen pt-14 md:pt-0">
+				<div className="w-full min-w-0 max-w-[var(--ws-feed-width)] sm:border-x border-hairline min-h-dvh pt-14 md:pt-0">
 					{/* Sticky column header — keeps the feed anchored while scrolling.
 					    Translucent page fill + blur so posts read through it. */}
 					<header

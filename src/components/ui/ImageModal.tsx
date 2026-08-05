@@ -74,7 +74,7 @@ export default function ImageModal({
 					animate={{ opacity: 1 }}
 					exit={{ opacity: 0 }}
 					transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-					className="fixed inset-0 z-modal flex items-center justify-center bg-page"
+					className="fixed inset-0 h-[100dvh] z-modal flex items-center justify-center bg-page"
 					onClick={(e) => {
 						e.stopPropagation();
 						onClose();
@@ -88,7 +88,7 @@ export default function ImageModal({
 							e.stopPropagation();
 							onClose();
 						}}
-						className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
+						className="absolute top-[calc(1rem+env(safe-area-inset-top,0px))] right-4 z-10 h-11 w-11 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
 					>
 						<X className="w-5 h-5" />
 					</button>
@@ -100,7 +100,7 @@ export default function ImageModal({
 								type="button"
 								aria-label="Previous image"
 								onClick={handlePrev}
-								className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
+								className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
 							>
 								<ChevronLeft className="w-6 h-6" />
 							</button>
@@ -108,7 +108,7 @@ export default function ImageModal({
 								type="button"
 								aria-label="Next image"
 								onClick={handleNext}
-								className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
+								className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
 							>
 								<ChevronRight className="w-6 h-6" />
 							</button>
@@ -117,7 +117,9 @@ export default function ImageModal({
 
 					{/* Image Container */}
 					<div
-						className="relative w-full h-full flex items-center justify-center p-4 md:p-10"
+						// px-16 below sm keeps the image clear of the prev/next buttons
+						// instead of letting them sit on top of the photo.
+						className="relative w-full h-full flex items-center justify-center px-16 py-16 sm:p-4 md:p-10"
 						onClick={(e) => e.stopPropagation()} // Prevent closing when clicking on image area
 					>
 						<motion.img

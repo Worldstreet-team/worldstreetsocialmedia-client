@@ -192,11 +192,13 @@ export default function ExploreClient({
 	const isSearching = query.trim().length > 0;
 
 	return (
-		<main className="min-h-screen bg-page text-primary">
-			<div className="max-w-[1265px] mx-auto flex justify-center min-h-screen">
+		<main className="min-h-dvh bg-page text-primary">
+			<div className="max-w-[1265px] mx-auto flex justify-center min-h-dvh">
 				<LeftSidebar />
 
-				<div className="w-full max-w-[600px] sm:border-x border-hairline min-h-screen pt-4 md:pt-0">
+				{/* pb-nav: /explore has no mobile header but the fixed bottom nav is
+				    on screen here, so the last row needs clearance to be reachable. */}
+				<div className="w-full min-w-0 max-w-[600px] sm:border-x border-hairline min-h-dvh pt-4 md:pt-0 pb-nav md:pb-0">
 					{/* Search Header */}
 					<div className="sticky top-0 bg-page z-sticky">
 						<div className="p-4 border-b border-hairline">
@@ -206,7 +208,9 @@ export default function ExploreClient({
 								</div>
 								<input
 									type="text"
-									className="block w-full pl-10 pr-3 py-3 rounded-pill bg-surface border border-hairline text-primary placeholder:text-subtle focus:outline-none focus:border-brand/60 transition-colors font-sans text-[15px]"
+									// text-base (16px) on mobile: anything smaller makes iOS
+									// Safari zoom the whole page in on focus. Desktop keeps 15.
+									className="block w-full pl-10 pr-3 py-3 rounded-pill bg-surface border border-hairline text-primary placeholder:text-subtle focus:outline-none focus:border-brand/60 transition-colors font-sans text-base sm:text-[15px]"
 									placeholder="Search WorldStreet"
 									value={query}
 									onChange={(e) => setQuery(e.target.value)}
@@ -287,17 +291,19 @@ export default function ExploreClient({
 														className="object-cover"
 													/>
 												</div>
-												<div className="flex flex-col">
-													<div className="flex items-center gap-1">
-														<span className="font-semibold text-primary text-[15px] hover:underline font-sans">
+												<div className="flex flex-col min-w-0">
+													<div className="flex items-center gap-1 min-w-0">
+														<span className="font-semibold text-primary text-[15px] hover:underline font-sans truncate">
 															{user.firstName}{" "}
 															{user.lastName}
 														</span>
 														{user.isVerified && (
-															<VerifiedIcon size={{ width: "16", height: "16" }} />
+															<span className="shrink-0">
+																<VerifiedIcon size={{ width: "16", height: "16" }} />
+															</span>
 														)}
 													</div>
-													<span className="text-muted text-[14px] leading-4">
+													<span className="text-muted text-[14px] leading-4 truncate">
 														@{user.username}
 													</span>
 												</div>

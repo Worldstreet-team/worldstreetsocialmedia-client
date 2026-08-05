@@ -1,261 +1,198 @@
 /* ---------------------------------------------------------------------------
    VENDORED FILE - do not hand-edit.
    Source of truth: <workspace>/design-tokens/tokens.css
-   Re-sync with:    cp ../design-tokens/tokens.css src/styles/ws-tokens.css
+   Re-sync with:    node design-tokens/sync.mjs   (verify with --check)
    Copied in because Next/PostCSS can't import CSS from outside the project root.
    This app renders the "platform" theme (see <html data-ws-theme> in layout.tsx).
    --------------------------------------------------------------------------- */
-/* WorldStreet Design Tokens — generated from the Figma design system
-   https://www.figma.com/design/DOkdLhK3pJ9fEwglOwSJfN
-   One semantic vocabulary, six modes. Set data-ws-theme on <html> or any subtree:
-     "shell"    — wallet/auth/dashboard surfaces (dark, stone + gold #EAB308)
-     "platform" — Academy · Social · Vision · Arcade · Shop (near-black + gold #FFCC29)
-     "platform-light" — user-toggled light inversion of platform (paper + gold)
-     "shop"       — legacy espresso + coral (Shop moved to platform 2026-08-03)
-     "shop-light" — Shop's original light paper palette, legacy opt-in
-     "xstream"    — Xstream only (pure black + antique gold #C9A24B)
-   Never hardcode a platform hex in app code — use the variables. */
+/* WorldStreet Design Tokens — v2, adopted 2026-08-05 from dashboard-revamp/
+   (the worldstreetgold.com hub). ONE look for the whole ecosystem: warm stone
+   + gold, two modes — dark (default) and light.
 
-:root, [data-ws-theme="shell"] {
-  --ws-bg-page: #0C0A09;
-  --ws-bg-sunken: #141110;
-  --ws-bg-surface: #1C1917;
-  --ws-bg-raised: #292524;
-  --ws-bg-chip: #292524;
-  --ws-bg-track: rgba(255, 255, 255, 0.06);
-  --ws-border-hairline: rgba(255, 255, 255, 0.10);
-  --ws-text-primary: #FAFAF9;
-  --ws-text-muted: #A8A29E;
-  --ws-text-subtle: #78716C;
-  --ws-brand-primary: #EAB308;
+   Canonical vocabulary = the hub's shadcn names (--background, --card,
+   --primary, --credit, …). Every legacy `--ws-*` name from v1 is kept as an
+   alias into the canonical tokens, so existing app code (bg-page, bg-surface,
+   text-muted, …via tailwind.preset.cjs) keeps rendering — it just renders the
+   new values.
+
+   Legacy `data-ws-theme` values still resolve — they all collapse into the
+   two modes:
+     dark  ← "shell" · "platform" · "shop" · "xstream" · "dark" · .dark · default
+     light ← "platform-light" · "shop-light" · "light" · .light
+   The per-platform palettes (espresso/coral Shop, pure-black Xstream, cool
+   near-black Platform) are RETIRED — archived in design-system-old/.
+
+   Never hardcode a hex in app code — use the variables. */
+
+/* ── Dark — the default. The hub's warm stone ladder:
+      #0C0A09 page → #141110 sunken → #1C1917 card → #292524 raised.
+   Values are byte-faithful to dashboard-revamp/app/globals.css (hex where the
+   hub uses hex on purpose — oklch round numbers don't hit them). */
+:root,
+.dark,
+[data-ws-theme="dark"],
+[data-ws-theme="shell"],
+[data-ws-theme="platform"],
+[data-ws-theme="shop"],
+[data-ws-theme="xstream"] {
+  --background: #0C0A09;
+  --foreground: oklch(0.986 0.002 67.8);
+  --card: #1C1917;
+  --card-foreground: oklch(0.986 0.002 67.8);
+  --popover: #1C1917;
+  --popover-foreground: oklch(0.986 0.002 67.8);
+  --primary: oklch(0.795 0.184 86.047);           /* gold */
+  --primary-foreground: oklch(0.147 0.004 49.3);
+  --secondary: #292524;
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: #292524;
+  --muted-foreground: #A8A29E;
+  --subtle: #78716C;                               /* eyebrows / tertiary ink */
+  --accent: #292524;                               /* raised step */
+  --accent-foreground: oklch(0.986 0.002 67.8);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.547 0.021 43.1);
+  --surface-sunken: #141110;                       /* panels UNDER a primary one */
+
+  /* Money direction + caution (Tailwind 500s — picked to glow on near-black).
+     Chip tints at 14% so they read on these surfaces. */
+  --credit: #10B981;
+  --credit-chip: rgba(16, 185, 129, 0.14);
+  --debit: #EF4444;
+  --debit-chip: rgba(239, 68, 68, 0.14);
+  --convert-chip: rgba(234, 179, 8, 0.14);
+  --warning: #F59E0B;
+  --warning-chip: rgba(245, 158, 11, 0.14);
+
+  --sidebar: #141110;
+  --sidebar-foreground: oklch(0.986 0.002 67.8);
+  --sidebar-primary: oklch(0.795 0.184 86.047);
+  --sidebar-primary-foreground: oklch(0.987 0.026 102.212);
+  --sidebar-accent: #292524;
+  --sidebar-accent-foreground: oklch(0.986 0.002 67.8);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.547 0.021 43.1);
+
+  /* ws-only extras with no shadcn counterpart — mode-specific values */
   --ws-brand-active: #FACC15;
   --ws-brand-dim: #CA8A04;
-  --ws-brand-on-primary: #0C0A09;
-  --ws-brand-gold-text: #EAB308;
-  --ws-status-success: #10B981;
-  --ws-status-warning: #F59E0B;
-  --ws-status-warning-chip: rgba(245, 158, 11, 0.14);
-  --ws-status-danger: #EF4444;
-  --ws-money-credit: #10B981;
-  --ws-money-credit-chip: rgba(16, 185, 129, 0.14);
-  --ws-money-debit: #EF4444;
-  --ws-money-debit-chip: rgba(239, 68, 68, 0.14);
-  --ws-money-convert: #EAB308;
-  --ws-money-convert-chip: rgba(234, 179, 8, 0.14);
+  --ws-brand-gold-text: #EAB308;                   /* gold as TEXT — dark only */
   --ws-overlay-scrim: rgba(0, 0, 0, 0.60);
-  --ws-focus-ring: #EAB308;
-  --ws-font-display: "Poppins", system-ui, sans-serif;
-  --ws-font-ui: "Public Sans", system-ui, sans-serif;
+  /* Ambient page glow — the ONLY permitted large-area brand color, as 1-2
+     huge blurred radials behind all surfaces, hero-scale pages only. */
+  --ws-glow-brand: rgba(234, 179, 8, 0.07);
 }
 
-[data-ws-theme="platform"] {
-  --ws-bg-page: #0B0B0F;
-  --ws-bg-sunken: #08080A;
-  --ws-bg-surface: #15151A;
-  --ws-bg-raised: #1F1F26;
-  --ws-bg-chip: #1F1F26;
-  --ws-bg-track: #26262E;
-  --ws-border-hairline: #26262E;
-  --ws-text-primary: #FAFAFA;
-  --ws-text-muted: #8E8E97;
-  --ws-text-subtle: #64646C;
-  --ws-brand-primary: #FFCC29;
-  --ws-brand-active: #FFD75C;
-  --ws-brand-dim: #D4A917;
-  --ws-brand-on-primary: #0B0B0F;
-  --ws-brand-gold-text: #FFCC29;
-  --ws-status-success: #10B981;
-  --ws-status-danger: #EF4444;
-  --ws-money-credit: #10B981;
-  --ws-money-credit-chip: rgba(16, 185, 129, 0.14);
-  --ws-money-debit: #EF4444;
-  --ws-money-debit-chip: rgba(239, 68, 68, 0.14);
-  --ws-money-convert: #FFCC29;
-  --ws-money-convert-chip: rgba(255, 204, 41, 0.14);
-  --ws-status-warning: #F59E0B;
-  --ws-status-warning-chip: rgba(245, 158, 11, 0.14);
-  --ws-overlay-scrim: rgba(0, 0, 0, 0.60);
-  --ws-focus-ring: #FFCC29;
-  --ws-accent-star: #F97316; /* ratings (Academy) */
-}
-
-/* Platform Light — opt-in inversion of Platform for user-toggled light mode
-   (added 2026-08-03 for Shop's theme switch; any Platform app may use it).
-   Same cool-neutral family and gold brand. Gold FILLS keep #FFCC29 with
-   near-black ink (contrast comes from the ink); gold TEXT darkens to #8A6C00
-   because raw #FFCC29 on white is unreadable (1.6:1). Status hues darken one
-   step for white surfaces. */
-[data-ws-theme="platform-light"] {
-  --ws-bg-page: #FAFAFA;
-  --ws-bg-sunken: #F0F0F2;
-  --ws-bg-surface: #FFFFFF;
-  --ws-bg-raised: #F4F4F6;
-  --ws-bg-chip: #EFEFF2;
-  --ws-bg-track: #E4E4E9;
-  --ws-border-hairline: #E4E4E9;
-  --ws-text-primary: #18181B;
-  --ws-text-muted: #6E6E78;
-  --ws-text-subtle: #9A9AA3;
-  --ws-brand-primary: #FFCC29;
-  --ws-brand-active: #F0BC0F;
-  --ws-brand-dim: #D4A917;
-  --ws-brand-on-primary: #0B0B0F;
-  --ws-brand-gold-text: #8A6C00;
-  --ws-status-success: #059669;
-  --ws-status-danger: #DC2626;
-  --ws-money-credit: #059669;
-  --ws-money-credit-chip: rgba(5, 150, 105, 0.12);
-  --ws-money-debit: #DC2626;
-  --ws-money-debit-chip: rgba(220, 38, 38, 0.12);
-  --ws-money-convert: #8A6C00;
-  --ws-money-convert-chip: rgba(255, 204, 41, 0.20);
-  --ws-status-warning: #D97706;
-  --ws-status-warning-chip: rgba(217, 119, 6, 0.14);
-  --ws-overlay-scrim: rgba(24, 24, 27, 0.45);
-  --ws-focus-ring: #D4A917;
-  --ws-accent-star: #F97316; /* ratings */
-}
-
-/* Shop — dark-first, the app default. A warm espresso ladder rather than
-   Shell's neutral stone, so Shop reads as its own sub-brand at night. Coral,
-   Space Grotesk and Inter are unchanged from the light mode; only the surface
-   ladder and the ink invert. */
-[data-ws-theme="shop"] {
-  --ws-bg-page: #0F0C0A;
-  --ws-bg-sunken: #171310;
-  --ws-bg-surface: #201B17;
-  --ws-bg-raised: #2C2621;
-  --ws-bg-chip: #2C2621;
-  --ws-bg-track: rgba(255, 255, 255, 0.06);
-  --ws-border-hairline: rgba(255, 255, 255, 0.10);
-  /* Shop Light's bg/page reused as ink — the two modes share an off-white. */
-  --ws-text-primary: #FAF9F5;
-  --ws-text-muted: #ABA398;
-  --ws-text-subtle: #7C7367;
-  --ws-brand-primary: #F0502F;
-  --ws-brand-active: #FF6A47;
-  --ws-brand-dim: #C73E22;
-  /* Ink on coral, not white: 5.4:1 vs white's 3.6:1, and it matches how every
-     other dark theme resolves on-primary to its own bg/page. */
-  --ws-brand-on-primary: #0F0C0A;
-  /* Mirror of the light mode's darker coral, same reason in reverse: raw coral
-     as *text* on espresso is thin, so it lightens. 7.6:1. */
-  --ws-brand-gold-text: #FF7A5A;
-  --ws-status-success: #10B981;
-  --ws-status-danger: #EF4444;
-  --ws-money-credit: #10B981;
-  --ws-money-credit-chip: rgba(16, 185, 129, 0.14);
-  --ws-money-debit: #EF4444;
-  --ws-money-debit-chip: rgba(239, 68, 68, 0.14);
-  --ws-money-convert: #F0502F;
-  --ws-money-convert-chip: rgba(240, 80, 47, 0.14);
-  --ws-status-warning: #F59E0B;
-  --ws-status-warning-chip: rgba(245, 158, 11, 0.14);
-  --ws-overlay-scrim: rgba(0, 0, 0, 0.60);
-  --ws-focus-ring: #F0502F;
-  --ws-font-display: "Space Grotesk", system-ui, sans-serif;
-  --ws-font-ui: "Inter", system-ui, sans-serif;
-}
-
-/* Shop Light — the original paper palette. No longer Shop's default, retained
-   for surfaces that need a light treatment (print views, embeds, opt-in). */
+/* ── Light — the hub's paper mode. Money 700s (emerald-500 lands ~2.4:1 on
+   white, under the 4.5:1 floor; the 700s keep the colour language legible
+   on paper). Chip tints drop to 10%. */
+.light,
+[data-ws-theme="light"],
+[data-ws-theme="platform-light"],
 [data-ws-theme="shop-light"] {
-  --ws-bg-page: #FAF9F5;
-  --ws-bg-sunken: #F1EFE8;
-  --ws-bg-surface: #FFFFFF;
-  --ws-bg-raised: #F5F3EC;
-  --ws-bg-chip: #F1EFE8;
-  --ws-bg-track: #EAE7E0;
-  --ws-border-hairline: #EAE7E0;
-  --ws-text-primary: #1B1A16;
-  --ws-text-muted: #6F6B61;
-  --ws-text-subtle: #9A958A;
-  --ws-brand-primary: #F0502F;
-  --ws-brand-active: #FF6A47;
-  --ws-brand-dim: #C73E22;
-  --ws-brand-on-primary: #FFFFFF;
-  --ws-brand-gold-text: #C73E22;
-  --ws-status-success: #047857;
-  --ws-status-danger: #B91C1C;
-  --ws-money-credit: #047857;
-  --ws-money-credit-chip: rgba(4, 120, 87, 0.10);
-  --ws-money-debit: #B91C1C;
-  --ws-money-debit-chip: rgba(185, 28, 28, 0.10);
-  --ws-money-convert: #C73E22;
-  --ws-money-convert-chip: rgba(240, 80, 47, 0.12);
-  --ws-status-warning: #B45309;
-  --ws-status-warning-chip: rgba(180, 83, 9, 0.10);
-  --ws-overlay-scrim: rgba(0, 0, 0, 0.40);
-  --ws-focus-ring: #F0502F;
-  --ws-font-display: "Space Grotesk", system-ui, sans-serif;
-  --ws-font-ui: "Inter", system-ui, sans-serif;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.147 0.004 49.3);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.147 0.004 49.3);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.147 0.004 49.3);
+  --primary: oklch(0.852 0.199 91.936);
+  --primary-foreground: oklch(0.147 0.004 49.3);
+  --secondary: oklch(0.967 0.001 286.375);
+  --secondary-foreground: oklch(0.21 0.006 285.885);
+  --muted: oklch(0.96 0.002 17.2);
+  --muted-foreground: oklch(0.547 0.021 43.1);
+  --subtle: oklch(0.553 0.013 58.1);
+  --accent: oklch(0.96 0.002 17.2);
+  --accent-foreground: oklch(0.214 0.009 43.1);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0.005 34.3);
+  --input: oklch(0.922 0.005 34.3);
+  --ring: oklch(0.714 0.014 41.2);
+  --surface-sunken: oklch(0.975 0.002 49.3);
+
+  --credit: #047857;
+  --credit-chip: rgba(4, 120, 87, 0.10);
+  --debit: #B91C1C;
+  --debit-chip: rgba(185, 28, 28, 0.10);
+  --convert-chip: rgba(161, 98, 7, 0.10);
+  --warning: #B45309;
+  --warning-chip: rgba(180, 83, 9, 0.10);
+
+  --sidebar: oklch(0.986 0.002 67.8);
+  --sidebar-foreground: oklch(0.147 0.004 49.3);
+  --sidebar-primary: oklch(0.681 0.162 75.834);
+  --sidebar-primary-foreground: oklch(0.987 0.026 102.212);
+  --sidebar-accent: oklch(0.96 0.002 17.2);
+  --sidebar-accent-foreground: oklch(0.214 0.009 43.1);
+  --sidebar-border: oklch(0.922 0.005 34.3);
+  --sidebar-ring: oklch(0.714 0.014 41.2);
+
+  --ws-brand-active: #CA8A04;
+  --ws-brand-dim: #A16207;
+  --ws-brand-gold-text: #A16207;                   /* raw gold on white is 1.9:1 */
+  --ws-overlay-scrim: rgba(24, 24, 27, 0.45);
+  --ws-glow-brand: rgba(202, 138, 4, 0.05);
 }
 
-[data-ws-theme="xstream"] {
-  --ws-bg-page: #000000;
-  --ws-bg-sunken: #060607;
-  --ws-bg-surface: #0C0C0D;
-  --ws-bg-raised: #141416;
-  --ws-bg-chip: #141416;
-  --ws-bg-track: #1F1F21;
-  --ws-border-hairline: rgba(255, 255, 255, 0.10);
-  --ws-text-primary: #F7F5F1;
-  --ws-text-muted: #7C7A76;
-  --ws-text-subtle: #55534F;
-  --ws-brand-primary: #C9A24B;
-  --ws-brand-active: #DDB55E;
-  --ws-brand-dim: #A8823A;
-  --ws-brand-on-primary: #000000;
-  --ws-brand-gold-text: #C9A24B;
-  --ws-status-success: #10B981;
-  --ws-status-danger: #E5484D; /* doubles as the LIVE red */
-  --ws-money-credit: #10B981;
-  --ws-money-credit-chip: rgba(16, 185, 129, 0.14);
-  --ws-money-debit: #E5484D;
-  --ws-money-debit-chip: rgba(229, 72, 77, 0.14);
-  --ws-money-convert: #C9A24B;
-  --ws-money-convert-chip: rgba(201, 162, 75, 0.14);
-  --ws-status-warning: #F59E0B;
-  --ws-status-warning-chip: rgba(245, 158, 11, 0.14);
-  --ws-overlay-scrim: rgba(0, 0, 0, 0.70);
-  --ws-focus-ring: #C9A24B;
-  --ws-font-display: "Space Grotesk", system-ui, sans-serif;
-  --ws-font-ui: "Inter", system-ui, sans-serif;
-}
-
-/* Shared, theme-independent */
+/* ── Shared, mode-independent ─────────────────────────────────────────── */
 :root {
+  /* Radius ladder — the hub's 0.45rem base. Cards are 20px (--radius-2xl):
+     the hub renders them rounded-[20px], softer than the ladder would give. */
+  --radius: 0.45rem;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: 20px;                              /* the card corner */
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Charts — 5-step gold ramp, same in both modes */
+  --chart-1: oklch(0.905 0.182 98.111);
+  --chart-2: oklch(0.795 0.184 86.047);
+  --chart-3: oklch(0.681 0.162 75.834);
+  --chart-4: oklch(0.554 0.135 66.442);
+  --chart-5: oklch(0.476 0.114 61.907);
+
+  /* Type — Poppins display / Public Sans UI everywhere (Xstream and Shop's
+     Space Grotesk/Inter pairing retired with their palettes). Money and
+     stats always tabular numerals. NOTE: bare --font-display/--font-sans are
+     NOT declared here on purpose — Next.js apps set them via next/font
+     (hashed family names) and a literal here would fight that; the legacy
+     --ws-font-* names below carry the literal stacks, and apps re-point
+     them at their next/font variables (see social's globals.css). */
+
   /* Motion — pair with ease; honor prefers-reduced-motion */
   --ws-motion-fast: 120ms;   /* hovers, toggles, icon states */
-  --ws-motion-base: 200ms;   /* menus, toasts, tab underlines */
+  --ws-motion-base: 200ms;   /* menus, toasts, tab thumbs */
   --ws-motion-slow: 320ms;   /* modals, sheets, page sections */
-  --ws-ease: cubic-bezier(0.2, 0, 0, 1); /* standard ease-out */
+  --ws-ease: cubic-bezier(0.2, 0, 0, 1);           /* standard ease-out */
+  --ws-ease-rise: cubic-bezier(0.22, 1, 0.36, 1);  /* the Rise cascade */
   /* Elevation — rare; the surface ladder does most depth work. Never on cards. */
-  --ws-shadow-nav: 0 3px 8px rgba(0, 0, 0, 0.45);    /* floating nav pill, menus, toasts */
-  --ws-shadow-sheet: 0 -2px 12px rgba(0, 0, 0, 0.35); /* bottom sheets — casts upward */
+  --ws-shadow-nav: 0 3px 8px rgba(0, 0, 0, 0.45);
+  --ws-shadow-sheet: 0 -2px 12px rgba(0, 0, 0, 0.35);
   /* Z-index scale */
-  --ws-z-sticky: 100;   /* sticky nav */
-  --ws-z-dropdown: 400; /* menus, selects, tooltips */
-  --ws-z-modal: 800;    /* scrim + modal/sheet */
-  --ws-z-toast: 1200;   /* always on top */
+  --ws-z-sticky: 100;
+  --ws-z-dropdown: 400;
+  --ws-z-modal: 800;
+  --ws-z-toast: 1200;
   /* Breakpoints (min-width) & containers */
   --ws-bp-sm: 640px;
   --ws-bp-lg: 1024px;
   --ws-bp-xl: 1280px;
   --ws-container-max: 1280px;
-  --ws-feed-width: 620px; /* Social center column */
+  --ws-feed-width: 620px;    /* Social center column */
   --ws-space-1: 4px;
   --ws-space-2: 8px;
   --ws-space-3: 12px;
   --ws-space-4: 16px;
   --ws-space-6: 24px;
   --ws-space-8: 32px;
-  --ws-radius-sm: 4px;
-  --ws-radius-md: 7px;
-  --ws-radius-lg: 10px;
-  --ws-radius-xl: 13px;
-  --ws-radius-pill: 999px;
-  /* 10 platform accents — used ONLY as ~13% washes behind icons/chips, never as large fills */
+  /* 10 platform accents — used ONLY as ~13% washes behind icons/chips,
+     never as large fills */
   --ws-accent-forex: #3B82F6;
   --ws-accent-crypto: #8B5CF6;
   --ws-accent-community: #10B981;
@@ -266,4 +203,113 @@
   --ws-accent-shop: #F59E0B;
   --ws-accent-social: #6366F1;
   --ws-accent-prediction: #14B8A6;
+  --ws-accent-star: #F97316; /* ratings (Academy) */
+}
+
+/* ── Legacy v1 aliases — every old --ws-* name, carrying the SAME values as
+   the canonical tokens above, so existing classes (bg-page, bg-surface,
+   text-muted, border-hairline, …) keep working.
+
+   Written as LITERALS per mode, NOT as var(--background) references, on
+   purpose: several apps bridge the other way (`--background:
+   var(--ws-bg-page)` in their own :root, e.g. Academy/Vision), and a
+   var()-based alias here would form a custom-property CYCLE with that
+   bridge — CSS resolves cycles by invalidating BOTH properties, blanking
+   the app. Keep both vocabularies literal; sync keeps them equal. */
+:root,
+.dark,
+[data-ws-theme="dark"],
+[data-ws-theme="shell"],
+[data-ws-theme="platform"],
+[data-ws-theme="shop"],
+[data-ws-theme="xstream"] {
+  --ws-bg-page: #0C0A09;
+  --ws-bg-sunken: #141110;
+  --ws-bg-surface: #1C1917;
+  --ws-bg-raised: #292524;
+  --ws-bg-chip: #292524;
+  --ws-bg-track: #141110;               /* Segmented tracks sit on the SUNKEN step */
+  --ws-border-hairline: oklch(1 0 0 / 10%);
+  --ws-text-primary: oklch(0.986 0.002 67.8);
+  --ws-text-muted: #A8A29E;
+  --ws-text-subtle: #78716C;
+  --ws-brand-primary: oklch(0.795 0.184 86.047);
+  --ws-brand-on-primary: oklch(0.147 0.004 49.3);
+  --ws-status-success: #10B981;
+  --ws-status-warning: #F59E0B;
+  --ws-status-warning-chip: rgba(245, 158, 11, 0.14);
+  --ws-status-danger: #EF4444;
+  --ws-money-credit: #10B981;
+  --ws-money-credit-chip: rgba(16, 185, 129, 0.14);
+  --ws-money-debit: #EF4444;
+  --ws-money-debit-chip: rgba(239, 68, 68, 0.14);
+  --ws-money-convert: #EAB308;
+  --ws-money-convert-chip: rgba(234, 179, 8, 0.14);
+  --ws-focus-ring: #EAB308;
+}
+
+.light,
+[data-ws-theme="light"],
+[data-ws-theme="platform-light"],
+[data-ws-theme="shop-light"] {
+  --ws-bg-page: #FFFFFF;
+  --ws-bg-sunken: oklch(0.975 0.002 49.3);
+  --ws-bg-surface: #FFFFFF;
+  --ws-bg-raised: oklch(0.96 0.002 17.2);
+  --ws-bg-chip: oklch(0.96 0.002 17.2);
+  --ws-bg-track: oklch(0.975 0.002 49.3);
+  --ws-border-hairline: oklch(0.922 0.005 34.3);
+  --ws-text-primary: oklch(0.147 0.004 49.3);
+  --ws-text-muted: oklch(0.547 0.021 43.1);
+  --ws-text-subtle: oklch(0.553 0.013 58.1);
+  --ws-brand-primary: oklch(0.852 0.199 91.936);
+  --ws-brand-on-primary: oklch(0.147 0.004 49.3);
+  --ws-status-success: #047857;
+  --ws-status-warning: #B45309;
+  --ws-status-warning-chip: rgba(180, 83, 9, 0.10);
+  --ws-status-danger: #B91C1C;
+  --ws-money-credit: #047857;
+  --ws-money-credit-chip: rgba(4, 120, 87, 0.10);
+  --ws-money-debit: #B91C1C;
+  --ws-money-debit-chip: rgba(185, 28, 28, 0.10);
+  --ws-money-convert: #A16207;
+  --ws-money-convert-chip: rgba(161, 98, 7, 0.10);
+  --ws-focus-ring: #CA8A04;
+}
+
+/* Mode-independent legacy names. Radius aliases reference the canonical
+   ladder — safe, nothing bridges radius the other way. */
+:root {
+  --ws-font-display: "Poppins", system-ui, sans-serif;
+  --ws-font-ui: "Public Sans", system-ui, sans-serif;
+  --ws-radius-sm: var(--radius-sm);
+  --ws-radius-md: var(--radius-md);
+  --ws-radius-lg: var(--radius-lg);
+  --ws-radius-xl: var(--radius-xl);
+  --ws-radius-pill: 999px;
+}
+
+/* ── Film grain — the hub's ashy noise texture, part of the house atmosphere
+   (design-system/01-foundations.md → Atmosphere). Fixed full-viewport SVG
+   turbulence at 2% opacity: reads as a faint mineral grain on the stone
+   ladder, invisible on white — so it keys off the DARK selectors only.
+   Non-interactive; z 50 sits above page content but under all chrome
+   (--ws-z-sticky starts at 100). Byte-identical to dashboard-revamp's
+   `.dark body::before`. If an app needs body::before for something else,
+   move this to an overlay div — don't delete the grain. */
+.dark body::before,
+[data-ws-theme="dark"] body::before,
+[data-ws-theme="shell"] body::before,
+[data-ws-theme="platform"] body::before,
+[data-ws-theme="shop"] body::before,
+[data-ws-theme="xstream"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0.02;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
 }

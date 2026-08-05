@@ -34,7 +34,7 @@ export default function BookmarksPage() {
 	}, [isLoaded, setBookmarks, setIsLoaded]);
 
 	return (
-		<div className="flex flex-col min-h-screen pb-20">
+		<div className="flex flex-col min-h-dvh pb-nav md:pb-20">
 			<header className="sticky top-0 z-sticky bg-page border-b border-hairline">
 				<div className="px-4 py-3">
 					<h1 className="font-display text-lg font-semibold text-primary">

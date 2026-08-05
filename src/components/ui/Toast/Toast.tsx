@@ -57,7 +57,9 @@ export const ToastItem = ({ toast, removeToast }: ToastProps) => {
 	return (
 		<output
 			className={clsx(
-				"flex items-center gap-2.5 px-3.5 py-3 min-w-[280px] max-w-md rounded-lg bg-raised border border-hairline shadow-nav pointer-events-auto cursor-pointer",
+				// min-w-0 on phones (the container stretches it full-width);
+				// the 280px floor only applies once there's room for it.
+				"flex items-center gap-2.5 px-3.5 py-3 w-full sm:w-auto sm:min-w-[280px] max-w-full sm:max-w-md rounded-lg bg-raised border border-hairline shadow-nav pointer-events-auto cursor-pointer",
 				"transition-[opacity,transform] duration-[var(--ws-motion-base)] ease-ws",
 				isVisible ? "opacity-100 translate-x-0 translate-y-0" : clsx("opacity-0", offscreen),
 			)}
@@ -66,7 +68,7 @@ export const ToastItem = ({ toast, removeToast }: ToastProps) => {
 			aria-live={isDanger ? "assertive" : "polite"}
 		>
 			<span className="shrink-0">{icons[toast.type]}</span>
-			<p className="flex-1 text-sm font-medium font-sans text-primary">
+			<p className="flex-1 min-w-0 text-sm font-medium font-sans text-primary break-words">
 				{toast.message}
 			</p>
 			<button

@@ -277,16 +277,19 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
         [displayedContent],
     );
 
+    /* Aspect ratios, not a fixed 290px height. At a 620px column 290px is
+       roughly 2:1; at 320px it squashed every tile into a letterbox and
+       cropped faces out of the frame. Ratios keep the same proportions at
+       every width. */
     const getImageGridClass = useCallback((count: number) => {
         switch (count) {
             case 1:
                 return "grid-cols-1 grid-rows-1 h-auto aspect-video";
             case 2:
-                return "grid-cols-2 grid-rows-1 h-[290px]";
+                return "grid-cols-2 grid-rows-1 aspect-[16/9] sm:aspect-[2/1]";
             case 3:
-                return "grid-cols-2 grid-rows-2 h-[290px]";
             case 4:
-                return "grid-cols-2 grid-rows-2 h-[290px]";
+                return "grid-cols-2 grid-rows-2 aspect-square sm:aspect-[16/11]";
             default:
                 return "grid-cols-1";
         }
@@ -300,7 +303,9 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
     if (isDeleted) return null;
 
     return (
-        <article className="relative block px-3 py-3 sm:px-4 sm:py-3.5 border-b border-hairline/60 hover:bg-surface/40 transition-colors">
+        // px-4 is the spec's minimum edge gutter on small screens; the old px-3
+        // put post text 12px from the viewport edge.
+        <article className="relative block px-4 py-3 sm:py-3.5 border-b border-hairline/60 hover:bg-surface/40 transition-colors">
             {/* ... Rest of the component remains the same ... */}
             <Link
                 href={`/post/${post.id}`}
@@ -325,7 +330,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                 initialIndex={selectedImageIndex || 0}
             />
 
-            <div className="flex gap-4 relative z-10 pointer-events-none">
+            <div className="flex gap-3 sm:gap-4 relative z-10 pointer-events-none">
                 <div className="shrink-0 pointer-events-auto mt-1">
                     <Link
                         href={`/profile/${post.author.username}`}
@@ -340,8 +345,12 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                     </Link>
                 </div>
                 <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-0.5">
-                        <div className="flex items-center gap-2 overflow-hidden pointer-events-auto">
+                    <div className="flex items-center justify-between gap-1 mb-0.5">
+                        {/* min-w-0 lets the two truncating links actually shrink;
+                            without it the row grows past the card on narrow
+                            screens. The badge, dot and timestamp never shrink —
+                            the handle gives way first, then the display name. */}
+                        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 overflow-hidden pointer-events-auto">
                             <Link
                                 href={`/profile/${post.author.username}`}
                                 className="text-[15px] font-semibold leading-5 text-primary truncate font-sans hover:underline decoration-gold underline-offset-4"
@@ -350,22 +359,26 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                             </Link>
                             {/* Gold seal badge — the one VerifiedIcon everywhere. */}
                             {post.author.isVerified && (
-                                <VerifiedIcon size={{ width: "16", height: "16" }} />
+                                <span className="shrink-0 flex">
+                                    <VerifiedIcon size={{ width: "16", height: "16" }} />
+                                </span>
                             )}
                             <Link
                                 href={`/profile/${post.author.username}`}
-                                className="text-subtle text-[13px] truncate font-sans hover:text-muted"
+                                className="hidden xs:block text-subtle text-[13px] truncate font-sans hover:text-muted"
                             >
                                 @{post.author.username}
                             </Link>
-                            <span className="text-subtle text-xs">•</span>
-                            <span className="text-subtle text-[13px] font-sans whitespace-nowrap">
+                            <span className="hidden xs:inline text-subtle text-xs shrink-0">
+                                •
+                            </span>
+                            <span className="text-subtle text-[13px] font-sans whitespace-nowrap shrink-0">
                                 {post.timestamp}
                             </span>
                         </div>
 
                         <div
-                            className="relative pointer-events-auto"
+                            className="relative pointer-events-auto shrink-0"
                             ref={menuRef}
                         >
                             <button

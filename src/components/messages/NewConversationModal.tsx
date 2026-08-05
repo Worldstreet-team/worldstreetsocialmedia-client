@@ -140,25 +140,29 @@ export default function NewConversationModal({
 						animate={{ opacity: 1, scale: 1, y: 0 }}
 						exit={{ opacity: 0, scale: 0.98, y: 8 }}
 						transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-						className="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[480px] md:max-h-[600px] md:rounded-xl bg-surface border border-hairline shadow-nav z-modal flex flex-col overflow-hidden"
+						// Full-bleed sheet on mobile — pt-safe/pb-safe keep the header
+						// off the notch and the list off the home indicator.
+						className="fixed inset-0 pt-safe pb-safe md:pt-0 md:pb-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[480px] md:max-h-[600px] md:rounded-xl bg-surface border border-hairline shadow-nav z-modal flex flex-col overflow-hidden"
 					>
 						{/* Header */}
-						<div className="flex items-center justify-between p-4 border-b border-hairline">
-							<div className="flex items-center gap-4">
+						<div className="flex shrink-0 items-center justify-between p-2 sm:p-4 border-b border-hairline">
+							<div className="flex items-center gap-2 sm:gap-4 min-w-0">
 								<button
+									type="button"
 									onClick={onClose}
-									className="p-1 rounded-pill hover:bg-raised transition-colors text-muted hover:text-primary"
+									aria-label="Close"
+									className="flex h-11 w-11 shrink-0 items-center justify-center rounded-pill hover:bg-raised transition-colors text-muted hover:text-primary"
 								>
 									<X className="w-5 h-5" />
 								</button>
-								<h2 className="font-display text-lg font-semibold text-primary">
+								<h2 className="font-display text-lg font-semibold text-primary truncate">
 									New Conversation
 								</h2>
 							</div>
 						</div>
 
 						{/* Search */}
-						<div className="p-4 border-b border-hairline">
+						<div className="shrink-0 p-4 border-b border-hairline">
 							<div className="relative">
 								<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle" />
 								<input
@@ -167,13 +171,13 @@ export default function NewConversationModal({
 									value={searchQuery}
 									onChange={(e) => setSearchQuery(e.target.value)}
 									autoFocus
-									className="w-full bg-sunken border border-hairline rounded-pill pl-10 pr-4 py-2.5 text-sm text-primary placeholder:text-subtle focus:border-brand/60 outline-none transition-colors"
+									className="w-full bg-sunken border border-hairline rounded-pill pl-10 pr-4 py-2.5 text-base sm:text-sm text-primary placeholder:text-subtle focus:border-brand/60 outline-none transition-colors"
 								/>
 							</div>
 						</div>
 
 						{/* User List */}
-						<div className="flex-1 overflow-y-auto">
+						<div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
 							{loading ? (
 								<div className="flex flex-col items-center justify-center py-12 text-muted">
 									<Loader2 className="w-6 h-6 animate-spin mb-3" />

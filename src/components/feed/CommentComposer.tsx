@@ -127,8 +127,8 @@ export const CommentComposer = ({
 	};
 
 	return (
-		<div className="border-b border-hairline p-6 mb-2 relative">
-			<div className="flex gap-4">
+		<div className="border-b border-hairline px-4 py-4 sm:p-6 mb-2 relative">
+			<div className="flex gap-3 sm:gap-4">
 				<div className="shrink-0">
 					{user ? (
 						<div className="relative w-10 h-10 rounded-full overflow-hidden border border-hairline">
@@ -145,7 +145,7 @@ export const CommentComposer = ({
 						</div>
 					)}
 				</div>
-				<div className="flex-1 w-full">
+				<div className="flex-1 w-full min-w-0">
 					<textarea
 						ref={textareaRef}
 						value={content}
@@ -178,8 +178,10 @@ export const CommentComposer = ({
 										className="object-cover"
 									/>
 									<button
+										type="button"
 										onClick={() => removeMedia(index)}
-										className="absolute top-2 right-2 p-1 bg-page/50 hover:bg-page/80 rounded-full text-primary transition-colors"
+										aria-label="Remove attachment"
+										className="absolute top-1.5 right-1.5 flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors"
 									>
 										<X className="w-4 h-4" />
 									</button>
@@ -191,11 +193,13 @@ export const CommentComposer = ({
 					<div className="flex items-center justify-between mt-2 pt-2">
 						<div className="flex gap-2 text-gold relative">
 							<button
+								type="button"
 								onClick={() => fileInputRef.current?.click()}
-								className="flex h-10 w-10 items-center justify-center hover:bg-brand/10 rounded-pill transition-colors relative group cursor-pointer"
+								aria-label="Attach media"
+								className="flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center hover:bg-brand/10 rounded-pill transition-colors relative group cursor-pointer"
 							>
 								<ImageIcon className="w-5 h-5" />
-								<span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] bg-raised text-primary px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
+								<span className="hidden sm:block absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] bg-raised text-primary px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
 									Media
 								</span>
 							</button>
@@ -210,22 +214,26 @@ export const CommentComposer = ({
 							/>
 
 							<button
+								type="button"
 								onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+								aria-label="Insert emoji"
 								className={clsx(
-									"flex h-10 w-10 items-center justify-center hover:bg-brand/10 rounded-pill transition-colors relative group cursor-pointer",
+									"flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center hover:bg-brand/10 rounded-pill transition-colors relative group cursor-pointer",
 									showEmojiPicker && "bg-brand/10",
 								)}
 							>
 								<Smile className="w-5 h-5" />
-								<span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] bg-raised text-primary px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
+								<span className="hidden sm:block absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] bg-raised text-primary px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
 									Emoji
 								</span>
 							</button>
 
-							{/* Emoji Picker Popover */}
+							{/* Centred on touch, anchored under the button from sm up —
+							    a 320px popover 72px in from the edge overflowed every
+							    small phone. Same treatment as PostComposer. */}
 							{showEmojiPicker && (
 								<div
-									className="absolute top-12 left-0 z-dropdown animate-rise ws-emoji-picker"
+									className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 sm:absolute sm:left-0 sm:top-12 sm:translate-x-0 sm:translate-y-0 w-[min(320px,calc(100vw-2rem))] max-h-[70dvh] z-dropdown animate-rise ws-emoji-picker"
 									ref={emojiPickerRef}
 								>
 									<EmojiPicker
@@ -235,8 +243,8 @@ export const CommentComposer = ({
 												? Theme.LIGHT
 												: Theme.DARK
 										}
-										width={320}
-										height={400}
+										width="100%"
+										height={360}
 										lazyLoadEmojis={true}
 									/>
 								</div>
@@ -244,12 +252,13 @@ export const CommentComposer = ({
 						</div>
 
 						<button
+							type="button"
 							onClick={handleSubmit}
 							disabled={
 								(!content.trim() && mediaItems.length === 0) || isPosting
 							}
 							className={clsx(
-								"px-[18px] h-9 rounded-pill font-semibold text-[13px] font-sans transition-colors flex items-center gap-2 cursor-pointer",
+								"px-[18px] h-11 sm:h-9 shrink-0 rounded-pill font-semibold text-[13px] font-sans transition-colors flex items-center gap-2 cursor-pointer",
 								(!content.trim() && mediaItems.length === 0) || isPosting
 									? "bg-raised text-subtle cursor-not-allowed opacity-50"
 									: "bg-brand text-brand-on hover:bg-brand-active",

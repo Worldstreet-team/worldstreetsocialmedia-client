@@ -300,8 +300,8 @@ export const PostComposer = ({
 	};
 
 	return (
-		<div className="border-b border-hairline p-6 mb-2 relative">
-			<div className="flex gap-4">
+		<div className="border-b border-hairline px-4 py-4 sm:p-6 mb-2 relative">
+			<div className="flex gap-3 sm:gap-4">
 				<div className="shrink-0">
 					{user ? (
 						<div className="relative w-10 h-10 rounded-full overflow-hidden border border-hairline">
@@ -318,7 +318,7 @@ export const PostComposer = ({
 						</div>
 					)}
 				</div>
-				<div className="flex-1 w-full">
+				<div className="flex-1 w-full min-w-0">
 					<textarea
 						id="post-composer-input"
 						ref={textareaRef}
@@ -353,8 +353,10 @@ export const PostComposer = ({
 										className="object-cover"
 									/>
 									<button
+										type="button"
 										onClick={() => removeMedia(index)}
-										className="absolute top-2 right-2 p-1 bg-page/50 hover:bg-page/80 rounded-full text-primary transition-colors"
+										aria-label="Remove attachment"
+										className="absolute top-1.5 right-1.5 flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors"
 									>
 										<X className="w-4 h-4" />
 									</button>
@@ -366,9 +368,13 @@ export const PostComposer = ({
 					{/* Link Preview Card */}
 					{linkPreview && mediaItems.length === 0 && (
 						<div className="mt-3 mb-2 rounded-xl border border-hairline overflow-hidden bg-surface/50 relative group">
+							{/* Reveal-on-hover is unreachable on touch — there is no
+							    hover state to enter. Always visible below sm. */}
 							<button
+								type="button"
 								onClick={removeLinkPreview}
-								className="absolute top-2 right-2 p-1 bg-page/50 hover:bg-page/80 rounded-full text-primary transition-colors z-10 opacity-0 group-hover:opacity-100"
+								aria-label="Remove link preview"
+								className="absolute top-1.5 right-1.5 flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-opacity z-10 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
 							>
 								<X className="w-4 h-4" />
 							</button>
@@ -409,9 +415,11 @@ export const PostComposer = ({
 					<div className="flex items-center justify-between mt-2 pt-3 border-t border-hairline/60">
 						<div className="flex gap-2 text-gold relative">
 							<button
+								type="button"
 								onClick={() => !linkPreview && fileInputRef.current?.click()}
+								aria-label="Attach media"
 								className={clsx(
-									"p-2 rounded-full transition-colors relative group",
+									"flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center rounded-pill transition-colors relative group",
 									linkPreview
 										? "opacity-50 cursor-not-allowed bg-raised/50 text-subtle"
 										: "hover:bg-brand/10 cursor-pointer",
@@ -419,7 +427,7 @@ export const PostComposer = ({
 							>
 								<ImageIcon className="w-5 h-5" />
 								{!linkPreview && (
-									<span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] bg-raised text-primary px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
+									<span className="hidden sm:block absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] bg-raised text-primary px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
 										Media
 									</span>
 								)}
@@ -435,22 +443,29 @@ export const PostComposer = ({
 							/>
 
 							<button
+								type="button"
 								onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+								aria-label="Insert emoji"
 								className={clsx(
-									"flex h-10 w-10 items-center justify-center hover:bg-brand/10 rounded-pill transition-colors relative group cursor-pointer",
+									"flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center hover:bg-brand/10 rounded-pill transition-colors relative group cursor-pointer",
 									showEmojiPicker && "bg-brand/10",
 								)}
 							>
 								<Smile className="w-5 h-5" />
-								<span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] bg-raised text-primary px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
+								<span className="hidden sm:block absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] bg-raised text-primary px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
 									Emoji
 								</span>
 							</button>
 
-							{/* Emoji Picker Popover */}
+							{/* Emoji Picker Popover.
+							    The picker is a fixed ~320px block anchored 72px in
+							    from the viewport edge — on a 320-375px screen that
+							    ran straight off the right side. Below sm it centres
+							    itself in the viewport instead of anchoring; from sm
+							    up it keeps the original under-the-button position. */}
 							{showEmojiPicker && (
 								<div
-									className="absolute top-12 left-0 z-dropdown animate-rise ws-emoji-picker"
+									className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 sm:absolute sm:left-0 sm:top-12 sm:translate-x-0 sm:translate-y-0 w-[min(320px,calc(100vw-2rem))] max-h-[70dvh] z-dropdown animate-rise ws-emoji-picker"
 									ref={emojiPickerRef}
 								>
 									<EmojiPicker
@@ -460,8 +475,8 @@ export const PostComposer = ({
 												? Theme.LIGHT
 												: Theme.DARK
 										}
-										width={320}
-										height={400}
+										width="100%"
+										height={360}
 										lazyLoadEmojis={true}
 									/>
 								</div>
@@ -477,8 +492,10 @@ export const PostComposer = ({
 								isPosting ||
 								isOverLimit
 							}
+							type="button"
 							className={clsx(
-								"px-[18px] h-9 rounded-pill font-semibold text-[13px] font-sans transition-colors flex items-center gap-2 cursor-pointer",
+								// h-11 on touch (44px target), the DS's 36px pill from sm up.
+								"px-[18px] h-11 sm:h-9 shrink-0 rounded-pill font-semibold text-[13px] font-sans transition-colors flex items-center gap-2 cursor-pointer",
 								(!content.trim() && mediaItems.length === 0) ||
 									isPosting ||
 									isOverLimit

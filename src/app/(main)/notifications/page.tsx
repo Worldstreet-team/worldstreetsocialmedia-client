@@ -101,7 +101,7 @@ export default function NotificationsPage() {
 	};
 
 	return (
-		<div className="flex flex-col min-h-screen pb-20">
+		<div className="flex flex-col min-h-dvh pb-nav md:pb-20">
 			<header className="sticky top-0 z-sticky bg-page border-b border-hairline">
 				<div className="px-4 py-3">
 					<h1 className="font-display text-lg font-semibold text-primary">
@@ -163,14 +163,14 @@ export default function NotificationsPage() {
 							<div className="w-8 flex justify-end mt-1">
 								{getIcon(notification.type)}
 							</div>
-							<div className="flex flex-col gap-2 flex-1">
+							<div className="flex flex-col gap-2 flex-1 min-w-0">
 								<div
-									className="w-8 h-8 rounded-full bg-cover bg-center border border-hairline"
+									className="w-8 h-8 shrink-0 rounded-full bg-cover bg-center border border-hairline"
 									style={{
 										backgroundImage: `url('${notification.sender.avatar}')`,
 									}}
 								/>
-								<div className="text-primary text-[15px] font-sans">
+								<div className="text-primary text-[15px] font-sans break-words">
 									<span className="font-bold hover:underline cursor-pointer mr-1">
 										{notification.sender.firstName}{" "}
 										{notification.sender.lastName}

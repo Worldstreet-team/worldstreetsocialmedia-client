@@ -170,8 +170,9 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 	};
 
 	return (
-		<div className="min-h-screen flex items-center justify-center bg-page p-4">
-			<div className="w-full max-w-md bg-surface rounded-xl p-8 border border-hairline relative overflow-hidden animate-rise">
+		<div className="min-h-dvh flex items-center justify-center bg-page p-4 py-8">
+			{/* p-8 left only 224px of usable width on a 320px screen; p-6 below sm. */}
+			<div className="w-full max-w-md bg-surface rounded-xl p-6 sm:p-8 border border-hairline relative overflow-hidden animate-rise">
 				<div className="relative z-10 flex flex-col items-center text-center space-y-8">
 					{/* Progress Indicator */}
 					<div className="flex gap-2 mb-4">
@@ -240,7 +241,9 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 										onChange={(e) => setBio(e.target.value)}
 										placeholder="Markets, code, and everything in between"
 										rows={3}
-										className="w-full bg-sunken text-primary rounded-lg p-3.5 font-medium border border-hairline focus:outline-none focus:border-brand/60 placeholder:text-subtle resize-none font-sans text-sm transition-colors"
+										// text-base on mobile — a 14px field makes iOS zoom
+										// into the card and the user can't see the CTA.
+										className="w-full bg-sunken text-primary rounded-lg p-3.5 font-medium border border-hairline focus:outline-none focus:border-brand/60 placeholder:text-subtle resize-none font-sans text-base sm:text-sm transition-colors"
 									/>
 								</div>
 							</div>
@@ -268,13 +271,15 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 								</p>
 							</div>
 
-							<div className="grid grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2">
+							{/* Capped against the viewport, not a fixed 400px — on a short
+							    phone the grid used to push the Back/Continue row off screen. */}
+							<div className="grid grid-cols-2 gap-2 sm:gap-3 max-h-[min(400px,45dvh)] overflow-y-auto overscroll-contain pr-1 sm:pr-2">
 								{INTERESTS.map((interest) => (
 									<button
 										key={interest}
 										onClick={() => toggleInterest(interest)}
 										className={clsx(
-											"px-4 py-3 rounded-lg font-semibold text-xs transition-colors border font-sans cursor-pointer",
+											"px-3 sm:px-4 min-h-11 py-3 rounded-lg font-semibold text-xs transition-colors border font-sans cursor-pointer",
 											formData.interests.includes(interest)
 												? "bg-primary text-page border-transparent"
 												: "bg-sunken text-muted border-hairline hover:bg-raised hover:text-primary",
@@ -289,7 +294,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 							<div className="flex gap-3 pt-4">
 								<button
 									onClick={() => setStep(1)}
-									className="flex-1 py-3.5 rounded-pill border border-hairline text-muted font-semibold hover:bg-raised hover:text-primary transition-colors cursor-pointer font-sans text-sm"
+									className="flex-1 h-14 rounded-pill border border-hairline text-muted font-semibold hover:bg-raised hover:text-primary transition-colors cursor-pointer font-sans text-sm"
 									type="button"
 								>
 									Back
@@ -344,8 +349,8 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 												key={user._id}
 												className="flex items-center justify-between p-3 rounded-lg bg-sunken border border-hairline hover:bg-raised transition-colors"
 											>
-												<div className="flex items-center gap-3">
-													<div className="relative w-10 h-10 rounded-full overflow-hidden border border-hairline">
+												<div className="flex items-center gap-3 min-w-0">
+													<div className="relative w-10 h-10 shrink-0 rounded-full overflow-hidden border border-hairline">
 														<Image
 															src={user.avatar || DEFAULT_AVATAR}
 															alt={user.username}
@@ -353,11 +358,11 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 															className="object-cover"
 														/>
 													</div>
-													<div className="text-left">
-														<p className="font-semibold text-primary text-sm font-sans">
+													<div className="text-left min-w-0">
+														<p className="font-semibold text-primary text-sm font-sans truncate">
 															{user.firstName}
 														</p>
-														<p className="text-xs text-muted font-sans">
+														<p className="text-xs text-muted font-sans truncate">
 															@{user.username}
 														</p>
 													</div>
@@ -365,7 +370,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 												<button
 													onClick={() => handleFollow(user._id)}
 													className={clsx(
-														"px-4 py-1.5 rounded-pill text-xs font-semibold border transition-colors font-sans cursor-pointer",
+														"shrink-0 px-4 h-10 rounded-pill text-xs font-semibold border transition-colors font-sans cursor-pointer",
 														followedUsers.includes(user._id)
 															? "bg-primary text-page border-transparent"
 															: "bg-transparent text-primary border-hairline hover:border-primary",

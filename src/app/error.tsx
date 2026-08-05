@@ -17,7 +17,7 @@ export default function ErrorBoundary({
   }, [error]);
 
   return (
-    <div className="min-h-screen bg-page flex flex-col items-center justify-center p-6 text-center animate-rise">
+    <div className="min-h-dvh bg-page flex flex-col items-center justify-center p-6 text-center animate-rise">
       <div className="flex h-16 w-16 items-center justify-center rounded-pill bg-raised">
         <RefreshCw className="h-[26px] w-[26px] text-muted" strokeWidth={2} />
       </div>

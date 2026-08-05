@@ -241,7 +241,9 @@ export function CommandPalette() {
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-modal flex items-start justify-center px-4 pt-[15vh]">
+        // dvh + a shallower top offset on phones: at 15vh of the *expanded*
+        // viewport the panel started below the fold once the keyboard opened.
+        <div className="fixed inset-0 z-modal flex items-start justify-center px-4 pt-[8dvh] sm:pt-[15dvh]">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -259,9 +261,9 @@ export function CommandPalette() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
             transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-            className="relative w-full max-w-[560px] bg-surface border border-hairline rounded-xl shadow-nav overflow-hidden"
+            className="relative w-full max-w-[560px] max-h-[84dvh] flex flex-col bg-surface border border-hairline rounded-xl shadow-nav overflow-hidden"
           >
-            <div className="flex items-center gap-3 px-4 h-12 border-b border-hairline">
+            <div className="flex shrink-0 items-center gap-3 px-4 h-12 border-b border-hairline">
               <Search className="w-4 h-4 text-subtle shrink-0" />
               <input
                 // biome-ignore lint/a11y/noAutofocus: focus belongs in the palette the moment it opens
@@ -274,14 +276,18 @@ export function CommandPalette() {
                 }}
                 onKeyDown={onInputKeyDown}
                 placeholder="Search WorldStreet — pages and actions…"
-                className="flex-1 bg-transparent font-sans text-sm text-primary placeholder:text-subtle outline-none"
+                // text-base below sm so focusing it doesn't zoom iOS Safari.
+                className="flex-1 min-w-0 bg-transparent font-sans text-base sm:text-sm text-primary placeholder:text-subtle outline-none"
               />
               <kbd className="hidden sm:flex items-center rounded-sm border border-hairline bg-raised px-1.5 h-5 text-[10px] font-sans text-subtle">
                 esc
               </kbd>
             </div>
 
-            <div ref={listRef} className="max-h-[360px] overflow-y-auto py-2">
+            <div
+              ref={listRef}
+              className="flex-1 min-h-0 max-h-[360px] overflow-y-auto overscroll-contain py-2"
+            >
               {items.length === 0 && (
                 <p className="px-4 py-6 text-center font-sans text-sm text-muted">
                   Nothing matches. Try a page name like Explore.
@@ -307,7 +313,7 @@ export function CommandPalette() {
                           data-index={index}
                           onClick={item.run}
                           onMouseEnter={() => setActiveIndex(index)}
-                          className={`w-full flex items-center gap-3 px-4 h-11 font-sans text-sm font-medium text-left transition-colors cursor-pointer ${
+                          className={`w-full flex items-center gap-3 px-4 h-12 sm:h-11 font-sans text-sm font-medium text-left transition-colors cursor-pointer ${
                             active ? "bg-raised text-primary" : "text-muted"
                           }`}
                         >
@@ -324,7 +330,7 @@ export function CommandPalette() {
                           ) : (
                             <span className="w-4 shrink-0" />
                           )}
-                          <span>{item.label}</span>
+                          <span className="truncate">{item.label}</span>
                         </button>
                       );
                     })}
@@ -333,7 +339,9 @@ export function CommandPalette() {
               })}
             </div>
 
-            <div className="flex items-center gap-4 px-4 h-9 border-t border-hairline font-sans text-[11px] text-subtle">
+            {/* Keyboard legend is meaningless on a touch device and it's the
+                first thing to cost vertical room there. */}
+            <div className="hidden sm:flex shrink-0 items-center gap-4 px-4 h-9 border-t border-hairline font-sans text-[11px] text-subtle">
               <span>↑↓ navigate</span>
               <span>↵ open</span>
               <span>esc close</span>
