@@ -6,10 +6,13 @@ import axios from "axios";
 
 const API_URL = BACKEND_URL;
 
-export async function getFeedAction(page: number = 1, limit: number = 10) {
+export async function getFeedAction(
+	cursor: string | null = null,
+	limit: number = 10,
+	mode: "foryou" | "following" = "foryou",
+) {
 	const { getToken } = await auth();
 	const accessToken = await getToken();
-	console.log("FeedAction: AccessToken present?", !!accessToken);
 
 	if (!accessToken) {
 		console.log("FeedAction: No token");
@@ -17,9 +20,8 @@ export async function getFeedAction(page: number = 1, limit: number = 10) {
 	}
 
 	try {
-		console.log(`Fetching feed page ${page} from ${API_URL}/api/feed`);
 		const response = await axios.get(`${API_URL}/api/feed`, {
-			params: { page, limit },
+			params: { limit, mode, ...(cursor ? { cursor } : {}) },
 			headers: {
 				Authorization: `Bearer ${accessToken}`,
 			},

@@ -121,8 +121,8 @@ export default function Feed() {
 		}
 
 		try {
-			const currentPage = reset ? 1 : feedState.page;
-			const result = await getFeedAction(currentPage);
+			const currentCursor = reset ? null : feedState.cursor;
+			const result = await getFeedAction(currentCursor);
 
 			if (result.success && result.data) {
 				const apiPosts = result.data.posts;
@@ -161,8 +161,8 @@ export default function Feed() {
 					return {
 						...prev,
 						posts: [...byId.values()],
-						page: reset ? 2 : prev.page + 1,
-						hasMore: result.data.page < result.data.totalPages,
+						cursor: result.data.nextCursor ?? null,
+						hasMore: Boolean(result.data.hasMore),
 					};
 				});
 			} else {
