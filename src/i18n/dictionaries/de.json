@@ -22,5 +22,20 @@
   "post.like": "Gefällt mir",
   "post.bookmark": "Speichern",
   "post.share": "Teilen",
-  "time.justnow": "Gerade eben"
+  "time.justnow": "Gerade eben",
+  "live.badge": "LIVE",
+  "live.watch": "Live ansehen",
+  "live.replay": "Aufzeichnung ansehen",
+  "live.viewers": "Zuschauer-Spitze",
+  "golive.entry": "Live gehen",
+  "golive.title": "Live gehen",
+  "golive.streamTitle": "Stream-Titel",
+  "golive.placeholder": "Was streamst du?",
+  "golive.category": "Kategorie",
+  "golive.start": "Stream starten",
+  "golive.starting": "Wird gestartet…",
+  "golive.denied": "Für den Livestream werden Kamera und Mikrofon benötigt. Erlaube den Zugriff und versuche es erneut.",
+  "golive.opens": "Dein Studio öffnet sich in einem neuen Tab — der Stream erscheint automatisch im Feed.",
+  "story.yours": "Deine Story",
+  "story.add": "Story hinzufügen"
 }

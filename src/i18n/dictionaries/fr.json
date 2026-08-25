@@ -22,5 +22,20 @@
   "post.like": "J'aime",
   "post.bookmark": "Enregistrer",
   "post.share": "Partager",
-  "time.justnow": "À l'instant"
+  "time.justnow": "À l'instant",
+  "live.badge": "EN DIRECT",
+  "live.watch": "Regarder en direct",
+  "live.replay": "Voir le replay",
+  "live.viewers": "pic de spectateurs",
+  "golive.entry": "Passer en direct",
+  "golive.title": "Passer en direct",
+  "golive.streamTitle": "Titre du direct",
+  "golive.placeholder": "Que diffusez-vous ?",
+  "golive.category": "Catégorie",
+  "golive.start": "Démarrer le direct",
+  "golive.starting": "Démarrage…",
+  "golive.denied": "L'accès à la caméra et au micro est requis pour passer en direct. Autorisez l'accès et réessayez.",
+  "golive.opens": "Votre studio s'ouvre dans un nouvel onglet — le direct arrive tout seul dans le fil.",
+  "story.yours": "Votre story",
+  "story.add": "Ajouter une story"
 }

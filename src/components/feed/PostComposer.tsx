@@ -2,7 +2,9 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { Image as ImageIcon, Smile, Send, X, User, Link2 } from "lucide-react";
+import { Image as ImageIcon, Radio, Smile, Send, X, User, Link2 } from "lucide-react";
+import { GoLiveSheet } from "@/components/feed/GoLiveSheet";
+import { useT } from "@/i18n/client";
 import { useUser } from "@clerk/nextjs";
 import { createPostAction } from "@/lib/post.actions";
 import { useToast } from "@/components/ui/Toast/ToastContext";
@@ -92,6 +94,8 @@ export const PostComposer = ({
 	onPostSuccess,
 	onPostStart,
 }: PostComposerProps) => {
+	const t = useT();
+	const [showGoLive, setShowGoLive] = useState(false);
 	const { user } = useUser();
 	const [content, setContent] = useState("");
 	const [isPosting, setIsPosting] = useState(false);
@@ -432,6 +436,17 @@ export const PostComposer = ({
 									</span>
 								)}
 							</button>
+							<button
+								type="button"
+								onClick={() => setShowGoLive(true)}
+								aria-label={t("golive.entry")}
+								className="flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center rounded-pill transition-colors relative group hover:bg-danger/10 text-danger cursor-pointer"
+							>
+								<Radio className="w-5 h-5" />
+								<span className="hidden sm:block absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] bg-raised text-primary px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
+									{t("golive.entry")}
+								</span>
+							</button>
 							<input
 								type="file"
 								ref={fileInputRef}
@@ -441,6 +456,7 @@ export const PostComposer = ({
 								onChange={handleImageSelect}
 								disabled={isPosting || mediaItems.length >= 4 || !!linkPreview}
 							/>
+							{showGoLive && <GoLiveSheet onClose={() => setShowGoLive(false)} />}
 
 							<button
 								type="button"

@@ -39,6 +39,9 @@ import ConfirmModal from "@/components/ui/ConfirmModal";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import ImageModal from "@/components/ui/ImageModal";
 import { renderRichText } from "@/components/ui/RichText";
+import { Radio } from "lucide-react";
+import { XSTREAM_WEB_URL } from "@/const";
+import { useT } from "@/i18n/client";
 
 export interface PostProps {
     id: string;
@@ -58,6 +61,13 @@ export interface PostProps {
         likes: number;
     };
     isLiked?: boolean;
+    type?: "post" | "live";
+    live?: {
+        streamId: string;
+        status: "live" | "ended";
+        title?: string;
+        viewerPeak?: number;
+    };
     isBookmarked?: boolean;
     isDetail?: boolean;
     linkPreview?: {
@@ -79,6 +89,7 @@ const formatCount = (n: number) => {
 };
 
 export const PostCard = memo(({ post }: { post: PostProps }) => {
+    const t = useT();
     const [isLiked, setIsLiked] = useState(post.isLiked);
     const [likeCount, setLikeCount] = useState(post.stats.likes);
     const [isBookmarked, setIsBookmarked] = useState(post.isBookmarked);
@@ -375,6 +386,12 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                             <span className="text-subtle text-[13px] font-sans whitespace-nowrap shrink-0">
                                 {post.timestamp}
                             </span>
+                            {post.live?.status === "live" && (
+                                <span className="shrink-0 flex items-center gap-1 rounded-[4px] bg-danger px-1.5 py-px text-[10px] font-bold tracking-wide text-white font-sans">
+                                    <span className="w-1.5 h-1.5 rounded-pill bg-white animate-pulse" />
+                                    {t("live.badge")}
+                                </span>
+                            )}
                         </div>
 
                         <div
@@ -539,6 +556,35 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                     </div>
                     {/* Post Content */}
                     {/* UI/Body: Public Sans Regular 15 — post text size per 02-typography. */}
+                    {post.live && (
+                        <a
+                            href={`${XSTREAM_WEB_URL}/stream/${post.live.streamId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="relative z-10 pointer-events-auto mb-2 flex items-center gap-3 rounded-lg border border-hairline bg-raised/40 hover:bg-raised px-3.5 py-3 transition-colors"
+                        >
+                            <span
+                                className={
+                                    post.live.status === "live"
+                                        ? "flex h-9 w-9 items-center justify-center rounded-pill bg-danger/15 text-danger shrink-0"
+                                        : "flex h-9 w-9 items-center justify-center rounded-pill bg-raised text-muted shrink-0"
+                                }
+                            >
+                                <Radio className="w-4.5 h-4.5" />
+                            </span>
+                            <span className="min-w-0">
+                                <span className="block text-sm font-semibold text-primary font-sans truncate">
+                                    {post.live.title || post.content}
+                                </span>
+                                <span className="block text-[13px] text-muted font-sans">
+                                    {post.live.status === "live"
+                                        ? t("live.watch")
+                                        : `${t("live.replay")}${post.live.viewerPeak ? ` · ${post.live.viewerPeak} ${t("live.viewers")}` : ""}`}
+                                </span>
+                            </span>
+                        </a>
+                    )}
                     <p className="text-primary whitespace-pre-wrap mb-1.5 font-normal leading-[1.55] text-[15px] font-sans tracking-tight pointer-events-none">
                         {formattedContent}
                         {shouldTruncate && (

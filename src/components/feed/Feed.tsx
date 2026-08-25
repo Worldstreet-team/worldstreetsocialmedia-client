@@ -15,6 +15,7 @@ import { ArrowUp, Plus, UserPlus } from "lucide-react";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { PostSkeleton } from "@/components/feed/PostSkeleton";
 import { ImpressionSensor } from "@/components/feed/ImpressionSensor";
+import { StoriesRail } from "@/components/feed/StoriesRail";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { DEFAULT_AVATAR } from "@/const";
 
@@ -145,6 +146,8 @@ export default function Feed() {
 					stats: post.stats || { replies: 0, reposts: 0, likes: 0 },
 					isLiked: post.isLiked,
 					isBookmarked: post.isBookmarked,
+					type: post.type,
+					live: post.live,
 				}));
 
 				setFeedState((prev) => {
@@ -242,6 +245,10 @@ export default function Feed() {
 					</motion.button>
 				)}
 			</AnimatePresence>
+
+			<div className="animate-rise" style={{ animationDelay: "60ms" }}>
+				<StoriesRail />
+			</div>
 
 			<div className="animate-rise" style={{ animationDelay: "100ms" }}>
 				<PostComposer

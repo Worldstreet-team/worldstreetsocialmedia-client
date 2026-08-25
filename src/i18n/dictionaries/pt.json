@@ -22,5 +22,20 @@
   "post.like": "Curtir",
   "post.bookmark": "Salvar",
   "post.share": "Compartilhar",
-  "time.justnow": "Agora mesmo"
+  "time.justnow": "Agora mesmo",
+  "live.badge": "AO VIVO",
+  "live.watch": "Assistir ao vivo",
+  "live.replay": "Ver a reprise",
+  "live.viewers": "pico de espectadores",
+  "golive.entry": "Transmitir",
+  "golive.title": "Transmitir ao vivo",
+  "golive.streamTitle": "Título da transmissão",
+  "golive.placeholder": "O que você vai transmitir?",
+  "golive.category": "Categoria",
+  "golive.start": "Iniciar transmissão",
+  "golive.starting": "Iniciando…",
+  "golive.denied": "É preciso acesso à câmera e ao microfone para transmitir. Permita o acesso e tente de novo.",
+  "golive.opens": "Seu estúdio abre em uma nova aba — a transmissão chega sozinha ao feed.",
+  "story.yours": "Sua história",
+  "story.add": "Adicionar história"
 }

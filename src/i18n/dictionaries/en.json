@@ -22,5 +22,20 @@
   "post.like": "Like",
   "post.bookmark": "Bookmark",
   "post.share": "Share",
-  "time.justnow": "Just now"
+  "time.justnow": "Just now",
+  "live.badge": "LIVE",
+  "live.watch": "Watch live",
+  "live.replay": "Watch the replay",
+  "live.viewers": "peak viewers",
+  "golive.entry": "Go live",
+  "golive.title": "Go live",
+  "golive.streamTitle": "Stream title",
+  "golive.placeholder": "What are you streaming?",
+  "golive.category": "Category",
+  "golive.start": "Start streaming",
+  "golive.starting": "Starting…",
+  "golive.denied": "Camera and microphone access is required to go live. Allow access and try again.",
+  "golive.opens": "Your studio opens in a new tab — the stream lands in the feed automatically.",
+  "story.yours": "Your story",
+  "story.add": "Add a story"
 }
