@@ -5,7 +5,8 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { useAtom } from "jotai";
 import {
-	RoadHorizon,
+	Microphone,
+	MonitorPlay,
 	Sparkle,
 	Users,
 	UsersThree,
@@ -82,8 +83,16 @@ export function FeedTabs() {
 				href="/live"
 				className={clsx(base, "font-medium text-muted hover:text-primary hover:bg-raised/40")}
 			>
-				<RoadHorizon size={16} weight="duotone" />
+				<MonitorPlay size={16} weight="duotone" />
 				{t("nav.videos")}
+			</Link>
+
+			<Link
+				href="/voice"
+				className={clsx(base, "font-medium text-muted hover:text-primary hover:bg-raised/40")}
+			>
+				<Microphone size={16} weight="duotone" />
+				{t("nav.voice")}
 			</Link>
 
 			<Link

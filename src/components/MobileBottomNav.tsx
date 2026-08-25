@@ -9,7 +9,7 @@ import {
 	ChatCircleDots,
 	House,
 	MagnifyingGlass,
-	RoadHorizon,
+	MonitorPlay,
 	Plus,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
@@ -32,7 +32,7 @@ const navIcon = (Icon: PhosphorIcon) => {
 
 const HomeIcon = navIcon(House);
 const SearchIcon = navIcon(MagnifyingGlass);
-const VideoIcon = navIcon(RoadHorizon);
+const VideoIcon = navIcon(MonitorPlay);
 const MessageIcon = navIcon(ChatCircleDots);
 const BellIcon = navIcon(Bell);
 

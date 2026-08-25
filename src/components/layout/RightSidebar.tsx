@@ -5,7 +5,7 @@ import { getWhoToFollowAction, followUserAction } from "@/lib/user.actions";
 import { getStoriesAction } from "@/lib/stories.actions";
 import Link from "next/link";
 import Image from "next/image";
-import { MagnifyingGlass, RoadHorizon } from "@phosphor-icons/react";
+import { MagnifyingGlass, MonitorPlay } from "@phosphor-icons/react";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { useAtom } from "jotai";
 import {
@@ -189,7 +189,7 @@ export function RightSidebar() {
 						href="/live"
 						className="flex-1 h-10 flex items-center justify-center gap-2 rounded-pill text-[13px] font-semibold font-sans text-primary bg-raised hover:bg-chip transition-colors"
 					>
-						<RoadHorizon size={15} weight="fill" />
+						<MonitorPlay size={15} weight="fill" />
 						{t("nav.videos")}
 					</Link>
 				</div>

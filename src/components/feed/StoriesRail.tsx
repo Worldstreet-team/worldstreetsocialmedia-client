@@ -68,15 +68,38 @@ export function StoriesRail() {
 				<span
 					className={clsx(
 						"relative w-16 h-16 rounded-pill p-[2px]",
-						self?.hasUnseen ? "bg-brand" : "bg-raised",
+						uploading
+							? "bg-transparent"
+							: self?.hasUnseen
+								? "bg-brand"
+								: "bg-raised",
 					)}
 				>
+					{/* Posting state: the ring becomes a spinning dashed stroke. */}
+					{uploading && (
+						<svg
+							viewBox="0 0 64 64"
+							className="absolute inset-0 h-full w-full animate-spin text-gold"
+							aria-hidden="true"
+						>
+							<circle
+								cx="32"
+								cy="32"
+								r="30"
+								fill="none"
+								stroke="currentColor"
+								strokeWidth="3"
+								strokeLinecap="round"
+								strokeDasharray="34 18"
+							/>
+						</svg>
+					)}
 					<span className="relative block w-full h-full rounded-pill overflow-hidden border-2 border-page">
 						<Image
 							src={self?.author.avatar || DEFAULT_AVATAR}
 							alt={t("story.yours")}
 							fill
-							className={clsx("object-cover", uploading && "opacity-50")}
+							className={clsx("object-cover", uploading && "opacity-60")}
 						/>
 					</span>
 					<span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-pill bg-brand text-brand-on border-2 border-page">
