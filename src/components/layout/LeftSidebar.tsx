@@ -28,14 +28,29 @@ import { useT } from "@/i18n/client";
 /* Every WorldStreet product, spelled out — the Products section expands
    inline (no popover), so the ecosystem is discoverable, not hidden.
    One shared wsa-mark stands in for per-product icons: these are all the
-   same brand, and six distinct glyphs read as six unrelated apps. */
+   same brand, and distinct glyphs read as unrelated apps.
+
+   Names, order and destinations mirror the hub's address book
+   (Worldstreet/components/landing/platform-links.ts) so the ecosystem
+   reads the same everywhere — keep this list in step with it. Notably
+   there is NO Wallet platform: the wallet is a feature inside the
+   dashboard, not a subdomain. Forex and Crypto are two products that
+   share one trading desk, which is why both point at /trade. The hub's
+   "Community" entry is deliberately omitted here — this app already has
+   its own Communities section in the nav above. */
 const ECOSYSTEM = [
-	{ title: "Dashboard", href: "https://dashboard.worldstreetgold.com" },
+	{ title: "Forex Markets", href: "https://dashboard.worldstreetgold.com/trade" },
+	{
+		title: "Cryptocurrencies",
+		href: "https://dashboard.worldstreetgold.com/trade",
+	},
+	{ title: "Vivid AI", href: "https://worldstreetgold.com/vivid" },
 	{ title: "Academy", href: "https://academy.worldstreetgold.com" },
+	{ title: "e-Commerce", href: "https://shop.worldstreetgold.com" },
 	{ title: "Xstream", href: "https://xtreme.worldstreetgold.com" },
-	{ title: "Shop", href: "https://shop.worldstreetgold.com" },
-	{ title: "Wallet", href: "https://wallet.worldstreetgold.com" },
+	{ title: "Prediction", href: "https://prediction.worldstreetgold.com" },
 	{ title: "Arcade", href: "https://arcade.worldstreetgold.com" },
+	{ title: "Vision", href: "https://vision.worldstreetgold.com" },
 ];
 
 /* Section eyebrow — the landing page's uppercase-tracking micro-label. */
@@ -184,30 +199,32 @@ export function LeftSidebar() {
 					>
 						<div className="overflow-hidden">
 							{/* No rail/divider: the rows are indented to sit under the
-							    parent's label, which is enough to read as nested. */}
-							<div className="flex flex-col py-0.5 pl-4">
+							    parent's label, which is enough to read as nested. The
+							    arrow is absolutely placed so it costs no row width —
+							    "Cryptocurrencies" needs every pixel in this rail. */}
+							<div className="flex flex-col py-0.5 pl-3">
 								{ECOSYSTEM.map((app) => (
 									<a
 										key={app.title}
 										href={app.href}
 										target="_blank"
 										rel="noopener noreferrer"
-										className="flex items-center gap-3 px-4 py-2 rounded-xl text-muted hover:bg-surface hover:text-primary transition-colors group/app"
+										className="relative flex items-center gap-2.5 pl-3 pr-7 py-2 rounded-xl text-muted hover:bg-surface hover:text-primary transition-colors group/app"
 									>
 										<Image
 											src="/images/wsa-mark.png"
 											alt=""
-											width={16}
-											height={16}
+											width={15}
+											height={15}
 											aria-hidden
-											className="h-4 w-4 object-contain shrink-0 opacity-70 group-hover/app:opacity-100 transition-opacity"
+											className="h-[15px] w-[15px] object-contain shrink-0 opacity-70 group-hover/app:opacity-100 transition-opacity"
 										/>
-										<span className="font-sans text-[14px] flex-1 min-w-0 truncate">
+										<span className="font-sans text-[13.5px] flex-1 min-w-0 truncate">
 											{app.title}
 										</span>
 										<ArrowUpRight
-											size={13}
-											className="text-subtle opacity-0 group-hover/app:opacity-100 transition-opacity shrink-0"
+											size={12}
+											className="absolute right-2.5 top-1/2 -translate-y-1/2 text-subtle opacity-0 group-hover/app:opacity-100 transition-opacity"
 										/>
 									</a>
 								))}
