@@ -18,6 +18,12 @@
  */
 
 import type { CropRect, Rotation } from "./document";
+import {
+  drawDecorations,
+  type Overlay,
+  type OverlayFonts,
+  type Stroke,
+} from "./overlays";
 import { type ColorOp, GRAIN_ALPHA, getGrainTile } from "./presets";
 
 /** Long-edge cap for the editor's working bitmap (~2560×1920 ≈ 5MP, safe). */
@@ -119,6 +125,12 @@ export interface RenderEffects {
   grain?: boolean;
   /** Exact output size (stories: 1080×1920). Defaults to the crop, capped. */
   target?: { w: number; h: number };
+  /** Story decorations (draw strokes under text/sticker overlays). */
+  decorations?: {
+    overlays: Overlay[];
+    strokes: Stroke[];
+    fonts: OverlayFonts;
+  };
 }
 
 /**
@@ -185,6 +197,16 @@ export async function exportCroppedFile(
   ctx.drawImage(source, crop.x, crop.y, crop.width, crop.height, 0, 0, w, h);
   if (effects.ops?.length) applyColorOps(ctx, w, h, effects.ops);
   if (effects.grain) applyGrain(ctx, w, h);
+  if (effects.decorations) {
+    drawDecorations(
+      ctx,
+      w,
+      h,
+      effects.decorations.overlays,
+      effects.decorations.strokes,
+      effects.decorations.fonts,
+    );
+  }
 
   let blob = await canvasToBlob(out, "image/webp", 0.82);
   if (!blob || blob.type !== "image/webp") {

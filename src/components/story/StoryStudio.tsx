@@ -2,12 +2,16 @@
 
 import clsx from "clsx";
 import { motion } from "framer-motion";
-import { ImagePlus, Send, X } from "lucide-react";
+import { ImagePlus, PenLine, Send, Sticker, Type, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import Cropper, { type Area } from "react-easy-crop";
 import "react-easy-crop/react-easy-crop.css";
 import GrainOverlay from "@/components/editor/GrainOverlay";
 import PresetCarousel from "@/components/editor/PresetCarousel";
+import DrawLayer from "@/components/story/overlays/DrawLayer";
+import OverlayLayer from "@/components/story/overlays/OverlayLayer";
+import StickerTray from "@/components/story/overlays/StickerTray";
+import TextTool from "@/components/story/overlays/TextTool";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { POST_CHAR_BUDGET } from "@/const";
@@ -19,8 +23,19 @@ import {
   makeSquareThumb,
   orientCanvas,
 } from "@/lib/editor/export";
+import {
+  MONO_STACK,
+  newOverlayId,
+  type Overlay,
+  type OverlayFonts,
+  resolveOverlayFonts,
+  type Stroke,
+  type TextOverlay,
+} from "@/lib/editor/overlays";
 import { colorOpsFor, cssFilterFor, getPreset } from "@/lib/editor/presets";
 import { createStoryAction } from "@/lib/story.actions";
+
+type ToolMode = "none" | "text" | "sticker" | "draw";
 
 const STORY_W = 1080;
 const STORY_H = 1920;
@@ -40,7 +55,11 @@ interface StoryStudioProps {
  * posts to the gateway's already-live POST /api/stories.
  *
  * Portalled to <body> (template.tsx's transient transform traps fixed UI).
- * Overlay tools (text, cashtags, draw) arrive in Phase 4.
+ *
+ * Phase 4 layers the decoration tools on top: text (Display/Clean/Ticker
+ * styles), cashtag + emoji stickers, and a draw layer — all stored in
+ * normalized stage coordinates and composited into the export by
+ * lib/editor/overlays.ts, so the posted file matches the preview.
  */
 export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
   const { toast } = useToast();
@@ -54,9 +73,41 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
   const [caption, setCaption] = useState("");
   const [posting, setPosting] = useState(false);
 
+  // Phase 4 decoration state.
+  const [overlays, setOverlays] = useState<Overlay[]>([]);
+  const [strokes, setStrokes] = useState<Stroke[]>([]);
+  const [mode, setMode] = useState<ToolMode>("none");
+  const [editingTextId, setEditingTextId] = useState<string | null>(null);
+  const [stageW, setStageW] = useState(0);
+  const [fonts] = useState<OverlayFonts>(() =>
+    typeof document === "undefined"
+      ? {
+          display: '"Poppins", system-ui, sans-serif',
+          ui: '"Public Sans", system-ui, sans-serif',
+          mono: MONO_STACK,
+        }
+      : resolveOverlayFonts(),
+  );
+
   const orientedRef = useRef<HTMLCanvasElement | null>(null);
   const sourceUrlRef = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const modeRef = useRef<ToolMode>("none");
+  modeRef.current = mode;
+
+  // Live stage width — the DOM preview's scale reference for overlays.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `file` isn't read — it re-attaches the observer when the stage subtree mounts.
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const sync = () => setStageW(el.getBoundingClientRect().width);
+    sync();
+    const observer = new ResizeObserver(sync);
+    observer.observe(el);
+    return () => observer.disconnect();
+    // Re-attach when the stage mounts (file: null → File swaps the subtree).
+  }, [file]);
 
   const neutral = createAdjustments();
   const previewFilter = cssFilterFor(neutral, preset);
@@ -133,6 +184,12 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
         target.blur();
         return;
       }
+      // Escape closes the active tool before it closes the studio.
+      if (modeRef.current !== "none") {
+        setEditingTextId(null);
+        setMode("none");
+        return;
+      }
       onClose();
     };
     document.addEventListener("keydown", onKey);
@@ -145,10 +202,52 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
     e.target.value = "";
   };
 
+  const patchOverlay = (id: string, patch: Partial<Overlay>) => {
+    setOverlays((prev) =>
+      prev.map((o) => (o.id === id ? ({ ...o, ...patch } as Overlay) : o)),
+    );
+  };
+
+  const addOverlay = (overlay: Overlay) =>
+    setOverlays((prev) => [...prev, overlay]);
+
+  const editingText =
+    (overlays.find((o) => o.id === editingTextId && o.kind === "text") as
+      | TextOverlay
+      | undefined) ?? null;
+
+  const handleTextDone = (
+    values: Pick<TextOverlay, "text" | "style" | "pill" | "color">,
+  ) => {
+    if (!values.text) {
+      // Emptied text deletes the overlay (or cancels a new one).
+      if (editingTextId) {
+        setOverlays((prev) => prev.filter((o) => o.id !== editingTextId));
+      }
+    } else if (editingTextId) {
+      patchOverlay(editingTextId, values);
+    } else {
+      addOverlay({
+        kind: "text",
+        id: newOverlayId(),
+        x: 0.5,
+        y: 0.4,
+        scale: 1,
+        rotation: 0,
+        ...values,
+      });
+    }
+    setEditingTextId(null);
+    setMode("none");
+  };
+
   const handleShare = async () => {
     if (!orientedRef.current || !croppedPx || posting || !file) return;
     setPosting(true);
     try {
+      // Canvas text uses the same hashed next/font faces the preview shows —
+      // make sure they're loaded before measuring/drawing.
+      await document.fonts.ready;
       const outFile = await exportCroppedFile(
         orientedRef.current,
         croppedPx,
@@ -157,6 +256,10 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
           ops: colorOpsFor(neutral, preset),
           grain: grainActive,
           target: { w: STORY_W, h: STORY_H },
+          decorations:
+            overlays.length > 0 || strokes.length > 0
+              ? { overlays, strokes, fonts }
+              : undefined,
         },
       );
       const formData = new FormData();
@@ -221,7 +324,10 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
         {/* Stage */}
         <div className="flex-1 min-h-0 flex items-center justify-center p-4">
           {file ? (
-            <div className="relative h-full max-h-full aspect-[9/16] rounded-xl overflow-hidden bg-sunken border border-hairline ws-cropper">
+            <div
+              ref={stageRef}
+              className="relative h-full max-h-full aspect-[9/16] rounded-xl overflow-hidden bg-sunken border border-hairline ws-cropper"
+            >
               {sourceUrl ? (
                 <Cropper
                   image={sourceUrl}
@@ -249,14 +355,88 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
                 <div className="absolute inset-0 skeleton" />
               )}
               {grainActive && <GrainOverlay />}
-              <button
-                type="button"
-                onClick={() => inputRef.current?.click()}
-                aria-label="Choose a different photo"
-                className="absolute top-2 right-2 flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors cursor-pointer"
-              >
-                <ImagePlus className="w-4 h-4" />
-              </button>
+
+              {/* Decoration layers: strokes under stickers (IG order). */}
+              <DrawLayer
+                strokes={strokes}
+                active={mode === "draw"}
+                onCommitStroke={(stroke) =>
+                  setStrokes((prev) => [...prev, stroke])
+                }
+                onUndo={() => setStrokes((prev) => prev.slice(0, -1))}
+                onDone={() => setMode("none")}
+              />
+              <OverlayLayer
+                overlays={overlays}
+                stageW={stageW}
+                fonts={fonts}
+                interactive={mode === "none"}
+                onChange={patchOverlay}
+                onDelete={(id) =>
+                  setOverlays((prev) => prev.filter((o) => o.id !== id))
+                }
+                onEditText={(id) => {
+                  setEditingTextId(id);
+                  setMode("text");
+                }}
+              />
+
+              {/* Tool rail */}
+              {mode === "none" && (
+                <div className="absolute top-2 left-2 flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingTextId(null);
+                      setMode("text");
+                    }}
+                    aria-label="Add text"
+                    className="flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors cursor-pointer"
+                  >
+                    <Type className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode("sticker")}
+                    aria-label="Add sticker"
+                    className="flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors cursor-pointer"
+                  >
+                    <Sticker className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode("draw")}
+                    aria-label="Draw"
+                    className="flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors cursor-pointer"
+                  >
+                    <PenLine className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {mode === "none" && (
+                <button
+                  type="button"
+                  onClick={() => inputRef.current?.click()}
+                  aria-label="Choose a different photo"
+                  className="absolute top-2 right-2 flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors cursor-pointer"
+                >
+                  <ImagePlus className="w-4 h-4" />
+                </button>
+              )}
+
+              {mode === "text" && (
+                <TextTool
+                  overlay={editingText}
+                  stageW={stageW}
+                  fonts={fonts}
+                  onDone={handleTextDone}
+                  onCancel={() => {
+                    setEditingTextId(null);
+                    setMode("none");
+                  }}
+                />
+              )}
             </div>
           ) : (
             <button
@@ -284,8 +464,39 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
           />
         </div>
 
-        {/* Filters + caption */}
-        {file && (
+        {/* Sticker tray — over the bottom panel, inside the studio. */}
+        {mode === "sticker" && (
+          <StickerTray
+            onAddCashtag={(symbol) => {
+              addOverlay({
+                kind: "cashtag",
+                id: newOverlayId(),
+                x: 0.5,
+                y: 0.6,
+                scale: 1,
+                rotation: 0,
+                symbol,
+              });
+              setMode("none");
+            }}
+            onAddEmoji={(emoji) => {
+              addOverlay({
+                kind: "emoji",
+                id: newOverlayId(),
+                x: 0.5,
+                y: 0.5,
+                scale: 1,
+                rotation: 0,
+                emoji,
+              });
+              setMode("none");
+            }}
+            onClose={() => setMode("none")}
+          />
+        )}
+
+        {/* Filters + caption (hidden while drawing — its palette sits there) */}
+        {file && mode !== "draw" && (
           <div className="shrink-0 border-t border-hairline px-3 sm:px-4 py-3 space-y-3 pb-safe">
             <PresetCarousel
               thumbUrl={thumbUrl}
