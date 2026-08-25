@@ -295,7 +295,11 @@ export default function MediaEditor({
 
   return (
     <ConfirmModalPortal>
-      <div className="fixed inset-0 z-modal flex items-center justify-center p-3 sm:p-4">
+      {/* Top-anchored, not centred: the panel's height changes with the tab,
+          and centring made the whole sheet re-centre on every switch — which
+          slid the tab bar out from under the pointer (a second click landed
+          on a slider). Pinning the top means only the bottom edge moves. */}
+      <div className="fixed inset-0 z-modal flex items-start justify-center overflow-y-auto p-3 sm:p-4 pt-[max(3vh,0.75rem)]">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -401,7 +405,7 @@ export default function MediaEditor({
               is vertically centred, the tab bar slides out from under the
               pointer — a second click lands on a slider instead of a tab
               (hit while testing). */}
-          <div className="shrink-0 min-h-[236px] flex flex-col">
+          <div className="shrink-0 flex flex-col">
             {tab === "adjust" && (
               <div className="shrink-0 px-3 sm:px-4 py-3 space-y-3 border-t border-hairline overflow-y-auto">
                 <div className="space-y-2">
