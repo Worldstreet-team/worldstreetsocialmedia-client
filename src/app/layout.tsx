@@ -11,6 +11,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ToastProvider } from "@/components/ui/Toast/ToastContext";
 import NextTopLoader from "nextjs-toploader";
 import JotaiHydrator from "./JotaiHydrator";
+import { LocaleProvider } from "@/i18n/client";
+import { LOCALE_HEADER, isLocale } from "@/i18n/config";
 import { headers } from "next/headers";
 import RealtimeProvider from "@/components/providers/RealtimeProvider";
 import { CallProvider } from "@/providers/CallProvider";
@@ -66,6 +68,9 @@ export default async function RootLayout({
 
     const parsedUser = userData ? JSON.parse(userData) : null;
 
+    const headerLocale = headersList.get(LOCALE_HEADER);
+    const locale = isLocale(headerLocale) ? headerLocale : "en";
+
     return (
         <ClerkProvider
             appearance={{
@@ -104,6 +109,7 @@ export default async function RootLayout({
                         enableSystem={false}
                         value={{ dark: "platform", light: "platform-light" }}
                     >
+                        <LocaleProvider locale={locale}>
                         <JotaiHydrator user={parsedUser}>
                             <RealtimeProvider>
                                 <CallProvider>
@@ -118,6 +124,7 @@ export default async function RootLayout({
                                 </CallProvider>
                             </RealtimeProvider>
                         </JotaiHydrator>
+                        </LocaleProvider>
                     </ThemeProvider>
                 </body>
             </html>

@@ -4,10 +4,11 @@ import clsx from "clsx";
 import { motion } from "framer-motion";
 import { useAtom } from "jotai";
 import { feedTabAtom } from "@/store/ui.atom";
+import { useT } from "@/i18n/client";
 
 const TABS = [
-  { key: "foryou", label: "For You" },
-  { key: "following", label: "Following" },
+  { key: "foryou", labelKey: "feed.tab.foryou" },
+  { key: "following", labelKey: "feed.tab.following" },
 ] as const;
 
 /**
@@ -17,10 +18,11 @@ const TABS = [
  */
 export function FeedTabs() {
   const [tab, setTab] = useAtom(feedTabAtom);
+  const t = useT();
 
   return (
     <div role="tablist" aria-label="Timeline" className="flex h-full w-full">
-      {TABS.map(({ key, label }) => {
+      {TABS.map(({ key, labelKey }) => {
         const active = tab === key;
         return (
           <button
@@ -36,7 +38,7 @@ export function FeedTabs() {
                 : "font-medium text-muted hover:text-primary",
             )}
           >
-            {label}
+            {t(labelKey)}
             {active && (
               <motion.span
                 layoutId="feed-tab-underline"

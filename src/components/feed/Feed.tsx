@@ -14,6 +14,7 @@ import { getFeedAction } from "@/lib/feed.actions";
 import { ArrowUp, Plus, UserPlus } from "lucide-react";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { PostSkeleton } from "@/components/feed/PostSkeleton";
+import { ImpressionSensor } from "@/components/feed/ImpressionSensor";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { DEFAULT_AVATAR } from "@/const";
 
@@ -253,8 +254,16 @@ export default function Feed() {
 			<div key={tab}>
 				{isPosting && <PostSkeleton />}
 				{visiblePosts.map((post, index) => (
-					<div
+					<ImpressionSensor
 						key={post.id}
+						meta={{
+							post: post.id,
+							author: post.author.id,
+							surface: tab === "following" ? "feed_following" : "feed_foryou",
+							position: index,
+							mediaType: post.images?.length ? "image" : "text",
+							cursorDepth: Math.floor(index / 10),
+						}}
 						className="animate-rise"
 						style={{
 							animationDelay: introPlayedRef.current
@@ -263,7 +272,7 @@ export default function Feed() {
 						}}
 					>
 						<PostCard post={post} />
-					</div>
+					</ImpressionSensor>
 				))}
 
 				{loading && (
