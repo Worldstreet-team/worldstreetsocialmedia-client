@@ -41,6 +41,8 @@ import ImageModal from "@/components/ui/ImageModal";
 import { renderRichText } from "@/components/ui/RichText";
 import { Radio } from "lucide-react";
 import { XSTREAM_WEB_URL } from "@/const";
+import { promotePostAction } from "@/lib/campaign.actions";
+import { Megaphone } from "lucide-react";
 import { useT } from "@/i18n/client";
 
 export interface PostProps {
@@ -62,6 +64,7 @@ export interface PostProps {
     };
     isLiked?: boolean;
     type?: "post" | "live";
+    promoted?: boolean;
     live?: {
         streamId: string;
         status: "live" | "ended";
@@ -386,6 +389,11 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                             <span className="text-subtle text-[13px] font-sans whitespace-nowrap shrink-0">
                                 {post.timestamp}
                             </span>
+                            {post.promoted && (
+                                <span className="shrink-0 rounded-[4px] bg-raised px-1.5 py-px text-[10px] font-semibold tracking-wide text-subtle font-sans">
+                                    {t("promo.label")}
+                                </span>
+                            )}
                             {post.live?.status === "live" && (
                                 <span className="shrink-0 flex items-center gap-1 rounded-[4px] bg-danger px-1.5 py-px text-[10px] font-bold tracking-wide text-white font-sans">
                                     <span className="w-1.5 h-1.5 rounded-pill bg-white animate-pulse" />
@@ -489,6 +497,32 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                     Delete post
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={async (e) => {
+                                                        e.stopPropagation();
+                                                        setIsMenuOpen(false);
+                                                        const res =
+                                                            await promotePostAction(
+                                                                post.id,
+                                                            );
+                                                        toast(
+                                                            res.success
+                                                                ? t("promo.created")
+                                                                : (res.message ??
+                                                                        t("promo.failed")),
+                                                            {
+                                                                type: res.success
+                                                                    ? "success"
+                                                                    : "error",
+                                                            },
+                                                        );
+                                                    }}
+                                                    className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
+                                                >
+                                                    <Megaphone className="w-4 h-4" />
+                                                    {t("promo.menu")}
                                                 </button>
                                             </>
                                         ) : (

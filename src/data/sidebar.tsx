@@ -5,12 +5,14 @@
 // match the semibold label — never a different icon.
 import type { LucideIcon } from "lucide-react";
 import {
+	BarChart3,
 	Bell,
 	Bookmark,
 	Home,
 	MessageCircle,
 	MoreHorizontal,
 	Search,
+	SquarePlay,
 	User,
 } from "lucide-react";
 
@@ -61,6 +63,16 @@ const sidebarList: SidebarItem[] = [
 		title: "Bookmarks",
 		link: "/bookmarks",
 		icon: navIcon(Bookmark),
+	},
+	{
+		title: "Videos",
+		link: "/live",
+		icon: navIcon(SquarePlay),
+	},
+	{
+		title: "Studio",
+		link: "/studio",
+		icon: navIcon(BarChart3),
 	},
 	{
 		title: "Profile",

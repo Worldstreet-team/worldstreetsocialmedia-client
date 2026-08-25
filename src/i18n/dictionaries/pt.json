@@ -51,5 +51,9 @@
   "studio.followers": "Seguidores",
   "studio.posts": "Publicações",
   "studio.daily": "Impressões diárias",
-  "studio.window": "últimos 28 dias"
+  "studio.window": "últimos 28 dias",
+  "promo.label": "Promovido",
+  "promo.menu": "Promover publicação",
+  "promo.created": "Promoção iniciada — orçamento de US$ 10, cobrado por interação.",
+  "promo.failed": "Não foi possível promover a publicação"
 }

@@ -148,6 +148,7 @@ export default function Feed() {
 					isBookmarked: post.isBookmarked,
 					type: post.type,
 					live: post.live,
+					promoted: Boolean(post.promoted),
 				}));
 
 				setFeedState((prev) => {
@@ -268,8 +269,13 @@ export default function Feed() {
 							author: post.author.id,
 							surface: tab === "following" ? "feed_following" : "feed_foryou",
 							position: index,
-							mediaType: post.images?.length ? "image" : "text",
+							mediaType: post.live
+								? "live"
+								: post.images?.length
+									? "image"
+									: "text",
 							cursorDepth: Math.floor(index / 10),
+							promoted: post.promoted,
 						}}
 						className="animate-rise"
 						style={{

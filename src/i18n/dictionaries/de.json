@@ -51,5 +51,9 @@
   "studio.followers": "Follower",
   "studio.posts": "Beiträge",
   "studio.daily": "Tägliche Impressionen",
-  "studio.window": "letzte 28 Tage"
+  "studio.window": "letzte 28 Tage",
+  "promo.label": "Gesponsert",
+  "promo.menu": "Beitrag bewerben",
+  "promo.created": "Promotion gestartet — 10 $ Budget, abgerechnet pro Interaktion.",
+  "promo.failed": "Beitrag konnte nicht beworben werden"
 }

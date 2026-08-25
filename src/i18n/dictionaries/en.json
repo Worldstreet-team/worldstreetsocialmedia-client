@@ -51,5 +51,9 @@
   "studio.followers": "Followers",
   "studio.posts": "Posts",
   "studio.daily": "Daily impressions",
-  "studio.window": "last 28 days"
+  "studio.window": "last 28 days",
+  "promo.label": "Promoted",
+  "promo.menu": "Promote post",
+  "promo.created": "Promotion started — $10 budget, billed per engagement.",
+  "promo.failed": "Could not promote the post"
 }

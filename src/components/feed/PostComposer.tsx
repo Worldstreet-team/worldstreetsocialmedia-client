@@ -212,7 +212,7 @@ export const PostComposer = ({
 			const newItems: MediaItem[] = filesToProcess.map((file) => ({
 				url: URL.createObjectURL(file),
 				file: file,
-				type: "image",
+				type: file.type.startsWith("video/") ? "video" : "image",
 			}));
 
 			setMediaItems((prev) => [...prev, ...newItems]);
@@ -274,7 +274,9 @@ export const PostComposer = ({
 			formData.append("content", content);
 
 			mediaItems.forEach((item) => {
-				if (item.type === "image") {
+				if (item.type === "video") {
+					formData.append("video", item.file);
+				} else {
 					formData.append("images", item.file);
 				}
 			});
@@ -350,12 +352,22 @@ export const PostComposer = ({
 										mediaItems.length > 1 ? "aspect-square" : "aspect-video",
 									)}
 								>
-									<Image
-										src={item.url}
-										alt="Preview"
-										fill
-										className="object-cover"
-									/>
+									{item.type === "video" ? (
+										// eslint-disable-next-line jsx-a11y/media-has-caption
+										<video
+											src={item.url}
+											className="absolute inset-0 w-full h-full object-cover"
+											muted
+											playsInline
+										/>
+									) : (
+										<Image
+											src={item.url}
+											alt="Preview"
+											fill
+											className="object-cover"
+										/>
+									)}
 									<button
 										type="button"
 										onClick={() => removeMedia(index)}
@@ -451,7 +463,7 @@ export const PostComposer = ({
 								type="file"
 								ref={fileInputRef}
 								className="hidden"
-								accept="image/*"
+								accept="image/*,video/*"
 								multiple
 								onChange={handleImageSelect}
 								disabled={isPosting || mediaItems.length >= 4 || !!linkPreview}
