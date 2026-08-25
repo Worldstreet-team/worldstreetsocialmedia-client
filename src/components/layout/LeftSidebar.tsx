@@ -7,17 +7,11 @@ import { useTheme } from "next-themes";
 import {
 	ArrowUpRight,
 	CaretDown,
-	ChartPieSlice,
-	GameController,
-	GraduationCap,
-	MonitorPlay,
 	Moon,
 	DotsThree,
-	ShoppingBagOpen,
 	SignOut,
 	Sun,
 	UserCircle,
-	Wallet,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
 import Image from "next/image";
@@ -32,44 +26,16 @@ import { withThemeTransition } from "@/lib/theme-transition";
 import { useT } from "@/i18n/client";
 
 /* Every WorldStreet product, spelled out — the Products section expands
-   inline (no popover), so the ecosystem is discoverable, not hidden. */
+   inline (no popover), so the ecosystem is discoverable, not hidden.
+   One shared wsa-mark stands in for per-product icons: these are all the
+   same brand, and six distinct glyphs read as six unrelated apps. */
 const ECOSYSTEM = [
-	{
-		title: "Dashboard",
-		description: "Wallet, portfolio and settings",
-		href: "https://dashboard.worldstreetgold.com",
-		icon: ChartPieSlice,
-	},
-	{
-		title: "Academy",
-		description: "Courses, order books, certifications",
-		href: "https://academy.worldstreetgold.com",
-		icon: GraduationCap,
-	},
-	{
-		title: "Xstream",
-		description: "Live streams and drops",
-		href: "https://xtreme.worldstreetgold.com",
-		icon: MonitorPlay,
-	},
-	{
-		title: "Shop",
-		description: "The WorldStreet marketplace",
-		href: "https://shop.worldstreetgold.com",
-		icon: ShoppingBagOpen,
-	},
-	{
-		title: "Wallet",
-		description: "Send, swap and hold assets",
-		href: "https://wallet.worldstreetgold.com",
-		icon: Wallet,
-	},
-	{
-		title: "Arcade",
-		description: "Games and competitions",
-		href: "https://arcade.worldstreetgold.com",
-		icon: GameController,
-	},
+	{ title: "Dashboard", href: "https://dashboard.worldstreetgold.com" },
+	{ title: "Academy", href: "https://academy.worldstreetgold.com" },
+	{ title: "Xstream", href: "https://xtreme.worldstreetgold.com" },
+	{ title: "Shop", href: "https://shop.worldstreetgold.com" },
+	{ title: "Wallet", href: "https://wallet.worldstreetgold.com" },
+	{ title: "Arcade", href: "https://arcade.worldstreetgold.com" },
 ];
 
 /* Section eyebrow — the landing page's uppercase-tracking micro-label. */
@@ -217,23 +183,27 @@ export function LeftSidebar() {
 						)}
 					>
 						<div className="overflow-hidden">
-							<div className="ml-4 pl-4 border-l border-hairline flex flex-col gap-0.5 py-1">
+							{/* No rail/divider: the rows are indented to sit under the
+							    parent's label, which is enough to read as nested. */}
+							<div className="flex flex-col py-0.5 pl-4">
 								{ECOSYSTEM.map((app) => (
 									<a
 										key={app.title}
 										href={app.href}
 										target="_blank"
 										rel="noopener noreferrer"
-										className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-muted hover:bg-surface hover:text-primary transition-colors group/app"
+										className="flex items-center gap-3 px-4 py-2 rounded-xl text-muted hover:bg-surface hover:text-primary transition-colors group/app"
 									>
-										<app.icon size={17} />
-										<span className="flex flex-col min-w-0 flex-1 leading-tight">
-											<span className="font-sans text-[13.5px] font-medium">
-												{app.title}
-											</span>
-											<span className="font-sans text-[11px] text-subtle truncate">
-												{app.description}
-											</span>
+										<Image
+											src="/images/wsa-mark.png"
+											alt=""
+											width={16}
+											height={16}
+											aria-hidden
+											className="h-4 w-4 object-contain shrink-0 opacity-70 group-hover/app:opacity-100 transition-opacity"
+										/>
+										<span className="font-sans text-[14px] flex-1 min-w-0 truncate">
+											{app.title}
 										</span>
 										<ArrowUpRight
 											size={13}
