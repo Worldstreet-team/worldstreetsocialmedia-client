@@ -7,7 +7,6 @@ import { useTheme } from "next-themes";
 import {
 	ArrowUpRight,
 	CaretDown,
-	Broadcast,
 	ChartPieSlice,
 	GameController,
 	GraduationCap,
@@ -31,7 +30,6 @@ import { unreadNotificationsCountAtom } from "@/store/ui.atom";
 import { handleSignOut } from "@/lib/utils";
 import { withThemeTransition } from "@/lib/theme-transition";
 import { useT } from "@/i18n/client";
-import { GoLiveSheet } from "@/components/feed/GoLiveSheet";
 
 /* Every WorldStreet product, spelled out — the Products section expands
    inline (no popover), so the ecosystem is discoverable, not hidden. */
@@ -93,7 +91,6 @@ export function LeftSidebar() {
 	const router = useRouter();
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [productsOpen, setProductsOpen] = useState(false);
-	const [showGoLive, setShowGoLive] = useState(false);
 	const menuRef = useRef<HTMLDivElement>(null);
 
 	// Theme is only knowable client-side; render the toggle after mount so
@@ -252,7 +249,7 @@ export function LeftSidebar() {
 				{/* Quick actions: the one gold CTA + the glossy Go Live beside it.
 				    The shine sweep passes every 5s (off under reduced motion). */}
 				<div
-					className="mt-5 flex flex-col gap-2 animate-rise"
+					className="mt-5 animate-rise"
 					style={{ animationDelay: "330ms" }}
 				>
 					<button
@@ -273,18 +270,8 @@ export function LeftSidebar() {
 					>
 						{t("composer.post")}
 					</button>
-					<button
-						type="button"
-						onClick={() => setShowGoLive(true)}
-						className="w-full h-11 shine flex items-center justify-center gap-2 rounded-pill font-sans font-semibold text-[14px] text-white cursor-pointer transition-opacity hover:opacity-90 bg-gradient-to-b from-danger to-[#C22D2D]"
-					>
-						<Broadcast size={17} weight="fill" />
-						{t("golive.entry")}
-					</button>
 				</div>
 			</nav>
-
-			{showGoLive && <GoLiveSheet onClose={() => setShowGoLive(false)} />}
 
 			{user && (
 				<div

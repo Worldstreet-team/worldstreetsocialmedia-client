@@ -1,26 +1,17 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
-import { Broadcast, MonitorPlay } from "@phosphor-icons/react";
+import { Broadcast } from "@phosphor-icons/react";
 import { useT } from "@/i18n/client";
 import { GoLiveSheet } from "@/components/feed/GoLiveSheet";
 
-/** Quick services on the feed header's right edge — the creation features
- *  flexed where the eye already is, instead of buried down a rail. */
+/** The one Go Live entry point — pinned on the bar, never scrolling with
+ *  the tabs. */
 export function FeedHeaderActions() {
 	const t = useT();
 	const [showGoLive, setShowGoLive] = useState(false);
 	return (
-		<div className="flex items-center gap-2 pr-3 shrink-0">
-			<Link
-				href="/live"
-				aria-label={t("nav.videos")}
-				title={t("nav.videos")}
-				className="flex h-9 w-9 items-center justify-center rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors"
-			>
-				<MonitorPlay size={18} weight="duotone" />
-			</Link>
+		<div className="flex items-center pl-3 pr-2 shrink-0">
 			<button
 				type="button"
 				onClick={() => setShowGoLive(true)}

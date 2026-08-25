@@ -5,11 +5,11 @@ import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import {
 	Bell,
 	BookmarkSimple,
-	ChartBar,
+	Faders,
 	ChatCircleDots,
 	House,
 	MagnifyingGlass,
-	MonitorPlay,
+	RoadHorizon,
 	SquaresFour,
 	UserCircle,
 	UsersThree,
@@ -52,7 +52,7 @@ export const mainNav: SidebarItem[] = [
 		labelKey: "nav.videos",
 		title: "Videos",
 		link: "/live",
-		icon: navIcon(MonitorPlay),
+		icon: navIcon(RoadHorizon),
 	},
 	{
 		labelKey: "nav.communities",
@@ -92,7 +92,7 @@ export const youNav: SidebarItem[] = [
 		labelKey: "nav.studio",
 		title: "Studio",
 		link: "/studio",
-		icon: navIcon(ChartBar),
+		icon: navIcon(Faders),
 	},
 ];
 

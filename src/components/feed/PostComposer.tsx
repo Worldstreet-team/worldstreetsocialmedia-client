@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { Image as ImageIcon, Radio, Smile, Send, X, User, Link2 } from "lucide-react";
 import { GoLiveSheet } from "@/components/feed/GoLiveSheet";
+import { VanishingPlaceholder } from "@/components/ui/VanishingPlaceholder";
 import { useT } from "@/i18n/client";
 import { useUser } from "@clerk/nextjs";
 import { createPostAction } from "@/lib/post.actions";
@@ -105,15 +106,6 @@ export const PostComposer = ({
 		"composer.prompt3",
 		"composer.prompt4",
 	];
-	const [promptIndex, setPromptIndex] = useState(0);
-	useEffect(() => {
-		const id = setInterval(
-			() => setPromptIndex((i) => (i + 1) % PROMPTS.length),
-			6000,
-		);
-		return () => clearInterval(id);
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
 	const { user } = useUser();
 	const [content, setContent] = useState("");
 	const [isPosting, setIsPosting] = useState(false);
@@ -363,19 +355,10 @@ export const PostComposer = ({
 				<div className="flex-1 w-full min-w-0">
 					<div className="relative">
 					{!content && (
-						<span className="pointer-events-none absolute left-0 top-0 text-lg text-subtle font-medium font-sans overflow-hidden">
-							<AnimatePresence mode="wait" initial={false}>
-								<motion.span
-									key={promptIndex}
-									initial={{ y: 10, opacity: 0, filter: "blur(4px)" }}
-									animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
-									exit={{ y: -10, opacity: 0, filter: "blur(4px)" }}
-									transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
-									className="block"
-								>
-									{t(PROMPTS[promptIndex])}
-								</motion.span>
-							</AnimatePresence>
+						<span className="pointer-events-none absolute left-0 top-0 h-8 w-full">
+							<VanishingPlaceholder
+								texts={PROMPTS.map((k) => t(k))}
+							/>
 						</span>
 					)}
 					<textarea

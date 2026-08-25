@@ -14,6 +14,7 @@ import {
 import VerifiedIcon from "@/assets/icons/VerifiedIcon";
 // 03-icons: Phosphor is reserved for the Social post-action row + overflow menu.
 import {
+    ArrowsClockwise,
     ChartBar,
     ChatCircle,
     Heart,
@@ -43,6 +44,8 @@ import { renderRichText } from "@/components/ui/RichText";
 import { Radio } from "lucide-react";
 import { XSTREAM_WEB_URL } from "@/const";
 import { promotePostAction } from "@/lib/campaign.actions";
+import { repostPostAction } from "@/lib/post.actions";
+import { QuoteModal } from "@/components/feed/QuoteModal";
 import { Megaphone } from "lucide-react";
 import { useT } from "@/i18n/client";
 
@@ -68,6 +71,16 @@ export interface PostProps {
     isLiked?: boolean;
     type?: "post" | "live";
     promoted?: boolean;
+    repostOf?: {
+        id: string;
+        authorName: string;
+        username: string;
+        avatar: string;
+        isVerified?: boolean;
+        content: string;
+        image?: string;
+        timestamp: string;
+    };
     live?: {
         streamId: string;
         status: "live" | "ended";
@@ -96,6 +109,10 @@ const formatCount = (n: number) => {
 
 export const PostCard = memo(({ post }: { post: PostProps }) => {
     const t = useT();
+    const [repostMenuOpen, setRepostMenuOpen] = useState(false);
+    const [quoteOpen, setQuoteOpen] = useState(false);
+    const [reposted, setReposted] = useState(false);
+    const [repostDelta, setRepostDelta] = useState(0);
     const [isLiked, setIsLiked] = useState(post.isLiked);
     const [likeCount, setLikeCount] = useState(post.stats.likes);
     const [isBookmarked, setIsBookmarked] = useState(post.isBookmarked);
@@ -593,6 +610,12 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                     </div>
                     {/* Post Content */}
                     {/* UI/Body: Public Sans Regular 15 — post text size per 02-typography. */}
+                    {post.repostOf && !post.content && (
+                        <span className="flex items-center gap-1.5 text-subtle text-[12px] font-sans mb-1">
+                            <ArrowsClockwise size={12} />
+                            {t("post.reposted")}
+                        </span>
+                    )}
                     {post.live && (
                         <a
                             href={`${XSTREAM_WEB_URL}/stream/${post.live.streamId}`}
@@ -636,6 +659,45 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                             </span>
                         )}
                     </p>
+                    {post.repostOf && (
+                        <Link
+                            href={`/post/${post.repostOf.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="relative z-10 pointer-events-auto block mt-2 mb-1.5 rounded-xl border border-hairline/70 p-3 hover:bg-raised/30 transition-colors"
+                        >
+                            <span className="flex items-center gap-2 mb-1 min-w-0">
+                                <span className="relative w-5 h-5 rounded-pill overflow-hidden shrink-0 bg-raised">
+                                    <Image
+                                        src={post.repostOf.avatar}
+                                        alt=""
+                                        fill
+                                        className="object-cover"
+                                    />
+                                </span>
+                                <span className="text-[13px] font-semibold text-primary font-sans truncate">
+                                    {post.repostOf.authorName}
+                                </span>
+                                <span className="text-[12px] text-subtle font-sans truncate shrink-0">
+                                    @{post.repostOf.username} · {post.repostOf.timestamp}
+                                </span>
+                            </span>
+                            {post.repostOf.content && (
+                                <span className="block text-[14px] text-muted font-sans line-clamp-4 whitespace-pre-wrap">
+                                    {post.repostOf.content}
+                                </span>
+                            )}
+                            {post.repostOf.image && (
+                                <span className="relative block mt-2 h-44 rounded-lg overflow-hidden bg-sunken">
+                                    <Image
+                                        src={post.repostOf.image}
+                                        alt=""
+                                        fill
+                                        className="object-cover"
+                                    />
+                                </span>
+                            )}
+                        </Link>
+                    )}
 
                     {/* Link Preview */}
                     {post.linkPreview && !post.images?.length && (
@@ -760,6 +822,77 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                             <span className="text-[13px] font-sans tabular-nums">
                                 {formatCount(post.stats.views ?? 0)}
                             </span>
+                        </div>
+                        <div className="relative">
+                            <button
+                                type="button"
+                                aria-label={t("post.repost")}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setRepostMenuOpen((v) => !v);
+                                }}
+                                className={clsx(
+                                    "flex items-center gap-0.5 transition-colors group cursor-pointer",
+                                    reposted ? "text-success" : "hover:text-success",
+                                )}
+                            >
+                                <span className="flex h-10 w-10 items-center justify-center rounded-pill group-hover:bg-success/10 transition group-active:scale-[0.98]">
+                                    <ArrowsClockwise
+                                        size={15}
+                                        weight={reposted ? "bold" : "regular"}
+                                    />
+                                </span>
+                                <span className="text-[13px] font-sans tabular-nums">
+                                    {formatCount(
+                                        (post.stats.reposts ?? 0) + repostDelta,
+                                    )}
+                                </span>
+                            </button>
+                            {repostMenuOpen && (
+                                <div
+                                    className="absolute bottom-11 left-0 z-dropdown card-depth rounded-xl overflow-hidden py-1 w-40 animate-rise"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            setRepostMenuOpen(false);
+                                            const res = await repostPostAction(
+                                                post.id,
+                                            );
+                                            if (res.success) {
+                                                setReposted(
+                                                    Boolean(res.reposted),
+                                                );
+                                                setRepostDelta(
+                                                    res.reposted ? 1 : 0,
+                                                );
+                                                toast(
+                                                    res.reposted
+                                                        ? t("post.reposted")
+                                                        : t("post.unreposted"),
+                                                    { type: "success" },
+                                                );
+                                            }
+                                        }}
+                                        className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans cursor-pointer"
+                                    >
+                                        <ArrowsClockwise size={15} />
+                                        {t("post.repost")}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setRepostMenuOpen(false);
+                                            setQuoteOpen(true);
+                                        }}
+                                        className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans cursor-pointer"
+                                    >
+                                        <ChatCircle size={15} />
+                                        {t("post.quote")}
+                                    </button>
+                                </div>
+                            )}
                         </div>
                         <button
                             type="button"
@@ -939,6 +1072,19 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                     </div>
                 </div>
             </div>
+            {quoteOpen && (
+                <QuoteModal
+                    target={{
+                        id: post.id,
+                        authorName: post.author.name,
+                        username: post.author.username,
+                        avatar: post.author.avatar,
+                        content: post.content || post.repostOf?.content || "",
+                        timestamp: post.timestamp,
+                    }}
+                    onClose={() => setQuoteOpen(false)}
+                />
+            )}
         </article>
     );
 });

@@ -1,54 +1,98 @@
 "use client";
 
 import clsx from "clsx";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { useAtom } from "jotai";
+import {
+	RoadHorizon,
+	Sparkle,
+	Users,
+	UsersThree,
+} from "@phosphor-icons/react";
 import { feedTabAtom } from "@/store/ui.atom";
 import { useT } from "@/i18n/client";
 
-const TABS = [
-  { key: "foryou", labelKey: "feed.tab.foryou" },
-  { key: "following", labelKey: "feed.tab.following" },
-] as const;
-
 /**
- * Feed header tabs, spec Tab style: full-height hit area, 2px gold underline
- * that slides between tabs (motion-base, the one easing). Hover lightens one
- * ladder step — no scale.
+ * The feed's top bar: the two timeline tabs plus the surfaces that grew out
+ * of them — The Street and Communities ride the same row as destinations.
+ * Each item carries its glyph (duotone at rest, filled when current); the
+ * gold underline still slides between the two true tabs.
  */
 export function FeedTabs() {
-  const [tab, setTab] = useAtom(feedTabAtom);
-  const t = useT();
+	const t = useT();
+	const [tab, setTab] = useAtom(feedTabAtom);
 
-  return (
-    <div role="tablist" aria-label="Timeline" className="flex h-full w-full">
-      {TABS.map(({ key, labelKey }) => {
-        const active = tab === key;
-        return (
-          <button
-            key={key}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            onClick={() => setTab(key)}
-            className={clsx(
-              "relative flex-1 h-full flex items-center justify-center font-sans text-sm transition-colors cursor-pointer hover:bg-raised/40",
-              active
-                ? "font-semibold text-primary"
-                : "font-medium text-muted hover:text-primary",
-            )}
-          >
-            {t(labelKey)}
-            {active && (
-              <motion.span
-                layoutId="feed-tab-underline"
-                transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-                className="absolute bottom-0 h-0.5 w-14 rounded-pill bg-brand"
-              />
-            )}
-          </button>
-        );
-      })}
-    </div>
-  );
+	const base =
+		"relative h-full flex items-center justify-center gap-1.5 px-4 font-sans text-sm whitespace-nowrap transition-colors cursor-pointer shrink-0";
+
+	return (
+		<div
+			role="tablist"
+			aria-label="Timeline"
+			className="flex h-full w-full overflow-x-auto [scrollbar-width:none]"
+		>
+			<button
+				type="button"
+				role="tab"
+				aria-selected={tab === "foryou"}
+				onClick={() => setTab("foryou")}
+				className={clsx(
+					base,
+					tab === "foryou"
+						? "font-semibold text-primary"
+						: "font-medium text-muted hover:text-primary hover:bg-raised/40",
+				)}
+			>
+				<Sparkle size={16} weight={tab === "foryou" ? "fill" : "duotone"} />
+				{t("feed.tab.foryou")}
+				{tab === "foryou" && (
+					<motion.span
+						layoutId="feed-tab-underline"
+						transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+						className="absolute bottom-0 h-0.5 w-12 rounded-pill bg-brand"
+					/>
+				)}
+			</button>
+
+			<button
+				type="button"
+				role="tab"
+				aria-selected={tab === "following"}
+				onClick={() => setTab("following")}
+				className={clsx(
+					base,
+					tab === "following"
+						? "font-semibold text-primary"
+						: "font-medium text-muted hover:text-primary hover:bg-raised/40",
+				)}
+			>
+				<Users size={16} weight={tab === "following" ? "fill" : "duotone"} />
+				{t("feed.tab.following")}
+				{tab === "following" && (
+					<motion.span
+						layoutId="feed-tab-underline"
+						transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+						className="absolute bottom-0 h-0.5 w-12 rounded-pill bg-brand"
+					/>
+				)}
+			</button>
+
+			<Link
+				href="/live"
+				className={clsx(base, "font-medium text-muted hover:text-primary hover:bg-raised/40")}
+			>
+				<RoadHorizon size={16} weight="duotone" />
+				{t("nav.videos")}
+			</Link>
+
+			<Link
+				href="/communities"
+				className={clsx(base, "font-medium text-muted hover:text-primary hover:bg-raised/40")}
+			>
+				<UsersThree size={16} weight="duotone" />
+				{t("nav.communities")}
+			</Link>
+		</div>
+	);
 }

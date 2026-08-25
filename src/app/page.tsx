@@ -26,10 +26,10 @@ export default async function Home() {
 					>
 						<h1 className="sr-only">Home</h1>
 						<div className="flex items-center h-full">
+							<FeedHeaderActions />
 							<div className="flex-1 h-full min-w-0">
 								<FeedTabs />
 							</div>
-							<FeedHeaderActions />
 						</div>
 					</header>
 					<Feed />

@@ -150,6 +150,23 @@ export default function Feed() {
 					type: post.type,
 					live: post.live,
 					promoted: Boolean(post.promoted),
+					repostOf: post.repostOf
+						? {
+								id: post.repostOf._id,
+								authorName:
+									post.repostOf.author?.firstName &&
+									post.repostOf.author?.lastName
+										? `${post.repostOf.author.firstName} ${post.repostOf.author.lastName}`
+										: (post.repostOf.author?.username ?? ""),
+								username: post.repostOf.author?.username ?? "",
+								avatar:
+									post.repostOf.author?.avatar || DEFAULT_AVATAR,
+								isVerified: post.repostOf.author?.isVerified,
+								content: post.repostOf.content ?? "",
+								image: post.repostOf.images?.[0],
+								timestamp: formatTimeAgo(post.repostOf.createdAt),
+							}
+						: undefined,
 				}));
 
 				setFeedState((prev) => {
@@ -252,7 +269,7 @@ export default function Feed() {
 			{/* One creation card: stories strip on top, composer below —
 			    borderless depth instead of hairline boxes. */}
 			<div
-				className="animate-rise card-depth overflow-hidden mx-2 sm:mx-3 my-3"
+				className="animate-rise card-depth mx-2 sm:mx-3 my-3"
 				style={{ animationDelay: "60ms" }}
 			>
 				<StoriesRail />

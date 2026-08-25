@@ -5,7 +5,7 @@ import { getWhoToFollowAction, followUserAction } from "@/lib/user.actions";
 import { getStoriesAction } from "@/lib/stories.actions";
 import Link from "next/link";
 import Image from "next/image";
-import { Broadcast, MagnifyingGlass, MonitorPlay } from "@phosphor-icons/react";
+import { MagnifyingGlass, RoadHorizon } from "@phosphor-icons/react";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { useAtom } from "jotai";
 import {
@@ -17,7 +17,6 @@ import { commandPaletteOpenAtom, followingIdsAtom } from "@/store/ui.atom";
 import { getExploreDataAction } from "@/lib/post.actions";
 import { DEFAULT_AVATAR, XSTREAM_WEB_URL } from "@/const";
 import { useT } from "@/i18n/client";
-import { GoLiveSheet } from "@/components/feed/GoLiveSheet";
 import VerifiedIcon from "@/assets/icons/VerifiedIcon";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import clsx from "clsx";
@@ -68,7 +67,6 @@ export function RightSidebar() {
 	const [isTrendsLoaded, setIsTrendsLoaded] = useAtom(trendsLoadedAtom);
 	const [liveNow, setLiveNow] = useState<LiveEntry[]>([]);
 	const [category, setCategory] = useState<string>("all");
-	const [showGoLive, setShowGoLive] = useState(false);
 	const [failed, setFailed] = useState(false);
 	const { toast } = useToast();
 	// Shared with the feed's "Following" tab, so a follow here shows up there.
@@ -187,24 +185,15 @@ export function RightSidebar() {
 					{t("rail.create.title")}
 				</p>
 				<div className="flex gap-2">
-					<button
-						type="button"
-						onClick={() => setShowGoLive(true)}
-						className="flex-1 h-10 shine flex items-center justify-center gap-2 rounded-pill text-[13px] font-semibold font-sans text-white bg-gradient-to-b from-danger to-[#C22D2D] hover:opacity-90 transition-opacity cursor-pointer"
-					>
-						<Broadcast size={15} weight="fill" />
-						{t("rail.create.golive")}
-					</button>
 					<Link
 						href="/live"
 						className="flex-1 h-10 flex items-center justify-center gap-2 rounded-pill text-[13px] font-semibold font-sans text-primary bg-raised hover:bg-chip transition-colors"
 					>
-						<MonitorPlay size={15} weight="fill" />
+						<RoadHorizon size={15} weight="fill" />
 						{t("nav.videos")}
 					</Link>
 				</div>
 			</section>
-			{showGoLive && <GoLiveSheet onClose={() => setShowGoLive(false)} />}
 
 			{/* Live now — flat rows, red-ring grammar. Absent when nobody is live. */}
 			{liveNow.length > 0 && (
