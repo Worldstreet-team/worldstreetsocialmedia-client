@@ -7,6 +7,7 @@ import { useSetAtom } from "jotai";
 import { userAtom } from "@/store/user.atom";
 import { motion, AnimatePresence } from "framer-motion";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
+import MediaEditor from "@/components/editor/MediaEditor";
 import { DEFAULT_AVATAR } from "@/const";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import {
@@ -44,6 +45,14 @@ export default function EditProfileModal({
 	const [bannerFile, setBannerFile] = useState<File | null>(null);
 	const [bannerPreview, setBannerPreview] = useState<string>(user.banner || "");
 
+	// A freshly picked file goes through the Studio sheet (locked aspect)
+	// before it lands in avatarFile/bannerFile — avatars shipped un-cropped
+	// before this.
+	const [cropTarget, setCropTarget] = useState<{
+		kind: "avatar" | "banner";
+		file: File;
+	} | null>(null);
+
 	const avatarInputRef = useRef<HTMLInputElement>(null);
 	const bannerInputRef = useRef<HTMLInputElement>(null);
 
@@ -66,16 +75,28 @@ export default function EditProfileModal({
 		type: "avatar" | "banner",
 	) => {
 		const file = e.target.files?.[0];
-		if (file) {
-			const previewUrl = URL.createObjectURL(file);
-			if (type === "avatar") {
-				setAvatarFile(file);
-				setAvatarPreview(previewUrl);
-			} else {
-				setBannerFile(file);
-				setBannerPreview(previewUrl);
+		if (file) setCropTarget({ kind: type, file });
+		// Reset so re-picking the same file re-fires onChange.
+		e.target.value = "";
+	};
+
+	const handleCropSave = (file: File) => {
+		if (!cropTarget) return;
+		const previewUrl = URL.createObjectURL(file);
+		if (cropTarget.kind === "avatar") {
+			if (avatarPreview.startsWith("blob:")) {
+				URL.revokeObjectURL(avatarPreview);
 			}
+			setAvatarFile(file);
+			setAvatarPreview(previewUrl);
+		} else {
+			if (bannerPreview.startsWith("blob:")) {
+				URL.revokeObjectURL(bannerPreview);
+			}
+			setBannerFile(file);
+			setBannerPreview(previewUrl);
 		}
+		setCropTarget(null);
 	};
 
 	const handleSave = async () => {
@@ -319,6 +340,21 @@ export default function EditProfileModal({
 					</motion.div>
 				</div>
 			</AnimatePresence>
+
+			{/* Studio sheet — portalled later in <body>, so it stacks above this
+			    modal at the same z-modal tier. */}
+			{cropTarget && (
+				<MediaEditor
+					file={cropTarget.file}
+					lockAspect={cropTarget.kind === "avatar" ? 1 : 3}
+					round={cropTarget.kind === "avatar"}
+					title={
+						cropTarget.kind === "avatar" ? "Crop profile photo" : "Crop banner"
+					}
+					onClose={() => setCropTarget(null)}
+					onSave={({ file }) => handleCropSave(file)}
+				/>
+			)}
 		</ConfirmModalPortal>
 	);
 }

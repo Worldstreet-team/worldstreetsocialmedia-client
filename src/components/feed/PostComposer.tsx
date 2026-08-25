@@ -2,13 +2,23 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { Image as ImageIcon, Smile, Send, X, User, Link2 } from "lucide-react";
+import {
+	Image as ImageIcon,
+	Smile,
+	Send,
+	X,
+	User,
+	Link2,
+	Pencil,
+} from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import { createPostAction } from "@/lib/post.actions";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import EmojiPicker, { type EmojiClickData, Theme } from "emoji-picker-react";
 import { useTheme } from "next-themes";
 import clsx from "clsx";
+import MediaEditor from "@/components/editor/MediaEditor";
+import type { EditDocument } from "@/lib/editor/document";
 
 interface PostComposerProps {
 	onPostSuccess?: (post?: any) => void;
@@ -19,6 +29,10 @@ interface MediaItem {
 	url: string;
 	file: File;
 	type: "image" | "video";
+	// Editor state: `file` is what gets posted; the untouched original plus
+	// the edit document stay behind so re-opening the editor is non-destructive.
+	originalFile?: File;
+	editDoc?: EditDocument;
 }
 
 // Same limit PostCard truncates at.
@@ -96,6 +110,7 @@ export const PostComposer = ({
 	const [content, setContent] = useState("");
 	const [isPosting, setIsPosting] = useState(false);
 	const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+	const [editingIndex, setEditingIndex] = useState<number | null>(null);
 	const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
 	// Link Preview State
@@ -187,6 +202,19 @@ export const PostComposer = ({
 			}
 		} catch {}
 	}, [content]);
+
+	// Blob URLs never survived unmount (navigating away leaked every preview).
+	// Mirror the current URLs in a ref so the unmount sweep sees the live set.
+	const mediaUrlsRef = useRef<string[]>([]);
+	useEffect(() => {
+		mediaUrlsRef.current = mediaItems.map((item) => item.url);
+	}, [mediaItems]);
+	useEffect(
+		() => () => {
+			mediaUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+		},
+		[],
+	);
 
 	// Auto-resize textarea
 	useEffect(() => {
@@ -283,6 +311,7 @@ export const PostComposer = ({
 
 			if (result.success) {
 				setContent("");
+				mediaItems.forEach((item) => URL.revokeObjectURL(item.url));
 				setMediaItems([]);
 				setLinkPreview(null);
 				lastCheckedUrl.current = null;
@@ -352,14 +381,24 @@ export const PostComposer = ({
 										fill
 										className="object-cover"
 									/>
-									<button
-										type="button"
-										onClick={() => removeMedia(index)}
-										aria-label="Remove attachment"
-										className="absolute top-1.5 right-1.5 flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors"
-									>
-										<X className="w-4 h-4" />
-									</button>
+									<div className="absolute top-1.5 right-1.5 flex gap-1.5">
+										<button
+											type="button"
+											onClick={() => setEditingIndex(index)}
+											aria-label="Edit image"
+											className="flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors"
+										>
+											<Pencil className="w-4 h-4" />
+										</button>
+										<button
+											type="button"
+											onClick={() => removeMedia(index)}
+											aria-label="Remove attachment"
+											className="flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors"
+										>
+											<X className="w-4 h-4" />
+										</button>
+									</div>
 								</div>
 							))}
 						</div>
@@ -516,6 +555,36 @@ export const PostComposer = ({
 					</div>
 				</div>
 			</div>
+
+			{/* Studio sheet — opens per preview tile; Save swaps the posted File
+			    in place while the original + edit doc stay for re-editing. */}
+			{editingIndex !== null && mediaItems[editingIndex] && (
+				<MediaEditor
+					file={
+						mediaItems[editingIndex].originalFile ??
+						mediaItems[editingIndex].file
+					}
+					doc={mediaItems[editingIndex].editDoc}
+					onClose={() => setEditingIndex(null)}
+					onSave={({ file, doc }) => {
+						setMediaItems((prev) => {
+							const next = [...prev];
+							const old = next[editingIndex];
+							if (!old) return prev;
+							URL.revokeObjectURL(old.url);
+							next[editingIndex] = {
+								url: URL.createObjectURL(file),
+								file,
+								type: "image",
+								originalFile: old.originalFile ?? old.file,
+								editDoc: doc,
+							};
+							return next;
+						});
+						setEditingIndex(null);
+					}}
+				/>
+			)}
 		</div>
 	);
 };
