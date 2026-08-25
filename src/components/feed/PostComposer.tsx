@@ -10,7 +10,7 @@ import {
 	X,
 	User,
 	Link2,
-	Pencil,
+	Plus,
 } from "lucide-react";
 import { GoLiveSheet } from "@/components/feed/GoLiveSheet";
 import { VanishingPlaceholder } from "@/components/ui/VanishingPlaceholder";
@@ -22,7 +22,9 @@ import EmojiPicker, { type EmojiClickData, Theme } from "emoji-picker-react";
 import { useTheme } from "next-themes";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
+import { PencilSimple } from "@phosphor-icons/react";
 import MediaEditor from "@/components/editor/MediaEditor";
+import VideoEditor from "@/components/editor/VideoEditor";
 import type { EditDocument } from "@/lib/editor/document";
 import { POST_CHAR_BUDGET } from "@/const";
 
@@ -426,7 +428,12 @@ export const PostComposer = ({
 						<div
 							className={clsx(
 								"grid gap-2 mt-3 mb-2 rounded-xl overflow-hidden relative",
-								mediaItems.length === 1 ? "grid-cols-1" : "grid-cols-2",
+								// Photos always get the 2-up grid so the add-more
+								// tile can ride alongside; only a lone video goes
+								// full-width.
+								mediaItems[0].type === "video"
+									? "grid-cols-1"
+									: "grid-cols-2",
 							)}
 						>
 							{mediaItems.map((item, index) => (
@@ -434,7 +441,10 @@ export const PostComposer = ({
 									key={item.url}
 									className={clsx(
 										"relative bg-surface border border-hairline",
-										mediaItems.length > 1 ? "aspect-square" : "aspect-video",
+										item.type === "video" &&
+											mediaItems.length === 1
+											? "aspect-video"
+											: "aspect-square",
 									)}
 								>
 									{item.type === "video" ? (
@@ -454,18 +464,21 @@ export const PostComposer = ({
 										/>
 									)}
 									<div className="absolute top-1.5 right-1.5 flex gap-1.5">
-										{/* Gate on the real MIME type, not the item.type
-										    label — the editor can't decode video. */}
-										{item.file.type.startsWith("image/") && (
-											<button
-												type="button"
-												onClick={() => setEditingIndex(index)}
-												aria-label="Edit image"
-												className="flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors"
-											>
-												<Pencil className="w-4 h-4" />
-											</button>
-										)}
+										{/* MIME decides which editor mounts below —
+										    images get the Studio sheet, videos the
+										    trim sheet. */}
+										<button
+											type="button"
+											onClick={() => setEditingIndex(index)}
+											aria-label={
+												item.file.type.startsWith("video/")
+													? "Edit video"
+													: "Edit image"
+											}
+											className="flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors"
+										>
+											<PencilSimple size={16} weight="bold" />
+										</button>
 										<button
 											type="button"
 											onClick={() => removeMedia(index)}
@@ -477,6 +490,26 @@ export const PostComposer = ({
 									</div>
 								</div>
 							))}
+							{/* Chain photos: an explicit add tile, not a hunt
+							    for the toolbar icon. 4 slots total. */}
+							{mediaItems[0].type !== "video" &&
+								mediaItems.length < 4 && (
+									<button
+										type="button"
+										onClick={() =>
+											fileInputRef.current?.click()
+										}
+										disabled={isPosting}
+										aria-label="Add more photos"
+										className="relative aspect-square border border-dashed border-hairline bg-sunken/30 hover:bg-raised/50 flex flex-col items-center justify-center gap-1.5 text-muted hover:text-primary transition-colors cursor-pointer"
+									>
+										<Plus className="w-6 h-6" />
+										<span className="text-[12px] font-sans font-medium tabular-nums">
+											Add photos · {4 - mediaItems.length}{" "}
+											left
+										</span>
+									</button>
+								)}
 						</div>
 					)}
 
@@ -644,44 +677,72 @@ export const PostComposer = ({
 				</div>
 			</div>
 
-			{/* Studio sheet — opens per preview tile; Save swaps the posted File
-			    in place while the original + edit doc stay for re-editing. */}
-			{editingIndex !== null && mediaItems[editingIndex] && (
-				<MediaEditor
-					file={
-						mediaItems[editingIndex].originalFile ??
-						mediaItems[editingIndex].file
-					}
-					doc={mediaItems[editingIndex].editDoc}
-					allowAlt
-					onClose={() => setEditingIndex(null)}
-					onSave={({ file, doc }) => {
-						// URL side effects stay OUTSIDE the updater — StrictMode
-						// double-invokes updaters, which would leak a blob URL
-						// per save. The editor is modal, so the item can't have
-						// moved since it opened.
-						const old = mediaItems[editingIndex];
-						if (!old) {
-							setEditingIndex(null);
-							return;
+			{/* Per-tile editors — the MIME decides which sheet mounts. Save swaps
+			    the posted File in place; images keep the original + edit doc so
+			    re-opening is non-destructive. URL side effects stay OUTSIDE the
+			    state updater (StrictMode double-invokes updaters). */}
+			{editingIndex !== null &&
+				mediaItems[editingIndex] &&
+				(mediaItems[editingIndex].file.type.startsWith("video/") ? (
+					<VideoEditor
+						file={
+							mediaItems[editingIndex].originalFile ??
+							mediaItems[editingIndex].file
 						}
-						URL.revokeObjectURL(old.url);
-						const url = URL.createObjectURL(file);
-						setMediaItems((prev) => {
-							const next = [...prev];
-							next[editingIndex] = {
-								url,
-								file,
-								type: "image",
-								originalFile: old.originalFile ?? old.file,
-								editDoc: doc,
-							};
-							return next;
-						});
-						setEditingIndex(null);
-					}}
-				/>
-			)}
+						onClose={() => setEditingIndex(null)}
+						onSave={(file) => {
+							const old = mediaItems[editingIndex];
+							if (!old) {
+								setEditingIndex(null);
+								return;
+							}
+							URL.revokeObjectURL(old.url);
+							const url = URL.createObjectURL(file);
+							setMediaItems((prev) => {
+								const next = [...prev];
+								next[editingIndex] = {
+									url,
+									file,
+									type: "video",
+									originalFile: old.originalFile ?? old.file,
+								};
+								return next;
+							});
+							setEditingIndex(null);
+						}}
+					/>
+				) : (
+					<MediaEditor
+						file={
+							mediaItems[editingIndex].originalFile ??
+							mediaItems[editingIndex].file
+						}
+						doc={mediaItems[editingIndex].editDoc}
+						allowAlt
+						onClose={() => setEditingIndex(null)}
+						onSave={({ file, doc }) => {
+							const old = mediaItems[editingIndex];
+							if (!old) {
+								setEditingIndex(null);
+								return;
+							}
+							URL.revokeObjectURL(old.url);
+							const url = URL.createObjectURL(file);
+							setMediaItems((prev) => {
+								const next = [...prev];
+								next[editingIndex] = {
+									url,
+									file,
+									type: "image",
+									originalFile: old.originalFile ?? old.file,
+									editDoc: doc,
+								};
+								return next;
+							});
+							setEditingIndex(null);
+						}}
+					/>
+				))}
 		</div>
 	);
 };

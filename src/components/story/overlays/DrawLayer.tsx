@@ -1,7 +1,7 @@
 "use client";
 
+import { ArrowUUpLeft, Check } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { Check, Undo2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   STROKE_COLORS,
@@ -145,7 +145,7 @@ export default function DrawLayer({
                 <span
                   className={clsx(
                     "block h-6 w-6 rounded-pill border-2 transition-colors",
-                    color === c ? "border-gold" : "border-hairline",
+                    color === c ? "border-[#fafaf9]" : "border-[#fafaf9]/20",
                   )}
                   style={{ background: c }}
                 />
@@ -158,16 +158,16 @@ export default function DrawLayer({
               onClick={onUndo}
               disabled={strokes.length === 0}
               aria-label="Undo last stroke"
-              className="flex h-10 w-10 items-center justify-center rounded-pill bg-scrim text-primary hover:bg-raised transition-colors disabled:opacity-40 cursor-pointer"
+              className="flex h-10 w-10 items-center justify-center rounded-pill glass-chip transition-colors disabled:opacity-40 cursor-pointer"
             >
-              <Undo2 className="w-4 h-4" />
+              <ArrowUUpLeft size={16} weight="bold" />
             </button>
             <button
               type="button"
               onClick={onDone}
-              className="flex items-center gap-2 bg-brand text-brand-on px-5 h-11 sm:h-9 rounded-pill font-semibold text-sm hover:bg-brand-active transition-colors font-sans cursor-pointer"
+              className="flex items-center gap-2 glass-cta px-5 h-11 sm:h-9 rounded-pill font-semibold text-sm transition-colors font-sans cursor-pointer"
             >
-              <Check className="w-4 h-4" />
+              <Check size={16} weight="bold" />
               Done
             </button>
           </div>

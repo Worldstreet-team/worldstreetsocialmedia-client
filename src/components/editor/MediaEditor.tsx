@@ -3,16 +3,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Cropper, { type Area } from "react-easy-crop";
 import "react-easy-crop/react-easy-crop.css";
+import {
+  ArrowClockwise,
+  Check,
+  FlipHorizontal,
+  MagnifyingGlassMinus,
+  MagnifyingGlassPlus,
+  X,
+} from "@phosphor-icons/react";
 import clsx from "clsx";
 import { motion } from "framer-motion";
-import {
-  Check,
-  FlipHorizontal2,
-  RotateCw,
-  X,
-  ZoomIn,
-  ZoomOut,
-} from "lucide-react";
 import GrainOverlay from "@/components/editor/GrainOverlay";
 import PresetCarousel from "@/components/editor/PresetCarousel";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
@@ -304,27 +304,27 @@ export default function MediaEditor({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           onClick={onClose}
-          className="absolute inset-0 bg-scrim"
+          className="absolute inset-0 glass-scrim"
         />
         <motion.div
           initial={{ opacity: 0, scale: 0.98, y: 8 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-          className="relative w-full max-w-xl bg-surface border border-hairline rounded-xl shadow-nav overflow-hidden flex flex-col max-h-[90dvh] text-primary"
+          className="relative w-full max-w-xl glass-panel overflow-hidden flex flex-col max-h-[90dvh] glass-ink"
           role="dialog"
           aria-modal="true"
           aria-label={title}
         >
           {/* Header */}
-          <div className="flex shrink-0 items-center justify-between gap-2 px-2 sm:px-4 py-2 sm:py-3 border-b border-hairline">
-            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+          <div className="flex shrink-0 items-center justify-between gap-2 px-3 sm:px-4 py-2.5 border-b glass-divider">
+            <div className="flex items-center gap-3 min-w-0">
               <button
                 type="button"
                 onClick={onClose}
                 aria-label="Discard edits"
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-pill hover:bg-raised transition-colors text-muted hover:text-primary cursor-pointer"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill glass-chip transition-colors cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X size={17} weight="bold" />
               </button>
               <h2 className="font-display text-lg font-semibold tracking-tight truncate">
                 {title}
@@ -334,12 +334,12 @@ export default function MediaEditor({
               type="button"
               onClick={handleSave}
               disabled={!croppedPx || exporting}
-              className="shrink-0 flex items-center gap-2 bg-brand text-brand-on px-5 sm:px-6 h-11 sm:h-9 rounded-pill font-semibold text-sm hover:bg-brand-active transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-sans cursor-pointer"
+              className="shrink-0 flex items-center gap-2 glass-cta px-5 sm:px-6 h-10 sm:h-9 rounded-pill font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-sans cursor-pointer"
             >
               {exporting ? (
-                <div className="w-4 h-4 border-2 border-brand-on/30 border-t-brand-on rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-[#0c0a09]/25 border-t-[#0c0a09] rounded-full animate-spin" />
               ) : (
-                <Check className="w-4 h-4" />
+                <Check size={16} weight="bold" />
               )}
               Save
             </button>
@@ -347,7 +347,7 @@ export default function MediaEditor({
 
           {/* Stage — stays mounted across tabs so crop state survives; the
               adjustment preview is a CSS filter on the cropper's media. */}
-          <div className="relative w-full h-[min(52dvh,420px)] bg-sunken ws-cropper">
+          <div className="relative w-full h-[min(52dvh,420px)] ws-cropper">
             {sourceUrl ? (
               <Cropper
                 image={sourceUrl}
@@ -372,8 +372,8 @@ export default function MediaEditor({
             {grainActive && <GrainOverlay />}
           </div>
 
-          {/* Tab bar — gold underline slides via layoutId (FeedTabs motion). */}
-          <div className="flex shrink-0 border-t border-hairline">
+          {/* Tab bar — white underline slides via layoutId (FeedTabs motion). */}
+          <div className="flex shrink-0 border-t glass-divider">
             {tabs.map(({ id, label }) => (
               <button
                 key={id}
@@ -382,17 +382,17 @@ export default function MediaEditor({
                 aria-pressed={tab === id}
                 className={clsx(
                   "relative flex-1 h-11 text-[13px] font-semibold font-sans transition-colors cursor-pointer",
-                  tab === id ? "text-primary" : "text-muted hover:text-primary",
+                  tab === id ? "glass-ink" : "glass-ink-dim hover:glass-ink",
                 )}
               >
                 {label}
                 {id === "adjust" && adjustmentsDirty && tab !== "adjust" && (
-                  <span className="absolute top-2 ml-1 inline-block h-1.5 w-1.5 rounded-pill bg-gold" />
+                  <span className="absolute top-2 ml-1 inline-block h-1.5 w-1.5 rounded-pill glass-fill" />
                 )}
                 {tab === id && (
                   <motion.span
                     layoutId="ws-editor-tab"
-                    className="absolute inset-x-8 top-0 h-0.5 rounded-pill bg-brand"
+                    className="absolute inset-x-8 top-0 h-0.5 rounded-pill glass-fill"
                     transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
                   />
                 )}
@@ -407,11 +407,11 @@ export default function MediaEditor({
               (hit while testing). */}
           <div className="shrink-0 flex flex-col">
             {tab === "adjust" && (
-              <div className="shrink-0 px-3 sm:px-4 py-3 space-y-3 border-t border-hairline overflow-y-auto">
+              <div className="shrink-0 px-3 sm:px-4 py-3 space-y-3 border-t glass-divider overflow-y-auto">
                 <div className="space-y-2">
                   {ADJUSTMENT_SLIDERS.map(({ key, label }) => (
                     <div key={key} className="flex items-center gap-3">
-                      <span className="w-[76px] shrink-0 text-[11px] uppercase tracking-[1px] font-medium text-muted font-sans">
+                      <span className="w-[76px] shrink-0 text-[11px] uppercase tracking-[1px] font-medium glass-ink-dim font-sans">
                         {label}
                       </span>
                       <input
@@ -438,7 +438,7 @@ export default function MediaEditor({
                         aria-label={label}
                         className="ws-slider flex-1"
                       />
-                      <span className="w-9 shrink-0 text-right text-xs text-muted font-sans tabular-nums">
+                      <span className="w-9 shrink-0 text-right text-xs glass-ink-dim font-sans tabular-nums">
                         {doc.adjustments[key]}
                       </span>
                     </div>
@@ -459,7 +459,7 @@ export default function MediaEditor({
                         preset: null,
                       }))
                     }
-                    className="text-[13px] font-medium font-sans text-muted hover:text-primary transition-colors cursor-pointer"
+                    className="text-[13px] font-medium font-sans glass-ink-dim hover:glass-ink transition-colors cursor-pointer"
                   >
                     Reset adjustments
                   </button>
@@ -468,10 +468,10 @@ export default function MediaEditor({
             )}
 
             {tab === "alt" && (
-              <div className="shrink-0 px-3 sm:px-4 py-3 border-t border-hairline">
+              <div className="shrink-0 px-3 sm:px-4 py-3 border-t glass-divider">
                 <label
                   htmlFor="ws-editor-alt"
-                  className="block text-[11px] uppercase tracking-[1px] font-medium text-muted mb-1 font-sans"
+                  className="block text-[11px] uppercase tracking-[1px] font-medium glass-ink-dim mb-1 font-sans"
                 >
                   Alt text
                 </label>
@@ -483,20 +483,20 @@ export default function MediaEditor({
                   }
                   maxLength={1000}
                   placeholder="Describe the image for people using screen readers"
-                  className="w-full rounded-md border border-hairline focus-within:border-brand/60 bg-transparent p-3 outline-none text-base sm:text-sm font-sans resize-none min-h-[72px] placeholder:text-subtle text-primary"
+                  className="w-full rounded-lg glass-input p-3 text-base sm:text-sm font-sans resize-none min-h-[72px]"
                 />
               </div>
             )}
 
             <div
               className={clsx(
-                "shrink-0 px-3 sm:px-4 py-3 space-y-3 border-t border-hairline",
+                "shrink-0 px-3 sm:px-4 py-3 space-y-3 border-t glass-divider",
                 tab !== "crop" && "hidden",
               )}
             >
               <div className="flex items-center justify-between gap-2">
                 {lockAspect ? (
-                  <span className="text-[11px] uppercase tracking-[1px] font-medium text-muted font-sans">
+                  <span className="text-[11px] uppercase tracking-[1px] font-medium glass-ink-dim font-sans">
                     {round ? "Profile photo" : "Banner"}
                   </span>
                 ) : (
@@ -509,8 +509,8 @@ export default function MediaEditor({
                         className={clsx(
                           "h-8 px-3 rounded-pill text-[13px] font-medium font-sans transition-colors whitespace-nowrap cursor-pointer tabular-nums",
                           doc.aspectId === id
-                            ? "bg-brand/10 text-gold"
-                            : "border border-hairline text-muted hover:bg-raised hover:text-primary",
+                            ? "glass-chip-active"
+                            : "glass-chip",
                         )}
                         aria-pressed={doc.aspectId === id}
                       >
@@ -519,14 +519,14 @@ export default function MediaEditor({
                     ))}
                   </div>
                 )}
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     type="button"
                     onClick={applyRotate}
                     aria-label="Rotate 90 degrees"
-                    className="flex h-10 w-10 items-center justify-center rounded-pill text-muted hover:bg-raised hover:text-primary transition-colors cursor-pointer"
+                    className="flex h-10 w-10 items-center justify-center rounded-pill glass-chip transition-colors cursor-pointer"
                   >
-                    <RotateCw className="w-[18px] h-[18px]" />
+                    <ArrowClockwise size={17} weight="bold" />
                   </button>
                   <button
                     type="button"
@@ -534,19 +534,21 @@ export default function MediaEditor({
                     aria-label="Flip horizontally"
                     className={clsx(
                       "flex h-10 w-10 items-center justify-center rounded-pill transition-colors cursor-pointer",
-                      doc.flipH
-                        ? "bg-brand/10 text-gold"
-                        : "text-muted hover:bg-raised hover:text-primary",
+                      doc.flipH ? "glass-chip-active" : "glass-chip",
                     )}
                     aria-pressed={doc.flipH}
                   >
-                    <FlipHorizontal2 className="w-[18px] h-[18px]" />
+                    <FlipHorizontal size={17} weight="bold" />
                   </button>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
-                <ZoomOut className="w-4 h-4 text-subtle shrink-0" aria-hidden />
+                <MagnifyingGlassMinus
+                  size={16}
+                  className="glass-ink-faint shrink-0"
+                  aria-hidden
+                />
                 <input
                   type="range"
                   min={1}
@@ -559,9 +561,13 @@ export default function MediaEditor({
                   aria-label="Zoom"
                   className="ws-slider flex-1"
                 />
-                <ZoomIn className="w-4 h-4 text-subtle shrink-0" aria-hidden />
+                <MagnifyingGlassPlus
+                  size={16}
+                  className="glass-ink-faint shrink-0"
+                  aria-hidden
+                />
                 <span
-                  className="text-xs text-muted font-sans tabular-nums w-[84px] text-right shrink-0"
+                  className="text-xs glass-ink-dim font-sans tabular-nums w-[84px] text-right shrink-0"
                   aria-live="polite"
                 >
                   {readout ? `${readout.w} × ${readout.h}` : "—"}

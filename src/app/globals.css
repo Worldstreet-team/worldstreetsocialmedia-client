@@ -235,27 +235,107 @@ html {
     font-family: var(--ws-font-ui);
 }
 
-/* react-easy-crop ships neutral chrome; re-skin it on-token (same approach
-   as the emoji picker above). Gold frame = the brand's one accent in the
-   editor; the thirds grid only renders while interacting (showGrid is
-   toggled by MediaEditor), so no fade rules are needed here. */
+/* ── Editor glass chrome (owner ruling 2026-08-25) ─────────────────────────
+   The media-editing surfaces (Studio sheet, Story Studio, video editor and
+   their tools) adopt Apple-style translucent chrome: heavy blur + saturate,
+   hairline white borders, a light top sheen, white CTAs. This is THE
+   sanctioned exception to the no-backdrop-blur ecosystem ruling, and the
+   editor chrome is deliberately dark in both themes (photo-editor chrome
+   reads dark everywhere — Apple Photos does the same), so these are fixed
+   values, not theme tokens. */
+.glass-scrim {
+    background: rgb(0 0 0 / 0.45);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+}
+.glass-panel {
+    background:
+        linear-gradient(180deg, rgb(255 255 255 / 0.07), rgb(255 255 255 / 0) 42%),
+        rgb(18 16 15 / 0.66);
+    backdrop-filter: blur(36px) saturate(180%);
+    -webkit-backdrop-filter: blur(36px) saturate(180%);
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: 1rem;
+    box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 0.08),
+        0 32px 64px -24px rgb(0 0 0 / 0.7);
+}
+.glass-chip {
+    background: rgb(255 255 255 / 0.08);
+    border: 1px solid rgb(255 255 255 / 0.1);
+    color: rgb(255 255 255 / 0.85);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+}
+.glass-chip:hover {
+    background: rgb(255 255 255 / 0.15);
+    color: rgb(255 255 255 / 1);
+}
+.glass-chip-active {
+    background: rgb(250 250 249 / 0.94);
+    border: 1px solid transparent;
+    color: #0c0a09;
+}
+.glass-chip-active:hover {
+    background: rgb(255 255 255 / 1);
+    color: #0c0a09;
+}
+.glass-cta {
+    background: rgb(250 250 249 / 0.96);
+    color: #0c0a09;
+    box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 0.6),
+        0 12px 28px -14px rgb(0 0 0 / 0.85);
+}
+.glass-cta:hover {
+    background: #ffffff;
+}
+.glass-ink {
+    color: #fafaf9;
+}
+.glass-ink-dim {
+    color: rgb(255 255 255 / 0.62);
+}
+.glass-ink-faint {
+    color: rgb(255 255 255 / 0.4);
+}
+.glass-fill {
+    background: #fafaf9;
+}
+.glass-divider {
+    border-color: rgb(255 255 255 / 0.09);
+}
+.glass-input {
+    background: rgb(255 255 255 / 0.07);
+    border: 1px solid rgb(255 255 255 / 0.1);
+    color: #fafaf9;
+}
+.glass-input::placeholder {
+    color: rgb(255 255 255 / 0.38);
+}
+.glass-input:focus {
+    border-color: rgb(255 255 255 / 0.32);
+    outline: none;
+}
+
+/* react-easy-crop ships neutral chrome; re-skin it for the glass editor —
+   white frame and thirds (Apple crop grammar), fixed dark mask. The grid
+   only renders while interacting (showGrid is toggled by MediaEditor). */
 .ws-cropper .reactEasyCrop_Container {
-    background: var(--ws-bg-sunken);
+    background: rgb(0 0 0 / 0.55);
 }
 .ws-cropper .reactEasyCrop_CropArea {
-    /* The mask outside the frame is drawn from `color` via box-shadow;
-       the scrim token keeps it retheming with data-ws-theme. */
-    color: var(--ws-overlay-scrim);
-    border: 1.5px solid var(--ws-brand-primary);
+    /* The mask outside the frame is drawn from `color` via box-shadow. */
+    color: rgb(0 0 0 / 0.55);
+    border: 1px solid rgb(255 255 255 / 0.9);
 }
 .ws-cropper .reactEasyCrop_CropAreaGrid::before,
 .ws-cropper .reactEasyCrop_CropAreaGrid::after {
-    border-color: rgb(255 255 255 / 0.28);
+    border-color: rgb(255 255 255 / 0.35);
 }
 
-/* Range input for the editor's zoom (04-components "Slider"): hairline track
-   on bg/track, primary-ink thumb — gold stays reserved for the crop frame
-   and the Save CTA. */
+/* Range input for the editor's zoom/adjust sliders — glass grammar: faint
+   white track, white thumb. */
 .ws-slider {
     appearance: none;
     -webkit-appearance: none;
@@ -266,12 +346,12 @@ html {
 .ws-slider::-webkit-slider-runnable-track {
     height: 3px;
     border-radius: var(--ws-radius-pill);
-    background: var(--ws-bg-track);
+    background: rgb(255 255 255 / 0.18);
 }
 .ws-slider::-moz-range-track {
     height: 3px;
     border-radius: var(--ws-radius-pill);
-    background: var(--ws-bg-track);
+    background: rgb(255 255 255 / 0.18);
 }
 .ws-slider::-webkit-slider-thumb {
     appearance: none;
@@ -280,15 +360,17 @@ html {
     height: 16px;
     margin-top: -6.5px;
     border-radius: var(--ws-radius-pill);
-    background: var(--ws-text-primary);
+    background: #fafaf9;
     border: none;
+    box-shadow: 0 2px 6px rgb(0 0 0 / 0.45);
 }
 .ws-slider::-moz-range-thumb {
     width: 16px;
     height: 16px;
     border-radius: var(--ws-radius-pill);
-    background: var(--ws-text-primary);
+    background: #fafaf9;
     border: none;
+    box-shadow: 0 2px 6px rgb(0 0 0 / 0.45);
 }
 
 /* Page-intro reveal (06-motion "page-section reveals"): opacity + 8px rise at

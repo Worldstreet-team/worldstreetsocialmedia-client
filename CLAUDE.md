@@ -271,7 +271,13 @@ noted below is fixed).
   mobile header uses the same mark. "More" opens a rich "More from
   WorldStreet" panel (icon chips + descriptions for
   Dashboard/Academy/Xstream/Shop — DS labels, never "XTreme").
-- **No backdrop-blur anywhere** (ecosystem glass ruling 2026-08-03): sticky
+- **Exception (owner ruling 2026-08-25): the media-editor surfaces are
+  glass.** MediaEditor/VideoEditor/Story Studio + their tools use the
+  `glass-*` utilities in globals.css (heavy backdrop-blur, white CTAs,
+  fixed-dark chrome in both themes, Phosphor icons). This is the ONE
+  sanctioned deviation from the no-backdrop-blur ruling below — don't
+  spread glass beyond the editors, and don't retoken the editors back.
+- **No backdrop-blur anywhere else** (ecosystem glass ruling 2026-08-03): sticky
   headers/bottom nav are solid `bg-page` + hairline, drawer/modal backdrops
   are flat `bg-scrim`. Don't reintroduce `backdrop-blur-*`.
 - **NextTopLoader is gold** (`var(--ws-brand-primary)`, 2px, no spinner) —

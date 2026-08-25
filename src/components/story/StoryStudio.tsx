@@ -1,13 +1,22 @@
 "use client";
 
+import {
+  Images,
+  PaperPlaneTilt,
+  Scissors,
+  Scribble,
+  Sticker,
+  TextAa,
+  X,
+} from "@phosphor-icons/react";
 import clsx from "clsx";
 import { motion } from "framer-motion";
-import { ImagePlus, PenLine, Send, Sticker, Type, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import Cropper, { type Area } from "react-easy-crop";
 import "react-easy-crop/react-easy-crop.css";
 import GrainOverlay from "@/components/editor/GrainOverlay";
 import PresetCarousel from "@/components/editor/PresetCarousel";
+import VideoEditor from "@/components/editor/VideoEditor";
 import DrawLayer from "@/components/story/overlays/DrawLayer";
 import OverlayLayer from "@/components/story/overlays/OverlayLayer";
 import StickerTray from "@/components/story/overlays/StickerTray";
@@ -64,6 +73,9 @@ interface StoryStudioProps {
 export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
   const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);
+  // Chained slides: extra picks wait here; each posts as its own story doc,
+  // so the viewer plays the chain in sequence automatically.
+  const [queue, setQueue] = useState<File[]>([]);
   const [sourceUrl, setSourceUrl] = useState<string | null>(null);
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -72,6 +84,9 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
   const [croppedPx, setCroppedPx] = useState<Area | null>(null);
   const [caption, setCaption] = useState("");
   const [posting, setPosting] = useState(false);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [trimOpen, setTrimOpen] = useState(false);
+  const isVideo = !!file && file.type.startsWith("video/");
 
   // Phase 4 decoration state.
   const [overlays, setOverlays] = useState<Overlay[]>([]);
@@ -116,8 +131,20 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
   // Decode the picked file into an oriented working canvas (EXIF-corrected,
   // downscaled) and hand the cropper a blob URL of it.
   // biome-ignore lint/correctness/useExhaustiveDependencies: decode once per file; toast/onClose identity changes must not re-decode.
+  // Video stories: no canvas pipeline — just an object URL for the preview.
   useEffect(() => {
-    if (!file) return;
+    if (!file || !file.type.startsWith("video/")) {
+      setVideoUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setVideoUrl(url);
+    setCroppedPx(null);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  useEffect(() => {
+    if (!file || file.type.startsWith("video/")) return;
     let cancelled = false;
     let bitmap: ImageBitmap | null = null;
     // The old photo's crop rect is meaningless for the new one — Share must
@@ -197,8 +224,16 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
   }, [onClose]);
 
   const handlePick = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const picked = e.target.files?.[0];
-    if (picked) setFile(picked);
+    const picked = Array.from(e.target.files ?? []);
+    if (picked.length > 0) {
+      if (!file) {
+        setFile(picked[0]);
+        if (picked.length > 1) setQueue((prev) => [...prev, ...picked.slice(1)]);
+      } else {
+        // Editing already — every new pick chains onto the queue.
+        setQueue((prev) => [...prev, ...picked]);
+      }
+    }
     e.target.value = "";
   };
 
@@ -241,8 +276,55 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
     setMode("none");
   };
 
+  // One slide posted: pull the next queued file into a fresh editor, or
+  // close when the chain is done.
+  const advanceAfterPost = () => {
+    onPosted();
+    const [next, ...rest] = queue;
+    if (!next) {
+      toast("Story posted!", { type: "success" });
+      onClose();
+      return;
+    }
+    toast(
+      rest.length > 0
+        ? `Slide posted — ${rest.length + 1} to go`
+        : "Slide posted — last one",
+      { type: "success" },
+    );
+    setQueue(rest);
+    setPosition({ x: 0, y: 0 });
+    setZoom(1);
+    setPreset(null);
+    setCroppedPx(null);
+    setCaption("");
+    setOverlays([]);
+    setStrokes([]);
+    setMode("none");
+    setEditingTextId(null);
+    setFile(next);
+    setPosting(false);
+  };
+
   const handleShare = async () => {
-    if (!orientedRef.current || !croppedPx || posting || !file) return;
+    if (posting || !file) return;
+    if (isVideo) {
+      // Video posts as-is (or as trimmed by the VideoEditor) — the canvas
+      // pipeline is image-only.
+      setPosting(true);
+      const formData = new FormData();
+      formData.append("media", file);
+      if (caption.trim()) formData.append("caption", caption.trim());
+      const result = await createStoryAction(formData);
+      if (result.success) {
+        advanceAfterPost();
+      } else {
+        toast(result.message || "Failed to post story", { type: "error" });
+        setPosting(false);
+      }
+      return;
+    }
+    if (!orientedRef.current || !croppedPx) return;
     setPosting(true);
     try {
       // Canvas text uses the same hashed next/font faces the preview shows —
@@ -267,9 +349,7 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
       if (caption.trim()) formData.append("caption", caption.trim());
       const result = await createStoryAction(formData);
       if (result.success) {
-        toast("Story posted!", { type: "success" });
-        onPosted();
-        onClose();
+        advanceAfterPost();
       } else {
         toast(result.message || "Failed to post story", { type: "error" });
         setPosting(false);
@@ -286,21 +366,21 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-        className="fixed inset-0 z-modal bg-page text-primary flex flex-col"
+        className="fixed inset-0 z-modal bg-[#0c0a09] glass-ink flex flex-col"
         role="dialog"
         aria-modal="true"
         aria-label="New story"
       >
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between gap-2 px-2 sm:px-4 py-2 sm:py-3 border-b border-hairline">
+        <div className="flex shrink-0 items-center justify-between gap-2 px-3 sm:px-4 py-2.5 border-b glass-divider">
           <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <button
               type="button"
               onClick={onClose}
               aria-label="Close story studio"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-pill hover:bg-raised transition-colors text-muted hover:text-primary cursor-pointer"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill glass-chip transition-colors cursor-pointer"
             >
-              <X className="w-5 h-5" />
+              <X size={17} weight="bold" />
             </button>
             <h2 className="font-display text-lg font-semibold tracking-tight truncate">
               New story
@@ -309,15 +389,15 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
           <button
             type="button"
             onClick={handleShare}
-            disabled={!croppedPx || posting}
-            className="shrink-0 flex items-center gap-2 bg-brand text-brand-on px-5 sm:px-6 h-11 sm:h-9 rounded-pill font-semibold text-sm hover:bg-brand-active transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-sans cursor-pointer"
+            disabled={posting || (isVideo ? !file : !croppedPx)}
+            className="shrink-0 flex items-center gap-2 glass-cta px-5 sm:px-6 h-10 sm:h-9 rounded-pill font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-sans cursor-pointer"
           >
             {posting ? (
-              <div className="w-4 h-4 border-2 border-brand-on/30 border-t-brand-on rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-[#0c0a09]/25 border-t-[#0c0a09] rounded-full animate-spin" />
             ) : (
-              <Send className="w-3.5 h-3.5" />
+              <PaperPlaneTilt size={15} weight="bold" />
             )}
-            Share
+            {queue.length > 0 ? `Share · ${queue.length + 1} slides` : "Share"}
           </button>
         </div>
 
@@ -326,9 +406,20 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
           {file ? (
             <div
               ref={stageRef}
-              className="relative h-full max-h-full aspect-[9/16] rounded-xl overflow-hidden bg-sunken border border-hairline ws-cropper"
+              className="relative h-full max-h-full aspect-[9/16] rounded-2xl overflow-hidden bg-[#141110] border border-[#fafaf9]/10 ws-cropper"
             >
-              {sourceUrl ? (
+              {isVideo && videoUrl ? (
+                // eslint-disable-next-line jsx-a11y/media-has-caption
+                <video
+                  key={videoUrl}
+                  src={videoUrl}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              ) : sourceUrl ? (
                 <Cropper
                   image={sourceUrl}
                   crop={position}
@@ -382,7 +473,7 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
               />
 
               {/* Tool rail */}
-              {mode === "none" && (
+              {mode === "none" && !isVideo && (
                 <div className="absolute top-2 left-2 flex gap-1.5">
                   <button
                     type="button"
@@ -391,37 +482,53 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
                       setMode("text");
                     }}
                     aria-label="Add text"
-                    className="flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors cursor-pointer"
+                    className="flex h-10 w-10 items-center justify-center rounded-pill glass-chip transition-colors cursor-pointer"
                   >
-                    <Type className="w-4 h-4" />
+                    <TextAa size={17} weight="bold" />
                   </button>
                   <button
                     type="button"
                     onClick={() => setMode("sticker")}
                     aria-label="Add sticker"
-                    className="flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors cursor-pointer"
+                    className="flex h-10 w-10 items-center justify-center rounded-pill glass-chip transition-colors cursor-pointer"
                   >
-                    <Sticker className="w-4 h-4" />
+                    <Sticker size={17} weight="bold" />
                   </button>
                   <button
                     type="button"
                     onClick={() => setMode("draw")}
                     aria-label="Draw"
-                    className="flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors cursor-pointer"
+                    className="flex h-10 w-10 items-center justify-center rounded-pill glass-chip transition-colors cursor-pointer"
                   >
-                    <PenLine className="w-4 h-4" />
+                    <Scribble size={17} weight="bold" />
                   </button>
                 </div>
+              )}
+              {mode === "none" && isVideo && (
+                <button
+                  type="button"
+                  onClick={() => setTrimOpen(true)}
+                  aria-label="Trim video"
+                  className="absolute top-2 left-2 flex items-center gap-2 h-10 px-4 rounded-pill glass-chip transition-colors cursor-pointer font-sans text-[13px] font-semibold"
+                >
+                  <Scissors size={15} weight="bold" />
+                  Trim
+                </button>
               )}
 
               {mode === "none" && (
                 <button
                   type="button"
                   onClick={() => inputRef.current?.click()}
-                  aria-label="Choose a different photo"
-                  className="absolute top-2 right-2 flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors cursor-pointer"
+                  aria-label="Add more slides"
+                  className="absolute top-2 right-2 flex h-10 w-10 items-center justify-center rounded-pill glass-chip transition-colors cursor-pointer"
                 >
-                  <ImagePlus className="w-4 h-4" />
+                  <Images size={17} weight="bold" />
+                  {queue.length > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-pill bg-brand px-1 text-[10px] font-bold text-brand-on font-sans tabular-nums">
+                      {queue.length}
+                    </span>
+                  )}
                 </button>
               )}
 
@@ -442,15 +549,15 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
-              className="flex flex-col items-center gap-3 text-muted hover:text-primary transition-colors cursor-pointer p-8"
+              className="flex flex-col items-center gap-3 glass-ink-dim hover:glass-ink transition-colors cursor-pointer p-8"
             >
-              <span className="flex h-14 w-14 items-center justify-center rounded-pill bg-raised">
-                <ImagePlus className="w-6 h-6" />
+              <span className="flex h-14 w-14 items-center justify-center rounded-pill glass-chip">
+                <Images size={24} />
               </span>
               <span className="font-sans text-sm font-medium">
-                Add a photo to your story
+                Add a photo or video to your story
               </span>
-              <span className="font-sans text-xs text-muted">
+              <span className="font-sans text-xs glass-ink-faint">
                 It disappears after 24 hours
               </span>
             </button>
@@ -458,13 +565,25 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
           <input
             type="file"
             ref={inputRef}
-            accept="image/*"
+            accept="image/*,video/*"
+            multiple
             className="hidden"
             onChange={handlePick}
           />
         </div>
 
         {/* Sticker tray — over the bottom panel, inside the studio. */}
+        {trimOpen && file && isVideo && (
+          <VideoEditor
+            file={file}
+            onClose={() => setTrimOpen(false)}
+            onSave={(edited) => {
+              setFile(edited);
+              setTrimOpen(false);
+            }}
+          />
+        )}
+
         {mode === "sticker" && (
           <StickerTray
             onAddCashtag={(symbol) => {
@@ -497,12 +616,14 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
 
         {/* Filters + caption (hidden while drawing — its palette sits there) */}
         {file && mode !== "draw" && (
-          <div className="shrink-0 border-t border-hairline px-3 sm:px-4 py-3 space-y-3 pb-safe">
-            <PresetCarousel
-              thumbUrl={thumbUrl}
-              active={preset}
-              onSelect={setPreset}
-            />
+          <div className="shrink-0 border-t glass-divider px-3 sm:px-4 py-3 space-y-3 pb-safe">
+            {!isVideo && (
+              <PresetCarousel
+                thumbUrl={thumbUrl}
+                active={preset}
+                onSelect={setPreset}
+              />
+            )}
             <div className="flex items-center gap-3">
               <input
                 type="text"
@@ -510,12 +631,14 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
                 onChange={(e) => setCaption(e.target.value)}
                 maxLength={CAPTION_MAX}
                 placeholder="Add a caption…"
-                className="flex-1 h-11 sm:h-10 rounded-pill border border-hairline bg-transparent px-4 outline-none text-base sm:text-sm font-sans placeholder:text-subtle text-primary focus:border-brand/60 transition-colors"
+                className="flex-1 h-11 sm:h-10 rounded-pill glass-input px-4 text-base sm:text-sm font-sans transition-colors"
               />
               <span
                 className={clsx(
                   "shrink-0 text-xs font-sans tabular-nums",
-                  caption.length >= CAPTION_MAX ? "text-danger" : "text-muted",
+                  caption.length >= CAPTION_MAX
+                    ? "text-danger"
+                    : "glass-ink-dim",
                 )}
                 aria-live="polite"
               >

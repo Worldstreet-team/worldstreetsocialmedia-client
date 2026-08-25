@@ -68,12 +68,12 @@ export default function TextTool({
   const fontPx = TEXT_SIZE_PREVIEW(stageW, overlay?.scale ?? 1);
 
   return (
-    <div className="absolute inset-0 z-20 flex flex-col bg-scrim">
+    <div className="absolute inset-0 z-20 flex flex-col glass-scrim">
       <div className="flex shrink-0 items-center justify-end px-3 py-2">
         <button
           type="button"
           onClick={() => onDone({ text: text.trim(), style, pill, color })}
-          className="flex items-center gap-2 bg-brand text-brand-on px-5 h-11 sm:h-9 rounded-pill font-semibold text-sm hover:bg-brand-active transition-colors font-sans cursor-pointer"
+          className="flex items-center gap-2 glass-cta px-5 h-11 sm:h-9 rounded-pill font-semibold text-sm transition-colors font-sans cursor-pointer"
         >
           <Check className="w-4 h-4" />
           Done
@@ -122,9 +122,7 @@ export default function TextTool({
               aria-pressed={style === id}
               className={clsx(
                 "h-9 px-4 rounded-pill text-[13px] font-medium font-sans transition-colors cursor-pointer",
-                style === id
-                  ? "bg-brand/10 text-gold"
-                  : "border border-hairline text-muted hover:bg-raised hover:text-primary",
+                style === id ? "glass-chip-active" : "glass-chip",
               )}
             >
               {label}
@@ -145,7 +143,7 @@ export default function TextTool({
                 <span
                   className={clsx(
                     "block h-6 w-6 rounded-pill border-2 transition-colors",
-                    color === c ? "border-gold" : "border-hairline",
+                    color === c ? "border-[#fafaf9]" : "border-[#fafaf9]/20",
                   )}
                   style={{ background: TEXT_COLORS[c].text }}
                 />
@@ -157,9 +155,7 @@ export default function TextTool({
               aria-pressed={pill}
               className={clsx(
                 "h-9 px-4 rounded-pill text-[13px] font-medium font-sans transition-colors cursor-pointer",
-                pill
-                  ? "bg-brand/10 text-gold"
-                  : "border border-hairline text-muted hover:bg-raised hover:text-primary",
+                pill ? "glass-chip-active" : "glass-chip",
               )}
             >
               Pill

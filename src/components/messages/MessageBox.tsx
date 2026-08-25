@@ -14,7 +14,6 @@ import {
 	StopCircle,
 	X,
 	Plus,
-	Pencil,
 	UserPlus,
 	ArrowLeft,
 	MessageCircle,
@@ -31,6 +30,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { useRealtime } from "../providers/RealtimeProvider";
 import MediaModal from "../ui/MediaModal";
+import { PencilSimple } from "@phosphor-icons/react";
 import MediaEditor from "@/components/editor/MediaEditor";
 import { VoiceMessage } from "./VoiceMessage";
 import { AnimatePresence, motion } from "framer-motion";
@@ -1033,7 +1033,7 @@ export const MessageBox = ({
 										aria-label="Edit image"
 										className="absolute -top-2.5 -left-2.5 flex h-9 w-9 items-center justify-center bg-raised rounded-pill text-muted hover:text-primary border border-hairline transition-colors"
 									>
-										<Pencil className="w-3.5 h-3.5" />
+										<PencilSimple size={15} weight="bold" />
 									</button>
 								)}
 							</div>

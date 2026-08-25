@@ -42,8 +42,8 @@ function PresetCarousel({ thumbUrl, active, onSelect }: PresetCarouselProps) {
           className={clsx(
             "relative block h-16 w-16 rounded-lg overflow-hidden border transition-colors",
             isActive
-              ? "border-gold"
-              : "border-hairline group-hover:border-subtle",
+              ? "border-[#fafaf9]"
+              : "border-[#fafaf9]/15 group-hover:border-[#fafaf9]/40",
           )}
         >
           {thumbUrl ? (
@@ -63,7 +63,7 @@ function PresetCarousel({ thumbUrl, active, onSelect }: PresetCarouselProps) {
         <span
           className={clsx(
             "text-[11px] font-sans transition-colors",
-            isActive ? "text-gold font-semibold" : "text-muted",
+            isActive ? "glass-ink font-semibold" : "glass-ink-dim",
           )}
         >
           {label}
