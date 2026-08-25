@@ -9,6 +9,7 @@ import { feedAtom } from "@/store/feed.atom";
 import { feedTabAtom, followingIdsAtom } from "@/store/ui.atom";
 import { PostCard, PostProps } from "@/components/feed/PostCard";
 import { PostComposer } from "@/components/feed/PostComposer";
+import StoryRail from "@/components/story/StoryRail";
 import { getFeedAction } from "@/lib/feed.actions";
 // 03-icons: `plus`, `user-plus` and `arrow-up` are all in the standardized set.
 import { ArrowUp, Plus, UserPlus } from "lucide-react";
@@ -241,6 +242,10 @@ export default function Feed() {
 					</motion.button>
 				)}
 			</AnimatePresence>
+
+			<div className="animate-rise" style={{ animationDelay: "60ms" }}>
+				<StoryRail />
+			</div>
 
 			<div className="animate-rise" style={{ animationDelay: "100ms" }}>
 				<PostComposer

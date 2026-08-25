@@ -89,6 +89,30 @@ export function finalDimensions(crop: CropRect): { w: number; h: number } {
   };
 }
 
+/** 64px cover-cropped snapshot of the oriented source for filter thumbs. */
+export function makeSquareThumb(source: HTMLCanvasElement): string {
+  const size = 64;
+  const thumb = document.createElement("canvas");
+  thumb.width = size;
+  thumb.height = size;
+  const ctx = thumb.getContext("2d");
+  if (!ctx) return "";
+  const side = Math.min(source.width, source.height);
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(
+    source,
+    (source.width - side) / 2,
+    (source.height - side) / 2,
+    side,
+    side,
+    0,
+    0,
+    size,
+    size,
+  );
+  return thumb.toDataURL("image/jpeg", 0.7);
+}
+
 export interface RenderEffects {
   /** Composed adjustment/preset matrix (presets.ts); null = skip the pass. */
   matrix?: ColorMatrix | null;

@@ -30,6 +30,7 @@ import {
   exportCroppedFile,
   finalDimensions,
   loadOrientedBitmap,
+  makeSquareThumb,
   orientCanvas,
 } from "@/lib/editor/export";
 import {
@@ -47,30 +48,6 @@ const ADJUSTMENT_SLIDERS: { key: keyof Adjustments; label: string }[] = [
   { key: "saturation", label: "Saturation" },
   { key: "warmth", label: "Warmth" },
 ];
-
-/** 64px cover-cropped snapshot of the oriented source for filter thumbs. */
-function makeThumb(source: HTMLCanvasElement): string {
-  const size = 64;
-  const thumb = document.createElement("canvas");
-  thumb.width = size;
-  thumb.height = size;
-  const ctx = thumb.getContext("2d");
-  if (!ctx) return "";
-  const side = Math.min(source.width, source.height);
-  ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(
-    source,
-    (source.width - side) / 2,
-    (source.height - side) / 2,
-    side,
-    side,
-    0,
-    0,
-    size,
-    size,
-  );
-  return thumb.toDataURL("image/jpeg", 0.7);
-}
 
 export interface MediaEditResult {
   file: File;
@@ -147,7 +124,7 @@ export default function MediaEditor({
     sourceUrlRef.current = url;
     setSourceUrl(url);
     setSourceSize({ w: canvas.width, h: canvas.height });
-    setThumbUrl(makeThumb(canvas));
+    setThumbUrl(makeSquareThumb(canvas));
   }, []);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: decode once per file — rebuild is a stable useCallback and re-running on toast/onClose identity would re-decode the bitmap.
