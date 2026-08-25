@@ -72,5 +72,18 @@
   "rail.followFailed": "Impossible de suivre",
   "rail.showMore": "Afficher plus",
   "rail.noTrends": "Rien en tendance pour l'instant",
-  "rail.noSuggestions": "Pas de suggestions pour le moment"
+  "rail.noSuggestions": "Pas de suggestions pour le moment",
+  "nav.videos": "Vidéos",
+  "nav.studio": "Studio",
+  "nav.products": "Produits",
+  "rail.create.title": "Lancez quelque chose",
+  "rail.create.golive": "Passer en direct",
+  "rail.create.video": "Publier une vidéo",
+  "rail.scope": "Mondial",
+  "composer.prompt1": "Qu'est-ce qui bouge aujourd'hui ?",
+  "composer.prompt2": "Partagez votre analyse du marché…",
+  "composer.prompt3": "Postez un graphique. Lancez la discussion.",
+  "composer.prompt4": "Que suivez-vous cette semaine ?",
+  "post.views": "Vues",
+  "rail.retry": "Réessayer"
 }

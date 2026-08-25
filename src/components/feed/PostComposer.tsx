@@ -96,6 +96,23 @@ export const PostComposer = ({
 }: PostComposerProps) => {
 	const t = useT();
 	const [showGoLive, setShowGoLive] = useState(false);
+	// Marketing psychology: the prompt rotates so the empty box keeps asking
+	// a different question. Rotation pauses once the person starts typing.
+	const PROMPTS = [
+		"composer.prompt1",
+		"composer.prompt2",
+		"composer.prompt3",
+		"composer.prompt4",
+	];
+	const [promptIndex, setPromptIndex] = useState(0);
+	useEffect(() => {
+		const id = setInterval(
+			() => setPromptIndex((i) => (i + 1) % PROMPTS.length),
+			6000,
+		);
+		return () => clearInterval(id);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 	const { user } = useUser();
 	const [content, setContent] = useState("");
 	const [isPosting, setIsPosting] = useState(false);
@@ -324,7 +341,7 @@ export const PostComposer = ({
 	};
 
 	return (
-		<div className="border-b border-hairline px-4 py-4 sm:p-6 mb-2 relative">
+		<div className="px-4 py-4 sm:p-6 relative">
 			<div className="flex gap-3 sm:gap-4">
 				<div className="shrink-0">
 					{user ? (
@@ -349,7 +366,7 @@ export const PostComposer = ({
 						value={content}
 						onChange={(e) => setContent(e.target.value)}
 						onPaste={handlePaste}
-						placeholder="What's moving today?"
+						placeholder={t(PROMPTS[promptIndex])}
 						className="w-full bg-transparent text-lg text-primary placeholder:text-subtle outline-none resize-none min-h-[60px] font-medium leading-relaxed overflow-hidden font-sans"
 						rows={1}
 					/>

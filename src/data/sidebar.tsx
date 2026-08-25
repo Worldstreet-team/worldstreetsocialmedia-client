@@ -1,18 +1,18 @@
-// 03-icons: web nav uses the standardized lucide set (the app's own filled
-// vectors are the mobile exception). Active state bolds the stroke slightly
-// to match the semibold label — never a different icon.
-import type { LucideIcon } from "lucide-react";
+// Nav icons are Phosphor (the mobile app's library) — the active state is a
+// real filled glyph via weight="fill", not a heavier stroke. Lucide stays for
+// the utility icons elsewhere; nav is the surface where fill pays off.
+import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import {
-	BarChart3,
 	Bell,
-	Bookmark,
-	Home,
-	MessageCircle,
-	MoreHorizontal,
-	Search,
-	SquarePlay,
-	User,
-} from "lucide-react";
+	BookmarkSimple,
+	ChartBar,
+	ChatCircleDots,
+	House,
+	MagnifyingGlass,
+	MonitorPlay,
+	SquaresFour,
+	UserCircle,
+} from "@phosphor-icons/react";
 
 import type { IconProps } from "@/app/types";
 
@@ -26,11 +26,11 @@ export interface SidebarItem {
 	dropdownItems?: { title: string; link: string }[];
 }
 
-const navIcon = (Icon: LucideIcon): React.FC<IconProps> => {
+const navIcon = (Icon: PhosphorIcon): React.FC<IconProps> => {
 	const NavIcon = ({ isActive }: IconProps) => (
 		<Icon
-			className="w-5 h-5"
-			strokeWidth={isActive ? 2.5 : 2}
+			size={22}
+			weight={isActive ? "fill" : "regular"}
 			aria-hidden="true"
 		/>
 	);
@@ -40,18 +40,18 @@ const navIcon = (Icon: LucideIcon): React.FC<IconProps> => {
 
 /** The rail's primary destinations. */
 export const mainNav: SidebarItem[] = [
-	{ labelKey: "nav.home", title: "Home", link: "/", icon: navIcon(Home) },
+	{ labelKey: "nav.home", title: "Home", link: "/", icon: navIcon(House) },
 	{
 		labelKey: "nav.explore",
 		title: "Explore",
 		link: "/explore",
-		icon: navIcon(Search),
+		icon: navIcon(MagnifyingGlass),
 	},
 	{
 		labelKey: "nav.videos",
 		title: "Videos",
 		link: "/live",
-		icon: navIcon(SquarePlay),
+		icon: navIcon(MonitorPlay),
 	},
 	{
 		labelKey: "nav.notifications",
@@ -63,13 +63,13 @@ export const mainNav: SidebarItem[] = [
 		labelKey: "nav.messages",
 		title: "Messages",
 		link: "/messages",
-		icon: navIcon(MessageCircle),
+		icon: navIcon(ChatCircleDots),
 	},
 	{
 		labelKey: "nav.bookmarks",
 		title: "Bookmarks",
 		link: "/bookmarks",
-		icon: navIcon(Bookmark),
+		icon: navIcon(BookmarkSimple),
 	},
 ];
 
@@ -79,29 +79,31 @@ export const youNav: SidebarItem[] = [
 		labelKey: "nav.profile",
 		title: "Profile",
 		link: "/profile",
-		icon: navIcon(User),
+		icon: navIcon(UserCircle),
 	},
 	{
 		labelKey: "nav.studio",
 		title: "Studio",
 		link: "/studio",
-		icon: navIcon(BarChart3),
+		icon: navIcon(ChartBar),
 	},
 ];
 
 export const moreItem: SidebarItem = {
-	labelKey: "nav.more",
-	title: "More",
+	labelKey: "nav.products",
+	title: "Products",
 	link: "#", // Handled programmatically
-	icon: navIcon(MoreHorizontal),
+	icon: navIcon(SquaresFour),
 	isDropdown: true,
-	// Cross-app link set per the DS TopNav spec (Dashboard · Academy ·
-	// Xstream · Shop — Social is this app). "xtreme" subdomain hosts Xstream.
+	// Cross-app link set per the DS TopNav spec. "xtreme" subdomain hosts
+	// Xstream; Wallet/Arcade follow the same subdomain convention.
 	dropdownItems: [
 		{ title: "Dashboard", link: "https://dashboard.worldstreetgold.com" },
 		{ title: "Academy", link: "https://academy.worldstreetgold.com" },
 		{ title: "Xstream", link: "https://xtreme.worldstreetgold.com" },
 		{ title: "Shop", link: "https://shop.worldstreetgold.com" },
+		{ title: "Wallet", link: "https://wallet.worldstreetgold.com" },
+		{ title: "Arcade", link: "https://arcade.worldstreetgold.com" },
 	],
 };
 

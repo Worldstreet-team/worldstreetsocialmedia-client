@@ -53,7 +53,7 @@ export function StoriesRail() {
 	const others = rail.filter((r) => !r.isSelf);
 
 	return (
-		<div className="flex gap-4 overflow-x-auto px-4 py-3 border-b border-hairline/60 [scrollbar-width:none]">
+		<div className="flex gap-4 overflow-x-auto px-4 py-3 border-b border-raised/60 [scrollbar-width:none]">
 			{/* self / add */}
 			<button
 				type="button"

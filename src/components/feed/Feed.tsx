@@ -144,7 +144,7 @@ export default function Feed() {
 					timestamp: formatTimeAgo(post.createdAt),
 					images: post.images,
 					videos: post.videos,
-					stats: post.stats || { replies: 0, reposts: 0, likes: 0 },
+					stats: post.stats || { replies: 0, reposts: 0, likes: 0, views: 0 },
 					isLiked: post.isLiked,
 					isBookmarked: post.isBookmarked,
 					type: post.type,
@@ -204,7 +204,7 @@ export default function Feed() {
 				timestamp: "Just now",
 				images: newPost.images,
 				videos: newPost.videos,
-				stats: newPost.stats || { replies: 0, reposts: 0, likes: 0 },
+				stats: newPost.stats || { replies: 0, reposts: 0, likes: 0, views: 0 },
 				isLiked: false,
 				isBookmarked: false,
 			};
@@ -249,11 +249,13 @@ export default function Feed() {
 				)}
 			</AnimatePresence>
 
-			<div className="animate-rise" style={{ animationDelay: "60ms" }}>
+			{/* One creation card: stories strip on top, composer below —
+			    borderless depth instead of hairline boxes. */}
+			<div
+				className="animate-rise card-depth overflow-hidden mx-2 sm:mx-3 my-3"
+				style={{ animationDelay: "60ms" }}
+			>
 				<StoriesRail />
-			</div>
-
-			<div className="animate-rise" style={{ animationDelay: "100ms" }}>
 				<PostComposer
 					onPostStart={handlePostStart}
 					onPostSuccess={handlePostSuccess}

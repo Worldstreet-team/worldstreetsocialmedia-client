@@ -72,5 +72,18 @@
   "rail.followFailed": "Não foi possível seguir",
   "rail.showMore": "Mostrar mais",
   "rail.noTrends": "Nada em alta por enquanto",
-  "rail.noSuggestions": "Sem sugestões no momento"
+  "rail.noSuggestions": "Sem sugestões no momento",
+  "nav.videos": "Vídeos",
+  "nav.studio": "Estúdio",
+  "nav.products": "Produtos",
+  "rail.create.title": "Comece algo",
+  "rail.create.golive": "Transmitir",
+  "rail.create.video": "Publicar um vídeo",
+  "rail.scope": "Global",
+  "composer.prompt1": "O que está se movendo hoje?",
+  "composer.prompt2": "Compartilhe sua análise do mercado…",
+  "composer.prompt3": "Poste um gráfico. Comece a conversa.",
+  "composer.prompt4": "O que você está acompanhando esta semana?",
+  "post.views": "Visualizações",
+  "rail.retry": "Tentar de novo"
 }

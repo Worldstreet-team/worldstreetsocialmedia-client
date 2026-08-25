@@ -14,6 +14,7 @@ import {
 import VerifiedIcon from "@/assets/icons/VerifiedIcon";
 // 03-icons: Phosphor is reserved for the Social post-action row + overflow menu.
 import {
+    ChartBar,
     ChatCircle,
     Heart,
     BookmarkSimple,
@@ -62,6 +63,7 @@ export interface PostProps {
         replies: number;
         reposts: number;
         likes: number;
+        views?: number;
     };
     isLiked?: boolean;
     type?: "post" | "live";
@@ -747,6 +749,18 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                 {formatCount(post.stats.replies)}
                             </span>
                         </Link>
+                        <div
+                            className="flex items-center gap-0.5 cursor-default"
+                            title={t("post.views")}
+                            aria-label={t("post.views")}
+                        >
+                            <span className="flex h-10 w-10 items-center justify-center rounded-pill">
+                                <ChartBar size={15} />
+                            </span>
+                            <span className="text-[13px] font-sans tabular-nums">
+                                {formatCount(post.stats.views ?? 0)}
+                            </span>
+                        </div>
                         <button
                             type="button"
                             aria-label={isLiked ? "Unlike" : "Like"}

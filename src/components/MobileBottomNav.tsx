@@ -2,27 +2,27 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-// 03-icons: web uses the standardized lucide set for nav.
+// Nav uses Phosphor with weight="fill" on the active tab, matching the rail.
+import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import {
 	Bell,
-	Home,
-	MessageCircle,
+	ChatCircleDots,
+	House,
+	MagnifyingGlass,
+	MonitorPlay,
 	Plus,
-	Search,
-	SquarePlay,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+} from "@phosphor-icons/react";
 import clsx from "clsx";
 import { useAtomValue } from "jotai";
 import { unreadMessagesCountAtom } from "@/store/messageCache";
 import { unreadNotificationsCountAtom } from "@/store/ui.atom";
 import { useT } from "@/i18n/client";
 
-const navIcon = (Icon: LucideIcon) => {
+const navIcon = (Icon: PhosphorIcon) => {
 	const NavIcon = ({ isActive }: { isActive?: boolean }) => (
 		<Icon
-			className="w-5 h-5"
-			strokeWidth={isActive ? 2.5 : 2}
+			size={22}
+			weight={isActive ? "fill" : "regular"}
 			aria-hidden="true"
 		/>
 	);
@@ -30,10 +30,10 @@ const navIcon = (Icon: LucideIcon) => {
 	return NavIcon;
 };
 
-const HomeIcon = navIcon(Home);
-const SearchIcon = navIcon(Search);
-const VideoIcon = navIcon(SquarePlay);
-const MessageIcon = navIcon(MessageCircle);
+const HomeIcon = navIcon(House);
+const SearchIcon = navIcon(MagnifyingGlass);
+const VideoIcon = navIcon(MonitorPlay);
+const MessageIcon = navIcon(ChatCircleDots);
 const BellIcon = navIcon(Bell);
 
 export const MobileBottomNav = () => {
@@ -119,7 +119,7 @@ export const MobileBottomNav = () => {
 				className="md:hidden fixed right-4 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-sticky flex h-13 w-13 items-center justify-center rounded-pill bg-brand text-brand-on shadow-nav active:bg-brand-active transition-colors"
 				style={{ width: 52, height: 52 }}
 			>
-				<Plus className="w-6 h-6" strokeWidth={2.5} />
+				<Plus size={24} weight="bold" />
 			</button>
 
 			<div className="fixed bottom-0 left-0 right-0 z-sticky bg-page border-t border-hairline/70 md:hidden">

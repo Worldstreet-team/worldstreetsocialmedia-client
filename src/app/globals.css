@@ -303,3 +303,56 @@ html {
         stroke var(--ws-motion-slow) var(--ws-ease),
         box-shadow var(--ws-motion-slow) var(--ws-ease) !important;
 }
+
+/* ── UI revamp utilities ──────────────────────────────────────────────────
+   card-depth: borderless card that reads as depth — a faint top-light
+   gradient over the surface, an inset top-edge highlight and a soft drop.
+   Works in both themes via the token vars. */
+.card-depth {
+	border-radius: 1rem;
+	background:
+		linear-gradient(180deg, rgb(255 255 255 / 0.04), rgb(255 255 255 / 0) 46%),
+		var(--color-surface);
+	box-shadow:
+		inset 0 1px 0 rgb(255 255 255 / 0.05),
+		0 10px 28px -14px rgb(0 0 0 / 0.55);
+}
+[data-ws-theme="platform-light"] .card-depth {
+	background:
+		linear-gradient(180deg, rgb(255 255 255 / 0.7), rgb(255 255 255 / 0) 46%),
+		var(--color-surface);
+	box-shadow:
+		inset 0 1px 0 rgb(255 255 255 / 0.9),
+		0 1px 2px rgb(0 0 0 / 0.05),
+		0 10px 28px -18px rgb(0 0 0 / 0.18);
+}
+
+/* shine: a glass pass sweeping across every 5 seconds. The sweep occupies
+   the last ~1.2s of the cycle; the rest is rest. Off under reduced motion. */
+.shine {
+	position: relative;
+	overflow: hidden;
+	isolation: isolate;
+}
+.shine::after {
+	content: "";
+	position: absolute;
+	inset: -20% auto -20% 0;
+	width: 45%;
+	transform: translateX(-160%) skewX(-18deg);
+	background: linear-gradient(
+		90deg,
+		rgb(255 255 255 / 0),
+		rgb(255 255 255 / 0.32),
+		rgb(255 255 255 / 0)
+	);
+	animation: ws-shine 5s linear infinite;
+	pointer-events: none;
+}
+@keyframes ws-shine {
+	0%, 76% { transform: translateX(-160%) skewX(-18deg); }
+	100% { transform: translateX(420%) skewX(-18deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+	.shine::after { animation: none; opacity: 0; }
+}

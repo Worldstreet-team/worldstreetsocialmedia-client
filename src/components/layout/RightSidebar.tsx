@@ -1,26 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getWhoToFollowAction, followUserAction } from "@/lib/user.actions";
 import { getStoriesAction } from "@/lib/stories.actions";
 import Link from "next/link";
 import Image from "next/image";
-import { Search } from "lucide-react";
+import { Broadcast, MagnifyingGlass, MonitorPlay } from "@phosphor-icons/react";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { useAtom } from "jotai";
 import {
 	suggestionsAtom,
 	suggestionsLoadedAtom,
 } from "@/store/suggestions.atom";
-import {
-	trendsAtom,
-	trendsLoadedAtom,
-} from "@/store/trends.atom";
+import { trendsAtom, trendsLoadedAtom } from "@/store/trends.atom";
 import { commandPaletteOpenAtom, followingIdsAtom } from "@/store/ui.atom";
 import { getExploreDataAction } from "@/lib/post.actions";
 import { DEFAULT_AVATAR, XSTREAM_WEB_URL } from "@/const";
 import { useT } from "@/i18n/client";
+import { GoLiveSheet } from "@/components/feed/GoLiveSheet";
 import VerifiedIcon from "@/assets/icons/VerifiedIcon";
+import clsx from "clsx";
 
 interface LiveEntry {
 	authorId: string;
@@ -30,37 +29,31 @@ interface LiveEntry {
 	streamRef?: string;
 }
 
-/* Module shell: one card grammar for the whole rail — title row with an
-   optional live dot, tight list, single gold "show more" tail. */
-function Module({
-	title,
+/* Flat section header — eyebrow + optional live dot + optional trailing
+   chip. No boxes: the rail reads as one column of content, not a stack of
+   cards. */
+function SectionHead({
+	label,
 	live,
-	delay,
-	children,
+	trailing,
 }: {
-	title: string;
+	label: string;
 	live?: boolean;
-	delay: number;
-	children: React.ReactNode;
+	trailing?: React.ReactNode;
 }) {
 	return (
-		<section
-			className="bg-surface border border-hairline rounded-xl overflow-hidden shrink-0 animate-rise"
-			style={{ animationDelay: `${delay}ms` }}
-		>
-			<div className="flex items-center gap-2 px-4 pt-4 pb-2">
-				{live && (
-					<span className="relative flex h-2 w-2">
-						<span className="absolute inline-flex h-full w-full rounded-pill bg-danger opacity-60 animate-ping" />
-						<span className="relative inline-flex h-2 w-2 rounded-pill bg-danger" />
-					</span>
-				)}
-				<h3 className="font-sans font-semibold text-primary text-[15px]">
-					{title}
-				</h3>
-			</div>
-			{children}
-		</section>
+		<div className="flex items-center gap-2 px-3 pb-1.5">
+			{live && (
+				<span className="relative flex h-2 w-2">
+					<span className="absolute inline-flex h-full w-full rounded-pill bg-danger opacity-60 animate-ping" />
+					<span className="relative inline-flex h-2 w-2 rounded-pill bg-danger" />
+				</span>
+			)}
+			<h3 className="font-sans font-semibold text-[11px] uppercase tracking-[0.14em] text-subtle flex-1">
+				{label}
+			</h3>
+			{trailing}
+		</div>
 	);
 }
 
@@ -73,50 +66,49 @@ export function RightSidebar() {
 	const [trends, setTrends] = useAtom(trendsAtom);
 	const [isTrendsLoaded, setIsTrendsLoaded] = useAtom(trendsLoadedAtom);
 	const [liveNow, setLiveNow] = useState<LiveEntry[]>([]);
-	const [loading, setLoading] = useState(
-		!isSuggestionsLoaded || !isTrendsLoaded,
-	);
+	const [category, setCategory] = useState<string>("all");
+	const [showGoLive, setShowGoLive] = useState(false);
+	const [failed, setFailed] = useState(false);
 	const { toast } = useToast();
 	// Shared with the feed's "Following" tab, so a follow here shows up there.
 	const [followedIds, setFollowedIds] = useAtom(followingIdsAtom);
 	const setPaletteOpen = useAtom(commandPaletteOpenAtom)[1];
 
-	useEffect(() => {
-		const fetchData = async () => {
-			if (!isSuggestionsLoaded) {
-				const res = await getWhoToFollowAction();
-				if (res.success && Array.isArray(res.data)) {
-					setSuggestions(res.data);
-					setIsSuggestionsLoaded(true);
-				}
-			}
-			if (!isTrendsLoaded) {
-				try {
-					const res = await getExploreDataAction();
-					if (res.success) {
-						setTrends(res.data.trendsForYou ?? []);
-					}
-				} catch (error) {
-					console.error("Failed to fetch trends", error);
-				} finally {
-					setIsTrendsLoaded(true);
-				}
-			}
-			setLoading(false);
-		};
-		fetchData();
+	// A failed fetch marks the section loaded-with-error and offers a retry —
+	// skeletons must never be a terminal state.
+	const fetchAll = useCallback(async () => {
+		setFailed(false);
+		const [who, explore] = await Promise.allSettled([
+			isSuggestionsLoaded ? null : getWhoToFollowAction(),
+			isTrendsLoaded ? null : getExploreDataAction(),
+		]);
+		if (who.status === "fulfilled" && who.value) {
+			if (who.value.success && Array.isArray(who.value.data)) {
+				setSuggestions(who.value.data);
+			} else setFailed(true);
+			setIsSuggestionsLoaded(true);
+		}
+		if (explore.status === "fulfilled" && explore.value) {
+			if (explore.value.success) {
+				setTrends(explore.value.data?.trendsForYou ?? []);
+			} else setFailed(true);
+			setIsTrendsLoaded(true);
+		}
 	}, [
 		isSuggestionsLoaded,
+		isTrendsLoaded,
 		setSuggestions,
 		setIsSuggestionsLoaded,
-		isTrendsLoaded,
 		setTrends,
 		setIsTrendsLoaded,
 	]);
 
-	// Live now — the stories rail already knows who is live; the module
-	// disappears entirely when nobody is (an empty "live" box is worse than
-	// none).
+	useEffect(() => {
+		void fetchAll();
+	}, [fetchAll]);
+
+	// Live now — the stories rail already knows who is live. The section is
+	// absent when nobody is.
 	useEffect(() => {
 		let cancelled = false;
 		(async () => {
@@ -125,9 +117,7 @@ export function RightSidebar() {
 			const entries: LiveEntry[] = res.data.rail
 				.filter((e: any) => e.isLive)
 				.map((e: any) => {
-					const liveStory = e.stories.find(
-						(s: any) => s.origin === "live",
-					);
+					const liveStory = e.stories.find((s: any) => s.origin === "live");
 					return {
 						authorId: e.author._id,
 						username: e.author.username,
@@ -144,10 +134,8 @@ export function RightSidebar() {
 	}, []);
 
 	const handleFollow = async (userId: string) => {
-		// Optimistic update
 		setFollowedIds((prev) => [...prev, userId]);
 		toast(t("rail.following"), { type: "success" });
-
 		const res = await followUserAction(userId);
 		if (!res.success) {
 			setFollowedIds((prev) => prev.filter((id) => id !== userId));
@@ -158,28 +146,70 @@ export function RightSidebar() {
 	const visibleSuggestions = suggestions.filter(
 		(u) => !followedIds.includes(u._id),
 	);
+	const categories = [
+		"all",
+		...Array.from(
+			new Set(trends.map((tr: any) => tr.category).filter(Boolean)),
+		).slice(0, 3),
+	];
+	const visibleTrends =
+		category === "all"
+			? trends
+			: trends.filter((tr: any) => tr.category === category);
 
 	return (
-		<aside className="w-[350px] shrink-0 hidden lg:flex flex-col gap-5 sticky top-0 h-dvh p-4 pl-8 overflow-y-auto no-scrollbar">
+		<aside className="w-[350px] shrink-0 hidden lg:flex flex-col gap-7 sticky top-0 h-dvh py-4 pl-8 pr-4 overflow-y-auto no-scrollbar">
 			{/* Search — opens the Ctrl/Cmd+K command palette. */}
 			<button
 				type="button"
 				onClick={() => setPaletteOpen(true)}
 				style={{ animationDelay: "60ms" }}
-				className="relative mt-2 shrink-0 flex items-center w-full h-10 bg-chip rounded-pill border-[1.5px] border-transparent pl-[42px] pr-3 font-sans text-sm text-subtle hover:text-muted hover:border-hairline transition-colors cursor-pointer animate-rise"
+				className="relative mt-2 shrink-0 flex items-center w-full h-10 bg-chip rounded-pill pl-[42px] pr-3 font-sans text-sm text-subtle hover:text-muted transition-colors cursor-pointer animate-rise"
 			>
-				<Search className="absolute left-4 top-1/2 -translate-y-1/2 text-subtle w-4 h-4 pointer-events-none" />
+				<MagnifyingGlass
+					size={16}
+					className="absolute left-4 top-1/2 -translate-y-1/2 text-subtle pointer-events-none"
+				/>
 				<span className="flex-1 text-left">{t("rail.search")}</span>
-				<kbd className="flex items-center gap-1 rounded-sm border border-hairline bg-raised px-1.5 h-5 text-[10px] text-subtle">
+				<kbd className="flex items-center gap-1 rounded-sm bg-raised px-1.5 h-5 text-[10px] text-subtle">
 					Ctrl K
 				</kbd>
 			</button>
 
-			{/* Live now — real streams, red ring grammar shared with the
-			    stories rail. Whole module absent when nobody is live. */}
+			{/* Start something — the creation features, surfaced instead of
+			    hidden. The one depth card on the rail. */}
+			<section
+				className="card-depth p-4 shrink-0 animate-rise"
+				style={{ animationDelay: "120ms" }}
+			>
+				<p className="font-sans font-semibold text-[15px] text-primary mb-3">
+					{t("rail.create.title")}
+				</p>
+				<div className="flex gap-2">
+					<button
+						type="button"
+						onClick={() => setShowGoLive(true)}
+						className="flex-1 h-10 shine flex items-center justify-center gap-2 rounded-pill text-[13px] font-semibold font-sans text-white bg-gradient-to-b from-danger to-[#C22D2D] hover:opacity-90 transition-opacity cursor-pointer"
+					>
+						<Broadcast size={15} weight="fill" />
+						{t("rail.create.golive")}
+					</button>
+					<Link
+						href="/live"
+						className="flex-1 h-10 flex items-center justify-center gap-2 rounded-pill text-[13px] font-semibold font-sans text-primary bg-raised hover:bg-chip transition-colors"
+					>
+						<MonitorPlay size={15} weight="fill" />
+						{t("nav.videos")}
+					</Link>
+				</div>
+			</section>
+			{showGoLive && <GoLiveSheet onClose={() => setShowGoLive(false)} />}
+
+			{/* Live now — flat rows, red-ring grammar. Absent when nobody is live. */}
 			{liveNow.length > 0 && (
-				<Module title={t("rail.liveNow")} live delay={140}>
-					<div className="flex flex-col pb-2">
+				<section className="animate-rise" style={{ animationDelay: "180ms" }}>
+					<SectionHead label={t("rail.liveNow")} live />
+					<div className="flex flex-col">
 						{liveNow.map((entry) => (
 							<a
 								key={entry.authorId}
@@ -190,13 +220,13 @@ export function RightSidebar() {
 								}
 								target="_blank"
 								rel="noopener noreferrer"
-								className="flex items-center gap-3 px-3 py-2.5 mx-1 rounded-lg hover:bg-raised transition-colors group"
+								className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface transition-colors group"
 							>
 								<span className="relative w-10 h-10 rounded-pill p-[2px] bg-danger shrink-0">
-									<span className="relative block w-full h-full rounded-pill overflow-hidden border-2 border-surface">
+									<span className="relative block w-full h-full rounded-pill overflow-hidden border-2 border-page bg-raised">
 										<Image
 											src={entry.avatar}
-											alt={entry.username}
+											alt=""
 											fill
 											className="object-cover"
 										/>
@@ -212,71 +242,107 @@ export function RightSidebar() {
 										</span>
 									)}
 								</span>
-								<span className="shrink-0 rounded-pill bg-danger px-3 h-7 flex items-center text-[12px] font-semibold text-white font-sans opacity-90 group-hover:opacity-100 transition-opacity">
+								<span className="shrink-0 rounded-pill bg-danger/15 text-danger px-3 h-7 flex items-center text-[12px] font-semibold font-sans group-hover:bg-danger group-hover:text-white transition-colors">
 									{t("rail.watch")}
 								</span>
 							</a>
 						))}
 					</div>
-				</Module>
+				</section>
 			)}
 
-			{/* Happening now — ranked topics, no hashtag framing. The mono
-			    rank digits are the module's only ornament. */}
-			<Module title={t("rail.happening")} delay={220}>
-				<div className="flex flex-col pb-1">
+			{/* Happening now — ranked topics, category chips, no hashtag framing. */}
+			<section className="animate-rise" style={{ animationDelay: "240ms" }}>
+				<SectionHead
+					label={t("rail.happening")}
+					trailing={
+						<span className="text-[10px] font-semibold uppercase tracking-wider text-gold font-sans">
+							{t("rail.scope")}
+						</span>
+					}
+				/>
+				{categories.length > 2 && (
+					<div className="flex gap-1.5 px-3 pb-2 flex-wrap">
+						{categories.map((c) => (
+							<button
+								key={c}
+								type="button"
+								onClick={() => setCategory(c)}
+								className={clsx(
+									"px-2.5 h-6 rounded-pill text-[11px] font-medium font-sans transition-colors cursor-pointer capitalize",
+									category === c
+										? "bg-primary text-page"
+										: "bg-raised text-muted hover:text-primary",
+								)}
+							>
+								{c}
+							</button>
+						))}
+					</div>
+				)}
+				<div className="flex flex-col">
 					{!isTrendsLoaded ? (
 						[1, 2, 3].map((i) => (
-							<div key={i} className="px-4 py-3">
+							<div key={i} className="px-3 py-2.5">
 								<div className="h-3 skeleton rounded w-16 mb-1.5" />
-								<div className="h-4 skeleton rounded w-3/4 mb-1" />
-								<div className="h-3 skeleton rounded w-12" />
+								<div className="h-4 skeleton rounded w-3/4" />
 							</div>
 						))
-					) : trends.length > 0 ? (
-						trends.slice(0, 4).map((trend, i) => (
+					) : visibleTrends.length > 0 ? (
+						visibleTrends.slice(0, 5).map((trend: any, i: number) => (
 							<Link
 								href={`/explore?q=${encodeURIComponent(
 									trend.title.replace(/^#/, ""),
 								)}`}
 								key={trend.title}
-								className="flex items-start gap-3.5 px-4 py-2.5 mx-1 rounded-lg hover:bg-raised transition-colors"
+								className="flex items-start gap-3.5 px-3 py-2.5 rounded-xl hover:bg-surface transition-colors"
 							>
 								<span className="pt-0.5 font-mono text-[13px] text-gold tabular-nums select-none">
 									{String(i + 1).padStart(2, "0")}
 								</span>
 								<span className="flex flex-col min-w-0">
-									<span className="text-[10.5px] uppercase tracking-[0.1em] text-subtle font-sans font-semibold">
-										{trend.category}
-									</span>
 									<span className="font-semibold text-primary text-[15px] truncate leading-snug">
 										{trend.title.replace(/^#/, "")}
 									</span>
 									<span className="text-[12px] text-subtle font-sans tabular-nums">
+										{trend.category ? `${trend.category} · ` : ""}
 										{trend.posts}
 									</span>
 								</span>
 							</Link>
 						))
+					) : failed ? (
+						<button
+							type="button"
+							onClick={() => {
+								setIsTrendsLoaded(false);
+								setIsSuggestionsLoaded(false);
+								void fetchAll();
+							}}
+							className="mx-3 my-2 px-3 py-2 rounded-pill bg-raised text-sm text-primary font-sans hover:bg-chip transition-colors cursor-pointer"
+						>
+							{t("rail.retry")}
+						</button>
 					) : (
-						<div className="px-4 py-3 text-sm text-subtle font-sans">
+						<p className="px-3 py-2 text-sm text-subtle font-sans">
 							{t("rail.noTrends")}
-						</div>
+						</p>
 					)}
 					<Link
 						href="/explore"
-						className="text-gold text-[13px] font-medium font-sans hover:underline px-4 py-2.5 block"
+						className="text-gold text-[13px] font-medium font-sans hover:underline px-3 py-2.5 block"
 					>
 						{t("rail.showMore")}
 					</Link>
 				</div>
-			</Module>
+			</section>
 
-			{/* Suggested for you */}
-			<Module title={t("rail.suggested")} delay={300}>
-				<div className="flex flex-col pb-2">
-					{loading && visibleSuggestions.length === 0 ? (
-						<div className="flex flex-col gap-4 p-4">
+			{/* Suggested for you — names always resolve (username fallback). */}
+			<section className="animate-rise" style={{ animationDelay: "300ms" }}>
+				<SectionHead label={t("rail.suggested")} />
+				<div className="flex flex-col">
+					{!isSuggestionsLoaded ? (
+						<div className="flex flex-col gap-4 p-3">
 							{[1, 2, 3].map((i) => (
 								<div key={i} className="flex gap-3">
 									<div className="w-10 h-10 skeleton rounded-full" />
@@ -288,61 +354,68 @@ export function RightSidebar() {
 							))}
 						</div>
 					) : visibleSuggestions.length === 0 ? (
-						<div className="px-5 py-5 text-center text-subtle text-sm font-sans">
+						<p className="px-3 py-3 text-sm text-subtle font-sans">
 							{t("rail.noSuggestions")}
-						</div>
+						</p>
 					) : (
-						visibleSuggestions.slice(0, 3).map((user) => (
-							<div
-								key={user._id}
-								className="flex items-center gap-3 px-3 py-2 mx-1 rounded-lg hover:bg-raised transition-colors group"
-							>
-								<Link
-									href={`/profile/${user.username}`}
-									className="flex items-center gap-3 flex-1 min-w-0"
+						visibleSuggestions.slice(0, 3).map((user) => {
+							const displayName =
+								[user.firstName, user.lastName]
+									.filter(Boolean)
+									.join(" ") || `@${user.username}`;
+							const showHandle = displayName !== `@${user.username}`;
+							return (
+								<div
+									key={user._id}
+									className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-surface transition-colors group"
 								>
-									<div className="relative w-10 h-10 rounded-pill overflow-hidden border border-hairline shrink-0">
-										<Image
-											src={user.avatar || DEFAULT_AVATAR}
-											alt={user.username}
-											fill
-											className="object-cover"
-										/>
-									</div>
-									<div className="flex flex-col flex-1 min-w-0">
-										<span className="flex items-center gap-1 min-w-0">
-											<span className="font-semibold text-primary text-sm truncate font-sans">
-												{user.firstName} {user.lastName}
+									<Link
+										href={`/profile/${user.username}`}
+										className="flex items-center gap-3 flex-1 min-w-0"
+									>
+										<div className="relative w-10 h-10 rounded-pill overflow-hidden shrink-0 bg-raised">
+											<Image
+												src={user.avatar || DEFAULT_AVATAR}
+												alt=""
+												fill
+												className="object-cover"
+											/>
+										</div>
+										<div className="flex flex-col flex-1 min-w-0">
+											<span className="flex items-center gap-1 min-w-0">
+												<span className="font-semibold text-primary text-sm truncate font-sans">
+													{displayName}
+												</span>
+												{(user as any).isVerified && (
+													<span className="shrink-0 flex">
+														<VerifiedIcon
+															size={{ width: "14", height: "14" }}
+														/>
+													</span>
+												)}
 											</span>
-											{(user as any).isVerified && (
-												<span className="shrink-0 flex">
-													<VerifiedIcon
-														size={{ width: "14", height: "14" }}
-													/>
+											{showHandle && (
+												<span className="text-subtle text-[12px] truncate font-sans">
+													@{user.username}
 												</span>
 											)}
-										</span>
-										<span className="text-subtle text-[12px] truncate font-sans">
-											@{user.username}
-										</span>
-									</div>
-								</Link>
-								<button
-									onClick={() => handleFollow(user._id)}
-									className="px-4 h-8 bg-primary text-page text-[13px] font-semibold rounded-pill font-sans hover:bg-muted transition-colors shrink-0 cursor-pointer"
-									type="button"
-								>
-									{t("rail.follow")}
-								</button>
-							</div>
-						))
+										</div>
+									</Link>
+									<button
+										onClick={() => handleFollow(user._id)}
+										className="px-4 h-8 bg-primary text-page text-[13px] font-semibold rounded-pill font-sans hover:bg-muted transition-colors shrink-0 cursor-pointer"
+										type="button"
+									>
+										{t("rail.follow")}
+									</button>
+								</div>
+							);
+						})
 					)}
 				</div>
-			</Module>
+			</section>
 
-			{/* Legal links return when real worldstreetgold.com URLs exist —
-			    no href="#" dead links shipped as content. */}
-			<footer className="px-4 mt-1">
+			<footer className="px-3 mt-auto pb-2">
 				<p className="text-[10px] text-subtle font-sans">
 					© 2026 WorldStreet Group
 				</p>
