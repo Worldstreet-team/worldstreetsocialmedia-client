@@ -118,5 +118,12 @@
   "voice.start": "Démarrer",
   "voice.end": "Terminer",
   "voice.listeners": "à l'écoute",
-  "voice.empty": "Pas encore d'espaces — lancez la première conversation."
+  "voice.empty": "Pas encore d'espaces — lancez la première conversation.",
+  "post.translate": "Traduire le post",
+  "post.translating": "Traduction…",
+  "post.translatedFrom": "Traduit du",
+  "post.showOriginal": "Voir l'original",
+  "post.showTranslation": "Voir la traduction",
+  "post.autoTranslateOn": "Traduire automatiquement les posts",
+  "post.autoTranslateOff": "Désactiver la traduction automatique"
 }

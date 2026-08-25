@@ -118,5 +118,12 @@
   "voice.start": "Starten",
   "voice.end": "Beenden",
   "voice.listeners": "hören zu",
-  "voice.empty": "Noch keine Spaces — starte das erste Gespräch."
+  "voice.empty": "Noch keine Spaces — starte das erste Gespräch.",
+  "post.translate": "Beitrag übersetzen",
+  "post.translating": "Übersetzen…",
+  "post.translatedFrom": "Übersetzt aus",
+  "post.showOriginal": "Original anzeigen",
+  "post.showTranslation": "Übersetzung anzeigen",
+  "post.autoTranslateOn": "Beiträge automatisch übersetzen",
+  "post.autoTranslateOff": "Automatische Übersetzung ausschalten"
 }

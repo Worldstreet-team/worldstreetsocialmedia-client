@@ -14,6 +14,7 @@ import {
 	StopCircle,
 	X,
 	Plus,
+	Pencil,
 	UserPlus,
 	ArrowLeft,
 	MessageCircle,
@@ -30,6 +31,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { useRealtime } from "../providers/RealtimeProvider";
 import MediaModal from "../ui/MediaModal";
+import MediaEditor from "@/components/editor/MediaEditor";
 import { VoiceMessage } from "./VoiceMessage";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCall } from "@/providers/CallProvider";
@@ -250,6 +252,7 @@ export const MessageBox = ({
 	const [recordingDuration, setRecordingDuration] = useState(0);
 
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
+	const [editingAttachment, setEditingAttachment] = useState(false);
 	const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 	const [isUploading, setIsUploading] = useState(false);
 
@@ -424,6 +427,15 @@ export const MessageBox = ({
 			setPreviewUrl(url);
 		}
 		if (fileInputRef.current) fileInputRef.current.value = "";
+	};
+
+	// Pre-send edit: the Studio sheet swaps the attachment in place, so the
+	// existing upload path (POST /api/messages/upload) is untouched.
+	const applyEditedAttachment = (file: File) => {
+		if (previewUrl) URL.revokeObjectURL(previewUrl);
+		setSelectedFile(file);
+		setPreviewUrl(URL.createObjectURL(file));
+		setEditingAttachment(false);
 	};
 
 	const clearSelectedFile = () => {
@@ -1013,7 +1025,27 @@ export const MessageBox = ({
 								>
 									<X className="w-3.5 h-3.5" />
 								</button>
+								{/* Images only — the editor can't decode video. */}
+								{selectedFile.type.startsWith("image/") && (
+									<button
+										type="button"
+										onClick={() => setEditingAttachment(true)}
+										aria-label="Edit image"
+										className="absolute -top-2.5 -left-2.5 flex h-9 w-9 items-center justify-center bg-raised rounded-pill text-muted hover:text-primary border border-hairline transition-colors"
+									>
+										<Pencil className="w-3.5 h-3.5" />
+									</button>
+								)}
 							</div>
+						)}
+
+						{editingAttachment && selectedFile && (
+							<MediaEditor
+								file={selectedFile}
+								title="Edit image"
+								onClose={() => setEditingAttachment(false)}
+								onSave={({ file }) => applyEditedAttachment(file)}
+							/>
 						)}
 
 						<div className="flex items-center gap-2 sm:gap-3 relative">

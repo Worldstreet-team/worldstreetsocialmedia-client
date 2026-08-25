@@ -9,3 +9,6 @@ export const XSTREAM_API_URL =
     process.env.NEXT_PUBLIC_XSTREAM_API_URL ?? "http://localhost:3001";
 export const XSTREAM_WEB_URL =
     process.env.NEXT_PUBLIC_XSTREAM_WEB_URL ?? "http://localhost:3010";
+
+// The one 280 budget: post composer, PostCard truncation, story captions.
+export const POST_CHAR_BUDGET = 280;

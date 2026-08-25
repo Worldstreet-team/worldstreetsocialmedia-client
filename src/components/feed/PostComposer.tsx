@@ -2,7 +2,16 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { Image as ImageIcon, Radio, Smile, Send, X, User, Link2 } from "lucide-react";
+import {
+	Image as ImageIcon,
+	Radio,
+	Smile,
+	Send,
+	X,
+	User,
+	Link2,
+	Pencil,
+} from "lucide-react";
 import { GoLiveSheet } from "@/components/feed/GoLiveSheet";
 import { VanishingPlaceholder } from "@/components/ui/VanishingPlaceholder";
 import { useT } from "@/i18n/client";
@@ -13,6 +22,9 @@ import EmojiPicker, { type EmojiClickData, Theme } from "emoji-picker-react";
 import { useTheme } from "next-themes";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
+import MediaEditor from "@/components/editor/MediaEditor";
+import type { EditDocument } from "@/lib/editor/document";
+import { POST_CHAR_BUDGET } from "@/const";
 
 interface PostComposerProps {
 	onPostSuccess?: (post?: any) => void;
@@ -23,10 +35,14 @@ interface MediaItem {
 	url: string;
 	file: File;
 	type: "image" | "video";
+	// Editor state: `file` is what gets posted; the untouched original plus
+	// the edit document stay behind so re-opening the editor is non-destructive.
+	originalFile?: File;
+	editDoc?: EditDocument;
 }
 
 // Same limit PostCard truncates at.
-const MAX_LENGTH = 280;
+const MAX_LENGTH = POST_CHAR_BUDGET;
 
 /**
  * Character-budget ring: gold while comfortable, status/warning inside the
@@ -110,6 +126,7 @@ export const PostComposer = ({
 	const [content, setContent] = useState("");
 	const [isPosting, setIsPosting] = useState(false);
 	const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+	const [editingIndex, setEditingIndex] = useState<number | null>(null);
 	const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
 	// Link Preview State
@@ -201,6 +218,19 @@ export const PostComposer = ({
 			}
 		} catch {}
 	}, [content]);
+
+	// Blob URLs never survived unmount (navigating away leaked every preview).
+	// Mirror the current URLs in a ref so the unmount sweep sees the live set.
+	const mediaUrlsRef = useRef<string[]>([]);
+	useEffect(() => {
+		mediaUrlsRef.current = mediaItems.map((item) => item.url);
+	}, [mediaItems]);
+	useEffect(
+		() => () => {
+			mediaUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+		},
+		[],
+	);
 
 	// Auto-resize textarea
 	useEffect(() => {
@@ -309,6 +339,17 @@ export const PostComposer = ({
 				}
 			});
 
+			// Alt text from the editor's Alt tab. The gateway ignores unknown
+			// body fields today (post images are bare URL strings), so this is
+			// the forward-compatible seam: when the post model grows media
+			// metadata, the transport is already here.
+			if (mediaItems.some((item) => item.editDoc?.alt)) {
+				formData.append(
+					"imageAlts",
+					JSON.stringify(mediaItems.map((item) => item.editDoc?.alt ?? "")),
+				);
+			}
+
 			if (linkPreview && mediaItems.length === 0) {
 				formData.append("linkPreview", JSON.stringify(linkPreview));
 			}
@@ -317,6 +358,13 @@ export const PostComposer = ({
 
 			if (result.success) {
 				setContent("");
+				// Revoke AFTER React commits the cleared state — a synchronous
+				// revoke leaves the still-mounted preview tiles pointing at
+				// dead blob: URLs for a frame (broken-image flash).
+				const postedUrls = mediaItems.map((item) => item.url);
+				setTimeout(() => {
+					postedUrls.forEach((url) => URL.revokeObjectURL(url));
+				}, 1000);
 				setMediaItems([]);
 				setLinkPreview(null);
 				lastCheckedUrl.current = null;
@@ -405,14 +453,28 @@ export const PostComposer = ({
 											className="object-cover"
 										/>
 									)}
-									<button
-										type="button"
-										onClick={() => removeMedia(index)}
-										aria-label="Remove attachment"
-										className="absolute top-1.5 right-1.5 flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors"
-									>
-										<X className="w-4 h-4" />
-									</button>
+									<div className="absolute top-1.5 right-1.5 flex gap-1.5">
+										{/* Gate on the real MIME type, not the item.type
+										    label — the editor can't decode video. */}
+										{item.file.type.startsWith("image/") && (
+											<button
+												type="button"
+												onClick={() => setEditingIndex(index)}
+												aria-label="Edit image"
+												className="flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors"
+											>
+												<Pencil className="w-4 h-4" />
+											</button>
+										)}
+										<button
+											type="button"
+											onClick={() => removeMedia(index)}
+											aria-label="Remove attachment"
+											className="flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors"
+										>
+											<X className="w-4 h-4" />
+										</button>
+									</div>
 								</div>
 							))}
 						</div>
@@ -581,6 +643,45 @@ export const PostComposer = ({
 					</div>
 				</div>
 			</div>
+
+			{/* Studio sheet — opens per preview tile; Save swaps the posted File
+			    in place while the original + edit doc stay for re-editing. */}
+			{editingIndex !== null && mediaItems[editingIndex] && (
+				<MediaEditor
+					file={
+						mediaItems[editingIndex].originalFile ??
+						mediaItems[editingIndex].file
+					}
+					doc={mediaItems[editingIndex].editDoc}
+					allowAlt
+					onClose={() => setEditingIndex(null)}
+					onSave={({ file, doc }) => {
+						// URL side effects stay OUTSIDE the updater — StrictMode
+						// double-invokes updaters, which would leak a blob URL
+						// per save. The editor is modal, so the item can't have
+						// moved since it opened.
+						const old = mediaItems[editingIndex];
+						if (!old) {
+							setEditingIndex(null);
+							return;
+						}
+						URL.revokeObjectURL(old.url);
+						const url = URL.createObjectURL(file);
+						setMediaItems((prev) => {
+							const next = [...prev];
+							next[editingIndex] = {
+								url,
+								file,
+								type: "image",
+								originalFile: old.originalFile ?? old.file,
+								editDoc: doc,
+							};
+							return next;
+						});
+						setEditingIndex(null);
+					}}
+				/>
+			)}
 		</div>
 	);
 };

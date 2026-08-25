@@ -1,14 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { Plus } from "lucide-react";
 import { DEFAULT_AVATAR, XSTREAM_WEB_URL } from "@/const";
 import { useT } from "@/i18n/client";
-import { createStoryAction, getStoriesAction } from "@/lib/stories.actions";
+import { getStoriesAction } from "@/lib/stories.actions";
 import { StoryViewer, type RailEntry } from "@/components/feed/StoryViewer";
-import { useToast } from "@/components/ui/Toast/ToastContext";
+import StoryStudio from "@/components/story/StoryStudio";
 
 /**
  * The stories rail doubles as live discovery: a going-live auto-story gets a
@@ -18,11 +18,11 @@ import { useToast } from "@/components/ui/Toast/ToastContext";
  */
 export function StoriesRail() {
 	const t = useT();
-	const { toast } = useToast();
 	const [rail, setRail] = useState<RailEntry[]>([]);
 	const [open, setOpen] = useState<RailEntry | null>(null);
-	const [uploading, setUploading] = useState(false);
-	const fileRef = useRef<HTMLInputElement>(null);
+	// Posting now runs through the Story Studio (crop/filters/text/stickers/
+	// draw), which owns its own picker, preview and posting state.
+	const [studioOpen, setStudioOpen] = useState(false);
 
 	const load = async () => {
 		const res = await getStoriesAction();
@@ -32,22 +32,6 @@ export function StoriesRail() {
 	useEffect(() => {
 		void load();
 	}, []);
-
-	const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
-		const file = e.target.files?.[0];
-		e.target.value = "";
-		if (!file) return;
-		setUploading(true);
-		try {
-			const form = new FormData();
-			form.append("media", file);
-			const res = await createStoryAction(form);
-			if (res.success) await load();
-			else if (res.message) toast(res.message, { type: "error" });
-		} finally {
-			setUploading(false);
-		}
-	};
 
 	const self = rail.find((r) => r.isSelf);
 	const others = rail.filter((r) => !r.isSelf);
@@ -60,7 +44,7 @@ export function StoriesRail() {
 				onClick={() =>
 					self && self.stories.length > 0
 						? setOpen(self)
-						: fileRef.current?.click()
+						: setStudioOpen(true)
 				}
 				className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
 				aria-label={t("story.add")}
@@ -68,38 +52,17 @@ export function StoriesRail() {
 				<span
 					className={clsx(
 						"relative w-16 h-16 rounded-pill p-[2px]",
-						uploading
-							? "bg-transparent"
-							: self?.hasUnseen
-								? "bg-brand"
-								: "bg-raised",
+						self?.hasUnseen ? "bg-brand" : "bg-raised",
 					)}
 				>
-					{/* Posting state: the ring becomes a spinning dashed stroke. */}
-					{uploading && (
-						<svg
-							viewBox="0 0 64 64"
-							className="absolute inset-0 h-full w-full animate-spin text-gold"
-							aria-hidden="true"
-						>
-							<circle
-								cx="32"
-								cy="32"
-								r="30"
-								fill="none"
-								stroke="currentColor"
-								strokeWidth="3"
-								strokeLinecap="round"
-								strokeDasharray="34 18"
-							/>
-						</svg>
-					)}
+					{/* The posting state lives in the Story Studio now — it holds
+					    the sheet open with its own spinner until the post lands. */}
 					<span className="relative block w-full h-full rounded-pill overflow-hidden border-2 border-page">
 						<Image
 							src={self?.author.avatar || DEFAULT_AVATAR}
 							alt={t("story.yours")}
 							fill
-							className={clsx("object-cover", uploading && "opacity-60")}
+							className="object-cover"
 						/>
 					</span>
 					<span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-pill bg-brand text-brand-on border-2 border-page">
@@ -110,13 +73,6 @@ export function StoriesRail() {
 					{t("story.yours")}
 				</span>
 			</button>
-			<input
-				type="file"
-				ref={fileRef}
-				className="hidden"
-				accept="image/*,video/*"
-				onChange={onPick}
-			/>
 
 			{others.map((entry) => {
 				const name = entry.author.username;
@@ -171,6 +127,12 @@ export function StoriesRail() {
 			})}
 
 			{open && <StoryViewer entry={open} onClose={() => setOpen(null)} />}
+			{studioOpen && (
+				<StoryStudio
+					onClose={() => setStudioOpen(false)}
+					onPosted={() => void load()}
+				/>
+			)}
 		</div>
 	);
 }

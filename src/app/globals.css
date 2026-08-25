@@ -235,6 +235,62 @@ html {
     font-family: var(--ws-font-ui);
 }
 
+/* react-easy-crop ships neutral chrome; re-skin it on-token (same approach
+   as the emoji picker above). Gold frame = the brand's one accent in the
+   editor; the thirds grid only renders while interacting (showGrid is
+   toggled by MediaEditor), so no fade rules are needed here. */
+.ws-cropper .reactEasyCrop_Container {
+    background: var(--ws-bg-sunken);
+}
+.ws-cropper .reactEasyCrop_CropArea {
+    /* The mask outside the frame is drawn from `color` via box-shadow;
+       the scrim token keeps it retheming with data-ws-theme. */
+    color: var(--ws-overlay-scrim);
+    border: 1.5px solid var(--ws-brand-primary);
+}
+.ws-cropper .reactEasyCrop_CropAreaGrid::before,
+.ws-cropper .reactEasyCrop_CropAreaGrid::after {
+    border-color: rgb(255 255 255 / 0.28);
+}
+
+/* Range input for the editor's zoom (04-components "Slider"): hairline track
+   on bg/track, primary-ink thumb — gold stays reserved for the crop frame
+   and the Save CTA. */
+.ws-slider {
+    appearance: none;
+    -webkit-appearance: none;
+    height: 20px;
+    background: transparent;
+    cursor: pointer;
+}
+.ws-slider::-webkit-slider-runnable-track {
+    height: 3px;
+    border-radius: var(--ws-radius-pill);
+    background: var(--ws-bg-track);
+}
+.ws-slider::-moz-range-track {
+    height: 3px;
+    border-radius: var(--ws-radius-pill);
+    background: var(--ws-bg-track);
+}
+.ws-slider::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    margin-top: -6.5px;
+    border-radius: var(--ws-radius-pill);
+    background: var(--ws-text-primary);
+    border: none;
+}
+.ws-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: var(--ws-radius-pill);
+    background: var(--ws-text-primary);
+    border: none;
+}
+
 /* Page-intro reveal (06-motion "page-section reveals"): opacity + 8px rise at
    motion-slow with the one easing. `backwards` fill so a delayed element stays
    hidden until its turn — stagger with an inline animation-delay. Goes

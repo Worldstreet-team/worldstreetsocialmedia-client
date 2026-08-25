@@ -14,19 +14,21 @@ import {
 import VerifiedIcon from "@/assets/icons/VerifiedIcon";
 // 03-icons: Phosphor is reserved for the Social post-action row + overflow menu.
 import {
-    ArrowsClockwise,
-    ChartBar,
-    ChatCircle,
-    Heart,
     BookmarkSimple,
-    Export,
+    ChartLineUp,
+    ChatCircle,
     Check,
+    CircleNotch,
     DotsThree,
+    Heart,
+    PaperPlaneTilt,
+    Repeat,
+    Translate,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { useState, useRef, useEffect, memo, useCallback, useMemo } from "react";
 
-import { useAtomValue, useSetAtom } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { motion, AnimatePresence } from "framer-motion";
 import { userAtom } from "@/store/user.atom";
 import { bookmarksAtom } from "@/store/bookmarks.atom";
@@ -48,6 +50,8 @@ import { repostPostAction } from "@/lib/post.actions";
 import { QuoteModal } from "@/components/feed/QuoteModal";
 import { Megaphone } from "lucide-react";
 import { useT } from "@/i18n/client";
+import { translatePostAction } from "@/lib/translate.actions";
+import { autoTranslateAtom } from "@/store/translate.atom";
 
 export interface PostProps {
     id: string;
@@ -117,6 +121,18 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
     const [likeCount, setLikeCount] = useState(post.stats.likes);
     const [isBookmarked, setIsBookmarked] = useState(post.isBookmarked);
 
+    // Translation (X-style): tap to translate, or automatic when the
+    // preference is on. The gateway caches by text-hash + target, so repeat
+    // views of a translated post cost one indexed read.
+    const [autoTranslate, setAutoTranslate] = useAtom(autoTranslateAtom);
+    const [translation, setTranslation] = useState<string | null>(null);
+    const [translationSource, setTranslationSource] = useState<string | null>(
+        null,
+    );
+    const [translating, setTranslating] = useState(false);
+    const [showOriginal, setShowOriginal] = useState(false);
+    const [translateChecked, setTranslateChecked] = useState(false);
+
     const currentUser = useAtomValue(userAtom);
     const setUser = useSetAtom(userAtom);
     const setBookmarks = useSetAtom(bookmarksAtom);
@@ -136,7 +152,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
         null,
     );
 
-    // Share feedback: Export briefly swaps to a success Check after copying.
+    // Share feedback: the paper plane briefly swaps to a success Check after copying.
     const [linkCopied, setLinkCopied] = useState(false);
     const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     useEffect(
@@ -248,6 +264,46 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
         }
     }, [currentUser, isBookmarked, post, setUser, setBookmarks, toast]);
 
+    const handleTranslate = useCallback(async () => {
+        if (translating || !post.content) return;
+        setTranslating(true);
+        try {
+            const res = await translatePostAction(post.content);
+            setTranslateChecked(true);
+            if (res.success && res.translated && !res.sameLanguage) {
+                setTranslation(res.translated);
+                setTranslationSource(res.source ?? null);
+                setShowOriginal(false);
+            }
+        } finally {
+            setTranslating(false);
+        }
+    }, [translating, post.content]);
+
+    // Auto-translate: with the preference on, each post checks itself against
+    // the reader's locale as it renders. Same-language posts come back fast,
+    // get marked checked, and never re-ask.
+    useEffect(() => {
+        if (autoTranslate && !translateChecked && !translating && post.content) {
+            handleTranslate();
+        }
+    }, [autoTranslate, translateChecked, translating, post.content, handleTranslate]);
+
+    // "Translated from Spanish" in the reader's own language.
+    const translatedFromLabel = useMemo(() => {
+        if (!translationSource) return null;
+        const code = translationSource.split("-")[0].toLowerCase();
+        try {
+            return (
+                new Intl.DisplayNames([t.locale], { type: "language" }).of(
+                    code,
+                ) ?? code.toUpperCase()
+            );
+        } catch {
+            return code.toUpperCase();
+        }
+    }, [translationSource, t.locale]);
+
     const handleDelete = useCallback(async () => {
         setIsDeleting(true);
         try {
@@ -310,6 +366,11 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
         () => renderRichText(displayedContent),
         [displayedContent],
     );
+    const formattedTranslation = useMemo(
+        () => (translation ? renderRichText(translation) : null),
+        [translation],
+    );
+    const showingTranslation = Boolean(translation) && !showOriginal;
 
     /* Aspect ratios, not a fixed 290px height. At a 620px column 290px is
        roughly 2:1; at 320px it squashed every tile into a letterbox and
@@ -484,6 +545,22 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
+                                                        setIsMenuOpen(false);
+                                                        setAutoTranslate(
+                                                            (v) => !v,
+                                                        );
+                                                    }}
+                                                    className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
+                                                >
+                                                    <Translate size={16} />
+                                                    {autoTranslate
+                                                        ? t("post.autoTranslateOff")
+                                                        : t("post.autoTranslateOn")}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
                                                         handleMenuAction("pin");
                                                     }}
                                                     className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
@@ -573,6 +650,22 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                                     <Copy className="w-4 h-4" />
                                                     Copy link
                                                 </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setIsMenuOpen(false);
+                                                        setAutoTranslate(
+                                                            (v) => !v,
+                                                        );
+                                                    }}
+                                                    className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
+                                                >
+                                                    <Translate size={16} />
+                                                    {autoTranslate
+                                                        ? t("post.autoTranslateOff")
+                                                        : t("post.autoTranslateOn")}
+                                                </button>
                                                 <div className="my-1 border-t border-hairline" />
                                                 <button
                                                     type="button"
@@ -612,7 +705,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                     {/* UI/Body: Public Sans Regular 15 — post text size per 02-typography. */}
                     {post.repostOf && !post.content && (
                         <span className="flex items-center gap-1.5 text-subtle text-[12px] font-sans mb-1">
-                            <ArrowsClockwise size={12} />
+                            <Repeat size={12} />
                             {t("post.reposted")}
                         </span>
                     )}
@@ -646,8 +739,10 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                         </a>
                     )}
                     <p className="text-primary whitespace-pre-wrap mb-1.5 font-normal leading-[1.55] text-[15px] font-sans tracking-tight pointer-events-none">
-                        {formattedContent}
-                        {shouldTruncate && (
+                        {showingTranslation
+                            ? formattedTranslation
+                            : formattedContent}
+                        {shouldTruncate && !showingTranslation && (
                             <span className="text-subtle pointer-events-auto">
                                 ...{" "}
                                 <Link
@@ -659,6 +754,55 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                             </span>
                         )}
                     </p>
+                    {post.content &&
+                        (translation || translating || !translateChecked) && (
+                            <div className="relative z-10 pointer-events-auto -mt-0.5 mb-1.5">
+                                {translation ? (
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowOriginal((v) => !v);
+                                        }}
+                                        className="flex items-center gap-1.5 text-[12.5px] font-sans text-subtle hover:text-gold transition-colors cursor-pointer"
+                                    >
+                                        <Translate size={13} />
+                                        {showOriginal ? (
+                                            t("post.showTranslation")
+                                        ) : (
+                                            <>
+                                                {t("post.translatedFrom")}
+                                                {translatedFromLabel
+                                                    ? ` ${translatedFromLabel}`
+                                                    : ""}
+                                                {" · "}
+                                                {t("post.showOriginal")}
+                                            </>
+                                        )}
+                                    </button>
+                                ) : translating ? (
+                                    <span className="flex items-center gap-1.5 text-[12.5px] font-sans text-subtle">
+                                        <CircleNotch
+                                            size={13}
+                                            className="animate-spin"
+                                        />
+                                        {t("post.translating")}
+                                    </span>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleTranslate();
+                                        }}
+                                        className="flex items-center gap-1.5 text-[12.5px] font-sans text-subtle hover:text-gold transition-colors cursor-pointer"
+                                    >
+                                        <Translate size={13} />
+                                        {t("post.translate")}
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     {post.repostOf && (
                         <Link
                             href={`/post/${post.repostOf.id}`}
@@ -795,34 +939,36 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                 ))}
                         </div>
                     )}
-                    {/* Post actions. 03-icons: this row is the ONE place Phosphor is
-                        used instead of Lucide, matching the mobile app. 15px, text/muted. */}
-                    <div className="flex items-center justify-between max-w-[420px] text-muted mt-1 -mb-1.5 pointer-events-auto">
+                    {/* Post actions — impressions sit isolated on the left
+                        (a metric, not a button); the interaction cluster rides
+                        the right edge. 03-icons: this row is the ONE place
+                        Phosphor is used instead of Lucide, matching mobile. */}
+                    <div className="flex items-center justify-between text-muted mt-1.5 -mb-1.5 pointer-events-auto">
+                        <div
+                            className="flex items-center gap-1.5 pl-0.5 cursor-default select-none text-subtle"
+                            title={t("post.views")}
+                            aria-label={t("post.views")}
+                        >
+                            <ChartLineUp size={14} />
+                            <span className="text-[12.5px] font-medium font-sans tabular-nums">
+                                {formatCount(post.stats.views ?? 0) || "0"}
+                            </span>
+                        </div>
+
+                        <div className="flex items-center gap-0.5 sm:gap-2">
                         <Link
                             href={`/post/${post.id}`}
                             onClick={(e) => e.stopPropagation()}
                             aria-label="Reply"
-                            className="flex items-center gap-0.5 -ml-2 hover:text-primary transition-colors group cursor-pointer"
+                            className="flex items-center gap-0.5 hover:text-primary transition-colors group cursor-pointer"
                         >
                             <span className="flex h-10 w-10 items-center justify-center rounded-pill group-hover:bg-primary/10 transition group-active:scale-[0.98]">
-                                <ChatCircle size={15} />
+                                <ChatCircle size={17} />
                             </span>
                             <span className="text-[13px] font-sans tabular-nums">
                                 {formatCount(post.stats.replies)}
                             </span>
                         </Link>
-                        <div
-                            className="flex items-center gap-0.5 cursor-default"
-                            title={t("post.views")}
-                            aria-label={t("post.views")}
-                        >
-                            <span className="flex h-10 w-10 items-center justify-center rounded-pill">
-                                <ChartBar size={15} />
-                            </span>
-                            <span className="text-[13px] font-sans tabular-nums">
-                                {formatCount(post.stats.views ?? 0)}
-                            </span>
-                        </div>
                         <div className="relative">
                             <button
                                 type="button"
@@ -837,8 +983,8 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                 )}
                             >
                                 <span className="flex h-10 w-10 items-center justify-center rounded-pill group-hover:bg-success/10 transition group-active:scale-[0.98]">
-                                    <ArrowsClockwise
-                                        size={15}
+                                    <Repeat
+                                        size={17}
                                         weight={reposted ? "bold" : "regular"}
                                     />
                                 </span>
@@ -877,7 +1023,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                         }}
                                         className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans cursor-pointer"
                                     >
-                                        <ArrowsClockwise size={15} />
+                                        <Repeat size={15} />
                                         {t("post.repost")}
                                     </button>
                                     <button
@@ -937,7 +1083,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                     className="flex"
                                 >
                                     <Heart
-                                        size={15}
+                                        size={17}
                                         weight={isLiked ? "fill" : "regular"}
                                     />
                                 </motion.span>
@@ -1002,7 +1148,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                     className="flex"
                                 >
                                     <BookmarkSimple
-                                        size={15}
+                                        size={17}
                                         weight={isBookmarked ? "fill" : "regular"}
                                     />
                                 </motion.span>
@@ -1046,7 +1192,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                             }}
                                             className="flex"
                                         >
-                                            <Check size={15} weight="bold" />
+                                            <Check size={16} weight="bold" />
                                         </motion.span>
                                     ) : (
                                         <motion.span
@@ -1063,12 +1209,13 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                             }}
                                             className="flex"
                                         >
-                                            <Export size={15} />
+                                            <PaperPlaneTilt size={17} />
                                         </motion.span>
                                     )}
                                 </AnimatePresence>
                             </span>
                         </button>
+                        </div>
                     </div>
                 </div>
             </div>

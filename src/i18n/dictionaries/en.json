@@ -118,5 +118,12 @@
   "voice.start": "Start",
   "voice.end": "End",
   "voice.listeners": "listening",
-  "voice.empty": "No spaces yet — start the first conversation."
+  "voice.empty": "No spaces yet — start the first conversation.",
+  "post.translate": "Translate post",
+  "post.translating": "Translating…",
+  "post.translatedFrom": "Translated from",
+  "post.showOriginal": "Show original",
+  "post.showTranslation": "Show translation",
+  "post.autoTranslateOn": "Auto-translate posts",
+  "post.autoTranslateOff": "Turn off auto-translate"
 }
