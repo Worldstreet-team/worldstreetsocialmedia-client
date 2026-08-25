@@ -587,6 +587,7 @@ export const PostComposer = ({
 						mediaItems[editingIndex].file
 					}
 					doc={mediaItems[editingIndex].editDoc}
+					allowAlt
 					onClose={() => setEditingIndex(null)}
 					onSave={({ file, doc }) => {
 						// URL side effects stay OUTSIDE the updater — StrictMode

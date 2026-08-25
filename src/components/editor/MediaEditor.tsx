@@ -59,6 +59,12 @@ interface MediaEditorProps {
   lockAspect?: number;
   /** Circular crop mask (avatar). */
   round?: boolean;
+  /**
+   * Show the Alt-text tab. Only true where the caller actually carries alt
+   * forward (post images) — offering it where nothing transports it is a
+   * promise the product can't keep.
+   */
+  allowAlt?: boolean;
   title?: string;
   onClose: () => void;
   onSave: (result: MediaEditResult) => void;
@@ -84,6 +90,7 @@ export default function MediaEditor({
   doc: initialDoc,
   lockAspect,
   round = false,
+  allowAlt = false,
   title = "Edit media",
   onClose,
   onSave,
@@ -261,8 +268,7 @@ export default function MediaEditor({
   const tabs: { id: EditorTab; label: string }[] = [
     { id: "crop", label: "Crop" },
     { id: "adjust", label: "Adjust" },
-    // Alt text is per-post-image; avatar/banner (locked) don't carry one.
-    ...(lockAspect ? [] : [{ id: "alt" as EditorTab, label: "Alt" }]),
+    ...(allowAlt ? [{ id: "alt" as EditorTab, label: "Alt" }] : []),
   ];
 
   const handleSave = async () => {
