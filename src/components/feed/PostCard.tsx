@@ -57,6 +57,7 @@ export interface PostProps {
     content: string;
     timestamp: string;
     images?: string[];
+    videos?: string[];
     stats: {
         replies: number;
         reposts: number;
@@ -670,6 +671,21 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                         </a>
                     )}
 
+                    {post.videos && post.videos.length > 0 && (
+                        <div
+                            className="relative z-10 pointer-events-auto mt-2 mb-1.5 rounded-xl overflow-hidden border border-hairline bg-sunken"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                            <video
+                                src={post.videos[0]}
+                                className="w-full max-h-[560px] aspect-video object-contain bg-sunken"
+                                controls
+                                playsInline
+                                preload="metadata"
+                            />
+                        </div>
+                    )}
                     {post.images && post.images.length === 1 && (
                         <div className="mb-3 w-full">
                             <img

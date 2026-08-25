@@ -82,8 +82,10 @@ export default clerkMiddleware(async (auth, req) => {
 			);
 		}
 
-		// 2. Prevent users who ALREADY have a profile from re-onboarding
-		if (isOnboardingPath && hasProfile) {
+		// 2. Prevent users who ALREADY have a profile from re-onboarding.
+		// Decided from the sync result, not the cookie — a cleared cookie must
+		// not reopen onboarding for an existing profile.
+		if (isOnboardingPath && userExistsInDb?.profile) {
 			return NextResponse.redirect(new URL(withLocale("/") || "/", req.url));
 		}
 

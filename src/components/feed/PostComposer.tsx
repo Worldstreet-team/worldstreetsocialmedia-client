@@ -206,6 +206,24 @@ export const PostComposer = ({
 
 		if (e.target.files) {
 			const files = Array.from(e.target.files);
+			// One video max, never mixed with images: a picked video replaces
+			// everything; once a video is attached, further picks are ignored.
+			const video = files.find((f) => f.type.startsWith("video/"));
+			if (mediaItems.some((m) => m.type === "video")) {
+				if (fileInputRef.current) fileInputRef.current.value = "";
+				return;
+			}
+			if (video) {
+				setMediaItems([
+					{
+						url: URL.createObjectURL(video),
+						file: video,
+						type: "video",
+					},
+				]);
+				if (fileInputRef.current) fileInputRef.current.value = "";
+				return;
+			}
 			const remainingSlots = 4 - mediaItems.length;
 			const filesToProcess = files.slice(0, remainingSlots);
 

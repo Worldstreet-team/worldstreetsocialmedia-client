@@ -107,15 +107,18 @@ export default function VerticalFeedPage() {
 	useEffect(() => {
 		const item = items[active];
 		if (!item) return;
-		track({
-			post: item.id,
-			author: item.authorId,
-			action: "impression",
-			surface: "vertical",
-			position: active,
-			meta: { mediaType: item.live ? "live" : "video" },
-		});
+		const timer = setTimeout(() => {
+			track({
+				post: item.id,
+				author: item.authorId,
+				action: "impression",
+				surface: "vertical",
+				position: active,
+				meta: { mediaType: item.live ? "live" : "video" },
+			});
+		}, 1000); // MRC: the card must hold the viewport for a continuous second
 		if (hasMore && active >= items.length - 3) void load(cursor);
+		return () => clearTimeout(timer);
 	}, [active, items, hasMore, cursor, load]);
 
 	const toggleLike = async (item: VideoItem, idx: number) => {
@@ -137,7 +140,7 @@ export default function VerticalFeedPage() {
 	return (
 		<div
 			ref={containerRef}
-			className="fixed inset-0 z-sticky bg-page overflow-y-auto snap-y snap-mandatory [scrollbar-width:none]"
+			className="fixed inset-0 z-dropdown bg-page overflow-y-auto snap-y snap-mandatory [scrollbar-width:none]"
 		>
 			<Link
 				href="/"

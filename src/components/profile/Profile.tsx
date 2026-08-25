@@ -176,6 +176,7 @@ export default function Profile({ username }: ProfileProps) {
 					content: post.content,
 					timestamp: formatTimeAgo(post.createdAt),
 					images: post.images,
+					videos: post.videos,
 					stats: post.stats || { replies: 0, reposts: 0, likes: 0 },
 					isLiked: post.isLiked,
 					isBookmarked: post.isBookmarked,

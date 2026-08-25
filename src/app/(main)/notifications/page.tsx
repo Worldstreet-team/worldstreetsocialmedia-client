@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
 	AtSign,
+	Radio,
 	Bell,
 	Heart,
 	MessageCircle,
@@ -22,7 +23,7 @@ import { unreadNotificationsCountAtom } from "@/store/ui.atom";
 
 interface Notification {
 	_id: string;
-	type: "like" | "repost" | "follow" | "reply" | "mention";
+	type: "like" | "repost" | "follow" | "reply" | "mention" | "live";
 	sender: {
 		userId: string;
 		firstName: string;
@@ -85,6 +86,8 @@ export default function NotificationsPage() {
 				return <Repeat className="w-5 h-5 text-success" />;
 			case "mention":
 				return <AtSign className="w-5 h-5 text-gold" />;
+			case "live":
+				return <Radio className="w-5 h-5 text-danger" />;
 			default:
 				return <div className="w-5 h-5 bg-raised rounded-pill" />;
 		}

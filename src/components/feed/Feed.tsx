@@ -143,6 +143,7 @@ export default function Feed() {
 					content: post.content,
 					timestamp: formatTimeAgo(post.createdAt),
 					images: post.images,
+					videos: post.videos,
 					stats: post.stats || { replies: 0, reposts: 0, likes: 0 },
 					isLiked: post.isLiked,
 					isBookmarked: post.isBookmarked,
@@ -202,6 +203,7 @@ export default function Feed() {
 				content: newPost.content,
 				timestamp: "Just now",
 				images: newPost.images,
+				videos: newPost.videos,
 				stats: newPost.stats || { replies: 0, reposts: 0, likes: 0 },
 				isLiked: false,
 				isBookmarked: false,
@@ -271,9 +273,11 @@ export default function Feed() {
 							position: index,
 							mediaType: post.live
 								? "live"
-								: post.images?.length
-									? "image"
-									: "text",
+								: post.videos?.length
+									? "video"
+									: post.images?.length
+										? "image"
+										: "text",
 							cursorDepth: Math.floor(index / 10),
 							promoted: post.promoted,
 						}}

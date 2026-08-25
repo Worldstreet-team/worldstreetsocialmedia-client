@@ -142,6 +142,7 @@ export default function ExploreClient({
 					},
 					content: post.content,
 					images: post.images,
+					videos: post.videos,
 					timestamp: formatTimeAgo(post.createdAt),
 					stats: post.stats,
 					isLiked: post.isLiked,
