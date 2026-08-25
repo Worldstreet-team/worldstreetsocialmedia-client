@@ -89,3 +89,29 @@ export async function getUserFeedAction(
 		return { success: false, message: "Something went wrong" };
 	}
 }
+
+export async function getVideoFeedAction(
+	cursor: string | null = null,
+	limit: number = 8,
+) {
+	const { getToken } = await auth();
+	const accessToken = await getToken();
+	if (!accessToken) {
+		return { success: false, message: "Unauthorized: No access token found" };
+	}
+	try {
+		const response = await axios.get(`${API_URL}/api/feed/videos`, {
+			params: { limit, ...(cursor ? { cursor } : {}) },
+			headers: { Authorization: `Bearer ${accessToken}` },
+		});
+		return { success: true, data: response.data };
+	} catch (error: any) {
+		if (axios.isAxiosError(error)) {
+			return {
+				success: false,
+				message: error.response?.data?.message || "Failed to fetch videos",
+			};
+		}
+		return { success: false, message: "Something went wrong" };
+	}
+}

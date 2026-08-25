@@ -37,5 +37,19 @@
   "golive.denied": "L'accès à la caméra et au micro est requis pour passer en direct. Autorisez l'accès et réessayez.",
   "golive.opens": "Votre studio s'ouvre dans un nouvel onglet — le direct arrive tout seul dans le fil.",
   "story.yours": "Votre story",
-  "story.add": "Ajouter une story"
+  "story.add": "Ajouter une story",
+  "vertical.title": "Vidéos",
+  "vertical.empty": "Pas encore de vidéos — publiez-en une ou passez en direct.",
+  "vertical.unmute": "Touchez pour activer le son",
+  "studio.title": "Studio créateur",
+  "studio.become.title": "Devenez créateur",
+  "studio.become.caption": "Débloquez le studio : statistiques d'audience, direct depuis l'éditeur et monétisation au fil de son arrivée. Gratuit, instantané, réversible.",
+  "studio.become.cta": "Activer le mode créateur",
+  "studio.impressions": "Impressions",
+  "studio.engagements": "Interactions",
+  "studio.engagementRate": "Taux d'interaction",
+  "studio.followers": "Abonnés",
+  "studio.posts": "Publications",
+  "studio.daily": "Impressions quotidiennes",
+  "studio.window": "28 derniers jours"
 }

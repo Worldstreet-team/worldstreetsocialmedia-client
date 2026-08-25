@@ -37,5 +37,19 @@
   "golive.denied": "Se necesita acceso a la cámara y al micrófono para transmitir. Permite el acceso e inténtalo de nuevo.",
   "golive.opens": "Tu estudio se abre en una pestaña nueva — la transmisión llega sola al feed.",
   "story.yours": "Tu historia",
-  "story.add": "Añadir una historia"
+  "story.add": "Añadir una historia",
+  "vertical.title": "Videos",
+  "vertical.empty": "Aún no hay videos — publica uno o transmite en vivo.",
+  "vertical.unmute": "Toca para activar el sonido",
+  "studio.title": "Estudio de creador",
+  "studio.become.title": "Conviértete en creador",
+  "studio.become.caption": "Desbloquea el estudio: analíticas de audiencia, transmisiones desde el editor y monetización a medida que llegue. Gratis, instantáneo y reversible.",
+  "studio.become.cta": "Activar modo creador",
+  "studio.impressions": "Impresiones",
+  "studio.engagements": "Interacciones",
+  "studio.engagementRate": "Tasa de interacción",
+  "studio.followers": "Seguidores",
+  "studio.posts": "Publicaciones",
+  "studio.daily": "Impresiones diarias",
+  "studio.window": "últimos 28 días"
 }

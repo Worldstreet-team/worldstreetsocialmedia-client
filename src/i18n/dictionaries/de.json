@@ -37,5 +37,19 @@
   "golive.denied": "Für den Livestream werden Kamera und Mikrofon benötigt. Erlaube den Zugriff und versuche es erneut.",
   "golive.opens": "Dein Studio öffnet sich in einem neuen Tab — der Stream erscheint automatisch im Feed.",
   "story.yours": "Deine Story",
-  "story.add": "Story hinzufügen"
+  "story.add": "Story hinzufügen",
+  "vertical.title": "Videos",
+  "vertical.empty": "Noch keine Videos — poste eins oder geh live.",
+  "vertical.unmute": "Zum Aktivieren des Tons tippen",
+  "studio.title": "Creator-Studio",
+  "studio.become.title": "Werde Creator",
+  "studio.become.caption": "Schalte das Studio frei: Publikums-Analysen, Livestreams aus dem Editor und Monetarisierung, sobald verfügbar. Kostenlos, sofort, umkehrbar.",
+  "studio.become.cta": "Creator-Modus aktivieren",
+  "studio.impressions": "Impressionen",
+  "studio.engagements": "Interaktionen",
+  "studio.engagementRate": "Interaktionsrate",
+  "studio.followers": "Follower",
+  "studio.posts": "Beiträge",
+  "studio.daily": "Tägliche Impressionen",
+  "studio.window": "letzte 28 Tage"
 }

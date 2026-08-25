@@ -37,5 +37,19 @@
   "golive.denied": "Camera and microphone access is required to go live. Allow access and try again.",
   "golive.opens": "Your studio opens in a new tab — the stream lands in the feed automatically.",
   "story.yours": "Your story",
-  "story.add": "Add a story"
+  "story.add": "Add a story",
+  "vertical.title": "Videos",
+  "vertical.empty": "No videos yet — post one or go live.",
+  "vertical.unmute": "Tap to unmute",
+  "studio.title": "Creator Studio",
+  "studio.become.title": "Become a creator",
+  "studio.become.caption": "Unlock the studio: audience analytics, going live from the composer, and monetization as it rolls out. Free, instant, reversible.",
+  "studio.become.cta": "Activate creator mode",
+  "studio.impressions": "Impressions",
+  "studio.engagements": "Engagements",
+  "studio.engagementRate": "Engagement rate",
+  "studio.followers": "Followers",
+  "studio.posts": "Posts",
+  "studio.daily": "Daily impressions",
+  "studio.window": "last 28 days"
 }
