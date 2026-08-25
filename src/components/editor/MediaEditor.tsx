@@ -13,12 +13,15 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
+import PresetCarousel from "@/components/editor/PresetCarousel";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import {
+  type Adjustments,
   ASPECT_LABELS,
   ASPECT_RATIOS,
   type AspectId,
+  createAdjustments,
   createEditDocument,
   type EditDocument,
   type Rotation,
@@ -29,6 +32,45 @@ import {
   loadOrientedBitmap,
   orientCanvas,
 } from "@/lib/editor/export";
+import {
+  colorMatrixFor,
+  cssFilterFor,
+  getGrainTileUrl,
+  getPreset,
+} from "@/lib/editor/presets";
+
+type EditorTab = "crop" | "adjust" | "alt";
+
+const ADJUSTMENT_SLIDERS: { key: keyof Adjustments; label: string }[] = [
+  { key: "brightness", label: "Brightness" },
+  { key: "contrast", label: "Contrast" },
+  { key: "saturation", label: "Saturation" },
+  { key: "warmth", label: "Warmth" },
+];
+
+/** 64px cover-cropped snapshot of the oriented source for filter thumbs. */
+function makeThumb(source: HTMLCanvasElement): string {
+  const size = 64;
+  const thumb = document.createElement("canvas");
+  thumb.width = size;
+  thumb.height = size;
+  const ctx = thumb.getContext("2d");
+  if (!ctx) return "";
+  const side = Math.min(source.width, source.height);
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(
+    source,
+    (source.width - side) / 2,
+    (source.height - side) / 2,
+    side,
+    side,
+    0,
+    0,
+    size,
+    size,
+  );
+  return thumb.toDataURL("image/jpeg", 0.7);
+}
 
 export interface MediaEditResult {
   file: File;
@@ -68,9 +110,14 @@ export default function MediaEditor({
   onSave,
 }: MediaEditorProps) {
   const { toast } = useToast();
-  const [doc, setDoc] = useState<EditDocument>(
-    () => initialDoc ?? createEditDocument(),
-  );
+  // Merge over defaults so docs saved before newer fields existed stay valid.
+  const [doc, setDoc] = useState<EditDocument>(() => ({
+    ...createEditDocument(),
+    ...initialDoc,
+  }));
+  const [tab, setTab] = useState<EditorTab>("crop");
+  const [thumbUrl, setThumbUrl] = useState<string | null>(null);
+  const [grainUrl, setGrainUrl] = useState<string | null>(null);
   const [sourceUrl, setSourceUrl] = useState<string | null>(null);
   const [sourceSize, setSourceSize] = useState<{ w: number; h: number } | null>(
     null,
@@ -100,6 +147,7 @@ export default function MediaEditor({
     sourceUrlRef.current = url;
     setSourceUrl(url);
     setSourceSize({ w: canvas.width, h: canvas.height });
+    setThumbUrl(makeThumb(canvas));
   }, []);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: decode once per file — rebuild is a stable useCallback and re-running on toast/onClose identity would re-decode the bitmap.
@@ -173,6 +221,23 @@ export default function MediaEditor({
       : ASPECT_RATIOS[doc.aspectId]);
 
   const readout = croppedPx ? finalDimensions(croppedPx) : null;
+  const previewFilter = cssFilterFor(doc.adjustments, doc.preset);
+  const grainActive = !!getPreset(doc.preset)?.grain;
+  const adjustmentsDirty =
+    doc.preset !== null ||
+    ADJUSTMENT_SLIDERS.some(({ key }) => doc.adjustments[key] !== 0);
+
+  // The grain preview tile is canvas-generated — client only, so post-mount.
+  useEffect(() => {
+    if (grainActive && !grainUrl) setGrainUrl(getGrainTileUrl());
+  }, [grainActive, grainUrl]);
+
+  const tabs: { id: EditorTab; label: string }[] = [
+    { id: "crop", label: "Crop" },
+    { id: "adjust", label: "Adjust" },
+    // Alt text is per-post-image; avatar/banner (locked) don't carry one.
+    ...(lockAspect ? [] : [{ id: "alt" as EditorTab, label: "Alt" }]),
+  ];
 
   const handleSave = async () => {
     if (!orientedRef.current || !croppedPx || exporting) return;
@@ -182,6 +247,10 @@ export default function MediaEditor({
         orientedRef.current,
         croppedPx,
         file.name,
+        {
+          matrix: colorMatrixFor(doc.adjustments, doc.preset),
+          grain: grainActive,
+        },
       );
       onSave({ file: outFile, doc });
     } catch {
@@ -238,8 +307,9 @@ export default function MediaEditor({
             </button>
           </div>
 
-          {/* Crop stage */}
-          <div className="relative w-full h-[min(56dvh,440px)] bg-sunken ws-cropper">
+          {/* Stage — stays mounted across tabs so crop state survives; the
+              adjustment preview is a CSS filter on the cropper's media. */}
+          <div className="relative w-full h-[min(52dvh,420px)] bg-sunken ws-cropper">
             {sourceUrl ? (
               <Cropper
                 image={sourceUrl}
@@ -250,6 +320,11 @@ export default function MediaEditor({
                 aspect={aspect}
                 cropShape={round ? "round" : "rect"}
                 showGrid={interacting}
+                style={
+                  previewFilter
+                    ? { mediaStyle: { filter: previewFilter } }
+                    : undefined
+                }
                 onCropChange={(position) => setDoc((d) => ({ ...d, position }))}
                 onZoomChange={(zoom) => setDoc((d) => ({ ...d, zoom }))}
                 onCropComplete={(_area, areaPixels) => setCroppedPx(areaPixels)}
@@ -259,10 +334,135 @@ export default function MediaEditor({
             ) : (
               <div className="absolute inset-0 skeleton" />
             )}
+            {grainActive && grainUrl && (
+              <div
+                aria-hidden
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  backgroundImage: `url(${grainUrl})`,
+                  backgroundRepeat: "repeat",
+                  mixBlendMode: "overlay",
+                  opacity: 0.28,
+                }}
+              />
+            )}
+          </div>
+
+          {/* Tab bar — gold underline slides via layoutId (FeedTabs motion). */}
+          <div className="flex shrink-0 border-t border-hairline">
+            {tabs.map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setTab(id)}
+                aria-pressed={tab === id}
+                className={clsx(
+                  "relative flex-1 h-11 text-[13px] font-semibold font-sans transition-colors cursor-pointer",
+                  tab === id ? "text-primary" : "text-muted hover:text-primary",
+                )}
+              >
+                {label}
+                {id === "adjust" && adjustmentsDirty && tab !== "adjust" && (
+                  <span className="absolute top-2 ml-1 inline-block h-1.5 w-1.5 rounded-pill bg-gold" />
+                )}
+                {tab === id && (
+                  <motion.span
+                    layoutId="ws-editor-tab"
+                    className="absolute inset-x-8 top-0 h-0.5 rounded-pill bg-brand"
+                    transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+                  />
+                )}
+              </button>
+            ))}
           </div>
 
           {/* Controls */}
-          <div className="shrink-0 px-3 sm:px-4 py-3 space-y-3 border-t border-hairline">
+          {tab === "adjust" && (
+            <div className="shrink-0 px-3 sm:px-4 py-3 space-y-3 border-t border-hairline overflow-y-auto">
+              <div className="space-y-2">
+                {ADJUSTMENT_SLIDERS.map(({ key, label }) => (
+                  <div key={key} className="flex items-center gap-3">
+                    <span className="w-[76px] shrink-0 text-[11px] uppercase tracking-[1px] font-medium text-muted font-sans">
+                      {label}
+                    </span>
+                    <input
+                      type="range"
+                      min={-100}
+                      max={100}
+                      step={1}
+                      value={doc.adjustments[key]}
+                      onChange={(e) =>
+                        setDoc((d) => ({
+                          ...d,
+                          adjustments: {
+                            ...d.adjustments,
+                            [key]: Number(e.target.value),
+                          },
+                        }))
+                      }
+                      onDoubleClick={() =>
+                        setDoc((d) => ({
+                          ...d,
+                          adjustments: { ...d.adjustments, [key]: 0 },
+                        }))
+                      }
+                      aria-label={label}
+                      className="ws-slider flex-1"
+                    />
+                    <span className="w-9 shrink-0 text-right text-xs text-subtle font-sans tabular-nums">
+                      {doc.adjustments[key]}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <PresetCarousel
+                thumbUrl={thumbUrl}
+                active={doc.preset}
+                onSelect={(preset) => setDoc((d) => ({ ...d, preset }))}
+              />
+              {adjustmentsDirty && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDoc((d) => ({
+                      ...d,
+                      adjustments: createAdjustments(),
+                      preset: null,
+                    }))
+                  }
+                  className="text-[13px] font-medium font-sans text-muted hover:text-primary transition-colors cursor-pointer"
+                >
+                  Reset adjustments
+                </button>
+              )}
+            </div>
+          )}
+
+          {tab === "alt" && (
+            <div className="shrink-0 px-3 sm:px-4 py-3 border-t border-hairline">
+              <label
+                htmlFor="ws-editor-alt"
+                className="block text-[11px] uppercase tracking-[1px] font-medium text-muted mb-1 font-sans"
+              >
+                Alt text
+              </label>
+              <textarea
+                id="ws-editor-alt"
+                value={doc.alt}
+                onChange={(e) => setDoc((d) => ({ ...d, alt: e.target.value }))}
+                maxLength={1000}
+                placeholder="Describe the image for people using screen readers"
+                className="w-full rounded-md border border-hairline focus-within:border-brand/60 bg-transparent p-3 outline-none text-base sm:text-sm font-sans resize-none min-h-[72px] placeholder:text-subtle text-primary"
+              />
+            </div>
+          )}
+
+          <div
+            className={clsx(
+              "shrink-0 px-3 sm:px-4 py-3 space-y-3 border-t border-hairline",
+              tab !== "crop" && "hidden",
+            )}
+          >
             <div className="flex items-center justify-between gap-2">
               {lockAspect ? (
                 <span className="text-[11px] uppercase tracking-[1px] font-medium text-subtle font-sans">

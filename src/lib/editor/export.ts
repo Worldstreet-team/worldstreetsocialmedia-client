@@ -12,11 +12,13 @@
  * - Server actions cap request bodies at 20mb (next.config.ts); the
  *   downscale + webp re-encode keeps every export far under it.
  *
- * NOTE (Phase 2): the filter/adjustment leg must NOT use ctx.filter — it is
- * still disabled in stable Safari (2026). It gets a WebGL color-matrix pass.
+ * The filter/adjustment leg must NOT use ctx.filter — it is still disabled
+ * in stable Safari (2026); it's a CPU color-matrix pass instead (see
+ * applyColorMatrix below).
  */
 
 import type { Rotation } from "./document";
+import { type ColorMatrix, GRAIN_ALPHA, getGrainTile } from "./presets";
 
 /** Long-edge cap for the editor's working bitmap (~2560×1920 ≈ 5MP, safe). */
 const WORKING_MAX = 2560;
@@ -87,17 +89,66 @@ export function finalDimensions(crop: CropRect): { w: number; h: number } {
   };
 }
 
+export interface RenderEffects {
+  /** Composed adjustment/preset matrix (presets.ts); null = skip the pass. */
+  matrix?: ColorMatrix | null;
+  /** Film-grain overlay pass. */
+  grain?: boolean;
+  /** Exact output size (stories: 1080×1920). Defaults to the crop, capped. */
+  target?: { w: number; h: number };
+}
+
 /**
- * Crop the oriented source and encode to a File ready for the existing
- * FormData submit paths. WebP at 0.82, falling back to JPEG 0.85 when the
- * UA ignores the webp request (sniffed from the returned blob type).
+ * The per-pixel color-matrix pass. CPU on ImageData rather than ctx.filter
+ * (disabled in stable Safari) — a one-shot ≤4MP loop at save time, well
+ * under jank territory; swap for a WebGL quad if profiling ever says so.
+ */
+function applyColorMatrix(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  matrix: ColorMatrix,
+) {
+  const image = ctx.getImageData(0, 0, w, h);
+  const d = image.data;
+  const { m, o } = matrix;
+  const o0 = o[0] * 255;
+  const o1 = o[1] * 255;
+  const o2 = o[2] * 255;
+  for (let i = 0; i < d.length; i += 4) {
+    const r = d[i];
+    const g = d[i + 1];
+    const b = d[i + 2];
+    d[i] = Math.min(255, Math.max(0, m[0] * r + m[1] * g + m[2] * b + o0));
+    d[i + 1] = Math.min(255, Math.max(0, m[3] * r + m[4] * g + m[5] * b + o1));
+    d[i + 2] = Math.min(255, Math.max(0, m[6] * r + m[7] * g + m[8] * b + o2));
+  }
+  ctx.putImageData(image, 0, 0);
+}
+
+function applyGrain(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  const pattern = ctx.createPattern(getGrainTile(), "repeat");
+  if (!pattern) return;
+  ctx.save();
+  ctx.globalAlpha = GRAIN_ALPHA;
+  ctx.globalCompositeOperation = "overlay";
+  ctx.fillStyle = pattern;
+  ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+}
+
+/**
+ * Crop the oriented source, apply effects, and encode to a File ready for
+ * the existing FormData submit paths. WebP at 0.82, falling back to JPEG
+ * 0.85 when the UA ignores the webp request (sniffed from the blob type).
  */
 export async function exportCroppedFile(
   source: HTMLCanvasElement,
   crop: CropRect,
   originalName: string,
+  effects: RenderEffects = {},
 ): Promise<File> {
-  const { w, h } = finalDimensions(crop);
+  const { w, h } = effects.target ?? finalDimensions(crop);
   const out = document.createElement("canvas");
   out.width = w;
   out.height = h;
@@ -105,6 +156,8 @@ export async function exportCroppedFile(
   if (!ctx) throw new Error("Canvas 2D unavailable");
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(source, crop.x, crop.y, crop.width, crop.height, 0, 0, w, h);
+  if (effects.matrix) applyColorMatrix(ctx, w, h, effects.matrix);
+  if (effects.grain) applyGrain(ctx, w, h);
 
   let blob = await canvasToBlob(out, "image/webp", 0.82);
   if (!blob || blob.type !== "image/webp") {
