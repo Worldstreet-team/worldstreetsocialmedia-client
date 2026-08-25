@@ -63,10 +63,9 @@ export default function StoryRail() {
     });
   }, []);
 
-  // The gateway sleeping (free Render instance) or erroring shouldn't cost
-  // the feed anything — the rail simply stays out of the way.
-  if (failed) return null;
-
+  // A sleeping/erroring gateway must not remove the ability to POST a story —
+  // only the ability to see other people's. On failure the rail keeps the
+  // "Your story" tile (which opens the Studio) and drops everything else.
   const selfEntry = entries?.find((e) => e.isSelf) ?? null;
   const others = entries?.filter((e) => !e.isSelf) ?? [];
 
@@ -126,50 +125,52 @@ export default function StoryRail() {
         </button>
       </div>
 
-      {entries === null
-        ? // Loading: quiet placeholder circles, no layout shift.
-          [0, 1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="flex w-16 shrink-0 flex-col items-center gap-1.5"
-            >
-              <div className="h-14 w-14 rounded-pill skeleton" />
-              <div className="h-3 w-12 rounded-sm skeleton" />
-            </div>
-          ))
-        : others.map((entry) => (
-            <button
-              key={entry.author._id}
-              type="button"
-              onClick={() => openViewerAt(entry)}
-              className="flex w-16 shrink-0 flex-col items-center gap-1.5 cursor-pointer"
-              aria-label={`View ${entry.author.username}'s story`}
-            >
-              <span
-                className={clsx(
-                  "rounded-pill p-[2px] transition-colors",
-                  entry.hasUnseen ? "bg-brand" : "bg-raised",
-                )}
+      {failed
+        ? null
+        : entries === null
+          ? // Loading: quiet placeholder circles, no layout shift.
+            [0, 1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="flex w-16 shrink-0 flex-col items-center gap-1.5"
+              >
+                <div className="h-14 w-14 rounded-pill skeleton" />
+                <div className="h-3 w-12 rounded-sm skeleton" />
+              </div>
+            ))
+          : others.map((entry) => (
+              <button
+                key={entry.author._id}
+                type="button"
+                onClick={() => openViewerAt(entry)}
+                className="flex w-16 shrink-0 flex-col items-center gap-1.5 cursor-pointer"
+                aria-label={`View ${entry.author.username}'s story`}
               >
                 <span
-                  className="block h-14 w-14 rounded-pill bg-raised bg-cover bg-center border-2 border-page"
-                  style={{
-                    backgroundImage: `url('${entry.author.avatar || DEFAULT_AVATAR}')`,
-                  }}
-                />
-              </span>
-              <span
-                className={clsx(
-                  "w-16 truncate text-center text-[11px] font-sans",
-                  entry.isLive
-                    ? "text-danger font-semibold uppercase tracking-[1px]"
-                    : "text-muted",
-                )}
-              >
-                {entry.isLive ? "Live" : entry.author.username}
-              </span>
-            </button>
-          ))}
+                  className={clsx(
+                    "rounded-pill p-[2px] transition-colors",
+                    entry.hasUnseen ? "bg-brand" : "bg-raised",
+                  )}
+                >
+                  <span
+                    className="block h-14 w-14 rounded-pill bg-raised bg-cover bg-center border-2 border-page"
+                    style={{
+                      backgroundImage: `url('${entry.author.avatar || DEFAULT_AVATAR}')`,
+                    }}
+                  />
+                </span>
+                <span
+                  className={clsx(
+                    "w-16 truncate text-center text-[11px] font-sans",
+                    entry.isLive
+                      ? "text-danger font-semibold uppercase tracking-[1px]"
+                      : "text-muted",
+                  )}
+                >
+                  {entry.isLive ? "Live" : entry.author.username}
+                </span>
+              </button>
+            ))}
 
       {studioOpen && (
         <StoryStudio onClose={() => setStudioOpen(false)} onPosted={refetch} />

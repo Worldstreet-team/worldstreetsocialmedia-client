@@ -396,165 +396,173 @@ export default function MediaEditor({
             ))}
           </div>
 
-          {/* Controls */}
-          {tab === "adjust" && (
-            <div className="shrink-0 px-3 sm:px-4 py-3 space-y-3 border-t border-hairline overflow-y-auto">
-              <div className="space-y-2">
-                {ADJUSTMENT_SLIDERS.map(({ key, label }) => (
-                  <div key={key} className="flex items-center gap-3">
-                    <span className="w-[76px] shrink-0 text-[11px] uppercase tracking-[1px] font-medium text-muted font-sans">
-                      {label}
-                    </span>
-                    <input
-                      type="range"
-                      min={-100}
-                      max={100}
-                      step={1}
-                      value={doc.adjustments[key]}
-                      onChange={(e) =>
-                        setDoc((d) => ({
-                          ...d,
-                          adjustments: {
-                            ...d.adjustments,
-                            [key]: Number(e.target.value),
-                          },
-                        }))
-                      }
-                      onDoubleClick={() =>
-                        setDoc((d) => ({
-                          ...d,
-                          adjustments: { ...d.adjustments, [key]: 0 },
-                        }))
-                      }
-                      aria-label={label}
-                      className="ws-slider flex-1"
-                    />
-                    <span className="w-9 shrink-0 text-right text-xs text-muted font-sans tabular-nums">
-                      {doc.adjustments[key]}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <PresetCarousel
-                thumbUrl={thumbUrl}
-                active={doc.preset}
-                onSelect={selectPreset}
-              />
-              {adjustmentsDirty && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setDoc((d) => ({
-                      ...d,
-                      adjustments: createAdjustments(),
-                      preset: null,
-                    }))
-                  }
-                  className="text-[13px] font-medium font-sans text-muted hover:text-primary transition-colors cursor-pointer"
-                >
-                  Reset adjustments
-                </button>
-              )}
-            </div>
-          )}
-
-          {tab === "alt" && (
-            <div className="shrink-0 px-3 sm:px-4 py-3 border-t border-hairline">
-              <label
-                htmlFor="ws-editor-alt"
-                className="block text-[11px] uppercase tracking-[1px] font-medium text-muted mb-1 font-sans"
-              >
-                Alt text
-              </label>
-              <textarea
-                id="ws-editor-alt"
-                value={doc.alt}
-                onChange={(e) => setDoc((d) => ({ ...d, alt: e.target.value }))}
-                maxLength={1000}
-                placeholder="Describe the image for people using screen readers"
-                className="w-full rounded-md border border-hairline focus-within:border-brand/60 bg-transparent p-3 outline-none text-base sm:text-sm font-sans resize-none min-h-[72px] placeholder:text-subtle text-primary"
-              />
-            </div>
-          )}
-
-          <div
-            className={clsx(
-              "shrink-0 px-3 sm:px-4 py-3 space-y-3 border-t border-hairline",
-              tab !== "crop" && "hidden",
-            )}
-          >
-            <div className="flex items-center justify-between gap-2">
-              {lockAspect ? (
-                <span className="text-[11px] uppercase tracking-[1px] font-medium text-muted font-sans">
-                  {round ? "Profile photo" : "Banner"}
-                </span>
-              ) : (
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                  {ASPECT_LABELS.map(({ id, label }) => (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => selectAspect(id)}
-                      className={clsx(
-                        "h-8 px-3 rounded-pill text-[13px] font-medium font-sans transition-colors whitespace-nowrap cursor-pointer tabular-nums",
-                        doc.aspectId === id
-                          ? "bg-brand/10 text-gold"
-                          : "border border-hairline text-muted hover:bg-raised hover:text-primary",
-                      )}
-                      aria-pressed={doc.aspectId === id}
-                    >
-                      {label}
-                    </button>
+          {/* Controls. The panel region keeps one height across all three
+              tabs: without it the modal grows/shrinks per tab and, because it
+              is vertically centred, the tab bar slides out from under the
+              pointer — a second click lands on a slider instead of a tab
+              (hit while testing). */}
+          <div className="shrink-0 min-h-[236px] flex flex-col">
+            {tab === "adjust" && (
+              <div className="shrink-0 px-3 sm:px-4 py-3 space-y-3 border-t border-hairline overflow-y-auto">
+                <div className="space-y-2">
+                  {ADJUSTMENT_SLIDERS.map(({ key, label }) => (
+                    <div key={key} className="flex items-center gap-3">
+                      <span className="w-[76px] shrink-0 text-[11px] uppercase tracking-[1px] font-medium text-muted font-sans">
+                        {label}
+                      </span>
+                      <input
+                        type="range"
+                        min={-100}
+                        max={100}
+                        step={1}
+                        value={doc.adjustments[key]}
+                        onChange={(e) =>
+                          setDoc((d) => ({
+                            ...d,
+                            adjustments: {
+                              ...d.adjustments,
+                              [key]: Number(e.target.value),
+                            },
+                          }))
+                        }
+                        onDoubleClick={() =>
+                          setDoc((d) => ({
+                            ...d,
+                            adjustments: { ...d.adjustments, [key]: 0 },
+                          }))
+                        }
+                        aria-label={label}
+                        className="ws-slider flex-1"
+                      />
+                      <span className="w-9 shrink-0 text-right text-xs text-muted font-sans tabular-nums">
+                        {doc.adjustments[key]}
+                      </span>
+                    </div>
                   ))}
                 </div>
-              )}
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  type="button"
-                  onClick={applyRotate}
-                  aria-label="Rotate 90 degrees"
-                  className="flex h-10 w-10 items-center justify-center rounded-pill text-muted hover:bg-raised hover:text-primary transition-colors cursor-pointer"
-                >
-                  <RotateCw className="w-[18px] h-[18px]" />
-                </button>
-                <button
-                  type="button"
-                  onClick={applyFlip}
-                  aria-label="Flip horizontally"
-                  className={clsx(
-                    "flex h-10 w-10 items-center justify-center rounded-pill transition-colors cursor-pointer",
-                    doc.flipH
-                      ? "bg-brand/10 text-gold"
-                      : "text-muted hover:bg-raised hover:text-primary",
-                  )}
-                  aria-pressed={doc.flipH}
-                >
-                  <FlipHorizontal2 className="w-[18px] h-[18px]" />
-                </button>
+                <PresetCarousel
+                  thumbUrl={thumbUrl}
+                  active={doc.preset}
+                  onSelect={selectPreset}
+                />
+                {adjustmentsDirty && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setDoc((d) => ({
+                        ...d,
+                        adjustments: createAdjustments(),
+                        preset: null,
+                      }))
+                    }
+                    className="text-[13px] font-medium font-sans text-muted hover:text-primary transition-colors cursor-pointer"
+                  >
+                    Reset adjustments
+                  </button>
+                )}
               </div>
-            </div>
+            )}
 
-            <div className="flex items-center gap-3">
-              <ZoomOut className="w-4 h-4 text-subtle shrink-0" aria-hidden />
-              <input
-                type="range"
-                min={1}
-                max={3}
-                step={0.01}
-                value={doc.zoom}
-                onChange={(e) =>
-                  setDoc((d) => ({ ...d, zoom: Number(e.target.value) }))
-                }
-                aria-label="Zoom"
-                className="ws-slider flex-1"
-              />
-              <ZoomIn className="w-4 h-4 text-subtle shrink-0" aria-hidden />
-              <span
-                className="text-xs text-muted font-sans tabular-nums w-[84px] text-right shrink-0"
-                aria-live="polite"
-              >
-                {readout ? `${readout.w} × ${readout.h}` : "—"}
-              </span>
+            {tab === "alt" && (
+              <div className="shrink-0 px-3 sm:px-4 py-3 border-t border-hairline">
+                <label
+                  htmlFor="ws-editor-alt"
+                  className="block text-[11px] uppercase tracking-[1px] font-medium text-muted mb-1 font-sans"
+                >
+                  Alt text
+                </label>
+                <textarea
+                  id="ws-editor-alt"
+                  value={doc.alt}
+                  onChange={(e) =>
+                    setDoc((d) => ({ ...d, alt: e.target.value }))
+                  }
+                  maxLength={1000}
+                  placeholder="Describe the image for people using screen readers"
+                  className="w-full rounded-md border border-hairline focus-within:border-brand/60 bg-transparent p-3 outline-none text-base sm:text-sm font-sans resize-none min-h-[72px] placeholder:text-subtle text-primary"
+                />
+              </div>
+            )}
+
+            <div
+              className={clsx(
+                "shrink-0 px-3 sm:px-4 py-3 space-y-3 border-t border-hairline",
+                tab !== "crop" && "hidden",
+              )}
+            >
+              <div className="flex items-center justify-between gap-2">
+                {lockAspect ? (
+                  <span className="text-[11px] uppercase tracking-[1px] font-medium text-muted font-sans">
+                    {round ? "Profile photo" : "Banner"}
+                  </span>
+                ) : (
+                  <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                    {ASPECT_LABELS.map(({ id, label }) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => selectAspect(id)}
+                        className={clsx(
+                          "h-8 px-3 rounded-pill text-[13px] font-medium font-sans transition-colors whitespace-nowrap cursor-pointer tabular-nums",
+                          doc.aspectId === id
+                            ? "bg-brand/10 text-gold"
+                            : "border border-hairline text-muted hover:bg-raised hover:text-primary",
+                        )}
+                        aria-pressed={doc.aspectId === id}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={applyRotate}
+                    aria-label="Rotate 90 degrees"
+                    className="flex h-10 w-10 items-center justify-center rounded-pill text-muted hover:bg-raised hover:text-primary transition-colors cursor-pointer"
+                  >
+                    <RotateCw className="w-[18px] h-[18px]" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={applyFlip}
+                    aria-label="Flip horizontally"
+                    className={clsx(
+                      "flex h-10 w-10 items-center justify-center rounded-pill transition-colors cursor-pointer",
+                      doc.flipH
+                        ? "bg-brand/10 text-gold"
+                        : "text-muted hover:bg-raised hover:text-primary",
+                    )}
+                    aria-pressed={doc.flipH}
+                  >
+                    <FlipHorizontal2 className="w-[18px] h-[18px]" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <ZoomOut className="w-4 h-4 text-subtle shrink-0" aria-hidden />
+                <input
+                  type="range"
+                  min={1}
+                  max={3}
+                  step={0.01}
+                  value={doc.zoom}
+                  onChange={(e) =>
+                    setDoc((d) => ({ ...d, zoom: Number(e.target.value) }))
+                  }
+                  aria-label="Zoom"
+                  className="ws-slider flex-1"
+                />
+                <ZoomIn className="w-4 h-4 text-subtle shrink-0" aria-hidden />
+                <span
+                  className="text-xs text-muted font-sans tabular-nums w-[84px] text-right shrink-0"
+                  aria-live="polite"
+                >
+                  {readout ? `${readout.w} × ${readout.h}` : "—"}
+                </span>
+              </div>
             </div>
           </div>
         </motion.div>
