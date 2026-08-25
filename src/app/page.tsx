@@ -2,6 +2,7 @@ import Image from "next/image";
 import { currentUser } from "@clerk/nextjs/server";
 import Feed from "@/components/feed/Feed";
 import { FeedTabs } from "@/components/feed/FeedTabs";
+import { FeedHeaderActions } from "@/components/feed/FeedHeaderActions";
 import { LeftSidebar } from "@/components/layout/LeftSidebar";
 import { RightSidebar } from "@/components/layout/RightSidebar";
 
@@ -24,7 +25,12 @@ export default async function Home() {
 						style={{ animationDelay: "40ms" }}
 					>
 						<h1 className="sr-only">Home</h1>
-						<FeedTabs />
+						<div className="flex items-center h-full">
+							<div className="flex-1 h-full min-w-0">
+								<FeedTabs />
+							</div>
+							<FeedHeaderActions />
+						</div>
 					</header>
 					<Feed />
 				</div>

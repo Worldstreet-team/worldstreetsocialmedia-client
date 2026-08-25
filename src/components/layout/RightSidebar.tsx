@@ -19,6 +19,7 @@ import { DEFAULT_AVATAR, XSTREAM_WEB_URL } from "@/const";
 import { useT } from "@/i18n/client";
 import { GoLiveSheet } from "@/components/feed/GoLiveSheet";
 import VerifiedIcon from "@/assets/icons/VerifiedIcon";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import clsx from "clsx";
 
 interface LiveEntry {
@@ -224,12 +225,7 @@ export function RightSidebar() {
 							>
 								<span className="relative w-10 h-10 rounded-pill p-[2px] bg-danger shrink-0">
 									<span className="relative block w-full h-full rounded-pill overflow-hidden border-2 border-page bg-raised">
-										<Image
-											src={entry.avatar}
-											alt=""
-											fill
-											className="object-cover"
-										/>
+										<SafeAvatar src={entry.avatar} />
 									</span>
 								</span>
 								<span className="flex flex-col flex-1 min-w-0">
@@ -374,12 +370,7 @@ export function RightSidebar() {
 										className="flex items-center gap-3 flex-1 min-w-0"
 									>
 										<div className="relative w-10 h-10 rounded-pill overflow-hidden shrink-0 bg-raised">
-											<Image
-												src={user.avatar || DEFAULT_AVATAR}
-												alt=""
-												fill
-												className="object-cover"
-											/>
+											<SafeAvatar src={user.avatar} />
 										</div>
 										<div className="flex flex-col flex-1 min-w-0">
 											<span className="flex items-center gap-1 min-w-0">

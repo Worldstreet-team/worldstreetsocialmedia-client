@@ -12,6 +12,7 @@ import {
 	MonitorPlay,
 	SquaresFour,
 	UserCircle,
+	UsersThree,
 } from "@phosphor-icons/react";
 
 import type { IconProps } from "@/app/types";
@@ -30,7 +31,7 @@ const navIcon = (Icon: PhosphorIcon): React.FC<IconProps> => {
 	const NavIcon = ({ isActive }: IconProps) => (
 		<Icon
 			size={22}
-			weight={isActive ? "fill" : "regular"}
+			weight={isActive ? "fill" : "duotone"}
 			aria-hidden="true"
 		/>
 	);
@@ -52,6 +53,12 @@ export const mainNav: SidebarItem[] = [
 		title: "Videos",
 		link: "/live",
 		icon: navIcon(MonitorPlay),
+	},
+	{
+		labelKey: "nav.communities",
+		title: "Communities",
+		link: "/communities",
+		icon: navIcon(UsersThree),
 	},
 	{
 		labelKey: "nav.notifications",

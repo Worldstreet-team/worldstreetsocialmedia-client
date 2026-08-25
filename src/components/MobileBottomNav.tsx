@@ -22,7 +22,7 @@ const navIcon = (Icon: PhosphorIcon) => {
 	const NavIcon = ({ isActive }: { isActive?: boolean }) => (
 		<Icon
 			size={22}
-			weight={isActive ? "fill" : "regular"}
+			weight={isActive ? "fill" : "duotone"}
 			aria-hidden="true"
 		/>
 	);

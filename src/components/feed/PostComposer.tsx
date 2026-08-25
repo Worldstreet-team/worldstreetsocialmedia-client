@@ -11,6 +11,7 @@ import { useToast } from "@/components/ui/Toast/ToastContext";
 import EmojiPicker, { type EmojiClickData, Theme } from "emoji-picker-react";
 import { useTheme } from "next-themes";
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
 
 interface PostComposerProps {
 	onPostSuccess?: (post?: any) => void;
@@ -360,16 +361,34 @@ export const PostComposer = ({
 					)}
 				</div>
 				<div className="flex-1 w-full min-w-0">
+					<div className="relative">
+					{!content && (
+						<span className="pointer-events-none absolute left-0 top-0 text-lg text-subtle font-medium font-sans overflow-hidden">
+							<AnimatePresence mode="wait" initial={false}>
+								<motion.span
+									key={promptIndex}
+									initial={{ y: 10, opacity: 0, filter: "blur(4px)" }}
+									animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
+									exit={{ y: -10, opacity: 0, filter: "blur(4px)" }}
+									transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
+									className="block"
+								>
+									{t(PROMPTS[promptIndex])}
+								</motion.span>
+							</AnimatePresence>
+						</span>
+					)}
 					<textarea
 						id="post-composer-input"
 						ref={textareaRef}
 						value={content}
 						onChange={(e) => setContent(e.target.value)}
 						onPaste={handlePaste}
-						placeholder={t(PROMPTS[promptIndex])}
+						placeholder=""
 						className="w-full bg-transparent text-lg text-primary placeholder:text-subtle outline-none resize-none min-h-[60px] font-medium leading-relaxed overflow-hidden font-sans"
 						rows={1}
 					/>
+					</div>
 
 					{/* Media Preview Grid */}
 					{mediaItems.length > 0 && (
