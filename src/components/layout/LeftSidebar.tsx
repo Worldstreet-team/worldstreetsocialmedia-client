@@ -11,20 +11,24 @@ import {
 	LogOut,
 	Moon,
 	MoreHorizontal,
+	Radio,
 	ShoppingBag,
 	Sun,
+	User as UserIcon,
 	Wallet,
 } from "lucide-react";
 import clsx from "clsx";
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
-import { sidebarList } from "@/data/sidebar";
+import { mainNav, moreItem, youNav, type SidebarItem } from "@/data/sidebar";
 import { useAtomValue } from "jotai";
 import { userAtom } from "@/store/user.atom";
 import { unreadMessagesCountAtom } from "@/store/messageCache";
 import { unreadNotificationsCountAtom } from "@/store/ui.atom";
 import { handleSignOut } from "@/lib/utils";
 import { withThemeTransition } from "@/lib/theme-transition";
+import { useT } from "@/i18n/client";
+import { GoLiveSheet } from "@/components/feed/GoLiveSheet";
 
 /* The ecosystem panel behind "More" — every WorldStreet app, spelled out.
    Icons are the platforms' 03-icons glyphs (graduation-cap, clapperboard,
@@ -56,7 +60,18 @@ const ECOSYSTEM = [
 	},
 ];
 
+/* Section eyebrow — the landing page's uppercase-tracking micro-label,
+   reused as the rail's grouping device. */
+function Eyebrow({ children }: { children: React.ReactNode }) {
+	return (
+		<p className="px-4 pt-5 pb-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.14em] text-subtle select-none">
+			{children}
+		</p>
+	);
+}
+
 export function LeftSidebar() {
+	const t = useT();
 	const pathname = usePathname();
 	const user = useAtomValue(userAtom);
 	const unreadCount = useAtomValue(unreadMessagesCountAtom);
@@ -64,6 +79,7 @@ export function LeftSidebar() {
 	const { signOut } = useClerk();
 	const router = useRouter();
 	const [isMenuOpen, setIsMenuOpen] = useState<boolean | "more">(false);
+	const [showGoLive, setShowGoLive] = useState(false);
 	const menuRef = useRef<HTMLDivElement>(null);
 	const moreMenuRef = useRef<HTMLDivElement>(null);
 
@@ -78,8 +94,10 @@ export function LeftSidebar() {
 		const handleClickOutside = (event: MouseEvent) => {
 			const target = event.target as Node;
 			if (
-				menuRef.current && !menuRef.current.contains(target) &&
-				moreMenuRef.current && !moreMenuRef.current.contains(target)
+				menuRef.current &&
+				!menuRef.current.contains(target) &&
+				moreMenuRef.current &&
+				!moreMenuRef.current.contains(target)
 			) {
 				setIsMenuOpen(false);
 			}
@@ -93,10 +111,55 @@ export function LeftSidebar() {
 		};
 	}, [isMenuOpen]);
 
+	const badgeFor = (item: SidebarItem) =>
+		item.title === "Messages"
+			? unreadCount
+			: item.title === "Notifications"
+				? unreadNotifications
+				: 0;
+
+	const renderItem = (item: SidebarItem, index: number, offset: number) => {
+		const href =
+			item.title === "Profile" && user?.username
+				? `/profile/${user.username}`
+				: item.link;
+		const isActive =
+			item.link === "/" ? pathname === "/" : pathname.startsWith(item.link);
+		const badgeCount = badgeFor(item);
+
+		return (
+			<Link
+				key={item.title}
+				href={href}
+				style={{ animationDelay: `${offset + index * 30}ms` }}
+				className={clsx(
+					"relative flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors group animate-rise",
+					isActive
+						? "bg-chip font-semibold text-primary"
+						: "text-muted hover:bg-surface hover:text-primary",
+				)}
+			>
+				{/* Modern active cue: a slim gold inset bar, not a heavier fill. */}
+				{isActive && (
+					<span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-pill bg-brand" />
+				)}
+				<span className="relative inline-flex w-5 h-5 items-center justify-center">
+					<item.icon isActive={isActive} />
+					{badgeCount > 0 && (
+						<span className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-4 h-4 px-1 text-[9px] font-bold text-brand-on bg-brand rounded-pill border border-page font-sans tabular-nums">
+							{badgeCount > 9 ? "9+" : badgeCount}
+						</span>
+					)}
+				</span>
+				<span className="text-[15px] font-sans">{t(item.labelKey)}</span>
+			</Link>
+		);
+	};
+
 	return (
 		<header className="w-[260px] shrink-0 hidden md:flex flex-col sticky top-0 h-dvh overflow-y-auto no-scrollbar pl-4 pr-6 border-r border-hairline">
 			{/* Intro: logo leads, nav items cascade after it (animate-rise + delays). */}
-			<div className="py-8 px-2 animate-rise">
+			<div className="py-7 px-2 animate-rise">
 				{/* Unified ecosystem lockup (05-screens): gold wsa-mark 26px, unboxed +
 				    "WorldStreet" Poppins SemiBold 15 + gold app eyebrow. */}
 				<Link href="/" className="flex items-center gap-2 group">
@@ -118,201 +181,160 @@ export function LeftSidebar() {
 				</Link>
 			</div>
 
-			<nav className="flex flex-col gap-1 mt-2 flex-1 px-2">
-				{sidebarList.map((item, index) => {
-					const isActive = pathname === item.link;
-					// Handle "More" dropdown state
-					const isMoreOpen = isMenuOpen === "more"; // modifying string state logic below
+			<nav className="flex flex-col gap-0.5 flex-1 px-2">
+				{mainNav.map((item, i) => renderItem(item, i, 60))}
 
-					const href =
-						item.title === "Profile" && user?.username
-							? `/profile/${user.username}`
-							: item.link;
+				<Eyebrow>{t("nav.you")}</Eyebrow>
+				{youNav.map((item, i) => renderItem(item, i, 240))}
 
-					const riseDelay = { animationDelay: `${60 + index * 30}ms` };
-
-					if (item.isDropdown) {
-						return (
-							<div
-								key={index}
-								className="relative animate-rise"
-								style={riseDelay}
-								ref={moreMenuRef}
-							>
-								<button
-									onClick={() =>
-										setIsMenuOpen(isMenuOpen === "more" ? false : "more")
-									}
-									className={clsx(
-										"flex items-center gap-3 px-4 py-3 rounded-pill transition-colors group relative w-full text-left cursor-pointer",
-										isMoreOpen
-											? "bg-chip font-semibold text-primary"
-											: "text-muted hover:bg-surface hover:text-primary",
-									)}
-								>
-									<div className="relative">
-										<span className="inline-flex w-5 h-5 items-center justify-center">
-											<item.icon isActive={isMoreOpen} />
-										</span>
-									</div>
-									<span className="text-[15px] font-sans">
-										{item.title}
-									</span>
-								</button>
-
-								{isMenuOpen === "more" && (
-									<div className="absolute bottom-full left-0 w-[300px] bg-surface border border-hairline rounded-lg shadow-nav overflow-hidden mb-2 z-dropdown animate-rise py-2">
-										<p className="px-4 pt-2 pb-1.5 font-sans font-medium text-[11px] uppercase tracking-[1px] text-subtle">
-											More from WorldStreet
-										</p>
-										{ECOSYSTEM.map((app) => (
-											<a
-												key={app.title}
-												href={app.href}
-												target="_blank"
-												rel="noopener noreferrer"
-												className="flex items-center gap-3 px-3.5 py-2.5 hover:bg-raised transition-colors group/app"
-												onClick={() => setIsMenuOpen(false)}
-											>
-												<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-raised border border-hairline">
-													<app.icon className="w-[18px] h-[18px] text-primary" />
-												</span>
-												<span className="flex flex-col min-w-0 flex-1">
-													<span className="font-sans text-sm font-medium text-primary">
-														{app.title}
-													</span>
-													<span className="font-sans text-[12px] text-muted truncate">
-														{app.description}
-													</span>
-												</span>
-												<ArrowUpRight className="w-4 h-4 text-subtle opacity-0 group-hover/app:opacity-100 transition-opacity shrink-0" />
-											</a>
-										))}
-										<p className="px-4 pt-2 pb-1 font-sans text-[11px] text-subtle border-t border-hairline mt-1.5">
-											One account works everywhere.
-										</p>
-									</div>
-								)}
-							</div>
-						);
-					}
-
-					return (
-						<Link
-							key={index}
-							href={href}
-							style={riseDelay}
-							className={clsx(
-								"flex items-center gap-3 px-4 py-3 rounded-pill transition-colors group relative animate-rise",
-								isActive
-									? "bg-chip font-semibold text-primary"
-									: "text-muted hover:bg-surface hover:text-primary",
-							)}
-						>
-							<div className="relative">
-								<span className="inline-flex w-5 h-5 items-center justify-center">
-									<item.icon isActive={isActive} />
-								</span>
-								{(() => {
-									const badgeCount =
-										item.title === "Messages"
-											? unreadCount
-											: item.title === "Notifications"
-												? unreadNotifications
-												: 0;
-									return badgeCount > 0 ? (
-										<span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 text-[10px] font-bold text-brand-on bg-brand rounded-full border-2 border-page animate-rise font-sans tabular-nums">
-											{badgeCount > 9 ? "9+" : badgeCount}
-										</span>
-									) : null;
-								})()}
-							</div>
-
-							<span className="text-[15px] font-sans">
-								{item.title}
-							</span>
-						</Link>
-					);
-				})}
-
-				{/* Primary CTA. Spec 05-screens: "gold Post button (pill, full-width)".
-				    Focuses the composer when it's on screen, otherwise routes home to it. */}
-				<button
-					type="button"
-					onClick={() => {
-						const composer =
-							document.querySelector<HTMLTextAreaElement>(
-								"#post-composer-input",
-							);
-						if (composer) {
-							window.scrollTo({ top: 0, behavior: "smooth" });
-							composer.focus();
-						} else {
-							router.push("/");
-						}
-					}}
-					style={{ animationDelay: "280ms" }}
-					className="mt-6 w-full h-12 bg-brand hover:bg-brand-active text-brand-on font-semibold text-[15px] rounded-pill font-sans transition-colors cursor-pointer animate-rise"
+				{/* More → ecosystem panel */}
+				<div
+					className="relative animate-rise"
+					style={{ animationDelay: "300ms" }}
+					ref={moreMenuRef}
 				>
-					Post
-				</button>
+					<button
+						type="button"
+						onClick={() =>
+							setIsMenuOpen(isMenuOpen === "more" ? false : "more")
+						}
+						className={clsx(
+							"flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors w-full text-left cursor-pointer",
+							isMenuOpen === "more"
+								? "bg-chip font-semibold text-primary"
+								: "text-muted hover:bg-surface hover:text-primary",
+						)}
+					>
+						<span className="inline-flex w-5 h-5 items-center justify-center">
+							<moreItem.icon isActive={isMenuOpen === "more"} />
+						</span>
+						<span className="text-[15px] font-sans">{t("nav.more")}</span>
+					</button>
+
+					{isMenuOpen === "more" && (
+						<div className="absolute bottom-full left-0 w-[300px] bg-surface border border-hairline rounded-lg shadow-nav overflow-hidden mb-2 z-dropdown animate-rise py-2">
+							<p className="px-4 pt-2 pb-1.5 font-sans font-medium text-[11px] uppercase tracking-[1px] text-subtle">
+								More from WorldStreet
+							</p>
+							{ECOSYSTEM.map((app) => (
+								<a
+									key={app.title}
+									href={app.href}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="flex items-center gap-3 px-3.5 py-2.5 hover:bg-raised transition-colors group/app"
+									onClick={() => setIsMenuOpen(false)}
+								>
+									<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-raised border border-hairline">
+										<app.icon className="w-[18px] h-[18px] text-primary" />
+									</span>
+									<span className="flex flex-col min-w-0 flex-1">
+										<span className="font-sans text-sm font-medium text-primary">
+											{app.title}
+										</span>
+										<span className="font-sans text-[12px] text-muted truncate">
+											{app.description}
+										</span>
+									</span>
+									<ArrowUpRight className="w-4 h-4 text-subtle opacity-0 group-hover/app:opacity-100 transition-opacity shrink-0" />
+								</a>
+							))}
+							<p className="px-4 pt-2 pb-1 font-sans text-[11px] text-subtle border-t border-hairline mt-1.5">
+								One account works everywhere.
+							</p>
+						</div>
+					)}
+				</div>
+
+				{/* Quick actions: the one gold CTA + Go Live beside it.
+				    05-screens: "gold Post button (pill, full-width)" — the pill
+				    stays primary; Go Live is a danger-tinted square companion. */}
+				<div
+					className="mt-5 flex items-center gap-2 animate-rise"
+					style={{ animationDelay: "330ms" }}
+				>
+					<button
+						type="button"
+						onClick={() => {
+							const composer =
+								document.querySelector<HTMLTextAreaElement>(
+									"#post-composer-input",
+								);
+							if (composer) {
+								window.scrollTo({ top: 0, behavior: "smooth" });
+								composer.focus();
+							} else {
+								router.push("/");
+							}
+						}}
+						className="flex-1 h-12 bg-brand hover:bg-brand-active text-brand-on font-semibold text-[15px] rounded-pill font-sans transition-colors cursor-pointer"
+					>
+						{t("composer.post")}
+					</button>
+					<button
+						type="button"
+						onClick={() => setShowGoLive(true)}
+						aria-label={t("golive.entry")}
+						title={t("golive.entry")}
+						className="h-12 w-12 shrink-0 flex items-center justify-center rounded-pill border border-danger/30 text-danger hover:bg-danger/10 transition-colors cursor-pointer"
+					>
+						<Radio className="w-5 h-5" />
+					</button>
+				</div>
 			</nav>
 
-			{/* Theme switch — light platform palette is an explicit opt-in. */}
-			<div
-				className="px-2 mb-2 animate-rise"
-				style={{ animationDelay: "300ms" }}
-			>
-				<button
-					type="button"
-					onClick={() =>
-						withThemeTransition(() =>
-							setTheme(isLight ? "dark" : "light"),
-						)
-					}
-					aria-label={
-						isLight ? "Switch to dark mode" : "Switch to light mode"
-					}
-					className="flex items-center gap-3 px-4 py-2.5 rounded-pill transition-colors w-full text-left text-muted hover:bg-surface hover:text-primary cursor-pointer"
-				>
-					<span className="inline-flex w-5 h-5 items-center justify-center">
-						{mounted && isLight ? (
-							<Moon className="w-5 h-5" strokeWidth={2} />
-						) : (
-							<Sun className="w-5 h-5" strokeWidth={2} />
-						)}
-					</span>
-					<span className="text-[14px] font-sans">
-						{mounted && isLight ? "Dark mode" : "Light mode"}
-					</span>
-				</button>
-			</div>
+			{showGoLive && <GoLiveSheet onClose={() => setShowGoLive(false)} />}
 
 			{user && (
 				<div
-					className="mb-8 px-2 relative animate-rise"
-					style={{ animationDelay: "320ms" }}
+					className="mb-6 px-2 relative animate-rise"
+					style={{ animationDelay: "360ms" }}
 					ref={menuRef}
 				>
-					{isMenuOpen && (
-						<div className="absolute bottom-full left-0 w-[220px] bg-surface border border-hairline rounded-lg shadow-nav overflow-hidden mb-4 z-dropdown animate-rise">
+					{isMenuOpen === true && (
+						<div className="absolute bottom-full left-0 w-[230px] bg-surface border border-hairline rounded-lg shadow-nav overflow-hidden mb-3 z-dropdown animate-rise py-1">
+							<Link
+								href={user.username ? `/profile/${user.username}` : "/profile"}
+								onClick={() => setIsMenuOpen(false)}
+								className="w-full text-left px-3.5 py-2.5 hover:bg-raised text-sm text-primary font-sans font-medium flex items-center gap-2.5 transition-colors"
+							>
+								<UserIcon className="w-4 h-4" />
+								{t("nav.viewProfile")}
+							</Link>
+							<button
+								type="button"
+								onClick={() =>
+									withThemeTransition(() =>
+										setTheme(isLight ? "dark" : "light"),
+									)
+								}
+								className="w-full text-left px-3.5 py-2.5 hover:bg-raised text-sm text-primary font-sans font-medium flex items-center gap-2.5 transition-colors cursor-pointer"
+							>
+								{mounted && isLight ? (
+									<Moon className="w-4 h-4" />
+								) : (
+									<Sun className="w-4 h-4" />
+								)}
+								{mounted && isLight ? t("nav.darkMode") : t("nav.lightMode")}
+							</button>
+							<div className="my-1 border-t border-hairline" />
 							<button
 								type="button"
 								className="w-full text-left px-3.5 py-2.5 hover:bg-raised text-sm text-danger font-sans font-medium flex items-center gap-2.5 transition-colors cursor-pointer"
 								onClick={() => handleSignOut(signOut)}
 							>
 								<LogOut className="w-4 h-4" />
-								Log out @{user.username}
+								{t("nav.logout")} @{user.username}
 							</button>
 						</div>
 					)}
 
 					<button
 						type="button"
-						onClick={() => setIsMenuOpen(!isMenuOpen)}
-						className="w-full flex items-center gap-3 p-3 rounded-full hover:bg-surface transition-colors text-left group cursor-pointer"
+						onClick={() => setIsMenuOpen(isMenuOpen === true ? false : true)}
+						className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-transparent hover:border-hairline hover:bg-surface transition-colors text-left group cursor-pointer"
 					>
-						<div className="relative w-11 h-11 rounded-full overflow-hidden border-2 border-hairline group-hover:border-brand transition-colors">
+						<div className="relative w-10 h-10 rounded-pill overflow-hidden border border-hairline shrink-0">
 							<Image
 								src={user.avatar}
 								alt={user.username || "User"}
@@ -321,14 +343,14 @@ export function LeftSidebar() {
 							/>
 						</div>
 						<div className="flex flex-col flex-1 min-w-0">
-							<span className="font-bold text-sm text-primary truncate font-sans group-hover:text-gold transition-colors">
+							<span className="font-semibold text-sm text-primary truncate font-sans">
 								{user.firstName + " " + user.lastName || user.username}
 							</span>
-							<span className="text-subtle text-[13px] truncate font-sans">
+							<span className="text-subtle text-[12px] truncate font-sans">
 								@{user.username}
 							</span>
 						</div>
-						<MoreHorizontal className="w-5 h-5 text-subtle group-hover:text-primary transition-colors" />
+						<MoreHorizontal className="w-5 h-5 text-subtle group-hover:text-primary transition-colors shrink-0" />
 					</button>
 				</div>
 			)}

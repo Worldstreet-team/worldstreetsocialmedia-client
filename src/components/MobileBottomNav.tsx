@@ -1,14 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 // 03-icons: web uses the standardized lucide set for nav.
-import { Bell, Home, MessageCircle, Search } from "lucide-react";
+import {
+	Bell,
+	Home,
+	MessageCircle,
+	Plus,
+	Search,
+	SquarePlay,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import clsx from "clsx";
 import { useAtomValue } from "jotai";
 import { unreadMessagesCountAtom } from "@/store/messageCache";
 import { unreadNotificationsCountAtom } from "@/store/ui.atom";
+import { useT } from "@/i18n/client";
 
 const navIcon = (Icon: LucideIcon) => {
 	const NavIcon = ({ isActive }: { isActive?: boolean }) => (
@@ -24,11 +32,14 @@ const navIcon = (Icon: LucideIcon) => {
 
 const HomeIcon = navIcon(Home);
 const SearchIcon = navIcon(Search);
+const VideoIcon = navIcon(SquarePlay);
 const MessageIcon = navIcon(MessageCircle);
 const BellIcon = navIcon(Bell);
 
 export const MobileBottomNav = () => {
+	const t = useT();
 	const pathname = usePathname();
+	const router = useRouter();
 	const unreadMessages = useAtomValue(unreadMessagesCountAtom);
 	const unreadNotifications = useAtomValue(unreadNotificationsCountAtom);
 
@@ -36,33 +47,38 @@ export const MobileBottomNav = () => {
 		{
 			href: "/",
 			icon: HomeIcon,
-			label: "Home",
+			label: t("nav.home"),
 			active: pathname === "/",
 		},
 		{
 			href: "/explore",
 			icon: SearchIcon,
-			label: "Explore",
+			label: t("nav.explore"),
 			active: pathname.startsWith("/explore"),
+		},
+		{
+			href: "/live",
+			icon: VideoIcon,
+			label: t("nav.videos"),
+			active: pathname.startsWith("/live"),
 		},
 		{
 			href: "/notifications",
 			icon: BellIcon,
-			label: "Notifications",
+			label: t("nav.notifications"),
 			active: pathname === "/notifications",
 			badge: unreadNotifications,
 		},
 		{
 			href: "/messages",
 			icon: MessageIcon,
-			label: "Messages",
+			label: t("nav.messages"),
 			active: pathname.startsWith("/messages"),
 			badge: unreadMessages,
 		},
 	];
 
-	// Don't show on auth pages or if not logged in (handled by parent layout logic usually, but here checking path)
-	// Don't show on auth pages or if not logged in (handled by parent layout logic usually, but here checking path)
+	// Don't show on auth/onboarding flows.
 	if (
 		pathname.startsWith("/sign-in") ||
 		pathname.startsWith("/sign-up") ||
@@ -76,19 +92,39 @@ export const MobileBottomNav = () => {
 		return null;
 	}
 
-	// Hide on post detail screens
-	if (pathname.startsWith("/post/")) {
+	// Hide on post detail screens and the full-screen vertical surface.
+	if (pathname.startsWith("/post/") || pathname.startsWith("/live")) {
 		return null;
 	}
 
+	const openComposer = () => {
+		const composer = document.querySelector<HTMLTextAreaElement>(
+			"#post-composer-input",
+		);
+		if (composer) {
+			window.scrollTo({ top: 0, behavior: "smooth" });
+			composer.focus();
+		} else {
+			router.push("/");
+		}
+	};
+
 	return (
-		<div className="fixed bottom-0 left-0 right-0 z-sticky bg-page border-t border-hairline/70 md:hidden">
-			<div className="flex justify-between items-center h-16 px-2">
-				{navItems.map((item) => {
-					// Single active predicate — the same startsWith matcher drives
-						// icon weight, color, and label so sub-routes stay in sync.
-						const isActive = item.active;
-					return (
+		<>
+			{/* Compose FAB — the one gold CTA on mobile, floated above the bar. */}
+			<button
+				type="button"
+				onClick={openComposer}
+				aria-label={t("composer.post")}
+				className="md:hidden fixed right-4 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-sticky flex h-13 w-13 items-center justify-center rounded-pill bg-brand text-brand-on shadow-nav active:bg-brand-active transition-colors"
+				style={{ width: 52, height: 52 }}
+			>
+				<Plus className="w-6 h-6" strokeWidth={2.5} />
+			</button>
+
+			<div className="fixed bottom-0 left-0 right-0 z-sticky bg-page border-t border-hairline/70 md:hidden">
+				<div className="flex justify-between items-center h-16 px-1">
+					{navItems.map((item) => (
 						<Link
 							key={item.href}
 							href={item.href}
@@ -100,7 +136,7 @@ export const MobileBottomNav = () => {
 							)}
 						>
 							<span className="relative">
-								<item.icon isActive={isActive} />
+								<item.icon isActive={item.active} />
 								{(item.badge ?? 0) > 0 && (
 									<span className="absolute -top-1.5 -right-2 flex items-center justify-center min-w-4 h-4 px-0.5 text-[9px] font-bold text-brand-on bg-brand rounded-pill border border-page font-sans tabular-nums">
 										{(item.badge ?? 0) > 9 ? "9+" : item.badge}
@@ -116,11 +152,11 @@ export const MobileBottomNav = () => {
 								{item.label}
 							</span>
 						</Link>
-					);
-				})}
+					))}
+				</div>
+				{/* Safe area spacer for iPhone home indicator */}
+				<div className="h-[env(safe-area-inset-bottom)] bg-page" />
 			</div>
-			{/* Safe area spacer for iPhone home indicator */}
-			<div className="h-[env(safe-area-inset-bottom)] bg-page" />
-		</div>
+		</>
 	);
 };

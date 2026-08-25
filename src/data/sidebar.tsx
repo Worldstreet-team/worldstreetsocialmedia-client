@@ -1,8 +1,6 @@
 // 03-icons: web nav uses the standardized lucide set (the app's own filled
-// vectors are the mobile exception). house / search / bell / message-circle /
-// bookmark / more-horizontal are all in-set; `user` is a documented deviation
-// (the set has no profile glyph). Active state bolds the stroke slightly to
-// match the semibold label — never a different icon.
+// vectors are the mobile exception). Active state bolds the stroke slightly
+// to match the semibold label — never a different icon.
 import type { LucideIcon } from "lucide-react";
 import {
 	BarChart3,
@@ -18,7 +16,9 @@ import {
 
 import type { IconProps } from "@/app/types";
 
-interface SidebarItem {
+export interface SidebarItem {
+	/** i18n key — LeftSidebar renders t(labelKey); title stays as fallback. */
+	labelKey: string;
 	title: string;
 	link: string;
 	icon: React.FC<IconProps>;
@@ -38,61 +38,72 @@ const navIcon = (Icon: LucideIcon): React.FC<IconProps> => {
 	return NavIcon;
 };
 
-const sidebarList: SidebarItem[] = [
+/** The rail's primary destinations. */
+export const mainNav: SidebarItem[] = [
+	{ labelKey: "nav.home", title: "Home", link: "/", icon: navIcon(Home) },
 	{
-		title: "Home",
-		link: "/",
-		icon: navIcon(Home),
-	},
-	{
+		labelKey: "nav.explore",
 		title: "Explore",
 		link: "/explore",
 		icon: navIcon(Search),
 	},
 	{
-		title: "Notifications",
-		link: "/notifications",
-		icon: navIcon(Bell),
-	},
-	{
-		title: "Messages",
-		link: "/messages",
-		icon: navIcon(MessageCircle),
-	},
-	{
-		title: "Bookmarks",
-		link: "/bookmarks",
-		icon: navIcon(Bookmark),
-	},
-	{
+		labelKey: "nav.videos",
 		title: "Videos",
 		link: "/live",
 		icon: navIcon(SquarePlay),
 	},
 	{
-		title: "Studio",
-		link: "/studio",
-		icon: navIcon(BarChart3),
+		labelKey: "nav.notifications",
+		title: "Notifications",
+		link: "/notifications",
+		icon: navIcon(Bell),
 	},
 	{
+		labelKey: "nav.messages",
+		title: "Messages",
+		link: "/messages",
+		icon: navIcon(MessageCircle),
+	},
+	{
+		labelKey: "nav.bookmarks",
+		title: "Bookmarks",
+		link: "/bookmarks",
+		icon: navIcon(Bookmark),
+	},
+];
+
+/** The personal section. */
+export const youNav: SidebarItem[] = [
+	{
+		labelKey: "nav.profile",
 		title: "Profile",
 		link: "/profile",
 		icon: navIcon(User),
 	},
 	{
-		title: "More",
-		link: "#", // Handled programmatically
-		icon: navIcon(MoreHorizontal),
-		isDropdown: true,
-		// Cross-app link set per the DS TopNav spec (Dashboard · Academy ·
-		// Xstream · Shop — Social is this app). "xtreme" subdomain hosts Xstream.
-		dropdownItems: [
-			{ title: "Dashboard", link: "https://dashboard.worldstreetgold.com" },
-			{ title: "Academy", link: "https://academy.worldstreetgold.com" },
-			{ title: "Xstream", link: "https://xtreme.worldstreetgold.com" },
-			{ title: "Shop", link: "https://shop.worldstreetgold.com" },
-		],
+		labelKey: "nav.studio",
+		title: "Studio",
+		link: "/studio",
+		icon: navIcon(BarChart3),
 	},
 ];
 
-export { sidebarList };
+export const moreItem: SidebarItem = {
+	labelKey: "nav.more",
+	title: "More",
+	link: "#", // Handled programmatically
+	icon: navIcon(MoreHorizontal),
+	isDropdown: true,
+	// Cross-app link set per the DS TopNav spec (Dashboard · Academy ·
+	// Xstream · Shop — Social is this app). "xtreme" subdomain hosts Xstream.
+	dropdownItems: [
+		{ title: "Dashboard", link: "https://dashboard.worldstreetgold.com" },
+		{ title: "Academy", link: "https://academy.worldstreetgold.com" },
+		{ title: "Xstream", link: "https://xtreme.worldstreetgold.com" },
+		{ title: "Shop", link: "https://shop.worldstreetgold.com" },
+	],
+};
+
+/** Flat list — kept for consumers that render one run (mobile drawer). */
+export const sidebarList: SidebarItem[] = [...mainNav, ...youNav, moreItem];

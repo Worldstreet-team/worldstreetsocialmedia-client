@@ -55,5 +55,22 @@
   "promo.label": "Promovido",
   "promo.menu": "Promover publicação",
   "promo.created": "Promoção iniciada — orçamento de US$ 10, cobrado por interação.",
-  "promo.failed": "Não foi possível promover a publicação"
+  "promo.failed": "Não foi possível promover a publicação",
+  "nav.more": "Mais",
+  "nav.you": "Você",
+  "nav.viewProfile": "Ver perfil",
+  "nav.lightMode": "Modo claro",
+  "nav.darkMode": "Modo escuro",
+  "nav.logout": "Sair",
+  "rail.search": "Pesquisar no WorldStreet",
+  "rail.liveNow": "Ao vivo agora",
+  "rail.watch": "Assistir",
+  "rail.happening": "Acontecendo agora",
+  "rail.suggested": "Sugestões para você",
+  "rail.follow": "Seguir",
+  "rail.following": "Seguindo usuário",
+  "rail.followFailed": "Não foi possível seguir",
+  "rail.showMore": "Mostrar mais",
+  "rail.noTrends": "Nada em alta por enquanto",
+  "rail.noSuggestions": "Sem sugestões no momento"
 }

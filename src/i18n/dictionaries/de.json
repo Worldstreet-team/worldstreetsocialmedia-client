@@ -55,5 +55,22 @@
   "promo.label": "Gesponsert",
   "promo.menu": "Beitrag bewerben",
   "promo.created": "Promotion gestartet — 10 $ Budget, abgerechnet pro Interaktion.",
-  "promo.failed": "Beitrag konnte nicht beworben werden"
+  "promo.failed": "Beitrag konnte nicht beworben werden",
+  "nav.more": "Mehr",
+  "nav.you": "Du",
+  "nav.viewProfile": "Profil ansehen",
+  "nav.lightMode": "Heller Modus",
+  "nav.darkMode": "Dunkler Modus",
+  "nav.logout": "Abmelden",
+  "rail.search": "WorldStreet durchsuchen",
+  "rail.liveNow": "Jetzt live",
+  "rail.watch": "Ansehen",
+  "rail.happening": "Gerade aktuell",
+  "rail.suggested": "Vorschläge für dich",
+  "rail.follow": "Folgen",
+  "rail.following": "Du folgst jetzt",
+  "rail.followFailed": "Folgen fehlgeschlagen",
+  "rail.showMore": "Mehr anzeigen",
+  "rail.noTrends": "Noch nichts im Trend",
+  "rail.noSuggestions": "Gerade keine Vorschläge"
 }

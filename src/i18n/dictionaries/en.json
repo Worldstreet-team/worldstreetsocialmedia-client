@@ -55,5 +55,22 @@
   "promo.label": "Promoted",
   "promo.menu": "Promote post",
   "promo.created": "Promotion started — $10 budget, billed per engagement.",
-  "promo.failed": "Could not promote the post"
+  "promo.failed": "Could not promote the post",
+  "nav.more": "More",
+  "nav.you": "You",
+  "nav.viewProfile": "View profile",
+  "nav.lightMode": "Light mode",
+  "nav.darkMode": "Dark mode",
+  "nav.logout": "Log out",
+  "rail.search": "Search WorldStreet",
+  "rail.liveNow": "Live now",
+  "rail.watch": "Watch",
+  "rail.happening": "Happening now",
+  "rail.suggested": "Suggested for you",
+  "rail.follow": "Follow",
+  "rail.following": "Following user",
+  "rail.followFailed": "Failed to follow",
+  "rail.showMore": "Show more",
+  "rail.noTrends": "Nothing trending yet",
+  "rail.noSuggestions": "No suggestions right now"
 }
