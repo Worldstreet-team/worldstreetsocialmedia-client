@@ -17,20 +17,15 @@
  * applyColorMatrix below).
  */
 
-import type { Rotation } from "./document";
-import { type ColorMatrix, GRAIN_ALPHA, getGrainTile } from "./presets";
+import type { CropRect, Rotation } from "./document";
+import { type ColorOp, GRAIN_ALPHA, getGrainTile } from "./presets";
 
 /** Long-edge cap for the editor's working bitmap (~2560×1920 ≈ 5MP, safe). */
 const WORKING_MAX = 2560;
 /** Long-edge cap for exported files — the social-platform standard tier. */
 const EXPORT_MAX = 2048;
 
-export interface CropRect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+export type { CropRect };
 
 /**
  * Decode a File into an EXIF-oriented bitmap, downscaled to the working cap.
@@ -66,8 +61,12 @@ export function orientCanvas(
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas 2D unavailable");
   ctx.translate(canvas.width / 2, canvas.height / 2);
-  ctx.rotate((rotation * Math.PI) / 180);
+  // Flip BEFORE rotate in code order → the drawn result is flip∘rotate in
+  // screen space, i.e. the mirror axis the "Flip horizontally" button
+  // promises even after a 90°/270° rotation. (rotate-then-flip mirrors
+  // vertically at those angles.)
   if (flipH) ctx.scale(-1, 1);
+  ctx.rotate((rotation * Math.PI) / 180);
   ctx.drawImage(bitmap, -bitmap.width / 2, -bitmap.height / 2);
   return canvas;
 }
@@ -114,8 +113,8 @@ export function makeSquareThumb(source: HTMLCanvasElement): string {
 }
 
 export interface RenderEffects {
-  /** Composed adjustment/preset matrix (presets.ts); null = skip the pass. */
-  matrix?: ColorMatrix | null;
+  /** Ordered adjustment/preset ops (presets.ts); null = skip the pass. */
+  ops?: ColorOp[] | null;
   /** Film-grain overlay pass. */
   grain?: boolean;
   /** Exact output size (stories: 1080×1920). Defaults to the crop, capped. */
@@ -123,29 +122,33 @@ export interface RenderEffects {
 }
 
 /**
- * The per-pixel color-matrix pass. CPU on ImageData rather than ctx.filter
- * (disabled in stable Safari) — a one-shot ≤4MP loop at save time, well
- * under jank territory; swap for a WebGL quad if profiling ever says so.
+ * The per-pixel color pass. CPU on ImageData rather than ctx.filter
+ * (disabled in stable Safari). Each op is a separate pass over the buffer —
+ * the Uint8ClampedArray write-back between passes reproduces the [0,1]
+ * clamp CSS applies between filter primitives, keeping preview and export
+ * equivalent even when an intermediate overflows. A few passes over ≤4MP at
+ * save time is well under jank territory.
  */
-function applyColorMatrix(
+function applyColorOps(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
-  matrix: ColorMatrix,
+  ops: ColorOp[],
 ) {
   const image = ctx.getImageData(0, 0, w, h);
   const d = image.data;
-  const { m, o } = matrix;
-  const o0 = o[0] * 255;
-  const o1 = o[1] * 255;
-  const o2 = o[2] * 255;
-  for (let i = 0; i < d.length; i += 4) {
-    const r = d[i];
-    const g = d[i + 1];
-    const b = d[i + 2];
-    d[i] = Math.min(255, Math.max(0, m[0] * r + m[1] * g + m[2] * b + o0));
-    d[i + 1] = Math.min(255, Math.max(0, m[3] * r + m[4] * g + m[5] * b + o1));
-    d[i + 2] = Math.min(255, Math.max(0, m[6] * r + m[7] * g + m[8] * b + o2));
+  for (const { m, o } of ops) {
+    const o0 = o[0] * 255;
+    const o1 = o[1] * 255;
+    const o2 = o[2] * 255;
+    for (let i = 0; i < d.length; i += 4) {
+      const r = d[i];
+      const g = d[i + 1];
+      const b = d[i + 2];
+      d[i] = m[0] * r + m[1] * g + m[2] * b + o0;
+      d[i + 1] = m[3] * r + m[4] * g + m[5] * b + o1;
+      d[i + 2] = m[6] * r + m[7] * g + m[8] * b + o2;
+    }
   }
   ctx.putImageData(image, 0, 0);
 }
@@ -180,7 +183,7 @@ export async function exportCroppedFile(
   if (!ctx) throw new Error("Canvas 2D unavailable");
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(source, crop.x, crop.y, crop.width, crop.height, 0, 0, w, h);
-  if (effects.matrix) applyColorMatrix(ctx, w, h, effects.matrix);
+  if (effects.ops?.length) applyColorOps(ctx, w, h, effects.ops);
   if (effects.grain) applyGrain(ctx, w, h);
 
   let blob = await canvasToBlob(out, "image/webp", 0.82);

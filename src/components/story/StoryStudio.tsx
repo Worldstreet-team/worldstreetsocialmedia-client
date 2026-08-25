@@ -6,9 +6,11 @@ import { ImagePlus, Send, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import Cropper, { type Area } from "react-easy-crop";
 import "react-easy-crop/react-easy-crop.css";
+import GrainOverlay from "@/components/editor/GrainOverlay";
 import PresetCarousel from "@/components/editor/PresetCarousel";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import { useToast } from "@/components/ui/Toast/ToastContext";
+import { POST_CHAR_BUDGET } from "@/const";
 import type { PresetId } from "@/lib/editor/document";
 import { createAdjustments } from "@/lib/editor/document";
 import {
@@ -17,17 +19,12 @@ import {
   makeSquareThumb,
   orientCanvas,
 } from "@/lib/editor/export";
-import {
-  colorMatrixFor,
-  cssFilterFor,
-  getGrainTileUrl,
-  getPreset,
-} from "@/lib/editor/presets";
+import { colorOpsFor, cssFilterFor, getPreset } from "@/lib/editor/presets";
 import { createStoryAction } from "@/lib/story.actions";
 
 const STORY_W = 1080;
 const STORY_H = 1920;
-const CAPTION_MAX = 280;
+const CAPTION_MAX = POST_CHAR_BUDGET;
 
 interface StoryStudioProps {
   onClose: () => void;
@@ -50,7 +47,6 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
   const [file, setFile] = useState<File | null>(null);
   const [sourceUrl, setSourceUrl] = useState<string | null>(null);
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
-  const [grainUrl, setGrainUrl] = useState<string | null>(null);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [preset, setPreset] = useState<PresetId | null>(null);
@@ -66,10 +62,6 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
   const previewFilter = cssFilterFor(neutral, preset);
   const grainActive = !!getPreset(preset)?.grain;
 
-  useEffect(() => {
-    if (grainActive && !grainUrl) setGrainUrl(getGrainTileUrl());
-  }, [grainActive, grainUrl]);
-
   // Decode the picked file into an oriented working canvas (EXIF-corrected,
   // downscaled) and hand the cropper a blob URL of it.
   // biome-ignore lint/correctness/useExhaustiveDependencies: decode once per file; toast/onClose identity changes must not re-decode.
@@ -77,6 +69,9 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
     if (!file) return;
     let cancelled = false;
     let bitmap: ImageBitmap | null = null;
+    // The old photo's crop rect is meaningless for the new one — Share must
+    // stay disabled until the cropper re-reports in the new pixel space.
+    setCroppedPx(null);
     loadOrientedBitmap(file)
       .then(async (bmp) => {
         bitmap = bmp;
@@ -125,7 +120,20 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      // Escape while typing the caption drops focus instead of closing the
+      // studio and eating the draft.
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        target.blur();
+        return;
+      }
+      onClose();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -146,7 +154,7 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
         croppedPx,
         file.name,
         {
-          matrix: colorMatrixFor(neutral, preset),
+          ops: colorOpsFor(neutral, preset),
           grain: grainActive,
           target: { w: STORY_W, h: STORY_H },
         },
@@ -240,18 +248,7 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
               ) : (
                 <div className="absolute inset-0 skeleton" />
               )}
-              {grainActive && grainUrl && (
-                <div
-                  aria-hidden
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    backgroundImage: `url(${grainUrl})`,
-                    backgroundRepeat: "repeat",
-                    mixBlendMode: "overlay",
-                    opacity: 0.28,
-                  }}
-                />
-              )}
+              {grainActive && <GrainOverlay />}
               <button
                 type="button"
                 onClick={() => inputRef.current?.click()}
@@ -273,7 +270,7 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
               <span className="font-sans text-sm font-medium">
                 Add a photo to your story
               </span>
-              <span className="font-sans text-xs text-subtle">
+              <span className="font-sans text-xs text-muted">
                 It disappears after 24 hours
               </span>
             </button>
@@ -307,7 +304,7 @@ export default function StoryStudio({ onClose, onPosted }: StoryStudioProps) {
               <span
                 className={clsx(
                   "shrink-0 text-xs font-sans tabular-nums",
-                  caption.length >= CAPTION_MAX ? "text-danger" : "text-subtle",
+                  caption.length >= CAPTION_MAX ? "text-danger" : "text-muted",
                 )}
                 aria-live="polite"
               >

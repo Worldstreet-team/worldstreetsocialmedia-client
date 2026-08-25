@@ -41,6 +41,9 @@ export default function StoryViewer({
   const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(true);
+  // The 5s countdown must not run against a blank frame — it starts only
+  // once the media has actually loaded.
+  const [mediaReady, setMediaReady] = useState(false);
 
   const progressRef = useRef(0);
   const pressStartRef = useRef(0);
@@ -81,6 +84,7 @@ export default function StoryViewer({
   useEffect(() => {
     setProgress(0);
     progressRef.current = 0;
+    setMediaReady(false);
   }, [authorIdx, storyIdx]);
 
   // Record the view — idempotent server-side; the rail updates its rings.
@@ -94,7 +98,7 @@ export default function StoryViewer({
 
   // Image auto-advance timer (videos drive progress via timeupdate/ended).
   useEffect(() => {
-    if (!story || story.media.type !== "image" || paused) return;
+    if (!story || story.media.type !== "image" || paused || !mediaReady) return;
     let raf = 0;
     const started = performance.now() - progressRef.current * IMAGE_DURATION_MS;
     const tick = (now: number) => {
@@ -109,7 +113,7 @@ export default function StoryViewer({
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [story, paused, goNext]);
+  }, [story, paused, mediaReady, goNext]);
 
   // Hold-to-pause also pauses video playback.
   useEffect(() => {
@@ -206,14 +210,20 @@ export default function StoryViewer({
                 }
               }}
               onEnded={goNext}
+              // A 404/undecodable video fires neither timeupdate nor ended —
+              // without this the viewer freezes at 0% forever.
+              onError={goNext}
             />
           ) : (
             // biome-ignore lint/performance/noImgElement: R2 story media renders full-bleed; next/image adds nothing here.
             <img
+              key={story.id}
               src={story.media.url}
               alt={story.caption || `Story by ${authorName}`}
               className="absolute inset-0 h-full w-full object-cover"
               draggable={false}
+              onLoad={() => setMediaReady(true)}
+              onError={goNext}
             />
           )}
 

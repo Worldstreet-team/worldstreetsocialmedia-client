@@ -75,9 +75,37 @@ export default function EditProfileModal({
 		type: "avatar" | "banner",
 	) => {
 		const file = e.target.files?.[0];
-		if (file) setCropTarget({ kind: type, file });
+		if (file) {
+			// Animated GIFs bypass the crop sheet — canvas re-encode would
+			// flatten them to one frame (the gateway stores files as-is).
+			if (file.type === "image/gif") {
+				applyPickedFile(type, file);
+			} else {
+				setCropTarget({ kind: type, file });
+			}
+		}
 		// Reset so re-picking the same file re-fires onChange.
 		e.target.value = "";
+	};
+
+	// Direct-set path: GIF picks and decode-failure fallbacks (e.g. HEIC on
+	// Chrome) keep the old upload-the-original behavior instead of
+	// dead-ending the pick.
+	const applyPickedFile = (kind: "avatar" | "banner", file: File) => {
+		const previewUrl = URL.createObjectURL(file);
+		if (kind === "avatar") {
+			if (avatarPreview.startsWith("blob:")) {
+				URL.revokeObjectURL(avatarPreview);
+			}
+			setAvatarFile(file);
+			setAvatarPreview(previewUrl);
+		} else {
+			if (bannerPreview.startsWith("blob:")) {
+				URL.revokeObjectURL(bannerPreview);
+			}
+			setBannerFile(file);
+			setBannerPreview(previewUrl);
+		}
 	};
 
 	const handleCropSave = (file: File) => {
@@ -353,6 +381,9 @@ export default function EditProfileModal({
 					}
 					onClose={() => setCropTarget(null)}
 					onSave={({ file }) => handleCropSave(file)}
+					onDecodeError={(file) => {
+						if (cropTarget) applyPickedFile(cropTarget.kind, file);
+					}}
 				/>
 			)}
 		</ConfirmModalPortal>

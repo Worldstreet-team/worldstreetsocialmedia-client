@@ -1,10 +1,11 @@
 "use client";
 
 import clsx from "clsx";
-import { useEffect, useState } from "react";
+import { memo } from "react";
+import GrainOverlay from "@/components/editor/GrainOverlay";
 import type { PresetId } from "@/lib/editor/document";
 import { createAdjustments } from "@/lib/editor/document";
-import { cssFilterFor, getGrainTileUrl, PRESETS } from "@/lib/editor/presets";
+import { cssFilterFor, PRESETS } from "@/lib/editor/presets";
 
 interface PresetCarouselProps {
   /** Small snapshot of the user's actual image (the IG/TikTok pattern). */
@@ -16,20 +17,10 @@ interface PresetCarouselProps {
 /**
  * Horizontal filter strip — every thumb is the user's own image with the
  * preset's CSS filter applied, so the choice is made on real pixels.
- * Tapping the active preset clears it.
+ * Tapping the active preset clears it. Memoized: parents re-render at
+ * keystroke/slider rate and the seven thumbs never change with them.
  */
-export default function PresetCarousel({
-  thumbUrl,
-  active,
-  onSelect,
-}: PresetCarouselProps) {
-  // Grain's thumb gets the same noise tile the export uses; generated on the
-  // client only (canvas), so resolve it post-mount.
-  const [grainUrl, setGrainUrl] = useState<string | null>(null);
-  useEffect(() => {
-    setGrainUrl(getGrainTileUrl());
-  }, []);
-
+function PresetCarousel({ thumbUrl, active, onSelect }: PresetCarouselProps) {
   const neutral = createAdjustments();
 
   const renderThumb = (
@@ -67,18 +58,7 @@ export default function PresetCarousel({
           ) : (
             <span className="block h-full w-full skeleton" />
           )}
-          {grain && grainUrl && (
-            <span
-              aria-hidden
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                backgroundImage: `url(${grainUrl})`,
-                backgroundRepeat: "repeat",
-                mixBlendMode: "overlay",
-                opacity: 0.28,
-              }}
-            />
-          )}
+          {grain && <GrainOverlay />}
         </span>
         <span
           className={clsx(
@@ -110,3 +90,5 @@ export default function PresetCarousel({
     </div>
   );
 }
+
+export default memo(PresetCarousel);

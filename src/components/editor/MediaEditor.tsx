@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Cropper, { type Area } from "react-easy-crop";
 import "react-easy-crop/react-easy-crop.css";
 import clsx from "clsx";
@@ -13,6 +13,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
+import GrainOverlay from "@/components/editor/GrainOverlay";
 import PresetCarousel from "@/components/editor/PresetCarousel";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import { useToast } from "@/components/ui/Toast/ToastContext";
@@ -33,12 +34,7 @@ import {
   makeSquareThumb,
   orientCanvas,
 } from "@/lib/editor/export";
-import {
-  colorMatrixFor,
-  cssFilterFor,
-  getGrainTileUrl,
-  getPreset,
-} from "@/lib/editor/presets";
+import { colorOpsFor, cssFilterFor, getPreset } from "@/lib/editor/presets";
 
 type EditorTab = "crop" | "adjust" | "alt";
 
@@ -66,6 +62,12 @@ interface MediaEditorProps {
   title?: string;
   onClose: () => void;
   onSave: (result: MediaEditResult) => void;
+  /**
+   * Called (before onClose) when the file can't be decoded — e.g. HEIC on
+   * Chrome, or a corrupt file. Lets callers fall back to using the original
+   * file untouched instead of losing the pick entirely.
+   */
+  onDecodeError?: (file: File) => void;
 }
 
 /**
@@ -85,6 +87,7 @@ export default function MediaEditor({
   title = "Edit media",
   onClose,
   onSave,
+  onDecodeError,
 }: MediaEditorProps) {
   const { toast } = useToast();
   // Merge over defaults so docs saved before newer fields existed stay valid.
@@ -94,8 +97,12 @@ export default function MediaEditor({
   }));
   const [tab, setTab] = useState<EditorTab>("crop");
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
-  const [grainUrl, setGrainUrl] = useState<string | null>(null);
   const [sourceUrl, setSourceUrl] = useState<string | null>(null);
+  // Restores the saved crop in oriented-source pixels (container-size-proof,
+  // unlike position/zoom). Cleared on rotate/flip — those reset the crop.
+  const [restoredCrop, setRestoredCrop] = useState<Area | undefined>(
+    initialDoc?.cropPixels ?? undefined,
+  );
   const [sourceSize, setSourceSize] = useState<{ w: number; h: number } | null>(
     null,
   );
@@ -106,6 +113,15 @@ export default function MediaEditor({
   const bitmapRef = useRef<ImageBitmap | null>(null);
   const orientedRef = useRef<HTMLCanvasElement | null>(null);
   const sourceUrlRef = useRef<string | null>(null);
+  // Generation token: rapid rotates and unmount both bump it, so a stale
+  // toBlob resolution can neither leak a fresh object URL nor land an
+  // out-of-order orientation.
+  const buildGenRef = useRef(0);
+  // Render-time mirror of doc, for async code that must read current state
+  // without abusing a setDoc updater (updaters must stay pure — StrictMode
+  // runs them twice).
+  const docRef = useRef(doc);
+  docRef.current = doc;
 
   // Bake rotation/flip into an oriented canvas and hand the cropper a fresh
   // object URL of it — cropper coordinates then live in oriented space, so
@@ -113,12 +129,13 @@ export default function MediaEditor({
   const rebuild = useCallback(async (rotation: Rotation, flipH: boolean) => {
     const bitmap = bitmapRef.current;
     if (!bitmap) return;
+    const gen = ++buildGenRef.current;
     const canvas = orientCanvas(bitmap, rotation, flipH);
     orientedRef.current = canvas;
     const blob = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob(resolve, "image/png"),
     );
-    if (!blob) return;
+    if (!blob || gen !== buildGenRef.current) return;
     if (sourceUrlRef.current) URL.revokeObjectURL(sourceUrlRef.current);
     const url = URL.createObjectURL(blob);
     sourceUrlRef.current = url;
@@ -138,17 +155,21 @@ export default function MediaEditor({
         }
         bitmapRef.current = bitmap;
         // Restore the stored orientation on open (fresh docs are 0/false).
-        setDoc((d) => {
-          void rebuild(d.rotation, d.flipH);
-          return d;
-        });
+        void rebuild(docRef.current.rotation, docRef.current.flipH);
       })
       .catch(() => {
-        toast("Couldn't open this image", { type: "error" });
+        toast(
+          onDecodeError
+            ? "Couldn't open this image for editing — using the original"
+            : "Couldn't open this image",
+          { type: "error" },
+        );
+        onDecodeError?.(file);
         onClose();
       });
     return () => {
       cancelled = true;
+      buildGenRef.current++;
       bitmapRef.current?.close();
       bitmapRef.current = null;
       if (sourceUrlRef.current) URL.revokeObjectURL(sourceUrlRef.current);
@@ -167,7 +188,19 @@ export default function MediaEditor({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      // Escape while typing (alt text) should drop focus, not eat the edits.
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        target.blur();
+        return;
+      }
+      onClose();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -176,12 +209,18 @@ export default function MediaEditor({
   const applyRotate = () => {
     const rotation = ((doc.rotation + 90) % 360) as Rotation;
     setDoc((d) => ({ ...d, rotation, position: { x: 0, y: 0 }, zoom: 1 }));
+    // The old crop rect lives in the previous orientation's pixel space —
+    // clearing it disables Save until the cropper re-reports for the new one.
+    setCroppedPx(null);
+    setRestoredCrop(undefined);
     void rebuild(rotation, doc.flipH);
   };
 
   const applyFlip = () => {
     const flipH = !doc.flipH;
     setDoc((d) => ({ ...d, flipH, position: { x: 0, y: 0 }, zoom: 1 }));
+    setCroppedPx(null);
+    setRestoredCrop(undefined);
     void rebuild(doc.rotation, flipH);
   };
 
@@ -198,16 +237,26 @@ export default function MediaEditor({
       : ASPECT_RATIOS[doc.aspectId]);
 
   const readout = croppedPx ? finalDimensions(croppedPx) : null;
-  const previewFilter = cssFilterFor(doc.adjustments, doc.preset);
+  // Memoized: pan/zoom re-renders at pointer rate must not re-derive filter
+  // strings or hand Cropper a fresh style object every frame.
+  const previewFilter = useMemo(
+    () => cssFilterFor(doc.adjustments, doc.preset),
+    [doc.adjustments, doc.preset],
+  );
+  const cropperStyle = useMemo(
+    () =>
+      previewFilter ? { mediaStyle: { filter: previewFilter } } : undefined,
+    [previewFilter],
+  );
   const grainActive = !!getPreset(doc.preset)?.grain;
   const adjustmentsDirty =
     doc.preset !== null ||
     ADJUSTMENT_SLIDERS.some(({ key }) => doc.adjustments[key] !== 0);
 
-  // The grain preview tile is canvas-generated — client only, so post-mount.
-  useEffect(() => {
-    if (grainActive && !grainUrl) setGrainUrl(getGrainTileUrl());
-  }, [grainActive, grainUrl]);
+  const selectPreset = useCallback(
+    (preset: EditDocument["preset"]) => setDoc((d) => ({ ...d, preset })),
+    [],
+  );
 
   const tabs: { id: EditorTab; label: string }[] = [
     { id: "crop", label: "Crop" },
@@ -225,11 +274,13 @@ export default function MediaEditor({
         croppedPx,
         file.name,
         {
-          matrix: colorMatrixFor(doc.adjustments, doc.preset),
+          ops: colorOpsFor(doc.adjustments, doc.preset),
           grain: grainActive,
         },
       );
-      onSave({ file: outFile, doc });
+      // Persist the pixel-space crop — it's the only representation that
+      // restores correctly when the editor reopens at a different size.
+      onSave({ file: outFile, doc: { ...doc, cropPixels: croppedPx } });
     } catch {
       toast("Couldn't save the edit", { type: "error" });
       setExporting(false);
@@ -297,11 +348,8 @@ export default function MediaEditor({
                 aspect={aspect}
                 cropShape={round ? "round" : "rect"}
                 showGrid={interacting}
-                style={
-                  previewFilter
-                    ? { mediaStyle: { filter: previewFilter } }
-                    : undefined
-                }
+                initialCroppedAreaPixels={restoredCrop}
+                style={cropperStyle}
                 onCropChange={(position) => setDoc((d) => ({ ...d, position }))}
                 onZoomChange={(zoom) => setDoc((d) => ({ ...d, zoom }))}
                 onCropComplete={(_area, areaPixels) => setCroppedPx(areaPixels)}
@@ -311,18 +359,7 @@ export default function MediaEditor({
             ) : (
               <div className="absolute inset-0 skeleton" />
             )}
-            {grainActive && grainUrl && (
-              <div
-                aria-hidden
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  backgroundImage: `url(${grainUrl})`,
-                  backgroundRepeat: "repeat",
-                  mixBlendMode: "overlay",
-                  opacity: 0.28,
-                }}
-              />
-            )}
+            {grainActive && <GrainOverlay />}
           </div>
 
           {/* Tab bar — gold underline slides via layoutId (FeedTabs motion). */}
@@ -386,7 +423,7 @@ export default function MediaEditor({
                       aria-label={label}
                       className="ws-slider flex-1"
                     />
-                    <span className="w-9 shrink-0 text-right text-xs text-subtle font-sans tabular-nums">
+                    <span className="w-9 shrink-0 text-right text-xs text-muted font-sans tabular-nums">
                       {doc.adjustments[key]}
                     </span>
                   </div>
@@ -395,7 +432,7 @@ export default function MediaEditor({
               <PresetCarousel
                 thumbUrl={thumbUrl}
                 active={doc.preset}
-                onSelect={(preset) => setDoc((d) => ({ ...d, preset }))}
+                onSelect={selectPreset}
               />
               {adjustmentsDirty && (
                 <button
@@ -442,7 +479,7 @@ export default function MediaEditor({
           >
             <div className="flex items-center justify-between gap-2">
               {lockAspect ? (
-                <span className="text-[11px] uppercase tracking-[1px] font-medium text-subtle font-sans">
+                <span className="text-[11px] uppercase tracking-[1px] font-medium text-muted font-sans">
                   {round ? "Profile photo" : "Banner"}
                 </span>
               ) : (
@@ -507,7 +544,7 @@ export default function MediaEditor({
               />
               <ZoomIn className="w-4 h-4 text-subtle shrink-0" aria-hidden />
               <span
-                className="text-xs text-subtle font-sans tabular-nums w-[84px] text-right shrink-0"
+                className="text-xs text-muted font-sans tabular-nums w-[84px] text-right shrink-0"
                 aria-live="polite"
               >
                 {readout ? `${readout.w} × ${readout.h}` : "—"}

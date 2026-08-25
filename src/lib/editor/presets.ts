@@ -193,36 +193,19 @@ const hueRotateOp = (deg: number): ColorOp => {
   };
 };
 
-/** second ∘ first — apply `first`, then `second`. */
-const composeOps = (second: ColorOp, first: ColorOp): ColorOp => {
-  const m = new Array<number>(9);
-  for (let r = 0; r < 3; r++) {
-    for (let c = 0; c < 3; c++) {
-      m[r * 3 + c] =
-        second.m[r * 3] * first.m[c] +
-        second.m[r * 3 + 1] * first.m[3 + c] +
-        second.m[r * 3 + 2] * first.m[6 + c];
-    }
-    // o' = M2·o1 + o2
-  }
-  const o: [number, number, number] = [0, 1, 2].map(
-    (r) =>
-      second.m[r * 3] * first.o[0] +
-      second.m[r * 3 + 1] * first.o[1] +
-      second.m[r * 3 + 2] * first.o[2] +
-      second.o[r],
-  ) as [number, number, number];
-  return { m, o };
-};
-
 /**
- * The full color matrix for export, or null when everything is identity
- * (lets the export skip the per-pixel pass entirely).
+ * The ordered color ops for export, or null when everything is identity.
+ * Deliberately NOT composed into one matrix: CSS clamps each filter
+ * primitive's output to [0,1] before the next primitive runs, so the export
+ * must apply the ops as sequential passes with the same clamping (the 8-bit
+ * write-back between passes provides it) — a single composed matrix
+ * diverges from the live preview whenever an intermediate overflows, e.g.
+ * brightness up followed by contrast down.
  */
-export function colorMatrixFor(
+export function colorOpsFor(
   adjustments: Adjustments,
   presetId: PresetId | null,
-): ColorOp | null {
+): ColorOp[] | null {
   const a = effectiveAdjustments(adjustments, presetId);
   const grayscale = getPreset(presetId)?.grayscale ?? 0;
   const ops: ColorOp[] = [];
@@ -237,11 +220,10 @@ export function colorMatrixFor(
     ops.push(sepiaOp(warmthSepiaAmount(a.warmth)));
     ops.push(hueRotateOp(180));
   }
-  if (ops.length === 0) return null;
-  return ops.reduce((acc, op) => composeOps(op, acc));
+  return ops.length > 0 ? ops : null;
 }
 
-export type ColorMatrix = ColorOp;
+export type { ColorOp };
 
 /* ── Grain ────────────────────────────────────────────────────────────────
    A tileable noise square, drawn once and reused: as a repeated background
@@ -273,6 +255,11 @@ export function getGrainTile(): HTMLCanvasElement {
   return canvas;
 }
 
+let grainUrl: string | null = null;
+
 export function getGrainTileUrl(): string {
-  return getGrainTile().toDataURL("image/png");
+  // Cached: a fresh toDataURL per call would re-encode the tile and hand
+  // each overlay a distinct string, defeating the browser's image cache.
+  grainUrl ??= getGrainTile().toDataURL("image/png");
+  return grainUrl;
 }

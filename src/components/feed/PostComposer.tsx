@@ -19,6 +19,7 @@ import { useTheme } from "next-themes";
 import clsx from "clsx";
 import MediaEditor from "@/components/editor/MediaEditor";
 import type { EditDocument } from "@/lib/editor/document";
+import { POST_CHAR_BUDGET } from "@/const";
 
 interface PostComposerProps {
 	onPostSuccess?: (post?: any) => void;
@@ -36,7 +37,7 @@ interface MediaItem {
 }
 
 // Same limit PostCard truncates at.
-const MAX_LENGTH = 280;
+const MAX_LENGTH = POST_CHAR_BUDGET;
 
 /**
  * Character-budget ring: gold while comfortable, status/warning inside the
@@ -303,6 +304,17 @@ export const PostComposer = ({
 				}
 			});
 
+			// Alt text from the editor's Alt tab. The gateway ignores unknown
+			// body fields today (post images are bare URL strings), so this is
+			// the forward-compatible seam: when the post model grows media
+			// metadata, the transport is already here.
+			if (mediaItems.some((item) => item.editDoc?.alt)) {
+				formData.append(
+					"imageAlts",
+					JSON.stringify(mediaItems.map((item) => item.editDoc?.alt ?? "")),
+				);
+			}
+
 			if (linkPreview && mediaItems.length === 0) {
 				formData.append("linkPreview", JSON.stringify(linkPreview));
 			}
@@ -311,7 +323,13 @@ export const PostComposer = ({
 
 			if (result.success) {
 				setContent("");
-				mediaItems.forEach((item) => URL.revokeObjectURL(item.url));
+				// Revoke AFTER React commits the cleared state — a synchronous
+				// revoke leaves the still-mounted preview tiles pointing at
+				// dead blob: URLs for a frame (broken-image flash).
+				const postedUrls = mediaItems.map((item) => item.url);
+				setTimeout(() => {
+					postedUrls.forEach((url) => URL.revokeObjectURL(url));
+				}, 1000);
 				setMediaItems([]);
 				setLinkPreview(null);
 				lastCheckedUrl.current = null;
@@ -382,14 +400,18 @@ export const PostComposer = ({
 										className="object-cover"
 									/>
 									<div className="absolute top-1.5 right-1.5 flex gap-1.5">
-										<button
-											type="button"
-											onClick={() => setEditingIndex(index)}
-											aria-label="Edit image"
-											className="flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors"
-										>
-											<Pencil className="w-4 h-4" />
-										</button>
+										{/* Gate on the real MIME type, not the (hardcoded)
+										    item.type label — the editor can't decode video. */}
+										{item.file.type.startsWith("image/") && (
+											<button
+												type="button"
+												onClick={() => setEditingIndex(index)}
+												aria-label="Edit image"
+												className="flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors"
+											>
+												<Pencil className="w-4 h-4" />
+											</button>
+										)}
 										<button
 											type="button"
 											onClick={() => removeMedia(index)}
@@ -567,13 +589,21 @@ export const PostComposer = ({
 					doc={mediaItems[editingIndex].editDoc}
 					onClose={() => setEditingIndex(null)}
 					onSave={({ file, doc }) => {
+						// URL side effects stay OUTSIDE the updater — StrictMode
+						// double-invokes updaters, which would leak a blob URL
+						// per save. The editor is modal, so the item can't have
+						// moved since it opened.
+						const old = mediaItems[editingIndex];
+						if (!old) {
+							setEditingIndex(null);
+							return;
+						}
+						URL.revokeObjectURL(old.url);
+						const url = URL.createObjectURL(file);
 						setMediaItems((prev) => {
 							const next = [...prev];
-							const old = next[editingIndex];
-							if (!old) return prev;
-							URL.revokeObjectURL(old.url);
 							next[editingIndex] = {
-								url: URL.createObjectURL(file),
+								url,
 								file,
 								type: "image",
 								originalFile: old.originalFile ?? old.file,

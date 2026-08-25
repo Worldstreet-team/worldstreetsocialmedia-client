@@ -243,8 +243,9 @@ html {
     background: var(--ws-bg-sunken);
 }
 .ws-cropper .reactEasyCrop_CropArea {
-    /* The mask outside the frame is drawn from `color` via box-shadow. */
-    color: rgb(0 0 0 / 0.55);
+    /* The mask outside the frame is drawn from `color` via box-shadow;
+       the scrim token keeps it retheming with data-ws-theme. */
+    color: var(--ws-overlay-scrim);
     border: 1.5px solid var(--ws-brand-primary);
 }
 .ws-cropper .reactEasyCrop_CropAreaGrid::before,

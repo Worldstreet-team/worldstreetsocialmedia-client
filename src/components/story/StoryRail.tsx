@@ -110,15 +110,19 @@ export default function StoryRail() {
             Your story
           </span>
         </button>
+        {/* 40×40 hit target (DS floor) with the 20px badge visual centered in
+            it — the invisible area overlaps the avatar's corner, and stacking
+            above it means those taps open the Studio, which is the likelier
+            intent near the + anyway. */}
         <button
           type="button"
           onClick={() => setStudioOpen(true)}
           aria-label="Create a story"
-          // 20px glyph on a bigger invisible hit area would collide with the
-          // avatar button; the badge itself is the affordance here.
-          className="absolute bottom-6 right-0.5 flex h-5 w-5 items-center justify-center rounded-pill bg-brand text-brand-on border-2 border-page cursor-pointer hover:bg-brand-active transition-colors"
+          className="absolute bottom-3.5 -right-2 z-10 flex h-10 w-10 items-center justify-center cursor-pointer group/badge"
         >
-          <Plus className="w-3 h-3" strokeWidth={3} />
+          <span className="flex h-5 w-5 items-center justify-center rounded-pill bg-brand text-brand-on border-2 border-page group-hover/badge:bg-brand-active transition-colors">
+            <Plus className="w-3 h-3" strokeWidth={3} />
+          </span>
         </button>
       </div>
 

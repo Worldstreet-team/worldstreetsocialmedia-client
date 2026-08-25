@@ -11,6 +11,14 @@
 
 export type Rotation = 0 | 90 | 180 | 270;
 
+/** Pixel rect in the oriented working-canvas space. */
+export interface CropRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export type AspectId = "original" | "1:1" | "4:5" | "16:9";
 
 /** Numeric ratios for the preset chips; "original" resolves at runtime. */
@@ -50,6 +58,13 @@ export interface EditDocument {
   /** Cropper pan offset (react-easy-crop's `crop` prop), oriented space. */
   position: { x: number; y: number };
   zoom: number;
+  /**
+   * The saved crop in oriented-source pixels — the value that survives a
+   * round-trip. position/zoom are container-relative, so restoring from
+   * them alone drifts when the editor reopens at a different size; this
+   * feeds react-easy-crop's initialCroppedAreaPixels instead.
+   */
+  cropPixels: CropRect | null;
   adjustments: Adjustments;
   /** Named look layered under the user's sliders; null = no preset. */
   preset: PresetId | null;
@@ -73,6 +88,7 @@ export const createEditDocument = (): EditDocument => ({
   aspectId: "original",
   position: { x: 0, y: 0 },
   zoom: 1,
+  cropPixels: null,
   adjustments: createAdjustments(),
   preset: null,
   alt: "",
