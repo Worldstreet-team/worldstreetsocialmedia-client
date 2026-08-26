@@ -479,10 +479,41 @@ class CallManager {
 		this.finish("failed");
 	}
 
+	/**
+	 * Map an end reason onto the row that belongs in the thread. Only the
+	 * caller logs — otherwise both sides would write the same call twice.
+	 */
+	private logIfCaller(reason: CallEndReason) {
+		const { isIncoming, conversationId, isVideo, startedAt } = this.state;
+		if (isIncoming || !conversationId) return;
+
+		let outcome: string | null = null;
+		if (reason === "ended") outcome = startedAt ? "answered" : "cancelled";
+		else if (reason === "declined") outcome = "declined";
+		else if (reason === "unanswered" || reason === "busy") outcome = "missed";
+		else if (reason === "cancelled") outcome = "cancelled";
+		// "failed" is our problem, not a call the other person can see.
+		if (!outcome) return;
+
+		const durationSec = startedAt ? (Date.now() - startedAt) / 1000 : 0;
+		this.api
+			?.("/api/calls/log", {
+				conversationId,
+				outcome,
+				video: isVideo,
+				durationSec,
+			})
+			.catch(() => {
+				/* the call still ended; a missing row isn't worth a toast */
+			});
+	}
+
 	/** Close the media plane, show the outcome briefly, then go idle. */
 	private finish(reason: CallEndReason) {
 		if (this.state.status === "idle") return;
 		this.clearTimers();
+		// Before the state is cleared — duration lives on `startedAt`.
+		this.logIfCaller(reason);
 		this.disconnectRoom();
 		this.set({ status: "ended", endReason: reason, startedAt: null });
 		this.teardownTimer = setTimeout(() => this.reset(), TEARDOWN_MS);
