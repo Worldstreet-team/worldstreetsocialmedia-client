@@ -25,7 +25,7 @@ npm is what's currently installed — pick one and stick with it.
 - **Clerk** (`@clerk/nextjs`) — auth, satellite of the `worldstreetgold.com` hub
 - **Jotai** — client state (`src/store/*.atom.ts`)
 - **Ably** — realtime messaging
-- **Cloudflare Realtime (Calls)** — WebRTC audio/video
+- **LiveKit** (`livekit-client`) — WebRTC audio/video for DM calls
 - **Tailwind v4** (PostCSS plugin, no `tailwind.config`) + `next-themes` dark mode
 - **Biome** — lint + format (tabs, not Prettier/ESLint)
 - Import alias: `@/*` → `./src/*`
@@ -39,8 +39,8 @@ src/
   components/     feed/ messages/ profile/ layout/ ui/ skeletons/ providers/
   lib/            *.actions.ts — all backend I/O ("use server" server actions)
   store/          Jotai atoms + cache modules
-  providers/      CallProvider (WebRTC)
-  hooks/          useCloudflareCalls
+  providers/      CallProvider (calls: signalling + LiveKit media)
+  hooks/          useCallTones, useChatSignals
   const.ts        BACKEND_URL, DEFAULT_AVATAR
   proxy.ts        middleware (see below)
 ```
@@ -362,6 +362,62 @@ Benchmarked against X/Threads-class clients; these are now in place:
   was never installed) are gone from the sidebar More panel and badges —
   replaced with `animate-rise`. Don't reintroduce that plugin's classes.
 
+## Calls and chat realtime (rebuilt 2026-08-26)
+
+**Calls were theatre before this.** `call-manager.sendSignal()` had an empty
+body, so an invite never left the browser; `acceptCall()` faked a connection
+with a 1.5s `setTimeout` and flipped the UI to "connected" with no media
+anywhere. `useCloudflareCalls` was the same story a layer down (`peerConnection`
+declared and never assigned, `handleSignal` empty). Both are deleted. Don't
+resurrect them from git history.
+
+The media plane is **LiveKit**, not Cloudflare Calls, because it owns
+offer/answer, ICE and renegotiation, which is exactly the part that was never
+written. Same LiveKit project as Xstream; the gateway needs `LIVEKIT_URL`,
+`LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET`. Rooms are namespaced `dm-<convId>`
+so calls and broadcasts can't collide.
+
+Two planes, and it matters which is which:
+
+| Plane | Carrier | What rides it |
+| --- | --- | --- |
+| Signalling | Ably, via the gateway | ring / accept / decline / end / busy / cancel |
+| Media | LiveKit room per conversation | the actual audio and video |
+
+- `lib/call-manager.ts` is framework-free: CallProvider injects auth and
+  transport. Mic is enabled **before** the camera so a voice call survives a
+  busy or refused camera. On accept it syncs from the room's *existing*
+  participants, not just the connect event, because the caller is already in
+  the room and the event never fires for them. 45s ring timeout.
+- `CallSurface.tsx` is one component with two states, maximized and minimized.
+  Minimizing repaints the tracks; it never tears down media.
+- **Remote audio must be attached to a real `<audio>` element.** LiveKit does
+  not play it for you and the call is silent otherwise.
+- `useCallTones` synthesizes ring/ringback with Web Audio rather than shipping
+  audio files, so nothing has to load while a call is being negotiated.
+- Finished calls are logged into the thread as `type: "call"` messages via
+  `POST /api/calls/log`, by the **caller only** (both sides logging would
+  double every row).
+
+**Ably capabilities are the load-bearing detail.** The token used to grant
+`user:*`, `post:*`, feed, live and spaces, but *not* `calls:*` — so a client
+subscribing to its own call channel was rejected and calls could never have
+rung even with working media. It now grants `calls:<profileId>` (subscribe
+only; the gateway publishes after checking conversation membership) and
+`conversation:*` (subscribe/publish/presence).
+
+Typing, presence and delivery receipts (`hooks/useChatSignals.ts`) are
+**client-to-client** on `conversation:<id>` on purpose: a round trip through
+the gateway would make a typing indicator slower than the typing it reports,
+and there is nothing to persist. Real messages still fan out server-side on
+`user:*`, so a forged publish there can at worst show a spurious typing
+bubble, never a fake message. Read is the one receipt that is persisted
+(`POST /api/messages/:id/read` — which the client had been calling all along
+against an endpoint that didn't exist, so every mark-read 404'd).
+
+Voice notes and media attachments were **not** broken — `POST
+/api/messages/upload` → R2 works; verified end to end.
+
 ## Local dev = real Clerk, real gateway
 
 There is no mock/fixture mode. The former `MOCK_AUTH` machinery (Turbopack
@@ -379,7 +435,7 @@ ByteString` when `proxy.ts` sets it.
 **Backend URL is unified through `src/const.ts`.** `BACKEND_URL` is
 `process.env.NEXT_PUBLIC_API_URL ?? <Render gateway>`, and every API module
 resolves through it (the actions import `BACKEND_URL`; conversation actions,
-RealtimeProvider, CallProvider, useCloudflareCalls and MessageBox read
+RealtimeProvider, CallProvider and MessageBox read
 `NEXT_PUBLIC_API_URL` with `BACKEND_URL` as fallback — same value either way).
 Repoint the whole app by setting `NEXT_PUBLIC_API_URL` in `.env.local`; never
 hardcode a URL in `const.ts` again.
