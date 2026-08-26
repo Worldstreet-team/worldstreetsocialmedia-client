@@ -1,16 +1,16 @@
 "use client";
 
-import { translatePostAction } from "@/lib/translate.actions";
+import { translatePostsAction } from "@/lib/translate.actions";
 import type { TranslationEntry } from "@/store/translate.atom";
 
 /**
- * Translate a page of posts in the background, as they load, before the
- * reader reaches them.
+ * Translate a page of posts in the background, as it loads, before the
+ * reader reaches it.
  *
- * Bounded concurrency rather than a flat Promise.all: the gateway's
- * translate provider is an external keyless service, and firing a whole
- * page at it at once is how you earn a rate limit. Four in flight keeps a
- * 20-post page well under a second of wall clock while staying polite.
+ * One request per page, not one per post: the gateway's batch endpoint
+ * resolves the whole page — local language detection first, then its cache,
+ * then the provider — so a page of same-language posts now costs a single
+ * round trip and zero provider calls.
  *
  * `inFlight` is module-level so two surfaces mounting at once (feed and a
  * post page) can't translate the same post twice.
@@ -24,11 +24,13 @@ import type { TranslationEntry } from "@/store/translate.atom";
 const inFlight = new Set<string>();
 const attempted = new Set<string>();
 
+/** Matches the gateway's MAX_BATCH. Longer pages go out as several calls. */
+const BATCH_SIZE = 30;
+
 export async function prefetchTranslations(
   posts: { id: string; content?: string | null }[],
   isKnown: (id: string) => boolean,
   put: (id: string, entry: TranslationEntry) => void,
-  concurrency = 4,
 ) {
   const queue = posts.filter(
     (p) =>
@@ -43,29 +45,34 @@ export async function prefetchTranslations(
     attempted.add(p.id);
   }
 
-  let cursor = 0;
-  const worker = async () => {
-    while (cursor < queue.length) {
-      const post = queue[cursor++];
+  try {
+    for (let i = 0; i < queue.length; i += BATCH_SIZE) {
+      const chunk = queue.slice(i, i + BATCH_SIZE);
+      // Guarded: a rejected action (transport error, timeout) must not take
+      // out the prefetch or surface as an unhandled rejection. A page that
+      // can't be translated is a page that stays in its original language.
+      let res: Awaited<ReturnType<typeof translatePostsAction>>;
       try {
-        const res = await translatePostAction(post.content as string);
-        if (res.success) {
-          put(post.id, {
-            translated: res.translated,
-            source: res.source,
-            sameLanguage: Boolean(res.sameLanguage),
-          });
-        }
+        res = await translatePostsAction(
+          chunk.map((p) => ({ id: p.id, text: p.content as string })),
+        );
       } catch {
-        // A failed translation is not a failed feed — the card just
-        // keeps its "Translate post" affordance.
-      } finally {
-        inFlight.delete(post.id);
+        continue;
+      }
+      if (!res.success) continue;
+      for (const post of chunk) {
+        const entry = res.results[post.id];
+        // Absent = the gateway couldn't resolve it. Leave the card alone;
+        // its manual "Translate" affordance still works.
+        if (!entry) continue;
+        put(post.id, {
+          translated: entry.translated,
+          source: entry.source,
+          sameLanguage: Boolean(entry.sameLanguage),
+        });
       }
     }
-  };
-
-  await Promise.all(
-    Array.from({ length: Math.min(concurrency, queue.length) }, worker),
-  );
+  } finally {
+    for (const p of queue) inFlight.delete(p.id);
+  }
 }
