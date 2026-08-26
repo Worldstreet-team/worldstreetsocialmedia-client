@@ -44,14 +44,14 @@ import { useToast } from "@/components/ui/Toast/ToastContext";
 import ImageModal from "@/components/ui/ImageModal";
 import { renderRichText } from "@/components/ui/RichText";
 import { Radio } from "lucide-react";
-import { XSTREAM_WEB_URL } from "@/const";
 import { promotePostAction } from "@/lib/campaign.actions";
 import { repostPostAction } from "@/lib/post.actions";
 import { QuoteModal } from "@/components/feed/QuoteModal";
 import { Megaphone } from "lucide-react";
 import { useT } from "@/i18n/client";
 import { translatePostAction } from "@/lib/translate.actions";
-import { autoTranslateAtom } from "@/store/translate.atom";
+import { autoTranslateAtom, translationsAtom } from "@/store/translate.atom";
+import { TranslatePanel } from "@/components/ui/TranslatePanel";
 
 export interface PostProps {
     id: string;
@@ -103,7 +103,7 @@ export interface PostProps {
 }
 
 /* Count formatting per 02-typography number rules: full 1,204 below 10K,
-   K/M abbreviation from 10K up — tabular-nums keeps rolls steady. */
+   K/M abbreviation from 10K up tabular-nums keeps rolls steady. */
 const formatCount = (n: number) => {
     if (!n) return "";
     if (n < 10_000) return n.toLocaleString();
@@ -125,6 +125,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
     // preference is on. The gateway caches by text-hash + target, so repeat
     // views of a translated post cost one indexed read.
     const [autoTranslate, setAutoTranslate] = useAtom(autoTranslateAtom);
+    const translations = useAtomValue(translationsAtom);
     const [translation, setTranslation] = useState<string | null>(null);
     const [translationSource, setTranslationSource] = useState<string | null>(
         null,
@@ -132,6 +133,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
     const [translating, setTranslating] = useState(false);
     const [showOriginal, setShowOriginal] = useState(false);
     const [translateChecked, setTranslateChecked] = useState(false);
+    const [translateOpen, setTranslateOpen] = useState(false);
 
     const currentUser = useAtomValue(userAtom);
     const setUser = useSetAtom(userAtom);
@@ -264,9 +266,10 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
         }
     }, [currentUser, isBookmarked, post, setUser, setBookmarks, toast]);
 
-    const handleTranslate = useCallback(async () => {
+    const handleTranslate = useCallback(
+        async (silent = false) => {
         if (translating || !post.content) return;
-        setTranslating(true);
+        if (!silent) setTranslating(true);
         try {
             const res = await translatePostAction(post.content);
             setTranslateChecked(true);
@@ -276,18 +279,46 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                 setShowOriginal(false);
             }
         } finally {
-            setTranslating(false);
+            if (!silent) setTranslating(false);
         }
-    }, [translating, post.content]);
+    },
+        [translating, post.content],
+    );
 
-    // Auto-translate: with the preference on, each post checks itself against
-    // the reader's locale as it renders. Same-language posts come back fast,
-    // get marked checked, and never re-ask.
+    // The feed translates a page in the background as it loads, so by the
+    // time a card is on screen its translation is usually already here —
+    // adopt it and render translated on first paint, no spinner, no request.
+    const cachedTranslation = translations[post.id];
     useEffect(() => {
-        if (autoTranslate && !translateChecked && !translating && post.content) {
-            handleTranslate();
+        if (!cachedTranslation) return;
+        setTranslateChecked(true);
+        if (cachedTranslation.translated && !cachedTranslation.sameLanguage) {
+            setTranslation(cachedTranslation.translated);
+            setTranslationSource(cachedTranslation.source ?? null);
         }
-    }, [autoTranslate, translateChecked, translating, post.content, handleTranslate]);
+    }, [cachedTranslation]);
+
+    // Fallback for surfaces with no prefetch (post detail, profile). Runs
+    // SILENTLY: an automatic translation the reader didn't ask for has no
+    // business showing them a loading state.
+    useEffect(() => {
+        if (
+            autoTranslate &&
+            !translateChecked &&
+            !translating &&
+            !cachedTranslation &&
+            post.content
+        ) {
+            handleTranslate(true);
+        }
+    }, [
+        autoTranslate,
+        translateChecked,
+        translating,
+        cachedTranslation,
+        post.content,
+        handleTranslate,
+    ]);
 
     // "Translated from Spanish" in the reader's own language.
     const translatedFromLabel = useMemo(() => {
@@ -343,7 +374,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
             } else {
                 // Pin/activity/not-interested/block/report have no gateway
                 // support yet — say so instead of silently no-oping.
-                toast("Not available yet — coming soon", { type: "info" });
+ toast("Not available yet coming soon", { type: "info" });
             }
         },
         [post.id, toast],
@@ -443,7 +474,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                     <div className="flex items-center justify-between gap-1 mb-0.5">
                         {/* min-w-0 lets the two truncating links actually shrink;
                             without it the row grows past the card on narrow
-                            screens. The badge, dot and timestamp never shrink —
+                            screens. The badge, dot and timestamp never shrink 
                             the handle gives way first, then the display name. */}
                         <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 overflow-hidden pointer-events-auto">
                             <Link
@@ -452,7 +483,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                             >
                                 {post.author.name}
                             </Link>
-                            {/* Gold seal badge — the one VerifiedIcon everywhere. */}
+                            {/* Gold seal badge the one VerifiedIcon everywhere. */}
                             {post.author.isVerified && (
                                 <span className="shrink-0 flex">
                                     <VerifiedIcon size={{ width: "16", height: "16" }} />
@@ -702,7 +733,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                         </div>
                     </div>
                     {/* Post Content */}
-                    {/* UI/Body: Public Sans Regular 15 — post text size per 02-typography. */}
+                    {/* UI/Body: Public Sans Regular 15 post text size per 02-typography. */}
                     {post.repostOf && !post.content && (
                         <span className="flex items-center gap-1.5 text-subtle text-[12px] font-sans mb-1">
                             <Repeat size={12} />
@@ -710,10 +741,8 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                         </span>
                     )}
                     {post.live && (
-                        <a
-                            href={`${XSTREAM_WEB_URL}/stream/${post.live.streamId}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                        <Link
+                            href={`/live?tab=live&s=${post.live.streamId}`}
                             onClick={(e) => e.stopPropagation()}
                             className="relative z-10 pointer-events-auto mb-2 flex items-center gap-3 rounded-lg border border-hairline bg-raised/40 hover:bg-raised px-3.5 py-3 transition-colors"
                         >
@@ -736,7 +765,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                         : `${t("live.replay")}${post.live.viewerPeak ? ` · ${post.live.viewerPeak} ${t("live.viewers")}` : ""}`}
                                 </span>
                             </span>
-                        </a>
+                        </Link>
                     )}
                     <p className="text-primary whitespace-pre-wrap mb-1.5 font-normal leading-[1.55] text-[15px] font-sans tracking-tight pointer-events-none">
                         {showingTranslation
@@ -793,7 +822,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                         type="button"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            handleTranslate();
+                                            setTranslateOpen(true);
                                         }}
                                         className="flex items-center gap-1.5 text-[12.5px] font-sans text-subtle hover:text-gold transition-colors cursor-pointer"
                                     >
@@ -895,7 +924,13 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                         </div>
                     )}
                     {post.images && post.images.length === 1 && (
-                        <div className="mb-3 w-full">
+                        // pointer-events-auto: the card body is
+                        // pointer-events-none so the card-wide overlay link
+                        // catches taps, and every interactive child has to opt
+                        // back in. The multi-image grid and the video block
+                        // already did; this one didn't, so single-image posts
+                        // silently could not be tapped to zoom.
+                        <div className="mb-3 w-full pointer-events-auto">
                             <img
                                 src={post.images[0]}
                                 alt="Post attachment"
@@ -939,23 +974,12 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                 ))}
                         </div>
                     )}
-                    {/* Post actions — impressions sit isolated on the left
-                        (a metric, not a button); the interaction cluster rides
-                        the right edge. 03-icons: this row is the ONE place
-                        Phosphor is used instead of Lucide, matching mobile. */}
+                    {/* Post actions the interaction cluster sits flush left;
+                        impressions ride the right edge, isolated (a metric, not
+                        a button). 03-icons: this row is the ONE place Phosphor
+                        is used instead of Lucide, matching mobile. */}
                     <div className="flex items-center justify-between text-muted mt-1.5 -mb-1.5 pointer-events-auto">
-                        <div
-                            className="flex items-center gap-1.5 pl-0.5 cursor-default select-none text-subtle"
-                            title={t("post.views")}
-                            aria-label={t("post.views")}
-                        >
-                            <ChartLineUp size={14} />
-                            <span className="text-[12.5px] font-medium font-sans tabular-nums">
-                                {formatCount(post.stats.views ?? 0) || "0"}
-                            </span>
-                        </div>
-
-                        <div className="flex items-center gap-0.5 sm:gap-2">
+                        <div className="flex items-center gap-0.5 sm:gap-2 -ml-2">
                         <Link
                             href={`/post/${post.id}`}
                             onClick={(e) => e.stopPropagation()}
@@ -1054,7 +1078,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                             )}
                         >
                             <span className="relative flex h-10 w-10 items-center justify-center rounded-pill group-hover:bg-danger/10 transition group-active:scale-[0.98]">
-                                {/* One-shot danger wash on like — opacity-only,
+                                {/* One-shot danger wash on like opacity-only,
                                     fades out over motion-slow and stays gone. */}
                                 <AnimatePresence>
                                     {isLiked && (
@@ -1216,9 +1240,26 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                             </span>
                         </button>
                         </div>
+
+                        <div
+                            className="flex items-center gap-1.5 pr-0.5 cursor-default select-none text-subtle"
+                            title={t("post.views")}
+                            aria-label={t("post.views")}
+                        >
+                            <ChartLineUp size={14} />
+                            <span className="text-[12.5px] font-medium font-sans tabular-nums">
+                                {formatCount(post.stats.views ?? 0) || "0"}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
+            {translateOpen && (
+                <TranslatePanel
+                    content={post.content}
+                    onClose={() => setTranslateOpen(false)}
+                />
+            )}
             {quoteOpen && (
                 <QuoteModal
                     target={{

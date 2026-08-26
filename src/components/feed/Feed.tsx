@@ -7,6 +7,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useAtom, useAtomValue } from "jotai";
 import { feedAtom } from "@/store/feed.atom";
 import { feedTabAtom, followingIdsAtom } from "@/store/ui.atom";
+import { autoTranslateAtom, translationsAtom } from "@/store/translate.atom";
+import { prefetchTranslations } from "@/lib/translate.prefetch";
 import { PostCard, PostProps } from "@/components/feed/PostCard";
 import { PostComposer } from "@/components/feed/PostComposer";
 import { getFeedAction } from "@/lib/feed.actions";
@@ -15,7 +17,6 @@ import { ArrowUp, Plus, UserPlus } from "lucide-react";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { PostSkeleton } from "@/components/feed/PostSkeleton";
 import { ImpressionSensor } from "@/components/feed/ImpressionSensor";
-import { StoriesRail } from "@/components/feed/StoriesRail";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { DEFAULT_AVATAR } from "@/const";
 
@@ -23,6 +24,12 @@ export default function Feed() {
 	const [feedState, setFeedState] = useAtom(feedAtom);
 	const tab = useAtomValue(feedTabAtom);
 	const followingIds = useAtomValue(followingIdsAtom);
+	const autoTranslate = useAtomValue(autoTranslateAtom);
+	const [translations, setTranslations] = useAtom(translationsAtom);
+	// Read through a ref inside the prefetch so a page landing mid-flight
+	// doesn't re-translate what an earlier page already resolved.
+	const translationsRef = useRef(translations);
+	translationsRef.current = translations;
 	const [loading, setLoading] = useState(true);
 	const [isPosting, setIsPosting] = useState(false);
 	const [showBackToTop, setShowBackToTop] = useState(false);
@@ -188,6 +195,21 @@ export default function Feed() {
 						hasMore: Boolean(result.data.hasMore),
 					};
 				});
+
+				// Translate the page in the background while the reader is
+				// still at the top of it. Deliberately not awaited: the feed
+				// must paint immediately, and each result lands in the atom
+				// as it arrives.
+				if (autoTranslate) {
+					void prefetchTranslations(
+						mappedPosts,
+						(id) => Boolean(translationsRef.current[id]),
+						(id, entry) =>
+							setTranslations((prev) =>
+								prev[id] ? prev : { ...prev, [id]: entry },
+							),
+					);
+				}
 			} else {
 				if (result.message) toast(result.message, { type: "error" });
 			}
@@ -266,13 +288,12 @@ export default function Feed() {
 				)}
 			</AnimatePresence>
 
-			{/* One creation card: stories strip on top, composer below —
+			{/* One creation card: stories strip on top, composer below 
 			    borderless depth instead of hairline boxes. */}
 			<div
 				className="animate-rise card-depth mx-2 sm:mx-3 my-3"
 				style={{ animationDelay: "60ms" }}
 			>
-				<StoriesRail />
 				<PostComposer
 					onPostStart={handlePostStart}
 					onPostSuccess={handlePostSuccess}
