@@ -14,8 +14,15 @@ import type { TranslationEntry } from "@/store/translate.atom";
  *
  * `inFlight` is module-level so two surfaces mounting at once (feed and a
  * post page) can't translate the same post twice.
+ *
+ * `attempted` is the retry-storm guard, and it is not optional. A failure
+ * stores nothing, so without it every re-run of the caller's effect re-queues
+ * the same posts forever — which is exactly what happened the first time this
+ * ran against an exhausted provider quota: ten requests every nine seconds,
+ * indefinitely. One attempt per post per session; a reload is the retry.
  */
 const inFlight = new Set<string>();
+const attempted = new Set<string>();
 
 export async function prefetchTranslations(
   posts: { id: string; content?: string | null }[],
@@ -24,10 +31,17 @@ export async function prefetchTranslations(
   concurrency = 4,
 ) {
   const queue = posts.filter(
-    (p) => p.content?.trim() && !isKnown(p.id) && !inFlight.has(p.id),
+    (p) =>
+      p.content?.trim() &&
+      !isKnown(p.id) &&
+      !inFlight.has(p.id) &&
+      !attempted.has(p.id),
   );
   if (queue.length === 0) return;
-  for (const p of queue) inFlight.add(p.id);
+  for (const p of queue) {
+    inFlight.add(p.id);
+    attempted.add(p.id);
+  }
 
   let cursor = 0;
   const worker = async () => {

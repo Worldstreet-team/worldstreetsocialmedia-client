@@ -85,6 +85,25 @@ export default function Feed() {
 		return () => observer.disconnect();
 	});
 
+	// Translate in the background whenever posts are present and untranslated
+	// — a fresh page, a restored timeline, or the reader turning the
+	// preference on mid-scroll. Keyed on posts rather than on the fetch, so a
+	// feed rehydrated from feedAtom (no network call) still gets translated.
+	// Not awaited: the feed paints immediately and each result lands in the
+	// atom as it arrives. prefetchTranslations dedupes against what's already
+	// known and what's already in flight.
+	useEffect(() => {
+		if (!autoTranslate || feedState.posts.length === 0) return;
+		void prefetchTranslations(
+			feedState.posts,
+			(id) => Boolean(translationsRef.current[id]),
+			(id, entry) =>
+				setTranslations((prev) =>
+					prev[id] ? prev : { ...prev, [id]: entry },
+				),
+		);
+	}, [autoTranslate, feedState.posts, setTranslations]);
+
 	// "Following" filters the loaded timeline by who this session follows
 	// (followingIdsAtom grows as Follow buttons are clicked).
 	const visiblePosts = useMemo(
@@ -195,21 +214,6 @@ export default function Feed() {
 						hasMore: Boolean(result.data.hasMore),
 					};
 				});
-
-				// Translate the page in the background while the reader is
-				// still at the top of it. Deliberately not awaited: the feed
-				// must paint immediately, and each result lands in the atom
-				// as it arrives.
-				if (autoTranslate) {
-					void prefetchTranslations(
-						mappedPosts,
-						(id) => Boolean(translationsRef.current[id]),
-						(id, entry) =>
-							setTranslations((prev) =>
-								prev[id] ? prev : { ...prev, [id]: entry },
-							),
-					);
-				}
 			} else {
 				if (result.message) toast(result.message, { type: "error" });
 			}
