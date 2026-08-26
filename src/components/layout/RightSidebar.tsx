@@ -5,7 +5,10 @@ import { getWhoToFollowAction, followUserAction } from "@/lib/user.actions";
 import { getStoriesAction } from "@/lib/stories.actions";
 import Link from "next/link";
 import Image from "next/image";
-import { MagnifyingGlass, MonitorPlay } from "@phosphor-icons/react";
+import { MagnifyingGlass } from "@phosphor-icons/react";
+import { StoriesRail } from "@/components/feed/StoriesRail";
+import { SectionHead } from "@/components/layout/SectionHead";
+import { SpacesRail } from "@/components/layout/SpacesRail";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { useAtom } from "jotai";
 import {
@@ -27,34 +30,6 @@ interface LiveEntry {
 	avatar: string;
 	title?: string;
 	streamRef?: string;
-}
-
-/* Flat section header — eyebrow + optional live dot + optional trailing
-   chip. No boxes: the rail reads as one column of content, not a stack of
-   cards. */
-function SectionHead({
-	label,
-	live,
-	trailing,
-}: {
-	label: string;
-	live?: boolean;
-	trailing?: React.ReactNode;
-}) {
-	return (
-		<div className="flex items-center gap-2 px-3 pb-1.5">
-			{live && (
-				<span className="relative flex h-2 w-2">
-					<span className="absolute inline-flex h-full w-full rounded-pill bg-danger opacity-60 animate-ping" />
-					<span className="relative inline-flex h-2 w-2 rounded-pill bg-danger" />
-				</span>
-			)}
-			<h3 className="font-sans font-semibold text-[11px] uppercase tracking-[0.14em] text-subtle flex-1">
-				{label}
-			</h3>
-			{trailing}
-		</div>
-	);
 }
 
 export function RightSidebar() {
@@ -158,7 +133,7 @@ export function RightSidebar() {
 
 	return (
 		<aside className="w-[350px] shrink-0 hidden lg:flex flex-col gap-7 sticky top-0 h-dvh py-4 pl-8 pr-4 overflow-y-auto no-scrollbar">
-			{/* Search — opens the Ctrl/Cmd+K command palette. */}
+			{/* Search opens the Ctrl/Cmd+K command palette. */}
 			<button
 				type="button"
 				onClick={() => setPaletteOpen(true)}
@@ -175,68 +150,66 @@ export function RightSidebar() {
 				</kbd>
 			</button>
 
-			{/* Start something — the creation features, surfaced instead of
-			    hidden. The one depth card on the rail. */}
+			{/* Stories moved here from the feed top: rings on the rail,
+			    the feed column stays pure timeline. */}
 			<section
-				className="card-depth p-4 shrink-0 animate-rise"
+				className="shrink-0 animate-rise"
 				style={{ animationDelay: "120ms" }}
 			>
-				<p className="font-sans font-semibold text-[15px] text-primary mb-3">
-					{t("rail.create.title")}
-				</p>
-				<div className="flex gap-2">
-					<Link
-						href="/live"
-						className="flex-1 h-10 flex items-center justify-center gap-2 rounded-pill text-[13px] font-semibold font-sans text-primary bg-raised hover:bg-chip transition-colors"
-					>
-						<MonitorPlay size={15} weight="fill" />
-						{t("nav.videos")}
-					</Link>
-				</div>
+				<SectionHead label={t("rail.stories")} />
+				<StoriesRail />
 			</section>
 
-			{/* Live now — flat rows, red-ring grammar. Absent when nobody is live. */}
+			{/* Live rings the red ring grammar, above Happening now. Click a
+			    ring to watch in-app; See all opens the live directory. */}
 			{liveNow.length > 0 && (
 				<section className="animate-rise" style={{ animationDelay: "180ms" }}>
-					<SectionHead label={t("rail.liveNow")} live />
-					<div className="flex flex-col">
+					<SectionHead
+						label={t("rail.liveNow")}
+						live
+						trailing={
+							<Link
+								href="/live-now"
+								className="font-sans text-[11px] font-semibold text-gold hover:underline"
+							>
+								{t("rail.seeAll")}
+							</Link>
+						}
+					/>
+					<div className="flex gap-3 overflow-x-auto px-3 py-1 [scrollbar-width:none]">
 						{liveNow.map((entry) => (
-							<a
+							<Link
 								key={entry.authorId}
 								href={
 									entry.streamRef
-										? `${XSTREAM_WEB_URL}/stream/${entry.streamRef}`
-										: XSTREAM_WEB_URL
+										? `/stream/${entry.streamRef}`
+										: "/live-now"
 								}
-								target="_blank"
-								rel="noopener noreferrer"
-								className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface transition-colors group"
+								className="flex flex-col items-center gap-1 shrink-0"
 							>
-								<span className="relative w-10 h-10 rounded-pill p-[2px] bg-danger shrink-0">
+								<span className="relative w-14 h-14 rounded-pill p-[2px] bg-danger">
 									<span className="relative block w-full h-full rounded-pill overflow-hidden border-2 border-page bg-raised">
 										<SafeAvatar src={entry.avatar} />
 									</span>
-								</span>
-								<span className="flex flex-col flex-1 min-w-0">
-									<span className="font-semibold text-primary text-sm truncate font-sans">
-										@{entry.username}
+									<span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-[4px] bg-danger px-1 py-px text-[8px] font-bold tracking-wide text-white font-sans">
+										{t("live.badge")}
 									</span>
-									{entry.title && (
-										<span className="text-subtle text-[12px] truncate font-sans">
-											{entry.title}
-										</span>
-									)}
 								</span>
-								<span className="shrink-0 rounded-pill bg-danger/15 text-danger px-3 h-7 flex items-center text-[12px] font-semibold font-sans group-hover:bg-danger group-hover:text-white transition-colors">
-									{t("rail.watch")}
+								<span className="text-[11px] text-muted font-sans truncate max-w-14">
+									@{entry.username}
 								</span>
-							</a>
+							</Link>
 						))}
 					</div>
 				</section>
 			)}
 
-			{/* Happening now — ranked topics, category chips, no hashtag framing. */}
+			{/* Street Voice — live audio rooms, then what's scheduled next.
+			    Directly under Live now so everything happening right now is
+			    one block of the column. */}
+			<SpacesRail />
+
+			{/* Happening now ranked topics, category chips, no hashtag framing. */}
 			<section className="animate-rise" style={{ animationDelay: "240ms" }}>
 				<SectionHead
 					label={t("rail.happening")}
@@ -322,7 +295,7 @@ export function RightSidebar() {
 				</div>
 			</section>
 
-			{/* Suggested for you — names always resolve (username fallback). */}
+			{/* Suggested for you names always resolve (username fallback). */}
 			<section className="animate-rise" style={{ animationDelay: "300ms" }}>
 				<SectionHead label={t("rail.suggested")} />
 				<div className="flex flex-col">
