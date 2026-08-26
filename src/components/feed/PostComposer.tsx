@@ -1,28 +1,74 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import Image from "next/image";
-import { Image as ImageIcon, Smile, Send, X, User, Link2 } from "lucide-react";
+import {
+	Image as ImageIcon,
+	Smile,
+	Send,
+	X,
+	User,
+	Link2,
+	Plus,
+	FileText,
+} from "lucide-react";
+import { VanishingPlaceholder } from "@/components/ui/VanishingPlaceholder";
+import { useT } from "@/i18n/client";
 import { useUser } from "@clerk/nextjs";
 import { createPostAction } from "@/lib/post.actions";
+import { getCommunitiesAction } from "@/lib/community.actions";
+import {
+	AudienceLock,
+	AudiencePicker,
+	type AudienceCommunity,
+} from "@/components/community/AudiencePicker";
 import { useToast } from "@/components/ui/Toast/ToastContext";
+import { useAtom, useSetAtom } from "jotai";
+import {
+	draftsAtom,
+	draftsOpenAtom,
+	pendingDraftAtom,
+} from "@/store/drafts.atom";
 import EmojiPicker, { type EmojiClickData, Theme } from "emoji-picker-react";
 import { useTheme } from "next-themes";
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
+import { PencilSimple } from "@phosphor-icons/react";
+import MediaEditor from "@/components/editor/MediaEditor";
+import VideoEditor from "@/components/editor/VideoEditor";
+import type { EditDocument } from "@/lib/editor/document";
+import { POST_CHAR_BUDGET } from "@/const";
+import {
+	MentionAutocomplete,
+	type MentionUser,
+} from "@/components/feed/MentionAutocomplete";
+import {
+	MentionInput,
+	type MentionInputHandle,
+} from "@/components/feed/MentionInput";
 
 interface PostComposerProps {
 	onPostSuccess?: (post?: any) => void;
 	onPostStart?: () => void;
+	/**
+	 * Rendered inside a community: the audience is fixed to it and the picker
+	 * becomes a static "Posting in <name>" line.
+	 */
+	community?: AudienceCommunity;
 }
 
 interface MediaItem {
 	url: string;
 	file: File;
 	type: "image" | "video";
+	// Editor state: `file` is what gets posted; the untouched original plus
+	// the edit document stay behind so re-opening the editor is non-destructive.
+	originalFile?: File;
+	editDoc?: EditDocument;
 }
 
 // Same limit PostCard truncates at.
-const MAX_LENGTH = 280;
+const MAX_LENGTH = POST_CHAR_BUDGET;
 
 /**
  * Character-budget ring: gold while comfortable, status/warning inside the
@@ -91,12 +137,85 @@ const CharacterRing = ({ length }: { length: number }) => {
 export const PostComposer = ({
 	onPostSuccess,
 	onPostStart,
+	community,
 }: PostComposerProps) => {
+	const t = useT();
+	// Marketing psychology: the prompt rotates so the empty box keeps asking
+	// a different question. Rotation pauses once the person starts typing.
+	const PROMPTS = [
+		"composer.prompt1",
+		"composer.prompt2",
+		"composer.prompt3",
+		"composer.prompt4",
+	];
 	const { user } = useUser();
 	const [content, setContent] = useState("");
+	// Where this post goes. null = the public timeline.
+	const [audience, setAudience] = useState<AudienceCommunity | null>(
+		community ?? null,
+	);
+	const [myCommunities, setMyCommunities] = useState<AudienceCommunity[]>([]);
+
+	useEffect(() => {
+		setAudience(community ?? null);
+	}, [community]);
+
+	useEffect(() => {
+		// Only the free composer needs the list; a locked one already knows.
+		if (community) return;
+		let cancelled = false;
+		void getCommunitiesAction().then((res) => {
+			if (cancelled || !res.success) return;
+			setMyCommunities(
+				(res.communities ?? [])
+					.filter((c: any) => c.joined)
+					.map((c: any) => ({
+						id: String(c.id),
+						name: c.name,
+						slug: c.slug,
+						avatar: c.avatar || undefined,
+					})),
+			);
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, [community]);
+	// The @token the caret is sitting in, if any: drives the mention typeahead.
+	const [mention, setMention] = useState<{
+		query: string;
+		start: number;
+		end: number;
+	} | null>(null);
+
+	// Everyone picked from the typeahead, kept so a badge can be rebuilt from a
+	// restored draft. Who is actually tagged is DERIVED from the text below.
+	const [taggedUserPool, setTaggedUserPool] = useState<MentionUser[]>([]);
+
+	// The editor turns the @token into an atomic inline badge and serializes it
+	// back to `@username`, so `content` stays a plain string for everything
+	// downstream (drafts, char budget, link preview, the post payload).
+	const insertMention = (user: MentionUser) => {
+		editorRef.current?.insertMention(user);
+		setMention(null);
+		setTaggedUserPool((prev) =>
+			prev.some((u) => u._id === user._id) ? prev : [...prev, user],
+		);
+	};
 	const [isPosting, setIsPosting] = useState(false);
 	const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+	const [editingIndex, setEditingIndex] = useState<number | null>(null);
 	const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+	// A picked user counts as tagged only while their @handle is still in the
+	// draft. Usernames are [A-Za-z0-9_] so they need no regex escaping.
+	const taggedUsers = useMemo(
+		() =>
+			taggedUserPool.filter((u) =>
+				new RegExp(`(^|\\s)@${u.username}\\b`, "i").test(content),
+			),
+		[taggedUserPool, content],
+	);
 
 	// Link Preview State
 	const [linkPreview, setLinkPreview] = useState<any>(null);
@@ -105,7 +224,7 @@ export const PostComposer = ({
 
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const emojiPickerRef = useRef<HTMLDivElement>(null);
-	const textareaRef = useRef<HTMLTextAreaElement>(null);
+	const editorRef = useRef<MentionInputHandle>(null);
 	const { toast } = useToast();
 	// Picker follows the app theme instead of hardcoding dark.
 	const { resolvedTheme } = useTheme();
@@ -170,11 +289,22 @@ export const PostComposer = ({
 	// initial empty-content run (and StrictMode's double-run) can never
 	// delete a stored draft before the restore lands.
 	const DRAFT_KEY = "ws-social-draft";
+	// The people, stored next to the text: a draft restores `@handle` strings,
+	// and without their avatars those can only come back as plain text.
+	const DRAFT_MENTIONS_KEY = "ws-social-draft-mentions";
 	const draftHadContentRef = useRef(false);
 	useEffect(() => {
 		try {
 			const saved = localStorage.getItem(DRAFT_KEY);
-			if (saved) setContent((prev) => prev || saved);
+			if (!saved) return;
+			let known: MentionUser[] = [];
+			try {
+				const raw = localStorage.getItem(DRAFT_MENTIONS_KEY);
+				if (raw) known = JSON.parse(raw);
+			} catch {}
+			setContent((prev) => prev || saved);
+			setTaggedUserPool(known);
+			editorRef.current?.setText(saved, known);
 		} catch {}
 	}, []);
 	useEffect(() => {
@@ -182,19 +312,66 @@ export const PostComposer = ({
 			if (content) {
 				draftHadContentRef.current = true;
 				localStorage.setItem(DRAFT_KEY, content);
+				localStorage.setItem(
+					DRAFT_MENTIONS_KEY,
+					JSON.stringify(taggedUserPool),
+				);
 			} else if (draftHadContentRef.current) {
 				localStorage.removeItem(DRAFT_KEY);
+				localStorage.removeItem(DRAFT_MENTIONS_KEY);
 			}
 		} catch {}
-	}, [content]);
+	}, [content, taggedUserPool]);
 
-	// Auto-resize textarea
+	// Named drafts — the autosave above is crash recovery for ONE in-flight
+	// post; these are the ones you deliberately keep.
+	const [drafts, setDrafts] = useAtom(draftsAtom);
+	const setDraftsOpen = useSetAtom(draftsOpenAtom);
+	const [pendingDraft, setPendingDraft] = useAtom(pendingDraftAtom);
+
 	useEffect(() => {
-		if (textareaRef.current) {
-			textareaRef.current.style.height = "auto";
-			textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-		}
-	}, [content]);
+		if (pendingDraft === null) return;
+		setContent(pendingDraft);
+		editorRef.current?.setText(pendingDraft, taggedUserPool);
+		setPendingDraft(null);
+		setTimeout(() => editorRef.current?.focus(), 0);
+	}, [pendingDraft, setPendingDraft]);
+
+	const saveDraft = () => {
+		const text = content.trim();
+		if (!text) return;
+		setDrafts((prev) =>
+			[
+				{
+					id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+					content: text,
+					updatedAt: Date.now(),
+				},
+				...prev,
+			].slice(0, 50),
+		);
+		setContent("");
+		editorRef.current?.setText("");
+		setTaggedUserPool([]);
+		try {
+			localStorage.removeItem(DRAFT_KEY);
+			localStorage.removeItem(DRAFT_MENTIONS_KEY);
+		} catch {}
+		toast(t("drafts.saved"), { type: "success" });
+	};
+
+	// Blob URLs never survived unmount (navigating away leaked every preview).
+	// Mirror the current URLs in a ref so the unmount sweep sees the live set.
+	const mediaUrlsRef = useRef<string[]>([]);
+	useEffect(() => {
+		mediaUrlsRef.current = mediaItems.map((item) => item.url);
+	}, [mediaItems]);
+	useEffect(
+		() => () => {
+			mediaUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+		},
+		[],
+	);
 
 	const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
 		// Disable if link preview exists
@@ -202,13 +379,31 @@ export const PostComposer = ({
 
 		if (e.target.files) {
 			const files = Array.from(e.target.files);
+			// One video max, never mixed with images: a picked video replaces
+			// everything; once a video is attached, further picks are ignored.
+			const video = files.find((f) => f.type.startsWith("video/"));
+			if (mediaItems.some((m) => m.type === "video")) {
+				if (fileInputRef.current) fileInputRef.current.value = "";
+				return;
+			}
+			if (video) {
+				setMediaItems([
+					{
+						url: URL.createObjectURL(video),
+						file: video,
+						type: "video",
+					},
+				]);
+				if (fileInputRef.current) fileInputRef.current.value = "";
+				return;
+			}
 			const remainingSlots = 4 - mediaItems.length;
 			const filesToProcess = files.slice(0, remainingSlots);
 
 			const newItems: MediaItem[] = filesToProcess.map((file) => ({
 				url: URL.createObjectURL(file),
 				file: file,
-				type: "image",
+				type: file.type.startsWith("video/") ? "video" : "image",
 			}));
 
 			setMediaItems((prev) => [...prev, ...newItems]);
@@ -254,7 +449,7 @@ export const PostComposer = ({
 	};
 
 	const onEmojiClick = (emojiData: EmojiClickData) => {
-		setContent((prev) => prev + emojiData.emoji);
+		editorRef.current?.insertText(emojiData.emoji);
 	};
 
 	const isOverLimit = content.length > MAX_LENGTH;
@@ -269,21 +464,62 @@ export const PostComposer = ({
 			const formData = new FormData();
 			formData.append("content", content);
 
+			// The gateway verifies membership before accepting this.
+			if (audience) formData.append("community", audience.id);
+
 			mediaItems.forEach((item) => {
-				if (item.type === "image") {
+				if (item.type === "video") {
+					formData.append("video", item.file);
+				} else {
 					formData.append("images", item.file);
 				}
 			});
 
+			// Alt text from the editor's Alt tab. The gateway ignores unknown
+			// body fields today (post images are bare URL strings), so this is
+			// the forward-compatible seam: when the post model grows media
+			// metadata, the transport is already here.
+			if (mediaItems.some((item) => item.editDoc?.alt)) {
+				formData.append(
+					"imageAlts",
+					JSON.stringify(mediaItems.map((item) => item.editDoc?.alt ?? "")),
+				);
+			}
+
 			if (linkPreview && mediaItems.length === 0) {
 				formData.append("linkPreview", JSON.stringify(linkPreview));
+			}
+
+			// Tagged users, resolved to ids client-side so the gateway does not
+			// have to re-parse @handles out of the body to know who to notify
+			// (in-app + email). Username rides along because the gateway's
+			// notification payload addresses people by handle.
+			if (taggedUsers.length > 0) {
+				formData.append(
+					"mentions",
+					JSON.stringify(
+						taggedUsers.map((u) => ({
+							userId: u._id,
+							username: u.username,
+						})),
+					),
+				);
 			}
 
 			const result = await createPostAction(formData);
 
 			if (result.success) {
 				setContent("");
+				editorRef.current?.setText("");
+				// Revoke AFTER React commits the cleared state — a synchronous
+				// revoke leaves the still-mounted preview tiles pointing at
+				// dead blob: URLs for a frame (broken-image flash).
+				const postedUrls = mediaItems.map((item) => item.url);
+				setTimeout(() => {
+					postedUrls.forEach((url) => URL.revokeObjectURL(url));
+				}, 1000);
 				setMediaItems([]);
+				setTaggedUserPool([]);
 				setLinkPreview(null);
 				lastCheckedUrl.current = null;
 				setShowEmojiPicker(false);
@@ -299,12 +535,14 @@ export const PostComposer = ({
 		}
 	};
 
+	// Same padding rhythm as PostCard, so the composer reads as the first row
+	// of the feed rather than a separate panel.
 	return (
-		<div className="border-b border-hairline px-4 py-4 sm:p-6 mb-2 relative">
-			<div className="flex gap-3 sm:gap-4">
+		<div className="px-4 py-3 sm:px-6 sm:py-4 relative">
+			<div className="flex gap-2.5 sm:gap-4">
 				<div className="shrink-0">
 					{user ? (
-						<div className="relative w-10 h-10 rounded-full overflow-hidden border border-hairline">
+						<div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border border-hairline">
 							<Image
 								src={user.imageUrl}
 								alt={user.username || "User"}
@@ -313,29 +551,49 @@ export const PostComposer = ({
 							/>
 						</div>
 					) : (
-						<div className="w-10 h-10 rounded-pill bg-raised border items-center justify-center flex border-hairline overflow-hidden">
+						<div className="w-9 h-9 sm:w-10 sm:h-10 rounded-pill bg-raised border items-center justify-center flex border-hairline overflow-hidden">
 							<User className="w-5 h-5 text-subtle" />
 						</div>
 					)}
 				</div>
 				<div className="flex-1 w-full min-w-0">
-					<textarea
+					<div className="relative">
+					{!content && (
+						<span className="pointer-events-none absolute left-0 top-0 h-8 w-full">
+							<VanishingPlaceholder
+								texts={PROMPTS.map((k) => t(k))}
+							/>
+						</span>
+					)}
+					<MentionInput
 						id="post-composer-input"
-						ref={textareaRef}
-						value={content}
-						onChange={(e) => setContent(e.target.value)}
+						ref={editorRef}
+						ariaLabel="Write a post"
+						onChange={setContent}
+						onQueryChange={setMention}
 						onPaste={handlePaste}
-						placeholder="What's moving today?"
-						className="w-full bg-transparent text-lg text-primary placeholder:text-subtle outline-none resize-none min-h-[60px] font-medium leading-relaxed overflow-hidden font-sans"
-						rows={1}
+						className="w-full bg-transparent text-lg text-primary outline-none min-h-[42px] sm:min-h-[60px] font-medium leading-relaxed font-sans whitespace-pre-wrap break-words"
 					/>
+					{mention && (
+						<MentionAutocomplete
+							query={mention.query}
+							onPick={insertMention}
+							onDismiss={() => setMention(null)}
+						/>
+					)}
+					</div>
 
 					{/* Media Preview Grid */}
 					{mediaItems.length > 0 && (
 						<div
 							className={clsx(
 								"grid gap-2 mt-3 mb-2 rounded-xl overflow-hidden relative",
-								mediaItems.length === 1 ? "grid-cols-1" : "grid-cols-2",
+								// Photos always get the 2-up grid so the add-more
+								// tile can ride alongside; only a lone video goes
+								// full-width.
+								mediaItems[0].type === "video"
+									? "grid-cols-1"
+									: "grid-cols-2",
 							)}
 						>
 							{mediaItems.map((item, index) => (
@@ -343,32 +601,82 @@ export const PostComposer = ({
 									key={item.url}
 									className={clsx(
 										"relative bg-surface border border-hairline",
-										mediaItems.length > 1 ? "aspect-square" : "aspect-video",
+										item.type === "video" &&
+											mediaItems.length === 1
+											? "aspect-video"
+											: "aspect-square",
 									)}
 								>
-									<Image
-										src={item.url}
-										alt="Preview"
-										fill
-										className="object-cover"
-									/>
-									<button
-										type="button"
-										onClick={() => removeMedia(index)}
-										aria-label="Remove attachment"
-										className="absolute top-1.5 right-1.5 flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors"
-									>
-										<X className="w-4 h-4" />
-									</button>
+									{item.type === "video" ? (
+										// eslint-disable-next-line jsx-a11y/media-has-caption
+										<video
+											src={item.url}
+											className="absolute inset-0 w-full h-full object-cover"
+											muted
+											playsInline
+										/>
+									) : (
+										<Image
+											src={item.url}
+											alt="Preview"
+											fill
+											className="object-cover"
+										/>
+									)}
+									<div className="absolute top-1.5 right-1.5 flex gap-1.5">
+										{/* MIME decides which editor mounts below 
+										    images get the Studio sheet, videos the
+										    trim sheet. */}
+										<button
+											type="button"
+											onClick={() => setEditingIndex(index)}
+											aria-label={
+												item.file.type.startsWith("video/")
+													? "Edit video"
+													: "Edit image"
+											}
+											className="flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors"
+										>
+											<PencilSimple size={16} weight="bold" />
+										</button>
+										<button
+											type="button"
+											onClick={() => removeMedia(index)}
+											aria-label="Remove attachment"
+											className="flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors"
+										>
+											<X className="w-4 h-4" />
+										</button>
+									</div>
 								</div>
 							))}
+							{/* Chain photos: an explicit add tile, not a hunt
+							    for the toolbar icon. 4 slots total. */}
+							{mediaItems[0].type !== "video" &&
+								mediaItems.length < 4 && (
+									<button
+										type="button"
+										onClick={() =>
+											fileInputRef.current?.click()
+										}
+										disabled={isPosting}
+										aria-label="Add more photos"
+										className="relative aspect-square border border-dashed border-hairline bg-sunken/30 hover:bg-raised/50 flex flex-col items-center justify-center gap-1.5 text-muted hover:text-primary transition-colors cursor-pointer"
+									>
+										<Plus className="w-6 h-6" />
+										<span className="text-[12px] font-sans font-medium tabular-nums">
+											Add photos · {4 - mediaItems.length}{" "}
+											left
+										</span>
+									</button>
+								)}
 						</div>
 					)}
 
 					{/* Link Preview Card */}
 					{linkPreview && mediaItems.length === 0 && (
 						<div className="mt-3 mb-2 rounded-xl border border-hairline overflow-hidden bg-surface/50 relative group">
-							{/* Reveal-on-hover is unreachable on touch — there is no
+							{/* Reveal-on-hover is unreachable on touch there is no
 							    hover state to enter. Always visible below sm. */}
 							<button
 								type="button"
@@ -412,31 +720,46 @@ export const PostComposer = ({
 						</div>
 					)}
 
-					<div className="flex items-center justify-between mt-2 pt-3 border-t border-hairline/60">
-						<div className="flex gap-2 text-gold relative">
+					{(community || myCommunities.length > 0) && (
+						<div className="mt-2 flex items-center">
+							{community ? (
+								<AudienceLock community={community} />
+							) : (
+								<AudiencePicker
+									communities={myCommunities}
+									value={audience}
+									onChange={setAudience}
+								/>
+							)}
+						</div>
+					)}
+
+					<div className="flex items-center justify-between mt-1 pt-2 sm:mt-2 sm:pt-3 border-t border-hairline/60">
+						<div className="flex items-center gap-2 relative">
+							{/* Faded word-chips from sm up: the toolbar says what it does.
+							    Below sm the words come off — three labelled chips plus the
+							    ring and CTA need ~500px, the row has ~275 — leaving 44px
+							    icon-only targets. Go Live moved out to the create FAB. */}
 							<button
 								type="button"
 								onClick={() => !linkPreview && fileInputRef.current?.click()}
-								aria-label="Attach media"
+								disabled={!!linkPreview}
+								aria-label={t("composer.media")}
 								className={clsx(
-									"flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center rounded-pill transition-colors relative group",
+									"flex h-10 w-10 justify-center sm:h-9 sm:w-auto sm:justify-start sm:px-3.5 items-center gap-2 rounded-pill font-sans text-[13px] font-medium transition-colors",
 									linkPreview
-										? "opacity-50 cursor-not-allowed bg-raised/50 text-subtle"
-										: "hover:bg-brand/10 cursor-pointer",
+										? "bg-raised/40 text-subtle cursor-not-allowed"
+										: "bg-raised/50 text-muted hover:bg-raised hover:text-primary cursor-pointer",
 								)}
 							>
-								<ImageIcon className="w-5 h-5" />
-								{!linkPreview && (
-									<span className="hidden sm:block absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] bg-raised text-primary px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
-										Media
-									</span>
-								)}
+								<ImageIcon className="w-4 h-4 shrink-0" />
+								<span className="hidden sm:inline">{t("composer.media")}</span>
 							</button>
 							<input
 								type="file"
 								ref={fileInputRef}
 								className="hidden"
-								accept="image/*"
+								accept="image/*,video/*"
 								multiple
 								onChange={handleImageSelect}
 								disabled={isPosting || mediaItems.length >= 4 || !!linkPreview}
@@ -445,24 +768,50 @@ export const PostComposer = ({
 							<button
 								type="button"
 								onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-								aria-label="Insert emoji"
+								aria-label={t("composer.emoji")}
 								className={clsx(
-									"flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center hover:bg-brand/10 rounded-pill transition-colors relative group cursor-pointer",
-									showEmojiPicker && "bg-brand/10",
+									"flex h-10 w-10 justify-center sm:h-9 sm:w-auto sm:justify-start sm:px-3.5 items-center gap-2 rounded-pill font-sans text-[13px] font-medium transition-colors cursor-pointer",
+									showEmojiPicker
+										? "bg-raised text-primary"
+										: "bg-raised/50 text-muted hover:bg-raised hover:text-primary",
 								)}
 							>
-								<Smile className="w-5 h-5" />
-								<span className="hidden sm:block absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] bg-raised text-primary px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
-									Emoji
-								</span>
+								<Smile className="w-4 h-4 shrink-0" />
+								<span className="hidden sm:inline">{t("composer.emoji")}</span>
 							</button>
 
-							{/* Emoji Picker Popover.
-							    The picker is a fixed ~320px block anchored 72px in
-							    from the viewport edge — on a 320-375px screen that
-							    ran straight off the right side. Below sm it centres
-							    itself in the viewport instead of anchoring; from sm
-							    up it keeps the original under-the-button position. */}
+							{content.trim() && (
+								<button
+									type="button"
+									onClick={saveDraft}
+									aria-label={t("composer.saveDraft")}
+									className="flex h-10 w-10 justify-center sm:h-9 sm:w-auto sm:justify-start sm:px-3.5 items-center gap-2 rounded-pill bg-raised/50 text-muted hover:bg-raised hover:text-primary font-sans text-[13px] font-medium transition-colors cursor-pointer"
+								>
+									<FileText className="w-4 h-4 shrink-0" />
+									<span className="hidden sm:inline">
+										{t("composer.saveDraft")}
+									</span>
+								</button>
+							)}
+
+							{/* Drafts stay reachable here the FAB only appears once you
+							    have scrolled past this composer. */}
+							{!content.trim() && drafts.length > 0 && (
+								<button
+									type="button"
+									onClick={() => setDraftsOpen(true)}
+									aria-label={t("drafts.title")}
+									className="flex h-10 sm:h-9 items-center gap-2 rounded-pill px-3 sm:px-3.5 bg-raised/50 text-muted hover:bg-raised hover:text-primary font-sans text-[13px] font-medium transition-colors cursor-pointer"
+								>
+									<FileText className="w-4 h-4 shrink-0" />
+									<span className="hidden sm:inline">{t("drafts.title")}</span>
+									<span className="tabular-nums">{drafts.length}</span>
+								</button>
+							)}
+
+							{/* Emoji Picker Popover below sm it centres in the viewport
+							    instead of anchoring (a fixed 320px block anchored 72px in
+							    ran off the right edge on a 320-375px screen). */}
 							{showEmojiPicker && (
 								<div
 									className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 sm:absolute sm:left-0 sm:top-12 sm:translate-x-0 sm:translate-y-0 w-[min(320px,calc(100vw-2rem))] max-h-[70dvh] z-dropdown animate-rise ws-emoji-picker"
@@ -495,7 +844,7 @@ export const PostComposer = ({
 							type="button"
 							className={clsx(
 								// h-11 on touch (44px target), the DS's 36px pill from sm up.
-								"px-[18px] h-11 sm:h-9 shrink-0 rounded-pill font-semibold text-[13px] font-sans transition-colors flex items-center gap-2 cursor-pointer",
+								"px-4 sm:px-[18px] h-10 sm:h-9 shrink-0 rounded-pill font-semibold text-[13px] font-sans transition-colors flex items-center gap-2 cursor-pointer",
 								(!content.trim() && mediaItems.length === 0) ||
 									isPosting ||
 									isOverLimit
@@ -507,7 +856,7 @@ export const PostComposer = ({
 								<div className="w-4 h-4 border-2 border-brand-on/30 border-t-brand-on rounded-full animate-spin" />
 							) : (
 								<>
-									<span className="uppercase">Post</span>
+									<span className="uppercase">{t("composer.post")}</span>
 									<Send className="w-3 h-3" />
 								</>
 							)}
@@ -516,6 +865,73 @@ export const PostComposer = ({
 					</div>
 				</div>
 			</div>
+
+			{/* Per-tile editors the MIME decides which sheet mounts. Save swaps
+			    the posted File in place; images keep the original + edit doc so
+			    re-opening is non-destructive. URL side effects stay OUTSIDE the
+			    state updater (StrictMode double-invokes updaters). */}
+			{editingIndex !== null &&
+				mediaItems[editingIndex] &&
+				(mediaItems[editingIndex].file.type.startsWith("video/") ? (
+					<VideoEditor
+						file={
+							mediaItems[editingIndex].originalFile ??
+							mediaItems[editingIndex].file
+						}
+						onClose={() => setEditingIndex(null)}
+						onSave={(file) => {
+							const old = mediaItems[editingIndex];
+							if (!old) {
+								setEditingIndex(null);
+								return;
+							}
+							URL.revokeObjectURL(old.url);
+							const url = URL.createObjectURL(file);
+							setMediaItems((prev) => {
+								const next = [...prev];
+								next[editingIndex] = {
+									url,
+									file,
+									type: "video",
+									originalFile: old.originalFile ?? old.file,
+								};
+								return next;
+							});
+							setEditingIndex(null);
+						}}
+					/>
+				) : (
+					<MediaEditor
+						file={
+							mediaItems[editingIndex].originalFile ??
+							mediaItems[editingIndex].file
+						}
+						doc={mediaItems[editingIndex].editDoc}
+						allowAlt
+						onClose={() => setEditingIndex(null)}
+						onSave={({ file, doc }) => {
+							const old = mediaItems[editingIndex];
+							if (!old) {
+								setEditingIndex(null);
+								return;
+							}
+							URL.revokeObjectURL(old.url);
+							const url = URL.createObjectURL(file);
+							setMediaItems((prev) => {
+								const next = [...prev];
+								next[editingIndex] = {
+									url,
+									file,
+									type: "image",
+									originalFile: old.originalFile ?? old.file,
+									editDoc: doc,
+								};
+								return next;
+							});
+							setEditingIndex(null);
+						}}
+					/>
+				))}
 		</div>
 	);
 };

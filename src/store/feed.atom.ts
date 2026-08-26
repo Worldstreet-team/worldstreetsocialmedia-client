@@ -3,14 +3,14 @@ import { PostProps } from "@/components/feed/PostCard";
 
 interface FeedState {
 	posts: PostProps[];
-	page: number;
+	cursor: string | null;
 	hasMore: boolean;
 	scrollPosition: number;
 }
 
 export const feedAtom = atom<FeedState>({
 	posts: [],
-	page: 1,
+	cursor: null,
 	hasMore: true,
 	scrollPosition: 0,
 });

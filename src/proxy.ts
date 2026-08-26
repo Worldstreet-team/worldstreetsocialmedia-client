@@ -2,69 +2,139 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { syncUser } from "./lib/auth.actions";
 
+// Per-isolate profile cache: userId → last good sync result. Best-effort —
+// a new isolate just re-syncs. 30s staleness is invisible in practice and
+// removes the biggest per-request latency in the whole app.
+const profileCache = new Map<string, { profile: unknown; at: number }>();
+const PROFILE_CACHE_TTL_MS = 30_000;
+import {
+	LOCALE_COOKIE,
+	LOCALE_HEADER,
+	isLocale,
+	negotiateLocale,
+	splitLocalePath,
+	type Locale,
+} from "./i18n/config";
+
 const isProtectedRoute = createRouteMatcher(["/(.*)"]);
-const isOnboardingRoute = createRouteMatcher(["/onboarding(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
-	const { userId, getToken, isAuthenticated } = await auth();
+	// ── i18n: /es/foo serves the same app as /foo ─────────────────────────
+	// The locale prefix is stripped via rewrite so app/ keeps its structure;
+	// the choice persists in the ws_locale cookie and reaches server
+	// components on the x-ws-locale request header. Bare URLs fall back to
+	// cookie, then Accept-Language, then English.
+	const { locale: prefixLocale, pathname } = splitLocalePath(
+		req.nextUrl.pathname,
+	);
+	const cookieLocale = req.cookies.get(LOCALE_COOKIE)?.value;
+	const locale: Locale =
+		prefixLocale ??
+		(isLocale(cookieLocale)
+			? cookieLocale
+			: negotiateLocale(req.headers.get("accept-language")));
+
+	const withLocale = (path: string) =>
+		prefixLocale ? `/${prefixLocale}${path === "/" ? "" : path}` || "/" : path;
+
+	const requestHeaders = new Headers(req.headers);
+	requestHeaders.set(LOCALE_HEADER, locale);
+
+	// Every response goes through here so the rewrite (when a prefix is
+	// present), the locale header and the locale cookie are never forgotten.
+	const respond = () => {
+		const res = prefixLocale
+			? NextResponse.rewrite(
+					new URL(pathname + req.nextUrl.search, req.url),
+					{ request: { headers: requestHeaders } },
+				)
+			: NextResponse.next({ request: { headers: requestHeaders } });
+		res.cookies.set(LOCALE_COOKIE, locale, { path: "/", httpOnly: false });
+		return res;
+	};
+
+	// ── auth ──────────────────────────────────────────────────────────────
+	const { userId, getToken } = await auth();
 
 	if (isProtectedRoute(req)) {
 		await auth.protect();
 	}
-	console.log("USERIDDDD: ", userId);
 
+	// Route checks run against the locale-stripped path so /es/onboarding
+	// behaves exactly like /onboarding.
+	// Exact match (plus real subroutes) — a bare startsWith also swallowed any
+	// future sibling like /onboarding-complete, silently redirecting it to the
+	// feed for anyone who already has a profile.
+	const isOnboardingPath =
+		pathname === "/onboarding" || pathname.startsWith("/onboarding/");
 	const hasProfile = req.cookies.get("has_profile")?.value === "true";
-	console.log("HAS PROFILE: ", hasProfile);
 
-	if (isOnboardingRoute(req) && !hasProfile) return;
+	if (isOnboardingPath && !hasProfile) return respond();
 
 	// 1. If user is logged in and trying to access a protected area
 	if (userId && isProtectedRoute(req)) {
-		// Check your custom cookie
-
-		const token = await getToken();
-		console.log("TOKEN: ", token);
-		const userExistsInDb = await syncUser(token);
-
-		console.log("EXISTS IN DB: ", userExistsInDb);
-
-		// if (userExistsInDb == null) {
-		// 	console.log("FAILED HERE");
-		// 	return;
-		// }
-
-		if (userExistsInDb?.status === "not_found") {
-			// Redirect to onboarding if they don't exist in your DB
-			return NextResponse.redirect(new URL("/onboarding", req.url));
+		// The sync round-trip (gateway → Atlas) used to run on EVERY request —
+		// pages, server actions, prefetches — adding ~0.5-1s each. A profile
+		// changes rarely; cache it per user for a short window and skip the
+		// trip entirely. Onboarding paths always re-check (fresh accounts).
+		const cached = profileCache.get(userId);
+		if (
+			cached &&
+			Date.now() - cached.at < PROFILE_CACHE_TTL_MS &&
+			!isOnboardingPath
+		) {
+			requestHeaders.set("x-user-data", JSON.stringify(cached.profile));
+			const response = respond();
+			response.cookies.set("has_profile", "true", {
+				path: "/",
+				httpOnly: false,
+			});
+			return response;
 		}
 
-		// 3. If they exist but cookie was missing, set the cookie and continue
-		const response = NextResponse.next();
+		const token = await getToken();
+		const userExistsInDb = await syncUser(token);
+
+		if (userExistsInDb?.status === "not_found") {
+			// Already on onboarding: let it render. Redirecting here loops
+			// forever whenever a stale has_profile=true cookie outlives the
+			// profile it stood for (e.g. after switching Clerk instances),
+			// because that cookie skips the early return above.
+			if (isOnboardingPath) {
+				const response = respond();
+				response.cookies.delete("has_profile");
+				return response;
+			}
+			// Redirect to onboarding if they don't exist in your DB
+			return NextResponse.redirect(
+				new URL(withLocale("/onboarding"), req.url),
+			);
+		}
+
+		// 2. Prevent users who ALREADY have a profile from re-onboarding.
+		// Decided from the sync result, not the cookie — a cleared cookie must
+		// not reopen onboarding for an existing profile.
+		if (isOnboardingPath && userExistsInDb?.profile) {
+			return NextResponse.redirect(new URL(withLocale("/") || "/", req.url));
+		}
+
+		// 3. They exist: set the cookie, forward the profile, continue
+		if (userExistsInDb?.profile) {
+			requestHeaders.set("x-user-data", JSON.stringify(userExistsInDb.profile));
+			profileCache.set(userId, {
+				profile: userExistsInDb.profile,
+				at: Date.now(),
+			});
+		}
+		const response = respond();
 		response.cookies.set("has_profile", "true", {
 			path: "/",
 			httpOnly: false,
 		});
-		if (userExistsInDb?.profile) {
-			console.log("GETTING SAVED EXISTS IN DB: ", userExistsInDb.profile);
-			const requestHeaders = new Headers(req.headers);
-			requestHeaders.set("x-user-data", JSON.stringify(userExistsInDb.profile));
-
-			return NextResponse.next({
-				request: {
-					headers: requestHeaders,
-				},
-			});
-		}
 		return response;
 	}
 
-	// 4. Prevent users who ALREADY have a profile from going back to onboarding
-	if (userId && isOnboardingRoute(req)) {
-		const hasProfile = req.cookies.get("has_profile")?.value === "true";
-		if (hasProfile) {
-			return NextResponse.redirect(new URL("/", req.url));
-		}
-	}
+	return respond();
 });
 
 export const config = {

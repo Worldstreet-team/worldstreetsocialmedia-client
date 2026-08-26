@@ -93,3 +93,22 @@ export const handleSignOut = async (
 		window.location.href = "https://www.worldstreetgold.com/login";
 	}
 };
+
+/**
+ * The middle column's scroll container.
+ *
+ * The story rail is fixed by making the column scroll inside its own
+ * element instead of the window, so every "scroll to top" and scroll listener
+ * has to target that element. Falls back to the document scroller on pages
+ * that still scroll the window (messages, live).
+ */
+export function mainScroller(): HTMLElement | (Window & typeof globalThis) {
+	if (typeof document === "undefined") return window;
+	return document.getElementById("ws-main-scroll") ?? window;
+}
+
+/** Current scroll offset of the main scroller, window or element alike. */
+export function mainScrollTop(): number {
+	const s = mainScroller();
+	return s instanceof Window ? s.scrollY : s.scrollTop;
+}

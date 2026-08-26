@@ -21,26 +21,38 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
+import { Badge } from "@/components/ui/Badge";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import axios from "axios";
 import { useUser, useAuth } from "@clerk/nextjs";
 import { useChannel, ChannelProvider } from "ably/react";
 import EmojiPicker, { Theme } from "emoji-picker-react";
 import { useTheme } from "next-themes";
+import { useT } from "@/i18n/client";
+import { getUserStoriesAction } from "@/lib/stories.actions";
+import { StoryViewer, type RailEntry } from "@/components/feed/StoryViewer";
 import { toast } from "sonner";
+import { useToast } from "@/components/ui/Toast/ToastContext";
 import { format } from "date-fns";
 import { useRealtime } from "../providers/RealtimeProvider";
 import MediaModal from "../ui/MediaModal";
+import { PencilSimple } from "@phosphor-icons/react";
+import MediaEditor from "@/components/editor/MediaEditor";
 import { VoiceMessage } from "./VoiceMessage";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCall } from "@/providers/CallProvider";
+import { useChatSignals } from "@/hooks/useChatSignals";
+import { TypingIndicator } from "@/components/messages/TypingIndicator";
+import { MessageTicks, tickStateFor } from "@/components/messages/MessageTicks";
+import { CallLogRow } from "@/components/messages/CallLogRow";
 import { BACKEND_URL } from "@/const";
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || BACKEND_URL).replace(
 	/\/api\/?$/,
 	"",
 );
-import { useAtom } from "jotai";
-import { messageCacheAtom } from "@/store/messageCache";
+import { useAtom, useSetAtom } from "jotai";
+import { activeConversationIdAtom, messageCacheAtom, unreadMessagesCountAtom } from "@/store/messageCache";
 import NewConversationModal from "./NewConversationModal";
 
 // Helper component for conditional channel subscription
@@ -86,8 +98,11 @@ interface Message {
 	conversationId: string;
 	sender: UserProfile;
 	content: string;
-	type: "text" | "image" | "video" | "audio" | "file";
+	// "call" is a finished call logged into the thread, not something typed.
+	type: "text" | "image" | "video" | "audio" | "file" | "call";
 	mediaUrl?: string;
+	/** Present when this message is a reply to a story. */
+	storyRef?: { story: string; thumbnail: string; authorUsername: string };
 	createdAt: string;
 }
 
@@ -205,6 +220,7 @@ export const MessageBox = ({
 	initialConversationId?: string;
 	initialConversations?: Conversation[];
 }) => {
+	const t = useT();
 	const { user } = useUser();
 	const { getToken } = useAuth();
 	const { isConnected } = useRealtime();
@@ -224,6 +240,33 @@ export const MessageBox = ({
 			return null;
 		});
 	const [messageCache, setMessageCache] = useAtom(messageCacheAtom);
+	const setUnreadMessages = useSetAtom(unreadMessagesCountAtom);
+	const setActiveConversationId = useSetAtom(activeConversationIdAtom);
+	// A story opened from a reply thumbnail. Fetched on click rather than
+	// stored on the message: the ref outlives the story, so availability has
+	// to be answered at tap time.
+	const [storyEntry, setStoryEntry] = useState<RailEntry | null>(null);
+	const { toast: appToast } = useToast();
+
+	const openStoryRef = async (ref: {
+		story: string;
+		authorUsername: string;
+	}) => {
+		const res = await getUserStoriesAction(ref.authorUsername);
+		const entry = res.entry;
+		if (entry?.stories?.some((st: any) => String(st.id) === ref.story)) {
+			setStoryEntry(entry);
+		} else {
+			appToast(t("story.expired"), { type: "error" });
+		}
+	};
+	// Tell the global listener which thread is on screen, so it suppresses the
+	// badge for this conversation only.
+	useEffect(() => {
+		setActiveConversationId(activeConversation?._id ?? null);
+		return () => setActiveConversationId(null);
+	}, [activeConversation?._id, setActiveConversationId]);
+
 	const messages = activeConversation
 		? messageCache[activeConversation._id] || []
 		: [];
@@ -250,6 +293,7 @@ export const MessageBox = ({
 	const [recordingDuration, setRecordingDuration] = useState(0);
 
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
+	const [editingAttachment, setEditingAttachment] = useState(false);
 	const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 	const [isUploading, setIsUploading] = useState(false);
 
@@ -413,6 +457,7 @@ export const MessageBox = ({
 		activeIdRef.current = activeConversation?._id || null;
 		if (activeConversation?._id) {
 			markAsRead(activeConversation._id);
+			chatRef.current.notifyRead();
 		}
 	}, [activeConversation]);
 
@@ -424,6 +469,15 @@ export const MessageBox = ({
 			setPreviewUrl(url);
 		}
 		if (fileInputRef.current) fileInputRef.current.value = "";
+	};
+
+	// Pre-send edit: the Studio sheet swaps the attachment in place, so the
+	// existing upload path (POST /api/messages/upload) is untouched.
+	const applyEditedAttachment = (file: File) => {
+		if (previewUrl) URL.revokeObjectURL(previewUrl);
+		setSelectedFile(file);
+		setPreviewUrl(URL.createObjectURL(file));
+		setEditingAttachment(false);
 	};
 
 	const clearSelectedFile = () => {
@@ -450,11 +504,16 @@ export const MessageBox = ({
 					headers: { Authorization: `Bearer ${token}` },
 				},
 			);
-			setConversations((prev) =>
-				prev.map((c) =>
+			// Drop this thread's share of the nav badge too. Patching only the
+			// local row left the badge stuck until a reload.
+			setConversations((prev) => {
+				const cleared = prev.find((c) => c._id === conversationId);
+				if (cleared?.unreadCount)
+					setUnreadMessages((n) => Math.max(0, n - cleared.unreadCount));
+				return prev.map((c) =>
 					c._id === conversationId ? { ...c, unreadCount: 0 } : c,
-				),
-			);
+				);
+			});
 		} catch (e) {
 			console.error("Failed to mark as read", e);
 		}
@@ -537,6 +596,10 @@ export const MessageBox = ({
 			if (currentActiveId === conversationId) {
 				scrollToBottom();
 				markAsRead(conversationId);
+				// Their message reached a client that is showing it — both
+				// receipts are true at the same instant.
+				chatRef.current.notifyDelivered();
+				chatRef.current.notifyRead();
 			}
 
 			// 2. Update Conversation List (Move to top + Unread count)
@@ -573,6 +636,7 @@ export const MessageBox = ({
 
 		const tempId = `temp-${Date.now()}`;
 		const content = messageInput;
+		chat.notifyStoppedTyping();
 		const currentFile = selectedFile;
 		const currentPreview = previewUrl;
 
@@ -686,6 +750,15 @@ export const MessageBox = ({
 	// --- Call Logic (Global) ---
 	const { startCall } = useCall();
 
+	// Typing / presence / receipts. Ephemeral signals go client-to-client on the
+	// conversation channel; only "read" is persisted.
+	const chat = useChatSignals({
+		conversationId: activeConversation?._id ?? null,
+		myProfileId: myProfileId ?? null,
+	});
+	const chatRef = useRef(chat);
+	chatRef.current = chat;
+
 	useEffect(() => {
 		const fetchMe = async () => {
 			const token = await getToken();
@@ -716,6 +789,10 @@ export const MessageBox = ({
 					onMessage={onMessage}
 				/>
 			)}
+			{storyEntry && (
+				<StoryViewer entry={storyEntry} onClose={() => setStoryEntry(null)} />
+			)}
+
 			<MediaModal
 				isOpen={isMediaModalOpen}
 				onClose={() => setIsMediaModalOpen(false)}
@@ -736,12 +813,12 @@ export const MessageBox = ({
 				)}
 			>
 				<div className="p-4 border-b border-hairline">
-					<h1 className="font-display text-lg font-semibold mb-4">Messages</h1>
+					<h1 className="font-display text-lg font-semibold mb-4">{t("nav.messages")}</h1>
 					<div className="relative">
 						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle" />
 						<input
 							type="text"
-							placeholder="Search Direct Messages"
+							placeholder={t("messages.searchPlaceholder")}
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
 							ref={searchInputRef}
@@ -781,16 +858,15 @@ export const MessageBox = ({
 									)}
 								>
 									<div className="relative shrink-0">
-										<Image
-											src={conv.otherParticipant.avatar}
-											alt="avatar"
-											width={48}
-											height={48}
-											className="rounded-full w-12 h-12 object-cover"
+										<span className="relative block h-12 w-12 overflow-hidden rounded-pill bg-raised">
+											<SafeAvatar src={conv.otherParticipant.avatar} />
+										</span>
+										{/* A count, not a bare dot: "3 waiting" and "1 waiting"
+										    looked identical before. */}
+										<Badge
+											count={conv.unreadCount}
+											className="absolute -top-1 -right-1"
 										/>
-										{conv.unreadCount > 0 && (
-											<div className="absolute -top-1 -right-1 w-3 h-3 bg-brand rounded-full border-2 border-page" />
-										)}
 									</div>
 									<div className="flex-1 min-w-0 text-left">
 										<div className="flex justify-between items-center gap-2">
@@ -812,7 +888,7 @@ export const MessageBox = ({
 													: "text-muted",
 											)}
 										>
-											{conv.lastMessage?.content || "No messages yet"}
+											{conv.lastMessage?.content || t("messages.noMessages")}
 										</p>
 									</div>
 								</button>
@@ -846,9 +922,18 @@ export const MessageBox = ({
 									{activeConversation.otherParticipant.firstName}{" "}
 									{activeConversation.otherParticipant.lastName}
 								</h2>
-								<p className="text-xs text-muted truncate">
-									@{activeConversation.otherParticipant.username}
-								</p>
+								{chat.peerTyping ? (
+									<p className="text-xs text-gold truncate">typing…</p>
+								) : chat.peerOnline ? (
+									<p className="flex items-center gap-1.5 text-xs text-muted truncate">
+										<span className="h-1.5 w-1.5 shrink-0 rounded-pill bg-success" />
+										Online
+									</p>
+								) : (
+									<p className="text-xs text-muted truncate">
+										@{activeConversation.otherParticipant.username}
+									</p>
+								)}
 							</div>
 						</div>
 						<div className="flex shrink-0 text-muted">
@@ -857,19 +942,20 @@ export const MessageBox = ({
 								aria-label="Start voice call"
 								className="h-11 w-11 md:h-10 md:w-10 flex items-center justify-center rounded-pill hover:bg-raised hover:text-primary transition-colors cursor-pointer"
 								onClick={() =>
-									startCall(
-										false,
-										activeConversation?.otherParticipant._id || "",
-										`${activeConversation.otherParticipant.firstName || ""} ${activeConversation.otherParticipant.lastName || ""}`,
-										activeConversation.otherParticipant.avatar || "",
-										false,
-										{
-											id: myProfileId || "",
-											name: `${user?.firstName || ""} ${user?.lastName || ""}`,
-											avatar: user?.imageUrl || "",
-											username: user?.username || "",
+									startCall({
+										conversationId: activeConversation._id,
+										peer: {
+											id: activeConversation.otherParticipant?._id || "",
+											name:
+												`${activeConversation.otherParticipant?.firstName || ""} ${activeConversation.otherParticipant?.lastName || ""}`.trim() ||
+												activeConversation.otherParticipant?.username ||
+												"",
+											avatar: activeConversation.otherParticipant?.avatar || "",
+											username:
+												activeConversation.otherParticipant?.username || "",
 										},
-									)
+										isVideo: false,
+									})
 								}
 							>
 								<Phone className="w-5 h-5" />
@@ -879,24 +965,25 @@ export const MessageBox = ({
 								aria-label="Start video call"
 								className="h-11 w-11 md:h-10 md:w-10 flex items-center justify-center rounded-pill hover:bg-raised hover:text-primary transition-colors cursor-pointer"
 								onClick={() =>
-									startCall(
-										true,
-										activeConversation?.otherParticipant._id || "",
-										`${activeConversation.otherParticipant.firstName || ""} ${activeConversation.otherParticipant.lastName || ""}`,
-										activeConversation.otherParticipant.avatar || "",
-										true,
-										{
-											id: myProfileId || "",
-											name: `${user?.firstName || ""} ${user?.lastName || ""}`,
-											avatar: user?.imageUrl || "",
-											username: user?.username || "",
+									startCall({
+										conversationId: activeConversation._id,
+										peer: {
+											id: activeConversation.otherParticipant?._id || "",
+											name:
+												`${activeConversation.otherParticipant?.firstName || ""} ${activeConversation.otherParticipant?.lastName || ""}`.trim() ||
+												activeConversation.otherParticipant?.username ||
+												"",
+											avatar: activeConversation.otherParticipant?.avatar || "",
+											username:
+												activeConversation.otherParticipant?.username || "",
 										},
-									)
+										isVideo: true,
+									})
 								}
 							>
 								<Video className="w-5 h-5" />
 							</button>
-							{/* Inert placeholder — hidden on phones, where the header has
+							{/* Inert placeholder hidden on phones, where the header has
 							    no room to spare for a control that does nothing. */}
 							<button
 								type="button"
@@ -917,6 +1004,11 @@ export const MessageBox = ({
 						{messages.map((m) => {
 							const isMe =
 								m.sender._id === myProfileId || m._id.startsWith("temp-");
+							// A call isn't something either side said, so it gets a
+							// centred chip instead of a bubble on one shore.
+							if (m.type === "call") {
+								return <CallLogRow key={m._id} content={m.content} />;
+							}
 							return (
 								<div
 									key={m._id}
@@ -962,6 +1054,26 @@ export const MessageBox = ({
 												<VoiceMessage src={m.mediaUrl} isMe={isMe} />
 											</div>
 										)}
+										{m.storyRef && (
+											<button
+												type="button"
+												onClick={() =>
+													m.storyRef && void openStoryRef(m.storyRef)
+												}
+												className="relative mb-1.5 block h-40 w-28 cursor-pointer overflow-hidden rounded-lg border border-current/15 transition-opacity hover:opacity-90"
+												aria-label={t("story.viewStory")}
+											>
+												{/* eslint-disable-next-line @next/next/no-img-element */}
+												<img
+													src={m.storyRef.thumbnail}
+													alt=""
+													className="h-full w-full object-cover"
+												/>
+												<span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0c0a09]/85 to-transparent px-2 pb-1.5 pt-5 text-left font-sans text-[10px] font-semibold text-[#fafaf9]/90">
+													{t("story.viewStory")}
+												</span>
+											</button>
+										)}
 										{m.content && (
 											<p
 												className={clsx(
@@ -975,12 +1087,23 @@ export const MessageBox = ({
 											</p>
 										)}
 									</div>
-									<span className="text-xs text-muted mt-1 block tabular-nums">
+									<span className="text-xs text-muted mt-1 flex items-center gap-1 tabular-nums">
 										{format(new Date(m.createdAt), "h:mm a")}
+										{isMe && (
+											<MessageTicks
+												state={tickStateFor({
+													id: m._id,
+													createdAt: m.createdAt,
+													deliveredAt: chat.deliveredAt,
+													readAt: chat.readAt,
+												})}
+											/>
+										)}
 									</span>
 								</div>
 							);
 						})}
+						{chat.peerTyping && <TypingIndicator />}
 						<div ref={messagesEndRef} />
 					</div>
 
@@ -1013,7 +1136,27 @@ export const MessageBox = ({
 								>
 									<X className="w-3.5 h-3.5" />
 								</button>
+ {/* Images only the editor can't decode video. */}
+								{selectedFile.type.startsWith("image/") && (
+									<button
+										type="button"
+										onClick={() => setEditingAttachment(true)}
+										aria-label="Edit image"
+										className="absolute -top-2.5 -left-2.5 flex h-9 w-9 items-center justify-center bg-raised rounded-pill text-muted hover:text-primary border border-hairline transition-colors"
+									>
+										<PencilSimple size={15} weight="bold" />
+									</button>
+								)}
 							</div>
+						)}
+
+						{editingAttachment && selectedFile && (
+							<MediaEditor
+								file={selectedFile}
+								title="Edit image"
+								onClose={() => setEditingAttachment(false)}
+								onSave={({ file }) => applyEditedAttachment(file)}
+							/>
 						)}
 
 						<div className="flex items-center gap-2 sm:gap-3 relative">
@@ -1089,7 +1232,7 @@ export const MessageBox = ({
 							{/* Recording UI */}
 							{isRecording ? (
 								<div className="flex-1 min-w-0 bg-surface border border-hairline rounded-pill h-[56px] flex items-center px-3 sm:px-6 gap-2 sm:gap-4">
-									{/* Recording dot — sanctioned live-state loop (06-motion):
+									{/* Recording dot sanctioned live-state loop (06-motion):
 										    opacity-only pulse while recording is active. */}
 										<div className="w-3 h-3 shrink-0 rounded-full bg-danger animate-pulse" />
 									<div className="flex-1 min-w-0 font-sans tabular-nums text-primary text-sm sm:text-base">
@@ -1117,7 +1260,11 @@ export const MessageBox = ({
 								<div className="flex-1 min-w-0 bg-surface border border-hairline rounded-xl flex items-center px-3 sm:px-4 py-1.5 gap-1 sm:gap-2 focus-within:border-brand/60 transition-colors">
 									<textarea
 										value={messageInput}
-										onChange={(e) => setMessageInput(e.target.value)}
+										onChange={(e) => {
+											setMessageInput(e.target.value);
+											if (e.target.value) chat.notifyTyping();
+											else chat.notifyStoppedTyping();
+										}}
 										onKeyDown={(e) =>
 											e.key === "Enter" &&
 											!e.shiftKey &&
@@ -1207,10 +1354,10 @@ export const MessageBox = ({
 						</div>
 						<div className="space-y-2">
 							<h3 className="font-display text-lg font-semibold text-primary">
-								Select a conversation or start a new one
+								{t("messages.selectTitle")}
 							</h3>
 							<p className="text-sm text-muted">
-								Choose from your existing conversations or start a new chat
+								{t("messages.selectCaption")}
 							</p>
 						</div>
 						<button

@@ -1,71 +1,91 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useAppPathname } from "@/i18n/useAppPathname";
 import { useClerk } from "@clerk/nextjs";
 import { useTheme } from "next-themes";
 import {
 	ArrowUpRight,
-	Clapperboard,
-	GraduationCap,
-	LogOut,
+	CaretDown,
 	Moon,
-	MoreHorizontal,
-	ShoppingBag,
+	DotsThree,
+	SignOut,
 	Sun,
-	Wallet,
-} from "lucide-react";
+	UserCircle,
+} from "@phosphor-icons/react";
 import clsx from "clsx";
+import { BadgedIcon } from "@/components/ui/Badge";
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
-import { sidebarList } from "@/data/sidebar";
-import { useAtomValue } from "jotai";
+import { mainNav, moreItem, youNav, type SidebarItem } from "@/data/sidebar";
+import { useAtomValue, useSetAtom } from "jotai";
 import { userAtom } from "@/store/user.atom";
+import { UserBadges } from "@/components/ui/UserBadges";
 import { unreadMessagesCountAtom } from "@/store/messageCache";
-import { unreadNotificationsCountAtom } from "@/store/ui.atom";
+import { liveSpacesCountAtom } from "@/store/voice.atom";
+import { badgeForNavKey, unreadNotificationsCountAtom } from "@/store/ui.atom";
 import { handleSignOut } from "@/lib/utils";
 import { withThemeTransition } from "@/lib/theme-transition";
+import { mainScroller } from "@/lib/utils";
+import { SealCheck } from "@phosphor-icons/react";
+import { premiumOpenAtom } from "@/store/ui.atom";
+import { BrandRitual } from "@/components/layout/BrandRitual";
+import { LanguageMenu } from "@/components/ui/LanguageMenu";
+import { useT } from "@/i18n/client";
 
-/* The ecosystem panel behind "More" — every WorldStreet app, spelled out.
-   Icons are the platforms' 03-icons glyphs (graduation-cap, clapperboard,
-   shopping-bag, wallet) on ListRow-style raised chips. */
+/* Every WorldStreet product, spelled out — the Products section expands
+   inline (no popover), so the ecosystem is discoverable, not hidden.
+   One shared wsa-mark stands in for per-product icons: these are all the
+   same brand, and distinct glyphs read as unrelated apps.
+
+   Names, order and destinations mirror the hub's address book
+   (Worldstreet/components/landing/platform-links.ts) so the ecosystem
+   reads the same everywhere keep this list in step with it. Notably
+   there is NO Wallet platform: the wallet is a feature inside the
+   dashboard, not a subdomain. Forex and Crypto are two products that
+   share one trading desk, which is why both point at /trade. The hub's
+ "Community" entry is deliberately omitted here this app already has
+   its own Communities section in the nav above. */
 const ECOSYSTEM = [
+	{ title: "Forex Markets", href: "https://dashboard.worldstreetgold.com/trade" },
 	{
-		title: "Academy",
-		description: "Courses, order books, certifications",
-		href: "https://academy.worldstreetgold.com",
-		icon: GraduationCap,
+		title: "Cryptocurrencies",
+		href: "https://dashboard.worldstreetgold.com/trade",
 	},
-	{
-		title: "Xstream",
-		description: "Live streams and drops",
-		href: "https://xtreme.worldstreetgold.com",
-		icon: Clapperboard,
-	},
-	{
-		title: "Shop",
-		description: "The WorldStreet marketplace",
-		href: "https://shop.worldstreetgold.com",
-		icon: ShoppingBag,
-	},
-	{
-		title: "Dashboard",
-		description: "Wallet, portfolio and settings",
-		href: "https://dashboard.worldstreetgold.com",
-		icon: Wallet,
-	},
+	{ title: "Vivid AI", href: "https://worldstreetgold.com/vivid" },
+	{ title: "Academy", href: "https://academy.worldstreetgold.com" },
+	{ title: "e-Commerce", href: "https://shop.worldstreetgold.com" },
+	{ title: "Xstream", href: "https://xtreme.worldstreetgold.com" },
+	{ title: "Prediction", href: "https://prediction.worldstreetgold.com" },
+	{ title: "Arcade", href: "https://arcade.worldstreetgold.com" },
+	{ title: "Vision", href: "https://vision.worldstreetgold.com" },
 ];
 
+/* Section eyebrow — the landing page's uppercase-tracking micro-label. */
+function Eyebrow({ children }: { children: React.ReactNode }) {
+	return (
+		<p className="px-4 pt-5 pb-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.14em] text-subtle select-none">
+			{children}
+		</p>
+	);
+}
+
 export function LeftSidebar() {
-	const pathname = usePathname();
+	const t = useT();
+	const pathname = useAppPathname();
 	const user = useAtomValue(userAtom);
 	const unreadCount = useAtomValue(unreadMessagesCountAtom);
 	const unreadNotifications = useAtomValue(unreadNotificationsCountAtom);
+	// Live rooms are not unread items, so they get a pulse rather than a
+	// number — see the render below.
+	const liveSpaces = useAtomValue(liveSpacesCountAtom);
 	const { signOut } = useClerk();
 	const router = useRouter();
-	const [isMenuOpen, setIsMenuOpen] = useState<boolean | "more">(false);
+	const [menuOpen, setMenuOpen] = useState(false);
+	const [productsOpen, setProductsOpen] = useState(false);
+	const [langOpen, setLangOpen] = useState(false);
 	const menuRef = useRef<HTMLDivElement>(null);
-	const moreMenuRef = useRef<HTMLDivElement>(null);
 
 	// Theme is only knowable client-side; render the toggle after mount so
 	// SSR and the first client paint agree.
@@ -76,243 +96,250 @@ export function LeftSidebar() {
 
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
-			const target = event.target as Node;
-			if (
-				menuRef.current && !menuRef.current.contains(target) &&
-				moreMenuRef.current && !moreMenuRef.current.contains(target)
-			) {
-				setIsMenuOpen(false);
+			if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+				setMenuOpen(false);
 			}
 		};
-
-		if (isMenuOpen) {
-			document.addEventListener("mousedown", handleClickOutside);
-		}
-		return () => {
+		if (!menuOpen) setLangOpen(false);
+		if (menuOpen) document.addEventListener("mousedown", handleClickOutside);
+		return () =>
 			document.removeEventListener("mousedown", handleClickOutside);
-		};
-	}, [isMenuOpen]);
+	}, [menuOpen]);
+
+	// Keyed on labelKey, not the display title: labelKey is the stable i18n
+	// identifier, so renaming the visible label can't silently drop a badge.
+	const badgeFor = (item: SidebarItem) =>
+		badgeForNavKey(item.labelKey, unreadNotifications, unreadCount);
+
+	const setPremiumOpen = useSetAtom(premiumOpenAtom);
+
+	const renderItem = (item: SidebarItem, index: number, offset: number) => {
+		const href =
+			item.title === "Profile" && user?.username
+				? `/profile/${user.username}`
+				: item.link;
+		const isActive =
+			item.link === "/" ? pathname === "/" : pathname.startsWith(item.link);
+		const badgeCount = badgeFor(item);
+
+		return (
+			<Link
+				key={item.title}
+				href={href}
+				style={{ animationDelay: `${offset + index * 30}ms` }}
+				className={clsx(
+					// Active = light chip + filled glyph; nothing heavier.
+					"relative flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors group animate-rise",
+					isActive
+						? "bg-raised text-primary font-semibold"
+						: "text-muted hover:bg-surface hover:text-primary",
+				)}
+			>
+				<BadgedIcon count={badgeCount} label={t(item.labelKey)}>
+					<item.icon isActive={isActive} />
+				</BadgedIcon>
+				<span className="text-[15px] font-sans">{t(item.labelKey)}</span>
+				{item.labelKey === "nav.voice" && liveSpaces > 0 && (
+					// A broadcast dot, not a count: rooms are happening now, they
+					// aren't a backlog. The title carries the actual number for
+					// anyone who wants it.
+					<span
+						className="relative ml-auto flex h-2 w-2 shrink-0"
+						title={`${liveSpaces} ${t("voice.liveNow")}`}
+					>
+						<span className="absolute inline-flex h-full w-full animate-ping rounded-pill bg-danger opacity-75" />
+						<span className="relative inline-flex h-2 w-2 rounded-pill bg-danger" />
+						<span className="sr-only">{t("voice.liveNow")}</span>
+					</span>
+				)}
+			</Link>
+		);
+	};
 
 	return (
-		<header className="w-[260px] shrink-0 hidden md:flex flex-col sticky top-0 h-dvh overflow-y-auto no-scrollbar pl-4 pr-6 border-r border-hairline">
+		<header className="w-[264px] shrink-0 hidden md:flex flex-col sticky top-0 h-dvh overflow-y-auto no-scrollbar pl-4 pr-5 border-r border-hairline">
 			{/* Intro: logo leads, nav items cascade after it (animate-rise + delays). */}
-			<div className="py-8 px-2 animate-rise">
-				{/* Unified ecosystem lockup (05-screens): gold wsa-mark 26px, unboxed +
-				    "WorldStreet" Poppins SemiBold 15 + gold app eyebrow. */}
+			<div className="py-7 px-2 animate-rise">
+				{/* Same brand ritual the mobile top bar plays — the rail is where
+				    the hub runs it, so the two apps now behave identically. */}
 				<Link href="/" className="flex items-center gap-2 group">
-					<Image
-						src="/images/wsa-mark.png"
-						alt="WorldStreet"
-						width={26}
-						height={26}
-						className="h-[26px] w-[26px] object-contain shrink-0"
-					/>
-					<div className="flex flex-col leading-tight min-w-0">
-						<span className="font-display font-semibold text-[15px] text-primary tracking-tight truncate">
-							WorldStreet
-						</span>
-						<span className="font-sans text-[10px] font-semibold uppercase tracking-[2px] text-gold">
-							Social
-						</span>
-					</div>
+					<BrandRitual size={26} wordSize={15} eyebrow="Social" />
 				</Link>
 			</div>
 
-			<nav className="flex flex-col gap-1 mt-2 flex-1 px-2">
-				{sidebarList.map((item, index) => {
-					const isActive = pathname === item.link;
-					// Handle "More" dropdown state
-					const isMoreOpen = isMenuOpen === "more"; // modifying string state logic below
+			<nav className="flex flex-col gap-0.5 flex-1 px-2">
+				{mainNav.map((item, i) => renderItem(item, i, 60))}
 
-					const href =
-						item.title === "Profile" && user?.username
-							? `/profile/${user.username}`
-							: item.link;
+				<Eyebrow>{t("nav.you")}</Eyebrow>
+				{youNav.map((item, i) => renderItem(item, i, 240))}
 
-					const riseDelay = { animationDelay: `${60 + index * 30}ms` };
-
-					if (item.isDropdown) {
-						return (
-							<div
-								key={index}
-								className="relative animate-rise"
-								style={riseDelay}
-								ref={moreMenuRef}
-							>
-								<button
-									onClick={() =>
-										setIsMenuOpen(isMenuOpen === "more" ? false : "more")
-									}
-									className={clsx(
-										"flex items-center gap-3 px-4 py-3 rounded-pill transition-colors group relative w-full text-left cursor-pointer",
-										isMoreOpen
-											? "bg-chip font-semibold text-primary"
-											: "text-muted hover:bg-surface hover:text-primary",
-									)}
-								>
-									<div className="relative">
-										<span className="inline-flex w-5 h-5 items-center justify-center">
-											<item.icon isActive={isMoreOpen} />
-										</span>
-									</div>
-									<span className="text-[15px] font-sans">
-										{item.title}
-									</span>
-								</button>
-
-								{isMenuOpen === "more" && (
-									<div className="absolute bottom-full left-0 w-[300px] bg-surface border border-hairline rounded-lg shadow-nav overflow-hidden mb-2 z-dropdown animate-rise py-2">
-										<p className="px-4 pt-2 pb-1.5 font-sans font-medium text-[11px] uppercase tracking-[1px] text-subtle">
-											More from WorldStreet
-										</p>
-										{ECOSYSTEM.map((app) => (
-											<a
-												key={app.title}
-												href={app.href}
-												target="_blank"
-												rel="noopener noreferrer"
-												className="flex items-center gap-3 px-3.5 py-2.5 hover:bg-raised transition-colors group/app"
-												onClick={() => setIsMenuOpen(false)}
-											>
-												<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-raised border border-hairline">
-													<app.icon className="w-[18px] h-[18px] text-primary" />
-												</span>
-												<span className="flex flex-col min-w-0 flex-1">
-													<span className="font-sans text-sm font-medium text-primary">
-														{app.title}
-													</span>
-													<span className="font-sans text-[12px] text-muted truncate">
-														{app.description}
-													</span>
-												</span>
-												<ArrowUpRight className="w-4 h-4 text-subtle opacity-0 group-hover/app:opacity-100 transition-opacity shrink-0" />
-											</a>
-										))}
-										<p className="px-4 pt-2 pb-1 font-sans text-[11px] text-subtle border-t border-hairline mt-1.5">
-											One account works everywhere.
-										</p>
-									</div>
-								)}
-							</div>
-						);
-					}
-
-					return (
-						<Link
-							key={index}
-							href={href}
-							style={riseDelay}
-							className={clsx(
-								"flex items-center gap-3 px-4 py-3 rounded-pill transition-colors group relative animate-rise",
-								isActive
-									? "bg-chip font-semibold text-primary"
-									: "text-muted hover:bg-surface hover:text-primary",
-							)}
-						>
-							<div className="relative">
-								<span className="inline-flex w-5 h-5 items-center justify-center">
-									<item.icon isActive={isActive} />
-								</span>
-								{(() => {
-									const badgeCount =
-										item.title === "Messages"
-											? unreadCount
-											: item.title === "Notifications"
-												? unreadNotifications
-												: 0;
-									return badgeCount > 0 ? (
-										<span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 text-[10px] font-bold text-brand-on bg-brand rounded-full border-2 border-page animate-rise font-sans tabular-nums">
-											{badgeCount > 9 ? "9+" : badgeCount}
-										</span>
-									) : null;
-								})()}
-							</div>
-
-							<span className="text-[15px] font-sans">
-								{item.title}
-							</span>
-						</Link>
-					);
-				})}
-
-				{/* Primary CTA. Spec 05-screens: "gold Post button (pill, full-width)".
-				    Focuses the composer when it's on screen, otherwise routes home to it. */}
+				{/* Premium opens the subscription sheet rather than navigating.
+				    Gold seal at rest: the row advertises the tick by wearing it. */}
 				<button
 					type="button"
-					onClick={() => {
-						const composer =
-							document.querySelector<HTMLTextAreaElement>(
-								"#post-composer-input",
-							);
-						if (composer) {
-							window.scrollTo({ top: 0, behavior: "smooth" });
-							composer.focus();
-						} else {
-							router.push("/");
-						}
-					}}
+					onClick={() => setPremiumOpen(true)}
+					className="animate-rise flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors w-full text-left cursor-pointer text-muted hover:bg-surface hover:text-primary"
 					style={{ animationDelay: "280ms" }}
-					className="mt-6 w-full h-12 bg-brand hover:bg-brand-active text-brand-on font-semibold text-[15px] rounded-pill font-sans transition-colors cursor-pointer animate-rise"
 				>
-					Post
+					<span className="inline-flex w-[22px] h-[22px] items-center justify-center">
+						<SealCheck size={22} weight="duotone" className="text-gold" />
+					</span>
+					<span className="text-[15px] font-sans">{t("nav.premium")}</span>
 				</button>
-			</nav>
 
-			{/* Theme switch — light platform palette is an explicit opt-in. */}
-			<div
-				className="px-2 mb-2 animate-rise"
-				style={{ animationDelay: "300ms" }}
-			>
-				<button
-					type="button"
-					onClick={() =>
-						withThemeTransition(() =>
-							setTheme(isLight ? "dark" : "light"),
-						)
-					}
-					aria-label={
-						isLight ? "Switch to dark mode" : "Switch to light mode"
-					}
-					className="flex items-center gap-3 px-4 py-2.5 rounded-pill transition-colors w-full text-left text-muted hover:bg-surface hover:text-primary cursor-pointer"
-				>
-					<span className="inline-flex w-5 h-5 items-center justify-center">
-						{mounted && isLight ? (
-							<Moon className="w-5 h-5" strokeWidth={2} />
-						) : (
-							<Sun className="w-5 h-5" strokeWidth={2} />
+				{/* Products expands inline so the ecosystem is one glance away. */}
+				<div className="animate-rise" style={{ animationDelay: "300ms" }}>
+					<button
+						type="button"
+						onClick={() => setProductsOpen((v) => !v)}
+						aria-expanded={productsOpen}
+						className={clsx(
+							"flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors w-full text-left cursor-pointer",
+							productsOpen
+								? "text-primary"
+								: "text-muted hover:bg-surface hover:text-primary",
 						)}
-					</span>
-					<span className="text-[14px] font-sans">
-						{mounted && isLight ? "Dark mode" : "Light mode"}
-					</span>
-				</button>
-			</div>
+					>
+						<span className="inline-flex w-[22px] h-[22px] items-center justify-center">
+							<moreItem.icon isActive={productsOpen} />
+						</span>
+						<span className="text-[15px] font-sans flex-1">
+							{t("nav.products")}
+						</span>
+						<CaretDown
+							size={14}
+							className={clsx(
+								"text-subtle transition-transform",
+								productsOpen && "rotate-180",
+							)}
+						/>
+					</button>
+
+					<div
+						className={clsx(
+							"grid transition-[grid-template-rows] duration-200",
+							productsOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+						)}
+					>
+						<div className="overflow-hidden">
+							{/* No rail/divider: the rows are indented to sit under the
+							    parent's label, which is enough to read as nested. The
+							    arrow is absolutely placed so it costs no row width 
+							    "Cryptocurrencies" needs every pixel in this rail. */}
+							<div className="flex flex-col py-0.5 pl-3">
+								{ECOSYSTEM.map((app) => (
+									<a
+										key={app.title}
+										href={app.href}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="relative flex items-center gap-2.5 pl-3 pr-7 py-2 rounded-xl text-muted hover:bg-surface hover:text-primary transition-colors group/app"
+									>
+										<Image
+											src="/images/wsa-mark.png"
+											alt=""
+											width={15}
+											height={15}
+											aria-hidden
+											className="h-[15px] w-[15px] object-contain shrink-0 opacity-70 group-hover/app:opacity-100 transition-opacity"
+										/>
+										<span className="font-sans text-[13.5px] flex-1 min-w-0 truncate">
+											{app.title}
+										</span>
+										<ArrowUpRight
+											size={12}
+											className="absolute right-2.5 top-1/2 -translate-y-1/2 text-subtle opacity-0 group-hover/app:opacity-100 transition-opacity"
+										/>
+									</a>
+								))}
+							</div>
+						</div>
+					</div>
+				</div>
+
+				{/* Quick actions: the one gold CTA + the glossy Go Live beside it.
+				    The shine sweep passes every 5s (off under reduced motion). */}
+				<div
+					className="mt-5 animate-rise"
+					style={{ animationDelay: "330ms" }}
+				>
+					<button
+						type="button"
+						onClick={() => {
+							const composer =
+								document.querySelector<HTMLTextAreaElement>(
+									"#post-composer-input",
+								);
+							if (composer) {
+								mainScroller().scrollTo({ top: 0, behavior: "smooth" });
+								composer.focus();
+							} else {
+								router.push("/");
+							}
+						}}
+						className="w-full h-12 shine bg-brand hover:bg-brand-active text-brand-on font-semibold text-[15px] rounded-pill font-sans transition-colors cursor-pointer"
+					>
+						{t("composer.post")}
+					</button>
+				</div>
+			</nav>
 
 			{user && (
 				<div
-					className="mb-8 px-2 relative animate-rise"
-					style={{ animationDelay: "320ms" }}
+					className="mb-6 mt-4 px-2 relative animate-rise"
+					style={{ animationDelay: "360ms" }}
 					ref={menuRef}
 				>
-					{isMenuOpen && (
-						<div className="absolute bottom-full left-0 w-[220px] bg-surface border border-hairline rounded-lg shadow-nav overflow-hidden mb-4 z-dropdown animate-rise">
+					{menuOpen && (
+						<div className="absolute bottom-full left-0 w-[230px] card-depth overflow-hidden mb-3 z-dropdown animate-rise py-1">
+							<Link
+								href={
+									user.username ? `/profile/${user.username}` : "/profile"
+								}
+								onClick={() => setMenuOpen(false)}
+								className="w-full text-left px-3.5 py-2.5 hover:bg-raised text-sm text-primary font-sans font-medium flex items-center gap-2.5 transition-colors"
+							>
+								<UserCircle size={16} />
+								{t("nav.viewProfile")}
+							</Link>
+							<button
+								type="button"
+								onClick={() =>
+									withThemeTransition(() =>
+										setTheme(isLight ? "dark" : "light"),
+									)
+								}
+								className="w-full text-left px-3.5 py-2.5 hover:bg-raised text-sm text-primary font-sans font-medium flex items-center gap-2.5 transition-colors cursor-pointer"
+							>
+								{mounted && isLight ? (
+									<Moon size={16} />
+								) : (
+									<Sun size={16} />
+								)}
+								{mounted && isLight ? t("nav.darkMode") : t("nav.lightMode")}
+							</button>
+							<LanguageMenu
+								expanded={langOpen}
+								onToggle={() => setLangOpen((v) => !v)}
+							/>
+							<div className="my-1 border-t border-hairline" />
 							<button
 								type="button"
 								className="w-full text-left px-3.5 py-2.5 hover:bg-raised text-sm text-danger font-sans font-medium flex items-center gap-2.5 transition-colors cursor-pointer"
 								onClick={() => handleSignOut(signOut)}
 							>
-								<LogOut className="w-4 h-4" />
-								Log out @{user.username}
+								<SignOut size={16} />
+								{t("nav.logout")} @{user.username}
 							</button>
 						</div>
 					)}
 
 					<button
 						type="button"
-						onClick={() => setIsMenuOpen(!isMenuOpen)}
-						className="w-full flex items-center gap-3 p-3 rounded-full hover:bg-surface transition-colors text-left group cursor-pointer"
+						onClick={() => setMenuOpen((v) => !v)}
+						className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-surface transition-colors text-left group cursor-pointer"
 					>
-						<div className="relative w-11 h-11 rounded-full overflow-hidden border-2 border-hairline group-hover:border-brand transition-colors">
+						<div className="relative w-10 h-10 rounded-pill overflow-hidden border border-hairline shrink-0">
 							<Image
 								src={user.avatar}
 								alt={user.username || "User"}
@@ -321,14 +348,25 @@ export function LeftSidebar() {
 							/>
 						</div>
 						<div className="flex flex-col flex-1 min-w-0">
-							<span className="font-bold text-sm text-primary truncate font-sans group-hover:text-gold transition-colors">
-								{user.firstName + " " + user.lastName || user.username}
+							<span className="flex items-center gap-1 min-w-0">
+								<span className="font-semibold text-sm text-primary truncate font-sans">
+									{user.firstName + " " + user.lastName || user.username}
+								</span>
+								<UserBadges
+									isVerified={user.isVerified}
+									badges={(user as any).badges}
+									size={13}
+								/>
 							</span>
-							<span className="text-subtle text-[13px] truncate font-sans">
+							<span className="text-subtle text-[12px] truncate font-sans">
 								@{user.username}
 							</span>
 						</div>
-						<MoreHorizontal className="w-5 h-5 text-subtle group-hover:text-primary transition-colors" />
+						<DotsThree
+							size={20}
+							weight="bold"
+							className="text-subtle group-hover:text-primary transition-colors shrink-0"
+						/>
 					</button>
 				</div>
 			)}

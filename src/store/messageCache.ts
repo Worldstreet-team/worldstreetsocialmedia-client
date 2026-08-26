@@ -10,11 +10,14 @@ interface UserProfile {
 }
 
 export interface Message {
+	/** Present when this message replies to a story. */
+	storyRef?: { story: string; thumbnail: string; authorUsername: string };
 	_id: string;
 	conversationId: string;
 	sender: UserProfile;
 	content: string;
-	type: "text" | "image" | "video" | "audio" | "file";
+	// "call" is a finished call logged into the thread, not something typed.
+	type: "text" | "image" | "video" | "audio" | "file" | "call";
 	mediaUrl?: string;
 	createdAt: string;
 }
@@ -45,6 +48,14 @@ export const updateConversationCacheAtom = atom(
 );
 
 export const unreadMessagesCountAtom = atom(0);
+
+/**
+ * The thread currently on screen, or null.
+ *
+ * The badge used to suppress on any /messages path, which meant a message
+ * arriving in thread B while you read thread A was silently dropped.
+ */
+export const activeConversationIdAtom = atom<string | null>(null);
 
 // Helper to append a single message
 export const addMessageToCacheAtom = atom(

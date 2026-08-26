@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ProfileBadge } from "@/components/ui/UserBadges";
 import Image from "next/image";
 // 03-icons: `copy` for copy-link, `bar-chart-3` for activity (both in-set).
 // Trash2/Ban/Pin have no in-set equivalents — kept as justified deviations.
@@ -11,20 +12,25 @@ import {
     BarChart3,
     Pin,
 } from "lucide-react";
-import VerifiedIcon from "@/assets/icons/VerifiedIcon";
+import { UserBadges } from "@/components/ui/UserBadges";
 // 03-icons: Phosphor is reserved for the Social post-action row + overflow menu.
 import {
-    ChatCircle,
-    Heart,
     BookmarkSimple,
-    Export,
+    ChartLineUp,
+    ChatCircle,
     Check,
+    CircleNotch,
     DotsThree,
+    Heart,
+    PaperPlaneTilt,
+    Repeat,
+    Translate,
+    UsersThree,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { useState, useRef, useEffect, memo, useCallback, useMemo } from "react";
 
-import { useAtomValue, useSetAtom } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { motion, AnimatePresence } from "framer-motion";
 import { userAtom } from "@/store/user.atom";
 import { bookmarksAtom } from "@/store/bookmarks.atom";
@@ -39,6 +45,18 @@ import ConfirmModal from "@/components/ui/ConfirmModal";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import ImageModal from "@/components/ui/ImageModal";
 import { renderRichText } from "@/components/ui/RichText";
+import { Radio } from "lucide-react";
+import { promotePostAction } from "@/lib/campaign.actions";
+import { repostPostAction } from "@/lib/post.actions";
+import { QuoteModal } from "@/components/feed/QuoteModal";
+import { Megaphone } from "lucide-react";
+import { useT } from "@/i18n/client";
+import { useLiveEvents } from "@/hooks/useLiveNow";
+import { translatePostAction } from "@/lib/translate.actions";
+import { autoTranslateAtom, translationsAtom } from "@/store/translate.atom";
+import { TranslatePanel } from "@/components/ui/TranslatePanel";
+import ReportSheet from "@/components/safety/ReportSheet";
+import { blockUserAction } from "@/lib/user.actions";
 
 export interface PostProps {
     id: string;
@@ -48,18 +66,48 @@ export interface PostProps {
         username: string;
         avatar: string;
         isVerified?: boolean;
+        /** Earned marks rendered after the name, alongside the tick. */
+        badges?: ProfileBadge[];
     };
     content: string;
     timestamp: string;
+    /** Denormalized @mention metadata (verified ticks on mention chips). */
+    mentions?: { username: string; isVerified?: boolean }[];
     images?: string[];
+    videos?: string[];
     stats: {
         replies: number;
         reposts: number;
         likes: number;
+        views?: number;
     };
     isLiked?: boolean;
+    type?: "post" | "live";
+    promoted?: boolean;
+    repostOf?: {
+        id: string;
+        authorName: string;
+        username: string;
+        avatar: string;
+        isVerified?: boolean;
+        content: string;
+        image?: string;
+        timestamp: string;
+    };
+    live?: {
+        streamId: string;
+        status: "live" | "ended";
+        title?: string;
+        viewerPeak?: number;
+    };
     isBookmarked?: boolean;
     isDetail?: boolean;
+    /** Set when the post was written into a community, so the card can say so. */
+    community?: {
+        id: string;
+        name: string;
+        slug: string;
+    };
     linkPreview?: {
         url: string;
         title: string;
@@ -70,7 +118,7 @@ export interface PostProps {
 }
 
 /* Count formatting per 02-typography number rules: full 1,204 below 10K,
-   K/M abbreviation from 10K up — tabular-nums keeps rolls steady. */
+   K/M abbreviation from 10K up tabular-nums keeps rolls steady. */
 const formatCount = (n: number) => {
     if (!n) return "";
     if (n < 10_000) return n.toLocaleString();
@@ -79,9 +127,41 @@ const formatCount = (n: number) => {
 };
 
 export const PostCard = memo(({ post }: { post: PostProps }) => {
+    const t = useT();
+    const [repostMenuOpen, setRepostMenuOpen] = useState(false);
+    const [quoteOpen, setQuoteOpen] = useState(false);
+    const [reposted, setReposted] = useState(false);
+    const [repostDelta, setRepostDelta] = useState(0);
     const [isLiked, setIsLiked] = useState(post.isLiked);
     const [likeCount, setLikeCount] = useState(post.stats.likes);
     const [isBookmarked, setIsBookmarked] = useState(post.isBookmarked);
+
+    // Translation (X-style): tap to translate, or automatic when the
+    // preference is on. The gateway caches by text-hash + target, so repeat
+    // views of a translated post cost one indexed read.
+    const [autoTranslate, setAutoTranslate] = useAtom(autoTranslateAtom);
+    const translations = useAtomValue(translationsAtom);
+    const [translation, setTranslation] = useState<string | null>(null);
+    const [translationSource, setTranslationSource] = useState<string | null>(
+        null,
+    );
+    const [translating, setTranslating] = useState(false);
+    const [showOriginal, setShowOriginal] = useState(false);
+    const [translateChecked, setTranslateChecked] = useState(false);
+    const [translateOpen, setTranslateOpen] = useState(false);
+    // A live card that keeps its LIVE badge after the broadcast ends is the
+    // most visible kind of stale state. Listen and flip it.
+    const [liveEnded, setLiveEnded] = useState(false);
+    useLiveEvents((event, data) => {
+        if (
+            event === "ended" &&
+            post.live?.streamId &&
+            data.streamId === post.live.streamId
+        ) {
+            setLiveEnded(true);
+        }
+    });
+    const isLiveNow = post.live?.status === "live" && !liveEnded;
 
     const currentUser = useAtomValue(userAtom);
     const setUser = useSetAtom(userAtom);
@@ -96,13 +176,15 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isDeleted, setIsDeleted] = useState(false);
+    const [isReportOpen, setIsReportOpen] = useState(false);
+    const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
 
     // Image Modal State
     const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(
         null,
     );
 
-    // Share feedback: Export briefly swaps to a success Check after copying.
+    // Share feedback: the paper plane briefly swaps to a success Check after copying.
     const [linkCopied, setLinkCopied] = useState(false);
     const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     useEffect(
@@ -214,6 +296,75 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
         }
     }, [currentUser, isBookmarked, post, setUser, setBookmarks, toast]);
 
+    const handleTranslate = useCallback(
+        async (silent = false) => {
+        if (translating || !post.content) return;
+        if (!silent) setTranslating(true);
+        try {
+            const res = await translatePostAction(post.content);
+            setTranslateChecked(true);
+            if (res.success && res.translated && !res.sameLanguage) {
+                setTranslation(res.translated);
+                setTranslationSource(res.source ?? null);
+                setShowOriginal(false);
+            }
+        } finally {
+            if (!silent) setTranslating(false);
+        }
+    },
+        [translating, post.content],
+    );
+
+    // The feed translates a page in the background as it loads, so by the
+    // time a card is on screen its translation is usually already here —
+    // adopt it and render translated on first paint, no spinner, no request.
+    const cachedTranslation = translations[post.id];
+    useEffect(() => {
+        if (!cachedTranslation) return;
+        setTranslateChecked(true);
+        if (cachedTranslation.translated && !cachedTranslation.sameLanguage) {
+            setTranslation(cachedTranslation.translated);
+            setTranslationSource(cachedTranslation.source ?? null);
+        }
+    }, [cachedTranslation]);
+
+    // Fallback for surfaces with no prefetch (post detail, profile). Runs
+    // SILENTLY: an automatic translation the reader didn't ask for has no
+    // business showing them a loading state.
+    useEffect(() => {
+        if (
+            autoTranslate &&
+            !translateChecked &&
+            !translating &&
+            !cachedTranslation &&
+            post.content
+        ) {
+            handleTranslate(true);
+        }
+    }, [
+        autoTranslate,
+        translateChecked,
+        translating,
+        cachedTranslation,
+        post.content,
+        handleTranslate,
+    ]);
+
+    // "Translated from Spanish" in the reader's own language.
+    const translatedFromLabel = useMemo(() => {
+        if (!translationSource) return null;
+        const code = translationSource.split("-")[0].toLowerCase();
+        try {
+            return (
+                new Intl.DisplayNames([t.locale], { type: "language" }).of(
+                    code,
+                ) ?? code.toUpperCase()
+            );
+        } catch {
+            return code.toUpperCase();
+        }
+    }, [translationSource, t.locale]);
+
     const handleDelete = useCallback(async () => {
         setIsDeleting(true);
         try {
@@ -250,14 +401,31 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                         console.error("Failed to copy link: ", err);
                         toast("Failed to copy link", { type: "error" });
                     });
+            } else if (action === "report") {
+                setIsReportOpen(true);
+            } else if (action === "block") {
+                setIsBlockModalOpen(true);
             } else {
-                // Pin/activity/not-interested/block/report have no gateway
-                // support yet — say so instead of silently no-oping.
-                toast("Not available yet — coming soon", { type: "info" });
+                // Pin, activity and not-interested still have no gateway
+                // support — say so instead of silently no-oping.
+                toast("Not available yet coming soon", { type: "info" });
             }
         },
         [post.id, toast],
     );
+
+    /** Block from the post menu, without leaving the feed. */
+    const handleBlockAuthor = useCallback(async () => {
+        const res = await blockUserAction(post.author.id);
+        if (!res.success) {
+            toast(res.message ?? "Could not block", { type: "error" });
+            return;
+        }
+        toast(t("safety.blocked.toast"));
+        // The post is now hidden server-side; drop it from this render too so
+        // the feed doesn't keep showing what it just agreed to hide.
+        setIsDeleted(true);
+    }, [post.author.id, toast, t]);
 
     const MAX_LENGTH = 280;
     const shouldTruncate = useMemo(
@@ -273,9 +441,17 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
 
     // URLs, $cashtags, #hashtags and @mentions become links (RichText).
     const formattedContent = useMemo(
-        () => renderRichText(displayedContent),
-        [displayedContent],
+        () => renderRichText(displayedContent, { mentions: post.mentions }),
+        [displayedContent, post.mentions],
     );
+    const formattedTranslation = useMemo(
+        () =>
+            translation
+                ? renderRichText(translation, { mentions: post.mentions })
+                : null,
+        [translation, post.mentions],
+    );
+    const showingTranslation = Boolean(translation) && !showOriginal;
 
     /* Aspect ratios, not a fixed 290px height. At a 620px column 290px is
        roughly 2:1; at 320px it squashed every tile into a letterbox and
@@ -323,12 +499,49 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                 isDestructive={true}
             />
 
+            <ConfirmModal
+                isOpen={isBlockModalOpen}
+                onClose={() => setIsBlockModalOpen(false)}
+                onConfirm={handleBlockAuthor}
+                title={`${t("safety.block")} @${post.author.username}?`}
+                message="They will not be able to message you or see your posts, and you will not see theirs."
+                confirmText={t("safety.block")}
+                isDestructive
+            />
+
+            {isReportOpen && (
+                <ReportSheet
+                    /* The gateway derives comment-vs-post from `parentPost`,
+                       so the client does not have to know which this is. */
+                    targetType="post"
+                    targetId={post.id}
+                    canBlock={!isOwnPost}
+                    onBlock={handleBlockAuthor}
+                    onClose={() => setIsReportOpen(false)}
+                />
+            )}
+
             <ImageModal
                 isOpen={selectedImageIndex !== null}
                 onClose={() => setSelectedImageIndex(null)}
                 images={post.images || []}
                 initialIndex={selectedImageIndex || 0}
             />
+
+            {/* Which community this came from, above the author row. In an
+                aggregated feed the community is the first thing you need,
+                not the last. z-10 + pointer-events-auto so it stays clickable
+                above the card's overlay link. */}
+            {post.community && (
+                <Link
+                    href={`/communities/${post.community.slug}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="relative z-10 mb-1.5 ml-[54px] sm:ml-[58px] flex w-fit items-center gap-1.5 pointer-events-auto font-sans text-[12.5px] font-semibold text-muted transition-colors hover:text-primary"
+                >
+                    <UsersThree size={13} weight="duotone" className="text-gold" />
+                    <span className="truncate">{post.community.name}</span>
+                </Link>
+            )}
 
             <div className="flex gap-3 sm:gap-4 relative z-10 pointer-events-none">
                 <div className="shrink-0 pointer-events-auto mt-1">
@@ -348,7 +561,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                     <div className="flex items-center justify-between gap-1 mb-0.5">
                         {/* min-w-0 lets the two truncating links actually shrink;
                             without it the row grows past the card on narrow
-                            screens. The badge, dot and timestamp never shrink —
+                            screens. The badge, dot and timestamp never shrink 
                             the handle gives way first, then the display name. */}
                         <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 overflow-hidden pointer-events-auto">
                             <Link
@@ -357,10 +570,10 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                             >
                                 {post.author.name}
                             </Link>
-                            {/* Gold seal badge — the one VerifiedIcon everywhere. */}
+                            {/* Gold seal badge the one VerifiedIcon everywhere. */}
                             {post.author.isVerified && (
                                 <span className="shrink-0 flex">
-                                    <VerifiedIcon size={{ width: "16", height: "16" }} />
+                                    <UserBadges isVerified badges={post.author.badges} size={16} />
                                 </span>
                             )}
                             <Link
@@ -375,6 +588,17 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                             <span className="text-subtle text-[13px] font-sans whitespace-nowrap shrink-0">
                                 {post.timestamp}
                             </span>
+                            {post.promoted && (
+                                <span className="shrink-0 rounded-[4px] bg-raised px-1.5 py-px text-[10px] font-semibold tracking-wide text-subtle font-sans">
+                                    {t("promo.label")}
+                                </span>
+                            )}
+                            {isLiveNow && (
+                                <span className="shrink-0 flex items-center gap-1 rounded-[4px] bg-danger px-1.5 py-px text-[10px] font-bold tracking-wide text-white font-sans">
+                                    <span className="w-1.5 h-1.5 rounded-pill bg-white animate-pulse" />
+                                    {t("live.badge")}
+                                </span>
+                            )}
                         </div>
 
                         <div
@@ -439,6 +663,22 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
+                                                        setIsMenuOpen(false);
+                                                        setAutoTranslate(
+                                                            (v) => !v,
+                                                        );
+                                                    }}
+                                                    className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
+                                                >
+                                                    <Translate size={16} />
+                                                    {autoTranslate
+                                                        ? t("post.autoTranslateOff")
+                                                        : t("post.autoTranslateOn")}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
                                                         handleMenuAction("pin");
                                                     }}
                                                     className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
@@ -473,6 +713,32 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                                     <Trash2 className="w-4 h-4" />
                                                     Delete post
                                                 </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={async (e) => {
+                                                        e.stopPropagation();
+                                                        setIsMenuOpen(false);
+                                                        const res =
+                                                            await promotePostAction(
+                                                                post.id,
+                                                            );
+                                                        toast(
+                                                            res.success
+                                                                ? t("promo.created")
+                                                                : (res.message ??
+                                                                        t("promo.failed")),
+                                                            {
+                                                                type: res.success
+                                                                    ? "success"
+                                                                    : "error",
+                                                            },
+                                                        );
+                                                    }}
+                                                    className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
+                                                >
+                                                    <Megaphone className="w-4 h-4" />
+                                                    {t("promo.menu")}
+                                                </button>
                                             </>
                                         ) : (
                                             <>
@@ -501,6 +767,22 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                                 >
                                                     <Copy className="w-4 h-4" />
                                                     Copy link
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setIsMenuOpen(false);
+                                                        setAutoTranslate(
+                                                            (v) => !v,
+                                                        );
+                                                    }}
+                                                    className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
+                                                >
+                                                    <Translate size={16} />
+                                                    {autoTranslate
+                                                        ? t("post.autoTranslateOff")
+                                                        : t("post.autoTranslateOn")}
                                                 </button>
                                                 <div className="my-1 border-t border-hairline" />
                                                 <button
@@ -538,10 +820,45 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                         </div>
                     </div>
                     {/* Post Content */}
-                    {/* UI/Body: Public Sans Regular 15 — post text size per 02-typography. */}
+                    {/* UI/Body: Public Sans Regular 15 post text size per 02-typography. */}
+                    {post.repostOf && !post.content && (
+                        <span className="flex items-center gap-1.5 text-subtle text-[12px] font-sans mb-1">
+                            <Repeat size={12} />
+                            {t("post.reposted")}
+                        </span>
+                    )}
+                    {post.live && (
+                        <Link
+                            href={`/live?tab=live&s=${post.live.streamId}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="relative z-10 pointer-events-auto mb-2 flex items-center gap-3 rounded-lg border border-hairline bg-raised/40 hover:bg-raised px-3.5 py-3 transition-colors"
+                        >
+                            <span
+                                className={
+                                    isLiveNow
+                                        ? "flex h-9 w-9 items-center justify-center rounded-pill bg-danger/15 text-danger shrink-0"
+                                        : "flex h-9 w-9 items-center justify-center rounded-pill bg-raised text-muted shrink-0"
+                                }
+                            >
+                                <Radio className="w-4.5 h-4.5" />
+                            </span>
+                            <span className="min-w-0">
+                                <span className="block text-sm font-semibold text-primary font-sans truncate">
+                                    {post.live.title || post.content}
+                                </span>
+                                <span className="block text-[13px] text-muted font-sans">
+                                    {isLiveNow
+                                        ? t("live.watch")
+                                        : `${t("live.replay")}${post.live.viewerPeak ? ` · ${post.live.viewerPeak} ${t("live.viewers")}` : ""}`}
+                                </span>
+                            </span>
+                        </Link>
+                    )}
                     <p className="text-primary whitespace-pre-wrap mb-1.5 font-normal leading-[1.55] text-[15px] font-sans tracking-tight pointer-events-none">
-                        {formattedContent}
-                        {shouldTruncate && (
+                        {showingTranslation
+                            ? formattedTranslation
+                            : formattedContent}
+                        {shouldTruncate && !showingTranslation && (
                             <span className="text-subtle pointer-events-auto">
                                 ...{" "}
                                 <Link
@@ -553,6 +870,94 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                             </span>
                         )}
                     </p>
+                    {post.content &&
+                        (translation || translating || !translateChecked) && (
+                            <div className="relative z-10 pointer-events-auto -mt-0.5 mb-1.5">
+                                {translation ? (
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowOriginal((v) => !v);
+                                        }}
+                                        className="flex items-center gap-1.5 text-[12.5px] font-sans text-subtle hover:text-gold transition-colors cursor-pointer"
+                                    >
+                                        <Translate size={13} />
+                                        {showOriginal ? (
+                                            t("post.showTranslation")
+                                        ) : (
+                                            <>
+                                                {t("post.translatedFrom")}
+                                                {translatedFromLabel
+                                                    ? ` ${translatedFromLabel}`
+                                                    : ""}
+                                                {" · "}
+                                                {t("post.showOriginal")}
+                                            </>
+                                        )}
+                                    </button>
+                                ) : translating ? (
+                                    <span className="flex items-center gap-1.5 text-[12.5px] font-sans text-subtle">
+                                        <CircleNotch
+                                            size={13}
+                                            className="animate-spin"
+                                        />
+                                        {t("post.translating")}
+                                    </span>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setTranslateOpen(true);
+                                        }}
+                                        className="flex items-center gap-1.5 text-[12.5px] font-sans text-subtle hover:text-gold transition-colors cursor-pointer"
+                                    >
+                                        <Translate size={13} />
+                                        {t("post.translate")}
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    {post.repostOf && (
+                        <Link
+                            href={`/post/${post.repostOf.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="relative z-10 pointer-events-auto block mt-2 mb-1.5 rounded-xl border border-hairline/70 p-3 hover:bg-raised/30 transition-colors"
+                        >
+                            <span className="flex items-center gap-2 mb-1 min-w-0">
+                                <span className="relative w-5 h-5 rounded-pill overflow-hidden shrink-0 bg-raised">
+                                    <Image
+                                        src={post.repostOf.avatar}
+                                        alt=""
+                                        fill
+                                        className="object-cover"
+                                    />
+                                </span>
+                                <span className="text-[13px] font-semibold text-primary font-sans truncate">
+                                    {post.repostOf.authorName}
+                                </span>
+                                <span className="text-[12px] text-subtle font-sans truncate shrink-0">
+                                    @{post.repostOf.username} · {post.repostOf.timestamp}
+                                </span>
+                            </span>
+                            {post.repostOf.content && (
+                                <span className="block text-[14px] text-muted font-sans line-clamp-4 whitespace-pre-wrap">
+                                    {post.repostOf.content}
+                                </span>
+                            )}
+                            {post.repostOf.image && (
+                                <span className="relative block mt-2 h-44 rounded-lg overflow-hidden bg-sunken">
+                                    <Image
+                                        src={post.repostOf.image}
+                                        alt=""
+                                        fill
+                                        className="object-cover"
+                                    />
+                                </span>
+                            )}
+                        </Link>
+                    )}
 
                     {/* Link Preview */}
                     {post.linkPreview && !post.images?.length && (
@@ -590,8 +995,29 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                         </a>
                     )}
 
+                    {post.videos && post.videos.length > 0 && (
+                        <div
+                            className="relative z-10 pointer-events-auto mt-2 mb-1.5 rounded-xl overflow-hidden border border-hairline bg-sunken"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                            <video
+                                src={post.videos[0]}
+                                className="w-full max-h-[560px] aspect-video object-contain bg-sunken"
+                                controls
+                                playsInline
+                                preload="metadata"
+                            />
+                        </div>
+                    )}
                     {post.images && post.images.length === 1 && (
-                        <div className="mb-3 w-full">
+                        // pointer-events-auto: the card body is
+                        // pointer-events-none so the card-wide overlay link
+                        // catches taps, and every interactive child has to opt
+                        // back in. The multi-image grid and the video block
+                        // already did; this one didn't, so single-image posts
+                        // silently could not be tapped to zoom.
+                        <div className="mb-3 w-full pointer-events-auto">
                             <img
                                 src={post.images[0]}
                                 alt="Post attachment"
@@ -635,22 +1061,96 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                 ))}
                         </div>
                     )}
-                    {/* Post actions. 03-icons: this row is the ONE place Phosphor is
-                        used instead of Lucide, matching the mobile app. 15px, text/muted. */}
-                    <div className="flex items-center justify-between max-w-[420px] text-muted mt-1 -mb-1.5 pointer-events-auto">
+                    {/* Post actions the interaction cluster sits flush left;
+                        impressions ride the right edge, isolated (a metric, not
+                        a button). 03-icons: this row is the ONE place Phosphor
+                        is used instead of Lucide, matching mobile. */}
+                    <div className="flex items-center justify-between text-muted mt-1.5 -mb-1.5 pointer-events-auto">
+                        <div className="flex items-center gap-0.5 sm:gap-2 -ml-2">
                         <Link
                             href={`/post/${post.id}`}
                             onClick={(e) => e.stopPropagation()}
                             aria-label="Reply"
-                            className="flex items-center gap-0.5 -ml-2 hover:text-primary transition-colors group cursor-pointer"
+                            className="flex items-center gap-0.5 hover:text-primary transition-colors group cursor-pointer"
                         >
-                            <span className="flex h-10 w-10 items-center justify-center rounded-pill group-hover:bg-primary/10 transition group-active:scale-[0.98]">
-                                <ChatCircle size={15} />
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill group-hover:bg-primary/10 transition group-active:scale-[0.98]">
+                                <ChatCircle size={17} />
                             </span>
                             <span className="text-[13px] font-sans tabular-nums">
                                 {formatCount(post.stats.replies)}
                             </span>
                         </Link>
+                        <div className="relative">
+                            <button
+                                type="button"
+                                aria-label={t("post.repost")}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setRepostMenuOpen((v) => !v);
+                                }}
+                                className={clsx(
+                                    "flex items-center gap-0.5 transition-colors group cursor-pointer",
+                                    reposted ? "text-success" : "hover:text-success",
+                                )}
+                            >
+                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill group-hover:bg-success/10 transition group-active:scale-[0.98]">
+                                    <Repeat
+                                        size={17}
+                                        weight={reposted ? "bold" : "regular"}
+                                    />
+                                </span>
+                                <span className="text-[13px] font-sans tabular-nums">
+                                    {formatCount(
+                                        (post.stats.reposts ?? 0) + repostDelta,
+                                    )}
+                                </span>
+                            </button>
+                            {repostMenuOpen && (
+                                <div
+                                    className="absolute bottom-11 left-0 z-dropdown card-depth rounded-xl overflow-hidden py-1 w-40 animate-rise"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            setRepostMenuOpen(false);
+                                            const res = await repostPostAction(
+                                                post.id,
+                                            );
+                                            if (res.success) {
+                                                setReposted(
+                                                    Boolean(res.reposted),
+                                                );
+                                                setRepostDelta(
+                                                    res.reposted ? 1 : 0,
+                                                );
+                                                toast(
+                                                    res.reposted
+                                                        ? t("post.reposted")
+                                                        : t("post.unreposted"),
+                                                    { type: "success" },
+                                                );
+                                            }
+                                        }}
+                                        className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans cursor-pointer"
+                                    >
+                                        <Repeat size={15} />
+                                        {t("post.repost")}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setRepostMenuOpen(false);
+                                            setQuoteOpen(true);
+                                        }}
+                                        className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans cursor-pointer"
+                                    >
+                                        <ChatCircle size={15} />
+                                        {t("post.quote")}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                         <button
                             type="button"
                             aria-label={isLiked ? "Unlike" : "Like"}
@@ -664,8 +1164,8 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                 isLiked ? "text-danger" : "hover:text-danger",
                             )}
                         >
-                            <span className="relative flex h-10 w-10 items-center justify-center rounded-pill group-hover:bg-danger/10 transition group-active:scale-[0.98]">
-                                {/* One-shot danger wash on like — opacity-only,
+                            <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-pill group-hover:bg-danger/10 transition group-active:scale-[0.98]">
+                                {/* One-shot danger wash on like opacity-only,
                                     fades out over motion-slow and stays gone. */}
                                 <AnimatePresence>
                                     {isLiked && (
@@ -694,7 +1194,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                     className="flex"
                                 >
                                     <Heart
-                                        size={15}
+                                        size={17}
                                         weight={isLiked ? "fill" : "regular"}
                                     />
                                 </motion.span>
@@ -734,7 +1234,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                 isBookmarked ? "text-gold" : "hover:text-gold",
                             )}
                         >
-                            <span className="relative flex h-10 w-10 items-center justify-center rounded-pill group-hover:bg-gold/10 transition group-active:scale-[0.98]">
+                            <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-pill group-hover:bg-gold/10 transition group-active:scale-[0.98]">
                                 <AnimatePresence>
                                     {isBookmarked && (
                                         <motion.span
@@ -759,7 +1259,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                     className="flex"
                                 >
                                     <BookmarkSimple
-                                        size={15}
+                                        size={17}
                                         weight={isBookmarked ? "fill" : "regular"}
                                     />
                                 </motion.span>
@@ -786,7 +1286,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                     : "hover:text-primary",
                             )}
                         >
-                            <span className="flex h-10 w-10 items-center justify-center rounded-pill group-hover:bg-primary/10 transition group-active:scale-[0.98]">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill group-hover:bg-primary/10 transition group-active:scale-[0.98]">
                                 <AnimatePresence mode="wait" initial={false}>
                                     {linkCopied ? (
                                         <motion.span
@@ -803,7 +1303,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                             }}
                                             className="flex"
                                         >
-                                            <Check size={15} weight="bold" />
+                                            <Check size={16} weight="bold" />
                                         </motion.span>
                                     ) : (
                                         <motion.span
@@ -820,15 +1320,49 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                             }}
                                             className="flex"
                                         >
-                                            <Export size={15} />
+                                            <PaperPlaneTilt size={17} />
                                         </motion.span>
                                     )}
                                 </AnimatePresence>
                             </span>
                         </button>
+                        </div>
+
+                        <div
+                            // hidden below sm: five 40px targets + counts already
+                            // outgrow a 375px card; the passive views metric is the
+                            // one item that can yield (it stays on the post page).
+                            className="hidden sm:flex items-center gap-1.5 pr-0.5 cursor-default select-none text-subtle"
+                            title={t("post.views")}
+                            aria-label={t("post.views")}
+                        >
+                            <ChartLineUp size={14} />
+                            <span className="text-[12.5px] font-medium font-sans tabular-nums">
+                                {formatCount(post.stats.views ?? 0) || "0"}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
+            {translateOpen && (
+                <TranslatePanel
+                    content={post.content}
+                    onClose={() => setTranslateOpen(false)}
+                />
+            )}
+            {quoteOpen && (
+                <QuoteModal
+                    target={{
+                        id: post.id,
+                        authorName: post.author.name,
+                        username: post.author.username,
+                        avatar: post.author.avatar,
+                        content: post.content || post.repostOf?.content || "",
+                        timestamp: post.timestamp,
+                    }}
+                    onClose={() => setQuoteOpen(false)}
+                />
+            )}
         </article>
     );
 });

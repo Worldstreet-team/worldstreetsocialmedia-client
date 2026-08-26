@@ -38,7 +38,7 @@ export const PostSkeleton = ({ hasMedia = false }: PostSkeletonProps) => {
 						<div className="skeleton w-full aspect-video rounded-xl mb-4" />
 					)}
 
-					{/* action row — same 48px gap rhythm as the real card */}
+					{/* action row same 48px gap rhythm as the real card */}
 					<div className="flex items-center gap-12 mt-3">
 						<div className="skeleton h-5 w-5 rounded-pill" />
 						<div className="skeleton h-5 w-5 rounded-pill" />

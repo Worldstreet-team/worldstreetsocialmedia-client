@@ -11,8 +11,8 @@ import { followUserAction, unfollowUserAction } from "@/lib/user.actions";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import clsx from "clsx";
 import { UserX } from "lucide-react";
-import VerifiedIcon from "@/assets/icons/VerifiedIcon";
-import { DEFAULT_AVATAR } from "@/const";
+import { UserBadges } from "@/components/ui/UserBadges";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 interface FollowsModalProps {
 	isOpen: boolean;
@@ -164,7 +164,7 @@ export default function FollowsModal({
 												key={i}
 												className="flex items-center gap-3 p-4 border-b border-hairline last:border-0"
 											>
-												<Skeleton className="w-10 h-10 rounded-full" />
+												<Skeleton className="w-10 h-10 rounded-pill" />
 												<div className="flex flex-col gap-1 flex-1">
 													<Skeleton className="h-4 w-32" />
 													<Skeleton className="h-3 w-20" />
@@ -185,14 +185,9 @@ export default function FollowsModal({
 											>
 												<Link
 													href={`/profile/${user.username}`}
-													className="shrink-0"
+													className="relative h-10 w-10 shrink-0 overflow-hidden rounded-pill bg-raised"
 												>
-													<div
-														className="w-10 h-10 rounded-full bg-cover bg-center border border-hairline"
-														style={{
-															backgroundImage: `url('${user.avatar || DEFAULT_AVATAR}')`,
-														}}
-													/>
+													<SafeAvatar src={user.avatar} />
 												</Link>
 												<div className="flex flex-col flex-1 min-w-0">
 													<Link
@@ -200,9 +195,11 @@ export default function FollowsModal({
 														className="font-semibold text-[15px] truncate flex items-center gap-1 hover:underline font-sans text-primary"
 													>
 														{user.firstName} {user.lastName}
-														{user.isVerified && (
-															<VerifiedIcon size={{ width: "16", height: "16" }} />
-														)}
+														<UserBadges
+											isVerified={user.isVerified}
+											badges={(user as any).badges}
+											size={16}
+										/>
 													</Link>
 													<Link
 														href={`/profile/${user.username}`}

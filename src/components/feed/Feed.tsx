@@ -1,12 +1,14 @@
 "use client";
 
-import { formatTimeAgo } from "@/lib/utils";
+import { formatTimeAgo, mainScrollTop, mainScroller } from "@/lib/utils";
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAtom, useAtomValue } from "jotai";
 import { feedAtom } from "@/store/feed.atom";
 import { feedTabAtom, followingIdsAtom } from "@/store/ui.atom";
+import { autoTranslateAtom, translationsAtom } from "@/store/translate.atom";
+import { prefetchTranslations } from "@/lib/translate.prefetch";
 import { PostCard, PostProps } from "@/components/feed/PostCard";
 import { PostComposer } from "@/components/feed/PostComposer";
 import { getFeedAction } from "@/lib/feed.actions";
@@ -14,14 +16,29 @@ import { getFeedAction } from "@/lib/feed.actions";
 import { ArrowUp, Plus, UserPlus } from "lucide-react";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { PostSkeleton } from "@/components/feed/PostSkeleton";
+import { ImpressionSensor } from "@/components/feed/ImpressionSensor";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { DEFAULT_AVATAR } from "@/const";
+import { useT } from "@/i18n/client";
+import { useFeedEvents } from "@/hooks/useUserEvents";
+import { userAtom } from "@/store/user.atom";
 
 export default function Feed() {
+	const t = useT();
 	const [feedState, setFeedState] = useAtom(feedAtom);
 	const tab = useAtomValue(feedTabAtom);
 	const followingIds = useAtomValue(followingIdsAtom);
+	const autoTranslate = useAtomValue(autoTranslateAtom);
+	const [translations, setTranslations] = useAtom(translationsAtom);
+	// Read through a ref inside the prefetch so a page landing mid-flight
+	// doesn't re-translate what an earlier page already resolved.
+	const translationsRef = useRef(translations);
+	translationsRef.current = translations;
 	const [loading, setLoading] = useState(true);
+	// New posts arrive as a count, not as a jump: yanking the timeline under
+	// someone mid-read is worse than letting them choose when to see them.
+	const [pendingPosts, setPendingPosts] = useState(0);
+	const me = useAtomValue(userAtom);
 	const [isPosting, setIsPosting] = useState(false);
 	const [showBackToTop, setShowBackToTop] = useState(false);
 	const { toast } = useToast();
@@ -57,9 +74,10 @@ export default function Feed() {
 
 	// Back-to-top pill once the reader is a couple of screens deep.
 	useEffect(() => {
-		const onScroll = () => setShowBackToTop(window.scrollY > 800);
-		window.addEventListener("scroll", onScroll, { passive: true });
-		return () => window.removeEventListener("scroll", onScroll);
+		const scroller = mainScroller();
+		const onScroll = () => setShowBackToTop(mainScrollTop() > 800);
+		scroller.addEventListener("scroll", onScroll, { passive: true });
+		return () => scroller.removeEventListener("scroll", onScroll);
 	}, []);
 
 	useEffect(() => {
@@ -75,6 +93,25 @@ export default function Feed() {
 		observer.observe(node);
 		return () => observer.disconnect();
 	});
+
+	// Translate in the background whenever posts are present and untranslated
+	// — a fresh page, a restored timeline, or the reader turning the
+	// preference on mid-scroll. Keyed on posts rather than on the fetch, so a
+	// feed rehydrated from feedAtom (no network call) still gets translated.
+	// Not awaited: the feed paints immediately and each result lands in the
+	// atom as it arrives. prefetchTranslations dedupes against what's already
+	// known and what's already in flight.
+	useEffect(() => {
+		if (!autoTranslate || feedState.posts.length === 0) return;
+		void prefetchTranslations(
+			feedState.posts,
+			(id) => Boolean(translationsRef.current[id]),
+			(id, entry) =>
+				setTranslations((prev) =>
+					prev[id] ? prev : { ...prev, [id]: entry },
+				),
+		);
+	}, [autoTranslate, feedState.posts, setTranslations]);
 
 	// "Following" filters the loaded timeline by who this session follows
 	// (followingIdsAtom grows as Follow buttons are clicked).
@@ -99,7 +136,7 @@ export default function Feed() {
 			// Restore scroll position with a slight delay to ensure DOM is ready
 			if (feedState.scrollPosition > 0) {
 				setTimeout(() => {
-					window.scrollTo(0, feedState.scrollPosition);
+					mainScroller().scrollTo(0, feedState.scrollPosition);
 				}, 10);
 			}
 		} else {
@@ -110,10 +147,18 @@ export default function Feed() {
 		return () => {
 			if (typeof window !== "undefined") {
 				window.history.scrollRestoration = "auto";
-				setFeedState((prev) => ({ ...prev, scrollPosition: window.scrollY }));
+				setFeedState((prev) => ({ ...prev, scrollPosition: mainScrollTop() }));
 			}
 		};
 	}, []);
+
+	useFeedEvents((event, data) => {
+		if (event !== "post") return;
+		// Your own post already appears optimistically.
+		if (data.author && me?._id && String(data.author) === String(me._id))
+			return;
+		setPendingPosts((n) => n + 1);
+	});
 
 	const fetchFeed = async (reset = false) => {
 		if (reset) {
@@ -121,8 +166,8 @@ export default function Feed() {
 		}
 
 		try {
-			const currentPage = reset ? 1 : feedState.page;
-			const result = await getFeedAction(currentPage);
+			const currentCursor = reset ? null : feedState.cursor;
+			const result = await getFeedAction(currentCursor);
 
 			if (result.success && result.data) {
 				const apiPosts = result.data.posts;
@@ -137,13 +182,36 @@ export default function Feed() {
 						username: post.author.username,
 						avatar: post.author.avatar || DEFAULT_AVATAR,
 						isVerified: post.author.isVerified,
+						badges: post.author.badges,
 					},
 					content: post.content,
+					mentions: post.mentions,
 					timestamp: formatTimeAgo(post.createdAt),
 					images: post.images,
-					stats: post.stats || { replies: 0, reposts: 0, likes: 0 },
+					videos: post.videos,
+					stats: post.stats || { replies: 0, reposts: 0, likes: 0, views: 0 },
 					isLiked: post.isLiked,
 					isBookmarked: post.isBookmarked,
+					type: post.type,
+					live: post.live,
+					promoted: Boolean(post.promoted),
+					repostOf: post.repostOf
+						? {
+								id: post.repostOf._id,
+								authorName:
+									post.repostOf.author?.firstName &&
+									post.repostOf.author?.lastName
+										? `${post.repostOf.author.firstName} ${post.repostOf.author.lastName}`
+										: (post.repostOf.author?.username ?? ""),
+								username: post.repostOf.author?.username ?? "",
+								avatar:
+									post.repostOf.author?.avatar || DEFAULT_AVATAR,
+								isVerified: post.repostOf.author?.isVerified,
+								content: post.repostOf.content ?? "",
+								image: post.repostOf.images?.[0],
+								timestamp: formatTimeAgo(post.repostOf.createdAt),
+							}
+						: undefined,
 				}));
 
 				setFeedState((prev) => {
@@ -161,8 +229,8 @@ export default function Feed() {
 					return {
 						...prev,
 						posts: [...byId.values()],
-						page: reset ? 2 : prev.page + 1,
-						hasMore: result.data.page < result.data.totalPages,
+						cursor: result.data.nextCursor ?? null,
+						hasMore: Boolean(result.data.hasMore),
 					};
 				});
 			} else {
@@ -197,7 +265,8 @@ export default function Feed() {
 				content: newPost.content,
 				timestamp: "Just now",
 				images: newPost.images,
-				stats: newPost.stats || { replies: 0, reposts: 0, likes: 0 },
+				videos: newPost.videos,
+				stats: newPost.stats || { replies: 0, reposts: 0, likes: 0, views: 0 },
 				isLiked: false,
 				isBookmarked: false,
 			};
@@ -219,6 +288,28 @@ export default function Feed() {
 
 	return (
 		<div className="w-full min-w-0 pb-nav md:pb-20">
+			{/* New posts announce themselves; the reader decides when to jump. */}
+			<AnimatePresence>
+				{pendingPosts > 0 && (
+					<motion.button
+						type="button"
+						initial={{ opacity: 0, y: -8, x: "-50%" }}
+						animate={{ opacity: 1, y: 0, x: "-50%" }}
+						exit={{ opacity: 0, transition: { duration: 0.12 } }}
+						transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+						onClick={() => {
+							setPendingPosts(0);
+							mainScroller().scrollTo({ top: 0, behavior: "smooth" });
+							void fetchFeed(true);
+						}}
+						className="fixed top-[72px] md:top-16 left-1/2 z-sticky flex items-center gap-1.5 h-9 pl-3.5 pr-4 rounded-pill bg-brand text-brand-on shadow-nav font-sans text-[13px] font-semibold hover:bg-brand-active transition-colors cursor-pointer"
+					>
+						<ArrowUp className="w-[14px] h-[14px]" />
+						{pendingPosts} {t("feed.newPosts")}
+					</motion.button>
+				)}
+			</AnimatePresence>
+
 			<AnimatePresence>
 				{showBackToTop && (
 					<motion.button
@@ -229,7 +320,7 @@ export default function Feed() {
 						exit={{ opacity: 0, transition: { duration: 0.12 } }}
 						transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
 						onClick={() =>
-							window.scrollTo({ top: 0, behavior: "smooth" })
+							mainScroller().scrollTo({ top: 0, behavior: "smooth" })
 						}
 						// bottom-nav derives from --ws-nav-clearance, so the pill
 						// tracks the real bar height + home indicator instead of a
@@ -242,7 +333,14 @@ export default function Feed() {
 				)}
 			</AnimatePresence>
 
-			<div className="animate-rise" style={{ animationDelay: "100ms" }}>
+			{/* A normal feed row, not a card (owner ruling 2026-08-26): the
+			    card-depth gradient + inset margins made the composer the
+			    loudest thing on the page. Same page ground and hairline rhythm
+			    as the posts below it. */}
+			<div
+				className="animate-rise border-b border-hairline"
+				style={{ animationDelay: "60ms" }}
+			>
 				<PostComposer
 					onPostStart={handlePostStart}
 					onPostSuccess={handlePostSuccess}
@@ -253,8 +351,23 @@ export default function Feed() {
 			<div key={tab}>
 				{isPosting && <PostSkeleton />}
 				{visiblePosts.map((post, index) => (
-					<div
+					<ImpressionSensor
 						key={post.id}
+						meta={{
+							post: post.id,
+							author: post.author.id,
+							surface: tab === "following" ? "feed_following" : "feed_foryou",
+							position: index,
+							mediaType: post.live
+								? "live"
+								: post.videos?.length
+									? "video"
+									: post.images?.length
+										? "image"
+										: "text",
+							cursorDepth: Math.floor(index / 10),
+							promoted: post.promoted,
+						}}
 						className="animate-rise"
 						style={{
 							animationDelay: introPlayedRef.current
@@ -263,7 +376,7 @@ export default function Feed() {
 						}}
 					>
 						<PostCard post={post} />
-					</div>
+					</ImpressionSensor>
 				))}
 
 				{loading && (
@@ -279,16 +392,16 @@ export default function Feed() {
 					(tab === "following" ? (
 						<EmptyState
 							icon={UserPlus}
-							title="Nothing here yet"
-							caption="Posts from people you follow land here. Follow someone from the suggestions to fill it up."
+							title={t("feed.following.empty.title")}
+							caption={t("feed.following.empty.caption")}
 						/>
 					) : (
 						<EmptyState
 							icon={Plus}
-							title="Your timeline is empty"
-							caption="Posts from people you follow show up here. Write the first one."
+							title={t("feed.empty.title")}
+							caption={t("feed.empty.caption")}
 							action={{
-								label: "Write a post",
+								label: t("feed.empty.action"),
 								onClick: () =>
 									document
 										.querySelector<HTMLTextAreaElement>("#post-composer-input")
@@ -302,7 +415,7 @@ export default function Feed() {
 						{isFetchingMore ? (
 							<span className="h-9 flex items-center gap-2 font-sans text-[13px] text-muted">
 								<span className="w-4 h-4 rounded-full border-2 border-raised border-t-brand animate-spin" />
-								Loading more posts
+								{t("feed.loading")}
 							</span>
 						) : (
 							<button
@@ -310,7 +423,7 @@ export default function Feed() {
 								onClick={loadMore}
 								className="h-9 px-4 rounded-pill border border-hairline bg-surface hover:bg-raised font-sans text-[13px] font-medium text-primary transition-colors cursor-pointer"
 							>
-								Show more posts
+								{t("feed.loadmore")}
 							</button>
 						)}
 					</div>

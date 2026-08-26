@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { Image as ImageIcon, Smile, Send, X, User } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import { replyToPostAction } from "@/lib/post.actions";
@@ -127,20 +128,15 @@ export const CommentComposer = ({
 	};
 
 	return (
-		<div className="border-b border-hairline px-4 py-4 sm:p-6 mb-2 relative">
-			<div className="flex gap-3 sm:gap-4">
+		<div className="relative border-b border-hairline px-4 py-3.5">
+			<div className="flex gap-3">
 				<div className="shrink-0">
 					{user ? (
-						<div className="relative w-10 h-10 rounded-full overflow-hidden border border-hairline">
-							<Image
-								src={user.imageUrl}
-								alt={user.username || "User"}
-								fill
-								className="object-cover"
-							/>
+						<div className="relative h-10 w-10 overflow-hidden rounded-pill bg-raised">
+							<SafeAvatar src={user.imageUrl} />
 						</div>
 					) : (
-						<div className="w-10 h-10 rounded-pill bg-raised border items-center justify-center flex border-hairline overflow-hidden">
+						<div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-pill bg-raised">
 							<User className="w-5 h-5 text-subtle" />
 						</div>
 					)}
@@ -151,7 +147,7 @@ export const CommentComposer = ({
 						value={content}
 						onChange={(e) => setContent(e.target.value)}
 						placeholder="Post your reply"
-						className="w-full bg-transparent text-lg text-primary placeholder:text-subtle outline-none resize-none min-h-[60px] font-medium leading-relaxed overflow-hidden font-sans"
+						className="w-full resize-none overflow-hidden bg-transparent pt-2 font-sans text-[16px] leading-relaxed text-primary outline-none placeholder:text-subtle"
 						rows={1}
 					/>
 
@@ -190,15 +186,15 @@ export const CommentComposer = ({
 						</div>
 					)}
 
-					<div className="flex items-center justify-between mt-2 pt-2">
-						<div className="flex gap-2 text-gold relative">
+					<div className="relative mt-1 flex items-center justify-between">
+						<div className="relative flex gap-1">
 							<button
 								type="button"
 								onClick={() => fileInputRef.current?.click()}
 								aria-label="Attach media"
-								className="flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center hover:bg-brand/10 rounded-pill transition-colors relative group cursor-pointer"
+								className="group relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-raised hover:text-primary"
 							>
-								<ImageIcon className="w-5 h-5" />
+								<ImageIcon className="h-[18px] w-[18px]" />
 								<span className="hidden sm:block absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] bg-raised text-primary px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
 									Media
 								</span>
@@ -218,17 +214,19 @@ export const CommentComposer = ({
 								onClick={() => setShowEmojiPicker(!showEmojiPicker)}
 								aria-label="Insert emoji"
 								className={clsx(
-									"flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center hover:bg-brand/10 rounded-pill transition-colors relative group cursor-pointer",
-									showEmojiPicker && "bg-brand/10",
+									"group relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill transition-colors",
+									showEmojiPicker
+										? "bg-raised text-primary"
+										: "text-muted hover:bg-raised hover:text-primary",
 								)}
 							>
-								<Smile className="w-5 h-5" />
+								<Smile className="h-[18px] w-[18px]" />
 								<span className="hidden sm:block absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] bg-raised text-primary px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
 									Emoji
 								</span>
 							</button>
 
-							{/* Centred on touch, anchored under the button from sm up —
+							{/* Centred on touch, anchored under the button from sm up 
 							    a 320px popover 72px in from the edge overflowed every
 							    small phone. Same treatment as PostComposer. */}
 							{showEmojiPicker && (
@@ -258,7 +256,7 @@ export const CommentComposer = ({
 								(!content.trim() && mediaItems.length === 0) || isPosting
 							}
 							className={clsx(
-								"px-[18px] h-11 sm:h-9 shrink-0 rounded-pill font-semibold text-[13px] font-sans transition-colors flex items-center gap-2 cursor-pointer",
+								"flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-pill px-[18px] font-sans text-[13px] font-semibold transition-colors",
 								(!content.trim() && mediaItems.length === 0) || isPosting
 									? "bg-raised text-subtle cursor-not-allowed opacity-50"
 									: "bg-brand text-brand-on hover:bg-brand-active",
@@ -268,7 +266,7 @@ export const CommentComposer = ({
 								<div className="w-4 h-4 border-2 border-brand-on/30 border-t-brand-on rounded-full animate-spin" />
 							) : (
 								<>
-									<span className="uppercase">Reply</span>
+									<span>Reply</span>
 									<Send className="w-3 h-3" />
 								</>
 							)}

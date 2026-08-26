@@ -2,40 +2,33 @@
 
 import React, {
 	createContext,
+	useCallback,
 	useContext,
 	useEffect,
 	useState,
-	ReactNode,
+	type ReactNode,
 } from "react";
 import { useAuth } from "@clerk/nextjs";
-import { useRealtime } from "@/components/providers/RealtimeProvider";
-import { callManager, CallState } from "@/lib/call-manager";
-import { CallModal } from "@/components/messages/CallModal";
 import axios from "axios";
+
+import { useRealtime } from "@/components/providers/RealtimeProvider";
+import { callManager, type CallPeer, type CallState } from "@/lib/call-manager";
+import { CallSurface } from "@/components/messages/CallSurface";
+import { useCallTones } from "@/hooks/useCallTones";
 import { BACKEND_URL } from "@/const";
 
-// Context
 interface CallContextType extends CallState {
-	startCall: (
-		isVideo: boolean,
-		recipientId: string,
-		recipientName: string,
-		recipientAvatar: string,
-		isGroup: boolean,
-		caller: {
-			id: string;
-			name: string;
-			avatar: string;
-			username: string;
-		},
-	) => void;
+	startCall: (opts: {
+		conversationId: string;
+		peer: CallPeer;
+		isVideo: boolean;
+	}) => void;
 	acceptCall: () => void;
-	rejectCall: () => void;
+	declineCall: () => void;
 	endCall: () => void;
 	toggleMic: () => void;
 	toggleCam: () => void;
-	isMicOn: boolean;
-	isCamOn: boolean;
+	setMinimized: (minimized: boolean) => void;
 }
 
 const CallContext = createContext<CallContextType | null>(null);
@@ -52,97 +45,93 @@ export const useCall = () => {
 
 export const CallProvider = ({ children }: { children: ReactNode }) => {
 	const { getToken } = useAuth();
-	const { client } = useRealtime(); // Access existing Ably client
+	const { client } = useRealtime();
 	const [state, setState] = useState<CallState>(callManager.getState());
 
-	// 1. Sync Ably Client with Manager
+	// The manager stays framework-free; auth and transport are injected.
 	useEffect(() => {
-		if (client) {
-			callManager.setAblyClient(client);
-		}
-	}, [client]);
-
-	// 2. Setup API function for Manager
-	useEffect(() => {
-		callManager.setSignalFunction(async (targetId, type, payload) => {
-			try {
-				const token = await getToken();
-				await axios.post(
-					`${API_URL}/api/calls/signal`,
-					{ targetId, type, payload },
-					{ headers: { Authorization: `Bearer ${token}` } },
-				);
-			} catch (error) {
-				console.error("Failed to send signal", error);
-			}
+		callManager.setApi(async (path, body) => {
+			const token = await getToken();
+			const res = await axios.post(`${API_URL}${path}`, body, {
+				headers: { Authorization: `Bearer ${token}` },
+				timeout: 15_000,
+			});
+			return res.data;
 		});
 	}, [getToken]);
 
-	// 3. Subscribe to Manager State
 	useEffect(() => {
-		const unsubscribe = callManager.subscribe((newState) => {
-			setState(newState);
-		});
-		return () => {
-			unsubscribe();
-		};
-	}, []);
+		if (client) callManager.setAblyClient(client);
+	}, [client]);
 
-	// 4. Initialize Listener (needs profile ID)
+	useEffect(() => callManager.subscribe(setState), []);
+
+	// Ably's clientId is the caller's profile id (the gateway mints it that
+	// way), which is exactly the key call channels are named after.
 	useEffect(() => {
-		if (client && client.auth.clientId) {
+		if (client?.auth.clientId) {
 			callManager.initialize(client.auth.clientId);
 		}
 	}, [client]);
 
-	// Local state for mic/cam
-	const [isMicOn, setIsMicOn] = useState(true);
-	const [isCamOn, setIsCamOn] = useState(true);
+	useCallTones(state);
 
-	const startCall = (
-		isVideo: boolean,
-		recipientId: string,
-		recipientName: string,
-		recipientAvatar: string,
-		isGroup: boolean,
-		caller: {
-			id: string;
-			name: string;
-			avatar: string;
-			username: string;
-		},
-	) => {
-		callManager.startCall(
-			isVideo,
-			recipientId,
-			recipientName,
-			recipientAvatar,
-			isGroup,
-			caller,
+	// A call you can't see is a call you'll miss — surface it at the OS level
+	// when the tab is in the background.
+	useEffect(() => {
+		if (state.status !== "ringing" || !state.isIncoming || !state.peer) return;
+		if (typeof Notification === "undefined") return;
+		if (Notification.permission !== "granted") return;
+		if (document.visibilityState === "visible") return;
+
+		const notification = new Notification(
+			`${state.peer.name} is calling`,
+			{
+				body: state.isVideo ? "Incoming video call" : "Incoming voice call",
+				icon: state.peer.avatar || undefined,
+				tag: "ws-incoming-call",
+			},
 		);
-	};
+		notification.onclick = () => {
+			window.focus();
+			notification.close();
+		};
+		return () => notification.close();
+	}, [state.status, state.isIncoming, state.peer, state.isVideo]);
 
-	const acceptCall = () => callManager.acceptCall();
-	const rejectCall = () => callManager.rejectCall();
-	const endCall = () => callManager.endCall();
-
-	const toggleMic = () => {
-		if (state.localStream) {
-			state.localStream.getAudioTracks().forEach((track) => {
-				track.enabled = !isMicOn;
-			});
-			setIsMicOn(!isMicOn);
+	// Ask once, on the first call of the session, rather than on page load.
+	useEffect(() => {
+		if (state.status === "idle") return;
+		if (typeof Notification === "undefined") return;
+		if (Notification.permission === "default") {
+			Notification.requestPermission().catch(() => {});
 		}
-	};
+	}, [state.status]);
 
-	const toggleCam = () => {
-		if (state.localStream) {
-			state.localStream.getVideoTracks().forEach((track) => {
-				track.enabled = !isCamOn;
-			});
-			setIsCamOn(!isCamOn);
-		}
-	};
+	// Closing the tab mid-call should hang up, not leave a ghost in the room.
+	useEffect(() => {
+		const onUnload = () => {
+			if (callManager.getState().status !== "idle") callManager.endCall();
+		};
+		window.addEventListener("beforeunload", onUnload);
+		return () => window.removeEventListener("beforeunload", onUnload);
+	}, []);
+
+	const startCall = useCallback(
+		(opts: { conversationId: string; peer: CallPeer; isVideo: boolean }) => {
+			void callManager.startCall(opts);
+		},
+		[],
+	);
+	const acceptCall = useCallback(() => void callManager.acceptCall(), []);
+	const declineCall = useCallback(() => callManager.declineCall(), []);
+	const endCall = useCallback(() => callManager.endCall(), []);
+	const toggleMic = useCallback(() => void callManager.toggleMic(), []);
+	const toggleCam = useCallback(() => void callManager.toggleCam(), []);
+	const setMinimized = useCallback(
+		(minimized: boolean) => callManager.setMinimized(minimized),
+		[],
+	);
 
 	return (
 		<CallContext.Provider
@@ -150,31 +139,15 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
 				...state,
 				startCall,
 				acceptCall,
-				rejectCall,
+				declineCall,
 				endCall,
 				toggleMic,
 				toggleCam,
-				isMicOn,
-				isCamOn,
+				setMinimized,
 			}}
 		>
 			{children}
-			<CallModal
-				isOpen={state.status !== "idle"}
-				isIncoming={state.isIncoming}
-				caller={state.caller}
-				onAccept={acceptCall}
-				onReject={rejectCall}
-				onEnd={endCall}
-				callStatus={state.status as any}
-				isVideoCall={state.isVideo}
-				localStream={state.localStream}
-				remoteStream={state.remoteStream}
-				onToggleMic={toggleMic}
-				onToggleCam={toggleCam}
-				isMicOn={isMicOn}
-				isCamOn={isCamOn}
-			/>
+			<CallSurface />
 		</CallContext.Provider>
 	);
 };

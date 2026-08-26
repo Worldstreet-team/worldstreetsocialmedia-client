@@ -1,0 +1,230 @@
+"use client";
+
+import clsx from "clsx";
+import { motion, useReducedMotion } from "framer-motion";
+import Link from "next/link";
+import { useAtomValue } from "jotai";
+import { useCallback, useEffect, useState } from "react";
+import { UserBadges } from "@/components/ui/UserBadges";
+import { MicrophoneStage } from "@phosphor-icons/react";
+import { SectionHead } from "@/components/layout/SectionHead";
+import { EqBars, spaceBackground } from "@/components/voice/SpaceCard";
+import { useRealtime } from "@/components/providers/RealtimeProvider";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import { useT } from "@/i18n/client";
+import { getSpacesAction } from "@/lib/space.actions";
+import { voiceRefreshAtom } from "@/store/voice.atom";
+
+interface SpaceHost {
+	_id?: string;
+	username?: string;
+	avatar?: string;
+	isVerified?: boolean;
+	firstName?: string;
+	lastName?: string;
+}
+
+interface Space {
+	id: string;
+	title: string;
+	status: "scheduled" | "live" | "ended";
+	scheduledFor?: string;
+	host?: SpaceHost;
+	community?: { name?: string; slug?: string } | null;
+	membersCount?: number;
+	/** The canvas the host picked in the create sheet. */
+	cover?: string;
+	/** A custom upload, which wins over the preset. */
+	coverImage?: string;
+}
+
+/* How many of each tier the rail shows before deferring to /voice. Live
+   rooms earn more slots than scheduled ones — a room you can join now is
+   worth more rail than one you can only diarise. */
+const MAX_LIVE = 3;
+const MAX_UPCOMING = 2;
+
+/**
+ * Three-bar equaliser — the "this is audio, and it is happening" signal that
+ * a static dot can't carry. Transform-only (scaleY on a bottom origin), and
+ * it flattens to a static meter under prefers-reduced-motion.
+ *
+ * The loop runs longer than the three UI durations on purpose: those govern
+ * state transitions, while ambient loops already sit outside them (the
+ * skeleton shimmer is 1.6s, the sidebar shine 5s).
+ */
+function LiveBars() {
+	const reduced = useReducedMotion();
+	return (
+		<span
+			className="flex h-3.5 shrink-0 items-end gap-[2px]"
+			aria-hidden="true"
+		>
+			{[0, 1, 2].map((i) => (
+				<motion.span
+					key={i}
+					className="h-full w-[3px] origin-bottom rounded-pill bg-danger"
+					initial={{ scaleY: 0.4 }}
+					animate={
+						reduced ? { scaleY: 0.5 } : { scaleY: [0.35, 1, 0.5, 0.85, 0.35] }
+					}
+					transition={
+						reduced
+							? undefined
+							: {
+									duration: 1.2,
+									repeat: Number.POSITIVE_INFINITY,
+									ease: "easeInOut",
+									delay: i * 0.16,
+								}
+					}
+				/>
+			))}
+		</span>
+	);
+}
+
+/** "in 12m" / "in 3h" / "Tue" — short enough for the rail's right edge. */
+function startsIn(iso?: string): string | null {
+	if (!iso) return null;
+	const ms = new Date(iso).getTime() - Date.now();
+	if (!Number.isFinite(ms)) return null;
+	if (ms <= 0) return "now";
+	const mins = Math.round(ms / 60000);
+	if (mins < 60) return `in ${mins}m`;
+	const hours = Math.round(mins / 60);
+	if (hours < 24) return `in ${hours}h`;
+	return new Date(iso).toLocaleDateString(undefined, { weekday: "short" });
+}
+
+function hostName(host?: SpaceHost) {
+	if (host?.username) return `@${host.username}`;
+	const full = [host?.firstName, host?.lastName].filter(Boolean).join(" ");
+	return full || "";
+}
+
+function SpaceRow({ space, live }: { space: Space; live: boolean }) {
+	const t = useT();
+	const name = hostName(space.host);
+	const count = space.membersCount ?? 0;
+	const when = startsIn(space.scheduledFor);
+
+	return (
+		<Link
+			href="/voice"
+			// The card wears the canvas the host chose, so a room is
+			// recognisable by its colour before you have read the title.
+			style={{ background: spaceBackground(space as any) }}
+			className="group relative block overflow-hidden rounded-xl p-3 transition-opacity hover:opacity-95"
+		>
+			{/* Ink on this card is fixed light: it sits on the host's art, which
+			    does not follow the theme, so text-primary would go black on
+			    paper and vanish. */}
+			<span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0c0a09]/85 via-[#0c0a09]/35 to-[#0c0a09]/20" />
+
+			<span className="relative flex items-center justify-between gap-2">
+				{live ? (
+					<span className="flex items-center gap-1.5 rounded-[4px] bg-danger px-1.5 py-px font-sans text-[9px] font-bold tracking-wide text-white">
+						{t("live.badge")}
+					</span>
+				) : (
+					<span className="rounded-[4px] bg-[#fafaf9]/15 px-1.5 py-px font-sans text-[9px] font-bold uppercase tracking-wide text-[#fafaf9]/85">
+						{when}
+					</span>
+				)}
+				{live && <EqBars className="text-[#fafaf9]" />}
+			</span>
+
+			<span className="relative mt-2 block truncate font-display text-[14px] font-semibold leading-snug text-[#fafaf9]">
+				{space.title}
+			</span>
+
+			<span className="relative mt-2 flex items-center gap-1.5">
+				<span className="relative h-5 w-5 shrink-0 overflow-hidden rounded-pill bg-[#1c1917]">
+					<SafeAvatar src={space.host?.avatar} />
+				</span>
+				<span className="min-w-0 truncate font-sans text-[11.5px] text-[#fafaf9]/80">
+					{name}
+				</span>
+				<UserBadges
+					isVerified={space.host?.isVerified}
+					badges={(space.host as any)?.badges}
+					size={11}
+				/>
+				<span className="ml-auto shrink-0 font-sans text-[11px] font-semibold tabular-nums text-[#fafaf9]/85">
+					{count} {live ? t("rail.spaces.listening") : t("rail.spaces.going")}
+				</span>
+			</span>
+		</Link>
+	);
+}
+
+
+/**
+ * Street Voice in the right rail: live audio rooms first, then what's
+ * scheduled next. Sits directly under Live now so everything happening
+ * right now is one block of the column, and borrows that section's
+ * grammar — same eyebrow, same ringed avatar, same row hover — so it reads
+ * as part of the rail rather than a widget bolted on.
+ *
+ * Absent entirely when there is nothing live and nothing scheduled; an
+ * empty section is worse than no section.
+ */
+export function SpacesRail({ delay = 210 }: { delay?: number }) {
+	const t = useT();
+	const { client } = useRealtime();
+	const refreshTick = useAtomValue(voiceRefreshAtom);
+	const [live, setLive] = useState<Space[]>([]);
+	const [upcoming, setUpcoming] = useState<Space[]>([]);
+
+	const load = useCallback(async () => {
+		const res = await getSpacesAction();
+		if (!res.success) return;
+		setLive((res.live ?? []).slice(0, MAX_LIVE));
+		setUpcoming((res.upcoming ?? []).slice(0, MAX_UPCOMING));
+	}, []);
+
+	// This used to fetch once on mount and never again, so cancelling or
+	// starting a room left the rail advertising it until a full reload.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: refreshTick is the signal; its value is unused.
+	useEffect(() => {
+		void load();
+	}, [load, refreshTick]);
+
+	// The gateway announces started/ended/cancelled on `spaces`; no poll needed.
+	useEffect(() => {
+		if (!client) return;
+		const channel = client.channels.get("spaces");
+		const onEvent = () => void load();
+		void channel.subscribe(onEvent);
+		return () => channel.unsubscribe(onEvent);
+	}, [client, load]);
+
+	if (live.length === 0 && upcoming.length === 0) return null;
+
+	return (
+		<section className="animate-rise" style={{ animationDelay: `${delay}ms` }}>
+			<SectionHead
+				icon={<MicrophoneStage size={13} weight="duotone" />}
+				label={t("rail.spaces")}
+				live={live.length > 0}
+				trailing={
+					<Link
+						href="/voice"
+						className="font-sans text-[11px] font-semibold text-gold hover:underline"
+					>
+						{t("rail.seeAll")}
+					</Link>
+				}
+			/>
+			<div className="flex flex-col gap-2 px-3">
+				{live.map((space) => (
+					<SpaceRow key={space.id} space={space} live />
+				))}
+				{upcoming.map((space) => (
+					<SpaceRow key={space.id} space={space} live={false} />
+				))}
+			</div>
+		</section>
+	);
+}

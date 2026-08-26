@@ -1,25 +1,67 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import Image from "next/image";
 import { updateMyProfileAction } from "@/lib/user.actions";
 import { useSetAtom } from "jotai";
 import { userAtom } from "@/store/user.atom";
 import { motion, AnimatePresence } from "framer-motion";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
+import MediaEditor from "@/components/editor/MediaEditor";
 import { DEFAULT_AVATAR } from "@/const";
 import { useToast } from "@/components/ui/Toast/ToastContext";
-import {
-	X,
-	Camera,
-	Link as LinkIcon,
-	MapPin,
-	User as UserIcon,
-} from "lucide-react";
+import clsx from "clsx";
+import { X, Camera, Link as LinkIcon, MapPin } from "lucide-react";
+import { CaretDown } from "@phosphor-icons/react";
+import { InterestPicker } from "@/components/onboarding/InterestPicker";
+import { CATEGORIES, MAX_INTERESTS } from "@/data/categories";
+import { normalizeCategoryIds } from "@/lib/categories";
 
 interface EditProfileModalProps {
 	user: any;
 	onClose: () => void;
+}
+
+/* Field caps. Nothing was bounded before — not on the client, not on the
+   gateway — while a story caption was capped at 280. */
+const MAX_NAME = 50;
+const MAX_BIO = 160;
+const MAX_LOCATION = 50;
+const MAX_WEBSITE = 100;
+
+const INPUT =
+	"w-full rounded-xl glass-input px-3.5 py-3 font-sans text-[15px] glass-ink outline-none placeholder:text-[#fafaf9]/35";
+
+/** Label + optional counter above a borderless glass control. */
+function Field({
+	label,
+	counter,
+	counterWarn,
+	children,
+}: {
+	label: string;
+	counter?: string;
+	counterWarn?: boolean;
+	children: React.ReactNode;
+}) {
+	return (
+		<div>
+			<div className="flex items-baseline justify-between gap-3">
+				<span className="glass-eyebrow">{label}</span>
+				{counter && (
+					<span
+						className={clsx(
+							"font-sans text-[11px] tabular-nums",
+							counterWarn ? "glass-ink" : "glass-ink-faint",
+						)}
+					>
+						{counter}
+					</span>
+				)}
+			</div>
+			<div className="mt-1.5">{children}</div>
+		</div>
+	);
 }
 
 export default function EditProfileModal({
@@ -38,11 +80,39 @@ export default function EditProfileModal({
 		website: user.website || "",
 	});
 
+	// Interests live here too now. "Edit topics" on the profile opened this
+	// modal, which had no topics field — a visible control that could not do
+	// the thing it named.
+	const [interests, setInterests] = useState<string[]>(() =>
+		normalizeCategoryIds(user.interests ?? []),
+	);
+
+	const [topicsOpen, setTopicsOpen] = useState(false);
+
+	/** "AI & Machine Learning, Crypto Markets +1" — labels, not ids. */
+	const topicSummary = useMemo(() => {
+		if (interests.length === 0) return "Choose what shapes your feed";
+		const labels = interests
+			.map((id) => CATEGORIES.find((c) => c.id === id)?.label)
+			.filter(Boolean) as string[];
+		const shown = labels.slice(0, 2).join(", ");
+		const rest = labels.length - 2;
+		return rest > 0 ? `${shown} +${rest}` : shown;
+	}, [interests]);
+
 	const [avatarFile, setAvatarFile] = useState<File | null>(null);
 	const [avatarPreview, setAvatarPreview] = useState<string>(user.avatar || "");
 
 	const [bannerFile, setBannerFile] = useState<File | null>(null);
 	const [bannerPreview, setBannerPreview] = useState<string>(user.banner || "");
+
+	// A freshly picked file goes through the Studio sheet (locked aspect)
+	// before it lands in avatarFile/bannerFile — avatars shipped un-cropped
+	// before this.
+	const [cropTarget, setCropTarget] = useState<{
+		kind: "avatar" | "banner";
+		file: File;
+	} | null>(null);
 
 	const avatarInputRef = useRef<HTMLInputElement>(null);
 	const bannerInputRef = useRef<HTMLInputElement>(null);
@@ -67,15 +137,55 @@ export default function EditProfileModal({
 	) => {
 		const file = e.target.files?.[0];
 		if (file) {
-			const previewUrl = URL.createObjectURL(file);
-			if (type === "avatar") {
-				setAvatarFile(file);
-				setAvatarPreview(previewUrl);
+			// Animated GIFs bypass the crop sheet — canvas re-encode would
+			// flatten them to one frame (the gateway stores files as-is).
+			if (file.type === "image/gif") {
+				applyPickedFile(type, file);
 			} else {
-				setBannerFile(file);
-				setBannerPreview(previewUrl);
+				setCropTarget({ kind: type, file });
 			}
 		}
+		// Reset so re-picking the same file re-fires onChange.
+		e.target.value = "";
+	};
+
+	// Direct-set path: GIF picks and decode-failure fallbacks (e.g. HEIC on
+	// Chrome) keep the old upload-the-original behavior instead of
+	// dead-ending the pick.
+	const applyPickedFile = (kind: "avatar" | "banner", file: File) => {
+		const previewUrl = URL.createObjectURL(file);
+		if (kind === "avatar") {
+			if (avatarPreview.startsWith("blob:")) {
+				URL.revokeObjectURL(avatarPreview);
+			}
+			setAvatarFile(file);
+			setAvatarPreview(previewUrl);
+		} else {
+			if (bannerPreview.startsWith("blob:")) {
+				URL.revokeObjectURL(bannerPreview);
+			}
+			setBannerFile(file);
+			setBannerPreview(previewUrl);
+		}
+	};
+
+	const handleCropSave = (file: File) => {
+		if (!cropTarget) return;
+		const previewUrl = URL.createObjectURL(file);
+		if (cropTarget.kind === "avatar") {
+			if (avatarPreview.startsWith("blob:")) {
+				URL.revokeObjectURL(avatarPreview);
+			}
+			setAvatarFile(file);
+			setAvatarPreview(previewUrl);
+		} else {
+			if (bannerPreview.startsWith("blob:")) {
+				URL.revokeObjectURL(bannerPreview);
+			}
+			setBannerFile(file);
+			setBannerPreview(previewUrl);
+		}
+		setCropTarget(null);
 	};
 
 	const handleSave = async () => {
@@ -86,6 +196,8 @@ export default function EditProfileModal({
 		data.append("bio", formData.bio);
 		data.append("location", formData.location);
 		data.append("website", formData.website);
+		// Ids only, JSON-encoded — labels never cross the wire.
+		data.append("interests", JSON.stringify(interests));
 
 		if (avatarFile) data.append("avatar", avatarFile);
 		if (bannerFile) data.append("banner", bannerFile);
@@ -106,52 +218,59 @@ export default function EditProfileModal({
 	return (
 		<ConfirmModalPortal>
 			<AnimatePresence>
-				<div className="fixed inset-0 z-modal flex items-center justify-center p-3 sm:p-4">
+				<div className="fixed inset-0 z-modal flex items-end justify-center sm:items-center sm:p-4">
 					<motion.div
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
 						onClick={onClose}
-						className="absolute inset-0 bg-scrim"
+						className="absolute inset-0 glass-veil-sheer backdrop-blur-md backdrop-saturate-150"
 					/>
 					<motion.div
-						initial={{ opacity: 0, scale: 0.98, y: 8 }}
+						initial={{ opacity: 0, scale: 0.985, y: 20 }}
 						animate={{ opacity: 1, scale: 1, y: 0 }}
-						exit={{ opacity: 0, scale: 0.98, y: 8 }}
-						transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-						// max-h-[90dvh]: with 100vh the panel was taller than the real
+						exit={{ opacity: 0, scale: 0.985, y: 20 }}
+						transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
+						// max-h-[92dvh]: with 100vh the panel was taller than the real
 						// viewport on mobile and the Save button fell off the top.
-						className="relative w-full max-w-lg bg-surface border border-hairline rounded-xl shadow-nav overflow-hidden flex flex-col max-h-[90dvh] text-primary"
+						className="relative flex max-h-[92dvh] w-full max-w-[460px] flex-col overflow-hidden rounded-t-2xl glass-dock backdrop-blur-xl backdrop-saturate-150 glass-ink sm:rounded-2xl"
 					>
 						{/* Header */}
-						<div className="flex shrink-0 items-center justify-between gap-2 px-2 sm:px-4 py-2 sm:py-3 border-b border-hairline">
-							<div className="flex items-center gap-2 sm:gap-4 min-w-0">
+						<div className="flex shrink-0 items-start justify-between gap-3 p-5 pb-4 sm:p-6 sm:pb-4">
+							<div className="min-w-0">
+								<h2 className="font-display text-[19px] font-semibold leading-tight">
+									Edit profile
+								</h2>
+								<p className="mt-1 font-sans text-[13px] glass-ink-dim">
+									How you appear across WorldStreet.
+								</p>
+							</div>
+							<div className="flex shrink-0 items-center gap-2">
+								<button
+									type="button"
+									onClick={handleSave}
+									disabled={isLoading}
+									className="h-9 cursor-pointer rounded-pill glass-cta px-5 font-sans text-[13px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+								>
+									{isLoading ? "Saving…" : "Save"}
+								</button>
 								<button
 									type="button"
 									onClick={onClose}
 									aria-label="Close"
-									className="flex h-11 w-11 shrink-0 items-center justify-center rounded-pill hover:bg-raised transition-colors text-muted hover:text-primary cursor-pointer"
+									className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill glass-chip transition-colors"
 								>
-									<X className="w-5 h-5" />
+									<X className="h-[15px] w-[15px]" />
 								</button>
-								<h2 className="font-display text-lg font-semibold tracking-tight truncate">
-									Edit Profile
-								</h2>
 							</div>
-							<button
-								type="button"
-								onClick={handleSave}
-								disabled={isLoading}
-								className="shrink-0 bg-primary text-page px-5 sm:px-6 h-11 sm:h-9 rounded-pill font-semibold text-sm hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-sans"
-							>
-								{isLoading ? "Saving..." : "Save"}
-							</button>
 						</div>
 
 						{/* Scrollable Content */}
 						<div className="overflow-y-auto overscroll-contain flex-1 min-h-0">
-							{/* Banner */}
-							<div className="relative h-32 sm:h-48 bg-sunken w-full group">
+							{/* Banner. `glass-well` is the video well — pure black,
+							    which reads as a hole when no banner is set. A card
+							    fill sits in the same ladder without punching through. */}
+							<div className="group relative mx-5 h-28 overflow-hidden rounded-xl glass-card sm:mx-6 sm:h-36">
 								{bannerPreview ? (
 									<Image
 										src={bannerPreview}
@@ -160,11 +279,11 @@ export default function EditProfileModal({
 										className="object-cover"
 									/>
 								) : (
-									// Flat sunken band — gradient placeholders are off-system.
-									<div className="w-full h-full bg-sunken" />
+									// Flat well — gradient placeholders are off-system.
+									<div className="h-full w-full" />
 								)}
 								{/* Reveal-on-hover made the banner and avatar pickers
-								    literally unusable on touch — there is no hover to
+								    literally unusable on touch there is no hover to
 								    enter, so you could not change either on a phone.
 								    Below sm the controls are always visible and the
 								    scrim is dropped so the image still reads. */}
@@ -173,7 +292,7 @@ export default function EditProfileModal({
 										type="button"
 										onClick={() => bannerInputRef.current?.click()}
 										aria-label="Change banner image"
-										className="h-11 w-11 sm:h-10 sm:w-10 flex items-center justify-center cursor-pointer bg-page/70 sm:bg-page/60 rounded-pill text-primary hover:bg-raised transition-colors"
+										className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-pill glass-chip-canvas transition-colors sm:h-10 sm:w-10"
 									>
 										<Camera className="w-5 h-5" />
 									</button>
@@ -185,7 +304,7 @@ export default function EditProfileModal({
 												setBannerPreview(user.banner || "");
 											}}
 											aria-label="Undo banner change"
-											className="h-11 w-11 sm:h-10 sm:w-10 flex items-center justify-center cursor-pointer bg-page/70 sm:bg-page/60 rounded-pill text-primary hover:bg-raised transition-colors"
+											className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-pill glass-chip-canvas transition-colors sm:h-10 sm:w-10"
 										>
 											<X className="w-5 h-5" />
 										</button>
@@ -201,8 +320,8 @@ export default function EditProfileModal({
 							</div>
 
 							{/* Avatar */}
-							<div className="px-4 relative mb-6">
-								<div className="w-[80px] sm:w-[112px] h-[80px] sm:h-[112px] rounded-full border-4 border-surface -mt-[40px] sm:-mt-[56px] relative bg-sunken group overflow-hidden">
+							<div className="relative mb-5 px-5 sm:px-6">
+								<div className="group relative -mt-[38px] h-[76px] w-[76px] overflow-hidden rounded-full glass-card ring-4 ring-[#161412] sm:-mt-[46px] sm:h-[92px] sm:w-[92px]">
 									<Image
 										src={avatarPreview || DEFAULT_AVATAR}
 										alt="Avatar"
@@ -214,9 +333,9 @@ export default function EditProfileModal({
 											type="button"
 											onClick={() => avatarInputRef.current?.click()}
 											aria-label="Change profile photo"
-											className="h-11 w-11 sm:h-10 sm:w-10 flex items-center justify-center bg-page/70 sm:bg-page/60 rounded-pill text-primary hover:bg-raised transition-colors"
+											className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill glass-chip-canvas transition-colors"
 										>
-											<Camera className="w-5 h-5" />
+											<Camera className="h-[18px] w-[18px]" />
 										</button>
 									</div>
 								</div>
@@ -230,95 +349,157 @@ export default function EditProfileModal({
 							</div>
 
 							{/* Form Fields */}
-							<div className="px-4 pb-8 space-y-5">
-								<div className="grid sm:grid-cols-2 gap-4">
-									{/* First Name */}
-									<div className="relative rounded-md border border-hairline focus-within:border-brand/60 transition-colors p-3">
-										<label className="block text-[11px] uppercase tracking-[1px] font-medium text-muted mb-1 font-sans">
-											First Name
-										</label>
-										<div className="flex items-center gap-2">
-											<UserIcon className="w-4 h-4 text-subtle" />
-											<input
-												type="text"
-												name="firstName"
-												value={formData.firstName}
-												onChange={handleInputChange}
-												className="w-full outline-none text-base sm:text-sm font-sans bg-transparent placeholder:text-subtle text-primary"
-												placeholder="First Name"
-											/>
-										</div>
-									</div>
-									{/* Last Name */}
-									<div className="relative rounded-md border border-hairline focus-within:border-brand/60 transition-colors p-3">
-										<label className="block text-[11px] uppercase tracking-[1px] font-medium text-muted mb-1 font-sans">
-											Last Name
-										</label>
-										<div className="flex items-center gap-2">
-											<UserIcon className="w-4 h-4 text-subtle" />
-											<input
-												type="text"
-												name="lastName"
-												value={formData.lastName}
-												onChange={handleInputChange}
-												className="w-full outline-none text-base sm:text-sm font-sans bg-transparent placeholder:text-subtle text-primary"
-												placeholder="Last Name"
-											/>
-										</div>
-									</div>
+							<div className="flex flex-col gap-4 px-5 pb-8 sm:px-6">
+								<div className="grid gap-3 sm:grid-cols-2">
+									<Field label="First name">
+										<input
+											type="text"
+											name="firstName"
+											value={formData.firstName}
+											onChange={handleInputChange}
+											maxLength={MAX_NAME}
+											className={INPUT}
+											placeholder="First name"
+										/>
+									</Field>
+									<Field label="Last name">
+										<input
+											type="text"
+											name="lastName"
+											value={formData.lastName}
+											onChange={handleInputChange}
+											maxLength={MAX_NAME}
+											className={INPUT}
+											placeholder="Last name"
+										/>
+									</Field>
 								</div>
 
-								<div className="relative rounded-md border border-hairline focus-within:border-brand/60 transition-colors p-3">
-									<label className="block text-[11px] uppercase tracking-[1px] font-medium text-muted mb-1 font-sans">
-										Bio
-									</label>
+								<Field
+									label="Bio"
+									counter={`${formData.bio.length}/${MAX_BIO}`}
+									counterWarn={formData.bio.length > MAX_BIO - 20}
+								>
 									<textarea
 										name="bio"
 										value={formData.bio}
 										onChange={handleInputChange}
-										className="w-full outline-none text-base sm:text-sm font-sans resize-none min-h-[80px] bg-transparent placeholder:text-subtle text-primary"
-										placeholder="Tell us about yourself"
+										maxLength={MAX_BIO}
+										rows={3}
+										className={`${INPUT} resize-none`}
+										placeholder="Say what you're about"
 									/>
-								</div>
+								</Field>
 
-								<div className="relative rounded-md border border-hairline focus-within:border-brand/60 transition-colors p-3">
-									<label className="block text-[11px] uppercase tracking-[1px] font-medium text-muted mb-1 font-sans">
-										Location
-									</label>
-									<div className="flex items-center gap-2">
-										<MapPin className="w-4 h-4 text-subtle" />
+								<Field label="Location">
+									<div className="flex items-center gap-2 rounded-xl glass-input px-3.5">
+										<MapPin className="h-4 w-4 shrink-0 glass-ink-faint" />
 										<input
 											type="text"
 											name="location"
 											value={formData.location}
 											onChange={handleInputChange}
-											className="w-full outline-none text-base sm:text-sm font-sans bg-transparent placeholder:text-subtle text-primary"
-											placeholder="Add your location"
+											maxLength={MAX_LOCATION}
+											className="w-full bg-transparent py-3 font-sans text-[15px] glass-ink outline-none placeholder:text-[#fafaf9]/35"
+											placeholder="Where you're based"
 										/>
 									</div>
-								</div>
+								</Field>
 
-								<div className="relative rounded-md border border-hairline focus-within:border-brand/60 transition-colors p-3">
-									<label className="block text-[11px] uppercase tracking-[1px] font-medium text-muted mb-1 font-sans">
-										Website
-									</label>
-									<div className="flex items-center gap-2">
-										<LinkIcon className="w-4 h-4 text-subtle" />
+								<Field label="Website">
+									<div className="flex items-center gap-2 rounded-xl glass-input px-3.5">
+										<LinkIcon className="h-4 w-4 shrink-0 glass-ink-faint" />
 										<input
 											type="text"
 											name="website"
 											value={formData.website}
 											onChange={handleInputChange}
-											className="w-full outline-none text-base sm:text-sm font-sans bg-transparent placeholder:text-subtle text-primary"
-											placeholder="Add your website"
+											maxLength={MAX_WEBSITE}
+											className="w-full bg-transparent py-3 font-sans text-[15px] glass-ink outline-none placeholder:text-[#fafaf9]/35"
+											placeholder="yoursite.com"
 										/>
 									</div>
+								</Field>
+
+								{/* Topics — the thing "Edit topics" always promised.
+								    Collapsed by default: a hundred category chips
+								    inlined under four text fields made the whole
+								    sheet read as one undifferentiated pile. */}
+								<div>
+									<button
+										type="button"
+										onClick={() => setTopicsOpen((v) => !v)}
+										aria-expanded={topicsOpen}
+										className="flex w-full items-center justify-between gap-3 rounded-xl glass-card px-3.5 py-3 text-left transition-colors"
+									>
+										<span className="min-w-0">
+											<span className="glass-eyebrow block">Topics</span>
+											<span className="mt-1 block truncate font-sans text-[13.5px] glass-ink">
+												{topicSummary}
+											</span>
+										</span>
+										<span className="flex shrink-0 items-center gap-2">
+											<span
+												className={clsx(
+													"font-sans text-[11px] tabular-nums",
+													interests.length >= MAX_INTERESTS
+														? "glass-ink"
+														: "glass-ink-faint",
+												)}
+											>
+												{interests.length}/{MAX_INTERESTS}
+											</span>
+											<CaretDown
+												size={14}
+												weight="bold"
+												className={clsx(
+													"transition-transform",
+													topicsOpen && "rotate-180",
+												)}
+											/>
+										</span>
+									</button>
+
+									{topicsOpen && (
+										<div className="mt-2.5">
+											<InterestPicker
+												selected={interests}
+												onToggle={(id) =>
+													setInterests((prev) =>
+														prev.includes(id)
+															? prev.filter((x) => x !== id)
+															: prev.length >= MAX_INTERESTS
+																? prev
+																: [...prev, id],
+													)
+												}
+											/>
+										</div>
+									)}
 								</div>
 							</div>
 						</div>
 					</motion.div>
 				</div>
 			</AnimatePresence>
+
+			{/* Studio sheet portalled later in <body>, so it stacks above this
+			    modal at the same z-modal tier. */}
+			{cropTarget && (
+				<MediaEditor
+					file={cropTarget.file}
+					lockAspect={cropTarget.kind === "avatar" ? 1 : 3}
+					round={cropTarget.kind === "avatar"}
+					title={
+						cropTarget.kind === "avatar" ? "Crop profile photo" : "Crop banner"
+					}
+					onClose={() => setCropTarget(null)}
+					onSave={({ file }) => handleCropSave(file)}
+					onDecodeError={(file) => {
+						if (cropTarget) applyPickedFile(cropTarget.kind, file);
+					}}
+				/>
+			)}
 		</ConfirmModalPortal>
 	);
 }

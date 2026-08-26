@@ -11,6 +11,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ToastProvider } from "@/components/ui/Toast/ToastContext";
 import NextTopLoader from "nextjs-toploader";
 import JotaiHydrator from "./JotaiHydrator";
+import { LocaleProvider } from "@/i18n/client";
+import { LOCALE_HEADER, isLocale } from "@/i18n/config";
 import { headers } from "next/headers";
 import RealtimeProvider from "@/components/providers/RealtimeProvider";
 import { CallProvider } from "@/providers/CallProvider";
@@ -18,9 +20,23 @@ import { MobileBottomNav } from "@/components/MobileBottomNav";
 import GlobalMessageListener from "@/components/providers/GlobalMessageListener";
 import { CommandPalette } from "@/components/ui/CommandPalette";
 import { WelcomeTour } from "@/components/ui/WelcomeTour";
+import { PremiumSheet } from "@/components/premium/PremiumSheet";
+import { CreateFab } from "@/components/ui/CreateFab";
+import VoiceRoomHost from "@/components/voice/VoiceRoomHost";
+import { LiveDock } from "@/components/live/LiveDock";
 import { NotificationCountSync } from "@/components/providers/NotificationCountSync";
+import { SpacesLiveSync } from "@/components/providers/SpacesLiveSync";
+import { MessageCountSync } from "@/components/providers/MessageCountSync";
 
-import { Poppins, Public_Sans } from "next/font/google";
+import {
+    Archivo_Black,
+    Bebas_Neue,
+    Caveat,
+    Instrument_Serif,
+    JetBrains_Mono,
+    Poppins,
+    Public_Sans,
+} from "next/font/google";
 
 // Design system type pairing for platform apps: Poppins for display, Public
 // Sans for UI. These feed --ws-font-display / --ws-font-ui in ws-tokens.css.
@@ -38,6 +54,42 @@ const poppins = Poppins({
     variable: "--font-poppins",
 });
 
+// Editorial + poster voices. These exist ONLY for story/creator typography
+// (the Story Studio's font picker) — app chrome stays Poppins + Public Sans.
+const instrumentSerif = Instrument_Serif({
+    subsets: ["latin"],
+    weight: ["400"],
+    style: ["normal", "italic"],
+    variable: "--font-instrument-serif",
+});
+
+const archivoBlack = Archivo_Black({
+    subsets: ["latin"],
+    weight: ["400"],
+    variable: "--font-archivo-black",
+});
+
+const bebasNeue = Bebas_Neue({
+    subsets: ["latin"],
+    weight: ["400"],
+    variable: "--font-bebas-neue",
+});
+
+const caveat = Caveat({
+    subsets: ["latin"],
+    weight: ["600", "700"],
+    variable: "--font-caveat",
+});
+
+// A real ticker face. The mono voice used to fall back to the system stack,
+// which meant the canvas export and the DOM preview could resolve different
+// fonts on different machines.
+const jetbrainsMono = JetBrains_Mono({
+    subsets: ["latin"],
+    weight: ["700"],
+    variable: "--font-jetbrains-mono",
+});
+
 // Never block pinch-zoom (06-motion-accessibility bans `user-scalable=no`).
 // maximumScale/userScalable are deliberately absent — do not reintroduce them.
 export const viewport: Viewport = {
@@ -53,7 +105,7 @@ export const metadata: Metadata = {
         template: "%s · WorldStreet Social",
     },
     description:
-        "WorldStreet Social — share ideas, follow traders and creators, and talk markets across the WorldStreet ecosystem.",
+ "WorldStreet Social share ideas, follow traders and creators, and talk markets across the WorldStreet ecosystem.",
 };
 
 export default async function RootLayout({
@@ -66,6 +118,9 @@ export default async function RootLayout({
 
     const parsedUser = userData ? JSON.parse(userData) : null;
 
+    const headerLocale = headersList.get(LOCALE_HEADER);
+    const locale = isLocale(headerLocale) ? headerLocale : "en";
+
     return (
         <ClerkProvider
             appearance={{
@@ -75,9 +130,9 @@ export default async function RootLayout({
                 },
             }}
         >
-            <html lang="en" data-ws-theme="platform" suppressHydrationWarning>
+            <html lang={locale} data-ws-theme="platform" suppressHydrationWarning>
                 <body
-                    className={`${publicSans.variable} ${poppins.variable} antialiased`}
+                    className={`${publicSans.variable} ${poppins.variable} ${instrumentSerif.variable} ${archivoBlack.variable} ${bebasNeue.variable} ${caveat.variable} ${jetbrainsMono.variable} antialiased`}
                 >
                     {/* Keyboard users jump the nav rails straight to the timeline. */}
                     <a
@@ -104,20 +159,28 @@ export default async function RootLayout({
                         enableSystem={false}
                         value={{ dark: "platform", light: "platform-light" }}
                     >
+                        <LocaleProvider locale={locale}>
                         <JotaiHydrator user={parsedUser}>
                             <RealtimeProvider>
                                 <CallProvider>
                                     <ToastProvider>
                                         <GlobalMessageListener />
                                         <NotificationCountSync />
+                                        <SpacesLiveSync />
+										<MessageCountSync />
                                         <CommandPalette />
                                         <WelcomeTour />
+                                        <PremiumSheet />
+                                        <CreateFab />
+                                        <LiveDock />
+                                        <VoiceRoomHost />
                                         {children}
                                         <MobileBottomNav />
                                     </ToastProvider>
                                 </CallProvider>
                             </RealtimeProvider>
                         </JotaiHydrator>
+                        </LocaleProvider>
                     </ThemeProvider>
                 </body>
             </html>

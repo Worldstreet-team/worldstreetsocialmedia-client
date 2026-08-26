@@ -12,6 +12,7 @@ import {
   MessageCircle,
   Plus,
   Search,
+  Settings,
   Sparkles,
 } from "lucide-react";
 import Image from "next/image";
@@ -181,6 +182,14 @@ export function CommandPalette() {
         run: () => go("/bookmarks"),
       },
       {
+        id: "nav-settings",
+        group: "Navigate",
+        label: "Settings",
+        keywords: "preferences account privacy blocked topics theme language",
+        icon: Settings,
+        run: () => go("/settings"),
+      },
+      {
         id: "nav-profile",
         group: "Navigate",
         label: "Profile",
@@ -249,7 +258,7 @@ export function CommandPalette() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-            className="absolute inset-0 bg-scrim"
+            className="absolute inset-0 glass-veil-sheer backdrop-blur-md backdrop-saturate-150"
             onClick={close}
           />
 
@@ -261,10 +270,10 @@ export function CommandPalette() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
             transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-            className="relative w-full max-w-[560px] max-h-[84dvh] flex flex-col bg-surface border border-hairline rounded-xl shadow-nav overflow-hidden"
+            className="relative w-full max-w-[560px] max-h-[84dvh] flex flex-col glass-dock backdrop-blur-xl backdrop-saturate-150 glass-ink rounded-2xl overflow-hidden"
           >
-            <div className="flex shrink-0 items-center gap-3 px-4 h-12 border-b border-hairline">
-              <Search className="w-4 h-4 text-subtle shrink-0" />
+            <div className="flex shrink-0 items-center gap-3 px-4 h-13 border-b border-[#fafaf9]/8">
+              <Search className="w-4 h-4 shrink-0 text-[#fafaf9]/45" />
               <input
                 // biome-ignore lint/a11y/noAutofocus: focus belongs in the palette the moment it opens
                 autoFocus
@@ -275,11 +284,11 @@ export function CommandPalette() {
                   setActiveIndex(0);
                 }}
                 onKeyDown={onInputKeyDown}
-                placeholder="Search WorldStreet — pages and actions…"
+                placeholder="Search WorldStreet pages and actions…"
                 // text-base below sm so focusing it doesn't zoom iOS Safari.
-                className="flex-1 min-w-0 bg-transparent font-sans text-base sm:text-sm text-primary placeholder:text-subtle outline-none"
+                className="flex-1 min-w-0 bg-transparent font-sans text-base sm:text-sm glass-ink placeholder:text-[#fafaf9]/35 outline-none"
               />
-              <kbd className="hidden sm:flex items-center rounded-sm border border-hairline bg-raised px-1.5 h-5 text-[10px] font-sans text-subtle">
+              <kbd className="hidden sm:flex items-center rounded-sm glass-chip px-1.5 h-5 text-[10px] font-sans">
                 esc
               </kbd>
             </div>
@@ -289,7 +298,7 @@ export function CommandPalette() {
               className="flex-1 min-h-0 max-h-[360px] overflow-y-auto overscroll-contain py-2"
             >
               {items.length === 0 && (
-                <p className="px-4 py-6 text-center font-sans text-sm text-muted">
+                <p className="px-4 py-6 text-center font-sans text-sm glass-ink-dim">
                   Nothing matches. Try a page name like Explore.
                 </p>
               )}
@@ -300,7 +309,7 @@ export function CommandPalette() {
                 return (
                   <div key={group}>
                     {/* UI/Label: Public Sans Medium 11, uppercase, +1 tracking. */}
-                    <p className="px-4 pt-2 pb-1 font-sans font-medium text-[11px] uppercase tracking-[1px] text-subtle">
+                    <p className="glass-eyebrow px-4 pt-2.5 pb-1 font-sans">
                       {group}
                     </p>
                     {groupItems.map((item) => {
@@ -314,7 +323,9 @@ export function CommandPalette() {
                           onClick={item.run}
                           onMouseEnter={() => setActiveIndex(index)}
                           className={`w-full flex items-center gap-3 px-4 h-12 sm:h-11 font-sans text-sm font-medium text-left transition-colors cursor-pointer ${
-                            active ? "bg-raised text-primary" : "text-muted"
+                            active
+                              ? "bg-[#fafaf9]/10 glass-ink"
+                              : "glass-ink-dim"
                           }`}
                         >
                           {item.icon ? (
@@ -341,7 +352,7 @@ export function CommandPalette() {
 
             {/* Keyboard legend is meaningless on a touch device and it's the
                 first thing to cost vertical room there. */}
-            <div className="hidden sm:flex shrink-0 items-center gap-4 px-4 h-9 border-t border-hairline font-sans text-[11px] text-subtle">
+            <div className="hidden sm:flex shrink-0 items-center gap-4 px-4 h-9 border-t border-[#fafaf9]/8 font-sans text-[11px] glass-ink-faint">
               <span>↑↓ navigate</span>
               <span>↵ open</span>
               <span>esc close</span>

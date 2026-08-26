@@ -6,7 +6,7 @@ import { X, Search, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getFollowersAction, getFollowingAction } from "@/lib/user.actions";
 import { startConversationAction } from "@/lib/conversation.actions";
-import VerifiedIcon from "@/assets/icons/VerifiedIcon";
+import { UserBadges } from "@/components/ui/UserBadges";
 import { DEFAULT_AVATAR } from "@/const";
 import { toast } from "sonner";
 
@@ -213,9 +213,11 @@ export default function NewConversationModal({
 													{user.firstName}{" "}
 													{user.lastName}
 												</span>
-												{user.isVerified && (
-													<VerifiedIcon size={{ width: "16", height: "16" }} />
-												)}
+												<UserBadges
+													isVerified={user.isVerified}
+													badges={(user as any).badges}
+													size={16}
+												/>
 											</div>
 											<span className="text-muted text-[13px] truncate block">
 												@{user.username}

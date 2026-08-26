@@ -3,12 +3,14 @@
 import { useState, useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { PostCard, type PostProps } from "@/components/feed/PostCard";
+import { usePostEvents } from "@/hooks/useUserEvents";
 import { CommentComposer } from "@/components/feed/CommentComposer";
 import { PostSkeleton } from "@/components/feed/PostSkeleton";
 import { getPostByIdAction, getPostCommentsAction } from "@/lib/post.actions";
 import { ArrowLeft, Search } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatTimeAgo } from "@/lib/utils";
+import { useT } from "@/i18n/client";
 import { DEFAULT_AVATAR } from "@/const";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { useAtom } from "jotai";
@@ -20,6 +22,7 @@ import {
 export default function PostPageScreen() {
 	const params = useParams();
 	const router = useRouter();
+	const t = useT();
 	const postId = params.id as string;
 	const { toast } = useToast();
 
@@ -30,6 +33,77 @@ export default function PostPageScreen() {
 	const cachedPost = postCache[postId];
 	const [post, setPost] = useState<PostProps | null>(cachedPost || null);
 	const [comments, setComments] = useState<PostProps[]>([]);
+
+	// An open thread should grow as people reply, and its counts should track
+	// what everyone else is doing, without a refresh.
+	usePostEvents(postId, (event, data) => {
+		if (event === "like") {
+			setPost((prev) =>
+				prev
+					? {
+							...prev,
+							stats: {
+								...prev.stats,
+								likes: Number(data.likes ?? prev.stats.likes),
+							},
+						}
+					: prev,
+			);
+		}
+		if (event === "repost") {
+			setPost((prev) =>
+				prev
+					? {
+							...prev,
+							stats: {
+								...prev.stats,
+								reposts: Number(data.reposts ?? prev.stats.reposts),
+							},
+						}
+					: prev,
+			);
+		}
+		if (event === "reply") {
+			setPost((prev) =>
+				prev
+					? {
+							...prev,
+							stats: {
+								...prev.stats,
+								replies: Number(data.replies ?? prev.stats.replies),
+							},
+						}
+					: prev,
+			);
+			const raw = data.reply as any;
+			if (!raw?._id) return;
+			setComments((prev) => {
+				if (prev.some((c) => c.id === raw._id)) return prev;
+				return [
+					...prev,
+					{
+						id: raw._id,
+						author: {
+							id: raw.author?._id ?? "",
+							name:
+								raw.author?.firstName && raw.author?.lastName
+									? `${raw.author.firstName} ${raw.author.lastName}`
+									: (raw.author?.username ?? ""),
+							username: raw.author?.username ?? "",
+							avatar: raw.author?.avatar ?? "",
+							isVerified: raw.author?.isVerified,
+						},
+						content: raw.content ?? "",
+						timestamp: formatTimeAgo(raw.createdAt),
+						images: raw.images ?? [],
+						stats: raw.stats || { replies: 0, reposts: 0, likes: 0 },
+						isLiked: Boolean(raw.isLiked),
+						isBookmarked: Boolean(raw.isBookmarked),
+					} as PostProps,
+				];
+			});
+		}
+	});
 	const [loading, setLoading] = useState(!cachedPost);
 	const [isAddingComment, setIsAddingComment] = useState(false);
 
@@ -64,7 +138,9 @@ export default function PostPageScreen() {
 						isVerified: p.author.isVerified,
 					},
 					content: p.content,
+					mentions: p.mentions,
 					images: p.images,
+					videos: p.videos,
 					timestamp: formatTimeAgo(p.createdAt),
 					stats: p.stats,
 					isLiked: p.isLiked,
@@ -89,7 +165,9 @@ export default function PostPageScreen() {
 							isVerified: p.author.isVerified,
 						},
 						content: p.content,
+						mentions: p.mentions,
 						images: p.images,
+						videos: p.videos,
 						timestamp: formatTimeAgo(p.createdAt),
 						stats: p.stats,
 						isLiked: p.isLiked,
@@ -116,7 +194,9 @@ export default function PostPageScreen() {
 						isVerified: c.author.isVerified,
 					},
 					content: c.content,
+					mentions: c.mentions,
 					images: c.images,
+					videos: c.videos,
 					timestamp: formatTimeAgo(c.createdAt),
 					stats: c.stats || { replies: 0, reposts: 0, likes: 0 },
 					isLiked: c.isLiked,
@@ -151,7 +231,7 @@ export default function PostPageScreen() {
 						<ArrowLeft className="w-5 h-5" />
 					</button>
 					<h1 className="font-display text-lg font-semibold leading-5 text-primary">
-						Post
+						{t("post.title")}
 					</h1>
 				</header>
 				<div className="p-4 border-b border-hairline">
@@ -191,14 +271,14 @@ export default function PostPageScreen() {
 		<div className="flex flex-col min-h-dvh pb-20">
 			<header className="sticky top-0 z-sticky bg-page border-b border-hairline px-2 sm:px-4 py-2 flex items-center gap-2 sm:gap-6">
 				<button
-					className="rounded-pill w-9 h-9 hover:bg-raised flex items-center justify-center transition-colors cursor-pointer text-primary"
+					className="rounded-pill h-11 w-11 sm:h-9 sm:w-9 shrink-0 hover:bg-raised flex items-center justify-center transition-colors cursor-pointer text-primary"
 					type="button"
 					onClick={() => router.back()}
 				>
 					<ArrowLeft className="w-5 h-5" />
 				</button>
 				<h1 className="font-display text-lg font-semibold leading-5 text-primary">
-					Post
+					{t("post.title")}
 				</h1>
 			</header>
 
