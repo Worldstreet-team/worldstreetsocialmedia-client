@@ -26,11 +26,5 @@ export default async function ExplorePage({
 		}
 	}
 
-	return (
-		<ExploreClient
-			initialResults={results}
-			initialQuery={query}
-			currentUserId={user.id}
-		/>
-	);
+	return <ExploreClient initialResults={results} initialQuery={query} />;
 }

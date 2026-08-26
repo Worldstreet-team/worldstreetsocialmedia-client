@@ -15,8 +15,31 @@
  * (status danger/success).
  */
 
-export type TextStyle = "display" | "clean" | "ticker";
-export type TextColor = "light" | "dark" | "gold";
+/**
+ * The five story voices. Adding one means adding a face to layout.tsx, a var
+ * to globals.css, a branch in fontFamilyFor/fontWeightFor, and a row to the
+ * TextTool picker — the canvas export reads the same three, so a voice that
+ * previews correctly exports correctly.
+ */
+export type TextStyle =
+  | "display"
+  | "editorial"
+  | "clean"
+  | "poster"
+  | "condensed"
+  | "script"
+  | "ticker";
+
+/**
+ * How the text sits on its background. Every style is drawn by BOTH legs
+ * from the same geometry helpers below, so the preview and the export agree.
+ * - none    bare type
+ * - solid   one rounded plate behind the whole block
+ * - line    a plate per line, ragged to each line's width
+ * - marker  a squat highlighter swipe per line, riding the baseline
+ * - outline hollow letters, stroked in the text colour
+ */
+export type PillStyle = "none" | "solid" | "line" | "marker" | "outline";
 
 interface OverlayBase {
   id: string;
@@ -32,9 +55,9 @@ export interface TextOverlay extends OverlayBase {
   kind: "text";
   text: string;
   style: TextStyle;
-  /** Background pill behind the text. Ticker style always renders one. */
-  pill: boolean;
-  color: TextColor;
+  pill: PillStyle;
+  /** Any hex the palette or the custom picker produced. */
+  color: string;
 }
 
 export interface CashtagOverlay extends OverlayBase {
@@ -48,7 +71,19 @@ export interface EmojiOverlay extends OverlayBase {
   emoji: string;
 }
 
-export type Overlay = TextOverlay | CashtagOverlay | EmojiOverlay;
+/** An @tag placed on the canvas. `userId` is the Profile _id so the tag can
+ *  round-trip once the gateway grows a mentions field. */
+export interface MentionOverlay extends OverlayBase {
+  kind: "mention";
+  username: string;
+  userId: string;
+}
+
+export type Overlay =
+  | TextOverlay
+  | CashtagOverlay
+  | EmojiOverlay
+  | MentionOverlay;
 
 export interface Stroke {
   /** Normalized 0..1 points in stage space. */
@@ -56,6 +91,8 @@ export interface Stroke {
   color: string;
   /** Line width as a fraction of canvas width. */
   width: number;
+  /** Erase strokes composite out what is under them, on both legs. */
+  erase?: boolean;
 }
 
 let idCounter = 0;
@@ -80,17 +117,65 @@ export const STROKE_COLORS = [
   "#10B981",
 ];
 
-export const TEXT_COLORS: Record<TextColor, { text: string; pill: string }> = {
-  light: { text: "#FAFAF9", pill: "rgba(12, 10, 9, 0.6)" },
-  dark: { text: "#0C0A09", pill: "rgba(250, 250, 249, 0.88)" },
-  gold: { text: "#EAB308", pill: "rgba(12, 10, 9, 0.6)" },
-};
+export const INK_LIGHT = "#FAFAF9";
+export const INK_DARK = "#0C0A09";
+export const INK_GOLD = "#EAB308";
 
-/** Ticker is a fixed brand moment: gold mono on a dark pill, always. */
-export const TICKER_COLORS = {
-  text: "#EAB308",
-  pill: "rgba(12, 10, 9, 0.75)",
-};
+export interface TextPalette {
+  id: string;
+  label: string;
+  colors: string[];
+}
+
+/** Named palettes for story type. The first row is the neutral/brand set the
+ *  canvas defaults draw from; the rest are editorial ranges. */
+export const TEXT_PALETTES: TextPalette[] = [
+  {
+    id: "core",
+    label: "Core",
+    colors: [INK_LIGHT, INK_DARK, INK_GOLD, "#A8A29E", "#57534E", "#B45309"],
+  },
+  {
+    id: "market",
+    label: "Market",
+    colors: ["#10B981", "#34D399", "#EF4444", "#F87171", "#F59E0B", "#0EA5E9"],
+  },
+  {
+    id: "dusk",
+    label: "Dusk",
+    colors: ["#FDE68A", "#FB923C", "#F43F5E", "#C026D3", "#7C3AED", "#4338CA"],
+  },
+  {
+    id: "flora",
+    label: "Flora",
+    colors: ["#ECFDF5", "#6EE7B7", "#14B8A6", "#0E7490", "#166534", "#3F6212"],
+  },
+];
+
+/** sRGB relative luminance, for picking a contrasting plate colour. */
+export function luminanceOf(hex: string): number {
+  const int = Number.parseInt(hex.slice(1), 16);
+  const channel = (v: number) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  return (
+    0.2126 * channel((int >> 16) & 255) +
+    0.7152 * channel((int >> 8) & 255) +
+    0.0722 * channel(int & 255)
+  );
+}
+
+/** The plate behind the text always opposes the ink, so any palette colour
+ *  stays legible without asking the user to choose a second colour. */
+export function plateColorFor(textHex: string, style: PillStyle): string {
+  const light = luminanceOf(textHex) > 0.5;
+  if (style === "marker") {
+    // A highlighter reads as a translucent swipe, not an opaque plate.
+    return light ? "rgba(12, 10, 9, 0.55)" : "rgba(250, 250, 249, 0.75)";
+  }
+  return light ? "rgba(12, 10, 9, 0.62)" : "rgba(250, 250, 249, 0.9)";
+}
 
 export const CASHTAG_COLORS = {
   text: "#EAB308",
@@ -98,9 +183,21 @@ export const CASHTAG_COLORS = {
   border: "#EAB308",
 };
 
+/** Tags read as brand chips — gold on ink, no rim, so they never look like
+ *  the bordered cashtag ticker. */
+export const MENTION_COLORS = {
+  text: "#EAB308",
+  pill: "rgba(12, 10, 9, 0.72)",
+};
+export const MENTION_SIZE_FRACTION = 0.045;
+
 export interface OverlayFonts {
   display: string;
+  editorial: string;
   ui: string;
+  poster: string;
+  condensed: string;
+  script: string;
   mono: string;
 }
 
@@ -110,25 +207,127 @@ export const MONO_STACK =
 /** Resolve the app's real (next/font-hashed) families for canvas use. */
 export function resolveOverlayFonts(): OverlayFonts {
   const styles = getComputedStyle(document.documentElement);
+  const read = (name: string, fallback: string) =>
+    styles.getPropertyValue(name).trim() || fallback;
   return {
-    display:
-      styles.getPropertyValue("--ws-font-display").trim() ||
-      '"Poppins", system-ui, sans-serif',
-    ui:
-      styles.getPropertyValue("--ws-font-ui").trim() ||
-      '"Public Sans", system-ui, sans-serif',
-    mono: MONO_STACK,
+    display: read("--ws-font-display", '"Poppins", system-ui, sans-serif'),
+    editorial: read(
+      "--ws-font-editorial",
+      '"Instrument Serif", Georgia, serif',
+    ),
+    ui: read("--ws-font-ui", '"Public Sans", system-ui, sans-serif'),
+    poster: read("--ws-font-poster", '"Archivo Black", Impact, sans-serif'),
+    condensed: read(
+      "--ws-font-condensed",
+      '"Bebas Neue", "Arial Narrow", sans-serif',
+    ),
+    script: read("--ws-font-script", '"Caveat", cursive'),
+    mono: read("--ws-font-mono", MONO_STACK),
   };
 }
 
 export function fontFamilyFor(style: TextStyle, fonts: OverlayFonts): string {
   if (style === "display") return fonts.display;
+  if (style === "editorial") return fonts.editorial;
+  if (style === "poster") return fonts.poster;
+  if (style === "condensed") return fonts.condensed;
+  if (style === "script") return fonts.script;
   if (style === "ticker") return fonts.mono;
   return fonts.ui;
 }
 
-export const fontWeightFor = (style: TextStyle) =>
-  style === "display" ? 700 : 600;
+/** Instrument Serif and Archivo Black ship one weight each — asking for 700
+ *  would synthesise a bold and lose the face's real drawing. */
+export const fontWeightFor = (style: TextStyle) => {
+  if (style === "display") return 700;
+  // Instrument Serif, Archivo Black and Bebas Neue each ship ONE weight —
+  // asking for 700 would synthesise a fake bold and lose the real drawing.
+  if (style === "editorial" || style === "poster" || style === "condensed") {
+    return 400;
+  }
+  if (style === "script") return 700;
+  if (style === "ticker") return 700;
+  return 600;
+};
+
+/** Per-face optical tracking — the poster face wants to be tight, the serif
+ *  wants air. Fraction of font size. */
+export const letterSpacingFor = (style: TextStyle) => {
+  if (style === "poster") return -0.02;
+  if (style === "editorial") return 0.005;
+  if (style === "condensed") return 0.03;
+  if (style === "ticker") return 0.04;
+  return 0;
+};
+
+/* ── Pill geometry — the shared contract ─────────────────────────────────
+   The DOM preview and the canvas export both size their plates from this,
+   so a pill that hugs in the editor hugs identically in the exported file.
+   Every number is a fraction of the font size. */
+
+export interface PillGeometry {
+  /** Horizontal padding around each line's text. */
+  padX: number;
+  /** Plate height (line/marker draw one per line). */
+  boxH: number;
+  radius: number;
+  /** Vertical nudge, used to sit the marker on the baseline. */
+  offsetY: number;
+  /** Stroke width for the outline style. */
+  strokeW: number;
+  /** True when the plate is drawn once per line rather than once per block. */
+  perLine: boolean;
+}
+
+export function pillGeometry(style: PillStyle): PillGeometry {
+  switch (style) {
+    case "solid":
+      return {
+        padX: 0.5,
+        boxH: 0,
+        radius: 0.38,
+        offsetY: 0,
+        strokeW: 0,
+        perLine: false,
+      };
+    case "line":
+      return {
+        padX: 0.42,
+        boxH: TEXT_LINE_HEIGHT + 0.1,
+        radius: 0.34,
+        offsetY: 0,
+        strokeW: 0,
+        perLine: true,
+      };
+    case "marker":
+      return {
+        padX: 0.22,
+        boxH: 0.86,
+        radius: 0.06,
+        offsetY: 0.08,
+        strokeW: 0,
+        perLine: true,
+      };
+    case "outline":
+      return {
+        padX: 0,
+        boxH: 0,
+        radius: 0,
+        offsetY: 0,
+        strokeW: 0.036,
+        perLine: false,
+      };
+    default:
+      return {
+        padX: 0,
+        boxH: 0,
+        radius: 0,
+        offsetY: 0,
+        strokeW: 0,
+        perLine: false,
+      };
+  }
+}
 
 /* ── Canvas compositor (export leg) ─────────────────────────────────────── */
 
@@ -157,6 +356,8 @@ function drawStroke(
   stroke: Stroke,
 ) {
   if (stroke.points.length === 0) return;
+  ctx.save();
+  if (stroke.erase) ctx.globalCompositeOperation = "destination-out";
   ctx.strokeStyle = stroke.color;
   ctx.lineWidth = Math.max(1, stroke.width * w);
   ctx.lineCap = "round";
@@ -177,6 +378,7 @@ function drawStroke(
     ctx.lineTo(last.x * w, last.y * h);
   }
   ctx.stroke();
+  ctx.restore();
 }
 
 function drawTextOverlay(
@@ -188,37 +390,96 @@ function drawTextOverlay(
   const fontPx = TEXT_SIZE_FRACTION * w * overlay.scale;
   const lineH = fontPx * TEXT_LINE_HEIGHT;
   const lines = overlay.text.split("\n");
-  const ticker = overlay.style === "ticker";
-  const colors = ticker ? TICKER_COLORS : TEXT_COLORS[overlay.color];
-  const pill = ticker || overlay.pill;
+  const geo = pillGeometry(overlay.pill);
+  const plate = plateColorFor(overlay.color, overlay.pill);
 
   ctx.font = `${fontWeightFor(overlay.style)} ${fontPx}px ${fontFamilyFor(overlay.style, fonts)}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
+  // ctx.letterSpacing is ignored by engines that lack it, which only costs
+  // the optical tracking — never the layout, since widths are measured after.
+  ctx.letterSpacing = `${letterSpacingFor(overlay.style) * fontPx}px`;
 
   const widths = lines.map((line) => ctx.measureText(line).width);
   const blockW = Math.max(...widths);
   const blockH = lines.length * lineH;
+  const centerY = (i: number) => -blockH / 2 + lineH * (i + 0.5);
 
-  if (pill) {
-    const padX = fontPx * PILL_PAD_X;
+  if (overlay.pill === "solid") {
+    const padX = fontPx * geo.padX;
     const padY = fontPx * PILL_PAD_Y;
-    ctx.fillStyle = colors.pill;
+    ctx.fillStyle = plate;
     roundedRect(
       ctx,
       -blockW / 2 - padX,
       -blockH / 2 - padY,
       blockW + padX * 2,
       blockH + padY * 2,
-      fontPx * PILL_RADIUS,
+      fontPx * geo.radius,
     );
     ctx.fill();
+  } else if (geo.perLine) {
+    // One plate per line, each hugging that line's own width — the ragged
+    // edge is the point of the style.
+    const padX = fontPx * geo.padX;
+    const boxH = fontPx * geo.boxH;
+    ctx.fillStyle = plate;
+    lines.forEach((line, i) => {
+      const lineW = widths[i];
+      if (!line.trim()) {
+        return;
+      }
+      roundedRect(
+        ctx,
+        -lineW / 2 - padX,
+        centerY(i) - boxH / 2 + fontPx * geo.offsetY,
+        lineW + padX * 2,
+        boxH,
+        fontPx * geo.radius,
+      );
+      ctx.fill();
+    });
   }
 
-  ctx.fillStyle = colors.text;
-  lines.forEach((line, i) => {
-    ctx.fillText(line, 0, -blockH / 2 + lineH * (i + 0.5));
-  });
+  if (overlay.pill === "outline") {
+    ctx.lineWidth = Math.max(1, fontPx * geo.strokeW);
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = overlay.color;
+    for (const [i, line] of lines.entries()) {
+      ctx.strokeText(line, 0, centerY(i));
+    }
+    return;
+  }
+
+  ctx.fillStyle = overlay.color;
+  for (const [i, line] of lines.entries()) {
+    ctx.fillText(line, 0, centerY(i));
+  }
+}
+
+function drawMentionOverlay(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  overlay: MentionOverlay,
+  fonts: OverlayFonts,
+) {
+  const fontPx = MENTION_SIZE_FRACTION * w * overlay.scale;
+  const label = `@${overlay.username}`;
+  ctx.font = `700 ${fontPx}px ${fonts.ui}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.letterSpacing = "0px";
+  const textW = ctx.measureText(label).width;
+  const padX = fontPx * PILL_PAD_X;
+  const padY = fontPx * PILL_PAD_Y;
+  const chipW = textW + padX * 2;
+  const chipH = fontPx + padY * 2;
+
+  ctx.fillStyle = MENTION_COLORS.pill;
+  roundedRect(ctx, -chipW / 2, -chipH / 2, chipW, chipH, chipH / 2);
+  ctx.fill();
+  ctx.fillStyle = MENTION_COLORS.text;
+  ctx.fillText(label, 0, 0);
 }
 
 function drawCashtagOverlay(
@@ -273,7 +534,19 @@ export function drawDecorations(
   strokes: Stroke[],
   fonts: OverlayFonts,
 ) {
-  for (const stroke of strokes) drawStroke(ctx, w, h, stroke);
+  if (strokes.length > 0) {
+    // Strokes are composited on their OWN transparent layer first. An eraser
+    // stroke uses destination-out, which would otherwise cut a hole straight
+    // through the photo underneath instead of just removing ink.
+    const layer = document.createElement("canvas");
+    layer.width = w;
+    layer.height = h;
+    const layerCtx = layer.getContext("2d");
+    if (layerCtx) {
+      for (const stroke of strokes) drawStroke(layerCtx, w, h, stroke);
+      ctx.drawImage(layer, 0, 0);
+    }
+  }
   for (const overlay of overlays) {
     ctx.save();
     ctx.translate(overlay.x * w, overlay.y * h);
@@ -281,6 +554,8 @@ export function drawDecorations(
     if (overlay.kind === "text") drawTextOverlay(ctx, w, overlay, fonts);
     else if (overlay.kind === "cashtag")
       drawCashtagOverlay(ctx, w, overlay, fonts);
+    else if (overlay.kind === "mention")
+      drawMentionOverlay(ctx, w, overlay, fonts);
     else drawEmojiOverlay(ctx, w, overlay);
     ctx.restore();
   }

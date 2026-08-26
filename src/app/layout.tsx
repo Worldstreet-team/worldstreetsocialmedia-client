@@ -20,11 +20,23 @@ import { MobileBottomNav } from "@/components/MobileBottomNav";
 import GlobalMessageListener from "@/components/providers/GlobalMessageListener";
 import { CommandPalette } from "@/components/ui/CommandPalette";
 import { WelcomeTour } from "@/components/ui/WelcomeTour";
+import { PremiumSheet } from "@/components/premium/PremiumSheet";
 import { CreateFab } from "@/components/ui/CreateFab";
+import VoiceRoomHost from "@/components/voice/VoiceRoomHost";
 import { LiveDock } from "@/components/live/LiveDock";
 import { NotificationCountSync } from "@/components/providers/NotificationCountSync";
+import { SpacesLiveSync } from "@/components/providers/SpacesLiveSync";
+import { MessageCountSync } from "@/components/providers/MessageCountSync";
 
-import { Poppins, Public_Sans } from "next/font/google";
+import {
+    Archivo_Black,
+    Bebas_Neue,
+    Caveat,
+    Instrument_Serif,
+    JetBrains_Mono,
+    Poppins,
+    Public_Sans,
+} from "next/font/google";
 
 // Design system type pairing for platform apps: Poppins for display, Public
 // Sans for UI. These feed --ws-font-display / --ws-font-ui in ws-tokens.css.
@@ -40,6 +52,42 @@ const poppins = Poppins({
     subsets: ["latin"],
     weight: ["600", "700", "800"],
     variable: "--font-poppins",
+});
+
+// Editorial + poster voices. These exist ONLY for story/creator typography
+// (the Story Studio's font picker) — app chrome stays Poppins + Public Sans.
+const instrumentSerif = Instrument_Serif({
+    subsets: ["latin"],
+    weight: ["400"],
+    style: ["normal", "italic"],
+    variable: "--font-instrument-serif",
+});
+
+const archivoBlack = Archivo_Black({
+    subsets: ["latin"],
+    weight: ["400"],
+    variable: "--font-archivo-black",
+});
+
+const bebasNeue = Bebas_Neue({
+    subsets: ["latin"],
+    weight: ["400"],
+    variable: "--font-bebas-neue",
+});
+
+const caveat = Caveat({
+    subsets: ["latin"],
+    weight: ["600", "700"],
+    variable: "--font-caveat",
+});
+
+// A real ticker face. The mono voice used to fall back to the system stack,
+// which meant the canvas export and the DOM preview could resolve different
+// fonts on different machines.
+const jetbrainsMono = JetBrains_Mono({
+    subsets: ["latin"],
+    weight: ["700"],
+    variable: "--font-jetbrains-mono",
 });
 
 // Never block pinch-zoom (06-motion-accessibility bans `user-scalable=no`).
@@ -84,7 +132,7 @@ export default async function RootLayout({
         >
             <html lang={locale} data-ws-theme="platform" suppressHydrationWarning>
                 <body
-                    className={`${publicSans.variable} ${poppins.variable} antialiased`}
+                    className={`${publicSans.variable} ${poppins.variable} ${instrumentSerif.variable} ${archivoBlack.variable} ${bebasNeue.variable} ${caveat.variable} ${jetbrainsMono.variable} antialiased`}
                 >
                     {/* Keyboard users jump the nav rails straight to the timeline. */}
                     <a
@@ -118,10 +166,14 @@ export default async function RootLayout({
                                     <ToastProvider>
                                         <GlobalMessageListener />
                                         <NotificationCountSync />
+                                        <SpacesLiveSync />
+										<MessageCountSync />
                                         <CommandPalette />
                                         <WelcomeTour />
+                                        <PremiumSheet />
                                         <CreateFab />
                                         <LiveDock />
+                                        <VoiceRoomHost />
                                         {children}
                                         <MobileBottomNav />
                                     </ToastProvider>

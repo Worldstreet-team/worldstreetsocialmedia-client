@@ -24,3 +24,44 @@ export async function promotePostAction(postId: string) {
 		};
 	}
 }
+
+export async function getMyCampaignsAction() {
+	const { getToken } = await auth();
+	const token = await getToken();
+	if (!token) return { success: false as const, message: "Unauthorized" };
+	try {
+		const res = await axios.get(`${BACKEND_URL}/api/campaigns/mine`, {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return { success: true as const, campaigns: res.data?.campaigns ?? [] };
+	} catch (error: any) {
+		return {
+			success: false as const,
+			message:
+				error.response?.data?.message || "Could not load campaigns",
+		};
+	}
+}
+
+export async function updateCampaignAction(
+	id: string,
+	body: { status?: "active" | "paused"; addBudgetUsdMinor?: number },
+) {
+	const { getToken } = await auth();
+	const token = await getToken();
+	if (!token) return { success: false as const, message: "Unauthorized" };
+	try {
+		const res = await axios.patch(
+			`${BACKEND_URL}/api/campaigns/${id}`,
+			body,
+			{ headers: { Authorization: `Bearer ${token}` } },
+		);
+		return { success: true as const, status: res.data?.status };
+	} catch (error: any) {
+		return {
+			success: false as const,
+			message:
+				error.response?.data?.message || "Could not update campaign",
+		};
+	}
+}

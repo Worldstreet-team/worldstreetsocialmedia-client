@@ -45,7 +45,7 @@ export async function getFeedAction(
 
 export async function getUserFeedAction(
 	userId: string,
-	type: "posts" | "media" | "likes" = "posts",
+	type: "posts" | "replies" | "media" | "likes" = "posts",
 	page: number = 1,
 	limit: number = 10,
 ) {
@@ -58,12 +58,10 @@ export async function getUserFeedAction(
 
 	try {
 		let endpoint = `/api/posts/user/${userId}`;
+		if (type === "replies") endpoint += "/replies";
 		if (type === "media") endpoint += "/media";
 		if (type === "likes") endpoint += "/likes";
 
-		console.log(
-			`Fetching user feed ${type} for ${userId} from ${API_URL}${endpoint}`,
-		);
 
 		const response = await axios.get(`${API_URL}${endpoint}`, {
 			params: { page, limit },

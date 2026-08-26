@@ -167,7 +167,7 @@ export default function MediaEditor({
       .catch(() => {
         toast(
           onDecodeError
-            ? "Couldn't open this image for editing — using the original"
+ ? "Couldn't open this image for editing using the original"
             : "Couldn't open this image",
           { type: "error" },
         );
@@ -296,7 +296,7 @@ export default function MediaEditor({
   return (
     <ConfirmModalPortal>
       {/* Top-anchored, not centred: the panel's height changes with the tab,
-          and centring made the whole sheet re-centre on every switch — which
+          and centring made the whole sheet re-centre on every switch which
           slid the tab bar out from under the pointer (a second click landed
           on a slider). Pinning the top means only the bottom edge moves. */}
       <div className="fixed inset-0 z-modal flex items-start justify-center overflow-y-auto p-3 sm:p-4 pt-[max(3vh,0.75rem)]">
@@ -304,13 +304,13 @@ export default function MediaEditor({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           onClick={onClose}
-          className="absolute inset-0 glass-scrim"
+          className="absolute inset-0 glass-scrim backdrop-blur-xl backdrop-saturate-150"
         />
         <motion.div
           initial={{ opacity: 0, scale: 0.98, y: 8 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-          className="relative w-full max-w-xl glass-panel overflow-hidden flex flex-col max-h-[90dvh] glass-ink"
+          className="relative w-full max-w-xl glass-panel backdrop-blur-2xl backdrop-saturate-150 overflow-hidden flex flex-col max-h-[90dvh] glass-ink"
           role="dialog"
           aria-modal="true"
           aria-label={title}
@@ -322,7 +322,7 @@ export default function MediaEditor({
                 type="button"
                 onClick={onClose}
                 aria-label="Discard edits"
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill glass-chip transition-colors cursor-pointer"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill glass-chip backdrop-blur-md backdrop-saturate-150 transition-colors cursor-pointer"
               >
                 <X size={17} weight="bold" />
               </button>
@@ -345,7 +345,7 @@ export default function MediaEditor({
             </button>
           </div>
 
-          {/* Stage — stays mounted across tabs so crop state survives; the
+          {/* Stage stays mounted across tabs so crop state survives; the
               adjustment preview is a CSS filter on the cropper's media. */}
           <div className="relative w-full h-[min(52dvh,420px)] ws-cropper">
             {sourceUrl ? (
@@ -372,7 +372,7 @@ export default function MediaEditor({
             {grainActive && <GrainOverlay />}
           </div>
 
-          {/* Tab bar — white underline slides via layoutId (FeedTabs motion). */}
+          {/* Tab bar white underline slides via layoutId (FeedTabs motion). */}
           <div className="flex shrink-0 border-t glass-divider">
             {tabs.map(({ id, label }) => (
               <button
@@ -403,7 +403,7 @@ export default function MediaEditor({
           {/* Controls. The panel region keeps one height across all three
               tabs: without it the modal grows/shrinks per tab and, because it
               is vertically centred, the tab bar slides out from under the
-              pointer — a second click lands on a slider instead of a tab
+              pointer a second click lands on a slider instead of a tab
               (hit while testing). */}
           <div className="shrink-0 flex flex-col">
             {tab === "adjust" && (
@@ -510,7 +510,7 @@ export default function MediaEditor({
                           "h-8 px-3 rounded-pill text-[13px] font-medium font-sans transition-colors whitespace-nowrap cursor-pointer tabular-nums",
                           doc.aspectId === id
                             ? "glass-chip-active"
-                            : "glass-chip",
+                            : "glass-chip backdrop-blur-md backdrop-saturate-150",
                         )}
                         aria-pressed={doc.aspectId === id}
                       >
@@ -524,7 +524,7 @@ export default function MediaEditor({
                     type="button"
                     onClick={applyRotate}
                     aria-label="Rotate 90 degrees"
-                    className="flex h-10 w-10 items-center justify-center rounded-pill glass-chip transition-colors cursor-pointer"
+                    className="flex h-10 w-10 items-center justify-center rounded-pill glass-chip backdrop-blur-md backdrop-saturate-150 transition-colors cursor-pointer"
                   >
                     <ArrowClockwise size={17} weight="bold" />
                   </button>
@@ -534,7 +534,7 @@ export default function MediaEditor({
                     aria-label="Flip horizontally"
                     className={clsx(
                       "flex h-10 w-10 items-center justify-center rounded-pill transition-colors cursor-pointer",
-                      doc.flipH ? "glass-chip-active" : "glass-chip",
+                      doc.flipH ? "glass-chip-active" : "glass-chip backdrop-blur-md backdrop-saturate-150",
                     )}
                     aria-pressed={doc.flipH}
                   >
@@ -570,7 +570,7 @@ export default function MediaEditor({
                   className="text-xs glass-ink-dim font-sans tabular-nums w-[84px] text-right shrink-0"
                   aria-live="polite"
                 >
-                  {readout ? `${readout.w} × ${readout.h}` : "—"}
+ {readout ? `${readout.w} × ${readout.h}` : ""}
                 </span>
               </div>
             </div>

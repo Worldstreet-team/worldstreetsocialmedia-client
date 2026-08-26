@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ProfileBadge } from "@/components/ui/UserBadges";
 import Image from "next/image";
 // 03-icons: `copy` for copy-link, `bar-chart-3` for activity (both in-set).
 // Trash2/Ban/Pin have no in-set equivalents — kept as justified deviations.
@@ -11,7 +12,7 @@ import {
     BarChart3,
     Pin,
 } from "lucide-react";
-import VerifiedIcon from "@/assets/icons/VerifiedIcon";
+import { UserBadges } from "@/components/ui/UserBadges";
 // 03-icons: Phosphor is reserved for the Social post-action row + overflow menu.
 import {
     BookmarkSimple,
@@ -24,6 +25,7 @@ import {
     PaperPlaneTilt,
     Repeat,
     Translate,
+    UsersThree,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { useState, useRef, useEffect, memo, useCallback, useMemo } from "react";
@@ -49,9 +51,12 @@ import { repostPostAction } from "@/lib/post.actions";
 import { QuoteModal } from "@/components/feed/QuoteModal";
 import { Megaphone } from "lucide-react";
 import { useT } from "@/i18n/client";
+import { useLiveEvents } from "@/hooks/useLiveNow";
 import { translatePostAction } from "@/lib/translate.actions";
 import { autoTranslateAtom, translationsAtom } from "@/store/translate.atom";
 import { TranslatePanel } from "@/components/ui/TranslatePanel";
+import ReportSheet from "@/components/safety/ReportSheet";
+import { blockUserAction } from "@/lib/user.actions";
 
 export interface PostProps {
     id: string;
@@ -61,9 +66,13 @@ export interface PostProps {
         username: string;
         avatar: string;
         isVerified?: boolean;
+        /** Earned marks rendered after the name, alongside the tick. */
+        badges?: ProfileBadge[];
     };
     content: string;
     timestamp: string;
+    /** Denormalized @mention metadata (verified ticks on mention chips). */
+    mentions?: { username: string; isVerified?: boolean }[];
     images?: string[];
     videos?: string[];
     stats: {
@@ -93,6 +102,12 @@ export interface PostProps {
     };
     isBookmarked?: boolean;
     isDetail?: boolean;
+    /** Set when the post was written into a community, so the card can say so. */
+    community?: {
+        id: string;
+        name: string;
+        slug: string;
+    };
     linkPreview?: {
         url: string;
         title: string;
@@ -134,6 +149,19 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
     const [showOriginal, setShowOriginal] = useState(false);
     const [translateChecked, setTranslateChecked] = useState(false);
     const [translateOpen, setTranslateOpen] = useState(false);
+    // A live card that keeps its LIVE badge after the broadcast ends is the
+    // most visible kind of stale state. Listen and flip it.
+    const [liveEnded, setLiveEnded] = useState(false);
+    useLiveEvents((event, data) => {
+        if (
+            event === "ended" &&
+            post.live?.streamId &&
+            data.streamId === post.live.streamId
+        ) {
+            setLiveEnded(true);
+        }
+    });
+    const isLiveNow = post.live?.status === "live" && !liveEnded;
 
     const currentUser = useAtomValue(userAtom);
     const setUser = useSetAtom(userAtom);
@@ -148,6 +176,8 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isDeleted, setIsDeleted] = useState(false);
+    const [isReportOpen, setIsReportOpen] = useState(false);
+    const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
 
     // Image Modal State
     const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(
@@ -371,14 +401,31 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                         console.error("Failed to copy link: ", err);
                         toast("Failed to copy link", { type: "error" });
                     });
+            } else if (action === "report") {
+                setIsReportOpen(true);
+            } else if (action === "block") {
+                setIsBlockModalOpen(true);
             } else {
-                // Pin/activity/not-interested/block/report have no gateway
-                // support yet — say so instead of silently no-oping.
- toast("Not available yet coming soon", { type: "info" });
+                // Pin, activity and not-interested still have no gateway
+                // support — say so instead of silently no-oping.
+                toast("Not available yet coming soon", { type: "info" });
             }
         },
         [post.id, toast],
     );
+
+    /** Block from the post menu, without leaving the feed. */
+    const handleBlockAuthor = useCallback(async () => {
+        const res = await blockUserAction(post.author.id);
+        if (!res.success) {
+            toast(res.message ?? "Could not block", { type: "error" });
+            return;
+        }
+        toast(t("safety.blocked.toast"));
+        // The post is now hidden server-side; drop it from this render too so
+        // the feed doesn't keep showing what it just agreed to hide.
+        setIsDeleted(true);
+    }, [post.author.id, toast, t]);
 
     const MAX_LENGTH = 280;
     const shouldTruncate = useMemo(
@@ -394,12 +441,15 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
 
     // URLs, $cashtags, #hashtags and @mentions become links (RichText).
     const formattedContent = useMemo(
-        () => renderRichText(displayedContent),
-        [displayedContent],
+        () => renderRichText(displayedContent, { mentions: post.mentions }),
+        [displayedContent, post.mentions],
     );
     const formattedTranslation = useMemo(
-        () => (translation ? renderRichText(translation) : null),
-        [translation],
+        () =>
+            translation
+                ? renderRichText(translation, { mentions: post.mentions })
+                : null,
+        [translation, post.mentions],
     );
     const showingTranslation = Boolean(translation) && !showOriginal;
 
@@ -449,12 +499,49 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                 isDestructive={true}
             />
 
+            <ConfirmModal
+                isOpen={isBlockModalOpen}
+                onClose={() => setIsBlockModalOpen(false)}
+                onConfirm={handleBlockAuthor}
+                title={`${t("safety.block")} @${post.author.username}?`}
+                message="They will not be able to message you or see your posts, and you will not see theirs."
+                confirmText={t("safety.block")}
+                isDestructive
+            />
+
+            {isReportOpen && (
+                <ReportSheet
+                    /* The gateway derives comment-vs-post from `parentPost`,
+                       so the client does not have to know which this is. */
+                    targetType="post"
+                    targetId={post.id}
+                    canBlock={!isOwnPost}
+                    onBlock={handleBlockAuthor}
+                    onClose={() => setIsReportOpen(false)}
+                />
+            )}
+
             <ImageModal
                 isOpen={selectedImageIndex !== null}
                 onClose={() => setSelectedImageIndex(null)}
                 images={post.images || []}
                 initialIndex={selectedImageIndex || 0}
             />
+
+            {/* Which community this came from, above the author row. In an
+                aggregated feed the community is the first thing you need,
+                not the last. z-10 + pointer-events-auto so it stays clickable
+                above the card's overlay link. */}
+            {post.community && (
+                <Link
+                    href={`/communities/${post.community.slug}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="relative z-10 mb-1.5 ml-[54px] sm:ml-[58px] flex w-fit items-center gap-1.5 pointer-events-auto font-sans text-[12.5px] font-semibold text-muted transition-colors hover:text-primary"
+                >
+                    <UsersThree size={13} weight="duotone" className="text-gold" />
+                    <span className="truncate">{post.community.name}</span>
+                </Link>
+            )}
 
             <div className="flex gap-3 sm:gap-4 relative z-10 pointer-events-none">
                 <div className="shrink-0 pointer-events-auto mt-1">
@@ -486,7 +573,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                             {/* Gold seal badge the one VerifiedIcon everywhere. */}
                             {post.author.isVerified && (
                                 <span className="shrink-0 flex">
-                                    <VerifiedIcon size={{ width: "16", height: "16" }} />
+                                    <UserBadges isVerified badges={post.author.badges} size={16} />
                                 </span>
                             )}
                             <Link
@@ -506,7 +593,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                     {t("promo.label")}
                                 </span>
                             )}
-                            {post.live?.status === "live" && (
+                            {isLiveNow && (
                                 <span className="shrink-0 flex items-center gap-1 rounded-[4px] bg-danger px-1.5 py-px text-[10px] font-bold tracking-wide text-white font-sans">
                                     <span className="w-1.5 h-1.5 rounded-pill bg-white animate-pulse" />
                                     {t("live.badge")}
@@ -748,7 +835,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                         >
                             <span
                                 className={
-                                    post.live.status === "live"
+                                    isLiveNow
                                         ? "flex h-9 w-9 items-center justify-center rounded-pill bg-danger/15 text-danger shrink-0"
                                         : "flex h-9 w-9 items-center justify-center rounded-pill bg-raised text-muted shrink-0"
                                 }
@@ -760,7 +847,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                     {post.live.title || post.content}
                                 </span>
                                 <span className="block text-[13px] text-muted font-sans">
-                                    {post.live.status === "live"
+                                    {isLiveNow
                                         ? t("live.watch")
                                         : `${t("live.replay")}${post.live.viewerPeak ? ` · ${post.live.viewerPeak} ${t("live.viewers")}` : ""}`}
                                 </span>
@@ -986,7 +1073,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                             aria-label="Reply"
                             className="flex items-center gap-0.5 hover:text-primary transition-colors group cursor-pointer"
                         >
-                            <span className="flex h-10 w-10 items-center justify-center rounded-pill group-hover:bg-primary/10 transition group-active:scale-[0.98]">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill group-hover:bg-primary/10 transition group-active:scale-[0.98]">
                                 <ChatCircle size={17} />
                             </span>
                             <span className="text-[13px] font-sans tabular-nums">
@@ -1006,7 +1093,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                     reposted ? "text-success" : "hover:text-success",
                                 )}
                             >
-                                <span className="flex h-10 w-10 items-center justify-center rounded-pill group-hover:bg-success/10 transition group-active:scale-[0.98]">
+                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill group-hover:bg-success/10 transition group-active:scale-[0.98]">
                                     <Repeat
                                         size={17}
                                         weight={reposted ? "bold" : "regular"}
@@ -1077,7 +1164,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                 isLiked ? "text-danger" : "hover:text-danger",
                             )}
                         >
-                            <span className="relative flex h-10 w-10 items-center justify-center rounded-pill group-hover:bg-danger/10 transition group-active:scale-[0.98]">
+                            <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-pill group-hover:bg-danger/10 transition group-active:scale-[0.98]">
                                 {/* One-shot danger wash on like opacity-only,
                                     fades out over motion-slow and stays gone. */}
                                 <AnimatePresence>
@@ -1147,7 +1234,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                 isBookmarked ? "text-gold" : "hover:text-gold",
                             )}
                         >
-                            <span className="relative flex h-10 w-10 items-center justify-center rounded-pill group-hover:bg-gold/10 transition group-active:scale-[0.98]">
+                            <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-pill group-hover:bg-gold/10 transition group-active:scale-[0.98]">
                                 <AnimatePresence>
                                     {isBookmarked && (
                                         <motion.span
@@ -1199,7 +1286,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                     : "hover:text-primary",
                             )}
                         >
-                            <span className="flex h-10 w-10 items-center justify-center rounded-pill group-hover:bg-primary/10 transition group-active:scale-[0.98]">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill group-hover:bg-primary/10 transition group-active:scale-[0.98]">
                                 <AnimatePresence mode="wait" initial={false}>
                                     {linkCopied ? (
                                         <motion.span
@@ -1242,7 +1329,10 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                         </div>
 
                         <div
-                            className="flex items-center gap-1.5 pr-0.5 cursor-default select-none text-subtle"
+                            // hidden below sm: five 40px targets + counts already
+                            // outgrow a 375px card; the passive views metric is the
+                            // one item that can yield (it stays on the post page).
+                            className="hidden sm:flex items-center gap-1.5 pr-0.5 cursor-default select-none text-subtle"
                             title={t("post.views")}
                             aria-label={t("post.views")}
                         >

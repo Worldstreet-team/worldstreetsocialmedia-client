@@ -10,14 +10,14 @@ interface ToastContainerProps {
 }
 
 /* Bottom-anchored toasts sit at z-toast (1200), which is above the fixed
-   MobileBottomNav (z-sticky, 100) — they used to cover the tab bar outright.
+   MobileBottomNav (z-sticky, 100) they used to cover the tab bar outright.
    `pb-nav` lifts them clear of it on phones; `md:pb-4` restores the plain
    16px gutter once the bar is gone. Left/right anchoring also collapses to
    full-width on phones so a 280px pill can't sit half off a 320px screen. */
 const positionClasses: Record<ToastPosition, string> = {
-	"top-left": "top-0 left-0 right-0 sm:right-auto items-stretch sm:items-start",
-	"top-center": "top-0 left-0 right-0 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 items-stretch sm:items-center",
-	"top-right": "top-0 left-0 right-0 sm:left-auto items-stretch sm:items-end",
+	"top-left": "top-0 left-0 right-0 sm:right-auto items-stretch sm:items-start pt-safe",
+	"top-center": "top-0 left-0 right-0 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 items-stretch sm:items-center pt-safe",
+	"top-right": "top-0 left-0 right-0 sm:left-auto items-stretch sm:items-end pt-safe",
 	"bottom-left":
 		"bottom-0 left-0 right-0 sm:right-auto items-stretch sm:items-start pb-nav md:pb-4",
 	"bottom-center":

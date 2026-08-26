@@ -9,8 +9,10 @@ import { userAtom } from "@/store/user.atom";
 import { bookmarksAtom, bookmarksLoadedAtom } from "@/store/bookmarks.atom";
 import { Bookmark } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { useT } from "@/i18n/client";
 
 export default function BookmarksPage() {
+	const t = useT();
 	const [bookmarks, setBookmarks] = useAtom(bookmarksAtom);
 	const [isLoaded, setIsLoaded] = useAtom(bookmarksLoadedAtom);
 	const user = useAtomValue(userAtom);
@@ -38,7 +40,7 @@ export default function BookmarksPage() {
 			<header className="sticky top-0 z-sticky bg-page border-b border-hairline">
 				<div className="px-4 py-3">
 					<h1 className="font-display text-lg font-semibold text-primary">
-						Bookmarks
+						{t("nav.bookmarks")}
 					</h1>
 					<div className="text-muted text-[13px] font-sans">
 						@{user?.username}
@@ -62,7 +64,7 @@ export default function BookmarksPage() {
 						<EmptyState
 							icon={Bookmark}
 							title="Save posts for later"
-							caption="Tap the bookmark on any post and it lands here — only you can see your bookmarks."
+ caption="Tap the bookmark on any post and it lands here only you can see your bookmarks."
 						/>
 					</div>
 				)}

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useAppPathname } from "@/i18n/useAppPathname";
 import { useClerk } from "@clerk/nextjs";
 import { useTheme } from "next-themes";
 import {
@@ -14,15 +15,22 @@ import {
 	UserCircle,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { BadgedIcon } from "@/components/ui/Badge";
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
 import { mainNav, moreItem, youNav, type SidebarItem } from "@/data/sidebar";
-import { useAtomValue } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import { userAtom } from "@/store/user.atom";
+import { UserBadges } from "@/components/ui/UserBadges";
 import { unreadMessagesCountAtom } from "@/store/messageCache";
-import { unreadNotificationsCountAtom } from "@/store/ui.atom";
+import { liveSpacesCountAtom } from "@/store/voice.atom";
+import { badgeForNavKey, unreadNotificationsCountAtom } from "@/store/ui.atom";
 import { handleSignOut } from "@/lib/utils";
 import { withThemeTransition } from "@/lib/theme-transition";
+import { mainScroller } from "@/lib/utils";
+import { SealCheck } from "@phosphor-icons/react";
+import { premiumOpenAtom } from "@/store/ui.atom";
+import { BrandRitual } from "@/components/layout/BrandRitual";
 import { LanguageMenu } from "@/components/ui/LanguageMenu";
 import { useT } from "@/i18n/client";
 
@@ -65,10 +73,13 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
 
 export function LeftSidebar() {
 	const t = useT();
-	const pathname = usePathname();
+	const pathname = useAppPathname();
 	const user = useAtomValue(userAtom);
 	const unreadCount = useAtomValue(unreadMessagesCountAtom);
 	const unreadNotifications = useAtomValue(unreadNotificationsCountAtom);
+	// Live rooms are not unread items, so they get a pulse rather than a
+	// number — see the render below.
+	const liveSpaces = useAtomValue(liveSpacesCountAtom);
 	const { signOut } = useClerk();
 	const router = useRouter();
 	const [menuOpen, setMenuOpen] = useState(false);
@@ -95,12 +106,12 @@ export function LeftSidebar() {
 			document.removeEventListener("mousedown", handleClickOutside);
 	}, [menuOpen]);
 
+	// Keyed on labelKey, not the display title: labelKey is the stable i18n
+	// identifier, so renaming the visible label can't silently drop a badge.
 	const badgeFor = (item: SidebarItem) =>
-		item.title === "Messages"
-			? unreadCount
-			: item.title === "Notifications"
-				? unreadNotifications
-				: 0;
+		badgeForNavKey(item.labelKey, unreadNotifications, unreadCount);
+
+	const setPremiumOpen = useSetAtom(premiumOpenAtom);
 
 	const renderItem = (item: SidebarItem, index: number, offset: number) => {
 		const href =
@@ -124,15 +135,23 @@ export function LeftSidebar() {
 						: "text-muted hover:bg-surface hover:text-primary",
 				)}
 			>
-				<span className="relative inline-flex w-[22px] h-[22px] items-center justify-center">
+				<BadgedIcon count={badgeCount} label={t(item.labelKey)}>
 					<item.icon isActive={isActive} />
-					{badgeCount > 0 && (
-						<span className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-4 h-4 px-1 text-[9px] font-bold text-brand-on bg-brand rounded-pill border border-page font-sans tabular-nums">
-							{badgeCount > 9 ? "9+" : badgeCount}
-						</span>
-					)}
-				</span>
+				</BadgedIcon>
 				<span className="text-[15px] font-sans">{t(item.labelKey)}</span>
+				{item.labelKey === "nav.voice" && liveSpaces > 0 && (
+					// A broadcast dot, not a count: rooms are happening now, they
+					// aren't a backlog. The title carries the actual number for
+					// anyone who wants it.
+					<span
+						className="relative ml-auto flex h-2 w-2 shrink-0"
+						title={`${liveSpaces} ${t("voice.liveNow")}`}
+					>
+						<span className="absolute inline-flex h-full w-full animate-ping rounded-pill bg-danger opacity-75" />
+						<span className="relative inline-flex h-2 w-2 rounded-pill bg-danger" />
+						<span className="sr-only">{t("voice.liveNow")}</span>
+					</span>
+				)}
 			</Link>
 		);
 	};
@@ -141,22 +160,10 @@ export function LeftSidebar() {
 		<header className="w-[264px] shrink-0 hidden md:flex flex-col sticky top-0 h-dvh overflow-y-auto no-scrollbar pl-4 pr-5 border-r border-hairline">
 			{/* Intro: logo leads, nav items cascade after it (animate-rise + delays). */}
 			<div className="py-7 px-2 animate-rise">
+				{/* Same brand ritual the mobile top bar plays — the rail is where
+				    the hub runs it, so the two apps now behave identically. */}
 				<Link href="/" className="flex items-center gap-2 group">
-					<Image
-						src="/images/wsa-mark.png"
-						alt="WorldStreet"
-						width={26}
-						height={26}
-						className="h-[26px] w-[26px] object-contain shrink-0"
-					/>
-					<div className="flex flex-col leading-tight min-w-0">
-						<span className="font-display font-semibold text-[15px] text-primary tracking-tight truncate">
-							WorldStreet
-						</span>
-						<span className="font-sans text-[10px] font-semibold uppercase tracking-[2px] text-gold">
-							Social
-						</span>
-					</div>
+					<BrandRitual size={26} wordSize={15} eyebrow="Social" />
 				</Link>
 			</div>
 
@@ -165,6 +172,20 @@ export function LeftSidebar() {
 
 				<Eyebrow>{t("nav.you")}</Eyebrow>
 				{youNav.map((item, i) => renderItem(item, i, 240))}
+
+				{/* Premium opens the subscription sheet rather than navigating.
+				    Gold seal at rest: the row advertises the tick by wearing it. */}
+				<button
+					type="button"
+					onClick={() => setPremiumOpen(true)}
+					className="animate-rise flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors w-full text-left cursor-pointer text-muted hover:bg-surface hover:text-primary"
+					style={{ animationDelay: "280ms" }}
+				>
+					<span className="inline-flex w-[22px] h-[22px] items-center justify-center">
+						<SealCheck size={22} weight="duotone" className="text-gold" />
+					</span>
+					<span className="text-[15px] font-sans">{t("nav.premium")}</span>
+				</button>
 
 				{/* Products expands inline so the ecosystem is one glance away. */}
 				<div className="animate-rise" style={{ animationDelay: "300ms" }}>
@@ -250,7 +271,7 @@ export function LeftSidebar() {
 									"#post-composer-input",
 								);
 							if (composer) {
-								window.scrollTo({ top: 0, behavior: "smooth" });
+								mainScroller().scrollTo({ top: 0, behavior: "smooth" });
 								composer.focus();
 							} else {
 								router.push("/");
@@ -327,8 +348,15 @@ export function LeftSidebar() {
 							/>
 						</div>
 						<div className="flex flex-col flex-1 min-w-0">
-							<span className="font-semibold text-sm text-primary truncate font-sans">
-								{user.firstName + " " + user.lastName || user.username}
+							<span className="flex items-center gap-1 min-w-0">
+								<span className="font-semibold text-sm text-primary truncate font-sans">
+									{user.firstName + " " + user.lastName || user.username}
+								</span>
+								<UserBadges
+									isVerified={user.isVerified}
+									badges={(user as any).badges}
+									size={13}
+								/>
 							</span>
 							<span className="text-subtle text-[12px] truncate font-sans">
 								@{user.username}

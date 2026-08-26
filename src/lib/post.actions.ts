@@ -310,14 +310,21 @@ export async function repostPostAction(postId: string) {
 	}
 }
 
-export async function quotePostAction(postId: string, content: string) {
+/**
+ * Quote a post.
+ *
+ * Takes FormData now, not a bare string: a quote is a post and may carry its
+ * own images or video on top of the thing it quotes. It used to accept text
+ * only, which is why the composer had nothing but a textarea.
+ */
+export async function quotePostAction(postId: string, formData: FormData) {
 	const { getToken } = await auth();
 	const accessToken = await getToken();
 	if (!accessToken) return { success: false, message: "Unauthorized" };
 	try {
 		const res = await axios.post(
 			`${API_URL}/api/posts/${postId}/quote`,
-			{ content },
+			formData,
 			{ headers: { Authorization: `Bearer ${accessToken}` } },
 		);
 		return { success: true, post: res.data?.post };

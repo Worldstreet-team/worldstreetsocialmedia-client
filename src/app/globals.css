@@ -21,29 +21,47 @@
    hand-rolled html.light palette is gone, do not reintroduce it.) */
 [data-ws-theme="platform"],
 [data-ws-theme="platform-light"] {
-    --ws-font-display: var(--font-poppins), "Poppins", system-ui, sans-serif;
-    --ws-font-ui: var(--font-public-sans), "Public Sans", system-ui, sans-serif;
+  --ws-font-display: var(--font-poppins), "Poppins", system-ui, sans-serif;
+  --ws-font-ui: var(--font-public-sans), "Public Sans", system-ui, sans-serif;
+  /* Creator-only voices — the Story Studio font picker reads these. App
+       chrome never uses them. */
+  --ws-font-editorial:
+    var(--font-instrument-serif), "Instrument Serif", Georgia, serif;
+  --ws-font-poster:
+    var(--font-archivo-black), "Archivo Black", Impact, system-ui, sans-serif;
+  --ws-font-condensed:
+    var(--font-bebas-neue), "Bebas Neue", "Arial Narrow", system-ui, sans-serif;
+  --ws-font-script: var(--font-caveat), "Caveat", "Segoe Script", cursive;
+  --ws-font-mono:
+    var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, "SF Mono", Menlo,
+    monospace;
 }
 
 /* Softer elevation on paper (referenced from @theme inline below). */
 :root {
-    --ws-shadow-nav: 0 3px 8px rgb(0 0 0 / 0.45);
-    --ws-shadow-sheet: 0 -2px 12px rgb(0 0 0 / 0.35);
+  --ws-shadow-nav: 0 3px 8px rgb(0 0 0 / 0.45);
+  --ws-shadow-sheet: 0 -2px 12px rgb(0 0 0 / 0.35);
 
-    /* Mobile chrome geometry. MobileBottomNav is a 64px bar plus the iOS home
+  /* Mobile chrome geometry. MobileBottomNav is a 64px bar plus the iOS home
        indicator, and it's `fixed`, so it covers the tail of every scrolling
        column. Everything that needs to clear it derives from these — never
        hardcode another magic bottom offset. */
-    --ws-mobile-nav-h: 64px;
-    --ws-safe-bottom: env(safe-area-inset-bottom, 0px);
-    --ws-safe-top: env(safe-area-inset-top, 0px);
-    --ws-nav-clearance: calc(
-        var(--ws-mobile-nav-h) + var(--ws-safe-bottom) + 16px
-    );
+  --ws-mobile-nav-h: 64px;
+  --ws-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --ws-safe-top: env(safe-area-inset-top, 0px);
+  /* The bar floats now (owner ruling): it sits this far off the bottom edge
+       and inset from the sides, so clearance has to carry the float gap too. */
+  --ws-nav-float: 10px;
+  --ws-nav-clearance: calc(
+    var(--ws-mobile-nav-h) +
+    var(--ws-safe-bottom) +
+    var(--ws-nav-float) +
+    16px
+  );
 }
 [data-ws-theme="platform-light"] {
-    --ws-shadow-nav: 0 3px 8px rgb(0 0 0 / 0.12);
-    --ws-shadow-sheet: 0 -2px 12px rgb(0 0 0 / 0.1);
+  --ws-shadow-nav: 0 3px 8px rgb(0 0 0 / 0.12);
+  --ws-shadow-sheet: 0 -2px 12px rgb(0 0 0 / 0.1);
 }
 
 /* One extra breakpoint below Tailwind's `sm`. Small-phone territory (320-399px)
@@ -51,188 +69,205 @@
    only affordable once there's ~400px to work with. Not `inline` — media
    queries can't resolve a var(). */
 @theme {
-    --breakpoint-xs: 400px;
+  --breakpoint-xs: 400px;
 }
 
 @theme inline {
-    --color-page: var(--ws-bg-page);
-    --color-sunken: var(--ws-bg-sunken);
-    --color-surface: var(--ws-bg-surface);
-    --color-raised: var(--ws-bg-raised);
-    --color-chip: var(--ws-bg-chip);
-    --color-track: var(--ws-bg-track);
-    --color-hairline: var(--ws-border-hairline);
+  --color-page: var(--ws-bg-page);
+  --color-sunken: var(--ws-bg-sunken);
+  --color-surface: var(--ws-bg-surface);
+  --color-raised: var(--ws-bg-raised);
+  --color-chip: var(--ws-bg-chip);
+  --color-track: var(--ws-bg-track);
+  --color-hairline: var(--ws-border-hairline);
 
-    --color-primary: var(--ws-text-primary);
-    --color-muted: var(--ws-text-muted);
-    --color-subtle: var(--ws-text-subtle);
+  --color-primary: var(--ws-text-primary);
+  --color-muted: var(--ws-text-muted);
+  --color-subtle: var(--ws-text-subtle);
 
-    --color-brand: var(--ws-brand-primary);
-    --color-brand-active: var(--ws-brand-active);
-    --color-brand-dim: var(--ws-brand-dim);
-    --color-brand-on: var(--ws-brand-on-primary);
-    --color-gold: var(--ws-brand-gold-text);
+  --color-brand: var(--ws-brand-primary);
+  --color-brand-active: var(--ws-brand-active);
+  --color-brand-dim: var(--ws-brand-dim);
+  --color-brand-on: var(--ws-brand-on-primary);
+  --color-gold: var(--ws-brand-gold-text);
 
-    --color-success: var(--ws-status-success);
-    --color-danger: var(--ws-status-danger);
-    /* money/* (01-foundations): credit/debit for deltas, convert for the
+  --color-success: var(--ws-status-success);
+  --color-danger: var(--ws-status-danger);
+  /* money/* (01-foundations): credit/debit for deltas, convert for the
        cashtag chip wash. Distinct from status/* even where values coincide. */
-    --color-credit: var(--ws-money-credit);
-    --color-debit: var(--ws-money-debit);
-    --color-convert: var(--ws-money-convert);
-    --color-warning: var(--ws-status-warning);
-    --color-warning-chip: var(--ws-status-warning-chip);
-    --color-scrim: var(--ws-overlay-scrim);
-    --color-focus: var(--ws-focus-ring);
+  --color-credit: var(--ws-money-credit);
+  --color-debit: var(--ws-money-debit);
+  --color-convert: var(--ws-money-convert);
+  --color-warning: var(--ws-status-warning);
+  --color-warning-chip: var(--ws-status-warning-chip);
+  --color-scrim: var(--ws-overlay-scrim);
+  --color-focus: var(--ws-focus-ring);
 
-    --color-accent-social: var(--ws-accent-social);
+  --color-accent-social: var(--ws-accent-social);
 
-    /* Motion (06-motion-accessibility). --ws-ease is the ONLY easing.
+  /* Motion (06-motion-accessibility). --ws-ease is the ONLY easing.
        Making these the defaults means every `transition-*` is on-token
        without each call site restating the duration. */
-    --default-transition-duration: var(--ws-motion-fast);
-    --default-transition-timing-function: var(--ws-ease);
-    --ease-ws: var(--ws-ease);
+  --default-transition-duration: var(--ws-motion-fast);
+  --default-transition-timing-function: var(--ws-ease);
+  --ease-ws: var(--ws-ease);
 
-    --radius-sm: var(--ws-radius-sm); /* 4  */
-    --radius-md: var(--ws-radius-md); /* 7  */
-    --radius-lg: var(--ws-radius-lg); /* 10 */
-    --radius-xl: var(--ws-radius-xl); /* 13 */
-    --radius-pill: var(--ws-radius-pill);
+  --radius-sm: var(--ws-radius-sm); /* 4  */
+  --radius-md: var(--ws-radius-md); /* 7  */
+  --radius-lg: var(--ws-radius-lg); /* 10 */
+  --radius-xl: var(--ws-radius-xl); /* 13 */
+  --radius-pill: var(--ws-radius-pill);
 
-    --font-display: var(--ws-font-display);
-    --font-ui: var(--ws-font-ui);
-    --font-sans: var(--ws-font-ui);
+  --font-display: var(--ws-font-display);
+  --font-ui: var(--ws-font-ui);
+  --font-sans: var(--ws-font-ui);
+  /* Story/creator voices only — never app chrome. */
+  --font-editorial: var(--ws-font-editorial);
+  --font-poster: var(--ws-font-poster);
+  --font-condensed: var(--ws-font-condensed);
+  --font-script: var(--ws-font-script);
+  --font-mono: var(--ws-font-mono);
 
-    /* The only two sanctioned elevation styles (01-foundations, "Elevation").
+  /* The only two sanctioned elevation styles (01-foundations, "Elevation").
        Everything else gets depth from the surface ladder, not shadow. */
-    --shadow-nav: var(--ws-shadow-nav);
-    --shadow-sheet: var(--ws-shadow-sheet);
+  --shadow-nav: var(--ws-shadow-nav);
+  --shadow-sheet: var(--ws-shadow-sheet);
 }
 
 /* Keyboard focus: 2px focus/ring, 2px offset, on every interactive element
    (06-motion-accessibility). focus-visible only, so pointer users never see it. */
 @layer base {
-    :focus-visible {
-        outline: 2px solid var(--ws-focus-ring);
-        outline-offset: 2px;
-        border-radius: var(--ws-radius-sm);
-    }
+  :focus-visible {
+    outline: 2px solid var(--ws-focus-ring);
+    outline-offset: 2px;
+    border-radius: var(--ws-radius-sm);
+  }
 }
 
 /* The z-index scale (06-motion-accessibility). Nothing outside these four
    values gets a z-index; local stacking uses DOM order. */
 @utility z-sticky {
-    z-index: var(--ws-z-sticky);
+  z-index: var(--ws-z-sticky);
 }
 @utility z-dropdown {
-    z-index: var(--ws-z-dropdown);
+  z-index: var(--ws-z-dropdown);
 }
 @utility z-modal {
-    z-index: var(--ws-z-modal);
+  z-index: var(--ws-z-modal);
 }
 @utility z-toast {
-    z-index: var(--ws-z-toast);
+  z-index: var(--ws-z-toast);
 }
 
 /* prefers-reduced-motion: durations to ~0, shimmer static, no translate.
    Opacity still changes, which the spec allows. */
 @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-        scroll-behavior: auto !important;
-    }
-    .animate-pulse {
-        animation: none !important;
-    }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-pulse {
+    animation: none !important;
+  }
 }
 
 body {
-    background: var(--ws-bg-page);
-    color: var(--ws-text-primary);
-    font-family: var(--ws-font-ui);
+  background: var(--ws-bg-page);
+  color: var(--ws-text-primary);
+  font-family: var(--ws-font-ui);
 
-    /* Nothing in this app is meant to scroll sideways. `clip` (not `hidden`)
+  /* Nothing in this app is meant to scroll sideways. `clip` (not `hidden`)
        so the many `position: sticky` headers keep working — `hidden` would
        turn body into a scroll container and break every one of them. */
-    overflow-x: clip;
+  overflow-x: clip;
 }
 
 html {
-    /* iOS inflates text in landscape without this; the design system's type
+  /* iOS inflates text in landscape without this; the design system's type
        ramp is fixed-size by intent. */
-    -webkit-text-size-adjust: 100%;
-    text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* Momentum scrolling inside the panes that scroll independently (message
    list, conversation rail, modal bodies) instead of the document. */
 @media (pointer: coarse) {
-    .overflow-y-auto,
-    .overflow-x-auto {
-        -webkit-overflow-scrolling: touch;
-    }
+  .overflow-y-auto,
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* Clear the fixed mobile bottom nav. Applied to the bottom of every scrolling
    column; `md:` variants turn it off once the nav is gone. */
 @utility pb-nav {
-    padding-bottom: var(--ws-nav-clearance);
+  padding-bottom: var(--ws-nav-clearance);
 }
 
 /* Sit floating UI (back-to-top pill, toasts) above the same bar. */
 @utility bottom-nav {
-    bottom: var(--ws-nav-clearance);
+  bottom: var(--ws-nav-clearance);
 }
 
 @utility pt-safe {
-    padding-top: var(--ws-safe-top);
+  padding-top: var(--ws-safe-top);
 }
 
 @utility pb-safe {
-    padding-bottom: var(--ws-safe-bottom);
+  padding-bottom: var(--ws-safe-bottom);
+}
+
+/* Clear the fixed mobile top bar (56px + the status-bar safe area). Columns
+   under MobileNavigation pad with pt-topbar; their sticky headers pin at
+   top-topbar. `md:` variants turn both off once the bar is gone. */
+@utility pt-topbar {
+  padding-top: calc(3.5rem + var(--ws-safe-top));
+}
+
+@utility top-topbar {
+  top: calc(3.5rem + var(--ws-safe-top));
 }
 
 /* The feed is a dark, dense surface; keep scrollbars from punching a bright
    hole in it on Windows/Chrome. */
 * {
-    scrollbar-color: var(--ws-bg-raised) transparent;
+  scrollbar-color: var(--ws-bg-raised) transparent;
 }
 
 /* Hide the scrollbar entirely on rails that scroll but shouldn't advertise it
    (right sidebar, profile tab strip). */
 @utility no-scrollbar {
-    scrollbar-width: none;
-    &::-webkit-scrollbar {
-        display: none;
-    }
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* emoji-picker-react ships its own palette; re-point its CSS variables at the
    token vocabulary so the popover sits on the surface ladder like every other
    dropdown. Wrapped class set by the composers' popover container. */
 .ws-emoji-picker .EmojiPickerReact {
-    --epr-bg-color: var(--ws-bg-surface);
-    --epr-category-label-bg-color: var(--ws-bg-surface);
-    --epr-picker-border-color: var(--ws-border-hairline);
-    --epr-search-input-bg-color: var(--ws-bg-sunken);
-    --epr-search-border-color: var(--ws-border-hairline);
-    --epr-text-color: var(--ws-text-primary);
-    --epr-search-input-text-color: var(--ws-text-primary);
-    --epr-search-input-placeholder-color: var(--ws-text-subtle);
-    --epr-category-icon-active-color: var(--ws-brand-primary);
-    --epr-highlight-color: var(--ws-brand-primary);
-    --epr-hover-bg-color: var(--ws-bg-raised);
-    --epr-focus-bg-color: var(--ws-bg-raised);
-    --epr-emoji-hover-color: var(--ws-bg-raised);
-    --epr-active-skin-tone-indicator-border-color: var(--ws-brand-primary);
-    border-radius: var(--ws-radius-xl);
-    box-shadow: var(--ws-shadow-nav);
-    font-family: var(--ws-font-ui);
+  --epr-bg-color: var(--ws-bg-surface);
+  --epr-category-label-bg-color: var(--ws-bg-surface);
+  --epr-picker-border-color: var(--ws-border-hairline);
+  --epr-search-input-bg-color: var(--ws-bg-sunken);
+  --epr-search-border-color: var(--ws-border-hairline);
+  --epr-text-color: var(--ws-text-primary);
+  --epr-search-input-text-color: var(--ws-text-primary);
+  --epr-search-input-placeholder-color: var(--ws-text-subtle);
+  --epr-category-icon-active-color: var(--ws-brand-primary);
+  --epr-highlight-color: var(--ws-brand-primary);
+  --epr-hover-bg-color: var(--ws-bg-raised);
+  --epr-focus-bg-color: var(--ws-bg-raised);
+  --epr-emoji-hover-color: var(--ws-bg-raised);
+  --epr-active-skin-tone-indicator-border-color: var(--ws-brand-primary);
+  border-radius: var(--ws-radius-xl);
+  box-shadow: var(--ws-shadow-nav);
+  font-family: var(--ws-font-ui);
 }
 
 /* ── Editor glass chrome (owner ruling 2026-08-25) ─────────────────────────
@@ -243,179 +278,278 @@ html {
    editor chrome is deliberately dark in both themes (photo-editor chrome
    reads dark everywhere — Apple Photos does the same), so these are fixed
    values, not theme tokens. */
+/* NOTE: these glass classes carry colour, border and shadow only — NOT the
+   blur. A hand-written `backdrop-filter` declaration (literal OR var()) is
+   silently stripped from the compiled stylesheet by the Tailwind v4
+   pipeline; only Tailwind's own generated utilities keep it. So every glass
+   surface pairs its class with `backdrop-blur-*` / `backdrop-saturate-*`
+   utilities at the usage site. Verified in-browser: without them
+   getComputedStyle reports backdrop-filter: none. */
 .glass-scrim {
-    background: rgb(0 0 0 / 0.45);
-    backdrop-filter: blur(24px) saturate(150%);
-    -webkit-backdrop-filter: blur(24px) saturate(150%);
+  background: rgb(0 0 0 / 0.45);
 }
+/* The broadcast dock floats over live video. Flat translucent fill, no
+   top-light gradient and no drop shadow — the blur at the usage site plus the
+   fill ladder carry it. */
+.glass-dock {
+    background: rgb(14 13 12 / 0.72);
+}
+/* Inner media well: sits *inside* the dock, so it reads as inset glass. */
+.glass-well {
+    background: #000;
+}
+/* Control surface under the media, one step lighter than the well. */
+.glass-tray {
+    background: rgb(255 255 255 / 0.04);
+}
+
 .glass-panel {
-    background:
-        linear-gradient(180deg, rgb(255 255 255 / 0.07), rgb(255 255 255 / 0) 42%),
-        rgb(18 16 15 / 0.66);
-    backdrop-filter: blur(36px) saturate(180%);
-    -webkit-backdrop-filter: blur(36px) saturate(180%);
-    border: 1px solid rgb(255 255 255 / 0.1);
-    border-radius: 1rem;
-    box-shadow:
-        inset 0 1px 0 rgb(255 255 255 / 0.08),
-        0 32px 64px -24px rgb(0 0 0 / 0.7);
+  background: rgb(18 16 15 / 0.66);
+  border-radius: 1rem;
 }
 .glass-chip {
-    background: rgb(255 255 255 / 0.08);
-    border: 1px solid rgb(255 255 255 / 0.1);
-    color: rgb(255 255 255 / 0.85);
-    backdrop-filter: blur(16px) saturate(160%);
-    -webkit-backdrop-filter: blur(16px) saturate(160%);
+  background: rgb(255 255 255 / 0.1);
+  color: rgb(255 255 255 / 0.85);
 }
 .glass-chip:hover {
-    background: rgb(255 255 255 / 0.15);
-    color: rgb(255 255 255 / 1);
+  background: rgb(255 255 255 / 0.15);
+  color: rgb(255 255 255 / 1);
 }
 .glass-chip-active {
-    background: rgb(250 250 249 / 0.94);
-    border: 1px solid transparent;
-    color: #0c0a09;
+  background: rgb(250 250 249 / 0.94);
+  color: #0c0a09;
 }
 .glass-chip-active:hover {
-    background: rgb(255 255 255 / 1);
-    color: #0c0a09;
+  background: rgb(255 255 255 / 1);
+  color: #0c0a09;
 }
+/* THE call to action on any glass surface: flat white, dark ink. Never a
+   gold fill over blur — gold is reserved, and over a moving backdrop it
+   muddies. */
 .glass-cta {
-    background: rgb(250 250 249 / 0.96);
-    color: #0c0a09;
-    box-shadow:
-        inset 0 1px 0 rgb(255 255 255 / 0.6),
-        0 12px 28px -14px rgb(0 0 0 / 0.85);
+  background: rgb(250 250 249 / 0.96);
+  color: #0c0a09;
 }
 .glass-cta:hover {
-    background: #ffffff;
+  background: #ffffff;
 }
 .glass-ink {
-    color: #fafaf9;
+  color: #fafaf9;
 }
 .glass-ink-dim {
-    color: rgb(255 255 255 / 0.62);
+  color: rgb(255 255 255 / 0.62);
 }
 .glass-ink-faint {
-    color: rgb(255 255 255 / 0.4);
+  color: rgb(255 255 255 / 0.4);
 }
 .glass-fill {
-    background: #fafaf9;
+  background: #fafaf9;
 }
 .glass-divider {
-    border-color: rgb(255 255 255 / 0.09);
+  border-color: rgb(255 255 255 / 0.09);
 }
 .glass-input {
-    background: rgb(255 255 255 / 0.07);
-    border: 1px solid rgb(255 255 255 / 0.1);
-    color: #fafaf9;
+  background: rgb(255 255 255 / 0.07);
+  color: #fafaf9;
+  transition: background-color var(--ws-motion-base, 200ms) var(--ws-ease);
 }
 .glass-input::placeholder {
-    color: rgb(255 255 255 / 0.38);
+  color: rgb(255 255 255 / 0.38);
 }
-.glass-input:focus {
-    border-color: rgb(255 255 255 / 0.32);
-    outline: none;
+.glass-input:focus,
+.glass-input:focus-within {
+  background: rgb(255 255 255 / 0.12);
+  outline: none;
+}
+
+/* ── Creator surfaces, second pass (2026-08-26) ─────────────────────────────
+   The first glass pass was too opaque — panels read as flat dark cards and
+   the app behind them disappeared. These are sheerer: the page stays legible
+   through them and depth comes from a top sheen + rim light, not from ink.
+   Every one still needs its own `backdrop-blur-*` at the usage site. */
+
+/* Full-bleed backdrop for the studio: the app shows through, blurred. */
+.glass-veil {
+  background: rgb(12 10 9 / 0.42);
+}
+
+/* Sheer scrim for sheets that float over content. */
+.glass-veil-sheer {
+  background: rgb(12 10 9 / 0.28);
+}
+
+/* The floating control panel / bottom dock. */
+.glass-dock {
+  background: rgb(22 20 18 / 0.62);
+}
+
+/* A tappable glass row (create-sheet lanes, list items). */
+.glass-card {
+  background: rgb(255 255 255 / 0.06);
+  transition: background-color var(--ws-motion-base, 200ms) var(--ws-ease);
+}
+.glass-card:hover {
+  background: rgb(255 255 255 / 0.1);
+}
+
+/* Controls that sit ON the canvas, over artwork that may be light or dark.
+   A dark scrim with a light rim is the only combination that reads on both —
+   glass-chip's white wash disappears against a bright photo or a paper
+   gradient. */
+.glass-chip-canvas {
+  background: rgb(12 10 9 / 0.5);
+  color: #fafaf9;
+}
+.glass-chip-canvas:hover {
+  background: rgb(12 10 9 / 0.68);
+}
+
+/* The 9:16 story frame. The drop shadow that used to lift it off the page
+   is gone; the frame reads from its own fill against the veil. */
+.glass-stage {
+  background: rgb(12 10 9 / 0.28);
+}
+
+/* react-colorful, sized and de-chromed for the creator docks. The library
+   ships its own class names; this is the only place they are referenced. */
+.ws-color-picker .react-colorful {
+  width: 190px;
+  height: 130px;
+  gap: 8px;
+}
+.ws-color-picker .react-colorful__saturation {
+  border-radius: 10px;
+  border-bottom: none;
+}
+.ws-color-picker .react-colorful__hue {
+  height: 14px;
+  border-radius: 999px;
+}
+.ws-color-picker .react-colorful__pointer {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+}
+
+/* Section eyebrow inside creator panels. */
+.glass-eyebrow {
+  color: rgb(255 255 255 / 0.45);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 /* react-easy-crop ships neutral chrome; re-skin it for the glass editor —
    white frame and thirds (Apple crop grammar), fixed dark mask. The grid
    only renders while interacting (showGrid is toggled by MediaEditor). */
 .ws-cropper .reactEasyCrop_Container {
-    background: rgb(0 0 0 / 0.55);
+  background: rgb(0 0 0 / 0.55);
 }
 .ws-cropper .reactEasyCrop_CropArea {
-    /* The mask outside the frame is drawn from `color` via box-shadow. */
-    color: rgb(0 0 0 / 0.55);
-    border: 1px solid rgb(255 255 255 / 0.9);
+  /* The mask outside the frame is drawn from `color` via box-shadow. */
+  color: rgb(0 0 0 / 0.55);
+  border: 1px solid rgb(255 255 255 / 0.9);
 }
 .ws-cropper .reactEasyCrop_CropAreaGrid::before,
 .ws-cropper .reactEasyCrop_CropAreaGrid::after {
-    border-color: rgb(255 255 255 / 0.35);
+  border-color: rgb(255 255 255 / 0.35);
 }
 
 /* Range input for the editor's zoom/adjust sliders — glass grammar: faint
    white track, white thumb. */
 .ws-slider {
-    appearance: none;
-    -webkit-appearance: none;
-    height: 20px;
-    background: transparent;
-    cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  height: 20px;
+  background: transparent;
+  cursor: pointer;
 }
 .ws-slider::-webkit-slider-runnable-track {
-    height: 3px;
-    border-radius: var(--ws-radius-pill);
-    background: rgb(255 255 255 / 0.18);
+  height: 3px;
+  border-radius: var(--ws-radius-pill);
+  background: rgb(255 255 255 / 0.18);
 }
 .ws-slider::-moz-range-track {
-    height: 3px;
-    border-radius: var(--ws-radius-pill);
-    background: rgb(255 255 255 / 0.18);
+  height: 3px;
+  border-radius: var(--ws-radius-pill);
+  background: rgb(255 255 255 / 0.18);
 }
 .ws-slider::-webkit-slider-thumb {
-    appearance: none;
-    -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
-    margin-top: -6.5px;
-    border-radius: var(--ws-radius-pill);
-    background: #fafaf9;
-    border: none;
-    box-shadow: 0 2px 6px rgb(0 0 0 / 0.45);
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6.5px;
+  border-radius: var(--ws-radius-pill);
+  background: #fafaf9;
+  border: none;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.45);
 }
 .ws-slider::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
-    border-radius: var(--ws-radius-pill);
-    background: #fafaf9;
-    border: none;
-    box-shadow: 0 2px 6px rgb(0 0 0 / 0.45);
+  width: 16px;
+  height: 16px;
+  border-radius: var(--ws-radius-pill);
+  background: #fafaf9;
+  border: none;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.45);
 }
 
 /* Page-intro reveal (06-motion "page-section reveals"): opacity + 8px rise at
    motion-slow with the one easing. `backwards` fill so a delayed element stays
    hidden until its turn — stagger with an inline animation-delay. Goes
    instant under prefers-reduced-motion via the global block above. */
+/* Street Voice equaliser bars (SpaceCard/SpaceRoom). Scale-only, so it
+   respects the animate-transform-and-opacity-only rule. */
+@keyframes ws-eq {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
 @keyframes ws-rise {
-    from {
-        opacity: 0;
-        transform: translateY(8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @utility animate-rise {
-    animation: ws-rise var(--ws-motion-slow) var(--ws-ease) backwards;
+  animation: ws-rise var(--ws-motion-slow) var(--ws-ease) backwards;
 }
 
 /* Skeleton shimmer (04-components "Skeleton"): white @4% sweep on bg/raised,
    looping at --ws-motion-slow. Goes static under reduced motion via the
    prefers-reduced-motion block above. */
 @keyframes ws-shimmer {
-    from {
-        background-position: -150% 0;
-    }
-    to {
-        background-position: 250% 0;
-    }
+  from {
+    background-position: -150% 0;
+  }
+  to {
+    background-position: 250% 0;
+  }
 }
 
 @utility skeleton {
-    background-color: var(--ws-bg-raised);
-    background-image: linear-gradient(
-        90deg,
-        transparent 0%,
-        rgb(255 255 255 / 0.04) 50%,
-        transparent 100%
-    );
-    background-size: 200% 100%;
-    background-repeat: no-repeat;
-    animation: ws-shimmer var(--ws-motion-slow) var(--ws-ease) infinite;
-    animation-duration: 1.6s;
+  background-color: var(--ws-bg-raised);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(255 255 255 / 0.04) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: ws-shimmer var(--ws-motion-slow) var(--ws-ease) infinite;
+  animation-duration: 1.6s;
 }
 
 /* Theme switch (light <-> dark): one motion-slow cross-fade instead of a hard
@@ -425,21 +559,21 @@ html {
    prefers-reduced-motion, so the reduced-motion block above stays authoritative. */
 ::view-transition-old(root),
 ::view-transition-new(root) {
-    animation-duration: var(--ws-motion-slow);
-    animation-timing-function: var(--ws-ease);
+  animation-duration: var(--ws-motion-slow);
+  animation-timing-function: var(--ws-ease);
 }
 
 .theme-switching,
 .theme-switching *,
 .theme-switching *::before,
 .theme-switching *::after {
-    transition:
-        background-color var(--ws-motion-slow) var(--ws-ease),
-        color var(--ws-motion-slow) var(--ws-ease),
-        border-color var(--ws-motion-slow) var(--ws-ease),
-        fill var(--ws-motion-slow) var(--ws-ease),
-        stroke var(--ws-motion-slow) var(--ws-ease),
-        box-shadow var(--ws-motion-slow) var(--ws-ease) !important;
+  transition:
+    background-color var(--ws-motion-slow) var(--ws-ease),
+    color var(--ws-motion-slow) var(--ws-ease),
+    border-color var(--ws-motion-slow) var(--ws-ease),
+    fill var(--ws-motion-slow) var(--ws-ease),
+    stroke var(--ws-motion-slow) var(--ws-ease),
+    box-shadow var(--ws-motion-slow) var(--ws-ease) !important;
 }
 
 /* ── UI revamp utilities ──────────────────────────────────────────────────
@@ -447,50 +581,419 @@ html {
    gradient over the surface, an inset top-edge highlight and a soft drop.
    Works in both themes via the token vars. */
 .card-depth {
-	border-radius: 1rem;
-	background:
-		linear-gradient(180deg, rgb(255 255 255 / 0.04), rgb(255 255 255 / 0) 46%),
-		var(--ws-bg-surface);
-	box-shadow:
-		inset 0 1px 0 rgb(255 255 255 / 0.05),
-		0 10px 28px -14px rgb(0 0 0 / 0.55);
+  border-radius: 1rem;
+  background: var(--ws-bg-surface);
 }
 [data-ws-theme="platform-light"] .card-depth {
-	background:
-		linear-gradient(180deg, rgb(255 255 255 / 0.7), rgb(255 255 255 / 0) 46%),
-		var(--ws-bg-surface);
-	box-shadow:
-		inset 0 1px 0 rgb(255 255 255 / 0.9),
-		0 1px 2px rgb(0 0 0 / 0.05),
-		0 10px 28px -18px rgb(0 0 0 / 0.18);
+  background: var(--ws-bg-surface);
+}
+
+/* glass-nav: the floating mobile tab bar. Unlike `.glass-dock` (fixed-dark
+   chrome that floats over live video in BOTH themes), this one FOLLOWS the
+   theme — a dark pane on the stone ladder, a light pane on paper — because it
+   is app chrome the reader looks at all day, not an overlay on video. Ink
+   comes from the normal text tokens, so it flips with it. Blur is a utility. */
+.glass-nav {
+  /* Flat tint only. No top-light gradient and no inset ring — the owner
+     asked for the gloss and the border gone, so depth comes purely from the
+     blur behind it plus one soft drop shadow. */
+  background: rgb(22 20 18 / 0.72);
+}
+[data-ws-theme="platform-light"] .glass-nav {
+  background: rgb(250 250 249 / 0.72);
+}
+
+/* No film grain in Social (owner ruling 2026-08-26). ws-tokens.css ships the
+   ecosystem's fixed full-viewport turbulence overlay on `body::before` at 2%
+   opacity — "part of the house atmosphere", and it is what reads as texture
+   over the page here. The token file is VENDORED (re-synced with cp), so the
+   kill lives in this file instead of being edited out of it; this rule has
+   the same specificity and comes later, so it wins and survives a re-sync. */
+[data-ws-theme="platform"] body::before {
+  content: none;
+}
+
+/* ── Adaptive glass ────────────────────────────────────────────────────────
+   TWO glass families live in this file and they are NOT interchangeable.
+
+   `glass-*` above is CREATOR chrome — the media editors and the story studio.
+   It is fixed-dark in BOTH themes on purpose: it floats over photos and video,
+   where a light pane would blow out the media it sits on.
+
+   The family below is APP chrome — onboarding, the mobile tab bar — surfaces
+   the reader looks at for minutes at a time. It FOLLOWS the theme: a dark pane
+   on stone, a light pane on paper, with ink from the normal text tokens so it
+   flips for free. `.glass-nav` belongs to this family too.
+
+   Every one of these still needs its own `backdrop-blur-*` at the usage site,
+   and glass only reads as glass when there is something behind it — see
+   `.ambient-field`, which is what these panes are meant to sit on. */
+
+.glass-card {
+  background: rgb(28 25 23 / 0.6);
+}
+[data-ws-theme="platform-light"] .glass-card {
+  background: rgb(255 255 255 / 0.66);
+}
+
+/* A selectable option inside a glass card (region tile, interest chip). */
+.glass-tile {
+  background: rgb(255 255 255 / 0.06);
+}
+.glass-tile:hover {
+  background: rgb(255 255 255 / 0.1);
+}
+[data-ws-theme="platform-light"] .glass-tile {
+  background: rgb(255 255 255 / 0.6);
+}
+[data-ws-theme="platform-light"] .glass-tile:hover {
+  background: rgb(255 255 255 / 0.85);
+}
+
+/* Selected. Gold rim rather than a gold fill — the DS reserves large gold
+   fills for the one primary CTA on a surface. */
+.glass-tile-on,
+.glass-tile-on:hover {
+  background: color-mix(in srgb, var(--ws-brand-primary) 14%, transparent);
+  box-shadow:
+    inset 0 0 0 1px
+      color-mix(in srgb, var(--ws-brand-primary) 55%, transparent);
+}
+
+/* The ground the glass sits on: a slow brand-tinted field, so the blur has
+   something to bend. Flat page colour behind glass is just a grey box. */
+.ambient-field {
+  background:
+    radial-gradient(
+      70% 55% at 12% 8%,
+      color-mix(in srgb, var(--ws-brand-primary) 18%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      60% 50% at 92% 22%,
+      color-mix(in srgb, var(--ws-accent-social) 16%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      80% 60% at 50% 108%,
+      color-mix(in srgb, var(--ws-brand-primary) 12%, transparent),
+      transparent 70%
+    ),
+    var(--ws-bg-page);
+}
+
+/* The brand ritual, on a loop: draw the W → flood the fill → the wordmark
+   walks in → hold → everything breathes out → begin again. One 5.2s cycle,
+   two synchronized keyframe tracks.
+
+   Lifted verbatim (timings, curves, keyframe stops) from the hub's
+   components/system/SidebarBrand.module.css so the mark behaves identically
+   across the ecosystem — only the palette differs (gold here, not lime).
+   Like `.shine`, this is a sanctioned exception to the three-duration motion
+   rule: it is a brand ritual, not UI feedback. */
+.ws-brand-mark {
+  flex: none;
+  overflow: visible;
+}
+.ws-brand-mark polygon {
+  fill: var(--ws-brand-primary);
+  fill-opacity: 0;
+  stroke: var(--ws-brand-primary);
+  stroke-width: 14; /* thick enough to read at ~22px */
+  stroke-linejoin: miter;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: ws-brand-cycle 5.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+.ws-brand-mark polygon:nth-child(2) {
+  animation-delay: 0.12s;
+}
+@keyframes ws-brand-cycle {
+  0%        { stroke-dashoffset: 1; fill-opacity: 0; opacity: 1; }
+  26%       { stroke-dashoffset: 0; fill-opacity: 0; }
+  34%, 82%  { stroke-dashoffset: 0; fill-opacity: 1; opacity: 1; }
+  92%, 100% { stroke-dashoffset: 1; fill-opacity: 0; opacity: 0; }
+}
+
+.ws-brand-word {
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(-6px);
+  animation: ws-brand-word 5.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+.ws-brand-word i {
+  font-style: normal;
+  color: var(--ws-brand-gold-text);
+}
+@keyframes ws-brand-word {
+  0%, 30%   { opacity: 0; transform: translateX(-6px); }
+  40%, 82%  { opacity: 1; transform: translateX(0); }
+  92%, 100% { opacity: 0; transform: translateX(4px); }
+}
+
+/* Reduced motion gets the resolved end state, not a frozen half-drawn W. */
+@media (prefers-reduced-motion: reduce) {
+  .ws-brand-mark polygon {
+    animation: none;
+    stroke-dashoffset: 0;
+    fill-opacity: 1;
+    opacity: 1;
+  }
+  .ws-brand-word {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* shine: a glass pass sweeping across every 5 seconds. The sweep occupies
    the last ~1.2s of the cycle; the rest is rest. Off under reduced motion. */
 .shine {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.shine::after {
+  content: "";
+  position: absolute;
+  inset: -20% auto -20% 0;
+  width: 45%;
+  transform: translateX(-160%) skewX(-18deg);
+  background: linear-gradient(
+    90deg,
+    rgb(255 255 255 / 0),
+    rgb(255 255 255 / 0.32),
+    rgb(255 255 255 / 0)
+  );
+  animation: ws-shine 5s linear infinite;
+  pointer-events: none;
+}
+@keyframes ws-shine {
+  0%,
+  76% {
+    transform: translateX(-160%) skewX(-18deg);
+  }
+  100% {
+    transform: translateX(420%) skewX(-18deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shine::after {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/* ── Promo ambience ─────────────────────────────────────────────────
+   The blurred head of a promo card. The images ship pre-blurred (a big
+   runtime backdrop-filter on a scrolling rail is not worth the paint), so
+   these rules only place them and give them slow life.
+
+   Two images are stacked and cross-faded by theme rather than swapped in
+   JS: no flash on hydrate, and the theme transition carries them along. */
+.promo-amb {
+	position: absolute;
+	inset: 0;
+	object-fit: cover;
+	transition: opacity var(--ws-motion-slow) var(--ws-ease);
+	will-change: transform;
+	animation: ws-amb-drift 22s ease-in-out infinite;
+}
+.promo-amb-light {
+	opacity: 0;
+}
+[data-ws-theme="platform-light"] .promo-amb-dark {
+	opacity: 0;
+}
+[data-ws-theme="platform-light"] .promo-amb-light {
+	opacity: 1;
+}
+
+/* The drift is what a blurred video would have bought, for none of the
+   bytes: at this blur radius the eye reads motion, never detail. */
+@keyframes ws-amb-drift {
+	0%,
+	100% {
+		transform: scale(1.18) translate3d(0, 0, 0);
+	}
+	50% {
+		transform: scale(1.26) translate3d(-3%, -2%, 0);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.promo-amb {
+		animation: none;
+		transform: scale(1.18);
+	}
+}
+
+/* ── MARKET wordmark glitch ─────────────────────────────────────────
+   Ported from the market square site's own MarketLogo (tsionark.com). The
+   offsets, opacities and time arrays are their values, not an approximation.
+
+   A 6s loop in three acts: rest, a ~0.65s glitch burst between 15% and 25.8%,
+   then M/E/T dip in opacity and return by the loop point. Only those three
+   glyphs move; A, R, K and the comet are one static path. That split looks
+   arbitrary in the SVG and is not: M is x16-102, E is x377-446, T is x448-520.
+
+   Transform stays a separate animation from opacity because the source drives
+   them on different time arrays. The two opacity phases had to merge into one
+   keyframe set, though: a second animation on the same property would simply
+   override the first. */
+.mk-glitch {
+	transform-box: fill-box;
+	animation:
+		mk-x 6s linear infinite,
+		mk-op 6s linear infinite;
+}
+@keyframes mk-x {
+	0%, 15% { transform: translateX(0); }
+	16.8% { transform: translateX(-3px); }
+	18.6% { transform: translateX(2.5px); }
+	20.4% { transform: translateX(-2px); }
+	22.2% { transform: translateX(3px); }
+	24% { transform: translateX(-1px); }
+	25.8%, 100% { transform: translateX(0); }
+}
+@keyframes mk-op {
+	/* the burst */
+	0%, 15% { opacity: 1; }
+	16.8% { opacity: 0.3; }
+	19.5% { opacity: 1; }
+	22.2% { opacity: 0.45; }
+	24% { opacity: 0.85; }
+	25.8% { opacity: 1; }
+	/* then the long dip and return, on the source's fill timing. They swap
+	   the fill to #353535 over this stretch; expressed as opacity instead so
+	   it reads the same way on paper, where a mid grey would go the wrong
+	   direction and darken rather than recede. */
+	39.2% { opacity: 0.45; }
+	92% { opacity: 0.45; }
+	100% { opacity: 1; }
+}
+
+/* The two torn slices, shearing in opposite directions. */
+.mk-slice-up {
+	transform-box: fill-box;
+	animation: mk-up 6s linear infinite;
+}
+@keyframes mk-up {
+	0%, 15% { transform: translateX(0); opacity: 0; }
+	17.7% { transform: translateX(6px); opacity: 0.7; }
+	20.4% { transform: translateX(-5px); opacity: 0; }
+	23.1% { transform: translateX(4px); opacity: 0.55; }
+	25.8%, 100% { transform: translateX(0); opacity: 0; }
+}
+.mk-slice-down {
+	transform-box: fill-box;
+	animation: mk-down 6s linear infinite;
+}
+@keyframes mk-down {
+	0%, 15% { transform: translateX(0); opacity: 0; }
+	17.7% { transform: translateX(-6px); opacity: 0.55; }
+	20.4% { transform: translateX(5px); opacity: 0; }
+	23.1% { transform: translateX(-4px); opacity: 0.7; }
+	25.8%, 100% { transform: translateX(0); opacity: 0; }
+}
+
+/* "Square": the animating clip gradient. The wordmark stays solid ink, this
+   word carries the colour, which is the whole point of the lockup. */
+.mk-square {
+	background: linear-gradient(
+		100deg,
+		#eab308,
+		#f97316,
+		#e879f9,
+		#38bdf8,
+		#eab308
+	);
+	background-size: 300% 100%;
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+	animation: mk-square-flow 7s linear infinite;
+}
+@keyframes mk-square-flow {
+	to {
+		background-position: 300% 50%;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.mk-glitch,
+	.mk-slice-up,
+	.mk-slice-down,
+	.mk-square {
+		animation: none;
+	}
+	.mk-slice-up,
+	.mk-slice-down {
+		opacity: 0;
+	}
+}
+
+/* A gentler pass than `.shine`, for large surfaces. The CTA-sized sweep at
+   0.32 alpha reads as a flare across a whole card. */
+.shine-soft {
 	position: relative;
 	overflow: hidden;
 	isolation: isolate;
 }
-.shine::after {
+.shine-soft::after {
 	content: "";
 	position: absolute;
 	inset: -20% auto -20% 0;
-	width: 45%;
+	width: 38%;
 	transform: translateX(-160%) skewX(-18deg);
 	background: linear-gradient(
 		90deg,
 		rgb(255 255 255 / 0),
-		rgb(255 255 255 / 0.32),
+		rgb(255 255 255 / 0.09),
 		rgb(255 255 255 / 0)
 	);
-	animation: ws-shine 5s linear infinite;
+	animation: ws-shine 7s linear infinite;
 	pointer-events: none;
-}
-@keyframes ws-shine {
-	0%, 76% { transform: translateX(-160%) skewX(-18deg); }
-	100% { transform: translateX(420%) skewX(-18deg); }
+	z-index: 3;
 }
 @media (prefers-reduced-motion: reduce) {
-	.shine::after { animation: none; opacity: 0; }
+	.shine-soft::after {
+		animation: none;
+		opacity: 0;
+	}
+}
+
+/* The wallet strip's own artwork, cross-faded by theme like the promo cards.
+   Separate classes because it is a different crop at a different aspect, and
+   it does not drift: a balance should sit still while you read it. */
+.wallet-amb {
+	position: absolute;
+	inset: 0;
+	object-fit: cover;
+	transition: opacity var(--ws-motion-slow) var(--ws-ease);
+}
+.wallet-amb-light {
+	opacity: 0;
+}
+[data-ws-theme="platform-light"] .wallet-amb-dark {
+	opacity: 0;
+}
+[data-ws-theme="platform-light"] .wallet-amb-light {
+	opacity: 1;
+}
+
+/* ── Story paywall orbits ───────────────────────────────────────────
+   Two icon rings circling the price in opposite directions. Each glyph runs
+   the reverse animation of its ring, so it orbits while staying upright.
+   Reduced motion is handled in the component, which swaps the animations for
+   static rotations. */
+@keyframes ws-orbit {
+	to {
+		transform: rotate(360deg);
+	}
+}
+@keyframes ws-orbit-rev {
+	to {
+		transform: rotate(-360deg);
+	}
 }

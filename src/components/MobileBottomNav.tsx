@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useAppPathname } from "@/i18n/useAppPathname";
 // Nav uses Phosphor with weight="fill" on the active tab, matching the rail.
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import {
@@ -10,9 +10,9 @@ import {
 	House,
 	MagnifyingGlass,
 	MonitorPlay,
-	Plus,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { BadgedIcon } from "@/components/ui/Badge";
 import { useAtomValue } from "jotai";
 import { unreadMessagesCountAtom } from "@/store/messageCache";
 import { unreadNotificationsCountAtom } from "@/store/ui.atom";
@@ -38,8 +38,7 @@ const BellIcon = navIcon(Bell);
 
 export const MobileBottomNav = () => {
 	const t = useT();
-	const pathname = usePathname();
-	const router = useRouter();
+	const pathname = useAppPathname();
 	const unreadMessages = useAtomValue(unreadMessagesCountAtom);
 	const unreadNotifications = useAtomValue(unreadNotificationsCountAtom);
 
@@ -93,59 +92,55 @@ export const MobileBottomNav = () => {
 	}
 
 	// Hide on post detail screens and the full-screen vertical surface.
-	if (pathname.startsWith("/post/") || pathname.startsWith("/live")) {
+	// Exact-match /live (plus real subroutes): a bare startsWith("/live")
+	// also swallowed /live-now and left that page with no navigation at all.
+	if (
+		pathname.startsWith("/post/") ||
+		pathname === "/live" ||
+		pathname.startsWith("/live/")
+	) {
 		return null;
 	}
 
-	const openComposer = () => {
-		const composer = document.querySelector<HTMLTextAreaElement>(
-			"#post-composer-input",
-		);
-		if (composer) {
-			window.scrollTo({ top: 0, behavior: "smooth" });
-			composer.focus();
-		} else {
-			router.push("/");
-		}
-	};
-
 	return (
 		<>
-			{/* Compose FAB — the one gold CTA on mobile, floated above the bar. */}
-			<button
-				type="button"
-				onClick={openComposer}
-				aria-label={t("composer.post")}
-				className="md:hidden fixed right-4 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-sticky flex h-13 w-13 items-center justify-center rounded-pill bg-brand text-brand-on shadow-nav active:bg-brand-active transition-colors"
-				style={{ width: 52, height: 52 }}
-			>
-				<Plus size={24} weight="bold" />
-			</button>
+			{/* The compose FAB that floated here was one of TWO gold FABs
+			    stacked in the same corner — CreateFab (root layout) is the one
+			    create entry point now.
 
-			<div className="fixed bottom-0 left-0 right-0 z-sticky bg-page border-t border-hairline/70 md:hidden">
+			    Floating glass bar (owner ruling 2026-08-26): this and the
+			    media editors are the sanctioned exceptions to the ecosystem
+			    no-backdrop-blur rule. It's inset from all three edges and
+			    rounded, so the feed scrolls *under* it — `--ws-nav-float`
+			    feeds the pb-nav/bottom-nav clearance so nothing hides beneath. */}
+			<div
+				className="fixed left-3 right-3 z-sticky md:hidden rounded-pill glass-nav backdrop-blur-xl backdrop-saturate-150 overflow-hidden"
+				style={{
+					bottom: "calc(var(--ws-safe-bottom) + var(--ws-nav-float))",
+				}}
+			>
 				<div className="flex justify-between items-center h-16 px-1">
 					{navItems.map((item) => (
 						<Link
 							key={item.href}
 							href={item.href}
 							className={clsx(
-								// 05-screens responsive spec: icon 20 + 10px label,
-								// active tab renders in brand gold.
-								"flex flex-col items-center justify-center gap-1 w-full h-full active:bg-raised transition-colors",
-								item.active ? "text-gold" : "text-subtle",
+								// 05-screens responsive spec: icon 20 + 10px label.
+								// `.glass-nav` follows the theme, so the ink is the
+								// normal token pair — text-gold resolves to the AA
+								// dark gold on paper and bright gold on stone.
+								"flex flex-col items-center justify-center gap-1 w-full h-full min-w-0 rounded-pill active:bg-primary/10 transition-colors",
+								item.active ? "text-gold" : "text-muted",
 							)}
 						>
-							<span className="relative">
+							<BadgedIcon count={item.badge} label={item.label}>
 								<item.icon isActive={item.active} />
-								{(item.badge ?? 0) > 0 && (
-									<span className="absolute -top-1.5 -right-2 flex items-center justify-center min-w-4 h-4 px-0.5 text-[9px] font-bold text-brand-on bg-brand rounded-pill border border-page font-sans tabular-nums">
-										{(item.badge ?? 0) > 9 ? "9+" : item.badge}
-									</span>
-								)}
-							</span>
+							</BadgedIcon>
 							<span
 								className={clsx(
-									"text-[10px] leading-none font-sans",
+									// One line, ellipsized: long locales ("Notificaciones",
+									// "Nachrichten") must not wrap or squeeze siblings.
+									"text-[10px] leading-none font-sans whitespace-nowrap truncate max-w-full px-0.5",
 									item.active ? "font-semibold" : "font-medium",
 								)}
 							>
@@ -154,8 +149,9 @@ export const MobileBottomNav = () => {
 						</Link>
 					))}
 				</div>
-				{/* Safe area spacer for iPhone home indicator */}
-				<div className="h-[env(safe-area-inset-bottom)] bg-page" />
+				{/* No safe-area spacer any more — the bar floats ABOVE the home
+				    indicator (its `bottom` already adds the inset) instead of
+				    running underneath it. */}
 			</div>
 		</>
 	);

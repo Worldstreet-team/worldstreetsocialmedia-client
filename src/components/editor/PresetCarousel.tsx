@@ -1,8 +1,10 @@
 "use client";
 
+import { Check } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { memo } from "react";
 import GrainOverlay from "@/components/editor/GrainOverlay";
+import ScrollStrip from "@/components/ui/ScrollStrip";
 import type { PresetId } from "@/lib/editor/document";
 import { createAdjustments } from "@/lib/editor/document";
 import { cssFilterFor, PRESETS } from "@/lib/editor/presets";
@@ -34,16 +36,16 @@ function PresetCarousel({ thumbUrl, active, onSelect }: PresetCarouselProps) {
       <button
         key={id ?? "none"}
         type="button"
+        role="option"
         onClick={() => onSelect(isActive ? null : id)}
-        aria-pressed={isActive}
+        aria-selected={isActive}
         className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
       >
         <span
           className={clsx(
-            "relative block h-16 w-16 rounded-lg overflow-hidden border transition-colors",
-            isActive
-              ? "border-[#fafaf9]"
-              : "border-[#fafaf9]/15 group-hover:border-[#fafaf9]/40",
+            // Borderless: the unselected thumbs recede instead of wearing a rim.
+            "relative block h-16 w-16 rounded-lg overflow-hidden transition-opacity",
+            isActive ? "opacity-100" : "opacity-60 group-hover:opacity-90",
           )}
         >
           {thumbUrl ? (
@@ -59,6 +61,11 @@ function PresetCarousel({ thumbUrl, active, onSelect }: PresetCarouselProps) {
             <span className="block h-full w-full skeleton" />
           )}
           {grain && <GrainOverlay />}
+          {isActive && (
+            <span className="absolute bottom-1 right-1 flex h-4 w-4 items-center justify-center rounded-pill bg-[#fafaf9] text-[#0c0a09]">
+              <Check size={9} weight="bold" />
+            </span>
+          )}
         </span>
         <span
           className={clsx(
@@ -73,21 +80,21 @@ function PresetCarousel({ thumbUrl, active, onSelect }: PresetCarouselProps) {
   };
 
   return (
-    <div
-      className="flex gap-3 overflow-x-auto no-scrollbar py-1 -mx-1 px-1"
-      role="listbox"
-      aria-label="Filters"
-    >
-      {renderThumb(null, "None", "", false)}
-      {PRESETS.map((preset) =>
-        renderThumb(
-          preset.id,
-          preset.label,
-          cssFilterFor(neutral, preset.id),
-          !!preset.grain,
-        ),
-      )}
-    </div>
+    // ScrollStrip supplies the edge fade + nudge buttons, so it is obvious
+    // that the strip carries more filters than fit the dock.
+    <ScrollStrip ariaLabel="Filters" className="gap-3 -mx-1 px-1">
+      <span role="listbox" aria-label="Filters" className="contents">
+        {renderThumb(null, "None", "", false)}
+        {PRESETS.map((preset) =>
+          renderThumb(
+            preset.id,
+            preset.label,
+            cssFilterFor(neutral, preset.id),
+            !!preset.grain,
+          ),
+        )}
+      </span>
+    </ScrollStrip>
   );
 }
 

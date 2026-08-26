@@ -26,7 +26,7 @@ export default function ErrorBoundary({
         Something went wrong
       </h1>
       <p className="mt-2 max-w-[38ch] font-sans text-[13px] leading-relaxed text-muted">
-        The page hit an unexpected error. Your data is fine — try loading it
+        The page hit an unexpected error. Your data is fine try loading it
         again.
       </p>
       {error.digest && (

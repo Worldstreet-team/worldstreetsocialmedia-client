@@ -2,8 +2,10 @@
 
 import clsx from "clsx";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { useAtom } from "jotai";
+import Image from "next/image";
+import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useAtom, useAtomValue } from "jotai";
 import {
 	Microphone,
 	MonitorPlay,
@@ -12,96 +14,186 @@ import {
 	UsersThree,
 } from "@phosphor-icons/react";
 import { feedTabAtom } from "@/store/ui.atom";
+import { userAtom } from "@/store/user.atom";
+import { getCommunitiesAction } from "@/lib/community.actions";
+import { CATEGORIES, LEGACY_CATEGORY_ALIASES } from "@/data/categories";
 import { useT } from "@/i18n/client";
 
+interface CommunityChip {
+	id: string;
+	name: string;
+	slug: string;
+	avatar?: string;
+}
+
+const CATEGORY_BY_ID = new Map(CATEGORIES.map((c) => [c.id, c]));
+
 /**
- * The feed's top bar: the two timeline tabs plus the surfaces that grew out
- * of them — The Street and Communities ride the same row as destinations.
- * Each item carries its glyph (duotone at rest, filled when current); the
- * gold underline still slides between the two true tabs.
+ * The feed bar: rounded chips, the CURRENT tab pinned left and never
+ * scrolling away. The scroller behind it carries the other timeline, The
+ * Street, Street Voice — then the communities you have actually JOINED
+ * (name + avatar, not a generic link) and your interest categories, the
+ * same vector the ranking algorithm personalizes on.
  */
 export function FeedTabs() {
 	const t = useT();
 	const [tab, setTab] = useAtom(feedTabAtom);
+	const user = useAtomValue(userAtom);
+	const [myCommunities, setMyCommunities] = useState<CommunityChip[]>([]);
 
-	const base =
-		"relative h-full flex items-center justify-center gap-1.5 px-4 font-sans text-sm whitespace-nowrap transition-colors cursor-pointer shrink-0";
+	useEffect(() => {
+		let cancelled = false;
+		(async () => {
+			const res = await getCommunitiesAction();
+			if (cancelled || !res.success) return;
+			setMyCommunities(
+				(res.communities ?? [])
+					.filter((c: any) => c.joined)
+					.slice(0, 8)
+					.map((c: any) => ({
+						id: String(c.id),
+						name: c.name,
+						slug: c.slug,
+						avatar: c.avatar || undefined,
+					})),
+			);
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+
+	// Interest ids → labels (legacy ids migrated through the alias table).
+	const categoryChips = useMemo(() => {
+		const seen = new Set<string>();
+		const out: { id: string; label: string }[] = [];
+		for (const raw of user?.interests ?? []) {
+			// Old profiles stored display labels ("Technology"); the alias
+			// table keys are lowercase, current ids are lowercase kebab.
+			const lower = raw.toLowerCase();
+			const id = LEGACY_CATEGORY_ALIASES[lower] ?? lower;
+			if (seen.has(id)) continue;
+			seen.add(id);
+			const cat = CATEGORY_BY_ID.get(id);
+			if (cat) out.push({ id: cat.id, label: cat.label });
+			if (out.length >= 6) break;
+		}
+		return out;
+	}, [user?.interests]);
+
+	const chip =
+		"relative flex items-center gap-1.5 h-9 px-3.5 rounded-pill font-sans text-[13.5px] whitespace-nowrap transition-colors shrink-0";
+	const idle = "font-medium text-muted hover:text-primary hover:bg-raised/50";
+
+	const TABS = [
+		{ key: "foryou" as const, label: t("feed.tab.foryou"), Icon: Sparkle },
+		{ key: "following" as const, label: t("feed.tab.following"), Icon: Users },
+	];
+	const active = TABS.find((x) => x.key === tab) ?? TABS[0];
+	const rest = TABS.filter((x) => x.key !== active.key);
 
 	return (
 		<div
 			role="tablist"
 			aria-label="Timeline"
-			className="flex h-full w-full overflow-x-auto [scrollbar-width:none]"
+			className="flex h-full w-full items-center gap-2 pl-3 pr-1"
 		>
+			{/* Pinned the tab you are on is always in reach. */}
 			<button
 				type="button"
 				role="tab"
-				aria-selected={tab === "foryou"}
-				onClick={() => setTab("foryou")}
-				className={clsx(
-					base,
-					tab === "foryou"
-						? "font-semibold text-primary"
-						: "font-medium text-muted hover:text-primary hover:bg-raised/40",
-				)}
+				aria-selected="true"
+				className={clsx(chip, "bg-raised font-semibold text-primary")}
 			>
-				<Sparkle size={16} weight={tab === "foryou" ? "fill" : "duotone"} />
-				{t("feed.tab.foryou")}
-				{tab === "foryou" && (
+				<AnimatePresence mode="wait" initial={false}>
 					<motion.span
-						layoutId="feed-tab-underline"
+						key={active.key}
+						initial={{ opacity: 0, y: 4 }}
+						animate={{ opacity: 1, y: 0 }}
+						exit={{ opacity: 0, transition: { duration: 0.12 } }}
 						transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-						className="absolute bottom-0 h-0.5 w-12 rounded-pill bg-brand"
-					/>
-				)}
+						className="flex items-center gap-1.5"
+					>
+						<active.Icon size={15} weight="fill" className="text-gold" />
+						{active.label}
+					</motion.span>
+				</AnimatePresence>
 			</button>
 
-			<button
-				type="button"
-				role="tab"
-				aria-selected={tab === "following"}
-				onClick={() => setTab("following")}
-				className={clsx(
-					base,
-					tab === "following"
-						? "font-semibold text-primary"
-						: "font-medium text-muted hover:text-primary hover:bg-raised/40",
+			<span className="h-5 w-px shrink-0 bg-hairline" />
+
+ {/* Scroller masked on the right so it reads as "more this way". */}
+			<div className="flex-1 min-w-0 flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent)]">
+				{rest.map((x) => (
+					<button
+						key={x.key}
+						type="button"
+						role="tab"
+						aria-selected="false"
+						onClick={() => setTab(x.key)}
+						className={clsx(chip, idle, "cursor-pointer")}
+					>
+						<x.Icon size={15} weight="duotone" />
+						{x.label}
+					</button>
+				))}
+				<Link href="/live" className={clsx(chip, idle)}>
+					<MonitorPlay size={15} weight="duotone" />
+					{t("nav.videos")}
+				</Link>
+				<Link href="/voice" className={clsx(chip, idle)}>
+					<Microphone size={15} weight="duotone" />
+					{t("nav.voice")}
+				</Link>
+
+				{/* YOUR communities, by name. The generic link only appears when
+				    you haven't joined any yet. */}
+				{myCommunities.length > 0 ? (
+					myCommunities.map((c) => (
+						<Link
+							key={c.id}
+							href={`/communities/${c.slug}`}
+							className={clsx(chip, idle)}
+						>
+							<span className="relative w-[18px] h-[18px] rounded-pill overflow-hidden bg-raised shrink-0 flex items-center justify-center">
+								{c.avatar ? (
+									<Image
+										src={c.avatar}
+										alt=""
+										fill
+										className="object-cover"
+									/>
+								) : (
+									<span className="text-[9px] font-bold text-subtle font-sans uppercase">
+										{c.name.slice(0, 1)}
+									</span>
+								)}
+							</span>
+							{c.name}
+						</Link>
+					))
+				) : (
+					<Link href="/communities" className={clsx(chip, idle)}>
+						<UsersThree size={15} weight="duotone" />
+						{t("nav.communities")}
+					</Link>
 				)}
-			>
-				<Users size={16} weight={tab === "following" ? "fill" : "duotone"} />
-				{t("feed.tab.following")}
-				{tab === "following" && (
-					<motion.span
-						layoutId="feed-tab-underline"
-						transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-						className="absolute bottom-0 h-0.5 w-12 rounded-pill bg-brand"
-					/>
+
+ {/* Interest categories the algorithm's personalization axes,
+				    surfaced. Tap one to explore it. */}
+				{categoryChips.length > 0 && (
+					<span className="h-5 w-px shrink-0 bg-hairline/60" />
 				)}
-			</button>
-
-			<Link
-				href="/live"
-				className={clsx(base, "font-medium text-muted hover:text-primary hover:bg-raised/40")}
-			>
-				<MonitorPlay size={16} weight="duotone" />
-				{t("nav.videos")}
-			</Link>
-
-			<Link
-				href="/voice"
-				className={clsx(base, "font-medium text-muted hover:text-primary hover:bg-raised/40")}
-			>
-				<Microphone size={16} weight="duotone" />
-				{t("nav.voice")}
-			</Link>
-
-			<Link
-				href="/communities"
-				className={clsx(base, "font-medium text-muted hover:text-primary hover:bg-raised/40")}
-			>
-				<UsersThree size={16} weight="duotone" />
-				{t("nav.communities")}
-			</Link>
+				{categoryChips.map((c) => (
+					<Link
+						key={c.id}
+						href={`/explore?q=${encodeURIComponent(c.label)}`}
+						className={clsx(chip, idle)}
+					>
+						{c.label}
+					</Link>
+				))}
+			</div>
 		</div>
 	);
 }

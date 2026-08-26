@@ -1,6 +1,6 @@
 "use client";
 
-import { formatTimeAgo } from "@/lib/utils";
+import { formatTimeAgo, mainScrollTop, mainScroller } from "@/lib/utils";
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -19,8 +19,12 @@ import { PostSkeleton } from "@/components/feed/PostSkeleton";
 import { ImpressionSensor } from "@/components/feed/ImpressionSensor";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { DEFAULT_AVATAR } from "@/const";
+import { useT } from "@/i18n/client";
+import { useFeedEvents } from "@/hooks/useUserEvents";
+import { userAtom } from "@/store/user.atom";
 
 export default function Feed() {
+	const t = useT();
 	const [feedState, setFeedState] = useAtom(feedAtom);
 	const tab = useAtomValue(feedTabAtom);
 	const followingIds = useAtomValue(followingIdsAtom);
@@ -31,6 +35,10 @@ export default function Feed() {
 	const translationsRef = useRef(translations);
 	translationsRef.current = translations;
 	const [loading, setLoading] = useState(true);
+	// New posts arrive as a count, not as a jump: yanking the timeline under
+	// someone mid-read is worse than letting them choose when to see them.
+	const [pendingPosts, setPendingPosts] = useState(0);
+	const me = useAtomValue(userAtom);
 	const [isPosting, setIsPosting] = useState(false);
 	const [showBackToTop, setShowBackToTop] = useState(false);
 	const { toast } = useToast();
@@ -66,9 +74,10 @@ export default function Feed() {
 
 	// Back-to-top pill once the reader is a couple of screens deep.
 	useEffect(() => {
-		const onScroll = () => setShowBackToTop(window.scrollY > 800);
-		window.addEventListener("scroll", onScroll, { passive: true });
-		return () => window.removeEventListener("scroll", onScroll);
+		const scroller = mainScroller();
+		const onScroll = () => setShowBackToTop(mainScrollTop() > 800);
+		scroller.addEventListener("scroll", onScroll, { passive: true });
+		return () => scroller.removeEventListener("scroll", onScroll);
 	}, []);
 
 	useEffect(() => {
@@ -127,7 +136,7 @@ export default function Feed() {
 			// Restore scroll position with a slight delay to ensure DOM is ready
 			if (feedState.scrollPosition > 0) {
 				setTimeout(() => {
-					window.scrollTo(0, feedState.scrollPosition);
+					mainScroller().scrollTo(0, feedState.scrollPosition);
 				}, 10);
 			}
 		} else {
@@ -138,10 +147,18 @@ export default function Feed() {
 		return () => {
 			if (typeof window !== "undefined") {
 				window.history.scrollRestoration = "auto";
-				setFeedState((prev) => ({ ...prev, scrollPosition: window.scrollY }));
+				setFeedState((prev) => ({ ...prev, scrollPosition: mainScrollTop() }));
 			}
 		};
 	}, []);
+
+	useFeedEvents((event, data) => {
+		if (event !== "post") return;
+		// Your own post already appears optimistically.
+		if (data.author && me?._id && String(data.author) === String(me._id))
+			return;
+		setPendingPosts((n) => n + 1);
+	});
 
 	const fetchFeed = async (reset = false) => {
 		if (reset) {
@@ -165,8 +182,10 @@ export default function Feed() {
 						username: post.author.username,
 						avatar: post.author.avatar || DEFAULT_AVATAR,
 						isVerified: post.author.isVerified,
+						badges: post.author.badges,
 					},
 					content: post.content,
+					mentions: post.mentions,
 					timestamp: formatTimeAgo(post.createdAt),
 					images: post.images,
 					videos: post.videos,
@@ -269,6 +288,28 @@ export default function Feed() {
 
 	return (
 		<div className="w-full min-w-0 pb-nav md:pb-20">
+			{/* New posts announce themselves; the reader decides when to jump. */}
+			<AnimatePresence>
+				{pendingPosts > 0 && (
+					<motion.button
+						type="button"
+						initial={{ opacity: 0, y: -8, x: "-50%" }}
+						animate={{ opacity: 1, y: 0, x: "-50%" }}
+						exit={{ opacity: 0, transition: { duration: 0.12 } }}
+						transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+						onClick={() => {
+							setPendingPosts(0);
+							mainScroller().scrollTo({ top: 0, behavior: "smooth" });
+							void fetchFeed(true);
+						}}
+						className="fixed top-[72px] md:top-16 left-1/2 z-sticky flex items-center gap-1.5 h-9 pl-3.5 pr-4 rounded-pill bg-brand text-brand-on shadow-nav font-sans text-[13px] font-semibold hover:bg-brand-active transition-colors cursor-pointer"
+					>
+						<ArrowUp className="w-[14px] h-[14px]" />
+						{pendingPosts} {t("feed.newPosts")}
+					</motion.button>
+				)}
+			</AnimatePresence>
+
 			<AnimatePresence>
 				{showBackToTop && (
 					<motion.button
@@ -279,7 +320,7 @@ export default function Feed() {
 						exit={{ opacity: 0, transition: { duration: 0.12 } }}
 						transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
 						onClick={() =>
-							window.scrollTo({ top: 0, behavior: "smooth" })
+							mainScroller().scrollTo({ top: 0, behavior: "smooth" })
 						}
 						// bottom-nav derives from --ws-nav-clearance, so the pill
 						// tracks the real bar height + home indicator instead of a
@@ -292,10 +333,12 @@ export default function Feed() {
 				)}
 			</AnimatePresence>
 
-			{/* One creation card: stories strip on top, composer below 
-			    borderless depth instead of hairline boxes. */}
+			{/* A normal feed row, not a card (owner ruling 2026-08-26): the
+			    card-depth gradient + inset margins made the composer the
+			    loudest thing on the page. Same page ground and hairline rhythm
+			    as the posts below it. */}
 			<div
-				className="animate-rise card-depth mx-2 sm:mx-3 my-3"
+				className="animate-rise border-b border-hairline"
 				style={{ animationDelay: "60ms" }}
 			>
 				<PostComposer
@@ -349,16 +392,16 @@ export default function Feed() {
 					(tab === "following" ? (
 						<EmptyState
 							icon={UserPlus}
-							title="Nothing here yet"
-							caption="Posts from people you follow land here. Follow someone from the suggestions to fill it up."
+							title={t("feed.following.empty.title")}
+							caption={t("feed.following.empty.caption")}
 						/>
 					) : (
 						<EmptyState
 							icon={Plus}
-							title="Your timeline is empty"
-							caption="Posts from people you follow show up here. Write the first one."
+							title={t("feed.empty.title")}
+							caption={t("feed.empty.caption")}
 							action={{
-								label: "Write a post",
+								label: t("feed.empty.action"),
 								onClick: () =>
 									document
 										.querySelector<HTMLTextAreaElement>("#post-composer-input")
@@ -372,7 +415,7 @@ export default function Feed() {
 						{isFetchingMore ? (
 							<span className="h-9 flex items-center gap-2 font-sans text-[13px] text-muted">
 								<span className="w-4 h-4 rounded-full border-2 border-raised border-t-brand animate-spin" />
-								Loading more posts
+								{t("feed.loading")}
 							</span>
 						) : (
 							<button
@@ -380,7 +423,7 @@ export default function Feed() {
 								onClick={loadMore}
 								className="h-9 px-4 rounded-pill border border-hairline bg-surface hover:bg-raised font-sans text-[13px] font-medium text-primary transition-colors cursor-pointer"
 							>
-								Show more posts
+								{t("feed.loadmore")}
 							</button>
 						)}
 					</div>

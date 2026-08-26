@@ -1,22 +1,21 @@
 "use client";
 
+import { ArrowsOutSimple } from "@phosphor-icons/react";
+import clsx from "clsx";
 import { Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
+import TextBlock from "@/components/story/overlays/TextBlock";
 import {
   CASHTAG_COLORS,
   CASHTAG_SIZE_FRACTION,
   EMOJI_SIZE_FRACTION,
-  fontFamilyFor,
-  fontWeightFor,
+  MENTION_COLORS,
+  MENTION_SIZE_FRACTION,
   type Overlay,
   type OverlayFonts,
   PILL_PAD_X,
   PILL_PAD_Y,
-  PILL_RADIUS,
-  TEXT_COLORS,
-  TEXT_LINE_HEIGHT,
   TEXT_SIZE_FRACTION,
-  TICKER_COLORS,
 } from "@/lib/editor/overlays";
 
 interface OverlayLayerProps {
@@ -42,9 +41,27 @@ interface GestureState {
   startAngle: number;
   moved: boolean;
   startedAt: number;
+  /** Set when the drag began on the transform grip (mouse scale + rotate). */
+  transforming?: boolean;
 }
 
 const TRASH_RADIUS = 44;
+
+/** Guides the canvas snaps to, in normalized stage coordinates. */
+const SNAP_X = [0.5];
+const SNAP_Y = [0.25, 0.5, 0.75];
+/** How close (in stage fractions) a drag must get before it locks on. */
+const SNAP_RANGE = 0.018;
+/** Rotation detents, in degrees. */
+const SNAP_ANGLES = [0, 90, 180, 270, -90, -180, -270];
+const SNAP_ANGLE_RANGE = 6;
+
+function snapTo(value: number, targets: number[], range: number) {
+  for (const target of targets) {
+    if (Math.abs(value - target) < range) return { value: target, hit: target };
+  }
+  return { value, hit: null as number | null };
+}
 
 /**
  * The direct-manipulation layer over the story canvas: one-finger drag,
@@ -68,6 +85,11 @@ export default function OverlayLayer({
   const stageElRef = useRef<HTMLDivElement>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overTrash, setOverTrash] = useState(false);
+  // Which guides the active drag is currently locked to, so they can be drawn.
+  const [guides, setGuides] = useState<{ x: number | null; y: number | null }>({
+    x: null,
+    y: null,
+  });
 
   const trashCenter = () => {
     const el = stageElRef.current;
@@ -120,7 +142,7 @@ export default function OverlayLayer({
   };
 
   const handlePointerMove = (
-    e: React.PointerEvent<HTMLDivElement>,
+    e: React.PointerEvent<Element>,
     overlay: Overlay,
   ) => {
     const g = gestureRef.current;
@@ -133,27 +155,64 @@ export default function OverlayLayer({
     if (Math.hypot(e.clientX - prev.x, e.clientY - prev.y) > 2) g.moved = true;
 
     const rect = stage.getBoundingClientRect();
+    if (g.transforming) {
+      // Mouse/single-pointer transform: distance from the overlay's centre
+      // drives scale, bearing drives rotation — the standard corner-grip.
+      const cx = rect.left + overlay.x * rect.width;
+      const cy = rect.top + overlay.y * rect.height;
+      const dist = Math.hypot(e.clientX - cx, e.clientY - cy);
+      const angle = Math.atan2(e.clientY - cy, e.clientX - cx);
+      const raw = g.startRotation + ((angle - g.startAngle) * 180) / Math.PI;
+      const snappedAngle = snapTo(
+        ((raw + 540) % 360) - 180,
+        SNAP_ANGLES,
+        SNAP_ANGLE_RANGE,
+      );
+      onChange(overlay.id, {
+        scale:
+          g.startDist > 0
+            ? Math.min(6, Math.max(0.3, g.startScale * (dist / g.startDist)))
+            : overlay.scale,
+        rotation: snappedAngle.value,
+      });
+      return;
+    }
     if (g.pointers.size === 1) {
       const dx = (e.clientX - prev.x) / rect.width;
       const dy = (e.clientY - prev.y) / rect.height;
-      onChange(overlay.id, {
-        x: Math.min(1.05, Math.max(-0.05, overlay.x + dx)),
-        y: Math.min(1.05, Math.max(-0.05, overlay.y + dy)),
-      });
+      // Snap to the canvas centre line and the horizontal thirds, and show
+      // the guide that caught — the same grammar as a design tool.
+      const nextX = snapTo(
+        Math.min(1.05, Math.max(-0.05, overlay.x + dx)),
+        SNAP_X,
+        SNAP_RANGE,
+      );
+      const nextY = snapTo(
+        Math.min(1.05, Math.max(-0.05, overlay.y + dy)),
+        SNAP_Y,
+        SNAP_RANGE,
+      );
+      setGuides({ x: nextX.hit, y: nextY.hit });
+      onChange(overlay.id, { x: nextX.value, y: nextY.value });
       updateTrashHover(e.clientX, e.clientY);
     } else if (g.pointers.size === 2 && g.startDist > 0) {
       const [a, b] = [...g.pointers.values()];
       const dist = Math.hypot(b.x - a.x, b.y - a.y);
       const angle = Math.atan2(b.y - a.y, b.x - a.x);
+      const raw = g.startRotation + ((angle - g.startAngle) * 180) / Math.PI;
       onChange(overlay.id, {
         scale: Math.min(6, Math.max(0.3, g.startScale * (dist / g.startDist))),
-        rotation: g.startRotation + ((angle - g.startAngle) * 180) / Math.PI,
+        rotation: snapTo(
+          ((raw + 540) % 360) - 180,
+          SNAP_ANGLES,
+          SNAP_ANGLE_RANGE,
+        ).value,
       });
     }
   };
 
   const handlePointerUp = (
-    e: React.PointerEvent<HTMLDivElement>,
+    e: React.PointerEvent<Element>,
     overlay: Overlay,
   ) => {
     const g = gestureRef.current;
@@ -163,6 +222,8 @@ export default function OverlayLayer({
     gestureRef.current = null;
     setDraggingId(null);
     setOverTrash(false);
+    setGuides({ x: null, y: null });
+    if (g.transforming) return;
 
     if (updateTrashHover(e.clientX, e.clientY) && g.moved) {
       setOverTrash(false);
@@ -176,29 +237,34 @@ export default function OverlayLayer({
   const renderOverlay = (overlay: Overlay) => {
     let content: React.ReactNode;
     if (overlay.kind === "text") {
-      const fontPx = TEXT_SIZE_FRACTION * stageW * overlay.scale;
-      const ticker = overlay.style === "ticker";
-      const colors = ticker ? TICKER_COLORS : TEXT_COLORS[overlay.color];
-      const pill = ticker || overlay.pill;
+      // Same component the editor renders, so placing changes nothing.
+      content = (
+        <TextBlock
+          text={overlay.text}
+          style={overlay.style}
+          pill={overlay.pill}
+          color={overlay.color}
+          fontPx={TEXT_SIZE_FRACTION * stageW * overlay.scale}
+          fonts={fonts}
+        />
+      );
+    } else if (overlay.kind === "mention") {
+      const fontPx = MENTION_SIZE_FRACTION * stageW * overlay.scale;
       content = (
         <div
           style={{
-            fontFamily: fontFamilyFor(overlay.style, fonts),
-            fontWeight: fontWeightFor(overlay.style),
+            fontFamily: fonts.ui,
+            fontWeight: 700,
             fontSize: fontPx,
-            lineHeight: TEXT_LINE_HEIGHT,
-            color: colors.text,
-            textAlign: "center",
-            whiteSpace: "pre",
-            background: pill ? colors.pill : undefined,
-            padding: pill
-              ? `${fontPx * PILL_PAD_Y}px ${fontPx * PILL_PAD_X}px`
-              : undefined,
-            borderRadius: pill ? fontPx * PILL_RADIUS : undefined,
-            fontVariantNumeric: ticker ? "tabular-nums" : undefined,
+            lineHeight: 1,
+            color: MENTION_COLORS.text,
+            background: MENTION_COLORS.pill,
+            padding: `${fontPx * PILL_PAD_Y}px ${fontPx * PILL_PAD_X}px`,
+            borderRadius: 999,
+            whiteSpace: "nowrap",
           }}
         >
-          {overlay.text}
+          @{overlay.username}
         </div>
       );
     } else if (overlay.kind === "cashtag") {
@@ -232,7 +298,7 @@ export default function OverlayLayer({
     return (
       <div
         key={overlay.id}
-        className="absolute select-none touch-none"
+        className="absolute select-none touch-none group/ov"
         style={{
           left: `${overlay.x * 100}%`,
           top: `${overlay.y * 100}%`,
@@ -247,6 +313,60 @@ export default function OverlayLayer({
         onPointerCancel={(e) => handlePointerUp(e, overlay)}
       >
         {content}
+        {/* Corner grip: scale + rotate for anyone without two fingers. It
+            only appears while this overlay is the one being touched, or on
+            hover, so it never litters the canvas. */}
+        {interactive && (
+          <button
+            type="button"
+            aria-label="Resize and rotate"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              const stage = stageElRef.current;
+              if (!stage) return;
+              e.currentTarget.setPointerCapture(e.pointerId);
+              const rect = stage.getBoundingClientRect();
+              const cx = rect.left + overlay.x * rect.width;
+              const cy = rect.top + overlay.y * rect.height;
+              gestureRef.current = {
+                id: overlay.id,
+                pointers: new Map([
+                  [e.pointerId, { x: e.clientX, y: e.clientY }],
+                ]),
+                startX: overlay.x,
+                startY: overlay.y,
+                startScale: overlay.scale,
+                startRotation: overlay.rotation,
+                startDist: Math.hypot(e.clientX - cx, e.clientY - cy),
+                startAngle: Math.atan2(e.clientY - cy, e.clientX - cx),
+                moved: false,
+                startedAt: performance.now(),
+                transforming: true,
+              };
+              setDraggingId(overlay.id);
+            }}
+            onPointerMove={(e) => {
+              e.stopPropagation();
+              handlePointerMove(e, overlay);
+            }}
+            onPointerUp={(e) => {
+              e.stopPropagation();
+              handlePointerUp(e, overlay);
+            }}
+            onPointerCancel={(e) => {
+              e.stopPropagation();
+              handlePointerUp(e, overlay);
+            }}
+            className={clsx(
+              "absolute -bottom-3 -right-3 flex h-7 w-7 items-center justify-center rounded-pill bg-[#fafaf9] text-[#0c0a09] shadow-[0_2px_10px_rgba(0,0,0,0.5)] transition-opacity cursor-nwse-resize touch-none",
+              draggingId === overlay.id
+                ? "opacity-100"
+                : "opacity-0 group-hover/ov:opacity-100 focus-visible:opacity-100",
+            )}
+          >
+            <ArrowsOutSimple size={13} weight="bold" />
+          </button>
+        )}
       </div>
     );
   };
@@ -256,6 +376,21 @@ export default function OverlayLayer({
       ref={stageElRef}
       className="absolute inset-0 overflow-hidden pointer-events-none"
     >
+      {/* Alignment guides — only while a drag is actually locked on. */}
+      {guides.x !== null && (
+        <span
+          aria-hidden="true"
+          className="absolute inset-y-0 w-px bg-[#EAB308]"
+          style={{ left: `${guides.x * 100}%` }}
+        />
+      )}
+      {guides.y !== null && (
+        <span
+          aria-hidden="true"
+          className="absolute inset-x-0 h-px bg-[#EAB308]"
+          style={{ top: `${guides.y * 100}%` }}
+        />
+      )}
       {overlays.map(renderOverlay)}
       {draggingId && (
         <div

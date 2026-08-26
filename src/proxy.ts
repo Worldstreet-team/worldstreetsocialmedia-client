@@ -1,6 +1,12 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { syncUser } from "./lib/auth.actions";
+
+// Per-isolate profile cache: userId → last good sync result. Best-effort —
+// a new isolate just re-syncs. 30s staleness is invisible in practice and
+// removes the biggest per-request latency in the whole app.
+const profileCache = new Map<string, { profile: unknown; at: number }>();
+const PROFILE_CACHE_TTL_MS = 30_000;
 import {
 	LOCALE_COOKIE,
 	LOCALE_HEADER,
@@ -56,13 +62,36 @@ export default clerkMiddleware(async (auth, req) => {
 
 	// Route checks run against the locale-stripped path so /es/onboarding
 	// behaves exactly like /onboarding.
-	const isOnboardingPath = pathname.startsWith("/onboarding");
+	// Exact match (plus real subroutes) — a bare startsWith also swallowed any
+	// future sibling like /onboarding-complete, silently redirecting it to the
+	// feed for anyone who already has a profile.
+	const isOnboardingPath =
+		pathname === "/onboarding" || pathname.startsWith("/onboarding/");
 	const hasProfile = req.cookies.get("has_profile")?.value === "true";
 
 	if (isOnboardingPath && !hasProfile) return respond();
 
 	// 1. If user is logged in and trying to access a protected area
 	if (userId && isProtectedRoute(req)) {
+		// The sync round-trip (gateway → Atlas) used to run on EVERY request —
+		// pages, server actions, prefetches — adding ~0.5-1s each. A profile
+		// changes rarely; cache it per user for a short window and skip the
+		// trip entirely. Onboarding paths always re-check (fresh accounts).
+		const cached = profileCache.get(userId);
+		if (
+			cached &&
+			Date.now() - cached.at < PROFILE_CACHE_TTL_MS &&
+			!isOnboardingPath
+		) {
+			requestHeaders.set("x-user-data", JSON.stringify(cached.profile));
+			const response = respond();
+			response.cookies.set("has_profile", "true", {
+				path: "/",
+				httpOnly: false,
+			});
+			return response;
+		}
+
 		const token = await getToken();
 		const userExistsInDb = await syncUser(token);
 
@@ -92,6 +121,10 @@ export default clerkMiddleware(async (auth, req) => {
 		// 3. They exist: set the cookie, forward the profile, continue
 		if (userExistsInDb?.profile) {
 			requestHeaders.set("x-user-data", JSON.stringify(userExistsInDb.profile));
+			profileCache.set(userId, {
+				profile: userExistsInDb.profile,
+				at: Date.now(),
+			});
 		}
 		const response = respond();
 		response.cookies.set("has_profile", "true", {

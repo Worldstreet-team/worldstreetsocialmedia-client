@@ -3,12 +3,17 @@
 import clsx from "clsx";
 import { motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import VerifiedIcon from "@/assets/icons/VerifiedIcon";
+import { useAtomValue } from "jotai";
+import { useCallback, useEffect, useState } from "react";
+import { UserBadges } from "@/components/ui/UserBadges";
+import { MicrophoneStage } from "@phosphor-icons/react";
 import { SectionHead } from "@/components/layout/SectionHead";
+import { EqBars, spaceBackground } from "@/components/voice/SpaceCard";
+import { useRealtime } from "@/components/providers/RealtimeProvider";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { useT } from "@/i18n/client";
 import { getSpacesAction } from "@/lib/space.actions";
+import { voiceRefreshAtom } from "@/store/voice.atom";
 
 interface SpaceHost {
 	_id?: string;
@@ -27,6 +32,10 @@ interface Space {
 	host?: SpaceHost;
 	community?: { name?: string; slug?: string } | null;
 	membersCount?: number;
+	/** The canvas the host picked in the create sheet. */
+	cover?: string;
+	/** A custom upload, which wins over the preset. */
+	coverImage?: string;
 }
 
 /* How many of each tier the rail shows before deferring to /voice. Live
@@ -103,51 +112,53 @@ function SpaceRow({ space, live }: { space: Space; live: boolean }) {
 	return (
 		<Link
 			href="/voice"
-			className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-surface"
+			// The card wears the canvas the host chose, so a room is
+			// recognisable by its colour before you have read the title.
+			style={{ background: spaceBackground(space as any) }}
+			className="group relative block overflow-hidden rounded-xl p-3 transition-opacity hover:opacity-95"
 		>
-			{/* Ring colour carries the state, exactly like the stories/live rails
-			    above — red means joinable now. */}
-			<span
-				className={clsx(
-					"relative h-9 w-9 shrink-0 rounded-pill p-[1.5px]",
-					live ? "bg-danger" : "bg-raised",
-				)}
-			>
-				<span className="relative block h-full w-full overflow-hidden rounded-pill border-2 border-page bg-raised">
-					<SafeAvatar src={space.host?.avatar} />
-				</span>
-			</span>
+			{/* Ink on this card is fixed light: it sits on the host's art, which
+			    does not follow the theme, so text-primary would go black on
+			    paper and vanish. */}
+			<span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0c0a09]/85 via-[#0c0a09]/35 to-[#0c0a09]/20" />
 
-			<span className="flex min-w-0 flex-1 flex-col leading-tight">
-				<span className="truncate font-sans text-[13.5px] font-semibold text-primary">
-					{space.title}
-				</span>
-				<span className="flex min-w-0 items-center gap-1 font-sans text-[11.5px] text-muted">
-					<span className="truncate">{name}</span>
-					{space.host?.isVerified && (
-						<VerifiedIcon size={{ width: "11", height: "11" }} />
-					)}
-					<span className="text-subtle">·</span>
-					<span className="shrink-0 tabular-nums">
-						{live
-							? `${count} ${t("rail.spaces.listening")}`
-							: `${count} ${t("rail.spaces.going")}`}
+			<span className="relative flex items-center justify-between gap-2">
+				{live ? (
+					<span className="flex items-center gap-1.5 rounded-[4px] bg-danger px-1.5 py-px font-sans text-[9px] font-bold tracking-wide text-white">
+						{t("live.badge")}
 					</span>
-				</span>
-			</span>
-
-			{live ? (
-				<LiveBars />
-			) : (
-				when && (
-					<span className="shrink-0 rounded-pill bg-raised px-2 py-0.5 font-sans text-[11px] text-muted tabular-nums">
+				) : (
+					<span className="rounded-[4px] bg-[#fafaf9]/15 px-1.5 py-px font-sans text-[9px] font-bold uppercase tracking-wide text-[#fafaf9]/85">
 						{when}
 					</span>
-				)
-			)}
+				)}
+				{live && <EqBars className="text-[#fafaf9]" />}
+			</span>
+
+			<span className="relative mt-2 block truncate font-display text-[14px] font-semibold leading-snug text-[#fafaf9]">
+				{space.title}
+			</span>
+
+			<span className="relative mt-2 flex items-center gap-1.5">
+				<span className="relative h-5 w-5 shrink-0 overflow-hidden rounded-pill bg-[#1c1917]">
+					<SafeAvatar src={space.host?.avatar} />
+				</span>
+				<span className="min-w-0 truncate font-sans text-[11.5px] text-[#fafaf9]/80">
+					{name}
+				</span>
+				<UserBadges
+					isVerified={space.host?.isVerified}
+					badges={(space.host as any)?.badges}
+					size={11}
+				/>
+				<span className="ml-auto shrink-0 font-sans text-[11px] font-semibold tabular-nums text-[#fafaf9]/85">
+					{count} {live ? t("rail.spaces.listening") : t("rail.spaces.going")}
+				</span>
+			</span>
 		</Link>
 	);
 }
+
 
 /**
  * Street Voice in the right rail: live audio rooms first, then what's
@@ -161,27 +172,40 @@ function SpaceRow({ space, live }: { space: Space; live: boolean }) {
  */
 export function SpacesRail({ delay = 210 }: { delay?: number }) {
 	const t = useT();
+	const { client } = useRealtime();
+	const refreshTick = useAtomValue(voiceRefreshAtom);
 	const [live, setLive] = useState<Space[]>([]);
 	const [upcoming, setUpcoming] = useState<Space[]>([]);
 
-	useEffect(() => {
-		let cancelled = false;
-		(async () => {
-			const res = await getSpacesAction();
-			if (cancelled || !res.success) return;
-			setLive((res.live ?? []).slice(0, MAX_LIVE));
-			setUpcoming((res.upcoming ?? []).slice(0, MAX_UPCOMING));
-		})();
-		return () => {
-			cancelled = true;
-		};
+	const load = useCallback(async () => {
+		const res = await getSpacesAction();
+		if (!res.success) return;
+		setLive((res.live ?? []).slice(0, MAX_LIVE));
+		setUpcoming((res.upcoming ?? []).slice(0, MAX_UPCOMING));
 	}, []);
+
+	// This used to fetch once on mount and never again, so cancelling or
+	// starting a room left the rail advertising it until a full reload.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: refreshTick is the signal; its value is unused.
+	useEffect(() => {
+		void load();
+	}, [load, refreshTick]);
+
+	// The gateway announces started/ended/cancelled on `spaces`; no poll needed.
+	useEffect(() => {
+		if (!client) return;
+		const channel = client.channels.get("spaces");
+		const onEvent = () => void load();
+		void channel.subscribe(onEvent);
+		return () => channel.unsubscribe(onEvent);
+	}, [client, load]);
 
 	if (live.length === 0 && upcoming.length === 0) return null;
 
 	return (
 		<section className="animate-rise" style={{ animationDelay: `${delay}ms` }}>
 			<SectionHead
+				icon={<MicrophoneStage size={13} weight="duotone" />}
 				label={t("rail.spaces")}
 				live={live.length > 0}
 				trailing={
@@ -193,7 +217,7 @@ export function SpacesRail({ delay = 210 }: { delay?: number }) {
 					</Link>
 				}
 			/>
-			<div className="flex flex-col">
+			<div className="flex flex-col gap-2 px-3">
 				{live.map((space) => (
 					<SpaceRow key={space.id} space={space} live />
 				))}

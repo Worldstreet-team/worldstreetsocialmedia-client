@@ -2,50 +2,50 @@
 
 import { useEffect } from "react";
 import { useAtom, useAtomValue } from "jotai";
-import { usePathname } from "next/navigation";
-import { toast } from "sonner";
-import { unreadMessagesCountAtom } from "@/store/messageCache";
+import { useToast } from "@/components/ui/Toast/ToastContext";
+import {
+	activeConversationIdAtom,
+	unreadMessagesCountAtom,
+} from "@/store/messageCache";
 import { userAtom } from "@/store/user.atom";
 import { useRealtime } from "./RealtimeProvider";
 
 export default function GlobalMessageListener() {
 	const { client, isConnected } = useRealtime();
 	const user = useAtomValue(userAtom);
-	const pathname = usePathname();
+	const activeConversationId = useAtomValue(activeConversationIdAtom);
 	const [, setUnreadCount] = useAtom(unreadMessagesCountAtom);
+	const { toast } = useToast();
 
 	useEffect(() => {
 		if (!client || !isConnected || !user) return;
 
-		const channelName = `user:${user._id}`;
-		const channel = client.channels.get(channelName);
+		const channel = client.channels.get(`user:${user._id}`);
 
+		// Bare subscribe, so the event-name guard below is what keeps DM logic
+		// from firing on notifications and story views, which share this channel.
 		const handleMessage = (message: any) => {
-			if (message.name === "event" && message.data.type === "message:new") {
-				const { message: newMessage } = message.data;
+			if (message.name !== "event" || message.data?.type !== "message:new") return;
 
-				// If we are NOT on the messages page, increment unread count and show toast
-				if (!pathname.startsWith("/messages")) {
-					setUnreadCount((prev: number) => prev + 1);
+			const { message: newMessage, conversationId } = message.data;
 
-					const senderName = newMessage.sender.firstName
-						? `${newMessage.sender.firstName} ${newMessage.sender.lastName}`
-						: newMessage.sender.username;
+			// Suppressed only for the thread actually on screen. Keying off the
+			// /messages path instead dropped every message that arrived while you
+			// were reading a different conversation.
+			if (conversationId && conversationId === activeConversationId) return;
 
-					toast.info(`New message from ${senderName}`, {
-						description: newMessage.content || "Sent an attachment",
-						duration: 4000,
-					});
-				}
-			}
+			setUnreadCount((prev: number) => prev + 1);
+
+			const senderName = newMessage?.sender?.firstName
+				? `${newMessage.sender.firstName} ${newMessage.sender.lastName}`
+				: (newMessage?.sender?.username ?? "");
+
+			toast(`New message from ${senderName}`, { duration: 4000 });
 		};
 
 		channel.subscribe(handleMessage);
-
-		return () => {
-			channel.unsubscribe(handleMessage);
-		};
-	}, [client, isConnected, user, pathname, setUnreadCount]);
+		return () => channel.unsubscribe(handleMessage);
+	}, [client, isConnected, user, activeConversationId, setUnreadCount, toast]);
 
 	return null;
 }

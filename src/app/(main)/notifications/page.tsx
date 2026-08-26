@@ -1,216 +1,276 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-	AtSign,
-	Radio,
-	Bell,
-	Heart,
-	MessageCircle,
-	Repeat,
-	User as UserIcon,
-} from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { AlertTriangle, AtSign, BadgeCheck, Bell, UserPlus } from "lucide-react";
+import { Check } from "@phosphor-icons/react";
+import { useAtom, useSetAtom } from "jotai";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Tabs } from "@/components/ui/Tabs";
+import { useToast } from "@/components/ui/Toast/ToastContext";
 import {
-	getNotificationsAction,
-	markNotificationsReadAction,
+  getNotificationsAction,
+  markNotificationsReadAction,
 } from "@/lib/notification.actions";
-import Link from "next/link";
-import clsx from "clsx";
-import { useRouter } from "next/navigation";
-import { useSetAtom } from "jotai";
-import { unreadNotificationsCountAtom } from "@/store/ui.atom";
+import { followUserAction } from "@/lib/user.actions";
+import { useUserEvents } from "@/hooks/useUserEvents";
+import { useLiveEvents } from "@/hooks/useLiveNow";
+import {
+  followingIdsAtom,
+  notificationFilterAtom,
+  unreadNotificationsCountAtom,
+} from "@/store/ui.atom";
+import { useT } from "@/i18n/client";
+import { mainScroller } from "@/lib/utils";
+import { groupNotifications } from "@/components/notifications/notification-groups";
+import {
+  NotificationRow,
+  NotificationRowSkeleton,
+} from "@/components/notifications/NotificationRow";
+import type {
+  AppNotification,
+  NotificationGroup,
+} from "@/components/notifications/types";
 
-interface Notification {
-	_id: string;
-	type: "like" | "repost" | "follow" | "reply" | "mention" | "live";
-	sender: {
-		userId: string;
-		firstName: string;
-		lastName: string;
-		username: string;
-		avatar: string;
-		isVerified?: boolean;
-	};
-	post?: {
-		_id: string;
-		content: string;
-	};
-	read: boolean;
-	createdAt: string;
+type Filter = "all" | "mentions" | "follows" | "verified";
+
+const FILTERS: { key: Filter; labelKey: string }[] = [
+  { key: "all", labelKey: "notif.tab.all" },
+  // Broader than type === "mention": anything asking for a response.
+  { key: "mentions", labelKey: "notif.tab.mentions" },
+  { key: "follows", labelKey: "notif.tab.follows" },
+  { key: "verified", labelKey: "notif.tab.verified" },
+];
+
+const EMPTY: Record<Filter, { icon: typeof Bell; title: string; caption: string }> = {
+  all: { icon: Bell, title: "notif.empty.all.title", caption: "notif.empty.all.caption" },
+  mentions: {
+    icon: AtSign,
+    title: "notif.empty.mentions.title",
+    caption: "notif.empty.mentions.caption",
+  },
+  follows: {
+    icon: UserPlus,
+    title: "notif.empty.follows.title",
+    caption: "notif.empty.follows.caption",
+  },
+  verified: {
+    icon: BadgeCheck,
+    title: "notif.empty.verified.title",
+    caption: "notif.empty.verified.caption",
+  },
+};
+
+function matches(n: AppNotification, filter: Filter) {
+  if (filter === "all") return true;
+  if (filter === "mentions") return n.type === "mention" || n.type === "reply";
+  if (filter === "follows") return n.type === "follow";
+  return Boolean(n.sender.isVerified);
 }
 
 export default function NotificationsPage() {
-	const [notifications, setNotifications] = useState<Notification[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [activeTab, setActiveTab] = useState<"all" | "verified" | "mentions">(
-		"all",
-	);
-	const router = useRouter();
-	const setUnreadNotifications = useSetAtom(unreadNotificationsCountAtom);
+  const t = useT();
+  const { toast } = useToast();
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [filter, setFilter] = useAtom(notificationFilterAtom);
+  const [followingIds, setFollowingIds] = useAtom(followingIdsAtom);
+  const setUnreadCount = useSetAtom(unreadNotificationsCountAtom);
+  const [pending, setPending] = useState(0);
+  const [liveStreams, setLiveStreams] = useState<Set<string>>(new Set());
 
-	useEffect(() => {
-		const fetchNotifications = async () => {
-			setLoading(true);
-			const res = await getNotificationsAction();
-			if (res.success) {
-				setNotifications(res.data);
-				// Mark as read immediately when viewing the page?
-				// Or maybe just mark the unread ones.
-				// For now, let's mark all as read to clear the "badge" concept if we had one.
-				markNotificationsReadAction();
-				setUnreadNotifications(0);
-			}
-			setLoading(false);
-		};
+  /**
+   * Unread is rendered from a snapshot taken on first load, not from row.read.
+   * The server rows flip to read the moment we mark them, so reading straight
+   * off them makes the highlight vanish on the next render and destroys the
+   * whole point of an unread state.
+   */
+  const unreadIds = useRef<Set<string>>(new Set());
 
-		fetchNotifications();
-	}, []);
+  const load = useCallback(
+    async (opts: { merge?: boolean } = {}) => {
+      setLoading(true);
+      setFailed(false);
+      const res = await getNotificationsAction();
+      if (res.success && Array.isArray(res.data)) {
+        const rows = res.data as AppNotification[];
+        const fresh = rows.filter((r) => !r.read).map((r) => r._id);
+        if (opts.merge) {
+          for (const id of fresh) unreadIds.current.add(id);
+        } else {
+          unreadIds.current = new Set(fresh);
+        }
+        setNotifications(rows);
+        setUnreadCount(0);
+        // After first paint, so the list is on screen before the round-trip.
+        setTimeout(() => {
+          void markNotificationsReadAction().then((r) => {
+            if (!r.success) toast(t("notif.error.title"), { type: "error" });
+          });
+        }, 0);
+      } else {
+        setFailed(true);
+      }
+      setLoading(false);
+    },
+    [setUnreadCount, toast, t],
+  );
 
-	const filteredNotifications = notifications.filter((n) => {
-		if (activeTab === "all") return true;
-		if (activeTab === "verified") return n.sender.isVerified;
-		if (activeTab === "mentions") return n.type === "mention";
-		return true;
-	});
+  const ran = useRef(false);
+  useEffect(() => {
+    if (ran.current) return;
+    ran.current = true;
+    void load();
+  }, [load]);
 
-	const getIcon = (type: string) => {
-		switch (type) {
-			case "like":
-				return <Heart className="w-5 h-5 text-danger fill-current" />;
-			case "follow":
-				return <UserIcon className="w-5 h-5 text-primary" />;
-			case "reply":
-				return <MessageCircle className="w-5 h-5 text-muted" />;
-			case "repost":
-				return <Repeat className="w-5 h-5 text-success" />;
-			case "mention":
-				return <AtSign className="w-5 h-5 text-gold" />;
-			case "live":
-				return <Radio className="w-5 h-5 text-danger" />;
-			default:
-				return <div className="w-5 h-5 bg-raised rounded-pill" />;
-		}
-	};
+  // New activity while the page is open: offer it, don't splice it in. The
+  // realtime payload has no id, avatar or name, so an optimistic row would be
+  // a grey circle that visibly rewrites itself on the next fetch.
+  useUserEvents(() => setPending((n) => n + 1));
 
-	const getRedirectUrl = (notification: Notification) => {
-		if (notification.type === "follow") {
-			return `/profile/${notification.sender.username}`;
-		}
-		if (notification.post) {
-			return `/post/${notification.post._id}`;
-		}
-		return "#";
-	};
+  // A live row should stop claiming LIVE the moment the stream ends.
+  useLiveEvents((event, data) => {
+    setLiveStreams((prev) => {
+      const next = new Set(prev);
+      if (event === "started" && data?.postId) next.add(String(data.postId));
+      if (event === "ended" && data?.postId) next.delete(String(data.postId));
+      return next;
+    });
+  });
 
-	return (
-		<div className="flex flex-col min-h-dvh pb-nav md:pb-20">
-			<header className="sticky top-0 z-sticky bg-page border-b border-hairline">
-				<div className="px-4 py-3">
-					<h1 className="font-display text-lg font-semibold text-primary">
-						Notifications
-					</h1>
-				</div>
-				<div className="flex w-full">
-					{["all", "verified", "mentions"].map((tab) => (
-						<button
-							key={tab}
-							onClick={() => setActiveTab(tab as any)}
-							className="flex-1 h-12 hover:bg-raised/40 transition-colors relative cursor-pointer"
-							type="button"
-						>
-							<span
-								className={clsx(
-									"text-sm capitalize font-sans",
-									activeTab === tab
-										? "font-semibold text-primary"
-										: "font-medium text-muted",
-								)}
-							>
-								{tab}
-							</span>
-							{activeTab === tab && (
-								<div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-0.5 bg-brand rounded-pill" />
-							)}
-						</button>
-					))}
-				</div>
-			</header>
+  const showPending = useCallback(() => {
+    setPending(0);
+    mainScroller().scrollTo({ top: 0, behavior: "smooth" });
+    void load({ merge: true });
+  }, [load]);
 
-			<div className="flex flex-col">
-				{loading ? (
-					[...Array(5)].map((_, i) => (
-						<div
-							key={i}
-							className="p-4 border-b border-hairline flex gap-3"
-						>
-							<div className="w-8 flex justify-end">
-								<div className="skeleton w-5 h-5 rounded-pill" />
-							</div>
-							<div className="flex flex-col gap-2 flex-1">
-								<div className="skeleton w-10 h-10 rounded-pill" />
-								<div className="skeleton h-3 w-40 rounded-sm" />
-							</div>
-						</div>
-					))
-				) : filteredNotifications.length > 0 ? (
-					filteredNotifications.map((notification) => (
-						<Link
-							href={getRedirectUrl(notification)}
-							key={notification._id}
-							className={clsx(
-								"p-4 border-b border-hairline hover:bg-surface/60 transition-colors cursor-pointer flex gap-3",
-								!notification.read && "bg-surface/40",
-							)}
-						>
-							<div className="w-8 flex justify-end mt-1">
-								{getIcon(notification.type)}
-							</div>
-							<div className="flex flex-col gap-2 flex-1 min-w-0">
-								<div
-									className="w-8 h-8 shrink-0 rounded-full bg-cover bg-center border border-hairline"
-									style={{
-										backgroundImage: `url('${notification.sender.avatar}')`,
-									}}
-								/>
-								<div className="text-primary text-[15px] font-sans break-words">
-									<span className="font-bold hover:underline cursor-pointer mr-1">
-										{notification.sender.firstName}{" "}
-										{notification.sender.lastName}
-									</span>
-									<span className="text-muted">
-										{notification.type === "follow" && "followed you"}
-										{notification.type === "like" && "liked your post"}
-										{notification.type === "reply" && "replied to your post"}
-										{notification.type === "mention" && "mentioned you"}
-										{notification.type === "repost" && "reposted your post"}
-									</span>
-								</div>
-								{(notification.type === "reply" ||
-									notification.type === "mention") &&
-									notification.post && (
-										<p className="text-muted text-[15px] mt-0.5 line-clamp-2">
-											{notification.post.content}
-										</p>
-									)}
-								{notification.type === "like" && notification.post && (
-									<p className="text-subtle text-sm mt-0.5 line-clamp-1">
-										{notification.post.content}
-									</p>
-								)}
-							</div>
-						</Link>
-					))
-				) : (
-					<div className="py-10">
-						<EmptyState
-							icon={Bell}
-							title="Nothing yet"
-							caption="Likes, follows, replies and mentions land here as they happen."
-						/>
-					</div>
-				)}
-			</div>
-		</div>
-	);
+  const markAllRead = useCallback(async () => {
+    unreadIds.current = new Set();
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setUnreadCount(0);
+    const res = await markNotificationsReadAction();
+    if (!res.success) toast(t("notif.error.title"), { type: "error" });
+  }, [setUnreadCount, toast, t]);
+
+  const openGroup = useCallback((group: NotificationGroup) => {
+    for (const id of group.ids) unreadIds.current.delete(id);
+    void markNotificationsReadAction(group.ids);
+  }, []);
+
+  const followBack = useCallback(
+    async (userId: string) => {
+      setFollowingIds((prev) => [...prev, userId]);
+      const res = await followUserAction(userId);
+      if (!res.success) {
+        setFollowingIds((prev) => prev.filter((x) => x !== userId));
+        toast(t("rail.followFailed"), { type: "error" });
+      }
+    },
+    [setFollowingIds, toast, t],
+  );
+
+  const counts = useMemo(() => {
+    const out = {} as Record<Filter, number>;
+    for (const f of FILTERS) {
+      out[f.key] = notifications.filter(
+        (n) => matches(n, f.key) && unreadIds.current.has(n._id),
+      ).length;
+    }
+    return out;
+  }, [notifications]);
+
+  const groups = useMemo(
+    () => groupNotifications(notifications.filter((n) => matches(n, filter))),
+    [notifications, filter],
+  );
+
+  const totalUnread = unreadIds.current.size;
+  const empty = EMPTY[filter];
+
+  return (
+    <div className="flex min-h-dvh flex-col pb-nav md:pb-20">
+      <header className="sticky top-0 z-sticky border-b border-hairline bg-page md:top-0">
+        <div className="flex items-end justify-between gap-3 px-4 py-3">
+          <div className="min-w-0">
+            <span className="block font-sans text-[11px] font-bold uppercase tracking-[0.16em] text-gold">
+              {t("notif.eyebrow")}
+            </span>
+            <h1 className="mt-1 font-display text-[24px] font-semibold leading-none text-primary">
+              {t("nav.notifications")}
+            </h1>
+          </div>
+          {totalUnread > 0 && (
+            <button
+              type="button"
+              onClick={markAllRead}
+              className="flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-pill border border-hairline bg-raised px-3.5 font-sans text-[12.5px] font-medium text-muted transition-colors hover:text-primary"
+            >
+              <Check size={13} weight="bold" />
+              {t("notif.markAllRead")}
+            </button>
+          )}
+        </div>
+
+        <Tabs
+          items={FILTERS.map(({ key, labelKey }) => ({
+            key,
+            label: t(labelKey),
+            badge: counts[key],
+          }))}
+          value={filter}
+          onChange={setFilter}
+          ariaLabel={t("nav.notifications")}
+        />
+      </header>
+
+      <AnimatePresence>
+        {pending > 0 && (
+          <motion.button
+            type="button"
+            onClick={showPending}
+            initial={{ opacity: 0, y: -8, x: "-50%" }}
+            animate={{ opacity: 1, y: 0, x: "-50%" }}
+            exit={{ opacity: 0, x: "-50%", transition: { duration: 0.12 } }}
+            transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+            className="fixed left-1/2 top-[72px] z-sticky flex h-9 cursor-pointer items-center gap-1.5 rounded-pill bg-brand pl-3.5 pr-4 font-sans text-[13px] font-semibold text-brand-on shadow-nav transition-colors hover:bg-brand-active md:top-16"
+          >
+            <span className="tabular-nums">{pending}</span> {t("notif.new")}
+          </motion.button>
+        )}
+      </AnimatePresence>
+
+      <div className="flex flex-col">
+        {loading ? (
+          [0, 1, 2, 3, 4, 5].map((i) => <NotificationRowSkeleton key={i} />)
+        ) : failed ? (
+          <EmptyState
+            icon={AlertTriangle}
+            title={t("notif.error.title")}
+            caption={t("notif.error.caption")}
+            action={{ label: t("common.retry"), onClick: () => void load() }}
+          />
+        ) : groups.length === 0 ? (
+          <EmptyState
+            icon={empty.icon}
+            title={t(empty.title)}
+            caption={t(empty.caption)}
+          />
+        ) : (
+          groups.map((group, i) => (
+            <NotificationRow
+              key={group.key}
+              group={group}
+              unread={group.ids.some((id) => unreadIds.current.has(id))}
+              isLive={group.post?._id ? liveStreams.has(group.post._id) : false}
+              onOpen={openGroup}
+              onFollowBack={followBack}
+              followed={followingIds.includes(group.senders[0]?.userId)}
+              delay={Math.min(i * 30, 300)}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
 }

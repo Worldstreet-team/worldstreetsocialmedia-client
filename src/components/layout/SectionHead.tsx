@@ -6,14 +6,20 @@
 export function SectionHead({
 	label,
 	live,
+	icon,
 	trailing,
 }: {
 	label: string;
 	live?: boolean;
+	/** A small Phosphor glyph before the label, same ink as the eyebrow. */
+	icon?: React.ReactNode;
 	trailing?: React.ReactNode;
 }) {
 	return (
 		<div className="flex items-center gap-2 px-3 pb-1.5">
+			{icon && (
+				<span className="flex shrink-0 items-center text-subtle">{icon}</span>
+			)}
 			{live && (
 				<span className="relative flex h-2 w-2">
 					<span className="absolute inline-flex h-full w-full rounded-pill bg-danger opacity-60 animate-ping" />

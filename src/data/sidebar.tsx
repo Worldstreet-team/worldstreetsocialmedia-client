@@ -6,6 +6,7 @@ import {
 	Bell,
 	BookmarkSimple,
 	Faders,
+	GearSix,
 	ChatCircleDots,
 	House,
 	MagnifyingGlass,
@@ -100,6 +101,12 @@ export const youNav: SidebarItem[] = [
 		title: "Studio",
 		link: "/studio",
 		icon: navIcon(Faders),
+	},
+	{
+		labelKey: "nav.settings",
+		title: "Settings",
+		link: "/settings",
+		icon: navIcon(GearSix),
 	},
 ];
 

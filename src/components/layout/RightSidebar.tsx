@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getWhoToFollowAction, followUserAction } from "@/lib/user.actions";
-import { getStoriesAction } from "@/lib/stories.actions";
+import { useLiveNow } from "@/hooks/useLiveNow";
 import Link from "next/link";
 import Image from "next/image";
-import { MagnifyingGlass } from "@phosphor-icons/react";
-import { StoriesRail } from "@/components/feed/StoriesRail";
+import { Aperture, Broadcast, Fire, MagnifyingGlass, UserPlus } from "@phosphor-icons/react";
+import { PromoBanners } from "@/components/feed/PromoBanners";
+import { SidebarWallet } from "@/components/layout/SidebarWallet";
 import { SectionHead } from "@/components/layout/SectionHead";
 import { SpacesRail } from "@/components/layout/SpacesRail";
 import { useToast } from "@/components/ui/Toast/ToastContext";
@@ -20,17 +21,10 @@ import { commandPaletteOpenAtom, followingIdsAtom } from "@/store/ui.atom";
 import { getExploreDataAction } from "@/lib/post.actions";
 import { DEFAULT_AVATAR, XSTREAM_WEB_URL } from "@/const";
 import { useT } from "@/i18n/client";
-import VerifiedIcon from "@/assets/icons/VerifiedIcon";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import { UserBadges } from "@/components/ui/UserBadges";
 import clsx from "clsx";
 
-interface LiveEntry {
-	authorId: string;
-	username: string;
-	avatar: string;
-	title?: string;
-	streamRef?: string;
-}
 
 export function RightSidebar() {
 	const t = useT();
@@ -40,12 +34,16 @@ export function RightSidebar() {
 	);
 	const [trends, setTrends] = useAtom(trendsAtom);
 	const [isTrendsLoaded, setIsTrendsLoaded] = useAtom(trendsLoadedAtom);
-	const [liveNow, setLiveNow] = useState<LiveEntry[]>([]);
+	// Live presence is realtime (Ably) and sourced from Xstream, so your own
+	// broadcast shows here the moment it starts.
+	const { entries: liveNow } = useLiveNow();
 	const [category, setCategory] = useState<string>("all");
 	const [failed, setFailed] = useState(false);
 	const { toast } = useToast();
 	// Shared with the feed's "Following" tab, so a follow here shows up there.
 	const [followedIds, setFollowedIds] = useAtom(followingIdsAtom);
+	const [trendsExpanded, setTrendsExpanded] = useState(false);
+	const [suggestionsExpanded, setSuggestionsExpanded] = useState(false);
 	const setPaletteOpen = useAtom(commandPaletteOpenAtom)[1];
 
 	// A failed fetch marks the section loaded-with-error and offers a retry —
@@ -78,34 +76,11 @@ export function RightSidebar() {
 	]);
 
 	useEffect(() => {
+		// The whole aside is hidden below lg — don't spend three requests on
+		// markup nobody can see (the feed column has its own stories rail).
+		if (!window.matchMedia("(min-width: 1024px)").matches) return;
 		void fetchAll();
 	}, [fetchAll]);
-
-	// Live now — the stories rail already knows who is live. The section is
-	// absent when nobody is.
-	useEffect(() => {
-		let cancelled = false;
-		(async () => {
-			const res = await getStoriesAction();
-			if (cancelled || !res.success || !res.data?.rail) return;
-			const entries: LiveEntry[] = res.data.rail
-				.filter((e: any) => e.isLive)
-				.map((e: any) => {
-					const liveStory = e.stories.find((s: any) => s.origin === "live");
-					return {
-						authorId: e.author._id,
-						username: e.author.username,
-						avatar: e.author.avatar || DEFAULT_AVATAR,
-						title: liveStory?.caption,
-						streamRef: liveStory?.streamRef,
-					};
-				});
-			setLiveNow(entries.slice(0, 3));
-		})();
-		return () => {
-			cancelled = true;
-		};
-	}, []);
 
 	const handleFollow = async (userId: string) => {
 		setFollowedIds((prev) => [...prev, userId]);
@@ -150,14 +125,20 @@ export function RightSidebar() {
 				</kbd>
 			</button>
 
-			{/* Stories moved here from the feed top: rings on the rail,
-			    the feed column stays pure timeline. */}
+			{/* Balance first: it is the one number on this rail that is about
+			    you rather than about other people. */}
+			<section
+				className="shrink-0 animate-rise"
+				style={{ animationDelay: "90ms" }}
+			>
+				<SidebarWallet />
+			</section>
+
 			<section
 				className="shrink-0 animate-rise"
 				style={{ animationDelay: "120ms" }}
 			>
-				<SectionHead label={t("rail.stories")} />
-				<StoriesRail />
+				<PromoBanners />
 			</section>
 
 			{/* Live rings the red ring grammar, above Happening now. Click a
@@ -165,6 +146,7 @@ export function RightSidebar() {
 			{liveNow.length > 0 && (
 				<section className="animate-rise" style={{ animationDelay: "180ms" }}>
 					<SectionHead
+						icon={<Broadcast size={13} weight="duotone" />}
 						label={t("rail.liveNow")}
 						live
 						trailing={
@@ -179,12 +161,8 @@ export function RightSidebar() {
 					<div className="flex gap-3 overflow-x-auto px-3 py-1 [scrollbar-width:none]">
 						{liveNow.map((entry) => (
 							<Link
-								key={entry.authorId}
-								href={
-									entry.streamRef
-										? `/stream/${entry.streamRef}`
-										: "/live-now"
-								}
+								key={entry.id}
+								href={`/live?tab=live&s=${entry.id}`}
 								className="flex flex-col items-center gap-1 shrink-0"
 							>
 								<span className="relative w-14 h-14 rounded-pill p-[2px] bg-danger">
@@ -212,6 +190,7 @@ export function RightSidebar() {
 			{/* Happening now ranked topics, category chips, no hashtag framing. */}
 			<section className="animate-rise" style={{ animationDelay: "240ms" }}>
 				<SectionHead
+					icon={<Fire size={13} weight="fill" />}
 					label={t("rail.happening")}
 					trailing={
 						<span className="text-[10px] font-semibold uppercase tracking-wider text-gold font-sans">
@@ -247,28 +226,30 @@ export function RightSidebar() {
 							</div>
 						))
 					) : visibleTrends.length > 0 ? (
-						visibleTrends.slice(0, 5).map((trend: any, i: number) => (
-							<Link
-								href={`/explore?q=${encodeURIComponent(
-									trend.title.replace(/^#/, ""),
-								)}`}
-								key={trend.title}
-								className="flex items-start gap-3.5 px-3 py-2.5 rounded-xl hover:bg-surface transition-colors"
-							>
-								<span className="pt-0.5 font-mono text-[13px] text-gold tabular-nums select-none">
-									{String(i + 1).padStart(2, "0")}
-								</span>
-								<span className="flex flex-col min-w-0">
-									<span className="font-semibold text-primary text-[15px] truncate leading-snug">
-										{trend.title.replace(/^#/, "")}
+						visibleTrends
+							.slice(0, trendsExpanded ? 8 : 5)
+							.map((trend: any, i: number) => (
+								<Link
+									href={`/explore?q=${encodeURIComponent(
+										trend.title.replace(/^#/, ""),
+									)}`}
+									key={trend.title}
+									className="flex items-start gap-3.5 px-3 py-2.5 rounded-xl hover:bg-surface transition-colors"
+								>
+									<span className="pt-0.5 font-mono text-[13px] text-gold tabular-nums select-none">
+										{String(i + 1).padStart(2, "0")}
 									</span>
-									<span className="text-[12px] text-subtle font-sans tabular-nums">
-										{trend.category ? `${trend.category} · ` : ""}
-										{trend.posts}
+									<span className="flex flex-col min-w-0">
+										<span className="font-semibold text-primary text-[15px] truncate leading-snug">
+											{trend.title.replace(/^#/, "")}
+										</span>
+										<span className="text-[12px] text-subtle font-sans tabular-nums">
+											{trend.category ? `${trend.category} · ` : ""}
+											{trend.posts}
+										</span>
 									</span>
-								</span>
-							</Link>
-						))
+								</Link>
+							))
 					) : failed ? (
 						<button
 							type="button"
@@ -286,24 +267,33 @@ export function RightSidebar() {
 							{t("rail.noTrends")}
 						</p>
 					)}
-					<Link
-						href="/explore"
-						className="text-gold text-[13px] font-medium font-sans hover:underline px-3 py-2.5 block"
-					>
-						{t("rail.showMore")}
-					</Link>
+
+					{/* Reveals the rest in place. It used to navigate to /explore,
+					    which lost your scroll position to show five more rows. */}
+					{visibleTrends.length > 5 && (
+						<button
+							type="button"
+							onClick={() => setTrendsExpanded((v) => !v)}
+							className="px-3 py-2.5 text-left text-gold text-[13px] font-medium font-sans hover:underline cursor-pointer"
+						>
+							{trendsExpanded ? t("rail.showLess") : t("rail.showMore")}
+						</button>
+					)}
 				</div>
 			</section>
 
 			{/* Suggested for you names always resolve (username fallback). */}
 			<section className="animate-rise" style={{ animationDelay: "300ms" }}>
-				<SectionHead label={t("rail.suggested")} />
+				<SectionHead
+					icon={<UserPlus size={13} weight="duotone" />}
+					label={t("rail.suggested")}
+				/>
 				<div className="flex flex-col">
 					{!isSuggestionsLoaded ? (
 						<div className="flex flex-col gap-4 p-3">
 							{[1, 2, 3].map((i) => (
 								<div key={i} className="flex gap-3">
-									<div className="w-10 h-10 skeleton rounded-full" />
+									<div className="w-10 h-10 skeleton rounded-pill" />
 									<div className="flex-1 space-y-2 py-1">
 										<div className="h-3 skeleton rounded w-24" />
 										<div className="h-2 skeleton rounded w-16" />
@@ -316,54 +306,66 @@ export function RightSidebar() {
 							{t("rail.noSuggestions")}
 						</p>
 					) : (
-						visibleSuggestions.slice(0, 3).map((user) => {
-							const displayName =
-								[user.firstName, user.lastName]
-									.filter(Boolean)
-									.join(" ") || `@${user.username}`;
-							const showHandle = displayName !== `@${user.username}`;
-							return (
-								<div
-									key={user._id}
-									className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-surface transition-colors group"
-								>
-									<Link
-										href={`/profile/${user.username}`}
-										className="flex items-center gap-3 flex-1 min-w-0"
+						visibleSuggestions
+							.slice(0, suggestionsExpanded ? visibleSuggestions.length : 3)
+							.map((user: any) => {
+								const displayName =
+									[user.firstName, user.lastName]
+										.filter(Boolean)
+										.join(" ") || `@${user.username}`;
+								const showHandle = displayName !== `@${user.username}`;
+								return (
+									<div
+										key={user._id}
+										className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-surface transition-colors group"
 									>
-										<div className="relative w-10 h-10 rounded-pill overflow-hidden shrink-0 bg-raised">
-											<SafeAvatar src={user.avatar} />
-										</div>
-										<div className="flex flex-col flex-1 min-w-0">
-											<span className="flex items-center gap-1 min-w-0">
-												<span className="font-semibold text-primary text-sm truncate font-sans">
-													{displayName}
+										<Link
+											href={`/profile/${user.username}`}
+											className="flex items-center gap-3 flex-1 min-w-0"
+										>
+											<div className="relative w-10 h-10 rounded-pill overflow-hidden shrink-0 bg-raised">
+												<SafeAvatar src={user.avatar} />
+											</div>
+											<div className="flex flex-col flex-1 min-w-0">
+												<span className="flex items-center gap-1 min-w-0">
+													<span className="font-semibold text-primary text-sm truncate font-sans">
+														{displayName}
+													</span>
+													<UserBadges
+														isVerified={user.isVerified}
+														badges={user.badges}
+														size={14}
+													/>
 												</span>
-												{(user as any).isVerified && (
-													<span className="shrink-0 flex">
-														<VerifiedIcon
-															size={{ width: "14", height: "14" }}
-														/>
+												{showHandle && (
+													<span className="text-subtle text-[12px] truncate font-sans">
+														@{user.username}
 													</span>
 												)}
-											</span>
-											{showHandle && (
-												<span className="text-subtle text-[12px] truncate font-sans">
-													@{user.username}
-												</span>
-											)}
-										</div>
-									</Link>
-									<button
-										onClick={() => handleFollow(user._id)}
-										className="px-4 h-8 bg-primary text-page text-[13px] font-semibold rounded-pill font-sans hover:bg-muted transition-colors shrink-0 cursor-pointer"
-										type="button"
-									>
-										{t("rail.follow")}
-									</button>
-								</div>
-							);
-						})
+											</div>
+										</Link>
+										<button
+											onClick={() => handleFollow(user._id)}
+											className="px-4 h-8 bg-primary text-page text-[13px] font-semibold rounded-pill font-sans hover:bg-muted transition-colors shrink-0 cursor-pointer"
+											type="button"
+										>
+											{t("rail.follow")}
+										</button>
+									</div>
+								);
+							})
+					)}
+
+					{visibleSuggestions.length > 3 && (
+						<button
+							type="button"
+							onClick={() => setSuggestionsExpanded((v) => !v)}
+							className="px-3 py-2.5 text-left text-gold text-[13px] font-medium font-sans hover:underline cursor-pointer"
+						>
+							{suggestionsExpanded
+								? t("rail.showLess")
+								: t("rail.showMore")}
+						</button>
 					)}
 				</div>
 			</section>

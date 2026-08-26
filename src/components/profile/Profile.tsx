@@ -1,62 +1,101 @@
 "use client";
 
-import { formatTimeAgo } from "@/lib/utils";
-
-import { useState, useEffect } from "react";
-import { PostCard, type PostProps } from "@/components/feed/PostCard";
-import { ProfileSkeleton } from "@/components/skeletons/ProfileSkeleton";
-import { PostSkeleton } from "@/components/feed/PostSkeleton";
-import {
-	getProfileByUsernameAction,
-	followUserAction,
-	unfollowUserAction,
-	blockUserAction,
-	unblockUserAction,
-} from "@/lib/user.actions";
-import ConfirmModal from "@/components/ui/ConfirmModal";
-import { toast } from "sonner";
-import { getUserFeedAction } from "@/lib/feed.actions";
-import { useAtomValue } from "jotai";
-import { userAtom } from "@/store/user.atom";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { startConversationAction } from "@/lib/conversation.actions";
+import { useAtom, useAtomValue } from "jotai";
+import { Grid3x3, Heart, MessageCircle, Plus, Search, Video } from "lucide-react";
+
+import { PostCard, type PostProps } from "@/components/feed/PostCard";
+import { PostSkeleton } from "@/components/feed/PostSkeleton";
+import { ProfileSkeleton } from "@/components/skeletons/ProfileSkeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
+import ConfirmModal from "@/components/ui/ConfirmModal";
+import { useToast } from "@/components/ui/Toast/ToastContext";
 import EditProfileModal from "@/components/profile/EditProfileModal";
 import FollowsModal from "@/components/profile/FollowsModal";
-import VerifiedIcon from "@/assets/icons/VerifiedIcon";
-import { DEFAULT_AVATAR } from "@/const";
-import {
-	ArrowLeft,
-	MapPin,
-	Link as LinkIcon,
-	Calendar,
-	Grid3x3,
-	Heart,
-	Mail,
-	MoreHorizontal,
-	Plus,
-	Search,
-} from "lucide-react";
-import { motion } from "framer-motion";
-import { EmptyState } from "@/components/ui/EmptyState";
-import clsx from "clsx";
-import { useAtom } from "jotai";
-import {
-	profileCacheAtom,
-	userPostsCacheAtom,
-	ProfileData,
-} from "@/store/profileCache";
+import { ProfileHeader } from "@/components/profile/ProfileHeader";
+import { ProfileAbout, type CommunityChip } from "@/components/profile/ProfileAbout";
+import { ProfileTabs, type ProfileTab } from "@/components/profile/ProfileTabs";
+import { ProfileGrid } from "@/components/profile/ProfileGrid";
+import ReportSheet from "@/components/safety/ReportSheet";
 
-interface ProfileProps {
-	username?: string;
+import {
+	blockUserAction,
+	followUserAction,
+	getProfileByUsernameAction,
+	unblockUserAction,
+	unfollowUserAction,
+} from "@/lib/user.actions";
+import { getUserFeedAction } from "@/lib/feed.actions";
+import { getCommunitiesAction } from "@/lib/community.actions";
+import { getUserStoriesAction } from "@/lib/stories.actions";
+import { StoryViewer, type RailEntry } from "@/components/feed/StoryViewer";
+import { startConversationAction } from "@/lib/conversation.actions";
+import { useLiveNow } from "@/hooks/useLiveNow";
+import { formatTimeAgo } from "@/lib/utils";
+import { DEFAULT_AVATAR } from "@/const";
+import { useT } from "@/i18n/client";
+import { userAtom } from "@/store/user.atom";
+import { profileCacheAtom, userPostsCacheAtom } from "@/store/profileCache";
+
+/** Which endpoint backs each tab. Street and Media share one media fetch. */
+const FETCH_FOR: Record<ProfileTab, "posts" | "replies" | "media" | "likes"> = {
+	posts: "posts",
+	replies: "replies",
+	street: "media",
+	media: "media",
+	likes: "likes",
+};
+
+/**
+ * Whether the signed-in user follows this profile.
+ *
+ * The gateway answers this directly now. It used to be derived client-side by
+ * scanning the profile's `followers` array, which meant every profile response
+ * had to carry every follower id — the same payload that was also leaking the
+ * person's email. The array branch stays for your own profile, which still
+ * returns the full document.
+ */
+function readIsFollowing(profile: any, currentUser: any): boolean {
+	if (typeof profile?.isFollowing === "boolean") return profile.isFollowing;
+	if (currentUser && Array.isArray(profile?.followers)) {
+		return profile.followers.includes(currentUser._id);
+	}
+	return false;
 }
 
-export default function Profile({ username }: ProfileProps) {
-	const router = useRouter();
-	const currentUser = useAtomValue(userAtom);
+function mapPost(post: any): PostProps {
+	return {
+		id: post._id,
+		author: {
+			id: post.author?._id || post.author,
+			name:
+				post.author?.firstName && post.author?.lastName
+					? `${post.author.firstName} ${post.author.lastName}`
+					: post.author?.username || "Unknown",
+			username: post.author?.username || "unknown",
+			avatar: post.author?.avatar || DEFAULT_AVATAR,
+			isVerified: post.author?.isVerified || false,
+			badges: post.author?.badges,
+		},
+		content: post.content,
+		mentions: post.mentions,
+		timestamp: formatTimeAgo(post.createdAt),
+		images: post.images,
+		videos: post.videos,
+		stats: post.stats || { replies: 0, reposts: 0, likes: 0 },
+		isLiked: post.isLiked,
+		isBookmarked: post.isBookmarked,
+	};
+}
 
-	// If no username provided, we assume it's "Me" (current user's profile)
-	// But we still track "profileUser" separately to handle the case where
-	// we view our own profile via /profile/[myUsername]
+export default function Profile({ username }: { username?: string }) {
+	const router = useRouter();
+	const t = useT();
+	const { toast } = useToast();
+	const currentUser = useAtomValue(userAtom);
+	const { entries: liveEntries } = useLiveNow();
+
 	const [profileUser, setProfileUser] = useState<any>(null);
 	const [profileCache, setProfileCache] = useAtom(profileCacheAtom);
 	const [userPostsCache, setUserPostsCache] = useAtom(userPostsCacheAtom);
@@ -67,245 +106,330 @@ export default function Profile({ username }: ProfileProps) {
 	const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 	const [isFollowsModalOpen, setIsFollowsModalOpen] = useState(false);
 	const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
-	const [showMoreMenu, setShowMoreMenu] = useState(false);
+	const [isReportOpen, setIsReportOpen] = useState(false);
 	const [followsInitialTab, setFollowsInitialTab] = useState<
 		"followers" | "following"
 	>("followers");
 
-	const [activeTab, setActiveTab] = useState<"posts" | "media" | "likes">(
-		"posts",
-	);
+	const [activeTab, setActiveTab] = useState<ProfileTab>("posts");
 	const [feedPosts, setFeedPosts] = useState<PostProps[]>([]);
 	const [loadingFeed, setLoadingFeed] = useState(false);
+	const [communities, setCommunities] = useState<CommunityChip[]>([]);
+	// The ring on the avatar, and what it opens. Fetched per profile rather
+	// than read off the rail: the rail only carries people you follow.
+	const [storyEntry, setStoryEntry] = useState<RailEntry | null>(null);
+	const [storyOpen, setStoryOpen] = useState(false);
 
-	// Follow state
 	const [isFollowing, setIsFollowing] = useState(false);
 	const [followersCount, setFollowersCount] = useState(0);
 	const [followLoading, setFollowLoading] = useState(false);
 
-	// Determine if we are viewing our own profile
 	const isMe =
 		!username ||
-		(currentUser && profileUser && currentUser.userId === profileUser.userId);
+		Boolean(currentUser && profileUser && currentUser.userId === profileUser.userId);
 
-	// Sync profileUser with currentUser if isMe (after edit)
+	// Keep our own profile in sync with the atom, so an edit lands immediately.
 	useEffect(() => {
 		if (isMe && currentUser) {
-			// If we are on /profile (no username) or /profile/[myUsername],
-			// keep profileUser in sync with currentUser atom (which updates after edit)
 			setProfileUser((prev: any) => ({ ...prev, ...currentUser }));
 		}
 	}, [currentUser, isMe]);
 
-	// Fetch Profile
 	useEffect(() => {
-		const fetchProfile = async () => {
+		// /profile with no username used to read the hydrated atom and stop
+		// there, so your own profile rendered without counts, interests or
+		// block state. Resolve the handle, then fetch like any other profile.
+		const handle = username || currentUser?.username;
+		if (!handle) return;
+
+		let cancelled = false;
+		const run = async () => {
 			setLoadingProfile(true);
 
-			if (!username) {
-				// /profile route -> view current user
-				if (currentUser) {
-					setProfileUser(currentUser);
-					setFollowersCount(currentUser.followersCount || 0);
-				}
-			} else {
-				// Check Cache First
-				if (profileCache[username]) {
-					const cached = profileCache[username];
-					setProfileUser(cached);
-					setFollowersCount(cached.followersCount || 0);
-					if (currentUser && cached.followers) {
-						setIsFollowing(cached.followers.includes(currentUser._id));
-					}
-					setLoadingProfile(false);
-					// return; // Optional: return here to skip fetch completely, or fetch in background
-				}
+			const cached = profileCache[handle];
+			if (cached) {
+				setProfileUser(cached);
+				setFollowersCount(cached.followersCount || 0);
+				setIsFollowing(readIsFollowing(cached, currentUser));
+				setLoadingProfile(false);
+			}
 
-				// /profile/[username] route
-				const result = await getProfileByUsernameAction(username);
-				if (result.success) {
-					setProfileUser(result.data);
-					setProfileCache((prev) => ({
-						...prev,
-						[username]: result.data,
-					}));
-					setFollowersCount(result.data.followersCount || 0);
-					// Check if current user is following
-					if (currentUser && result.data.followers) {
-						setIsFollowing(result.data.followers.includes(currentUser._id));
-					}
-				} else {
-					if (!profileCache[username]) setNotFound(true);
-				}
+			const result = await getProfileByUsernameAction(handle);
+			if (cancelled) return;
+
+			if (result.success) {
+				setProfileUser(result.data);
+				setProfileCache((prev) => ({ ...prev, [handle]: result.data }));
+				setFollowersCount(result.data.followersCount || 0);
+				setIsFollowing(readIsFollowing(result.data, currentUser));
+			} else if (!cached) {
+				setNotFound(true);
 			}
 			setLoadingProfile(false);
 		};
 
-		if (currentUser || username) {
-			fetchProfile();
-		}
-	}, [username, currentUser]);
+		void run();
+		return () => {
+			cancelled = true;
+		};
+	}, [username, currentUser?.username]);
 
-	// Fetch Feed (Only if profile fetching succeeded)
+	// Communities are only shown on your own profile: the gateway's list
+	// carries the viewer's membership, not the profile owner's.
+	useEffect(() => {
+		if (!isMe) {
+			setCommunities([]);
+			return;
+		}
+		let cancelled = false;
+		void getCommunitiesAction().then((res) => {
+			if (cancelled || !res.success) return;
+			setCommunities(
+				(res.communities ?? [])
+					.filter((c: any) => c.joined)
+					.map((c: any) => ({
+						id: String(c.id),
+						name: c.name,
+						slug: c.slug,
+						avatar: c.avatar || undefined,
+					})),
+			);
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, [isMe]);
+
+	useEffect(() => {
+		const handle = profileUser?.username;
+		if (!handle) return;
+		let cancelled = false;
+		void getUserStoriesAction(handle).then((res) => {
+			if (!cancelled) setStoryEntry(res.entry);
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, [profileUser?.username]);
+
 	useEffect(() => {
 		if (!profileUser?.userId) return;
 
-		const fetchFeed = async () => {
-			const cacheKey = `${profileUser.userId}-${activeTab}`;
-			if (userPostsCache[cacheKey]) {
-				setFeedPosts(userPostsCache[cacheKey]);
-				return;
-			}
+		const kind = FETCH_FOR[activeTab];
+		const cacheKey = `${profileUser.userId}-${kind}`;
+		const cached = userPostsCache[cacheKey];
+		if (cached) {
+			setFeedPosts(cached);
+			return;
+		}
 
-			setLoadingFeed(true);
-			const result = await getUserFeedAction(profileUser.userId, activeTab);
-
+		let cancelled = false;
+		setLoadingFeed(true);
+		void getUserFeedAction(profileUser.userId, kind).then((result) => {
+			if (cancelled) return;
 			if (result.success && Array.isArray(result.data)) {
-				const mappedPosts: PostProps[] = result.data.map((post: any) => ({
-					id: post._id,
-					author: {
-						id: post.author._id || post.author,
-						name:
-							post.author.firstName && post.author.lastName
-								? `${post.author.firstName} ${post.author.lastName}`
-								: post.author.username || "Unknown",
-						username: post.author.username || "unknown",
-						avatar: post.author.avatar || DEFAULT_AVATAR,
-						isVerified: post.author.isVerified || false,
-					},
-					content: post.content,
-					timestamp: formatTimeAgo(post.createdAt),
-					images: post.images,
-					videos: post.videos,
-					stats: post.stats || { replies: 0, reposts: 0, likes: 0 },
-					isLiked: post.isLiked,
-					isBookmarked: post.isBookmarked,
-				}));
-				setFeedPosts(mappedPosts);
-				setUserPostsCache((prev) => ({
-					...prev,
-					[cacheKey]: mappedPosts,
-				}));
+				const mapped = result.data.map(mapPost);
+				setFeedPosts(mapped);
+				setUserPostsCache((prev) => ({ ...prev, [cacheKey]: mapped }));
 			} else {
 				setFeedPosts([]);
 			}
 			setLoadingFeed(false);
+		});
+		return () => {
+			cancelled = true;
 		};
-
-		fetchFeed();
 	}, [profileUser?.userId, activeTab]);
 
-	const handleFollowToggle = async () => {
+	// Street and Media split one media fetch: video posts vs everything else.
+	const visiblePosts = useMemo(() => {
+		if (activeTab === "street") return feedPosts.filter((p) => p.videos?.length);
+		if (activeTab === "media") return feedPosts.filter((p) => !p.videos?.length);
+		return feedPosts;
+	}, [feedPosts, activeTab]);
+
+	const handleFollowToggle = useCallback(async () => {
 		if (!profileUser || !currentUser || followLoading) return;
 
-		// Optimistic update
-		const previousIsFollowing = isFollowing;
+		const wasFollowing = isFollowing;
 		const previousCount = followersCount;
-
-		setIsFollowing(!isFollowing);
-		setFollowersCount((prev) => (isFollowing ? prev - 1 : prev + 1));
+		setIsFollowing(!wasFollowing);
+		setFollowersCount((n) => (wasFollowing ? n - 1 : n + 1));
 		setFollowLoading(true);
 
-		try {
-			let res;
-			if (previousIsFollowing) {
-				res = await unfollowUserAction(profileUser._id);
-			} else {
-				res = await followUserAction(profileUser._id);
-			}
+		const res = wasFollowing
+			? await unfollowUserAction(profileUser._id)
+			: await followUserAction(profileUser._id);
 
-			if (!res.success) {
-				// Revert on failure
-				setIsFollowing(previousIsFollowing);
-				setFollowersCount(previousCount);
-				console.error(res.message);
-			} else {
-				// Update Cache on success
-				if (username) {
-					setProfileCache((prev) => {
-						const cached = prev[username];
-						if (!cached) return prev;
-						// Update followers logic in cache if needed, broadly updating count
-						return {
-							...prev,
-							[username]: {
-								...cached,
-								followersCount: isFollowing
-									? previousCount - 1
-									: previousCount + 1,
-								followers: isFollowing
-									? cached.followers?.filter((id) => id !== currentUser._id)
-									: [...(cached.followers || []), currentUser._id],
-							},
-						};
-					});
-				}
-			}
-		} catch (error) {
-			setIsFollowing(previousIsFollowing);
+		if (!res.success) {
+			setIsFollowing(wasFollowing);
 			setFollowersCount(previousCount);
-			console.error(error);
-		} finally {
-			setFollowLoading(false);
+			toast(t("rail.followFailed"), { type: "error" });
+		} else if (username) {
+			setProfileCache((prev) => {
+				const cached = prev[username];
+				if (!cached) return prev;
+				return {
+					...prev,
+					[username]: {
+						...cached,
+						followersCount: wasFollowing ? previousCount - 1 : previousCount + 1,
+						followers: wasFollowing
+							? cached.followers?.filter((id) => id !== currentUser._id)
+							: [...(cached.followers || []), currentUser._id],
+					},
+				};
+			});
 		}
-	};
+		setFollowLoading(false);
+	}, [
+		profileUser,
+		currentUser,
+		followLoading,
+		isFollowing,
+		followersCount,
+		username,
+		setProfileCache,
+		toast,
+		t,
+	]);
 
-	const handleBlockUser = async () => {
-		if (!profileUser?.userId) return;
-		const res = await blockUserAction(profileUser.userId);
+	/**
+	 * Block without leaving the page. The report sheet offers "also block" on
+	 * its confirmation step, and `handleBlock`'s redirect would rip the sheet
+	 * away before the user saw it land.
+	 */
+	const blockInPlace = useCallback(async () => {
+		if (!profileUser?._id) return;
+		const res = await blockUserAction(profileUser._id);
+		if (!res.success) {
+			toast(res.message ?? "Could not block", { type: "error" });
+			return;
+		}
+		toast(t("safety.blocked.toast"));
+		setProfileUser((prev: any) => ({ ...prev, isBlockedByYou: true }));
+		if (username) {
+			setProfileCache((prev) => ({
+				...prev,
+				[username]: { ...prev[username], isBlockedByYou: true },
+			}));
+		}
+	}, [profileUser?._id, username, setProfileCache, toast, t]);
+
+	// `_id`, not `userId` — the gateway resolves both now, but the follow
+	// handler two functions up already passes `_id` and these should agree.
+	const handleBlock = useCallback(async () => {
+		if (!profileUser?._id) return;
+		const res = await blockUserAction(profileUser._id);
 		if (res.success) {
-			toast.success("User blocked");
+			toast(t("safety.blocked.toast"));
 			router.push("/");
 		} else {
-			toast.error(res.message);
+			toast(res.message ?? "Could not block", { type: "error" });
 		}
-	};
+	}, [profileUser?._id, router, toast, t]);
 
-	const handleUnblockUser = async () => {
+	const handleUnblock = useCallback(async () => {
+		if (!profileUser?._id) return;
+		const res = await unblockUserAction(profileUser._id);
+		if (!res.success) {
+			toast(res.message ?? "Could not unblock", { type: "error" });
+			return;
+		}
+		toast(t("safety.unblocked.toast"));
+		setProfileUser((prev: any) => ({ ...prev, isBlockedByYou: false }));
+		if (username) {
+			setProfileCache((prev) => ({
+				...prev,
+				[username]: { ...prev[username], isBlockedByYou: false },
+			}));
+		}
+	}, [profileUser?._id, username, setProfileCache, toast, t]);
+
+	const handleMessage = useCallback(async () => {
 		if (!profileUser?.userId) return;
-		const res = await unblockUserAction(profileUser.userId);
-		if (res.success) {
-			toast.success("User unblocked");
-			// Refresh profile data manually
-			setProfileUser((prev: any) => ({ ...prev, isBlockedByYou: false }));
-			// Also update cache
-			if (username) {
-				setProfileCache((prev) => ({
-					...prev,
-					[username]: { ...prev[username], isBlockedByYou: false },
-				}));
-			}
-		} else {
-			toast.error(res.message);
-		}
-	};
+		const res: any = await startConversationAction(profileUser.userId);
+		const id = res?._id || res?.data?._id;
+		if (id) router.push(`/messages/${id}`);
+		else toast("Could not open the conversation", { type: "error" });
+	}, [profileUser?.userId, router, toast]);
 
-	if (loadingProfile && !profileUser) {
-		return <ProfileSkeleton />;
-	}
+	if (loadingProfile && !profileUser) return <ProfileSkeleton />;
 
 	if (notFound) {
 		return (
-			<div className="flex flex-col justify-center items-center min-h-[60dvh]">
+			<div className="flex min-h-[60dvh] flex-col items-center justify-center">
 				<EmptyState
 					icon={Search}
 					title="This account doesn't exist"
 					caption={`@${username} isn't on WorldStreet Social. Try searching for another account.`}
-					action={{ label: "Go back", onClick: () => router.back() }}
+					action={{ label: t("common.back"), onClick: () => router.back() }}
 				/>
 			</div>
 		);
 	}
 
-	if (!profileUser) return null; // Should ideally show loading or error
+	if (!profileUser) return null;
 
 	const fullName =
 		profileUser.firstName && profileUser.lastName
 			? `${profileUser.firstName} ${profileUser.lastName}`
 			: profileUser.username;
 
+	const isLive = liveEntries.some((e) => e.username === profileUser.username);
+	// The gateway sends this as a boolean now. The array fallback covers the
+	// owner's own payload, which still carries the full document.
+	const followsYou =
+		!isMe &&
+		(typeof profileUser.followsYou === "boolean"
+			? profileUser.followsYou
+			: Boolean(currentUser && profileUser.following?.includes(currentUser._id)));
+
+	const emptyIcon =
+		activeTab === "likes"
+			? Heart
+			: activeTab === "media"
+				? Grid3x3
+				: activeTab === "street"
+					? Video
+					: activeTab === "replies"
+						? MessageCircle
+						: Plus;
+
+	const emptyCaptionKey =
+		activeTab === "likes"
+			? isMe
+				? "profile.empty.likesSelf"
+				: "profile.empty.likesOther"
+			: activeTab === "media"
+				? "profile.empty.media"
+				: activeTab === "street"
+					? isMe
+						? "profile.empty.streetSelf"
+						: "profile.empty.streetOther"
+					: activeTab === "replies"
+						? "profile.empty.replies"
+						: isMe
+							? "profile.empty.postsSelf"
+							: "profile.empty.postsOther";
+
 	return (
-		<div className="flex flex-col min-h-dvh pb-nav md:pb-20">
+		<div className="flex min-h-dvh flex-col pb-nav md:pb-20">
+			{storyOpen && storyEntry && (
+				<StoryViewer
+					entry={storyEntry}
+					onClose={() => {
+						setStoryOpen(false);
+						// Re-read so the ring settles to "seen" without a reload.
+						if (profileUser?.username) {
+							void getUserStoriesAction(profileUser.username).then((res) =>
+								setStoryEntry(res.entry),
+							);
+						}
+					}}
+				/>
+			)}
+
 			{isEditProfileOpen && currentUser && (
 				<EditProfileModal
 					user={currentUser}
@@ -313,71 +437,58 @@ export default function Profile({ username }: ProfileProps) {
 				/>
 			)}
 
-			<header className="sticky top-0 z-sticky bg-page border-b border-hairline px-2 sm:px-4 py-2 flex items-center gap-2 sm:gap-6">
-				<button
-					className="rounded-pill h-11 w-11 sm:h-9 sm:w-9 shrink-0 hover:bg-raised flex items-center justify-center transition-colors cursor-pointer text-primary"
-					type="button"
-					aria-label="Go back"
-					onClick={() => router.back()}
-				>
-					<ArrowLeft className="w-5 h-5" />
-				</button>
-				<div className="flex flex-col min-w-0">
-					<h1 className="text-lg font-bold leading-5 flex items-center gap-1 font-sans text-primary min-w-0">
-						<span className="truncate">{fullName}</span>
-						{profileUser.isVerified && (
-							<span className="shrink-0 flex">
-								<VerifiedIcon />
-							</span>
-						)}
-					</h1>
-					<span className="text-xs text-muted font-sans tabular-nums">
-						{(profileUser.postsCount || 0).toLocaleString("en-NG")}{" "}
-						{profileUser.postsCount === 1 ? "Post" : "Posts"}
-					</span>
-				</div>
-			</header>
+			<ProfileHeader
+				fullName={fullName}
+				username={profileUser.username}
+				isVerified={profileUser.isVerified}
+				badges={profileUser.badges}
+				postsCount={profileUser.postsCount || 0}
+				banner={profileUser.banner}
+				avatar={profileUser.avatar}
+				isLive={isLive}
+				storyState={
+					storyEntry
+						? storyEntry.hasUnseen
+							? "unseen"
+							: "seen"
+						: "none"
+				}
+				onAvatarClick={storyEntry ? () => setStoryOpen(true) : undefined}
+				isMe={isMe}
+				isFollowing={isFollowing}
+				followLoading={followLoading}
+				blockedByYou={profileUser.isBlockedByYou}
+				blockedByThem={profileUser.isBlockedByThem}
+				onBack={() => router.back()}
+				onEdit={() => setIsEditProfileOpen(true)}
+				onFollowToggle={handleFollowToggle}
+				onMessage={handleMessage}
+				onBlock={() => setIsBlockModalOpen(true)}
+				onUnblock={handleUnblock}
+				onReport={() => setIsReportOpen(true)}
+			/>
 
-			{/* Hero Section */}
-			<div className="relative">
-				<div
-					className="relative h-[150px] sm:h-[200px] w-full bg-cover bg-center bg-no-repeat bg-sunken"
-					style={
-						profileUser.banner
-							? { backgroundImage: `url('${profileUser.banner}')` }
-							: undefined
-					}
-				>
-					{/* No banner: quiet sunken band with a faint centered brand
-					    mark — imagery rules ban gradient placeholder surfaces. */}
-					{!profileUser.banner && (
-						<img
-							src="/images/logo.png"
-							alt=""
-							aria-hidden="true"
-							className="absolute left-1/2 top-1/2 w-12 -translate-x-1/2 -translate-y-1/2 opacity-[0.08] pointer-events-none select-none"
-						/>
-					)}
-				</div>
-				<div className="absolute -bottom-[50px] sm:-bottom-[67px] left-4 border-4 border-page rounded-full bg-page">
-					<div
-						className="w-[100px] h-[100px] sm:w-[134px] sm:h-[134px] rounded-full bg-cover bg-center border border-hairline"
-						style={{
-							backgroundImage: `url('${profileUser.avatar || DEFAULT_AVATAR}')`,
-						}}
-					/>
-				</div>
-			</div>
+			{isReportOpen && (
+				<ReportSheet
+					targetType="user"
+					targetId={profileUser._id}
+					subject={`@${profileUser.username}`}
+					canBlock={!profileUser.isBlockedByYou}
+					alreadyBlocked={Boolean(profileUser.isBlockedByYou)}
+					onBlock={blockInPlace}
+					onClose={() => setIsReportOpen(false)}
+				/>
+			)}
 
-			{/* Blocked Status Banners */}
 			{profileUser.isBlockedByYou && (
-				<div className="mx-4 mt-2 p-3 bg-danger/10 border border-danger/20 rounded-xl flex items-center justify-between">
-					<span className="text-danger text-sm font-semibold font-sans">
+				<div className="mx-4 mt-2 flex items-center justify-between rounded-xl border border-danger/20 bg-danger/10 p-3">
+					<span className="font-sans text-sm font-semibold text-danger">
 						You blocked this user.
 					</span>
 					<button
-						onClick={handleUnblockUser}
-						className="text-primary text-xs bg-danger hover:opacity-90 px-3 py-1.5 rounded-md font-semibold transition-colors cursor-pointer"
+						type="button"
+						onClick={handleUnblock}
+						className="cursor-pointer rounded-md bg-danger px-3 py-1.5 font-sans text-xs font-semibold text-page transition-opacity hover:opacity-90"
 					>
 						Unblock
 					</button>
@@ -385,289 +496,67 @@ export default function Profile({ username }: ProfileProps) {
 			)}
 
 			{profileUser.isBlockedByThem && (
-				<div className="mx-4 mt-2 p-3 bg-surface border border-hairline rounded-xl">
-					<span className="text-muted text-sm font-semibold font-sans">
+				<div className="mx-4 mt-2 rounded-xl border border-hairline bg-surface p-3">
+					<span className="font-sans text-sm font-semibold text-muted">
 						You have been blocked by this user.
 					</span>
 				</div>
 			)}
 
-			{/* Profile Actions */}
-			<div className="flex justify-end px-4 py-3 gap-2 mt-2 min-h-[50px]">
-				{!isMe &&
-					!profileUser.isBlockedByThem &&
-					!profileUser.isBlockedByYou && (
-						<button
-							className="h-11 w-11 sm:h-10 sm:w-10 shrink-0 border border-hairline rounded-pill flex items-center justify-center hover:bg-raised transition-colors cursor-pointer"
-							type="button"
-							onClick={async () => {
-								if (!profileUser?.userId) return;
-								// Implement start conversation
-								const res = await startConversationAction(profileUser.userId);
-								if (res.success || res._id) {
-									router.push(`/messages/${res._id || res.data?._id}`);
-								} else {
-									console.error("Failed to start conversation");
-								}
-							}}
-						>
-							<Mail className="w-[18px] h-[18px] text-muted" />
-						</button>
-					)}
-				{!isMe &&
-					!profileUser.isBlockedByThem &&
-					!profileUser.isBlockedByYou && (
-						<div className="relative">
-							<button
-								className="h-11 w-11 sm:h-10 sm:w-10 shrink-0 border border-hairline rounded-pill flex items-center justify-center hover:bg-raised transition-colors cursor-pointer text-primary"
-								type="button"
-								onClick={() => setShowMoreMenu(!showMoreMenu)}
-							>
-								<MoreHorizontal className="w-[18px] h-[18px] text-muted" />
-							</button>
-							{showMoreMenu && (
-								<div className="absolute top-full right-0 mt-2 w-[220px] bg-surface border border-hairline rounded-lg shadow-nav overflow-hidden z-dropdown flex flex-col py-1.5">
-									<button
-										className="w-full text-left px-3.5 py-2.5 text-danger hover:bg-raised text-sm font-medium font-sans transition-colors cursor-pointer"
-										onClick={() => {
-											setShowMoreMenu(false);
-											setIsBlockModalOpen(true);
-										}}
-									>
-										Block @{profileUser.username}
-									</button>
-								</div>
-							)}
-						</div>
-					)}
-				{isMe ? (
-					<button
-						className="border border-hairline text-primary rounded-pill px-5 h-11 sm:h-9 shrink-0 font-semibold hover:bg-raised transition-colors text-sm cursor-pointer font-sans"
-						type="button"
-						onClick={() => setIsEditProfileOpen(true)}
-					>
-						Edit profile
-					</button>
-				) : profileUser.isBlockedByYou ? (
-					<button
-						className="rounded-pill px-5 h-11 sm:h-9 shrink-0 font-semibold transition-colors text-sm cursor-pointer min-w-[100px] font-sans bg-danger text-primary hover:opacity-90"
-						type="button"
-						onClick={handleUnblockUser}
-					>
-						Unblock
-					</button>
-				) : profileUser.isBlockedByThem ? (
-					<button
-						className="rounded-pill px-5 h-11 sm:h-9 shrink-0 font-semibold transition-colors text-sm cursor-not-allowed min-w-[100px] font-sans border border-hairline bg-raised text-subtle"
-						type="button"
-						disabled
-					>
-						Blocked
-					</button>
-				) : (
-					<button
-						className={clsx(
-							"rounded-pill px-5 h-11 sm:h-9 shrink-0 font-semibold transition-colors text-sm cursor-pointer min-w-[100px] font-sans",
-							isFollowing
-								? "border border-hairline bg-transparent text-primary hover:border-danger hover:text-danger"
-								: "bg-primary text-page hover:bg-muted",
-						)}
-						type="button"
-						onClick={handleFollowToggle}
-						disabled={followLoading}
-						onMouseEnter={(e) => {
-							if (isFollowing) e.currentTarget.textContent = "Unfollow";
-						}}
-						onMouseLeave={(e) => {
-							if (isFollowing) e.currentTarget.textContent = "Following";
-						}}
-					>
-						{isFollowing ? "Following" : "Follow"}
-					</button>
-				)}
-			</div>
+			<ProfileAbout
+				fullName={fullName}
+				username={profileUser.username}
+				isVerified={profileUser.isVerified}
+				badges={profileUser.badges}
+				bio={profileUser.bio}
+				location={profileUser.location}
+				website={profileUser.website}
+				createdAt={profileUser.createdAt}
+				interests={profileUser.interests}
+				communities={communities}
+				followsYou={followsYou}
+				followingCount={profileUser.followingCount || 0}
+				followersCount={followersCount}
+				onOpenFollows={(tab) => {
+					setFollowsInitialTab(tab);
+					setIsFollowsModalOpen(true);
+				}}
+				onEditTopics={() => setIsEditProfileOpen(true)}
+				isMe={isMe}
+			/>
 
-			{/* Profile Info */}
-			<div className="px-4 mt-6 flex flex-col gap-3">
-				<div className="min-w-0">
-					<h1 className="font-display text-xl font-semibold leading-6 flex items-center gap-1.5 text-primary min-w-0">
-						<span className="truncate">{fullName}</span>
-						{profileUser.isVerified && (
-							<span className="shrink-0 flex">
-								<VerifiedIcon />
-							</span>
-						)}
-					</h1>
-					<div className="text-sm text-muted font-sans truncate">
-						@{profileUser.username}
-					</div>
-				</div>
+			<FollowsModal
+				isOpen={isFollowsModalOpen}
+				onClose={() => setIsFollowsModalOpen(false)}
+				userId={profileUser.userId || profileUser._id}
+				initialTab={followsInitialTab}
+			/>
 
-				{/* break-words: a long unbroken bio token (a URL, a wallet address)
-				    used to push the whole profile column past the viewport. */}
-				<div className="text-[15px] text-primary leading-relaxed font-sans break-words">
-					{profileUser.bio || (
-						<span className="text-subtle">No bio yet.</span>
-					)}
-				</div>
+			<ConfirmModal
+				isOpen={isBlockModalOpen}
+				onClose={() => setIsBlockModalOpen(false)}
+				onConfirm={handleBlock}
+				title={`Block @${profileUser.username}?`}
+				message="They will not be able to message you or see your posts. This action cannot be easily undone."
+				confirmText="Block"
+				isDestructive
+			/>
 
-				<div className="flex gap-x-4 gap-y-2 text-muted text-[14px] flex-wrap mt-1 font-sans">
-					{profileUser.location && (
-						<div className="flex items-center gap-1">
-							<MapPin className="w-4 h-4" />
-							<span>{profileUser.location}</span>
-						</div>
-					)}
+			<ProfileTabs active={activeTab} onChange={setActiveTab} />
 
-					{profileUser.website && (
-						<div className="flex items-center gap-1">
-							<LinkIcon className="w-4 h-4" />
-							<a
-								href={
-									profileUser.website.startsWith("http")
-										? profileUser.website
-										: `https://${profileUser.website}`
-								}
-								className="text-gold hover:underline break-all"
-								target="_blank"
-								rel="noopener noreferrer"
-							>
-								{profileUser.website.replace(/^https?:\/\//, "")}
-							</a>
-						</div>
-					)}
-
-					<div className="flex items-center gap-1">
-						<Calendar className="w-4 h-4" />
-						<span>
-							Joined{" "}
-							{new Date(profileUser.createdAt || Date.now()).toLocaleDateString(
-								"en-US",
-								{ month: "long", year: "numeric" },
-							)}
-						</span>
-					</div>
-				</div>
-
-				{profileUser && (
-					<FollowsModal
-						isOpen={isFollowsModalOpen}
-						onClose={() => setIsFollowsModalOpen(false)}
-						userId={profileUser.userId || profileUser._id}
-						initialTab={followsInitialTab}
-					/>
-				)}
-
-				<ConfirmModal
-					isOpen={isBlockModalOpen}
-					onClose={() => setIsBlockModalOpen(false)}
-					onConfirm={handleBlockUser}
-					title={`Block @${profileUser.username}?`}
-					message="They will not be able to message you or see your posts. This action cannot be easily undone."
-					confirmText="Block"
-					isDestructive={true}
-				/>
-
-				<div className="flex gap-5 text-[15px] mt-1 font-sans">
-					<button
-						type="button"
-						className="hover:underline cursor-pointer bg-transparent border-none p-0 flex gap-1 items-baseline"
-						onClick={() => {
-							setFollowsInitialTab("following");
-							setIsFollowsModalOpen(true);
-						}}
-					>
-						<span className="font-semibold text-primary tabular-nums">
-							{(profileUser.followingCount || 0).toLocaleString("en-NG")}
-						</span>{" "}
-						<span className="text-muted">Following</span>
-					</button>
-					<button
-						type="button"
-						className="hover:underline cursor-pointer bg-transparent border-none p-0 flex gap-1 items-baseline"
-						onClick={() => {
-							setFollowsInitialTab("followers");
-							setIsFollowsModalOpen(true);
-						}}
-					>
-						<span className="font-semibold text-primary tabular-nums">
-							{followersCount.toLocaleString("en-NG")}
-						</span>{" "}
-						<span className="text-muted">Followers</span>
-					</button>
-				</div>
-			</div>
-
-			{/* Tabs */}
-			<div
-				role="tablist"
-				aria-label="Profile content"
-				className="flex mt-6 border-b border-hairline overflow-x-auto no-scrollbar"
-			>
-				{(["posts", "media", "likes"] as const).map((tab) => (
-					<button
-						key={tab}
-						role="tab"
-						aria-selected={activeTab === tab}
-						onClick={() => setActiveTab(tab)}
-						className={clsx(
-							"flex-1 min-w-fit h-12 flex items-center justify-center hover:bg-raised/40 transition-colors relative cursor-pointer font-sans text-sm capitalize",
-							activeTab === tab
-								? "font-semibold text-primary"
-								: "font-medium text-muted hover:text-primary",
-						)}
-						type="button"
-					>
-						{tab}
-						{activeTab === tab && (
-							<motion.span
-								layoutId="profile-tab-underline"
-								transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-								className="absolute bottom-0 h-0.5 w-14 rounded-pill bg-brand"
-							/>
-						)}
-					</button>
-				))}
-			</div>
-
-			{/* Content Feed */}
-			<div className="flex flex-col min-h-[300px]">
+			<div className="flex min-h-[300px] flex-col">
 				{loadingFeed ? (
-					<div className="flex flex-col">
-						{[...Array(3)].map((_, i) => (
-							<PostSkeleton key={i} />
-						))}
-					</div>
-				) : feedPosts.length > 0 ? (
-					feedPosts.map((post) => <PostCard key={post.id} post={post} />)
+					[0, 1, 2].map((i) => <PostSkeleton key={i} />)
+				) : visiblePosts.length === 0 ? (
+					<EmptyState
+						icon={emptyIcon}
+						title={t(`profile.emptyTitle.${activeTab}`)}
+						caption={t(emptyCaptionKey)}
+					/>
+				) : activeTab === "media" || activeTab === "street" ? (
+					<ProfileGrid posts={visiblePosts} kind={activeTab} />
 				) : (
-					<div className="py-10">
-						<EmptyState
-							icon={
-								activeTab === "likes"
-									? Heart
-									: activeTab === "media"
-										? Grid3x3
-										: Plus
-							}
-							title={
-								activeTab === "likes"
-									? "No likes yet"
-									: activeTab === "media"
-										? "No media yet"
-										: "No posts yet"
-							}
-							caption={
-								isMe
-									? activeTab === "posts"
-										? "Your posts land here. Share what's moving today."
-										: activeTab === "likes"
-											? "Posts you like show up here."
-											: "Posts with photos or video show up here."
-									: `When @${profileUser.username} posts, it shows up here.`
-							}
-						/>
-					</div>
+					visiblePosts.map((post) => <PostCard key={post.id} post={post} />)
 				)}
 			</div>
 		</div>

@@ -40,7 +40,7 @@ const STEPS = [
   {
     key: "welcome",
     title: "Welcome to WorldStreet Social",
-    body: "This is the social side of the WorldStreet ecosystem — share ideas, follow traders and creators, and talk markets with the people trading them.",
+ body: "This is the social side of the WorldStreet ecosystem share ideas, follow traders and creators, and talk markets with the people trading them.",
     hero: (
       <div className="flex flex-col items-center gap-3">
         <Image
@@ -59,7 +59,7 @@ const STEPS = [
   {
     key: "markets",
     title: "Built for market talk",
-    body: "Tag tickers with $cashtags and topics with #hashtags — they link straight to search, so every conversation is one tap from the posts behind it.",
+ body: "Tag tickers with $cashtags and topics with #hashtags they link straight to search, so every conversation is one tap from the posts behind it.",
     hero: (
       <div className="flex flex-col items-center gap-3">
         <span className="flex h-14 w-14 items-center justify-center rounded-lg bg-convert/10">

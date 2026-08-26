@@ -157,7 +157,7 @@ export default function VideoEditor({
       const out = await reencode(source, range, muted, setExportPct, file.name);
       onSave(out);
     } catch {
-      toast("Couldn't process the video — posting the original", {
+ toast("Couldn't process the video posting the original", {
         type: "error",
       });
       onSave(file);
@@ -178,13 +178,13 @@ export default function VideoEditor({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           onClick={exporting ? undefined : onClose}
-          className="absolute inset-0 glass-scrim"
+          className="absolute inset-0 glass-scrim backdrop-blur-xl backdrop-saturate-150"
         />
         <motion.div
           initial={{ opacity: 0, scale: 0.98, y: 8 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-          className="relative w-full max-w-xl glass-panel overflow-hidden flex flex-col max-h-[90dvh] glass-ink"
+          className="relative w-full max-w-xl glass-panel backdrop-blur-2xl backdrop-saturate-150 overflow-hidden flex flex-col max-h-[90dvh] glass-ink"
           role="dialog"
           aria-modal="true"
           aria-label={title}
@@ -197,7 +197,7 @@ export default function VideoEditor({
                 onClick={onClose}
                 disabled={exporting}
                 aria-label="Discard edits"
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill glass-chip transition-colors cursor-pointer disabled:opacity-40"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill glass-chip backdrop-blur-md backdrop-saturate-150 transition-colors cursor-pointer disabled:opacity-40"
               >
                 <X size={17} weight="bold" />
               </button>
@@ -252,7 +252,7 @@ export default function VideoEditor({
               type="button"
               onClick={togglePlay}
               aria-label={playing ? "Pause" : "Play"}
-              className="absolute bottom-3 left-3 flex h-11 w-11 items-center justify-center rounded-pill glass-chip cursor-pointer"
+              className="absolute bottom-3 left-3 flex h-11 w-11 items-center justify-center rounded-pill glass-chip backdrop-blur-md backdrop-saturate-150 cursor-pointer"
             >
               {playing ? (
                 <Pause size={18} weight="fill" />
@@ -268,7 +268,7 @@ export default function VideoEditor({
               aria-pressed={muted}
               className={clsx(
                 "absolute bottom-3 right-3 flex h-11 w-11 items-center justify-center rounded-pill cursor-pointer disabled:opacity-40",
-                muted ? "glass-chip-active" : "glass-chip",
+                muted ? "glass-chip-active" : "glass-chip backdrop-blur-md backdrop-saturate-150",
               )}
             >
               {muted ? (

@@ -13,6 +13,7 @@
 // Events queue locally and flush in batches so telemetry costs the UI nothing.
 
 import { sendEventsAction } from "@/lib/telemetry.actions";
+import { detectCountry } from "@/lib/tz-country";
 
 export type Surface =
 	| "feed_foryou"
@@ -36,6 +37,8 @@ export interface TelemetryEvent {
 	meta?: Record<string, unknown>;
 	sessionId?: string;
 	clientTs?: number;
+	/** ISO country, timezone-derived; the gateway prefers edge geo headers. */
+	country?: string;
 }
 
 const FLUSH_INTERVAL_MS = 5_000;
@@ -91,6 +94,10 @@ function bindLifecycleFlush() {
 }
 
 export function track(event: TelemetryEvent) {
+	if (!event.country) {
+		const c = detectCountry();
+		if (c) event.country = c;
+	}
 	if (typeof window === "undefined") return;
 	bindLifecycleFlush();
 	queue.push({ ...event, sessionId: sessionId(), clientTs: Date.now() });

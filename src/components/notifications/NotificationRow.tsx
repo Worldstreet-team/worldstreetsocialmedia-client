@@ -1,0 +1,207 @@
+"use client";
+
+import Link from "next/link";
+import Image from "next/image";
+import clsx from "clsx";
+import {
+  At,
+  Broadcast,
+  ChatCircle,
+  Heart,
+  Repeat,
+  UserPlus,
+  type Icon,
+} from "@phosphor-icons/react";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import { UserBadges } from "@/components/ui/UserBadges";
+import { renderRichText } from "@/components/ui/RichText";
+import { formatTimeAgo } from "@/lib/utils";
+import { useT } from "@/i18n/client";
+import { senderName, type NotificationGroup, type NotificationType } from "./types";
+
+/**
+ * The type chip: a coloured wash behind a filled glyph, pinned to the avatar.
+ * Colours follow the app-wide notification map (like = danger, follow =
+ * primary, reply = muted, repost = success, mention = gold, live = danger).
+ */
+const CHIP: Record<NotificationType, { classes: string; glyph: Icon; weight: "fill" | "bold" }> = {
+  like: { classes: "bg-danger/15 text-danger", glyph: Heart, weight: "fill" },
+  repost: { classes: "bg-success/15 text-success", glyph: Repeat, weight: "bold" },
+  reply: { classes: "bg-raised text-muted", glyph: ChatCircle, weight: "fill" },
+  follow: { classes: "bg-primary/12 text-primary", glyph: UserPlus, weight: "fill" },
+  mention: { classes: "bg-brand/15 text-gold", glyph: At, weight: "bold" },
+  live: { classes: "bg-danger/15 text-danger", glyph: Broadcast, weight: "fill" },
+};
+
+/** Two lines of an excerpt, without relying on a line-clamp plugin. */
+const CLAMP_2 =
+  "[display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden";
+const CLAMP_1 =
+  "[display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:1] overflow-hidden";
+
+export function NotificationRow({
+  group,
+  unread,
+  isLive,
+  onOpen,
+  onFollowBack,
+  followed,
+  delay,
+}: {
+  group: NotificationGroup;
+  unread: boolean;
+  /** Only true while the stream is actually running. */
+  isLive?: boolean;
+  onOpen: (group: NotificationGroup) => void;
+  onFollowBack: (userId: string) => void;
+  followed: boolean;
+  delay: number;
+}) {
+  const t = useT();
+  const { type, senders, post } = group;
+  const chip = CHIP[type];
+  const Glyph = chip.glyph;
+  const lead = senders[0];
+
+  const href =
+    type === "follow"
+      ? lead.username
+        ? `/profile/${lead.username}`
+        : "#"
+      : post?._id
+        ? `/post/${post._id}`
+        : "#";
+
+  const others = senders.length - 1;
+  const excerpt = post?.content;
+  const thumb = post?.images?.[0];
+
+  return (
+    <Link
+      href={href}
+      onClick={() => onOpen(group)}
+      style={{ animationDelay: `${delay}ms` }}
+      className={clsx(
+        "animate-rise relative flex gap-3 border-b border-hairline px-4 py-3.5 transition-colors hover:bg-surface/60",
+        unread && "bg-surface/40",
+      )}
+    >
+      {unread && (
+        <span
+          aria-hidden
+          className="absolute bottom-0 left-0 top-0 w-[3px] rounded-pill bg-brand"
+        />
+      )}
+
+      {/* 40x40 cluster: avatar (or a pile, when grouped) plus the type chip. */}
+      <span className="relative h-10 w-10 shrink-0">
+        {senders.length > 1 ? (
+          senders
+            .slice(0, 3)
+            .reverse()
+            .map((s, i) => (
+              <span
+                key={s.userId}
+                className="absolute h-8 w-8 overflow-hidden rounded-pill bg-raised ring-2 ring-page"
+                // Intra-row stacking only, far below the z-sticky floor.
+                style={{ left: i * 6, top: i * 3, zIndex: i }}
+              >
+                <SafeAvatar src={s.avatar} />
+              </span>
+            ))
+        ) : (
+          <span className="relative block h-10 w-10 overflow-hidden rounded-pill bg-raised">
+            <SafeAvatar src={lead.avatar} />
+          </span>
+        )}
+        <span
+          className={clsx(
+            "absolute -bottom-0.5 -right-0.5 z-[3] flex h-[18px] w-[18px] items-center justify-center rounded-pill ring-2 ring-page",
+            chip.classes,
+          )}
+        >
+          <Glyph size={10} weight={chip.weight} />
+        </span>
+      </span>
+
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="font-sans text-[14.5px] leading-snug text-primary">
+          <span className="font-semibold">{senderName(lead)}</span>
+          {lead.isVerified && (
+            <span className="mx-0.5 inline-flex translate-y-[1px]">
+              <UserBadges isVerified badges={lead.badges} size={12} />
+            </span>
+          )}
+          {others > 0 && (
+            <span className="text-primary">
+              {" "}
+              {others === 1
+                ? t("notif.others.one")
+                : t("notif.others.many").replace("{n}", String(others))}
+            </span>
+          )}
+          <span className="text-muted"> {t(`notif.verb.${type}`)}</span>
+          <span className="text-subtle"> · {formatTimeAgo(group.createdAt)}</span>
+        </span>
+
+        {excerpt && (
+          <span
+            className={clsx(
+              "font-sans leading-snug text-muted",
+              type === "like" || type === "repost"
+                ? `text-[13px] ${CLAMP_1}`
+                : `text-[13.5px] ${CLAMP_2}`,
+            )}
+          >
+            {type === "mention" ? renderRichText(excerpt) : excerpt}
+          </span>
+        )}
+
+        {type === "live" && isLive && (
+          <span className="mt-1 flex h-5 w-fit items-center gap-1 rounded-pill bg-danger px-2 font-sans text-[10px] font-bold tracking-wide text-white">
+            <span className="h-1 w-1 animate-pulse rounded-pill bg-white" />
+            {t("live.badge")}
+          </span>
+        )}
+
+        {type === "follow" && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onFollowBack(lead.userId);
+            }}
+            disabled={followed}
+            className={clsx(
+              "mt-1.5 h-8 w-fit shrink-0 rounded-pill px-3.5 font-sans text-[12px] font-semibold transition-colors",
+              followed
+                ? "cursor-default bg-raised text-muted"
+                : "cursor-pointer bg-primary text-page hover:bg-muted",
+            )}
+          >
+            {followed ? t("community.joined") : t("notif.followBack")}
+          </button>
+        )}
+      </span>
+
+      {thumb && (
+        <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-raised">
+          <Image src={thumb} alt="" fill sizes="44px" className="object-cover" />
+        </span>
+      )}
+    </Link>
+  );
+}
+
+export function NotificationRowSkeleton() {
+  return (
+    <div className="flex gap-3 border-b border-hairline px-4 py-3.5">
+      <div className="skeleton h-10 w-10 shrink-0 rounded-pill" />
+      <div className="flex-1">
+        <div className="skeleton mb-1.5 h-3.5 w-2/3 rounded-sm" />
+        <div className="skeleton h-3 w-2/5 rounded-sm" />
+      </div>
+    </div>
+  );
+}
