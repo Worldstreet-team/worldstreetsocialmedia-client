@@ -23,6 +23,7 @@ import { unreadMessagesCountAtom } from "@/store/messageCache";
 import { unreadNotificationsCountAtom } from "@/store/ui.atom";
 import { handleSignOut } from "@/lib/utils";
 import { withThemeTransition } from "@/lib/theme-transition";
+import { LanguageMenu } from "@/components/ui/LanguageMenu";
 import { useT } from "@/i18n/client";
 
 /* Every WorldStreet product, spelled out — the Products section expands
@@ -32,11 +33,11 @@ import { useT } from "@/i18n/client";
 
    Names, order and destinations mirror the hub's address book
    (Worldstreet/components/landing/platform-links.ts) so the ecosystem
-   reads the same everywhere — keep this list in step with it. Notably
+   reads the same everywhere keep this list in step with it. Notably
    there is NO Wallet platform: the wallet is a feature inside the
    dashboard, not a subdomain. Forex and Crypto are two products that
    share one trading desk, which is why both point at /trade. The hub's
-   "Community" entry is deliberately omitted here — this app already has
+ "Community" entry is deliberately omitted here this app already has
    its own Communities section in the nav above. */
 const ECOSYSTEM = [
 	{ title: "Forex Markets", href: "https://dashboard.worldstreetgold.com/trade" },
@@ -72,6 +73,7 @@ export function LeftSidebar() {
 	const router = useRouter();
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [productsOpen, setProductsOpen] = useState(false);
+	const [langOpen, setLangOpen] = useState(false);
 	const menuRef = useRef<HTMLDivElement>(null);
 
 	// Theme is only knowable client-side; render the toggle after mount so
@@ -87,6 +89,7 @@ export function LeftSidebar() {
 				setMenuOpen(false);
 			}
 		};
+		if (!menuOpen) setLangOpen(false);
 		if (menuOpen) document.addEventListener("mousedown", handleClickOutside);
 		return () =>
 			document.removeEventListener("mousedown", handleClickOutside);
@@ -163,7 +166,7 @@ export function LeftSidebar() {
 				<Eyebrow>{t("nav.you")}</Eyebrow>
 				{youNav.map((item, i) => renderItem(item, i, 240))}
 
-				{/* Products — expands inline so the ecosystem is one glance away. */}
+				{/* Products expands inline so the ecosystem is one glance away. */}
 				<div className="animate-rise" style={{ animationDelay: "300ms" }}>
 					<button
 						type="button"
@@ -200,7 +203,7 @@ export function LeftSidebar() {
 						<div className="overflow-hidden">
 							{/* No rail/divider: the rows are indented to sit under the
 							    parent's label, which is enough to read as nested. The
-							    arrow is absolutely placed so it costs no row width —
+							    arrow is absolutely placed so it costs no row width 
 							    "Cryptocurrencies" needs every pixel in this rail. */}
 							<div className="flex flex-col py-0.5 pl-3">
 								{ECOSYSTEM.map((app) => (
@@ -294,6 +297,10 @@ export function LeftSidebar() {
 								)}
 								{mounted && isLight ? t("nav.darkMode") : t("nav.lightMode")}
 							</button>
+							<LanguageMenu
+								expanded={langOpen}
+								onToggle={() => setLangOpen((v) => !v)}
+							/>
 							<div className="my-1 border-t border-hairline" />
 							<button
 								type="button"

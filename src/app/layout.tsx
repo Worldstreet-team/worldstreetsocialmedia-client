@@ -20,6 +20,8 @@ import { MobileBottomNav } from "@/components/MobileBottomNav";
 import GlobalMessageListener from "@/components/providers/GlobalMessageListener";
 import { CommandPalette } from "@/components/ui/CommandPalette";
 import { WelcomeTour } from "@/components/ui/WelcomeTour";
+import { CreateFab } from "@/components/ui/CreateFab";
+import { LiveDock } from "@/components/live/LiveDock";
 import { NotificationCountSync } from "@/components/providers/NotificationCountSync";
 
 import { Poppins, Public_Sans } from "next/font/google";
@@ -55,7 +57,7 @@ export const metadata: Metadata = {
         template: "%s · WorldStreet Social",
     },
     description:
-        "WorldStreet Social — share ideas, follow traders and creators, and talk markets across the WorldStreet ecosystem.",
+ "WorldStreet Social share ideas, follow traders and creators, and talk markets across the WorldStreet ecosystem.",
 };
 
 export default async function RootLayout({
@@ -80,7 +82,7 @@ export default async function RootLayout({
                 },
             }}
         >
-            <html lang="en" data-ws-theme="platform" suppressHydrationWarning>
+            <html lang={locale} data-ws-theme="platform" suppressHydrationWarning>
                 <body
                     className={`${publicSans.variable} ${poppins.variable} antialiased`}
                 >
@@ -118,6 +120,8 @@ export default async function RootLayout({
                                         <NotificationCountSync />
                                         <CommandPalette />
                                         <WelcomeTour />
+                                        <CreateFab />
+                                        <LiveDock />
                                         {children}
                                         <MobileBottomNav />
                                     </ToastProvider>

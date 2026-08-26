@@ -12,6 +12,7 @@ import Link from "next/link";
 import { sidebarList } from "@/data/sidebar";
 import clsx from "clsx";
 import { handleSignOut } from "@/lib/utils";
+import { LanguageMenu } from "@/components/ui/LanguageMenu";
 import { DEFAULT_AVATAR } from "@/const";
 
 import { unreadMessagesCountAtom } from "@/store/messageCache";
@@ -24,6 +25,7 @@ export function MobileNavigation() {
 	const { signOut } = useClerk();
 	const pathname = usePathname();
 	const [isOpen, setIsOpen] = useState(false);
+	const [langOpen, setLangOpen] = useState(false);
 
 	// Close sidebar on route change
 	useEffect(() => {
@@ -54,7 +56,7 @@ export function MobileNavigation() {
 			{/* Mobile Header */}
 			<header className="fixed top-0 left-0 right-0 h-14 bg-page border-b border-hairline flex items-center justify-between px-2 z-sticky md:hidden">
 				<div className="flex items-center gap-3">
-					{/* 44x44 target around a 32px avatar — the glyph stays small,
+					{/* 44x44 target around a 32px avatar the glyph stays small,
 					    the tappable box doesn't. */}
 					<button
 						type="button"
@@ -190,6 +192,12 @@ export function MobileNavigation() {
 
 							{/* Footer Actions */}
 							<div className="p-4 border-t border-hairline">
+								<div className="pb-1">
+									<LanguageMenu
+										expanded={langOpen}
+										onToggle={() => setLangOpen((v) => !v)}
+									/>
+								</div>
 								<button
 									onClick={() => handleSignOut(signOut)}
 									className="w-full flex items-center gap-3 px-4 py-3 text-danger hover:bg-surface rounded-pill transition-colors font-sans font-bold text-sm cursor-pointer"

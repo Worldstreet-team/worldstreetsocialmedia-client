@@ -251,5 +251,6 @@
   "liveNow.emptyCaption": "Live streams will show up here.",
   "watch.waiting": "Connecting to the stream",
   "watch.ended": "This stream has ended",
-  "watch.browse": "Browse live streams"
+  "watch.browse": "Browse live streams",
+  "nav.language": "Language"
 }
