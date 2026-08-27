@@ -159,7 +159,6 @@ function SpaceRow({ space, live }: { space: Space; live: boolean }) {
 	);
 }
 
-
 /**
  * Space Voice in the right rail: live audio rooms first, then what's
  * scheduled next. Sits directly under Live now so everything happening

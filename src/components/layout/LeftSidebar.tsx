@@ -34,6 +34,7 @@ import { premiumOpenAtom } from "@/store/ui.atom";
 import { BrandRitual } from "@/components/layout/BrandRitual";
 import { LanguageMenu } from "@/components/ui/LanguageMenu";
 import { useT } from "@/i18n/client";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 /* Every WorldStreet product, spelled out — the Products section expands
    inline (no popover), so the ecosystem is discoverable, not hidden.
@@ -334,12 +335,7 @@ export function LeftSidebar() {
 						className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-surface transition-colors text-left group cursor-pointer"
 					>
 						<div className="relative w-10 h-10 rounded-pill overflow-hidden border border-hairline shrink-0">
-							<Image
-								src={user.avatar}
-								alt={user.username || "User"}
-								fill
-								className="object-cover"
-							/>
+							<SafeAvatar src={user.avatar} className="object-cover" alt={user.username || "User"} />
 						</div>
 						<div className="flex flex-col flex-1 min-w-0">
 							<span className="flex items-center gap-1 min-w-0">

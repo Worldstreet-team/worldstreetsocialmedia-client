@@ -152,11 +152,24 @@ function userDataHeader(profile: unknown): string {
 		// pages, server actions, prefetches — adding ~0.5-1s each. A profile
 		// changes rarely; cache it per user for a short window and skip the
 		// trip entirely. Onboarding paths always re-check (fresh accounts).
+		//
+		// A profile edit has to beat this cache immediately. Server actions run
+		// in a different runtime and cannot reach this Map, so
+		// `updateMyProfileAction` drops a `profile_stale` cookie and we treat it
+		// as a one-shot bust: skip the cache, refetch, clear the flag. Without
+		// it the next navigation re-hydrates the client atom from a stale header
+		// and the avatar someone just changed silently reverts to the old one
+		// for up to the TTL — which is exactly what it looked like when a new
+		// profile picture "did not save".
+		const profileStale = req.cookies.get("profile_stale")?.value === "1";
+		if (profileStale) profileCache.delete(userId);
+
 		const cached = profileCache.get(userId);
 		if (
 			cached &&
 			Date.now() - cached.at < PROFILE_CACHE_TTL_MS &&
-			!isOnboardingPath
+			!isOnboardingPath &&
+			!profileStale
 		) {
 			requestHeaders.set("x-user-data", userDataHeader(cached.profile));
 			const response = respond();
@@ -189,7 +202,18 @@ function userDataHeader(profile: unknown): string {
 		// 2. Prevent users who ALREADY have a profile from re-onboarding.
 		// Decided from the sync result, not the cookie — a cleared cookie must
 		// not reopen onboarding for an existing profile.
-		if (isOnboardingPath && userExistsInDb?.profile) {
+		//
+		// `?preview=1` opens it anyway, in DEVELOPMENT ONLY. Working on this
+		// flow otherwise means having an account that has not completed it, and
+		// the alternative — flipping `onboardingCompleted` on a real profile —
+		// writes to the shared database, so it would push that person into
+		// onboarding in production too. The NODE_ENV guard is the whole point:
+		// this can never reopen onboarding on a deployed build.
+		const previewOnboarding =
+			process.env.NODE_ENV !== "production" &&
+			req.nextUrl.searchParams.get("preview") === "1";
+
+		if (isOnboardingPath && userExistsInDb?.profile && !previewOnboarding) {
 			return NextResponse.redirect(new URL(withLocale("/") || "/", req.url));
 		}
 
@@ -206,6 +230,8 @@ function userDataHeader(profile: unknown): string {
 			path: "/",
 			httpOnly: false,
 		});
+		// The refetch above is the fresh copy the flag was asking for.
+		if (profileStale) response.cookies.delete("profile_stale");
 		return response;
 	}
 

@@ -15,7 +15,6 @@ import {
 	Sun,
 	X,
 } from "@phosphor-icons/react";
-import Image from "next/image";
 import Link from "next/link";
 import { sidebarList } from "@/data/sidebar";
 import clsx from "clsx";
@@ -24,12 +23,12 @@ import { handleSignOut } from "@/lib/utils";
 import { withThemeTransition } from "@/lib/theme-transition";
 import { LanguageMenu } from "@/components/ui/LanguageMenu";
 import { useT } from "@/i18n/client";
-import { DEFAULT_AVATAR } from "@/const";
 
 import { BrandRitual } from "@/components/layout/BrandRitual";
 import { FeedHeaderActions } from "@/components/feed/FeedHeaderActions";
 import { unreadMessagesCountAtom } from "@/store/messageCache";
 import { badgeForNavKey, commandPaletteOpenAtom, unreadNotificationsCountAtom } from "@/store/ui.atom";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 export function MobileNavigation() {
 	const t = useT();
@@ -89,12 +88,7 @@ export function MobileNavigation() {
 						className="flex h-11 w-11 shrink-0 items-center justify-center rounded-pill active:bg-raised transition-colors"
 					>
 						<span className="relative block w-8 h-8 rounded-full overflow-hidden border border-hairline">
-							<Image
-								src={user.avatar || DEFAULT_AVATAR}
-								alt={user.username || "User"}
-								fill
-								className="object-cover"
-							/>
+							<SafeAvatar src={user.avatar} className="object-cover" alt={user.username || "User"} />
 						</span>
 					</button>
 
@@ -151,12 +145,7 @@ export function MobileNavigation() {
 				<div className="p-4 border-b border-hairline flex items-center justify-between gap-2">
 					<div className="flex items-center gap-3 min-w-0">
 						<div className="relative w-10 h-10 shrink-0 rounded-full overflow-hidden border border-hairline">
-							<Image
-								src={user.avatar || DEFAULT_AVATAR}
-								alt={user.username || "User"}
-								fill
-								className="object-cover"
-							/>
+							<SafeAvatar src={user.avatar} className="object-cover" alt={user.username || "User"} />
 						</div>
 						<div className="flex flex-col min-w-0">
 							<span className="font-bold text-primary text-sm truncate font-sans">

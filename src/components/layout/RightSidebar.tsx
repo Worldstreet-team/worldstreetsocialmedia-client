@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { getWhoToFollowAction, followUserAction } from "@/lib/user.actions";
 import { useLiveNow } from "@/hooks/useLiveNow";
 import Link from "next/link";
-import Image from "next/image";
 import { Aperture, Broadcast, Fire, MagnifyingGlass, UserPlus } from "@phosphor-icons/react";
 import { PromoBanners } from "@/components/feed/PromoBanners";
 import { SidebarWallet } from "@/components/layout/SidebarWallet";
@@ -21,7 +20,7 @@ import {
 import { trendsAtom, trendsLoadedAtom } from "@/store/trends.atom";
 import { followingIdsAtom, searchOpenAtom } from "@/store/ui.atom";
 import { getExploreDataAction } from "@/lib/post.actions";
-import { DEFAULT_AVATAR, XSTREAM_WEB_URL } from "@/const";
+import { XSTREAM_WEB_URL } from "@/const";
 import { useT } from "@/i18n/client";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";

@@ -1,16 +1,16 @@
 "use client";
 
-import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Download, Send, Volume2, VolumeX, X } from "lucide-react";
-import { DEFAULT_AVATAR } from "@/const";
+
 import { replyToStoryAction, viewStoryAction } from "@/lib/stories.actions";
 import { StoryPaywall } from "@/components/feed/StoryPaywall";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { useAtomValue } from "jotai";
 import { userAtom } from "@/store/user.atom";
 import { useT } from "@/i18n/client";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 export interface RailStory {
 	id: string;
@@ -264,12 +264,7 @@ export function StoryViewer({
 					{/* header */}
 					<div className="absolute top-5 inset-x-0 z-20 flex items-center gap-2.5 px-3">
 						<div className="relative w-9 h-9 rounded-pill overflow-hidden shrink-0">
-							<Image
-								src={entry.author.avatar || DEFAULT_AVATAR}
-								alt={entry.author.username}
-								fill
-								className="object-cover"
-							/>
+							<SafeAvatar src={entry.author.avatar} className="object-cover" alt={entry.author.username} />
 						</div>
 						<span className="flex min-w-0 flex-col leading-tight">
 							<span className="truncate font-sans text-[14px] font-semibold text-white">

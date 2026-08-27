@@ -76,6 +76,7 @@ import { autoTranslateAtom, translationsAtom } from "@/store/translate.atom";
 import { TranslatePanel } from "@/components/ui/TranslatePanel";
 import ReportSheet from "@/components/safety/ReportSheet";
 import { blockUserAction } from "@/lib/user.actions";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 /**
  * Does this post have anything to show?
@@ -703,12 +704,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                         href={`/profile/${post.author.username}`}
                         className="relative block w-[42px] h-[42px] rounded-pill overflow-hidden border border-hairline hover:border-brand transition-colors"
                     >
-                        <Image
-                            src={post.author.avatar}
-                            alt={post.author.username}
-                            fill
-                            className="object-cover"
-                        />
+                        <SafeAvatar src={post.author.avatar} className="object-cover" alt={post.author.username} />
                     </Link>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -1172,12 +1168,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                         >
                             <span className="flex items-center gap-2 mb-1 min-w-0">
                                 <span className="relative w-5 h-5 rounded-pill overflow-hidden shrink-0 bg-raised">
-                                    <Image
-                                        src={post.repostOf.avatar}
-                                        alt=""
-                                        fill
-                                        className="object-cover"
-                                    />
+                                    <SafeAvatar src={post.repostOf.avatar} className="object-cover" />
                                 </span>
                                 <span className="text-[13px] font-semibold text-primary font-sans truncate">
                                     {post.repostOf.authorName}

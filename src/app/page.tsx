@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { currentUser } from "@clerk/nextjs/server";
 import Feed from "@/components/feed/Feed";
 import { StoriesRail } from "@/components/feed/StoriesRail";

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Calendar, Link as LinkIcon, MapPin } from "lucide-react";
 import { renderRichText } from "@/components/ui/RichText";
 import {
@@ -11,6 +10,7 @@ import {
 } from "@/components/ui/UserBadges";
 import { resolveCategories } from "@/lib/categories";
 import { useT } from "@/i18n/client";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 export interface CommunityChip {
   id: string;
@@ -209,7 +209,7 @@ export function ProfileAbout({
               >
                 <span className="relative h-6 w-6 shrink-0 overflow-hidden rounded-pill bg-page">
                   {c.avatar ? (
-                    <Image src={c.avatar} alt="" fill sizes="24px" className="object-cover" />
+                    <SafeAvatar src={c.avatar} className="object-cover" sizes="24px" />
                   ) : (
                     <span className="flex h-full w-full items-center justify-center font-display text-[11px] font-semibold text-gold">
                       {c.name.charAt(0).toUpperCase()}

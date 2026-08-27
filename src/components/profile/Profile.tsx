@@ -96,7 +96,6 @@ function readIsFollowing(profile: any, currentUser: any): boolean {
 	return false;
 }
 
-
 export default function Profile({ username }: { username?: string }) {
 	const router = useRouter();
 	const t = useT();

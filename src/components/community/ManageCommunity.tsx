@@ -10,7 +10,6 @@ import {
   X,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import ConfirmModal from "@/components/ui/ConfirmModal";
@@ -271,13 +270,7 @@ function EditCommunitySheet({
             className="group relative h-16 w-16 shrink-0 cursor-pointer overflow-hidden rounded-xl bg-raised"
           >
             {avatarPreview || community.avatar ? (
-              <Image
-                src={avatarPreview ?? community.avatar ?? ""}
-                alt=""
-                fill
-                sizes="64px"
-                className="object-cover"
-              />
+              <SafeAvatar src={avatarPreview ?? community.avatar} className="object-cover" sizes="64px" />
             ) : (
               <span className="flex h-full w-full items-center justify-center font-display text-2xl font-semibold text-gold">
                 {community.name.charAt(0).toUpperCase()}

@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import clsx from "clsx";
-import { DEFAULT_AVATAR } from "@/const";
+
 import { searchUsersAction } from "@/lib/user.actions";
 import { getSubscriptionAction } from "@/lib/subscription.actions";
 import { premiumOpenAtom } from "@/store/ui.atom";
 import { useSetAtom } from "jotai";
 import { Lock } from "lucide-react";
 import { UserBadges } from "@/components/ui/UserBadges";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 /**
  * Whether the viewer may summon @vivid, fetched once per app session. The
@@ -187,12 +187,7 @@ export function MentionAutocomplete({
 							)}
 						>
 							<span className="relative h-8 w-8 rounded-pill overflow-hidden bg-white/10 shrink-0 ring-1 ring-white/15">
-								<Image
-									src={u.avatar || DEFAULT_AVATAR}
-									alt=""
-									fill
-									className="object-cover"
-								/>
+								<SafeAvatar src={u.avatar} className="object-cover" />
 							</span>
 							<span className="min-w-0 flex-1">
 								<span className="flex items-center gap-1 min-w-0">

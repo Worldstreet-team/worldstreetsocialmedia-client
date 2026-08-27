@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useT } from "@/i18n/client";
 import { ExploreSection, SectionLink } from "./ExploreSection";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 export interface CommunityRow {
   id: string;
@@ -54,7 +54,7 @@ export function CommunityStrip({
                   className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-raised"
                 >
                   {row.avatar ? (
-                    <Image src={row.avatar} alt="" fill className="object-cover" />
+                    <SafeAvatar src={row.avatar} className="object-cover" />
                   ) : (
                     <span className="flex h-full w-full items-center justify-center font-display text-[17px] font-semibold text-gold">
                       {row.name.charAt(0).toUpperCase()}

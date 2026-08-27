@@ -3,7 +3,6 @@
 import type { ProfileBadge } from "@/components/ui/UserBadges";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
@@ -53,7 +52,6 @@ interface CommunityDetail {
 		avatar?: string;
 	}[];
 }
-
 
 /**
  * A community as a place: header, membership, and its own timeline.
@@ -249,13 +247,7 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 						<div className="flex gap-4">
 							<div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-raised">
 								{community.avatar ? (
-									<Image
-										src={community.avatar}
-										alt=""
-										fill
-										sizes="64px"
-										className="object-cover"
-									/>
+									<SafeAvatar src={community.avatar} className="object-cover" sizes="64px" />
 								) : (
 									<span className="flex h-full w-full items-center justify-center font-display text-2xl font-semibold text-gold">
 										{community.name.charAt(0).toUpperCase()}

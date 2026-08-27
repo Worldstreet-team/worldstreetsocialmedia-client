@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { VideoPlayer } from "@/components/ui/VideoPlayer";
-import Image from "next/image";
 import {
 	Search,
 	Send,
@@ -908,13 +907,7 @@ export const MessageBox = ({
 							>
 								<ArrowLeft className="w-5 h-5" />
 							</button>
-							<Image
-								src={activeConversation.otherParticipant.avatar}
-								alt="avatar"
-								width={40}
-								height={40}
-								className="rounded-full shrink-0 w-10 h-10 object-cover"
-							/>
+							<SafeAvatar src={activeConversation.otherParticipant.avatar} width={40} height={40} className="rounded-full shrink-0 w-10 h-10 object-cover" alt="avatar" />
 							<div className="min-w-0">
 								<h2 className="font-semibold text-sm truncate">
 									{activeConversation.otherParticipant.firstName}{" "}

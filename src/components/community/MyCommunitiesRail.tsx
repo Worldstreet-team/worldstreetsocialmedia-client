@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { Plus } from "@phosphor-icons/react";
 import { useT } from "@/i18n/client";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 export interface RailCommunity {
   id: string;
@@ -37,7 +37,7 @@ export function MyCommunitiesRail({
         >
           <span className="relative block aspect-[4/3] w-full overflow-hidden rounded-xl bg-raised transition-opacity group-hover:opacity-90">
             {c.avatar ? (
-              <Image src={c.avatar} alt="" fill sizes="112px" className="object-cover" />
+              <SafeAvatar src={c.avatar} className="object-cover" sizes="112px" />
             ) : (
               <span className="flex h-full w-full items-center justify-center font-display text-2xl font-semibold text-gold">
                 {c.name.charAt(0).toUpperCase()}

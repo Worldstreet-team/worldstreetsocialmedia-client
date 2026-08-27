@@ -1,13 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAtomValue } from "jotai";
 import { storyStudioSignalAtom } from "@/store/ui.atom";
 import clsx from "clsx";
 import { Plus } from "lucide-react";
-import { DEFAULT_AVATAR } from "@/const";
+
 import { useT } from "@/i18n/client";
 import { useLiveEvents } from "@/hooks/useLiveNow";
 import { useFeedEvents } from "@/hooks/useUserEvents";
@@ -17,6 +16,7 @@ import StoryCreateSheet, {
 	type StoryKind,
 } from "@/components/story/StoryCreateSheet";
 import StoryStudio from "@/components/story/StoryStudio";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 /* The rail now mounts twice — RightSidebar (lg+) and the feed column
    (below lg) — so a create signal fired before the visible instance mounted
@@ -203,12 +203,7 @@ export function StoriesRail() {
 						) : (
 							// No story yet: your own avatar. Dimmed only on the card,
 							// where an avatar-as-cover would otherwise read as a story.
-							<Image
-								src={self?.author.avatar || DEFAULT_AVATAR}
-								alt={t("story.yours")}
-								fill
-								className="object-cover sm:opacity-40"
-							/>
+							<SafeAvatar src={self?.author.avatar} className="object-cover sm:opacity-40" alt={t("story.yours")} />
 						)}
 
 						{/* Card-only: veils so the white ink below holds on any cover. */}
@@ -217,12 +212,7 @@ export function StoriesRail() {
 
 						{/* Card-only: avatar top left. */}
 						<span className="absolute left-2 top-2 hidden h-9 w-9 overflow-hidden rounded-pill ring-2 ring-white/90 sm:block">
-							<Image
-								src={self?.author.avatar || DEFAULT_AVATAR}
-								alt=""
-								fill
-								className="object-cover"
-							/>
+							<SafeAvatar src={self?.author.avatar} className="object-cover" />
 						</span>
 
 						{/* Card-only: name over the cover. */}
@@ -300,12 +290,7 @@ export function StoriesRail() {
 								) : (
 									// Falls back to the avatar: a circle wearing a blank
 									// cover is indistinguishable from a broken image.
-									<Image
-										src={cover?.url || entry.author.avatar || DEFAULT_AVATAR}
-										alt={name}
-										fill
-										className="object-cover"
-									/>
+									<SafeAvatar src={cover?.url || entry.author.avatar} className="object-cover" alt={name} />
 								)}
 
 								{/* Card-only: veils so the white ink below holds. */}
@@ -314,12 +299,7 @@ export function StoriesRail() {
 
 								{/* Card-only: avatar top left. */}
 								<span className="absolute left-2 top-2 hidden h-9 w-9 overflow-hidden rounded-pill ring-2 ring-white/90 sm:block">
-									<Image
-										src={entry.author.avatar || DEFAULT_AVATAR}
-										alt=""
-										fill
-										className="object-cover"
-									/>
+									<SafeAvatar src={entry.author.avatar} className="object-cover" />
 								</span>
 
 								{/* Card-only: name over the cover. */}

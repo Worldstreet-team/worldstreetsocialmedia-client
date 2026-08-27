@@ -2,7 +2,6 @@
 
 import clsx from "clsx";
 import Link from "next/link";
-import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAtom, useAtomValue } from "jotai";
@@ -18,6 +17,7 @@ import { userAtom } from "@/store/user.atom";
 import { getCommunitiesAction } from "@/lib/community.actions";
 import { CATEGORIES, LEGACY_CATEGORY_ALIASES } from "@/data/categories";
 import { useT } from "@/i18n/client";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 interface CommunityChip {
 	id: string;
@@ -157,12 +157,7 @@ export function FeedTabs() {
 						>
 							<span className="relative w-[18px] h-[18px] rounded-pill overflow-hidden bg-raised shrink-0 flex items-center justify-center">
 								{c.avatar ? (
-									<Image
-										src={c.avatar}
-										alt=""
-										fill
-										className="object-cover"
-									/>
+									<SafeAvatar src={c.avatar} className="object-cover" />
 								) : (
 									<span className="text-[9px] font-bold text-subtle font-sans uppercase">
 										{c.name.slice(0, 1)}

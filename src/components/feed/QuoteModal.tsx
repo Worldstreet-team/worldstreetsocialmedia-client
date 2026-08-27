@@ -3,13 +3,13 @@
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import Image from "next/image";
 import clsx from "clsx";
 import { ImageSquare, VideoCamera, X } from "@phosphor-icons/react";
 import { useT } from "@/i18n/client";
 import { quotePostAction } from "@/lib/post.actions";
 import { useToast } from "@/components/ui/Toast/ToastContext";
-import { DEFAULT_AVATAR } from "@/const";
+
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 const EASE = [0.2, 0, 0, 1] as const;
 const MAX_CHARS = 280;
@@ -215,12 +215,7 @@ export function QuoteModal({
 					<div className="mt-3 rounded-xl glass-card p-3">
 						<div className="mb-1 flex items-center gap-2">
 							<span className="relative h-5 w-5 shrink-0 overflow-hidden rounded-pill">
-								<Image
-									src={target.avatar || DEFAULT_AVATAR}
-									alt=""
-									fill
-									className="object-cover"
-								/>
+								<SafeAvatar src={target.avatar} className="object-cover" />
 							</span>
 							<span className="truncate font-sans text-[13px] font-semibold glass-ink">
 								{target.authorName}

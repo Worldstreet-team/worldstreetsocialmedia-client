@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import Image from "next/image";
 import { useAtomValue } from "jotai";
 import { useEffect, useState } from "react";
 import {
@@ -16,6 +15,7 @@ import {
 } from "@phosphor-icons/react";
 import { userAtom } from "@/store/user.atom";
 import { useT } from "@/i18n/client";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 const GROUPS = [
 	{
@@ -144,7 +144,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 						<div className="flex items-center gap-2.5">
 							{user?.avatar && (
 								<span className="relative h-9 w-9 shrink-0 overflow-hidden rounded-pill">
-									<Image src={user.avatar} alt="" fill className="object-cover" />
+									<SafeAvatar src={user.avatar} className="object-cover" />
 								</span>
 							)}
 							<span className="min-w-0 flex-1">

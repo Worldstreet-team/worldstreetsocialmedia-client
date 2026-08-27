@@ -2,6 +2,7 @@
 
 import { BACKEND_URL } from "@/const";
 import { auth } from "@clerk/nextjs/server";
+import { cookies } from "next/headers";
 import axios from "axios";
 
 const API_URL = BACKEND_URL;
@@ -131,6 +132,19 @@ export async function updateMyProfileAction(formData: FormData) {
 		if (!res.ok) {
 			return { success: false, message: data.message || "Failed to update" };
 		}
+
+		// Tell the middleware its cached copy of this profile is dead. It keeps
+		// a 30s per-user cache and stringifies it into `x-user-data`, which is
+		// what re-hydrates the client's user atom on every navigation — so
+		// without this flag a freshly changed avatar or display name reverts on
+		// the next page load and only "takes" once the TTL lapses. Cookies are
+		// the only channel: middleware runs in a different runtime and cannot
+		// see this module's memory.
+		(await cookies()).set("profile_stale", "1", {
+			path: "/",
+			httpOnly: false,
+			maxAge: 60,
+		});
 
 		return { success: true, data };
 	} catch (error: any) {

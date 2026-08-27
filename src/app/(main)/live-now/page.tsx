@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Eye } from "@phosphor-icons/react";
 import { Radio } from "lucide-react";
 import { listLiveStreamsAction } from "@/lib/live.actions";
-import { DEFAULT_AVATAR } from "@/const";
+
 import { useT } from "@/i18n/client";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 interface Row {
 	id: string;
@@ -72,12 +72,7 @@ export default function LiveNowPage() {
 						>
 							<span className="relative w-12 h-12 rounded-pill p-[2px] bg-danger shrink-0">
 								<span className="relative block w-full h-full rounded-pill overflow-hidden border-2 border-page bg-raised">
-									<Image
-										src={row.avatar || DEFAULT_AVATAR}
-										alt=""
-										fill
-										className="object-cover"
-									/>
+									<SafeAvatar src={row.avatar} className="object-cover" />
 								</span>
 							</span>
 							<span className="min-w-0 flex-1">

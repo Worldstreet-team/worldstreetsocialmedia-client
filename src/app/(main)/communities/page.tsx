@@ -30,7 +30,6 @@ import { useT } from "@/i18n/client";
 
 type Tab = "home" | "explore";
 
-
 /**
  * Communities.
  *

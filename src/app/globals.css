@@ -1054,3 +1054,49 @@ video,
   -webkit-user-drag: none;
   -webkit-touch-callout: none;
 }
+
+/* ── Onboarding backdrop ────────────────────────────────────────────────
+   The artwork behind the sign-up card, in two cuts: one drawn on white, one
+   on near-black. It is not decoration the glass can do without — a blurred
+   pane over a flat colour is just a grey box, which is why `ambient-field`
+   painted radials there before. Real artwork gives it something to refract.
+
+   `background-color` is set as well as the image, so the page is the right
+   ground for a beat before a 20KB file lands and if it never lands at all.
+   `fixed` keeps it still while the card's own content scrolls on a short
+   phone, rather than the backdrop sliding under it. */
+.onboarding-backdrop {
+  background-color: var(--ws-bg-page);
+  background-image: url("/images/onboarding/backdrop-dark.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+[data-ws-theme="platform-light"] .onboarding-backdrop {
+  background-image: url("/images/onboarding/backdrop-light.webp");
+}
+
+/* The artwork is busy in places (icon clusters, dotted paths) and the card
+   sits right on top of it. This veil buys back the contrast the text needs
+   without flattening the picture into a solid panel. */
+.onboarding-backdrop::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    62% 48% at 50% 50%,
+    rgb(0 0 0 / 0.55),
+    rgb(0 0 0 / 0.2) 70%,
+    transparent
+  );
+}
+[data-ws-theme="platform-light"] .onboarding-backdrop::before {
+  background: radial-gradient(
+    62% 48% at 50% 50%,
+    rgb(255 255 255 / 0.72),
+    rgb(255 255 255 / 0.35) 70%,
+    transparent
+  );
+}

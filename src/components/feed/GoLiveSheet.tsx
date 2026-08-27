@@ -31,6 +31,7 @@ import {
 import { liveSessionAtom } from "@/store/live.atom";
 import { CATEGORIES as TAXONOMY, VERTICALS } from "@/data/categories";
 import { useToast } from "@/components/ui/Toast/ToastContext";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 /** Old preset values (socials 5-list / Xstream 6-enum) → taxonomy labels. */
 const LEGACY_PRESET_CATEGORY: Record<string, string> = {
@@ -577,13 +578,7 @@ export function GoLiveSheet({
 										<span className="relative shrink-0">
 											<span className="block h-7 w-7 rounded-pill overflow-hidden bg-white/10">
 												{me?.avatar && (
-													<Image
-														src={me.avatar}
-														alt=""
-														width={28}
-														height={28}
-														className="h-7 w-7 object-cover"
-													/>
+													<SafeAvatar src={me.avatar} width={28} height={28} className="h-7 w-7 object-cover" />
 												)}
 											</span>
 											{/* WorldStreet mark: this identity is the ecosystem one. */}

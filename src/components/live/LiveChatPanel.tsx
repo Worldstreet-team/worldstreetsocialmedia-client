@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import clsx from "clsx";
 import { Gift, HandWaving, Heart, PaperPlaneTilt } from "@phosphor-icons/react";
 import type { Room } from "livekit-client";
-import { BACKEND_URL, DEFAULT_AVATAR, XSTREAM_API_URL } from "@/const";
+import { BACKEND_URL, XSTREAM_API_URL } from "@/const";
 import { useT } from "@/i18n/client";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 /** The cross-platform chat wire shape (matches Xstream's LiveChat). */
 export interface ChatMsg {
@@ -413,12 +413,7 @@ export function LiveChatPanel({
 					) : (
 						<div key={msg.id} className="flex gap-2 px-1 py-0.5">
 							<span className="relative h-5 w-5 rounded-pill overflow-hidden shrink-0 mt-0.5 bg-white/10">
-								<Image
-									src={msg.avatar || DEFAULT_AVATAR}
-									alt=""
-									fill
-									className="object-cover"
-								/>
+								<SafeAvatar src={msg.avatar} className="object-cover" />
 							</span>
 							<div className="min-w-0 flex-1">
 								<span className="flex items-center gap-1.5 min-w-0">

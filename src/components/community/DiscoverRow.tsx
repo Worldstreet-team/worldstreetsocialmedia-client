@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import clsx from "clsx";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { fmt } from "@/components/studio/studio-ui";
@@ -42,7 +41,7 @@ export function DiscoverRow({
         className="relative h-[68px] w-[68px] shrink-0 overflow-hidden rounded-xl bg-raised"
       >
         {row.avatar ? (
-          <Image src={row.avatar} alt="" fill sizes="68px" className="object-cover" />
+          <SafeAvatar src={row.avatar} className="object-cover" sizes="68px" />
         ) : (
           <span className="flex h-full w-full items-center justify-center font-display text-2xl font-semibold text-gold">
             {row.name.charAt(0).toUpperCase()}

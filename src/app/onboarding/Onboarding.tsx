@@ -10,7 +10,6 @@ import {
 	MonitorPlay,
 	UsersThree,
 } from "@phosphor-icons/react";
-import Image from "next/image";
 import clsx from "clsx";
 import { REGIONS, MIN_INTERESTS, MAX_INTERESTS } from "@/data/categories";
 import { InterestPicker } from "@/components/onboarding/InterestPicker";
@@ -28,8 +27,15 @@ import { useAuth } from "@clerk/nextjs";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { useSetAtom } from "jotai";
 import { userAtom } from "@/store/user.atom";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 const TOTAL_STEPS = 5;
+/**
+ * Bio cap. The field had none, which is how a profile ends up with a bio long
+ * enough to need a "See more" — this is the cheapest place to stop that, at
+ * the point it is written rather than every place it is read.
+ */
+const BIO_MAX = 160;
 
 /* What the tour announces. Order is deliberate: the surfaces someone can
    consume come before the ones that ask them to create. */
@@ -262,27 +268,44 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 		}
 	};
 
+	// One definition for both fields. Borderless by ruling: depth comes from the
+	// fill, and focus from a ring — an outline on top of a border is two edges
+	// saying the same thing. `text-base` on mobile is load-bearing: anything
+	// under 16px makes iOS zoom the card and hide the CTA.
+	const fieldShell =
+		"w-full rounded-xl bg-primary/[0.06] px-4 font-sans text-base text-primary outline-none transition-[background-color,box-shadow] placeholder:text-subtle hover:bg-primary/[0.09] focus:bg-primary/[0.09] focus:ring-2 focus:ring-brand/50";
+	const fieldLabel =
+		"block text-left font-sans text-[11px] font-semibold uppercase tracking-[0.12em] text-muted";
+
 	const primaryBtn =
 		"group w-full bg-brand text-brand-on h-14 cursor-pointer py-3.5 px-6 rounded-pill flex items-center justify-center gap-2 hover:bg-brand-active transition-colors active:scale-[0.98] font-sans text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed";
 	const backBtn =
 		"glass-tile flex-1 h-14 rounded-pill text-muted font-semibold hover:text-primary transition-colors cursor-pointer font-sans text-sm";
 
 	return (
-		// ambient-field gives the glass something to refract; over a flat page
-		// colour a blurred pane is just a grey box.
-		<div className="min-h-dvh ambient-field flex items-center justify-center p-4 py-8">
-			<div className="w-full max-w-md glass-card backdrop-blur-2xl backdrop-saturate-150 rounded-xl p-6 sm:p-8 relative overflow-hidden animate-rise">
-				<div className="relative z-10 flex flex-col items-center text-center space-y-8">
+		// Real artwork behind the glass, in a light and a dark cut. A blurred
+		// pane over a flat colour is just a grey box, which is what the radial
+		// `ambient-field` stand-in was compensating for.
+		<div className="onboarding-backdrop flex min-h-dvh items-center justify-center p-4 py-8">
+			<div className="animate-rise glass-card relative isolate w-full max-w-[420px] overflow-hidden rounded-xl p-6 shadow-sheet backdrop-blur-2xl backdrop-saturate-150 sm:p-9">
+				<div className="relative z-10 flex flex-col items-center gap-7 text-center">
 					<BrandRitual size={34} wordSize={18} />
 
 					{/* Progress */}
-					<div className="flex gap-2" aria-hidden="true">
+					<div
+						className="flex w-full max-w-[220px] gap-1.5"
+						role="progressbar"
+						aria-valuemin={1}
+						aria-valuemax={TOTAL_STEPS}
+						aria-valuenow={step}
+						aria-label={`Step ${step} of ${TOTAL_STEPS}`}
+					>
 						{Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((s) => (
-							<div
+							<span
 								key={s}
 								className={clsx(
-									"h-1.5 rounded-pill transition-[width,background-color]",
-									step >= s ? "w-7 bg-brand" : "w-2 bg-raised",
+									"h-1 flex-1 rounded-pill transition-colors",
+									step >= s ? "bg-brand" : "bg-primary/12",
 								)}
 							/>
 						))}
@@ -317,7 +340,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 								<div className="space-y-2 text-left">
 									<label
 										htmlFor="username"
-										className="font-sans text-[11px] font-medium tracking-[1px] text-muted uppercase ml-1"
+										className={fieldLabel}
 									>
 										Username
 									</label>
@@ -338,7 +361,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 											aria-invalid={
 												handleState === "taken" || handleState === "invalid"
 											}
-											className="glass-tile w-full text-primary rounded-pill py-3 h-14 pl-8 pr-4 font-medium outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-subtle font-sans text-base transition-colors"
+											className={clsx(fieldShell, "h-13 pl-8 font-medium")}
 										/>
 									</div>
 									{/* Says WHY Continue is disabled. aria-live because this is
@@ -367,9 +390,19 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 								<div className="space-y-2 text-left">
 									<label
 										htmlFor="bio"
-										className="font-sans text-[11px] font-medium tracking-[1px] text-muted uppercase ml-1"
+										className={clsx(fieldLabel, "flex items-baseline justify-between")}
 									>
-										Bio
+										<span>Bio</span>
+										{/* tabular-nums: any number that changes, per 02-typography
+										    — a proportional counter jitters as it counts. */}
+										<span
+											className={clsx(
+												"font-sans text-[11px] font-medium tabular-nums tracking-normal normal-case",
+												bio.length >= BIO_MAX ? "text-danger" : "text-subtle",
+											)}
+										>
+											{bio.length}/{BIO_MAX}
+										</span>
 									</label>
 									<textarea
 										id="bio"
@@ -377,9 +410,8 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 										onChange={(e) => setBio(e.target.value)}
 										placeholder="Markets, code, and everything in between"
 										rows={3}
-										// text-base on mobile — a 14px field makes iOS zoom
-										// into the card and the user can't see the CTA.
-										className="glass-tile w-full text-primary rounded-lg p-3.5 font-medium outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-subtle resize-none font-sans text-base sm:text-sm transition-colors"
+										maxLength={BIO_MAX}
+										className={clsx(fieldShell, "resize-none py-3.5")}
 									/>
 								</div>
 							</div>
@@ -588,12 +620,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 											>
 												<div className="flex items-center gap-3 min-w-0">
 													<div className="relative w-10 h-10 shrink-0 rounded-full overflow-hidden border border-hairline">
-														<Image
-															src={user.avatar || DEFAULT_AVATAR}
-															alt={user.username}
-															fill
-															className="object-cover"
-														/>
+														<SafeAvatar src={user.avatar} className="object-cover" alt={user.username} />
 													</div>
 													<div className="text-left min-w-0">
 														<p className="font-semibold text-primary text-sm font-sans truncate">

@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import clsx from "clsx";
 import { CaretDown, Check, Globe, UsersThree } from "@phosphor-icons/react";
 import { useT } from "@/i18n/client";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 export interface AudienceCommunity {
   id: string;
@@ -74,7 +74,7 @@ export function AudiencePicker({
         {value ? (
           <span className="relative h-4 w-4 shrink-0 overflow-hidden rounded-pill bg-page">
             {value.avatar ? (
-              <Image src={value.avatar} alt="" fill sizes="16px" className="object-cover" />
+              <SafeAvatar src={value.avatar} className="object-cover" sizes="16px" />
             ) : (
               <span className="flex h-full w-full items-center justify-center text-[9px] font-bold text-gold">
                 {value.name.charAt(0).toUpperCase()}
@@ -120,7 +120,7 @@ export function AudiencePicker({
               icon={
                 <span className="relative h-7 w-7 shrink-0 overflow-hidden rounded-lg bg-raised">
                   {c.avatar ? (
-                    <Image src={c.avatar} alt="" fill sizes="28px" className="object-cover" />
+                    <SafeAvatar src={c.avatar} className="object-cover" sizes="28px" />
                   ) : (
                     <span className="flex h-full w-full items-center justify-center font-display text-[12px] font-semibold text-gold">
                       {c.name.charAt(0).toUpperCase()}

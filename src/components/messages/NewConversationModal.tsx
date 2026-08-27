@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import Image from "next/image";
 import { X, Search, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getFollowersAction, getFollowingAction } from "@/lib/user.actions";
 import { startConversationAction } from "@/lib/conversation.actions";
 import { UserBadges } from "@/components/ui/UserBadges";
-import { DEFAULT_AVATAR } from "@/const";
+
 import { toast } from "sonner";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 interface UserItem {
 	_id: string;
@@ -202,12 +202,7 @@ export default function NewConversationModal({
 										className="w-full flex items-center gap-3 px-4 py-3 hover:bg-raised transition-colors border-b border-hairline/50 disabled:opacity-50 cursor-pointer"
 									>
 										<div className="relative w-11 h-11 rounded-full overflow-hidden shrink-0 bg-raised">
-											<Image
-												src={user.avatar || DEFAULT_AVATAR}
-												alt={user.username || "User"}
-												fill
-												className="object-cover"
-											/>
+											<SafeAvatar src={user.avatar} className="object-cover" alt={user.username || "User"} />
 										</div>
 										<div className="flex-1 text-left min-w-0">
 											<div className="flex items-center gap-1">

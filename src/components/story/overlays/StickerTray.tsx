@@ -3,14 +3,14 @@
 import { MagnifyingGlass, X } from "@phosphor-icons/react";
 import clsx from "clsx";
 import EmojiPicker, { type EmojiClickData, Theme } from "emoji-picker-react";
-import Image from "next/image";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { UserBadges } from "@/components/ui/UserBadges";
 import type { MentionUser } from "@/components/feed/MentionAutocomplete";
-import { DEFAULT_AVATAR } from "@/const";
+
 import { CASHTAG_COLORS, MENTION_COLORS } from "@/lib/editor/overlays";
 import { searchUsersAction } from "@/lib/user.actions";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 interface StickerTrayProps {
   onAddCashtag: (symbol: string) => void;
@@ -147,12 +147,7 @@ export default function StickerTray({
                 className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-[#fafaf9]/8 cursor-pointer"
               >
                 <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-pill">
-                  <Image
-                    src={user.avatar || DEFAULT_AVATAR}
-                    alt=""
-                    fill
-                    className="object-cover"
-                  />
+                  <SafeAvatar src={user.avatar} className="object-cover" />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1">

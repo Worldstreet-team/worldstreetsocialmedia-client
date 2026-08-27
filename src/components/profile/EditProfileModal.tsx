@@ -8,7 +8,7 @@ import { userAtom } from "@/store/user.atom";
 import { motion, AnimatePresence } from "framer-motion";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import MediaEditor from "@/components/editor/MediaEditor";
-import { DEFAULT_AVATAR } from "@/const";
+
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import clsx from "clsx";
 import { X, Camera, Link as LinkIcon, MapPin } from "lucide-react";
@@ -17,6 +17,7 @@ import { InterestPicker } from "@/components/onboarding/InterestPicker";
 import { CATEGORIES, MAX_INTERESTS } from "@/data/categories";
 import { normalizeCategoryIds } from "@/lib/categories";
 import { cacheKeys, writeCache } from "@/lib/cache";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 interface EditProfileModalProps {
 	user: any;
@@ -329,12 +330,7 @@ export default function EditProfileModal({
 							{/* Avatar */}
 							<div className="relative mb-5 px-5 sm:px-6">
 								<div className="group relative -mt-[38px] h-[76px] w-[76px] overflow-hidden rounded-full glass-card ring-4 ring-[#161412] sm:-mt-[46px] sm:h-[92px] sm:w-[92px]">
-									<Image
-										src={avatarPreview || DEFAULT_AVATAR}
-										alt="Avatar"
-										fill
-										className="object-cover"
-									/>
+									<SafeAvatar src={avatarPreview} className="object-cover" alt="Avatar" />
 									<div className="absolute inset-0 bg-page/30 sm:bg-page/40 flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
 										<button
 											type="button"

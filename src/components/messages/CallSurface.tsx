@@ -12,7 +12,6 @@ import {
 	CornersOut,
 	WifiSlash,
 } from "@phosphor-icons/react";
-import Image from "next/image";
 import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
 import type { LocalVideoTrack, RemoteTrack } from "livekit-client";
@@ -20,6 +19,7 @@ import type { LocalVideoTrack, RemoteTrack } from "livekit-client";
 import { useCall } from "@/providers/CallProvider";
 import { callManager } from "@/lib/call-manager";
 import { DEFAULT_AVATAR } from "@/const";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 /**
  * The one on-screen surface for a call, in both of its states:
@@ -218,13 +218,7 @@ export function CallSurface() {
 									<VideoTile track={remoteVideo} />
 								) : (
 									<div className="flex h-full w-full items-center justify-center">
-										<Image
-											src={avatar}
-											alt=""
-											width={48}
-											height={48}
-											className="h-12 w-12 rounded-pill object-cover"
-										/>
+										<SafeAvatar src={avatar} width={48} height={48} className="h-12 w-12 rounded-pill object-cover" />
 									</div>
 								)}
 								<span className="absolute right-2 top-2 rounded-pill bg-scrim px-2 py-0.5 text-[11px] text-primary">
@@ -307,13 +301,7 @@ export function CallSurface() {
 										<VideoTile track={remoteVideo} />
 									) : (
 										<div className="flex h-full w-full flex-col items-center justify-center gap-3">
-											<Image
-												src={avatar}
-												alt=""
-												width={96}
-												height={96}
-												className="h-24 w-24 rounded-pill object-cover"
-											/>
+											<SafeAvatar src={avatar} width={96} height={96} className="h-24 w-24 rounded-pill object-cover" />
 											<p className="text-sm text-muted">
 												{peer.name}'s camera is off
 											</p>
@@ -352,13 +340,7 @@ export function CallSurface() {
 							) : (
 								<div className="flex flex-col items-center text-center">
 									<div className="relative">
-										<Image
-											src={avatar}
-											alt=""
-											width={112}
-											height={112}
-											className="h-28 w-28 rounded-pill object-cover"
-										/>
+										<SafeAvatar src={avatar} width={112} height={112} className="h-28 w-28 rounded-pill object-cover" />
 										{status === "ringing" && (
 											// A slow breathing ring, not a spinner — it says
 											// "waiting on a person", not "loading".

@@ -4,12 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { DEFAULT_AVATAR } from "@/const";
+
 import {
 	followUserAction,
 	getProfileByUsernameAction,
 } from "@/lib/user.actions";
 import { UserBadges } from "@/components/ui/UserBadges";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 /**
  * Glass profile preview on hovering an @handle.
@@ -184,12 +185,7 @@ export function ProfileHoverCard({
 									href={`/profile/${profile.username}`}
 									className="relative block h-16 w-16 overflow-hidden rounded-pill bg-black/40 ring-2 ring-white/20"
 								>
-									<Image
-										src={profile.avatar || DEFAULT_AVATAR}
-										alt=""
-										fill
-										className="object-cover"
-									/>
+									<SafeAvatar src={profile.avatar} className="object-cover" />
 								</Link>
 								{!following ? (
 									<button

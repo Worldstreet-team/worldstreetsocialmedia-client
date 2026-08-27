@@ -17,7 +17,6 @@ import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAtom, useAtomValue } from "jotai";
 import type { Room } from "livekit-client";
-import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
@@ -43,6 +42,7 @@ import { track } from "@/lib/telemetry";
 import { followUserAction } from "@/lib/user.actions";
 import { followingIdsAtom } from "@/store/ui.atom";
 import { userAtom } from "@/store/user.atom";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 type Tab = "street" | "live";
 
@@ -833,12 +833,7 @@ function VerticalSurface() {
 											href={`/profile/${slide.username}`}
 											className="relative w-9 h-9 rounded-pill overflow-hidden shrink-0 bg-white/10"
 										>
-											<Image
-												src={slide.avatar}
-												alt={slide.username}
-												fill
-												className="object-cover"
-											/>
+											<SafeAvatar src={slide.avatar} className="object-cover" alt={slide.username} />
 										</Link>
 										<Link
 											href={`/profile/${slide.username}`}
@@ -1116,7 +1111,7 @@ function VerticalSurface() {
 												href={`/profile/${c.username}`}
 												className="relative h-8 w-8 shrink-0 overflow-hidden rounded-pill bg-white/10"
 											>
-												<Image src={c.avatar} alt="" fill className="object-cover" />
+												<SafeAvatar src={c.avatar} className="object-cover" />
 											</Link>
 											{/* The comment sits in its own tinted bubble so a
 											    wall of replies has rhythm instead of running
