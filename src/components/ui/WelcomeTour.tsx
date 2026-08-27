@@ -47,19 +47,30 @@ const STEPS = [
     key: "welcome",
     title: "Welcome to WorldSpace",
  body: "This is the social side of the WorldStreet ecosystem share ideas, follow traders and creators, and talk markets with the people trading them.",
+    // The cloud, in both cuts. This was /images/logo.png — the retired gold W —
+    // under a "Socials" eyebrow, so the first thing a new account ever saw was
+    // the OLD brand and the OLD product name.
     hero: (
-      <div className="flex flex-col items-center gap-3">
+      <>
         <Image
-          src="/images/logo.png"
-          alt="WorldStreet"
-          width={56}
-          height={56}
-          className="object-contain"
+          src="/images/worldspace-mark-dark.png"
+          alt=""
+          width={72}
+          height={72}
+          aria-hidden
+          unoptimized
+          className="object-contain [[data-ws-theme='platform-light']_&]:hidden"
         />
-        <span className="font-sans text-[10px] font-semibold uppercase tracking-[2px] text-gold">
-          Socials
-        </span>
-      </div>
+        <Image
+          src="/images/worldspace-mark-light.png"
+          alt=""
+          width={72}
+          height={72}
+          aria-hidden
+          unoptimized
+          className="hidden object-contain [[data-ws-theme='platform-light']_&]:block"
+        />
+      </>
     ),
   },
   {
@@ -182,7 +193,21 @@ export function WelcomeTour() {
           </OverlayHeader>
 
           {/* Hero band */}
-          <div className="h-[120px] sm:h-[150px] shrink-0 bg-sunken border-y border-hairline flex items-center justify-center overflow-hidden">
+          {/* The same artwork the onboarding flow stands on, so the tour reads
+              as the end of that journey rather than a different product. Two
+              cuts swapped on the theme attribute; the overlay dissolves it into
+              the panel and carries a wash of brand so the picture belongs to
+              this palette instead of sitting on top of it. No border — depth is
+              the fade, per the overlay grammar. */}
+          <div className="relative flex h-[120px] shrink-0 items-center justify-center overflow-hidden bg-sunken bg-cover bg-center bg-[url('/images/onboarding/backdrop-dark.webp')] [[data-ws-theme='platform-light']_&]:bg-[url('/images/onboarding/backdrop-light.webp')] sm:h-[150px]">
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-surface/45 to-surface"
+            />
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0 bg-brand/10"
+            />
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={current.key}
@@ -190,6 +215,7 @@ export function WelcomeTour() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, transition: { duration: 0.12 } }}
                 transition={{ duration: 0.2, ease: EASE }}
+                className="relative flex flex-col items-center gap-3"
               >
                 {current.hero}
               </motion.div>
@@ -218,12 +244,23 @@ export function WelcomeTour() {
 
           {/* Footer: dots + controls */}
           <div className="flex shrink-0 items-center justify-between gap-3 px-5 sm:px-6 pb-5">
-            <div className="flex items-center gap-1.5 shrink-0" aria-hidden="true">
+            {/* The onboarding's segment rail, not a growing dot. Equal
+                segments show how far through you are AND how much is left —
+                a single wide pill among small dots shows only where you are.
+                Same control, same grammar, one flow. */}
+            <div
+              className="flex w-[124px] shrink-0 items-center gap-1.5"
+              role="progressbar"
+              aria-valuemin={1}
+              aria-valuemax={STEPS.length}
+              aria-valuenow={step + 1}
+              aria-label={`Step ${step + 1} of ${STEPS.length}`}
+            >
               {STEPS.map((s, i) => (
                 <span
                   key={s.key}
-                  className={`h-1.5 rounded-pill transition-[width,background-color] ${
-                    i === step ? "w-5 bg-brand" : "w-1.5 bg-track"
+                  className={`h-1 flex-1 rounded-pill transition-colors ${
+                    i <= step ? "bg-brand" : "bg-primary/12"
                   }`}
                 />
               ))}
