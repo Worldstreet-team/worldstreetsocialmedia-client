@@ -66,6 +66,7 @@ import {
 import { VideoPlayer } from "@/components/ui/VideoPlayer";
 import { Radio } from "lucide-react";
 import { promotePostAction } from "@/lib/campaign.actions";
+import { getSubscriptionAction } from "@/lib/subscription.actions";
 import { repostPostAction } from "@/lib/post.actions";
 import { QuoteModal } from "@/components/feed/QuoteModal";
 import { Megaphone } from "lucide-react";
@@ -189,6 +190,24 @@ const formatCount = (n: number) => {
     return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
 };
 
+/**
+ * Can this account promote a post? One request per page load, shared by every
+ * card, cached at module scope.
+ *
+ * Promotion is a membership perk and the gateway enforces that — but the menu
+ * item was offered to everyone, so free accounts were invited to promote and
+ * only found out it was not for them from a failed toast.
+ */
+let canPromotePromise: Promise<boolean> | null = null;
+function fetchCanPromote(): Promise<boolean> {
+	canPromotePromise ??= getSubscriptionAction()
+		.then((res) =>
+			res.success ? Boolean(res.data.entitlements?.subscriber) : false,
+		)
+		.catch(() => false);
+	return canPromotePromise;
+}
+
 export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
     const t = useT();
     // A paid unlock swaps the stripped post for the revealed one in place —
@@ -197,6 +216,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
     const [revealed, setRevealed] = useState<PostProps | null>(null);
     const post = revealed ?? postProp;
     const [unlocking, setUnlocking] = useState(false);
+    const [canPromote, setCanPromote] = useState(false);
     const [repostMenuOpen, setRepostMenuOpen] = useState(false);
     const [quoteOpen, setQuoteOpen] = useState(false);
     const [reposted, setReposted] = useState(false);
@@ -318,6 +338,10 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
 
         if (isMenuOpen) {
             document.addEventListener("mousedown", handleClickOutside);
+            // Asked only when a menu actually opens, not once per card on
+            // mount. The promise is module-scoped, so however many cards ask,
+            // one request goes out per page load.
+            void fetchCanPromote().then(setCanPromote);
         }
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
@@ -869,32 +893,34 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                                     <Trash2 className="w-4 h-4" />
                                                     Delete post
                                                 </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={async (e) => {
-                                                        e.stopPropagation();
-                                                        setIsMenuOpen(false);
-                                                        const res =
-                                                            await promotePostAction(
-                                                                post.id,
+                                                {canPromote && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={async (e) => {
+                                                            e.stopPropagation();
+                                                            setIsMenuOpen(false);
+                                                            const res =
+                                                                await promotePostAction(
+                                                                    post.id,
+                                                                );
+                                                            toast(
+                                                                res.success
+                                                                    ? t("promo.created")
+                                                                    : (res.message ??
+                                                                            t("promo.failed")),
+                                                                {
+                                                                    type: res.success
+                                                                        ? "success"
+                                                                        : "error",
+                                                                },
                                                             );
-                                                        toast(
-                                                            res.success
-                                                                ? t("promo.created")
-                                                                : (res.message ??
-                                                                        t("promo.failed")),
-                                                            {
-                                                                type: res.success
-                                                                    ? "success"
-                                                                    : "error",
-                                                            },
-                                                        );
-                                                    }}
-                                                    className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
-                                                >
-                                                    <Megaphone className="w-4 h-4" />
-                                                    {t("promo.menu")}
-                                                </button>
+                                                        }}
+                                                        className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
+                                                    >
+                                                        <Megaphone className="w-4 h-4" />
+                                                        {t("promo.menu")}
+                                                    </button>
+                                                )}
                                             </>
                                         ) : (
                                             <>
