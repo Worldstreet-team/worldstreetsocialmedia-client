@@ -431,7 +431,9 @@ function VerticalSurface() {
 		const qs = params.toString();
 		const next = qs ? `/live?${qs}` : "/live";
 		if (next === window.location.pathname + window.location.search) return;
-		window.history.replaceState(null, "", next);
+		// Preserve the App Router's own history state — passing null strips
+		// it, and the next back/forward then restores the wrong tree.
+		window.history.replaceState(window.history.state, "", next);
 	}, [active, slides, tab, demo]);
 
 	// ── telemetry + tail prefetch ────────────────────────────────────────

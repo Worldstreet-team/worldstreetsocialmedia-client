@@ -27,7 +27,11 @@ import { useT } from "@/i18n/client";
 import { BrandRitual } from "@/components/layout/BrandRitual";
 import { FeedHeaderActions } from "@/components/feed/FeedHeaderActions";
 import { unreadMessagesCountAtom } from "@/store/messageCache";
-import { badgeForNavKey, commandPaletteOpenAtom, unreadNotificationsCountAtom } from "@/store/ui.atom";
+import {
+	badgeForNavKey,
+	searchOpenAtom,
+	unreadNotificationsCountAtom,
+} from "@/store/ui.atom";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 export function MobileNavigation() {
@@ -42,7 +46,12 @@ export function MobileNavigation() {
 	const [isOpen, setIsOpen] = useState(false);
 	const [langOpen, setLangOpen] = useState(false);
 	const [productsOpen, setProductsOpen] = useState(false);
-	const setPaletteOpen = useSetAtom(commandPaletteOpenAtom);
+	// The magnifier opens the same SearchWindow the desktop rail opens.
+	// It used to open the command palette, which is a different thing —
+	// the palette is a keyboard launcher (Ctrl+K), search is search — so
+	// tapping the magnifier on a phone gave a different feature than
+	// clicking "Search" on the web.
+	const setSearchOpen = useSetAtom(searchOpenAtom);
 
 	useEffect(() => setMounted(true), []);
 	const isLight = mounted && resolvedTheme === "light";
@@ -105,7 +114,7 @@ export function MobileNavigation() {
 					<div className="flex items-center gap-1 shrink-0">
 						<button
 							type="button"
-							onClick={() => setPaletteOpen(true)}
+							onClick={() => setSearchOpen(true)}
 							aria-label={t("rail.search")}
 							className="flex h-11 w-11 items-center justify-center rounded-pill text-muted active:bg-raised transition-colors"
 						>
