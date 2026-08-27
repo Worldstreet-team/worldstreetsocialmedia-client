@@ -696,5 +696,7 @@
   "chat.walletUnavailable": "Wallet nicht verfügbar",
   "chat.walletUnreachable": "Wallet nicht erreichbar",
   "chat.walletSignedOut": "Zum Schenken anmelden",
-  "profile.followingState": "Folge ich"
+  "profile.followingState": "Folge ich",
+  "post.forSale.preview": "Als Käufer ansehen",
+  "post.forSale.exitPreview": "Vorschau beenden"
 }
