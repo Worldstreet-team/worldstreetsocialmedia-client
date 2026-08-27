@@ -6,7 +6,7 @@ import {
 	Broadcast,
 	Camera,
 	Faders,
-	Microphone,
+	Waveform,
 	MonitorPlay,
 	UsersThree,
 } from "@phosphor-icons/react";
@@ -46,7 +46,7 @@ const WHATS_NEW = [
 		blurb: "A full-screen video feed. Swipe it like a reel, not a timeline.",
 	},
 	{
-		icon: Microphone,
+		icon: Waveform,
 		title: "Space Voice",
 		blurb: "Live audio rooms — drop in, listen, or ask for the mic.",
 	},

@@ -1,6 +1,6 @@
 "use client";
 
-import { CaretUp, Microphone, X } from "@phosphor-icons/react";
+import { CaretUp, Waveform, X } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
 import { useAtom, useSetAtom } from "jotai";
 import { useEffect, useState } from "react";
@@ -121,7 +121,7 @@ export default function VoiceRoomHost() {
             style={{ background: spaceBackground(row) }}
           >
             <span className="absolute inset-0 bg-[#0c0a09]/35" />
-            <Microphone
+            <Waveform
               size={14}
               weight="fill"
               className="relative text-[#fafaf9]"

@@ -8,7 +8,7 @@ import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
   Broadcast,
   Camera,
-  Microphone,
+  Waveform,
   NotePencil,
   PencilSimple,
   Plus,
@@ -141,7 +141,7 @@ export function CreateFab() {
     {
       key: "space",
       label: t("fab.space"),
-      icon: Microphone,
+      icon: Waveform,
       onClick: () => router.push("/voice?create=1"),
     },
     {

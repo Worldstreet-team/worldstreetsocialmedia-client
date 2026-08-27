@@ -6,11 +6,12 @@ import Link from "next/link";
 import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { UserBadges } from "@/components/ui/UserBadges";
-import { CaretLeft, CaretRight, MicrophoneStage } from "@phosphor-icons/react";
+import { CaretLeft, CaretRight, Waveform } from "@phosphor-icons/react";
 import { SectionHead } from "@/components/layout/SectionHead";
 import { EqBars, spaceBackground } from "@/components/voice/SpaceCard";
 import { useRealtime } from "@/components/providers/RealtimeProvider";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import { useAppPathname } from "@/i18n/useAppPathname";
 import { useT } from "@/i18n/client";
 import { getSpacesAction } from "@/lib/space.actions";
 import { voiceRefreshAtom } from "@/store/voice.atom";
@@ -183,6 +184,7 @@ export function SpacesRail({ delay = 210 }: { delay?: number }) {
 	const [page, setPage] = useState(0);
 	// Smooth paging is motion; honour the reader's setting like everything else.
 	const reduced = useReducedMotion();
+	const onVoice = useAppPathname().startsWith("/voice");
 
 	const load = useCallback(async () => {
 		const res = await getSpacesAction();
@@ -259,7 +261,7 @@ export function SpacesRail({ delay = 210 }: { delay?: number }) {
 	return (
 		<section className="animate-rise" style={{ animationDelay: `${delay}ms` }}>
 			<SectionHead
-				icon={<MicrophoneStage size={13} weight="duotone" />}
+				icon={<Waveform size={13} weight="duotone" />}
 				label={t("rail.spaces")}
 				live={live.length > 0}
 				trailing={
@@ -290,12 +292,17 @@ export function SpacesRail({ delay = 210 }: { delay?: number }) {
 								</button>
 							</>
 						)}
-						<Link
-							href="/voice"
-							className="ml-1 font-sans text-[11px] font-semibold text-gold hover:underline"
-						>
-							{t("rail.seeAll")}
-						</Link>
+						{/* "See all" is a link to where you already are when the
+						    reader is on /voice — offering it there is a dead end
+						    dressed as a way out. The carousel controls stay. */}
+						{!onVoice && (
+							<Link
+								href="/voice"
+								className="ml-1 font-sans text-[11px] font-semibold text-gold hover:underline"
+							>
+								{t("rail.seeAll")}
+							</Link>
+						)}
 					</span>
 				}
 			/>

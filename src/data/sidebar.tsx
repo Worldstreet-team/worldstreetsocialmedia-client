@@ -10,11 +10,11 @@ import {
 	ChatCircleDots,
 	House,
 	MagnifyingGlass,
-	Microphone,
 	MonitorPlay,
 	SquaresFour,
 	UserCircle,
 	UsersThree,
+	Waveform,
 } from "@phosphor-icons/react";
 
 import type { IconProps } from "@/app/types";
@@ -60,7 +60,7 @@ export const mainNav: SidebarItem[] = [
 		labelKey: "nav.voice",
 		title: "Voice",
 		link: "/voice",
-		icon: navIcon(Microphone),
+		icon: navIcon(Waveform),
 	},
 	{
 		labelKey: "nav.communities",
