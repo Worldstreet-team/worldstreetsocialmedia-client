@@ -21,6 +21,8 @@ export interface ResolvedHandle {
  */
 const resolved = new Map<string, ResolvedHandle | null>();
 const inFlight = new Map<string, Promise<void>>();
+/** Seeded handles still missing their real record (avatar, name, tier). */
+const partial = new Set<string>();
 
 /** Handles queued this tick, so one post costs one request, not one per chip. */
 let queue = new Set<string>();
@@ -74,6 +76,12 @@ export function seedHandles(
 			tier: "gold",
 			badges: [],
 		});
+		// A post's stored mentions carry {username, isVerified} and NOTHING
+		// else — no avatar, no display name, no tier. Seeding is for instant
+		// paint, so it must not count as knowing the person: without this the
+		// seed satisfied requestHandle's cache check, the real lookup never
+		// ran, and every mention chip rendered with an empty photo forever.
+		if (!e.avatar) partial.add(key);
 		added = true;
 	}
 	if (added) notify();
@@ -92,7 +100,14 @@ async function flush() {
 	for (const handle of batch) {
 		// Absent from the response means the account does not exist. Cached as
 		// null so it is never asked about again.
-		resolved.set(handle, (found.get(handle) as ResolvedHandle) ?? null);
+		const full = found.get(handle) as ResolvedHandle | undefined;
+		// Absent from the response means the account does not exist — but only
+		// downgrade to null if we were not already showing a seeded chip for
+		// it; a failed request must not erase a mention the post vouched for.
+		if (full || !partial.has(handle)) {
+			resolved.set(handle, full ?? null);
+		}
+		if (full) partial.delete(handle);
 		inFlight.delete(handle);
 	}
 	notify();
@@ -101,7 +116,8 @@ async function flush() {
 /** Ask for a handle. Coalesced into one batched request per tick. */
 export function requestHandle(handle: string) {
 	const key = handle.toLowerCase();
-	if (resolved.has(key) || inFlight.has(key)) return;
+	// A partial entry paints, but still owes us the real record.
+	if ((resolved.has(key) && !partial.has(key)) || inFlight.has(key)) return;
 	inFlight.set(key, Promise.resolve());
 	queue.add(key);
 	if (!flushTimer) flushTimer = setTimeout(flush, 40);
