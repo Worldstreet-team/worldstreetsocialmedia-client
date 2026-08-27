@@ -698,5 +698,6 @@
   "chat.walletSignedOut": "Zum Schenken anmelden",
   "profile.followingState": "Folge ich",
   "post.forSale.preview": "Als Käufer ansehen",
-  "post.forSale.exitPreview": "Vorschau beenden"
+  "post.forSale.exitPreview": "Vorschau beenden",
+  "post.translated": "Übersetzt"
 }

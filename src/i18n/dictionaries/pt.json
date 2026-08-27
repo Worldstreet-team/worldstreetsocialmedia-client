@@ -698,5 +698,6 @@
   "chat.walletSignedOut": "Inicia sessão para presentear",
   "profile.followingState": "Seguindo",
   "post.forSale.preview": "Ver como comprador",
-  "post.forSale.exitPreview": "Sair da pré-visualização"
+  "post.forSale.exitPreview": "Sair da pré-visualização",
+  "post.translated": "Traduzido"
 }

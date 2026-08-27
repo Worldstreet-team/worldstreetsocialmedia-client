@@ -1128,10 +1128,14 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                             t("post.showTranslation")
                                         ) : (
                                             <>
-                                                {t("post.translatedFrom")}
+                                                {/* "Translated from Spanish"
+                                                    when the source is known;
+                                                    plain "Translated" when it
+                                                    is not — never a dangling
+                                                    "Translated from ·". */}
                                                 {translatedFromLabel
-                                                    ? ` ${translatedFromLabel}`
-                                                    : ""}
+                                                    ? `${t("post.translatedFrom")} ${translatedFromLabel}`
+                                                    : t("post.translated")}
                                                 {" · "}
                                                 {t("post.showOriginal")}
                                             </>
