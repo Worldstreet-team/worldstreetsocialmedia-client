@@ -735,5 +735,7 @@
   "chat.walletUnavailable": "Wallet unavailable",
   "chat.walletUnreachable": "Can't reach the wallet",
   "chat.walletSignedOut": "Sign in to gift",
-  "profile.followingState": "Following"
+  "profile.followingState": "Following",
+  "post.forSale.preview": "Preview as buyer",
+  "post.forSale.exitPreview": "Exit preview"
 }

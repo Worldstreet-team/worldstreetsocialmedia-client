@@ -696,5 +696,7 @@
   "chat.walletUnavailable": "Portefeuille indisponible",
   "chat.walletUnreachable": "Portefeuille injoignable",
   "chat.walletSignedOut": "Connectez-vous pour offrir",
-  "profile.followingState": "Abonné"
+  "profile.followingState": "Abonné",
+  "post.forSale.preview": "Vue acheteur",
+  "post.forSale.exitPreview": "Quitter l'aperçu"
 }

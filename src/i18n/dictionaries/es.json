@@ -696,5 +696,7 @@
   "chat.walletUnavailable": "Cartera no disponible",
   "chat.walletUnreachable": "No se puede conectar con la cartera",
   "chat.walletSignedOut": "Inicia sesión para regalar",
-  "profile.followingState": "Siguiendo"
+  "profile.followingState": "Siguiendo",
+  "post.forSale.preview": "Ver como comprador",
+  "post.forSale.exitPreview": "Salir de la vista"
 }
