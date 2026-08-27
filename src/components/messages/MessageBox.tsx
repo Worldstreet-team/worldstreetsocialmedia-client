@@ -380,6 +380,8 @@ export const MessageBox = ({
 
 		const formData = new FormData();
 		formData.append("file", audioBlob, "voice-note.webm");
+		// Outside the try so the catch can roll the optimistic bubble back.
+		const tempId = `temp-${Date.now()}`;
 
 		try {
 			toast.info("Sending voice note...");
@@ -400,7 +402,6 @@ export const MessageBox = ({
 			const { url } = uploadRes.data;
 
 			// 2. Send Message
-			const tempId = `temp-${Date.now()}`;
 			const optimisticMessage: Message = {
 				_id: tempId,
 				conversationId: activeConversation._id,
@@ -443,9 +444,22 @@ export const MessageBox = ({
 					(m) => (m._id === tempId ? response.data : m),
 				),
 			}));
-		} catch (error) {
+		} catch (error: any) {
 			console.error("Failed to send audio", error);
-			toast.error("Failed to send voice note");
+			// The gateway refuses with a sentence worth reading — "You can
+			// only message or call people who follow you back" is a rule, and
+			// a generic "failed" sends the user off debugging their mic.
+			toast.error(
+				error?.response?.data?.message || "Failed to send voice note",
+			);
+			// The optimistic bubble stayed in the thread on failure, so a
+			// refused voice note LOOKED sent and silently never arrived.
+			setMessageCache((prev) => ({
+				...prev,
+				[activeConversation._id]: (prev[activeConversation._id] || []).filter(
+					(m) => m._id !== tempId,
+				),
+			}));
 		}
 	};
 
@@ -731,9 +745,10 @@ export const MessageBox = ({
 					),
 				};
 			});
-		} catch (error) {
+		} catch (error: any) {
 			console.error("Failed to send", error);
-			toast.error("Failed to send message");
+			// Same rule as the voice path: a 403 carries the actual reason.
+			toast.error(error?.response?.data?.message || "Failed to send message");
 			setMessageCache((prev) => ({
 				...prev,
 				[activeConversation._id]: (prev[activeConversation._id] || []).filter(

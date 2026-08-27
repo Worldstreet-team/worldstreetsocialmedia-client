@@ -349,10 +349,16 @@ class CallManager {
 			const denied =
 				err?.name === "NotAllowedError" ||
 				/permission|denied/i.test(err?.message ?? "");
+			// The token endpoint refuses with a sentence — 503 "Calling is not
+			// configured on this server" when LiveKit env is missing, 403 for
+			// a rule. Production ran for a day with calls dead and every
+			// caller shown "Couldn't connect the call", which reads as *their*
+			// network; the real reason was in the discarded response body.
+			const reason = err?.response?.data?.message;
 			this.fail(
 				denied
 					? "Microphone permission is blocked"
-					: "Couldn't connect the call",
+					: reason || "Couldn't connect the call",
 			);
 			return false;
 		}
