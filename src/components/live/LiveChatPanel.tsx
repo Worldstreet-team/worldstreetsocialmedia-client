@@ -326,9 +326,15 @@ export function LiveChatPanel({
 				timestamp: timeLabel(),
 			});
 			setGiftOpen(false);
+			// Show the spend immediately, then reconcile against the wallet.
+			// The charge books through Xstream's branch while we read our own,
+			// but both address /v1/wallet/<clerkUserId>/… — one balance per
+			// user, so the authoritative figure reflects the gift. Without the
+			// re-read the optimistic number would drift from it.
 			setWallet((prev) =>
 				prev === null ? prev : Math.max(0, prev - option.usdMinor),
 			);
+			void loadWallet();
 		} catch (err) {
 			setError(err instanceof Error ? err.message : t("chat.giftFailed"));
 		} finally {
