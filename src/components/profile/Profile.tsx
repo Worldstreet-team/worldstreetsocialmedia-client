@@ -267,11 +267,12 @@ export default function Profile({ username }: { username?: string }) {
 	// itself, off the same single feed subscription.
 	useFeedEvents((event, data) => {
 		const ownerProfileId = profileUser?._id;
-		if (event !== "post" || !ownerProfileId) return;
+		if (event !== "post" && event !== "reply") return;
+		if (!ownerProfileId) return;
 		if (!data.author || String(data.author) !== String(ownerProfileId)) return;
 		// A community post belongs to its community page, same rule the home
 		// timeline follows — the profile query filters it out too.
-		if (data.community) return;
+		if (event === "post" && data.community) return;
 
 		// Every cached tab for this person is stale now, not just the visible
 		// one, so switching tabs does not resurrect the old list.
@@ -280,9 +281,12 @@ export default function Profile({ username }: { username?: string }) {
 		}
 
 		const postId = data.postId ? String(data.postId) : "";
-		// Only the posts tab lists top-level posts. Replies publish on the
-		// post channel rather than the feed, so the replies tab stays a fetch.
-		if (!postId || activeTab !== "posts") return;
+		// Each event feeds exactly one tab. Media and Street are deliberately
+		// left to the invalidation above: their list is fetched with kind
+		// "media", so prepending a text post would put it under a tab the
+		// server would never have returned it for.
+		const tabForEvent = event === "post" ? "posts" : "replies";
+		if (!postId || activeTab !== tabForEvent) return;
 
 		void getPostByIdAction(postId)
 			.then((result: any) => {

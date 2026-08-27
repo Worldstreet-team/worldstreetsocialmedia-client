@@ -81,7 +81,7 @@ export function usePostEvents(
 /** New posts and new stories, for the timeline and the story rail. */
 export function useFeedEvents(
 	handler: (
-		event: "post" | "story" | "engagement",
+		event: "post" | "story" | "engagement" | "reply",
 		data: Record<string, unknown>,
 	) => void,
 ) {
@@ -97,11 +97,16 @@ export function useFeedEvents(
 		// Likes, replies and reposts for every post on screen, mirrored here
 		// by the gateway so a timeline needs one attach rather than one per card.
 		const onEngagement = (m: any) => ref.current("engagement", m?.data ?? {});
+		// A reply is its own event, never "post": the home timeline filters
+		// replies out entirely, so only a surface that lists them reacts.
+		const onReply = (m: any) => ref.current("reply", m?.data ?? {});
 		void channel.subscribe("post", onPost);
+		void channel.subscribe("reply", onReply);
 		void channel.subscribe("story", onStory);
 		void channel.subscribe("engagement", onEngagement);
 		return () => {
 			channel.unsubscribe("post", onPost);
+			channel.unsubscribe("reply", onReply);
 			channel.unsubscribe("story", onStory);
 			channel.unsubscribe("engagement", onEngagement);
 		};
