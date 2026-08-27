@@ -16,7 +16,6 @@ import { UserBadges } from "@/components/ui/UserBadges";
 import { StoryPaywall } from "@/components/feed/StoryPaywall";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { useAtomValue } from "jotai";
-import { userAtom } from "@/store/user.atom";
 import { useT } from "@/i18n/client";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
@@ -69,7 +68,6 @@ export function StoryViewer({
 }) {
 	const t = useT();
 	const { toast } = useToast();
-	const viewer = useAtomValue(userAtom);
 	const [index, setIndex] = useState(() =>
 		Math.max(
 			0,
@@ -417,16 +415,17 @@ export function StoryViewer({
 						/>
 					)}
 
-					{/* Forensic watermark: the viewer's own handle tiled over the
-					    frame. Screenshots on the web cannot be blanked, so the
-					    deterrent is traceability — any capture that leaks carries
-					    the account it was taken from. Skipped on your own stories.
+					{/* Attribution watermark: the POSTER's handle tiled over the
+					    frame, so a screenshot that travels still credits whose
+					    story it is. It shows the author, never the person
+					    watching — tiling the viewer's own handle read as if you
+					    were being tagged on someone else's story.
 					    Fixed white, NOT `text-primary`: this chrome is dark in both
 					    themes, so the theme-following token painted the mark in
 					    near-black ink for anyone on light mode and it disappeared
 					    entirely. It also has to survive a bright frame, hence the
-					    shadow — a deterrent nobody can see deters nobody. */}
-					{!entry.isSelf && viewer?.username && (
+					    shadow — a mark nobody can see credits nobody. */}
+					{entry.author.username && (
 						<div
 							aria-hidden
 							className="pointer-events-none absolute inset-0 z-[15] overflow-hidden opacity-[0.17]"
@@ -443,7 +442,7 @@ export function StoryViewer({
 										}}
 									>
 										{[0, 1, 2, 3].map((col) => (
-											<span key={col}>@{viewer.username}</span>
+											<span key={col}>@{entry.author.username}</span>
 										))}
 									</div>
 								))}

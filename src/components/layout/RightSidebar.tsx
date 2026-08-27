@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getWhoToFollowAction, followUserAction } from "@/lib/user.actions";
 import { useLiveNow } from "@/hooks/useLiveNow";
 import Link from "next/link";
@@ -59,59 +59,79 @@ export function RightSidebar() {
 	// palette, which could navigate and compose but could not find a user.
 	const setSearchOpen = useAtom(searchOpenAtom)[1];
 
+	// Live mirrors of the atoms this fetch reads. They are refs, not deps, and
+	// that is the whole point: `fetchAll` must keep ONE identity for the life
+	// of the component.
+	//
+	// It used to depend on `railFetchedAt` and the two loaded flags while also
+	// calling `setRailFetchedAt` on its way out. Stamping changed a dep, which
+	// gave the callback a new identity, which re-ran the mount effect, which
+	// stamped again. The loaded flags could not stop it either — they only flip
+	// after the awaited request RESOLVES, so every re-run in the meantime still
+	// saw `loaded === false`, still decided it needed the data, and still
+	// stamped. That is the "Maximum update depth exceeded" at this line, and it
+	// fired a burst of who-to-follow/explore requests on every mount.
+	const railFetchedAtRef = useRef(railFetchedAt);
+	railFetchedAtRef.current = railFetchedAt;
+	const loadedRef = useRef({ who: isSuggestionsLoaded, trends: isTrendsLoaded });
+	loadedRef.current = { who: isSuggestionsLoaded, trends: isTrendsLoaded };
+	// One flight at a time. The re-entrancy guard is what actually makes the
+	// loop impossible, rather than merely unlikely.
+	const inFlight = useRef(false);
+
 	// A failed fetch marks the section loaded-with-error and offers a retry —
 	// skeletons must never be a terminal state.
-	const fetchAll = useCallback(async () => {
-		setFailed(false);
-		// `loaded` used to be a permanent per-tab freeze (and Explore warming
-		// the same atoms froze the rail before it ever fetched here). Loaded
-		// AND fresh serves from memory; loaded-but-stale revalidates quietly
-		// behind the already-rendered list.
-		const fresh = Date.now() - railFetchedAt < RAIL_TTL_MS;
-		const needWho = !(isSuggestionsLoaded && fresh);
-		const needTrends = !(isTrendsLoaded && fresh);
-		// Stamp only when a request actually went out — an unconditional
-		// stamp changes the atom this callback depends on and loops the
-		// mount effect.
-		if (needWho || needTrends) setRailFetchedAt(Date.now());
-		const [who, explore] = await Promise.allSettled([
-			needWho ? getWhoToFollowAction() : null,
-			needTrends ? getExploreDataAction() : null,
-		]);
-		// Keyed on whether a request actually went out, NOT on whether it came
-		// back with a value. A rejected action left the `loaded` flag false
-		// while the timestamp above had already been stamped — so `fetchAll`
-		// got a new identity, the mount effect re-ran, stamped again, failed
-		// again, forever. React eventually threw "maximum update depth
-		// exceeded" and the rail sat on skeletons for the whole session.
-		// Failure has to be a terminal state with a retry, exactly as the
-		// comment above this function says.
-		if (needWho) {
-			if (
-				who.status === "fulfilled" &&
-				who.value?.success &&
-				Array.isArray(who.value.data)
-			) {
-				setSuggestions(who.value.data);
-			} else setFailed(true);
-			setIsSuggestionsLoaded(true);
-		}
-		if (needTrends) {
-			if (explore.status === "fulfilled" && explore.value?.success) {
-				setTrends(explore.value.data?.trendsForYou ?? []);
-			} else setFailed(true);
-			setIsTrendsLoaded(true);
-		}
-	}, [
-		isSuggestionsLoaded,
-		isTrendsLoaded,
-		railFetchedAt,
-		setRailFetchedAt,
-		setSuggestions,
-		setIsSuggestionsLoaded,
-		setTrends,
-		setIsTrendsLoaded,
-	]);
+	const fetchAll = useCallback(
+		async (force = false) => {
+			if (inFlight.current) return;
+			setFailed(false);
+			// Loaded AND fresh serves from memory; loaded-but-stale revalidates
+			// quietly behind the already-rendered list. `force` is the retry
+			// button, which must get through both checks.
+			const fresh = Date.now() - railFetchedAtRef.current < RAIL_TTL_MS;
+			const needWho = force || !(loadedRef.current.who && fresh);
+			const needTrends = force || !(loadedRef.current.trends && fresh);
+			if (!needWho && !needTrends) return;
+
+			inFlight.current = true;
+			setRailFetchedAt(Date.now());
+			try {
+				const [who, explore] = await Promise.allSettled([
+					needWho ? getWhoToFollowAction() : null,
+					needTrends ? getExploreDataAction() : null,
+				]);
+				// Keyed on whether a request actually went out, NOT on whether it
+				// came back with a value: failure has to be a terminal state with
+				// a retry, exactly as the comment above says.
+				if (needWho) {
+					if (
+						who.status === "fulfilled" &&
+						who.value?.success &&
+						Array.isArray(who.value.data)
+					) {
+						setSuggestions(who.value.data);
+					} else setFailed(true);
+					setIsSuggestionsLoaded(true);
+				}
+				if (needTrends) {
+					if (explore.status === "fulfilled" && explore.value?.success) {
+						setTrends(explore.value.data?.trendsForYou ?? []);
+					} else setFailed(true);
+					setIsTrendsLoaded(true);
+				}
+			} finally {
+				inFlight.current = false;
+			}
+		},
+		// Setters only — every one of these is stable, so the callback is too.
+		[
+			setRailFetchedAt,
+			setSuggestions,
+			setIsSuggestionsLoaded,
+			setTrends,
+			setIsTrendsLoaded,
+		],
+	);
 
 	useEffect(() => {
 		// The whole aside is hidden below lg — don't spend three requests on
@@ -327,7 +347,7 @@ export function RightSidebar() {
 							onClick={() => {
 								setIsTrendsLoaded(false);
 								setIsSuggestionsLoaded(false);
-								void fetchAll();
+								void fetchAll(true);
 							}}
 							className="mx-3 my-2 px-3 py-2 rounded-pill bg-raised text-sm text-primary font-sans hover:bg-chip transition-colors cursor-pointer"
 						>

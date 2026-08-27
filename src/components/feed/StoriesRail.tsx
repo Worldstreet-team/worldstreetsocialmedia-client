@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useAtomValue } from "jotai";
-import { storyStudioSignalAtom } from "@/store/ui.atom";
+import { useAtom, useAtomValue } from "jotai";
+import { storyRailAtom, storyStudioSignalAtom } from "@/store/ui.atom";
 import clsx from "clsx";
 import { Plus } from "lucide-react";
 
@@ -23,6 +23,8 @@ import { SafeAvatar } from "@/components/ui/SafeAvatar";
    (the FAB navigating home from another route) must survive until a rail can
    act on it. Module scope outlives the mounts. */
 let consumedStorySignal: number | null = null;
+/** One initial rail load per page load, shared by both mounted instances. */
+let railLoadStarted = false;
 
 /** Sustained downward travel before the rail gets out of the way. */
 const COLLAPSE_AFTER_DOWN_PX = 120;
@@ -131,7 +133,10 @@ function useCollapseOnScrollDown() {
  */
 export function StoriesRail() {
 	const t = useT();
-	const [rail, setRail] = useState<RailEntry[]>([]);
+	const [rail, setRail] = useAtom(storyRailAtom) as [
+		RailEntry[],
+		(v: RailEntry[]) => void,
+	];
 	const [open, setOpen] = useState<RailEntry | null>(null);
 	// Posting now runs through the Story Studio (crop/filters/text/stickers/
 	// draw), which owns its own picker, preview and posting state. The plus
@@ -162,13 +167,29 @@ export function StoriesRail() {
 		}
 	}, [storySignal]);
 
+	// Three things call this — the mount effect, a live-presence event and a
+	// feed "story" event — so several loads can be in flight at once and they
+	// do NOT resolve in the order they were sent. Whichever answered last used
+	// to win, so a slower, older (or momentarily empty) response would land on
+	// top of a newer full one and the rail would blank out, then come back on
+	// the next event. `[]` is truthy, so the success check never caught it.
+	// Only the most recent request may write.
+	const loadSeq = useRef(0);
 	const load = async () => {
+		const seq = ++loadSeq.current;
 		const res = await getStoriesAction();
+		if (seq !== loadSeq.current) return;
 		if (res.success && res.data?.rail) setRail(res.data.rail);
 	};
 
 	useEffect(() => {
-		if (!isVisible()) return;
+		// Visibility gates the EVENT-driven refreshes below, but it must not
+		// gate the first load. `getClientRects()` inside the first effect can
+		// legitimately measure zero on both copies (neither laid out yet), and
+		// when that happened the rail never fetched at all. The module flag
+		// keeps this to a single request no matter how many copies mount.
+		if (railLoadStarted) return;
+		railLoadStarted = true;
 		void load();
 	}, []);
 

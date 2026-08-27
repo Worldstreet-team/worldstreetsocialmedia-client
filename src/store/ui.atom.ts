@@ -75,3 +75,15 @@ export const searchOpenAtom = atom(false);
 
 /** Seeds the search window's input, so a caller can hand it a query. */
 export const searchSeedAtom = atom("");
+
+/**
+ * The story rail, shared by both StoriesRail instances.
+ *
+ * The rail is mounted twice — once in `app/page.tsx` and once in
+ * `(main)/layout.tsx` — and only the one that is actually on screen fetches.
+ * While each copy held its own `useState`, the hidden copy stayed empty
+ * forever (its mount effect returns early), so as soon as it became the
+ * visible one the stories vanished and never came back. Shared state means
+ * whichever copy is showing renders what the other one fetched.
+ */
+export const storyRailAtom = atom<any[]>([]);
