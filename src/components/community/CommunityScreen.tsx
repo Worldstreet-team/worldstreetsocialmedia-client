@@ -22,6 +22,7 @@ import {
 	getCommunityPostsAction,
 	toggleCommunityAction,
 } from "@/lib/community.actions";
+import { ManageCommunity } from "@/components/community/ManageCommunity";
 import { resolveCategoryLabel } from "@/lib/categories";
 import { formatTimeAgo } from "@/lib/utils";
 import { DEFAULT_AVATAR } from "@/const";
@@ -103,6 +104,10 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 	const [loadingMore, setLoadingMore] = useState(false);
 	const [joinBusy, setJoinBusy] = useState(false);
 
+	// Bumped by ManageCommunity after an edit/removal so the header refetches.
+	const [refetch, setRefetch] = useState(0);
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: refetch is the signal; its value is unused.
 	useEffect(() => {
 		let cancelled = false;
 		setLoading(true);
@@ -115,7 +120,7 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 		return () => {
 			cancelled = true;
 		};
-	}, [slug]);
+	}, [slug, refetch]);
 
 	// Normalized so the failure branch of the action, which carries no
 	// pagination fields, can't widen these into optionals.
@@ -242,6 +247,21 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 						</span>
 					)}
 				</div>
+				{community?.isOwner && (
+					<div className="ml-auto">
+						<ManageCommunity
+							community={{
+								id: community.id,
+								slug: community.slug,
+								name: community.name,
+								description: community.description,
+								category: community.category,
+								avatar: community.avatar,
+							}}
+							onChanged={() => setRefetch((n) => n + 1)}
+						/>
+					</div>
+				)}
 			</header>
 
 			{loading || !community ? (

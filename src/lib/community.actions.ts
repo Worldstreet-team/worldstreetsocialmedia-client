@@ -155,3 +155,89 @@ export async function getCommunityHomeAction(cursor: string | null = null) {
 		};
 	}
 }
+
+/**
+ * Owner edits: description, category, avatar. The name (and slug) is
+ * immutable server-side — links in the wild are the slug.
+ */
+export async function updateCommunityAction(id: string, form: FormData) {
+	const headers = await bearer();
+	if (!headers) return { success: false, message: "Unauthorized" };
+	try {
+		await axios.patch(`${BACKEND_URL}/api/communities/${id}`, form, {
+			headers,
+			timeout: 30_000,
+		});
+		return { success: true };
+	} catch (error: any) {
+		return {
+			success: false,
+			message:
+				error.response?.data?.message || "Could not save the changes",
+		};
+	}
+}
+
+/** Owner deletes the community; its posts go with it. */
+export async function deleteCommunityAction(id: string) {
+	const headers = await bearer();
+	if (!headers) return { success: false, message: "Unauthorized" };
+	try {
+		await axios.delete(`${BACKEND_URL}/api/communities/${id}`, { headers });
+		return { success: true };
+	} catch (error: any) {
+		return {
+			success: false,
+			message: error.response?.data?.message || "Could not delete it",
+		};
+	}
+}
+
+/** Owner removes (and bans) a member. */
+export async function removeMemberAction(id: string, profileId: string) {
+	const headers = await bearer();
+	if (!headers) return { success: false, message: "Unauthorized" };
+	try {
+		await axios.post(
+			`${BACKEND_URL}/api/communities/${id}/remove`,
+			{ profileId },
+			{ headers },
+		);
+		return { success: true };
+	} catch (error: any) {
+		return {
+			success: false,
+			message: error.response?.data?.message || "Could not remove them",
+		};
+	}
+}
+
+export interface CommunityMemberRow {
+	id: string;
+	username: string;
+	firstName?: string;
+	lastName?: string;
+	avatar?: string;
+	isVerified?: boolean;
+	isOwner: boolean;
+}
+
+/** Paged member roster for the members sheet. */
+export async function getCommunityMembersAction(slug: string, offset = 0) {
+	const headers = await bearer();
+	if (!headers)
+		return { success: false as const, members: [], nextOffset: null };
+	try {
+		const res = await axios.get(
+			`${BACKEND_URL}/api/communities/${slug}/members`,
+			{ headers, params: { offset } },
+		);
+		return {
+			success: true as const,
+			members: (res.data?.members ?? []) as CommunityMemberRow[],
+			nextOffset: (res.data?.nextOffset ?? null) as number | null,
+		};
+	} catch {
+		return { success: false as const, members: [], nextOffset: null };
+	}
+}
