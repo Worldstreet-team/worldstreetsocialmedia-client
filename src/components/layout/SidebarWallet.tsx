@@ -6,10 +6,10 @@ import { getWalletBalanceAction, type WalletBalances } from "@/lib/wallet.action
 import { useT } from "@/i18n/client";
 
 /** Always two decimals: a balance that renders "$8" reads as an estimate. */
-const money = (minor: number, currency: "USD" | "NGN") =>
+const money = (minor: number) =>
 	new Intl.NumberFormat(undefined, {
 		style: "currency",
-		currency,
+		currency: "USD",
 		minimumFractionDigits: 2,
 		maximumFractionDigits: 2,
 	}).format(minor / 100);
@@ -74,14 +74,15 @@ export function SidebarWallet() {
 				</span>
 
 				<span className="mt-2 block font-display text-[24px] font-semibold leading-none tabular-nums text-primary">
-					{money(balances.USD.availableMinor, "USD")}
+					{money(balances.USD.availableMinor)}
 				</span>
 
-				{balances.NGN.availableMinor > 0 && (
-					<span className="mt-1.5 block font-sans text-[12px] tabular-nums text-primary/60">
-						{money(balances.NGN.availableMinor, "NGN")}
-					</span>
-				)}
+				{/* USD only (owner ruling 2026-08-28). The naira line rendered a
+				    SECOND balance under the first, which reads as two wallets
+				    rather than one — and the gateway is the authority on which
+				    currency this surface speaks. The NGN figure is still on the
+				    balance payload for whoever needs it; it is just not shown
+				    here. */}
 			</span>
 		</a>
 	);
