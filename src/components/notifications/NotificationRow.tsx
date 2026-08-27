@@ -141,11 +141,17 @@ export function NotificationRow({
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="font-sans text-[14.5px] leading-snug text-primary">
           <span className="font-semibold">{senderName(lead)}</span>
-          {lead.isVerified && (
-            <span className="mx-0.5 inline-flex translate-y-[1px]">
-              <UserBadges isVerified badges={lead.badges} size={12} />
-            </span>
-          )}
+          {/* No isVerified guard: UserBadges already returns null when there
+              is nothing to show, so the guard only ever hid Wolf and
+              developer marks from people who had not also bought a tick. */}
+          <span className="mx-0.5 inline-flex translate-y-[1px]">
+            <UserBadges
+              isVerified={lead.isVerified}
+              verification={(lead as any).verification}
+              badges={lead.badges}
+              size={12}
+            />
+          </span>
           {others > 0 && (
             <span className="text-primary">
               {" "}

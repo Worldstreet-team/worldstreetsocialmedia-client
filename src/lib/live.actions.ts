@@ -250,6 +250,11 @@ export async function listLiveStreamsAction() {
 				likes: Number(st.likes ?? 0),
 				username: String(st.streamerId?.username ?? ""),
 				avatar: String(st.streamerId?.avatar ?? ""),
+				// Forward-compatible: shown when Xstream populates them, and
+				// the name falls back to the handle when it does not.
+				firstName: st.streamerId?.firstName ?? undefined,
+				lastName: st.streamerId?.lastName ?? undefined,
+				isVerified: Boolean(st.streamerId?.isVerified),
 			}));
 		return { success: true as const, streams };
 	} catch (error: any) {

@@ -18,6 +18,7 @@ import StoryCreateSheet, {
 } from "@/components/story/StoryCreateSheet";
 import StoryStudio from "@/components/story/StoryStudio";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import { displayName } from "@/components/ui/PersonName";
 
 /* The rail now mounts twice — RightSidebar (lg+) and the feed column
    (below lg) — so a create signal fired before the visible instance mounted
@@ -323,7 +324,7 @@ export function StoriesRail() {
 			</button>
 
 			{others.map((entry) => {
-				const name = entry.author.username;
+				const name = displayName(entry.author);
 				const liveStory = entry.stories.find((s) => s.origin === "live");
 				// The card wears the story it is offering. First unseen if there
 				// is one, so the cover matches what tapping actually opens.

@@ -11,6 +11,12 @@ export interface LiveEntry {
 	viewers: number;
 	username: string;
 	avatar: string;
+	/** Real name and verification, so the rail can address a broadcaster the
+	 *  way every other surface does. Optional: these ride along from Xstream,
+	 *  which may not populate them, and the name falls back to the handle. */
+	firstName?: string;
+	lastName?: string;
+	isVerified?: boolean;
 }
 
 /**

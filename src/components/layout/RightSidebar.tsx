@@ -24,6 +24,7 @@ import { XSTREAM_WEB_URL } from "@/const";
 import { useT } from "@/i18n/client";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";
+import { PersonName } from "@/components/ui/PersonName";
 import { resolveCategoryLabel } from "@/lib/categories";
 import { cacheKeys, fetchCached } from "@/lib/cache";
 import clsx from "clsx";
@@ -238,9 +239,11 @@ export function RightSidebar() {
 										{t("live.badge")}
 									</span>
 								</span>
-								<span className="text-[11px] text-muted font-sans truncate max-w-14">
-									@{entry.username}
-								</span>
+								<PersonName
+									person={entry}
+									size={10}
+									className="max-w-14 text-[11px] text-muted font-sans"
+								/>
 							</Link>
 						))}
 					</div>

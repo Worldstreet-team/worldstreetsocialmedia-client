@@ -5,7 +5,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { UserBadges } from "@/components/ui/UserBadges";
+import { PersonName } from "@/components/ui/PersonName";
 import { CaretLeft, CaretRight, Waveform } from "@phosphor-icons/react";
 import { SectionHead } from "@/components/layout/SectionHead";
 import { EqBars, spaceBackground } from "@/components/voice/SpaceCard";
@@ -98,15 +98,10 @@ function startsIn(iso?: string): string | null {
 	return new Date(iso).toLocaleDateString(undefined, { weekday: "short" });
 }
 
-function hostName(host?: SpaceHost) {
-	if (host?.username) return `@${host.username}`;
-	const full = [host?.firstName, host?.lastName].filter(Boolean).join(" ");
-	return full || "";
-}
+
 
 function SpaceRow({ space, live }: { space: Space; live: boolean }) {
 	const t = useT();
-	const name = hostName(space.host);
 	const count = space.membersCount ?? 0;
 	const when = startsIn(space.scheduledFor);
 
@@ -144,13 +139,10 @@ function SpaceRow({ space, live }: { space: Space; live: boolean }) {
 				<span className="relative h-5 w-5 shrink-0 overflow-hidden rounded-pill bg-[#1c1917]">
 					<SafeAvatar src={space.host?.avatar} />
 				</span>
-				<span className="min-w-0 truncate font-sans text-[11.5px] text-[#fafaf9]/80">
-					{name}
-				</span>
-				<UserBadges
-					isVerified={space.host?.isVerified}
-					badges={(space.host as any)?.badges}
+				<PersonName
+					person={space.host as any}
 					size={11}
+					className="min-w-0 font-sans text-[11.5px] text-[#fafaf9]/80"
 				/>
 				<span className="ml-auto shrink-0 font-sans text-[11px] font-semibold tabular-nums text-[#fafaf9]/85">
 					{count} {live ? t("rail.spaces.listening") : t("rail.spaces.going")}
