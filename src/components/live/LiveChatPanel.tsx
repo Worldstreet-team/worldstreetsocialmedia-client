@@ -67,6 +67,7 @@ export function LiveChatPanel({
 	const [giftOpen, setGiftOpen] = useState(false);
 	const [giftBusy, setGiftBusy] = useState(false);
 	const [wallet, setWallet] = useState<number | null>(null);
+	const [walletError, setWalletError] = useState<string | null>(null);
 	const listRef = useRef<HTMLDivElement>(null);
 	const seenRef = useRef<Set<string>>(new Set());
 
@@ -237,20 +238,38 @@ export function LiveChatPanel({
 		}
 	};
 
-	// Wallet balance is a courtesy readout; the charge itself is authoritative.
+	/**
+	 * Wallet balance for the gift panel.
+	 *
+	 * This used to swallow every failure and just hide the figure, so a
+	 * suspended API, a missing env var and a genuinely empty wallet all
+	 * looked identical: nothing. For a spending surface that is the wrong
+	 * silence — say the balance is unreadable instead of implying zero.
+	 */
 	const loadWallet = useCallback(async () => {
+		setWalletError(null);
 		try {
 			const token = await (window as any).Clerk?.session?.getToken();
-			if (!token) return;
+			if (!token) {
+				setWalletError(t("chat.walletSignedOut"));
+				return;
+			}
 			const res = await fetch(`${XSTREAM_API_URL}/v1/wallet/balance`, {
 				headers: { Authorization: `Bearer ${token}` },
 			});
 			const body = await res.json().catch(() => null);
-			if (body?.data) setWallet(Number(body.data.availableUsdMinor ?? 0));
+			if (res.ok && body?.data) {
+				setWallet(Number(body.data.availableUsdMinor ?? 0));
+				return;
+			}
+			setWallet(null);
+			setWalletError(body?.message ?? t("chat.walletUnavailable"));
 		} catch {
 			setWallet(null);
+			// Network-level failure: unreachable host, CORS, or DNS.
+			setWalletError(t("chat.walletUnreachable"));
 		}
-	}, []);
+	}, [t]);
 
 	useEffect(() => {
 		if (giftOpen) void loadWallet();
@@ -446,7 +465,7 @@ export function LiveChatPanel({
 						>
 							{t("chat.gift")}
 						</span>
-						{wallet !== null && (
+						{wallet !== null ? (
 							<span
 								className={clsx(
 									"font-sans text-[11px] tabular-nums",
@@ -455,7 +474,11 @@ export function LiveChatPanel({
 							>
 								{t("chat.wallet")} {centsToDollars(wallet)}
 							</span>
-						)}
+						) : walletError ? (
+							<span className="font-sans text-[11px] text-danger">
+								{walletError}
+							</span>
+						) : null}
 					</div>
 					<div className="flex flex-wrap gap-1.5">
 						{GIFT_OPTIONS.map((g) => (
