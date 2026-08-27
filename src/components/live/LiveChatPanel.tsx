@@ -5,7 +5,7 @@ import Image from "next/image";
 import clsx from "clsx";
 import { Gift, HandWaving, Heart, PaperPlaneTilt } from "@phosphor-icons/react";
 import type { Room } from "livekit-client";
-import { DEFAULT_AVATAR, XSTREAM_API_URL } from "@/const";
+import { BACKEND_URL, DEFAULT_AVATAR, XSTREAM_API_URL } from "@/const";
 import { useT } from "@/i18n/client";
 
 /** The cross-platform chat wire shape (matches Xstream's LiveChat). */
@@ -239,12 +239,14 @@ export function LiveChatPanel({
 	};
 
 	/**
-	 * Wallet balance for the gift panel.
+	 * Wallet balance, read from OUR OWN gateway — not Xstream's.
 	 *
-	 * This used to swallow every failure and just hide the figure, so a
-	 * suspended API, a missing env var and a genuinely empty wallet all
-	 * looked identical: nothing. For a spending surface that is the wrong
-	 * silence — say the balance is unreadable instead of implying zero.
+	 * Every platform holds its own wallet-service branch token (socials is
+	 * registered wallet-side as `social:<token>`, the same way academy has
+	 * its own). Reading the balance through Xstream's API borrowed a
+	 * different platform's credentials for a question about this user's
+	 * money, and made a simple balance read fail whenever the live service
+	 * was unreachable. It is a read against our own branch; it belongs here.
 	 */
 	const loadWallet = useCallback(async () => {
 		setWalletError(null);
@@ -254,19 +256,21 @@ export function LiveChatPanel({
 				setWalletError(t("chat.walletSignedOut"));
 				return;
 			}
-			const res = await fetch(`${XSTREAM_API_URL}/v1/wallet/balance`, {
+			const res = await fetch(`${BACKEND_URL}/api/wallet/balance`, {
 				headers: { Authorization: `Bearer ${token}` },
 			});
 			const body = await res.json().catch(() => null);
-			if (res.ok && body?.data) {
-				setWallet(Number(body.data.availableUsdMinor ?? 0));
+			// The gateway answers 200 with available:false on a wallet outage
+			// rather than failing the request — treat that as "unreadable",
+			// never as a zero balance.
+			if (res.ok && body?.available && body.balances?.USD) {
+				setWallet(Number(body.balances.USD.availableMinor ?? 0));
 				return;
 			}
 			setWallet(null);
-			setWalletError(body?.message ?? t("chat.walletUnavailable"));
+			setWalletError(t("chat.walletUnavailable"));
 		} catch {
 			setWallet(null);
-			// Network-level failure: unreachable host, CORS, or DNS.
 			setWalletError(t("chat.walletUnreachable"));
 		}
 	}, [t]);
