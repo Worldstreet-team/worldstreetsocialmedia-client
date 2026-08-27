@@ -7,6 +7,7 @@ import { WindowSwitch, fmt } from "@/components/studio/studio-ui";
 import {
 	BarList,
 	TrendChart,
+	countryFlag,
 	countryLabel,
 } from "@/components/studio/charts";
 
@@ -194,6 +195,7 @@ export function PostStats({
 										items={data.stats.byCountry.map((c) => ({
 											key: c.country,
 											label: countryLabel(c.country, t.locale),
+											glyph: countryFlag(c.country),
 											value: c.impressions,
 										}))}
 									/>

@@ -445,6 +445,21 @@ dashboard work here:
   get the become-a-creator pitch; the gateway still 403s non-creators.
 - /studio/apps is a redirect; the ecosystem links are three quiet rows on
   the overview and must mirror the ratified platform list (no "Wallet").
+- **The rail carries its own fill** (`#141312` vs page `#0F0E0D`). Removing
+  its border was right; leaving it the same ink as the page made it dissolve
+  — contrast is what makes it read as a rail.
+- **Live presets hold what the Go Live sheet asks and forgets**: category
+  (the 100-item taxonomy, same vocabulary the sheet picks from), capture
+  source (camera/OBS) and notifyFollowers. `title` is legacy and no longer
+  surfaced — the sheet deliberately never prefills a title. Don't add preset
+  fields the go-live payload can't consume.
+- **Never show an empty state while a request is in flight.** Top posts had
+  its own `postsLoading` flag added for exactly this: server actions
+  serialise, so it resolves after the stats calls and briefly claimed the
+  creator had never posted.
+- Country rows carry flag emoji (`countryFlag`). The emoji-as-icon ban is
+  about UI glyphs; a flag is the datum, there's no flag set in the icon
+  library, and platforms without flag glyphs fall back to the ISO letters.
 - Brand accent always via `var(--ws-brand-primary)` — the Worldspace
   rebrand moves it, and the Studio must follow. The shell's identity card
   renders after mount only (the user atom hydrates client-side; rendering

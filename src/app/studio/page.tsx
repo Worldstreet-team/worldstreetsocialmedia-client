@@ -33,6 +33,7 @@ import {
 	DonutChart,
 	MiniBars,
 	TrendChart,
+	countryFlag,
 	countryLabel,
 } from "@/components/studio/charts";
 import { XSTREAM_WEB_URL } from "@/const";
@@ -98,6 +99,10 @@ export default function StudioOverview() {
 	const [stats, setStats] = useState<Stats | null>(null);
 	const [prev, setPrev] = useState<Stats | null>(null);
 	const [topPosts, setTopPosts] = useState<TopPost[]>([]);
+	// Next serialises server actions, so this one lands after the two stats
+	// calls. Without its own flag the card showed "you haven't posted yet"
+	// while the request was still in flight — an empty state that lies.
+	const [postsLoading, setPostsLoading] = useState(true);
 	const [days, setDays] = useState(28);
 	const [notCreator, setNotCreator] = useState(false);
 	const [busy, setBusy] = useState(false);
@@ -144,15 +149,17 @@ export default function StudioOverview() {
 	}, [days, load]);
 
 	useEffect(() => {
-		void getCreatorPostsAction().then((res) => {
-			if (res.success && Array.isArray(res.posts)) {
-				setTopPosts(
-					[...(res.posts as TopPost[])]
-						.sort((a, b) => (b.stats.views ?? 0) - (a.stats.views ?? 0))
-						.slice(0, 5),
-				);
-			}
-		});
+		void getCreatorPostsAction()
+			.then((res) => {
+				if (res.success && Array.isArray(res.posts)) {
+					setTopPosts(
+						[...(res.posts as TopPost[])]
+							.sort((a, b) => (b.stats.views ?? 0) - (a.stats.views ?? 0))
+							.slice(0, 5),
+					);
+				}
+			})
+			.finally(() => setPostsLoading(false));
 	}, []);
 
 	const activate = async () => {
@@ -345,7 +352,16 @@ export default function StudioOverview() {
 							</Link>
 						}
 					/>
-					{topPosts.length === 0 ? (
+					{postsLoading ? (
+						<div className="flex flex-col gap-2 px-5 pb-4 pt-2">
+							{[1, 2, 3, 4].map((i) => (
+								<div
+									key={i}
+									className="h-11 animate-pulse rounded-lg bg-[#fafaf9]/[0.04]"
+								/>
+							))}
+						</div>
+					) : topPosts.length === 0 ? (
 						<CellEmpty>{t("studio.noPosts")}</CellEmpty>
 					) : (
 						<div className="px-2 pb-3 pt-1">
@@ -407,6 +423,7 @@ export default function StudioOverview() {
 								items={stats.byCountry.map((c) => ({
 									key: c.country,
 									label: countryLabel(c.country, t.locale),
+									glyph: countryFlag(c.country),
 									value: c.impressions,
 								}))}
 							/>

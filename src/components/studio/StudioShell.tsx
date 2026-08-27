@@ -32,6 +32,9 @@ const GROUPS = [
 				href: "/studio/promotions",
 				key: "studio.nav.promotions",
 				Icon: Megaphone,
+				// Campaigns exist end-to-end but aren't launched yet; the badge
+				// is the honest signal rather than a working-looking page.
+				badgeKey: "studio.soon",
 			},
 			{ href: "/studio/live", key: "studio.nav.live", Icon: Broadcast },
 		],
@@ -67,7 +70,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 		<div className="min-h-dvh bg-[#0F0E0D] text-[#fafaf9]">
 			<div className="flex min-h-dvh">
 				{/* ── rail ─────────────────────────────────────────────────── */}
-				<aside className="sticky top-0 hidden h-dvh w-[236px] shrink-0 flex-col px-4 pb-4 pt-5 md:flex">
+				<aside className="sticky top-0 hidden h-dvh w-[240px] shrink-0 flex-col bg-[#141312] px-4 pb-4 pt-5 md:flex">
 					<Link
 						href="/"
 						className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 glass-ink-faint transition-colors hover:glass-ink hover:bg-[#fafaf9]/[0.05]"
@@ -94,7 +97,10 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 									{t(group.labelKey)}
 								</p>
 								<div className="flex flex-col gap-0.5">
-									{group.items.map(({ href, key, Icon }) => {
+									{group.items.map((item) => {
+										const { href, key, Icon } = item;
+										const badgeKey = (item as { badgeKey?: string })
+											.badgeKey;
 										const active = isActive(href);
 										return (
 											<Link
@@ -112,6 +118,18 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 													weight={active ? "fill" : "regular"}
 												/>
 												<span className="truncate">{t(key)}</span>
+												{badgeKey && (
+													<span
+														className={clsx(
+															"ml-auto shrink-0 rounded-pill px-1.5 py-0.5 font-sans text-[9.5px] font-bold uppercase tracking-[0.06em]",
+															active
+																? "bg-[#0c0a09]/15 text-[#0c0a09]"
+																: "bg-[#fafaf9]/[0.08] glass-ink-faint",
+														)}
+													>
+														{t(badgeKey)}
+													</span>
+												)}
 											</Link>
 										);
 									})}

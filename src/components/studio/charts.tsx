@@ -355,7 +355,7 @@ export function DonutChart({
 	centerLabel,
 	unknownLabel,
 }: {
-	items: { key: string; label: string; value: number }[];
+	items: { key: string; label: string; value: number; glyph?: string }[];
 	centerLabel: string;
 	unknownLabel?: string;
 }) {
@@ -372,7 +372,7 @@ export function DonutChart({
 	const shown = items.slice(0, 5);
 	const rest = items.slice(5).reduce((s, i) => s + i.value, 0);
 	const slices = rest > 0
-		? [...shown, { key: "__rest", label: "…", value: rest }]
+		? [...shown, { key: "__rest", label: "…", value: rest, glyph: "" }]
 		: shown;
 
 	let acc = 0;
@@ -422,6 +422,11 @@ export function DonutChart({
 							className="h-2 w-2 shrink-0 rounded-pill"
 							style={{ background: SLICE_COLORS[i % SLICE_COLORS.length] }}
 						/>
+						{s.glyph && (
+							<span className="shrink-0 text-[13px] leading-none">
+								{s.glyph}
+							</span>
+						)}
 						<span className="min-w-0 flex-1 truncate glass-ink-dim">
 							{s.label || unknownLabel || s.key}
 						</span>
@@ -440,7 +445,7 @@ export function BarList({
 	items,
 	unknownLabel,
 }: {
-	items: { key: string; label: string; value: number }[];
+	items: { key: string; label: string; value: number; glyph?: string }[];
 	unknownLabel?: string;
 }) {
 	const total = Math.max(
@@ -454,8 +459,13 @@ export function BarList({
 				return (
 					<div key={item.key}>
 						<div className="mb-1 flex items-center justify-between font-sans text-[13px]">
-							<span className="min-w-0 truncate font-medium glass-ink">
-								{item.label || unknownLabel || item.key}
+							<span className="flex min-w-0 items-center gap-1.5 font-medium glass-ink">
+								{item.glyph && (
+									<span className="shrink-0 leading-none">{item.glyph}</span>
+								)}
+								<span className="truncate">
+									{item.label || unknownLabel || item.key}
+								</span>
 							</span>
 							<span className="ml-3 shrink-0 glass-ink-dim tabular-nums">
 								{fmt(item.value)}
@@ -474,6 +484,24 @@ export function BarList({
 				);
 			})}
 		</div>
+	);
+}
+
+/**
+ * ISO-3166 alpha-2 → flag emoji, by offsetting each letter into the
+ * regional-indicator block.
+ *
+ * The design system bans emoji *as icons*; a flag is data — the country
+ * itself — and there is no flag set in the 74-icon library. Platforms
+ * without flag glyphs (Windows Chrome) render the two letters instead,
+ * which is a correct fallback rather than tofu.
+ */
+export function countryFlag(code: string): string {
+	if (!code || code.length !== 2 || code === "??") return "";
+	const up = code.toUpperCase();
+	if (!/^[A-Z]{2}$/.test(up)) return "";
+	return String.fromCodePoint(
+		...[...up].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65),
 	);
 }
 
