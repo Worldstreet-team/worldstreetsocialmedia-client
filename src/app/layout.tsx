@@ -101,11 +101,11 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
     title: {
-        default: "Worldspace",
-        template: "%s · Worldspace",
+        default: "WorldSpace",
+        template: "%s · WorldSpace",
     },
     description:
- "Worldspace share ideas, follow traders and creators, and talk markets across the WorldStreet ecosystem.",
+ "WorldSpace share ideas, follow traders and creators, and talk markets across the WorldStreet ecosystem.",
 };
 
 export default async function RootLayout({

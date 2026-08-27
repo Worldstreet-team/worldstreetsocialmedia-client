@@ -6,7 +6,7 @@
    This app renders the "platform" theme (see <html data-ws-theme> in layout.tsx).
    --------------------------------------------------------------------------- */
 /* WorldStreet Design Tokens — v2, adopted 2026-08-05 from dashboard-revamp/
-   (the worldstreetgold.com hub). Worldspace runs stone + BLUE; the rest of the
+   (the worldstreetgold.com hub). WorldSpace runs stone + CYAN; the rest of the
    ecosystem is still stone + gold, so this file has deliberately diverged.
    Two modes: dark (default) and light.
 
@@ -42,8 +42,8 @@
   --card-foreground: oklch(0.986 0.002 67.8);
   --popover: #1C1917;
   --popover-foreground: oklch(0.986 0.002 67.8);
-  --primary: #2563EB;                             /* brand blue */
-  --primary-foreground: #FFFFFF;
+  --primary: #22B8D6;                             /* brand cyan */
+  --primary-foreground: #0C0A09;
   --secondary: #292524;
   --secondary-foreground: oklch(0.985 0 0);
   --muted: #292524;
@@ -77,16 +77,16 @@
   --sidebar-ring: oklch(0.547 0.021 43.1);
 
   /* ws-only extras with no shadcn counterpart — mode-specific values */
-  --ws-brand-active: #3B82F6;                      /* hover lifts on dark */
-  --ws-brand-dim: #1D4ED8;
-  /* Brand as TEXT on the dark page: 7.8:1, comfortably AA. The token keeps
+  --ws-brand-active: #3FCFE8;                      /* hover lifts on dark */
+  --ws-brand-dim: #1A93AB;
+  /* Brand as TEXT on the dark page: 8.6:1, comfortably AA. The token keeps
      its historic name so ~100 `text-gold` call sites did not all have to
-     churn; it means "brand ink", and it is blue now. */
-  --ws-brand-gold-text: #60A5FA;
+     churn; it means "brand ink", and it is cyan now. */
+  --ws-brand-gold-text: #67DCF0;
   --ws-overlay-scrim: rgba(0, 0, 0, 0.60);
   /* Ambient page glow — the ONLY permitted large-area brand color, as 1-2
      huge blurred radials behind all surfaces, hero-scale pages only. */
-  --ws-glow-brand: rgba(37, 99, 235, 0.10);
+  --ws-glow-brand: rgba(34, 184, 214, 0.10);
 }
 
 /* ── Light — the hub's paper mode. Money 700s (emerald-500 lands ~2.4:1 on
@@ -134,11 +134,13 @@
   --sidebar-border: oklch(0.922 0.005 34.3);
   --sidebar-ring: oklch(0.714 0.014 41.2);
 
-  --ws-brand-active: #1D4ED8;                      /* hover deepens on paper */
-  --ws-brand-dim: #1E40AF;
-  --ws-brand-gold-text: #1D4ED8;                   /* 6.4:1 on paper */
+  --ws-brand-active: #1A93AB;                      /* hover deepens on paper */
+  --ws-brand-dim: #14778B;
+  /* Brand ink on paper has to be much deeper than the fill: #22B8D6 as text
+     on white is only 2.2:1. This is 5.1:1. */
+  --ws-brand-gold-text: #0E6273;
   --ws-overlay-scrim: rgba(24, 24, 27, 0.45);
-  --ws-glow-brand: rgba(29, 78, 216, 0.06);
+  --ws-glow-brand: rgba(26, 147, 171, 0.06);
 }
 
 /* ── Shared, mode-independent ─────────────────────────────────────────── */
@@ -237,10 +239,14 @@
   --ws-text-primary: oklch(0.986 0.002 67.8);
   --ws-text-muted: #A8A29E;
   --ws-text-subtle: #78716C;
-  --ws-brand-primary: #2563EB;
-  /* The load-bearing flip: gold needed DARK ink on it, blue needs WHITE.
-     White on #2563EB is 5.2:1; the old stone ink would have been 3.4:1. */
-  --ws-brand-on-primary: #FFFFFF;
+  /* Cyan, sampled from the brand artwork (2026-08-27). */
+  --ws-brand-primary: #22B8D6;
+  /* The ink flips BACK to dark, as it was under gold. Cyan is a light fill:
+     white on #22B8D6 is 2.36:1, a clear AA failure, and no amount of nudging
+     the hue fixes that without darkening the fill until it stops reading as
+     the brand colour. Stone ink on it is 8.37:1.
+     Blue was the exception that needed white ink, not the rule. */
+  --ws-brand-on-primary: #0C0A09;
   --ws-status-success: #10B981;
   --ws-status-warning: #F59E0B;
   --ws-status-warning-chip: rgba(245, 158, 11, 0.14);
@@ -268,8 +274,10 @@
   --ws-text-primary: oklch(0.147 0.004 49.3);
   --ws-text-muted: oklch(0.547 0.021 43.1);
   --ws-text-subtle: oklch(0.553 0.013 58.1);
-  --ws-brand-primary: #2563EB;
-  --ws-brand-on-primary: #FFFFFF;
+  --ws-brand-primary: #22B8D6;
+  /* Same reasoning as dark mode: the cyan fill is light, so its ink is dark
+     in BOTH themes (8.37:1). */
+  --ws-brand-on-primary: #0C0A09;
   --ws-status-success: #047857;
   --ws-status-warning: #B45309;
   --ws-status-warning-chip: rgba(180, 83, 9, 0.10);

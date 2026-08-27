@@ -401,7 +401,7 @@ export default function Profile({ username }: { username?: string }) {
 				<EmptyState
 					icon={Search}
 					title="This account doesn't exist"
-					caption={`@${username} isn't on Worldspace. Try searching for another account.`}
+					caption={`@${username} isn't on WorldSpace. Try searching for another account.`}
 					action={{ label: t("common.back"), onClick: () => router.back() }}
 				/>
 			</div>

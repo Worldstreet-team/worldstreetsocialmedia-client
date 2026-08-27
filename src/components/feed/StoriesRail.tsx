@@ -34,21 +34,40 @@ let consumedStorySignal: number | null = null;
  */
 function useCollapseOnScrollDown() {
 	const [collapsed, setCollapsed] = useState(false);
+	const collapsedRef = useRef(false);
 
 	useEffect(() => {
 		const scroller = document.getElementById("ws-main-scroll");
 		if (!scroller) return;
 
 		let last = scroller.scrollTop;
+		// Toggling RESIZES this scroller — the rail is a sibling above it, so
+		// collapsing hands the column ~100px of height back. That reflow can
+		// clamp scrollTop and emit a scroll event of its own, which reads as
+		// travel in the opposite direction and toggles the rail straight back:
+		// the rail then oscillates for as long as the feedback loop runs.
+		// Ignoring events until the height transition has settled breaks it.
+		let settleUntil = 0;
+
 		const onScroll = () => {
 			const y = scroller.scrollTop;
+			if (performance.now() < settleUntil) {
+				// Re-anchor, so the reflow's own delta is never attributed to
+				// the reader once the window reopens.
+				last = y;
+				return;
+			}
 			const dy = y - last;
-			// Deadband: sub-pixel and rubber-band deltas would otherwise flip
-			// the rail open and shut while the reader holds still.
-			if (Math.abs(dy) < 6) return;
+			// Deadband, wide enough that a fingertip resting on the glass or a
+			// rubber-band bounce cannot flip the rail.
+			if (Math.abs(dy) < 12) return;
 			last = y;
 			// Near the top the rail is always available, whatever the direction.
-			setCollapsed(y > 64 && dy > 0);
+			const next = y > 64 && dy > 0;
+			if (next === collapsedRef.current) return;
+			collapsedRef.current = next;
+			settleUntil = performance.now() + 400; // > the 320ms motion-slow beat
+			setCollapsed(next);
 		};
 
 		scroller.addEventListener("scroll", onScroll, { passive: true });

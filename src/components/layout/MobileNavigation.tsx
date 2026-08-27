@@ -102,7 +102,7 @@ export function MobileNavigation() {
 					    the wordmark walks in — the hub's brand ritual. */}
 					<Link
 						href="/"
-						aria-label="Worldspace home"
+						aria-label="WorldSpace home"
 						className="absolute left-1/2 -translate-x-1/2 flex h-11 items-center justify-center px-2 rounded-pill active:bg-raised transition-colors"
 					>
 						<BrandRitual />

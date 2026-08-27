@@ -18,14 +18,14 @@ import clsx from "clsx";
 export function BrandRitual({
 	size = 22,
 	wordSize = 14,
-	word = "Worldspace",
+	word = "WorldSpace",
 	eyebrow,
 	className,
 }: {
 	size?: number;
 	wordSize?: number;
 	/**
-	 * The wordmark. This app is Worldspace, one word. It used to be hardcoded
+	 * The wordmark. This app is WorldSpace, one word. It used to be hardcoded
 	 * to "WorldStreet" with the product as a gold eyebrow underneath, which
 	 * read as "WorldStreet's Space" rather than as a product name.
 	 */
