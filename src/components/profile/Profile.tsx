@@ -606,6 +606,8 @@ export default function Profile({ username }: { username?: string }) {
 				onClose={() => setIsFollowsModalOpen(false)}
 				userId={profileUser.userId || profileUser._id}
 				initialTab={followsInitialTab}
+				followersCount={followersCount}
+				followingCount={profileUser.followingCount ?? 0}
 			/>
 
 			<ConfirmModal

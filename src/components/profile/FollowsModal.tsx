@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getFollowersAction, getFollowingAction } from "@/lib/user.actions";
+import { Tabs } from "@/components/ui/Tabs";
+import { useT } from "@/i18n/client";
 import { Skeleton } from "@/components/ui/Skeleton";
 import Link from "next/link";
 import { useAtomValue } from "jotai";
@@ -19,6 +21,10 @@ interface FollowsModalProps {
 	onClose: () => void;
 	userId: string;
 	initialTab: "followers" | "following";
+	/** Shown as badges on the tabs — the modal is opened to learn "how many",
+	 *  and the caller already knows, so it should not have to be counted. */
+	followersCount?: number;
+	followingCount?: number;
 }
 
 interface UserItem {
@@ -38,11 +44,14 @@ export default function FollowsModal({
 	onClose,
 	userId,
 	initialTab,
+	followersCount,
+	followingCount,
 }: FollowsModalProps) {
 	const [activeTab, setActiveTab] = useState(initialTab); // Simplified from web's useStateAndSync
 	const [loading, setLoading] = useState(true);
 	const [users, setUsers] = useState<UserItem[]>([]);
 	const currentUser = useAtomValue(userAtom);
+	const t = useT();
 
 	useEffect(() => {
 		if (isOpen) {
@@ -121,36 +130,32 @@ export default function FollowsModal({
 							animate={{ opacity: 1, scale: 1, y: 0 }}
 							exit={{ opacity: 0, scale: 0.98, y: 8 }}
 							transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-							className="relative bg-surface border border-hairline rounded-xl shadow-nav w-full max-w-md overflow-hidden max-h-[80dvh] flex flex-col text-primary"
+							className="relative flex max-h-[80dvh] w-full max-w-md flex-col overflow-hidden rounded-xl bg-surface/85 text-primary shadow-nav backdrop-blur-xl backdrop-saturate-150"
 						>
-							{/* Header with Tabs */}
-							<div className="flex border-b border-hairline">
-								<button
-									type="button"
-									onClick={() => setActiveTab("followers")}
-									className={clsx(
-										"flex-1 py-4 text-[15px] font-semibold text-center relative hover:bg-raised transition-colors font-sans cursor-pointer",
-										activeTab === "followers" ? "text-primary" : "text-muted",
-									)}
-								>
-									Followers
-									{activeTab === "followers" && (
-										<div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-14 bg-brand rounded-pill" />
-									)}
-								</button>
-								<button
-									type="button"
-									onClick={() => setActiveTab("following")}
-									className={clsx(
-										"flex-1 py-4 text-[15px] font-semibold text-center relative hover:bg-raised transition-colors font-sans cursor-pointer",
-										activeTab === "following" ? "text-primary" : "text-muted",
-									)}
-								>
-									Following
-									{activeTab === "following" && (
-										<div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-14 bg-brand rounded-pill" />
-									)}
-								</button>
+							{/* THE Tabs component — pill chips, the app's one tab grammar.
+							    This was a hand-rolled underline pair, which is exactly
+							    the second tab language that control exists to prevent.
+							    The counts ride along as badges: "how many" is the
+							    question this modal is opened to answer, and it used to
+							    make you count rows to find out. */}
+							<div className="px-1 pt-1">
+								<Tabs
+									items={[
+										{
+											key: "followers" as const,
+											label: t("profile.followers"),
+											badge: followersCount,
+										},
+										{
+											key: "following" as const,
+											label: t("profile.following"),
+											badge: followingCount,
+										},
+									]}
+									value={activeTab}
+									onChange={setActiveTab}
+									ariaLabel={t("profile.followers")}
+								/>
 							</div>
 
 							{/* List Content */}
@@ -228,14 +233,17 @@ export default function FollowsModal({
 														)}
 														onMouseEnter={(e) => {
 															if (user.isFollowing)
-																e.currentTarget.textContent = "Unfollow";
+																e.currentTarget.textContent = t("profile.unfollow");
 														}}
 														onMouseLeave={(e) => {
 															if (user.isFollowing)
-																e.currentTarget.textContent = "Following";
+																e.currentTarget.textContent =
+																	t("profile.followingState");
 														}}
 													>
-														{user.isFollowing ? "Following" : "Follow"}
+														{user.isFollowing
+																					? t("profile.followingState")
+																					: t("profile.follow")}
 													</button>
 												)}
 											</div>
