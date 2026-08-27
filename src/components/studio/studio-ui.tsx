@@ -1,15 +1,19 @@
 "use client";
 
+import { ArrowDownRight, ArrowUpRight } from "@phosphor-icons/react";
 import clsx from "clsx";
 
 /**
- * The Studio's glass kit.
+ * The Studio's kit — flat professional dark, benchmarked against
+ * reference-grade analytics dashboards (owner review 2026-08-26):
  *
- * The Studio joined the sanctioned glass surfaces (owner ruling 2026-08-26):
- * fixed-dark chrome in both themes, sheer panels with backdrop blur, white
- * CTAs, gold reserved for data and the active state. Everything here builds
- * on the `glass-*` utilities in globals.css — no theme tokens, because the
- * panels must not flip in light mode while sitting on a dark veil.
+ *  - **No borders.** Depth comes from fill contrast alone: page `#0F0E0D`,
+ *    card one step lighter. A hairline on every card is where dashboards go
+ *    to look like wireframes.
+ *  - **No gradients, no ambient decoration.** The data is the visual.
+ *  - Every count that can carry an honest comparison carries a DeltaChip;
+ *    a number without context is trivia.
+ *  - Fixed inks (`glass-ink*`) because this surface is dark in both themes.
  */
 
 export const fmt = (n: number) => {
@@ -19,26 +23,24 @@ export const fmt = (n: number) => {
 	return String(n);
 };
 
-/**
- * A bento cell. `span` is the desktop column span on the 12-col grid;
- * below xl everything stacks and the span is ignored.
- */
-export function GlassCell({
+/** The card fill. One string so every surface stays on the same step. */
+export const CARD = "rounded-2xl bg-[#171614]";
+
+/** A bento cell on the overview's 12-col grid; spans apply at xl only. */
+export function Cell({
 	span,
-	tall,
 	className,
 	children,
 }: {
 	span: 3 | 4 | 5 | 6 | 7 | 8 | 12;
-	tall?: boolean;
 	className?: string;
 	children: React.ReactNode;
 }) {
 	return (
 		<div
 			className={clsx(
-				"glass-panel backdrop-blur-xl backdrop-saturate-150 border glass-divider rounded-2xl min-w-0",
-				tall && "xl:row-span-2",
+				CARD,
+				"min-w-0",
 				span === 3 && "xl:col-span-3",
 				span === 4 && "xl:col-span-4",
 				span === 5 && "xl:col-span-5",
@@ -54,7 +56,7 @@ export function GlassCell({
 	);
 }
 
-/** Panel header: eyebrow + optional right-side control. */
+/** Card header: eyebrow + optional right-side control. */
 export function CellHead({
 	label,
 	action,
@@ -71,37 +73,101 @@ export function CellHead({
 }
 
 /**
- * A headline number. The value is the hero — Poppins, big, tabular — and the
- * label is an eyebrow above it, so a wall of tiles reads as numbers first.
+ * Change vs the previous window, in the compact chip grammar every analytics
+ * product speaks: arrow + percentage, green up / red down, on a soft wash.
+ * `delta` is a fraction (0.09 = +9%); null renders nothing — an absent
+ * comparison beats an invented one.
  */
-export function StatTile({
+export function DeltaChip({
+	delta,
+	suffix = "%",
+	caption,
+}: {
+	delta: number | null;
+	suffix?: string;
+	caption?: string;
+}) {
+	if (delta === null || !Number.isFinite(delta)) return null;
+	const up = delta >= 0;
+	const magnitude = Math.abs(suffix === "%" ? delta * 100 : delta);
+	const value = magnitude >= 100 ? Math.round(magnitude) : magnitude.toFixed(1);
+	return (
+		<span className="flex items-center gap-1.5">
+			<span
+				className={clsx(
+					"inline-flex items-center gap-0.5 rounded-pill px-1.5 py-0.5 font-sans text-[11px] font-semibold tabular-nums",
+					up ? "bg-success/10 text-success" : "bg-danger/10 text-danger",
+				)}
+			>
+				{up ? (
+					<ArrowUpRight size={11} weight="bold" />
+				) : (
+					<ArrowDownRight size={11} weight="bold" />
+				)}
+				{value}
+				{suffix}
+			</span>
+			{caption && (
+				<span className="font-sans text-[11px] glass-ink-faint">{caption}</span>
+			)}
+		</span>
+	);
+}
+
+/**
+ * A headline metric: icon chip + label up top, the number as the hero, the
+ * honest comparison under it, and the metric's own pulse on the right.
+ */
+export function StatCard({
+	icon: Icon,
 	label,
 	value,
+	delta = null,
+	deltaSuffix,
+	deltaCaption,
+	chart,
 	sub,
-	children,
 }: {
+	icon: React.ComponentType<{ size?: number; weight?: any }>;
 	label: string;
 	value: string;
+	delta?: number | null;
+	deltaSuffix?: string;
+	deltaCaption?: string;
+	chart?: React.ReactNode;
 	sub?: string;
-	children?: React.ReactNode;
 }) {
 	return (
 		<div className="flex h-full flex-col px-5 py-4">
-			<span className="glass-eyebrow font-sans">{label}</span>
-			<span className="mt-2 font-display text-[28px] font-semibold leading-none tracking-tight glass-ink tabular-nums">
-				{value}
-			</span>
-			{sub && (
-				<span className="mt-1 font-sans text-[12px] glass-ink-faint">
-					{sub}
+			<div className="flex items-center gap-2.5">
+				<span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[#fafaf9]/[0.06] text-[var(--ws-brand-primary)]">
+					<Icon size={15} weight="bold" />
 				</span>
-			)}
-			{children && <div className="mt-auto pt-3">{children}</div>}
+				<span className="glass-eyebrow font-sans">{label}</span>
+			</div>
+			<div className="mt-3 flex items-end justify-between gap-3">
+				<span className="font-display text-[30px] font-semibold leading-none tracking-tight glass-ink tabular-nums">
+					{value}
+				</span>
+				{chart}
+			</div>
+			<div className="mt-2.5 min-h-[18px]">
+				{delta !== null ? (
+					<DeltaChip
+						delta={delta}
+						suffix={deltaSuffix}
+						caption={deltaCaption}
+					/>
+				) : sub ? (
+					<span className="font-sans text-[11px] glass-ink-faint">{sub}</span>
+				) : null}
+			</div>
 		</div>
 	);
 }
 
-/** label · value line inside a panel. */
+/** label · value line inside a panel. Divider only between rows — the one
+ *  place a hairline earns its keep. */
 export function MetricRow({
 	label,
 	value,
@@ -112,25 +178,25 @@ export function MetricRow({
 	hint?: string;
 }) {
 	return (
-		<div className="flex items-baseline justify-between gap-3 py-2 border-b glass-divider last:border-0">
+		<div className="flex items-baseline justify-between gap-3 border-b border-[#fafaf9]/[0.05] py-2.5 last:border-0">
 			<span className="min-w-0">
 				<span className="block font-sans text-[13px] glass-ink-dim">
 					{label}
 				</span>
 				{hint && (
-					<span className="block font-sans text-[11px] glass-ink-faint mt-0.5">
+					<span className="mt-0.5 block font-sans text-[11px] glass-ink-faint">
 						{hint}
 					</span>
 				)}
 			</span>
-			<span className="font-sans text-[15px] font-semibold glass-ink tabular-nums shrink-0">
+			<span className="shrink-0 font-sans text-[15px] font-semibold glass-ink tabular-nums">
 				{value}
 			</span>
 		</div>
 	);
 }
 
-/** The 7/28/90-day window switch, as glass chips. */
+/** The 7/28/90-day window switch, segmented-control style. */
 export function WindowSwitch({
 	value,
 	onChange,
@@ -139,7 +205,7 @@ export function WindowSwitch({
 	onChange: (days: number) => void;
 }) {
 	return (
-		<div className="flex items-center gap-1">
+		<div className="flex items-center gap-0.5 rounded-pill bg-[#fafaf9]/[0.05] p-0.5">
 			{[7, 28, 90].map((d) => (
 				<button
 					key={d}
@@ -147,10 +213,10 @@ export function WindowSwitch({
 					onClick={() => onChange(d)}
 					aria-pressed={value === d}
 					className={clsx(
-						"h-7 rounded-pill px-2.5 font-sans text-[11.5px] font-semibold tabular-nums transition-colors cursor-pointer",
+						"h-7 rounded-pill px-3 font-sans text-[11.5px] font-semibold tabular-nums transition-colors cursor-pointer",
 						value === d
-							? "glass-chip-active"
-							: "glass-ink-faint hover:glass-ink hover:bg-[#fafaf9]/[0.07]",
+							? "bg-[#fafaf9] text-[#0c0a09]"
+							: "glass-ink-faint hover:glass-ink",
 					)}
 				>
 					{d}d
@@ -160,7 +226,7 @@ export function WindowSwitch({
 	);
 }
 
-/** Empty note inside a panel — quiet, centred, never a full EmptyState. */
+/** Empty note inside a card — quiet, centred. */
 export function CellEmpty({ children }: { children: React.ReactNode }) {
 	return (
 		<p className="px-5 py-10 text-center font-sans text-[13px] glass-ink-faint">
@@ -170,8 +236,8 @@ export function CellEmpty({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Subpage header. The desktop shell deliberately has no top bar, so each
- * section names itself: display-face title, caption as the subline.
+ * Subpage header. The desktop shell has no top bar, so each section names
+ * itself: display-face title, caption as the subline.
  */
 export function PageHead({
 	title,
@@ -189,7 +255,7 @@ export function PageHead({
 					{title}
 				</h1>
 				{caption && (
-					<p className="mt-1 font-sans text-[13px] glass-ink-dim max-w-[68ch]">
+					<p className="mt-1 max-w-[68ch] font-sans text-[13px] glass-ink-dim">
 						{caption}
 					</p>
 				)}

@@ -68,7 +68,7 @@ export default function StudioPromotions() {
 					))}
 				</div>
 			) : campaigns.length === 0 ? (
-				<div className="glass-panel backdrop-blur-xl backdrop-saturate-150 border glass-divider rounded-2xl p-8 text-center">
+				<div className="rounded-2xl bg-[#171614] p-8 text-center">
 					<span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-pill bg-[#fafaf9]/[0.07] glass-ink-faint">
 						<Megaphone size={22} />
 					</span>
@@ -91,7 +91,7 @@ export default function StudioPromotions() {
 								? usd(c.spentUsdMinor / c.stats.engagements)
  : "";
 						return (
-							<div key={c._id} className="glass-panel backdrop-blur-xl backdrop-saturate-150 border glass-divider rounded-2xl p-4">
+							<div key={c._id} className="rounded-2xl bg-[#171614] p-4">
 								<div className="flex items-start justify-between gap-3">
 									<p className="font-sans text-[14px] glass-ink line-clamp-1 min-w-0">
 										{c.post?.content || t("studio.mediaPost")}
@@ -160,7 +160,7 @@ export default function StudioPromotions() {
 																: "active",
 													})
 												}
-												className="h-8 px-3.5 rounded-pill glass-chip backdrop-blur-md font-sans text-[12.5px] font-semibold transition-colors cursor-pointer disabled:opacity-50"
+												className="h-8 px-3.5 rounded-pill bg-[#fafaf9]/[0.06] glass-ink-dim hover:glass-ink hover:bg-[#fafaf9]/[0.1] font-sans text-[12.5px] font-semibold transition-colors cursor-pointer disabled:opacity-50"
 											>
 												{c.status === "active"
 													? t("studio.promo.pause")
@@ -173,7 +173,7 @@ export default function StudioPromotions() {
 											onClick={() =>
 												mutate(c._id, { addBudgetUsdMinor: 500 })
 											}
-											className="h-8 px-3.5 rounded-pill glass-cta font-sans text-[12.5px] font-semibold transition-colors cursor-pointer disabled:opacity-50 active:brightness-95"
+											className="h-8 px-3.5 rounded-pill bg-[#fafaf9] text-[#0c0a09] hover:bg-white font-sans text-[12.5px] font-semibold transition-colors cursor-pointer disabled:opacity-50 active:brightness-95"
 										>
 											{t("studio.promo.topUp")}
 										</button>

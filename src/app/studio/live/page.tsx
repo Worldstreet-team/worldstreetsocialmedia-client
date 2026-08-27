@@ -78,7 +78,7 @@ export default function StudioLive() {
 				caption={t("studio.live.caption")}
 			/>
 
-			<section className="glass-panel backdrop-blur-xl backdrop-saturate-150 border glass-divider rounded-2xl p-4 mb-3">
+			<section className="rounded-2xl bg-[#171614] p-4 mb-3">
 				<h2 className="glass-eyebrow font-sans mb-3">
 					{t("studio.live.new")}
 				</h2>
@@ -107,8 +107,8 @@ export default function StudioLive() {
 							className={clsx(
 								"h-7 px-3 rounded-pill font-sans text-[12px] font-medium transition-colors cursor-pointer",
 								category === c.value
-									? "glass-chip-active font-semibold"
-									: "glass-chip backdrop-blur-md",
+									? "bg-[#fafaf9] text-[#0c0a09] font-semibold"
+									: "bg-[#fafaf9]/[0.06] glass-ink-dim hover:glass-ink hover:bg-[#fafaf9]/[0.1]",
 							)}
 						>
 							{c.label}
@@ -118,7 +118,7 @@ export default function StudioLive() {
 						type="button"
 						onClick={create}
 						disabled={!name.trim() || saving}
-						className="ml-auto h-9 px-4 rounded-pill glass-cta font-sans text-[13px] font-semibold transition-colors cursor-pointer disabled:opacity-50 active:brightness-95"
+						className="ml-auto h-9 px-4 rounded-pill bg-[#fafaf9] text-[#0c0a09] hover:bg-white font-sans text-[13px] font-semibold transition-colors cursor-pointer disabled:opacity-50 active:brightness-95"
 					>
 						{t("studio.live.save")}
 					</button>
@@ -128,7 +128,7 @@ export default function StudioLive() {
 			{loading ? (
 				<div className="rounded-2xl h-20 bg-[#fafaf9]/[0.05] animate-pulse" />
 			) : presets.length === 0 ? (
-				<div className="glass-panel backdrop-blur-xl backdrop-saturate-150 border glass-divider rounded-2xl p-8 text-center">
+				<div className="rounded-2xl bg-[#171614] p-8 text-center">
 					<span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-pill bg-[#fafaf9]/[0.07] glass-ink-faint">
 						<Broadcast size={22} />
 					</span>
@@ -141,7 +141,7 @@ export default function StudioLive() {
 					{presets.map((p) => (
 						<div
 							key={p.id}
-							className="glass-panel backdrop-blur-xl backdrop-saturate-150 border glass-divider rounded-2xl px-4 py-3 flex items-center gap-3"
+							className="rounded-2xl bg-[#171614] px-4 py-3 flex items-center gap-3"
 						>
 							<div className="flex-1 min-w-0">
 								<p className="font-sans text-[14.5px] font-semibold glass-ink truncate">

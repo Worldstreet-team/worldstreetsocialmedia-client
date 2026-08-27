@@ -418,30 +418,37 @@ against an endpoint that didn't exist, so every mark-read 404'd).
 Voice notes and media attachments were **not** broken — `POST
 /api/messages/upload` → R2 works; verified end to end.
 
-## Creator Studio (glass rewrite 2026-08-26)
+## Creator Studio (rebuilt 2026-08-26, second pass)
 
-The Studio is a **glass surface** now (the owner extended the editors' glass
-exception to it): fixed-dark chrome in both themes, an ambient brand-tinted
-radial backdrop that the panel blur refracts, floating rail dock, and a
-12-col bento overview. Everything themes through `glass-*` utilities plus the
-brand token — never theme tokens (`bg-surface`/`text-primary` flip in light
-mode and break on the dark veil), and never hardcoded brand hexes (the
-Worldspace rebrand moves `--ws-brand-primary`; the Studio must follow it).
+The first rewrite (glass panels, ambient radials, bordered cards) was
+rejected in owner review — references were Dribbble-grade analytics
+dashboards. The standing rules for this surface, and for any future
+dashboard work here:
 
+- **Flat professional dark, fixed in both themes.** Page `#0F0E0D`, cards
+  `#171614`. **No card borders** — depth is fill contrast only; hairlines
+  only *inside* content where they separate rows. **No gradients, no
+  ambient decoration, no backdrop blur.** The data is the visual.
+- **Every count carries an honest comparison where one exists.** The
+  overview fetches the window *and* double-window; previous period =
+  difference; `DeltaChip` renders the change. No baseline (90d clamps, or
+  prev window empty) → no chip. Never fabricate a delta.
+- Detail lives *inside* cards: icon chips on stat cards, `MiniBars` pulses,
+  the countries **DonutChart** (ring + centre total + legend), the top-posts
+  table with real columns, smoothed trend curves (Catmull-Rom in
+  `charts.tsx`) with flat fills. All hand-rolled SVG — no chart lib.
+- **A drilldown is a modal, not a page.** The posts list opens `PostStats`
+  in an overlay; `/studio/posts/[id]` stays only as the deep-link host.
+  Prefer this pattern over new routes for any "see more" surface.
 - **Creator-gated**: LeftSidebar and MobileNavigation hide the Studio entry
-  unless `user.role === "creator"` (`role` rides `x-user-data`). The route
-  stays reachable — deep links get the become-a-creator pitch, and the
-  gateway still 403s data for non-creators (verified-subscriber analytics
-  perk aside).
-- **/studio/apps is a redirect** to /studio — the ecosystem strip is a card
-  on the overview now. It must mirror the ratified platform list (no
-  "Wallet"; that ruling has bitten twice).
-- `studio-ui.tsx` is the kit (GlassCell/CellHead/StatTile/MetricRow/
-  WindowSwitch/PageHead); `charts.tsx` carries TrendChart (glow + gradient),
-  BarList, Sparkline, RadialRate — all hand-rolled SVG, no chart lib, keep it
-  that way.
-- Charts use **fixed glass inks** (`rgb(255 255 255 / …)`) for grid/axis text
-  and the brand token for the data series.
+  unless `user.role === "creator"` (`role` rides `x-user-data`). Deep links
+  get the become-a-creator pitch; the gateway still 403s non-creators.
+- /studio/apps is a redirect; the ecosystem links are three quiet rows on
+  the overview and must mirror the ratified platform list (no "Wallet").
+- Brand accent always via `var(--ws-brand-primary)` — the Worldspace
+  rebrand moves it, and the Studio must follow. The shell's identity card
+  renders after mount only (the user atom hydrates client-side; rendering
+  it during SSR causes a hydration mismatch that throws the shell away).
 
 ## Local dev = real Clerk, real gateway
 
