@@ -95,7 +95,14 @@ export function hasRenderableBody(post: PostProps): boolean {
             post.images?.length ||
             post.videos?.length ||
             post.live ||
-            post.repostOf,
+            post.repostOf ||
+            // A locked paid post is empty ON PURPOSE — the gateway strips its
+            // body for anyone who has not bought it, which is exactly the
+            // shape this guard was written to discard. Without this line the
+            // paywall card was filtered out of every feed and profile, so a
+            // seller's post simply did not exist for anyone else: the wall
+            // worked perfectly and nobody could find the door.
+            post.sale?.locked,
     );
 }
 
