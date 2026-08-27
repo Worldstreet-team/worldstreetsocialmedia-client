@@ -248,7 +248,16 @@ export async function listLiveStreamsAction() {
 				avatar: String(st.streamerId?.avatar ?? ""),
 			}));
 		return { success: true as const, streams };
-	} catch {
+	} catch (error: any) {
+		// Loudly, and only on the server. An empty rail is indistinguishable
+		// from "nobody is live", so a swallowed error here is invisible: the
+		// production rail was empty for a WEEK because XSTREAM_API_URL was
+		// unset and every call was hitting the fallback localhost:3001 on the
+		// production host itself.
+		console.error(
+			`[live] listLiveStreams failed against ${XSTREAM_API_URL}:`,
+			error?.code || error?.message || error,
+		);
 		return { success: false as const, streams: [] };
 	}
 }
