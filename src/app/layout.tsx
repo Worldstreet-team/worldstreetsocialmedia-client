@@ -22,6 +22,7 @@ import { MobileBottomNav } from "@/components/MobileBottomNav";
 import GlobalMessageListener from "@/components/providers/GlobalMessageListener";
 import { CommandPalette } from "@/components/ui/CommandPalette";
 import { SearchWindow } from "@/components/search/SearchWindow";
+import { MediaGuard } from "@/components/providers/MediaGuard";
 import { WelcomeTour } from "@/components/ui/WelcomeTour";
 import { PremiumSheet } from "@/components/premium/PremiumSheet";
 import { CreateFab } from "@/components/ui/CreateFab";
@@ -202,6 +203,7 @@ export default async function RootLayout({
 										<EngagementSync />
                                         <CommandPalette />
                                         <SearchWindow />
+                                        <MediaGuard />
                                         <WelcomeTour />
                                         <PremiumSheet />
                                         <CreateFab />

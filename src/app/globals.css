@@ -1037,3 +1037,20 @@ html.ws-intro-done .animate-rise {
 		transform: rotate(-360deg);
 	}
 }
+
+/* Media is not for saving.
+
+   The JS half lives in components/providers/MediaGuard.tsx (context menu and
+   drag). These are the parts only CSS can reach: iOS's long-press "Save Image"
+   sheet, and the drag ghost WebKit paints before `dragstart` ever fires.
+   `user-select` stops the tap-and-hold selection that raises that sheet on
+   some Android builds.
+
+   Friction, not protection - the file is still in the page. */
+img,
+video,
+[data-media] {
+  user-select: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+}
