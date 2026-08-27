@@ -218,38 +218,40 @@ export function WelcomeTour() {
             >
               <X size={16} weight="bold" />
             </button>
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={current.key}
-                initial={{ opacity: 0, x: 8 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, transition: { duration: 0.12 } }}
-                transition={{ duration: 0.2, ease: EASE }}
-                className="relative flex flex-col items-center gap-3"
-              >
-                {current.hero}
-              </motion.div>
-            </AnimatePresence>
+            {/* No AnimatePresence around the step swap. Its exits never
+                resolved here, so instead of replacing the step it ACCUMULATED
+                them — all four headings live in the DOM at once and slide one
+                sits on top forever, which is why Next moved the indicator and
+                the Back button while the copy never changed. A keyed element
+                already remounts and replays initial → animate on every step,
+                so presence was buying nothing but the leak. */}
+            <motion.div
+              key={current.key}
+              initial={{ opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.2, ease: EASE }}
+              className="relative flex flex-col items-center gap-3"
+            >
+              {current.hero}
+            </motion.div>
           </div>
 
           {/* Copy */}
           <div className="min-h-[128px] flex-1 overflow-y-auto overscroll-contain px-5 sm:px-6 pt-5 pb-4">
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={current.key}
-                initial={{ opacity: 0, x: 8 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, transition: { duration: 0.12 } }}
-                transition={{ duration: 0.2, ease: EASE }}
-              >
-                <h2 className="font-display font-semibold text-xl text-primary mb-2">
-                  {current.title}
-                </h2>
-                <p className="font-sans text-[15px] leading-relaxed text-muted">
-                  {current.body}
-                </p>
-              </motion.div>
-            </AnimatePresence>
+            {/* Keyed, not presence-wrapped — see the hero above. */}
+            <motion.div
+              key={current.key}
+              initial={{ opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.2, ease: EASE }}
+            >
+              <h2 className="font-display font-semibold text-xl text-primary mb-2">
+                {current.title}
+              </h2>
+              <p className="font-sans text-[15px] leading-relaxed text-muted">
+                {current.body}
+              </p>
+            </motion.div>
           </div>
 
           {/* Footer: dots + controls */}
@@ -292,7 +294,7 @@ export function WelcomeTour() {
                   isLast ? finish(true) : setStep((s) => s + 1)
                 }
                 className="h-11 sm:h-9 px-[18px] rounded-pill font-sans text-[13px] font-semibold bg-brand text-brand-on hover:bg-brand-active transition-colors cursor-pointer whitespace-nowrap"
-              >
+            >
                 {isLast ? "Start posting" : "Next"}
               </button>
             </div>
