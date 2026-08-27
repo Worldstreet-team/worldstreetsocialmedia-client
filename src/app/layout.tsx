@@ -29,6 +29,7 @@ import { LiveDock } from "@/components/live/LiveDock";
 import { NotificationCountSync } from "@/components/providers/NotificationCountSync";
 import { SpacesLiveSync } from "@/components/providers/SpacesLiveSync";
 import { MessageCountSync } from "@/components/providers/MessageCountSync";
+import { EngagementSync } from "@/components/providers/EngagementSync";
 
 import {
     Archivo_Black,
@@ -185,6 +186,7 @@ export default async function RootLayout({
                                         <NotificationCountSync />
                                         <SpacesLiveSync />
 										<MessageCountSync />
+										<EngagementSync />
                                         <CommandPalette />
                                         <WelcomeTour />
                                         <PremiumSheet />

@@ -33,7 +33,7 @@ import EmojiPicker, { type EmojiClickData, Theme } from "emoji-picker-react";
 import { useTheme } from "next-themes";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
-import { PencilSimple } from "@phosphor-icons/react";
+import { LockSimple, PencilSimple } from "@phosphor-icons/react";
 import MediaEditor from "@/components/editor/MediaEditor";
 import VideoEditor from "@/components/editor/VideoEditor";
 import type { EditDocument } from "@/lib/editor/document";
@@ -156,6 +156,17 @@ export const PostComposer = ({
 		community ?? null,
 	);
 	const [myCommunities, setMyCommunities] = useState<AudienceCommunity[]>([]);
+	// Paid post: the author's asking price, in dollars as typed. Kept as a
+	// string so "5." survives mid-keystroke; parsed once at submit. The 50¢
+	// floor and $1,000 ceiling are enforced by the gateway — the UI only
+	// keeps the button honest.
+	const [selling, setSelling] = useState(false);
+	const [salePrice, setSalePrice] = useState("");
+	const salePriceMinor = selling
+		? Math.round(Number.parseFloat(salePrice || "0") * 100)
+		: 0;
+	const saleInvalid =
+		selling && (salePriceMinor < 50 || salePriceMinor > 100_000);
 
 	useEffect(() => {
 		setAudience(community ?? null);
@@ -467,6 +478,9 @@ export const PostComposer = ({
 
 			// The gateway verifies membership before accepting this.
 			if (audience) formData.append("community", audience.id);
+			if (selling && !saleInvalid) {
+				formData.append("salePriceUsdMinor", String(salePriceMinor));
+			}
 
 			mediaItems.forEach((item) => {
 				if (item.type === "video") {
@@ -520,6 +534,8 @@ export const PostComposer = ({
 					postedUrls.forEach((url) => URL.revokeObjectURL(url));
 				}, 1000);
 				setMediaItems([]);
+				setSelling(false);
+				setSalePrice("");
 				setTaggedUserPool([]);
 				setLinkPreview(null);
 				lastCheckedUrl.current = null;
@@ -735,6 +751,56 @@ export const PostComposer = ({
 						</div>
 					)}
 
+					{/* Sell this post: a quiet row until armed, then the price field
+					    appears inline with the split spelled out — the 60/40 is shown
+					    to the SELLER here, never to the buyer on the paywall. */}
+					<div className="mt-2 flex flex-wrap items-center gap-2">
+						<button
+							type="button"
+							onClick={() => setSelling((v) => !v)}
+							aria-pressed={selling}
+							className={clsx(
+								"flex h-9 items-center gap-1.5 rounded-pill px-3 font-sans text-[12.5px] font-medium transition-colors cursor-pointer",
+								selling
+									? "bg-brand/[0.12] text-gold"
+									: "bg-raised/50 text-muted hover:bg-raised hover:text-primary",
+							)}
+						>
+							<LockSimple size={14} weight={selling ? "fill" : "regular"} />
+							{selling ? t("composer.sellingOn") : t("composer.sellPost")}
+						</button>
+						{selling && (
+							<>
+								<label className="flex h-9 items-center gap-1 rounded-pill bg-sunken border border-hairline px-3 font-sans text-[13px] text-primary focus-within:border-brand/60 transition-colors">
+									<span className="text-muted">$</span>
+									<input
+										type="text"
+										inputMode="decimal"
+										value={salePrice}
+										onChange={(e) =>
+											setSalePrice(
+												e.target.value.replace(/[^0-9.]/g, ""),
+											)
+										}
+										placeholder="5.00"
+										aria-label={t("composer.sellPrice")}
+										className="w-16 bg-transparent outline-none placeholder:text-subtle tabular-nums"
+									/>
+								</label>
+								<span
+									className={clsx(
+										"font-sans text-[11.5px]",
+										saleInvalid && salePrice ? "text-danger" : "text-subtle",
+									)}
+								>
+									{saleInvalid && salePrice
+										? t("composer.sellBounds")
+										: t("composer.sellSplit")}
+								</span>
+							</>
+						)}
+					</div>
+
 					<div className="flex items-center justify-between mt-1 pt-2 sm:mt-2 sm:pt-3 border-t border-hairline/60">
 						<div className="flex items-center gap-2 relative">
 							{/* Faded word-chips from sm up: the toolbar says what it does.
@@ -840,7 +906,8 @@ export const PostComposer = ({
 							disabled={
 								(!content.trim() && mediaItems.length === 0) ||
 								isPosting ||
-								isOverLimit
+								isOverLimit ||
+								saleInvalid
 							}
 							type="button"
 							className={clsx(
@@ -848,7 +915,8 @@ export const PostComposer = ({
 								"px-4 sm:px-[18px] h-10 sm:h-9 shrink-0 rounded-pill font-semibold text-[13px] font-sans transition-colors flex items-center gap-2 cursor-pointer",
 								(!content.trim() && mediaItems.length === 0) ||
 									isPosting ||
-									isOverLimit
+									isOverLimit ||
+									saleInvalid
 									? "bg-raised text-subtle cursor-not-allowed opacity-50"
 									: "bg-brand text-brand-on hover:bg-brand-active",
 							)}

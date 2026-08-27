@@ -709,5 +709,8 @@
   "post.locked.failed": "Could not unlock, try again",
   "post.forSale.selling": "For sale · {price}",
   "post.forSale.sold": "{count} sold",
-  "post.unlocked.toast": "Post unlocked"
+  "post.unlocked.toast": "Post unlocked",
+  "chat.gift": "Send a gift",
+  "chat.wallet": "Wallet:",
+  "chat.giftFailed": "Couldn't send the gift"
 }

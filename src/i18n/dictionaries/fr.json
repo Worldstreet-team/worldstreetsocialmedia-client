@@ -670,5 +670,8 @@
   "post.locked.failed": "Échec du déblocage, réessayez",
   "post.forSale.selling": "En vente · {price}",
   "post.forSale.sold": "{count} vendus",
-  "post.unlocked.toast": "Post débloqué"
+  "post.unlocked.toast": "Post débloqué",
+  "chat.gift": "Envoyer un cadeau",
+  "chat.wallet": "Portefeuille :",
+  "chat.giftFailed": "Impossible d'envoyer le cadeau"
 }

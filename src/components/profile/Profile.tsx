@@ -111,6 +111,7 @@ function mapPost(post: any): PostProps {
 		},
 		content: post.content,
 		mentions: post.mentions,
+		sale: post.sale,
 		timestamp: formatTimeAgo(post.createdAt),
 		images: post.images,
 		videos: post.videos,

@@ -14,7 +14,7 @@ export interface ChatMsg {
 	username: string;
 	avatar: string;
 	isMod?: boolean;
-	platform?: "xstream" | "socials";
+	platform?: "xstream" | "worldspace";
 	content: string;
 	type: "text" | "tip" | "reaction";
 	tipAmount?: string;
@@ -22,6 +22,18 @@ export interface ChatMsg {
 	emoji?: string;
 	timestamp: string;
 }
+
+/** Same catalogue as Xstream's chat — one gift economy, two storefronts. */
+const GIFT_OPTIONS = [
+	{ emoji: "\u{1F44F}", name: "Clap", usdMinor: 50 },
+	{ emoji: "\u{1F525}", name: "Fire", usdMinor: 100 },
+	{ emoji: "\u{1F680}", name: "Rocket", usdMinor: 500 },
+	{ emoji: "\u{1F48E}", name: "Diamond", usdMinor: 1000 },
+	{ emoji: "\u{1F451}", name: "Crown", usdMinor: 5000 },
+] as const;
+
+const centsToDollars = (minor: number) =>
+	minor % 100 === 0 ? `$${minor / 100}` : `$${(minor / 100).toFixed(2)}`;
 
 const timeLabel = () =>
 	new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -51,6 +63,9 @@ export function LiveChatPanel({
 	const [input, setInput] = useState("");
 	const [sending, setSending] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [giftOpen, setGiftOpen] = useState(false);
+	const [giftBusy, setGiftBusy] = useState(false);
+	const [wallet, setWallet] = useState<number | null>(null);
 	const listRef = useRef<HTMLDivElement>(null);
 	const seenRef = useRef<Set<string>>(new Set());
 
@@ -75,7 +90,10 @@ export function LiveChatPanel({
 					username: String(m.username ?? ""),
 					avatar: String(m.avatar ?? ""),
 					isMod: Boolean(m.isMod),
-					platform: m.platform === "socials" ? "socials" : "xstream",
+					platform:
+						m.platform === "socials" || m.platform === "worldspace"
+							? "worldspace"
+							: "xstream",
 					content: String(m.content ?? ""),
 					type: (m.type ?? "text") as ChatMsg["type"],
 					tipAmount: m.tipAmount ?? undefined,
@@ -114,7 +132,10 @@ export function LiveChatPanel({
 					append({
 						...data,
 						id: String(data.id ?? crypto.randomUUID()),
-						platform: data.platform === "socials" ? "socials" : "xstream",
+						platform:
+							data.platform === "socials" || data.platform === "worldspace"
+								? "worldspace"
+								: "xstream",
 					} as ChatMsg);
 				} catch {
 					// Not a chat payload.
@@ -156,7 +177,7 @@ export function LiveChatPanel({
 					body: JSON.stringify({
 						content,
 						type: "text",
-						platform: "socials",
+						platform: "worldspace",
 					}),
 				},
 			);
@@ -169,23 +190,97 @@ export function LiveChatPanel({
 				id: String(saved?.data?.message?._id ?? crypto.randomUUID()),
 				username: me.username,
 				avatar: me.avatar,
-				platform: "socials",
+				platform: "worldspace",
 				content,
 				type: "text",
 				timestamp: timeLabel(),
 			};
+			// Local echo only — the API broadcasts the persisted message into
+			// the room itself, and append() dedupes it by id when it echoes
+			// back. Publishing from here was the old delivery path, and it
+			// silently delivered nothing when this token couldn't publish data.
 			append(msg);
-			if (room?.localParticipant) {
-				room.localParticipant.publishData(
-					new TextEncoder().encode(JSON.stringify(msg)),
-					{ reliable: true },
-				);
-			}
 		} catch (err) {
 			setInput(content);
 			setError(err instanceof Error ? err.message : t("chat.failed"));
 		} finally {
 			setSending(false);
+		}
+	};
+
+	// Wallet balance is a courtesy readout; the charge itself is authoritative.
+	const loadWallet = useCallback(async () => {
+		try {
+			const token = await (window as any).Clerk?.session?.getToken();
+			if (!token) return;
+			const res = await fetch(`${XSTREAM_API_URL}/v1/wallet/balance`, {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+			const body = await res.json().catch(() => null);
+			if (body?.data) setWallet(Number(body.data.availableUsdMinor ?? 0));
+		} catch {
+			setWallet(null);
+		}
+	}, []);
+
+	useEffect(() => {
+		if (giftOpen) void loadWallet();
+	}, [giftOpen, loadWallet]);
+
+	/**
+	 * Gifts ride the same wallet-charged Xstream endpoint the Xtreme app
+	 * uses: the charge, the split, and the tip announcement are identical —
+	 * WorldSpace is just a second storefront for the same economy.
+	 */
+	const sendGift = async (option: (typeof GIFT_OPTIONS)[number]) => {
+		if (!me || giftBusy) return;
+		setGiftBusy(true);
+		setError(null);
+		try {
+			const token = await (window as any).Clerk?.session?.getToken();
+			if (!token) throw new Error("unauthorized");
+			const res = await fetch(
+				`${XSTREAM_API_URL}/v1/streams/${streamId}/gifts`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${token}`,
+						"Idempotency-Key": crypto.randomUUID(),
+					},
+					body: JSON.stringify({
+						amountUsdMinor: option.usdMinor,
+						giftName: option.name,
+						emoji: option.emoji,
+						platform: "worldspace",
+					}),
+				},
+			);
+			const body = await res.json().catch(() => null);
+			if (!res.ok) {
+				throw new Error(body?.message ?? t("chat.giftFailed"));
+			}
+			const announcement = body?.data?.chatMessage;
+			append({
+				id: String(announcement?._id ?? crypto.randomUUID()),
+				username: me.username,
+				avatar: me.avatar,
+				platform: "worldspace",
+				content: announcement?.content ?? `sent a ${option.name}`,
+				type: "tip",
+				tipAmount: announcement?.tipAmount ?? centsToDollars(option.usdMinor).slice(1),
+				tipCurrency: "USD",
+				emoji: option.emoji,
+				timestamp: timeLabel(),
+			});
+			setGiftOpen(false);
+			setWallet((prev) =>
+				prev === null ? prev : Math.max(0, prev - option.usdMinor),
+			);
+		} catch (err) {
+			setError(err instanceof Error ? err.message : t("chat.giftFailed"));
+		} finally {
+			setGiftBusy(false);
 		}
 	};
 
@@ -250,7 +345,7 @@ export function LiveChatPanel({
 									>
 										{msg.username}
 									</span>
-									{msg.platform !== "socials" && (
+									{msg.platform !== "worldspace" && (
 										<span className="shrink-0 rounded-[4px] bg-danger/15 px-1 py-px text-[9px] font-bold uppercase tracking-wide text-danger">
 											Xstream
 										</span>
@@ -279,12 +374,86 @@ export function LiveChatPanel({
 				</p>
 			)}
 
+			{giftOpen && (
+				<div
+					className={clsx(
+						"border-t p-3",
+						glass ? "border-white/10" : "border-hairline",
+					)}
+				>
+					<div className="mb-2 flex items-center justify-between">
+						<span
+							className={clsx(
+								"font-sans text-[11px] font-semibold uppercase tracking-[0.1em]",
+								glass ? "glass-ink-faint" : "text-subtle",
+							)}
+						>
+							{t("chat.gift")}
+						</span>
+						{wallet !== null && (
+							<span
+								className={clsx(
+									"font-sans text-[11px] tabular-nums",
+									glass ? "glass-ink-dim" : "text-muted",
+								)}
+							>
+								{t("chat.wallet")} {centsToDollars(wallet)}
+							</span>
+						)}
+					</div>
+					<div className="flex flex-wrap gap-1.5">
+						{GIFT_OPTIONS.map((g) => (
+							<button
+								key={g.name}
+								type="button"
+								disabled={giftBusy || !me}
+								onClick={() => void sendGift(g)}
+								className={clsx(
+									"flex items-center gap-1.5 rounded-pill px-3 py-1.5 font-sans text-[12px] font-semibold transition-colors cursor-pointer disabled:opacity-40",
+									glass
+										? "bg-white/[0.08] glass-ink hover:bg-white/[0.14]"
+										: "bg-raised text-primary hover:bg-hairline",
+								)}
+							>
+								<span className="text-[14px] leading-none">{g.emoji}</span>
+								{g.name}
+								<span
+									className={clsx(
+										"tabular-nums",
+										glass ? "glass-ink-faint" : "text-subtle",
+									)}
+								>
+									{centsToDollars(g.usdMinor)}
+								</span>
+							</button>
+						))}
+					</div>
+				</div>
+			)}
+
 			<div
 				className={clsx(
 					"flex items-center gap-2 p-2.5 border-t",
 					glass ? "border-white/10" : "border-hairline",
 				)}
 			>
+				<button
+					type="button"
+					onClick={() => setGiftOpen((v) => !v)}
+					disabled={!me}
+					aria-label={t("chat.gift")}
+					aria-pressed={giftOpen}
+					className={clsx(
+						"flex h-9 w-9 shrink-0 items-center justify-center rounded-pill transition-colors cursor-pointer disabled:opacity-40",
+						giftOpen
+							? "bg-gold/20 text-gold"
+							: glass
+								? "bg-white/[0.08] glass-ink-dim hover:glass-ink"
+								: "bg-raised text-muted hover:text-primary",
+					)}
+				>
+					<Gift size={15} weight={giftOpen ? "fill" : "bold"} />
+				</button>
 				<input
 					value={input}
 					onChange={(e) => setInput(e.target.value)}

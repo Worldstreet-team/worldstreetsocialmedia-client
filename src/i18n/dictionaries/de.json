@@ -670,5 +670,8 @@
   "post.locked.failed": "Freischalten fehlgeschlagen, versuche es erneut",
   "post.forSale.selling": "Zum Verkauf · {price}",
   "post.forSale.sold": "{count} verkauft",
-  "post.unlocked.toast": "Beitrag freigeschaltet"
+  "post.unlocked.toast": "Beitrag freigeschaltet",
+  "chat.gift": "Geschenk senden",
+  "chat.wallet": "Wallet:",
+  "chat.giftFailed": "Geschenk konnte nicht gesendet werden"
 }

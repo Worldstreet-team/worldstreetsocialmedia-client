@@ -80,7 +80,10 @@ export function usePostEvents(
 
 /** New posts and new stories, for the timeline and the story rail. */
 export function useFeedEvents(
-	handler: (event: "post" | "story", data: Record<string, unknown>) => void,
+	handler: (
+		event: "post" | "story" | "engagement",
+		data: Record<string, unknown>,
+	) => void,
 ) {
 	const { client } = useRealtime();
 	const ref = useRef(handler);
@@ -91,11 +94,16 @@ export function useFeedEvents(
 		const channel = client.channels.get("feed");
 		const onPost = (m: any) => ref.current("post", m?.data ?? {});
 		const onStory = (m: any) => ref.current("story", m?.data ?? {});
+		// Likes, replies and reposts for every post on screen, mirrored here
+		// by the gateway so a timeline needs one attach rather than one per card.
+		const onEngagement = (m: any) => ref.current("engagement", m?.data ?? {});
 		void channel.subscribe("post", onPost);
 		void channel.subscribe("story", onStory);
+		void channel.subscribe("engagement", onEngagement);
 		return () => {
 			channel.unsubscribe("post", onPost);
 			channel.unsubscribe("story", onStory);
+			channel.unsubscribe("engagement", onEngagement);
 		};
 	}, [client]);
 }

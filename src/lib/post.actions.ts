@@ -42,6 +42,27 @@ export async function createPostAction(formData: FormData) {
 	}
 }
 
+export async function unlockPostAction(postId: string) {
+	const { getToken } = await auth();
+	const accessToken = await getToken();
+	if (!accessToken) return { success: false as const, message: "Unauthorized" };
+
+	try {
+		const res = await axios.post(
+			`${API_URL}/api/posts/${postId}/unlock`,
+			{},
+			{ headers: { Authorization: `Bearer ${accessToken}` } },
+		);
+		return { success: true as const, data: res.data?.data };
+	} catch (error: any) {
+		return {
+			success: false as const,
+			code: error.response?.data?.code as string | undefined,
+			message: error.response?.data?.message || "Failed to unlock post",
+		};
+	}
+}
+
 export async function likePostAction(postId: string) {
 	const { getToken } = await auth();
 	const accessToken = await getToken();

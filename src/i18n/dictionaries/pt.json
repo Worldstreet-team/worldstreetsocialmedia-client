@@ -670,5 +670,8 @@
   "post.locked.failed": "Falha ao desbloquear, tente novamente",
   "post.forSale.selling": "À venda · {price}",
   "post.forSale.sold": "{count} vendidos",
-  "post.unlocked.toast": "Publicação desbloqueada"
+  "post.unlocked.toast": "Publicação desbloqueada",
+  "chat.gift": "Enviar um presente",
+  "chat.wallet": "Carteira:",
+  "chat.giftFailed": "Não foi possível enviar o presente"
 }

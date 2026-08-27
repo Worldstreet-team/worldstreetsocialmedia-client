@@ -87,6 +87,7 @@ export function useExploreData() {
           },
           content: post.content,
           mentions: post.mentions,
+          sale: post.sale,
           images: post.images,
           videos: post.videos,
           timestamp: formatTimeAgo(post.createdAt),

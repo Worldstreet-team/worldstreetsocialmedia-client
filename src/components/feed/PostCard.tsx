@@ -16,6 +16,7 @@ import { UserBadges } from "@/components/ui/UserBadges";
 // 03-icons: Phosphor is reserved for the Social post-action row + overflow menu.
 import {
     BookmarkSimple,
+    LockSimple,
     ChartLineUp,
     ChatCircle,
     Check,
@@ -28,7 +29,15 @@ import {
     UsersThree,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { useState, useRef, useEffect, memo, useCallback, useMemo } from "react";
+import {
+    memo,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    useSyncExternalStore,
+} from "react";
 
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { motion, AnimatePresence } from "framer-motion";
@@ -36,6 +45,7 @@ import { userAtom } from "@/store/user.atom";
 import { bookmarksAtom } from "@/store/bookmarks.atom";
 import {
     deletePostAction,
+    unlockPostAction,
     likePostAction,
     unlikePostAction,
     bookmarkPostAction,
@@ -45,6 +55,12 @@ import ConfirmModal from "@/components/ui/ConfirmModal";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import ImageModal from "@/components/ui/ImageModal";
 import { renderRichText } from "@/components/ui/RichText";
+import {
+    applyStats,
+    getStats,
+    seedStats,
+    subscribeStats,
+} from "@/lib/engagementStore";
 import { VideoPlayer } from "@/components/ui/VideoPlayer";
 import { Radio } from "lucide-react";
 import { promotePostAction } from "@/lib/campaign.actions";
@@ -98,6 +114,15 @@ export interface PostProps {
     timestamp: string;
     /** Denormalized @mention metadata (verified ticks on mention chips). */
     mentions?: { username: string; isVerified?: boolean }[];
+    /** Paid post. When locked, the gateway has already stripped content and
+     *  media — the glass layer here is presentation over an empty body, not
+     *  the thing standing between a reader and the words. */
+    sale?: {
+        priceUsdMinor: number;
+        locked: boolean;
+        isSeller?: boolean;
+        salesCount?: number;
+    };
     images?: string[];
     videos?: string[];
     stats: {
@@ -151,14 +176,48 @@ const formatCount = (n: number) => {
     return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
 };
 
-export const PostCard = memo(({ post }: { post: PostProps }) => {
+export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
     const t = useT();
+    // A paid unlock swaps the stripped post for the revealed one in place —
+    // no refetch of the page, no scroll jump. Shadowing the prop means every
+    // reference below sees the unlocked body the instant it lands.
+    const [revealed, setRevealed] = useState<PostProps | null>(null);
+    const post = revealed ?? postProp;
+    const [unlocking, setUnlocking] = useState(false);
     const [repostMenuOpen, setRepostMenuOpen] = useState(false);
     const [quoteOpen, setQuoteOpen] = useState(false);
     const [reposted, setReposted] = useState(false);
     const [repostDelta, setRepostDelta] = useState(0);
     const [isLiked, setIsLiked] = useState(post.isLiked);
     const [likeCount, setLikeCount] = useState(post.stats.likes);
+
+    // useState(prop) only reads its argument on the FIRST render, so a refetch
+    // that returned a newer count left the card showing the old one forever.
+    // Re-sync whenever the server's numbers actually change.
+    useEffect(() => {
+        setIsLiked(post.isLiked);
+    }, [post.isLiked, post.id]);
+    useEffect(() => {
+        setLikeCount(post.stats.likes);
+        seedStats(post.id, {
+            likes: post.stats.likes,
+            replies: post.stats.replies,
+            reposts: post.stats.reposts,
+        });
+    }, [post.id, post.stats.likes, post.stats.replies, post.stats.reposts]);
+
+    // Live counts for THIS post, off the one shared feed subscription.
+    const live = useSyncExternalStore(
+        useCallback((fn: () => void) => subscribeStats(post.id, fn), [post.id]),
+        useCallback(() => getStats(post.id), [post.id]),
+        () => undefined,
+    );
+
+    // The optimistic local count wins for the viewer's own like, so their tap
+    // never appears to bounce when their own event arrives back.
+    const shownLikes = live?.likes ?? likeCount;
+    const shownReplies = live?.replies ?? post.stats.replies;
+    const shownReposts = live?.reposts ?? post.stats.reposts;
     const [isBookmarked, setIsBookmarked] = useState(post.isBookmarked);
 
     // Translation (X-style): tap to translate, or automatic when the
@@ -251,24 +310,33 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
         }
 
         const newIsLiked = !isLiked;
+        // Optimistic, and written THROUGH to the shared store. Without that,
+        // a like that had already arrived from someone else would keep winning
+        // and the viewer's own tap would look like it did nothing.
+        const optimistic = newIsLiked ? shownLikes + 1 : Math.max(0, shownLikes - 1);
         setIsLiked(newIsLiked);
-        setLikeCount((prev: number) =>
-            newIsLiked ? prev + 1 : Math.max(0, prev - 1),
-        );
+        setLikeCount(optimistic);
+        applyStats(post.id, { likes: optimistic });
 
         try {
-            if (newIsLiked) {
-                await likePostAction(post.id);
-            } else {
-                await unlikePostAction(post.id);
+            const res = newIsLiked
+                ? await likePostAction(post.id)
+                : await unlikePostAction(post.id);
+            // Reconcile against the server's own number rather than trusting
+            // the arithmetic: two devices liking at once would otherwise drift.
+            const server = (res as any)?.likes;
+            if (typeof server === "number") {
+                setLikeCount(server);
+                applyStats(post.id, { likes: server });
             }
         } catch (error) {
             console.error("Like error:", error);
             setIsLiked(!newIsLiked);
-            setLikeCount((prev) => (newIsLiked ? prev - 1 : prev + 1));
+            setLikeCount(shownLikes);
+            applyStats(post.id, { likes: shownLikes });
             toast("Failed to update like", { type: "error" });
         }
-    }, [currentUser, isLiked, post.id, toast]);
+    }, [currentUser, isLiked, post.id, shownLikes, toast]);
 
     const handleBookmark = useCallback(async () => {
         if (!currentUser) {
@@ -457,6 +525,41 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
         () => !post.isDetail && post.content.length > MAX_LENGTH,
         [post.isDetail, post.content.length],
     );
+
+    // Paid post plumbing. `locked` drives the glass layer; the handler swaps
+    // in the gateway's revealed copy on success. Errors speak in toasts, and
+    // an empty wallet gets pointed at the wallet rather than a dead retry.
+    const saleLocked = Boolean(post.sale?.locked);
+    const salePriceLabel = post.sale
+        ? `$${(post.sale.priceUsdMinor / 100).toFixed(2).replace(/\.00$/, "")}`
+        : "";
+
+    const handleUnlock = useCallback(async () => {
+        if (unlocking) return;
+        setUnlocking(true);
+        try {
+            const res = await unlockPostAction(post.id);
+            if (res.success && res.data) {
+                const d: any = res.data;
+                setRevealed({
+                    ...postProp,
+                    content: d.content ?? "",
+                    images: d.images,
+                    videos: d.videos,
+                    mentions: d.mentions,
+                    linkPreview: d.linkPreview,
+                    sale: d.sale,
+                });
+                toast(t("post.unlocked.toast"), { type: "success" });
+            } else if (!res.success && res.code === "INSUFFICIENT_BALANCE") {
+                toast(t("post.locked.insufficient"), { type: "error" });
+            } else {
+                toast(t("post.locked.failed"), { type: "error" });
+            }
+        } finally {
+            setUnlocking(false);
+        }
+    }, [unlocking, post.id, postProp, toast, t]);
 
     const displayedContent = useMemo(
         () =>
@@ -885,6 +988,62 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                             </span>
                         </Link>
                     )}
+                    {/* The paywall. The gateway already stripped the body for
+                        non-buyers, so the "blurred post" behind the glass is
+                        staged — skeleton lines standing in for text nobody has
+                        paid to see. The glass panel carries the ask; the 60/40
+                        split is seller-facing copy in the composer, never shown
+                        to the buyer here. */}
+                    {saleLocked && (
+                        <div className="relative z-10 mb-2 overflow-hidden rounded-xl border border-hairline pointer-events-auto">
+                            <div aria-hidden className="space-y-2.5 p-4">
+                                <div className="h-3 w-[88%] rounded-sm bg-raised" />
+                                <div className="h-3 w-[70%] rounded-sm bg-raised" />
+                                <div className="h-32 w-full rounded-lg bg-gradient-to-br from-brand/15 via-raised to-sunken" />
+                                <div className="h-3 w-[52%] rounded-sm bg-raised" />
+                            </div>
+                            <div className="absolute inset-0 flex items-center justify-center backdrop-blur-xl backdrop-saturate-150 glass-veil">
+                                <div className="flex flex-col items-center gap-2.5 px-6 text-center">
+                                    <span className="flex h-11 w-11 items-center justify-center rounded-pill glass-chip">
+                                        <LockSimple size={19} weight="fill" />
+                                    </span>
+                                    <span className="glass-ink font-sans text-[14px] font-semibold">
+                                        {t("post.locked.title")}
+                                    </span>
+                                    <span className="glass-ink-dim font-sans text-[12.5px]">
+                                        {t("post.locked.sub")}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        disabled={unlocking}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            void handleUnlock();
+                                        }}
+                                        className="glass-cta mt-1 h-10 cursor-pointer rounded-pill px-5 font-sans text-[13px] font-semibold transition-colors disabled:opacity-60"
+                                    >
+                                        {unlocking
+                                            ? t("post.locked.unlocking")
+                                            : t("post.locked.cta").replace(
+                                                  "{price}",
+                                                  salePriceLabel,
+                                              )}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Seller's own view: the listing state, quietly. */}
+                    {post.sale && !saleLocked && post.sale.isSeller && (
+                        <p className="mb-1 font-sans text-[11.5px] font-semibold text-gold">
+                            {t("post.forSale.selling").replace("{price}", salePriceLabel)}
+                            {post.sale.salesCount
+                                ? ` · ${t("post.forSale.sold").replace("{count}", String(post.sale.salesCount))}`
+                                : ""}
+                        </p>
+                    )}
+
                     {/* overflow-wrap:anywhere, not break-words: a caption like
                         "Worldstreet#SouthSouthRegion#BeninRepublicZone#TogosubZone"
                         is ONE unbreakable run, and break-word only breaks a word
@@ -1110,7 +1269,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                 <ChatCircle size={17} />
                             </span>
                             <span className="text-[13px] font-sans tabular-nums">
-                                {formatCount(post.stats.replies)}
+                                {formatCount(shownReplies)}
                             </span>
                         </Link>
                         <div className="relative">
@@ -1134,7 +1293,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                 </span>
                                 <span className="text-[13px] font-sans tabular-nums">
                                     {formatCount(
-                                        (post.stats.reposts ?? 0) + repostDelta,
+                                        (shownReposts ?? 0) + repostDelta,
                                     )}
                                 </span>
                             </button>
@@ -1236,7 +1395,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                 <AnimatePresence mode="wait" initial={false}>
                                     {/* Count rolls 8px in the direction of change. */}
                                     <motion.span
-                                        key={likeCount}
+                                        key={shownLikes}
                                         initial={{ opacity: 0, y: isLiked ? 8 : -8 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{
@@ -1249,7 +1408,7 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                                         }}
                                         className="inline-block"
                                     >
-                                        {formatCount(likeCount)}
+                                        {formatCount(shownLikes)}
                                     </motion.span>
                                 </AnimatePresence>
                             </span>

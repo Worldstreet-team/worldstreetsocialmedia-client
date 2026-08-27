@@ -37,6 +37,7 @@ import {
 import { DEFAULT_AVATAR } from "@/const";
 import { useT } from "@/i18n/client";
 import { useFeedEvents } from "@/hooks/useUserEvents";
+import { cacheKeys, invalidate, invalidatePrefix } from "@/lib/cache";
 import { userAtom } from "@/store/user.atom";
 
 /**
@@ -91,6 +92,7 @@ function mapApiPost(post: any): PostProps {
 		},
 		content: post.content,
 		mentions: post.mentions,
+		sale: post.sale,
 		timestamp: formatTimeAgo(post.createdAt),
 		images: post.images,
 		videos: post.videos,
@@ -172,7 +174,6 @@ export default function Feed() {
 	const prependedRef = useRef<PostProps[]>([]);
 	const me = useAtomValue(userAtom);
 	const [isPosting, setIsPosting] = useState(false);
-	const [showBackToTop, setShowBackToTop] = useState(false);
 	const { toast } = useToast();
 
 	// First paint gets the orchestrated stagger; after that, new posts
@@ -203,14 +204,6 @@ export default function Feed() {
 			setIsFetchingMore(false);
 		}
 	};
-
-	// Back-to-top pill once the reader is a couple of screens deep.
-	useEffect(() => {
-		const scroller = mainScroller();
-		const onScroll = () => setShowBackToTop(mainScrollTop() > 800);
-		scroller.addEventListener("scroll", onScroll, { passive: true });
-		return () => scroller.removeEventListener("scroll", onScroll);
-	}, []);
 
 	useEffect(() => {
 		const node = loadMoreRef.current;
@@ -472,10 +465,11 @@ export default function Feed() {
 				.filter((post): post is PostProps => Boolean(post))
 				.reverse(),
 		);
-		// Only the delivered ones leave the pill. Anything still being fetched
-		// keeps its face up, with the spinner, until it actually arrives —
-		// which is the honest thing to show.
-		setPending((prev) => prev.filter((p) => !ready.includes(p)));
+		// The pill clears NOW, all of it. Keeping the un-preloaded ones up with
+		// a spinner was honest but felt broken: you tap "5 new posts" and the
+		// thing you tapped is still sitting there loading. Whatever the
+		// preload missed lands underneath a moment later instead.
+		setPending([]);
 		mainScroller().scrollTo({ top: 0, behavior: "smooth" });
 
 		// ── Background: whatever the preload missed, plus a reconcile ──
@@ -495,7 +489,6 @@ export default function Feed() {
 					if (result.success && result.data) late.push(mapApiPost(result.data));
 				}
 				prependPosts(late.reverse());
-				setPending((prev) => prev.filter((p) => !missing.includes(p)));
 			} finally {
 				refreshingRef.current = false;
 				setRefreshing(false);
@@ -538,6 +531,17 @@ export default function Feed() {
 					...prev.posts.filter((p) => p.id !== mappedPost.id),
 				],
 			}));
+
+			// The feed prepends the new post, but the profile keeps its own
+			// cached tab lists. Without this, posting and then opening your
+			// profile showed a list that did not include what you just wrote.
+			if (newPost.author?.userId) {
+				invalidatePrefix(cacheKeys.userPostsAll(newPost.author.userId));
+			}
+			if (newPost.author?.username) {
+				invalidate(cacheKeys.profile(newPost.author.username));
+			}
+
 			setIsPosting(false);
 		} else {
 			// Keep isPosting true while fetching
@@ -551,18 +555,23 @@ export default function Feed() {
 			{/* New posts announce themselves; the reader decides when to jump.
 			    The stack says WHO posted before the click — a name you follow is
 			    worth interrupting a read for, a count on its own isn't. */}
+			{/* Sticky under the column header rather than `fixed` at a guessed
+			    offset: fixed positioning knows nothing about the stories rail
+			    or the tab bar above it, so the pill landed ON TOP of the rail.
+			    h-0 keeps it out of the flow so nothing below shifts down. */}
+			<div className="sticky top-14 z-sticky flex h-0 justify-center">
 			<AnimatePresence>
 				{pending.length > 0 && (
 					<motion.button
 						type="button"
-						initial={{ opacity: 0, y: -8, x: "-50%" }}
-						animate={{ opacity: 1, y: 0, x: "-50%" }}
+						initial={{ opacity: 0, y: -8 }}
+						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0, transition: { duration: 0.12 } }}
 						transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
 						onClick={showNewPosts}
 						disabled={refreshing}
 						aria-busy={refreshing}
-						className="fixed top-[72px] md:top-16 left-1/2 z-sticky flex items-center gap-2 h-10 pl-2.5 pr-4 rounded-pill bg-brand text-brand-on shadow-nav font-sans text-[13px] font-semibold hover:bg-brand-active transition-colors cursor-pointer disabled:cursor-default"
+						className="mt-2 flex items-center gap-2 h-10 pl-2.5 pr-4 rounded-pill bg-brand text-brand-on shadow-nav font-sans text-[13px] font-semibold hover:bg-brand-active transition-colors cursor-pointer disabled:cursor-default"
 					>
 						{refreshing ? (
 							<span
@@ -605,29 +614,8 @@ export default function Feed() {
 					</motion.button>
 				)}
 			</AnimatePresence>
+			</div>
 
-			<AnimatePresence>
-				{showBackToTop && (
-					<motion.button
-						type="button"
-						// Enter rises 8px at motion-base; exit is a fast fade (06-motion).
-						initial={{ opacity: 0, y: 8, x: "-50%" }}
-						animate={{ opacity: 1, y: 0, x: "-50%" }}
-						exit={{ opacity: 0, transition: { duration: 0.12 } }}
-						transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-						onClick={() =>
-							mainScroller().scrollTo({ top: 0, behavior: "smooth" })
-						}
-						// bottom-nav derives from --ws-nav-clearance, so the pill
-						// tracks the real bar height + home indicator instead of a
-						// guessed 24 (which overlapped it on notched phones).
-						className="fixed bottom-nav md:bottom-8 left-1/2 z-sticky flex items-center gap-1.5 h-10 md:h-9 pl-3.5 pr-4 rounded-pill bg-raised border border-hairline shadow-nav font-sans text-[13px] font-medium text-primary hover:bg-track transition-colors cursor-pointer"
-					>
-						<ArrowUp className="w-[14px] h-[14px]" />
-						{t("feed.backtotop")}
-					</motion.button>
-				)}
-			</AnimatePresence>
 
 			{/* A normal feed row, not a card (owner ruling 2026-08-26): the
 			    card-depth gradient + inset margins made the composer the

@@ -24,7 +24,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { LiveChatPanel } from "@/components/live/LiveChatPanel";
 import { LiveSlidePlayer } from "@/components/live/LiveSlidePlayer";
 import { useToast } from "@/components/ui/Toast/ToastContext";
-import { DEFAULT_AVATAR } from "@/const";
+import { DEFAULT_AVATAR, XSTREAM_API_URL } from "@/const";
 import { useLiveEvents } from "@/hooks/useLiveNow";
 import { useVideoBuffer } from "@/hooks/useVideoBuffer";
 import { useT } from "@/i18n/client";
@@ -91,6 +91,9 @@ function VerticalSurface() {
 	const [cursor, setCursor] = useState<string | null>(null);
 	const [hasMore, setHasMore] = useState(true);
 	const [active, setActive] = useState(0);
+	// Mirrors for the room's data listener, which must not re-bind per slide.
+	const activeRef = useRef(0);
+	const slidesRef = useRef<Slide[]>([]);
 	const [muted, setMuted] = useState(true);
 	const [loading, setLoading] = useState(true);
 	const [viewers, setViewers] = useState(0);
@@ -301,6 +304,13 @@ function VerticalSurface() {
 		else void loadStreet(null);
 	}, [tab, loadLive, loadStreet, demo]);
 
+	useEffect(() => {
+		activeRef.current = active;
+	}, [active]);
+	useEffect(() => {
+		slidesRef.current = slides;
+	}, [slides]);
+
 	// ── active tracking + deep link positioning ──────────────────────────
 	useEffect(() => {
 		const root = containerRef.current;
@@ -333,6 +343,69 @@ function VerticalSurface() {
 		}
 		if (idx >= 0) deepLinkRef.current = null;
 	}, [slides]);
+
+	// The stream's like count is shared with Xstream; seed it when a live
+	// slide becomes the active one (the directory list doesn't carry it).
+	useEffect(() => {
+		const slide = slides[active];
+		if (!slide?.streamId || slide.postId) return;
+		let cancelled = false;
+		(async () => {
+			try {
+				const token = await (window as any).Clerk?.session?.getToken();
+				const res = await fetch(
+					`${XSTREAM_API_URL}/v1/streams/${slide.streamId}/like`,
+					{
+						headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+					},
+				);
+				const body = await res.json().catch(() => null);
+				if (!cancelled && body?.data) {
+					patchSlide(slide.key, {
+						likes: Number(body.data.likes ?? 0),
+						isLiked: Boolean(body.data.liked),
+					});
+				}
+			} catch {
+				/* count stays at its listed value */
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+		// biome-ignore lint/correctness/useExhaustiveDependencies: keyed by the active slide only.
+	}, [active, slides[active]?.streamId]);
+
+	// Likes fan out from the Xstream API into the room (server-side), so
+	// every watcher's count moves together — whichever platform they're on.
+	useEffect(() => {
+		if (!liveRoom) return;
+		let detach: (() => void) | null = null;
+		let disposed = false;
+		(async () => {
+			const { RoomEvent } = await import("livekit-client");
+			if (disposed) return;
+			const handler = (payload: Uint8Array) => {
+				try {
+					const data = JSON.parse(new TextDecoder().decode(payload));
+					if (data.__evt !== "like" || typeof data.likes !== "number")
+						return;
+					const slide = slidesRef.current[activeRef.current];
+					if (slide?.streamId) {
+						patchSlide(slide.key, { likes: data.likes });
+					}
+				} catch {
+					/* not a like event */
+				}
+			};
+			liveRoom.on(RoomEvent.DataReceived, handler);
+			detach = () => liveRoom.off(RoomEvent.DataReceived, handler);
+		})();
+		return () => {
+			disposed = true;
+			detach?.();
+		};
+	}, [liveRoom]);
 
 	// ── URL follows the active slide, so every slide is shareable ────────
 	useEffect(() => {
@@ -380,6 +453,40 @@ function VerticalSurface() {
 		);
 
 	const toggleLike = async (slide: Slide) => {
+		// A live slide's heart is the STREAM's like, shared with Xstream —
+		// it used to like the backing feed post, so hearts sent here never
+		// reached Xstream's counter and theirs never reached ours.
+		if (slide.streamId && !slide.postId) {
+			const wasLiked = slide.isLiked;
+			patchSlide(slide.key, {
+				isLiked: !wasLiked,
+				likes: Math.max(0, slide.likes + (wasLiked ? -1 : 1)),
+			});
+			try {
+				const token = await (window as any).Clerk?.session?.getToken();
+				if (!token) throw new Error("signed out");
+				const res = await fetch(
+					`${XSTREAM_API_URL}/v1/streams/${slide.streamId}/like`,
+					{
+						method: wasLiked ? "DELETE" : "POST",
+						headers: { Authorization: `Bearer ${token}` },
+					},
+				);
+				const body = await res.json().catch(() => null);
+				if (body?.data) {
+					patchSlide(slide.key, {
+						likes: Number(body.data.likes ?? 0),
+						isLiked: Boolean(body.data.liked),
+					});
+				}
+			} catch {
+				patchSlide(slide.key, {
+					isLiked: wasLiked,
+					likes: slide.likes,
+				});
+			}
+			return;
+		}
 		if (!slide.postId) return;
 		patchSlide(slide.key, {
 			isLiked: !slide.isLiked,
