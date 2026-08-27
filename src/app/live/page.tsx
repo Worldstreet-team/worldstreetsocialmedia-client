@@ -752,7 +752,7 @@ function VerticalSurface() {
 									type="button"
 									onClick={() => setChatFor(null)}
 									aria-label="Close"
-									className="flex h-9 w-9 items-center justify-center rounded-pill glass-chip backdrop-blur-md cursor-pointer"
+									className="flex h-9 w-9 items-center justify-center rounded-pill glass-chip cursor-pointer"
 								>
 									<X size={15} />
 								</button>
@@ -808,7 +808,7 @@ function VerticalSurface() {
 									type="button"
 									onClick={() => setCommentsFor(null)}
 									aria-label="Close"
-									className="flex h-9 w-9 items-center justify-center rounded-pill glass-chip backdrop-blur-md cursor-pointer"
+									className="flex h-9 w-9 items-center justify-center rounded-pill glass-chip cursor-pointer"
 								>
 									<X size={15} />
 								</button>

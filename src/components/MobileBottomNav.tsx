@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
+import { Fragment, useState } from "react";
 import { useAppPathname } from "@/i18n/useAppPathname";
+import { EcosystemSheet } from "@/components/layout/EcosystemSheet";
 // Nav uses Phosphor with weight="fill" on the active tab, matching the rail.
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import {
@@ -9,7 +12,6 @@ import {
 	ChatCircleDots,
 	House,
 	MagnifyingGlass,
-	MonitorPlay,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { BadgedIcon } from "@/components/ui/Badge";
@@ -30,15 +32,18 @@ const navIcon = (Icon: PhosphorIcon) => {
 	return NavIcon;
 };
 
+/** The brand mark sits mid-row: two tabs, the mark, two tabs. */
+const CENTER_SLOT = 2;
+
 const HomeIcon = navIcon(House);
 const SearchIcon = navIcon(MagnifyingGlass);
-const VideoIcon = navIcon(MonitorPlay);
 const MessageIcon = navIcon(ChatCircleDots);
 const BellIcon = navIcon(Bell);
 
 export const MobileBottomNav = () => {
 	const t = useT();
 	const pathname = useAppPathname();
+	const [ecosystemOpen, setEcosystemOpen] = useState(false);
 	const unreadMessages = useAtomValue(unreadMessagesCountAtom);
 	const unreadNotifications = useAtomValue(unreadNotificationsCountAtom);
 
@@ -54,12 +59,6 @@ export const MobileBottomNav = () => {
 			icon: SearchIcon,
 			label: t("nav.explore"),
 			active: pathname.startsWith("/explore"),
-		},
-		{
-			href: "/live",
-			icon: VideoIcon,
-			label: t("nav.videos"),
-			active: pathname.startsWith("/live"),
 		},
 		{
 			href: "/notifications",
@@ -119,9 +118,41 @@ export const MobileBottomNav = () => {
 				    its own `bottom` offset instead). */}
 				<div style={{ paddingBottom: "var(--ws-safe-bottom)" }}>
 				<div className="flex justify-between items-center h-16 px-1">
-					{navItems.map((item) => (
+					{navItems.map((item, index) => (
+						<Fragment key={item.href}>
+							{/* The centre slot is the brand, not a destination. It used
+							    to be The Space, which is still one tap away in the rail
+							    and the FAB — the ecosystem had no mobile entry at all. */}
+							{index === CENTER_SLOT && (
+								<button
+									type="button"
+									onClick={() => setEcosystemOpen(true)}
+									aria-haspopup="dialog"
+									aria-expanded={ecosystemOpen}
+									aria-label="More from WorldStreet"
+									className="flex h-full w-full min-w-0 flex-col items-center justify-center gap-1 transition-colors active:bg-primary/10"
+								>
+									<span
+										className={clsx(
+											"flex h-[26px] w-[26px] items-center justify-center rounded-[7px] transition-colors",
+											ecosystemOpen && "bg-raised",
+										)}
+									>
+										<Image
+											src="/images/wsa-mark.png"
+											alt=""
+											width={22}
+											height={22}
+											aria-hidden
+											className="h-[22px] w-[22px] object-contain"
+										/>
+									</span>
+									<span className="max-w-full truncate px-0.5 font-sans text-[10px] font-medium leading-none whitespace-nowrap text-muted">
+										{t("nav.more")}
+									</span>
+								</button>
+							)}
 						<Link
-							key={item.href}
 							href={item.href}
 							className={clsx(
 								// 05-screens responsive spec: icon 20 + 10px label.
@@ -146,10 +177,16 @@ export const MobileBottomNav = () => {
 								{item.label}
 							</span>
 						</Link>
+						</Fragment>
 					))}
 					</div>
 				</div>
 			</div>
+
+			<EcosystemSheet
+				open={ecosystemOpen}
+				onClose={() => setEcosystemOpen(false)}
+			/>
 		</>
 	);
 };

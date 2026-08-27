@@ -641,5 +641,19 @@
   "voice.endedByHost": "El anfitrión terminó esta sala",
   "voice.linkGone": "Esa sala ya no existe",
   "voice.linkScheduled": "Esa sala aún no ha empezado: está en Próximas",
-  "voice.linkOver": "Esa sala ya terminó"
+  "voice.linkOver": "Esa sala ya terminó",
+  "community.edit": "Editar comunidad",
+  "community.delete": "Eliminar comunidad",
+  "community.deleteTitle": "¿Eliminar esta comunidad?",
+  "community.deleteBody": "La comunidad y todas sus publicaciones se eliminarán permanentemente. Esto no se puede deshacer.",
+  "community.deleteConfirm": "Sí, eliminar",
+  "community.deletedToast": "Comunidad eliminada",
+  "community.removedToast": "Miembro expulsado",
+  "community.removeTitle": "¿Expulsar a este miembro?",
+  "community.removeBody": "Será expulsado y no podrá volver a unirse.",
+  "community.remove": "Expulsar",
+  "community.nameLocked": "El nombre no se puede cambiar: los enlaces lo usan.",
+  "community.changeAvatar": "Cambiar avatar",
+  "community.descriptionLabel": "Descripción",
+  "community.categoryLabel": "Categoría"
 }

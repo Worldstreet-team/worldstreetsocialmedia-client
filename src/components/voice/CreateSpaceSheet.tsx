@@ -192,7 +192,7 @@ export default function CreateSpaceSheet({
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill glass-chip backdrop-blur-md transition-colors cursor-pointer"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill glass-chip transition-colors cursor-pointer"
             >
               <X size={16} weight="bold" />
             </button>

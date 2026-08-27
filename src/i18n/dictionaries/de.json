@@ -641,5 +641,19 @@
   "voice.endedByHost": "Der Host hat diesen Raum beendet",
   "voice.linkGone": "Diesen Raum gibt es nicht mehr",
   "voice.linkScheduled": "Dieser Raum hat noch nicht begonnen — siehe Anstehend",
-  "voice.linkOver": "Dieser Raum ist bereits vorbei"
+  "voice.linkOver": "Dieser Raum ist bereits vorbei",
+  "community.edit": "Community bearbeiten",
+  "community.delete": "Community löschen",
+  "community.deleteTitle": "Diese Community löschen?",
+  "community.deleteBody": "Die Community und alle Beiträge darin werden dauerhaft gelöscht. Das lässt sich nicht rückgängig machen.",
+  "community.deleteConfirm": "Ja, löschen",
+  "community.deletedToast": "Community gelöscht",
+  "community.removedToast": "Mitglied entfernt",
+  "community.removeTitle": "Dieses Mitglied entfernen?",
+  "community.removeBody": "Es wird entfernt und kann nicht wieder beitreten.",
+  "community.remove": "Entfernen",
+  "community.nameLocked": "Der Name ist fest — Links verwenden ihn.",
+  "community.changeAvatar": "Avatar ändern",
+  "community.descriptionLabel": "Beschreibung",
+  "community.categoryLabel": "Kategorie"
 }

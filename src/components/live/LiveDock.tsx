@@ -349,7 +349,7 @@ export function LiveDock() {
 						type="button"
 						onClick={() => setExpanded((v) => !v)}
 						aria-label={expanded ? t("dock.collapse") : t("dock.expand")}
-						className="ml-auto flex h-7 w-7 items-center justify-center rounded-pill glass-chip backdrop-blur-md backdrop-saturate-150 cursor-pointer"
+						className="ml-auto flex h-7 w-7 items-center justify-center rounded-pill glass-chip cursor-pointer"
 					>
 						{expanded ? (
 							<ArrowsInSimple size={13} weight="bold" />

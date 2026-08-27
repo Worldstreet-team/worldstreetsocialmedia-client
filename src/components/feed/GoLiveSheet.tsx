@@ -102,7 +102,7 @@ function GlassSelect({
 			<button
 				type="button"
 				onClick={() => setOpen((v) => !v)}
-				className="w-full flex items-center gap-1.5 rounded-pill glass-chip backdrop-blur-md backdrop-saturate-150 px-3 h-8 cursor-pointer"
+				className="w-full flex items-center gap-1.5 rounded-pill glass-chip px-3 h-8 cursor-pointer"
 			>
 				<span className="shrink-0 opacity-80">{icon}</span>
 				<span className="flex-1 min-w-0 truncate text-left text-[12px] font-sans">
@@ -402,7 +402,7 @@ export function GoLiveSheet({
 									type="button"
 									onClick={close}
 									aria-label="Close"
-									className="flex h-9 w-9 items-center justify-center rounded-pill glass-chip backdrop-blur-md backdrop-saturate-150 cursor-pointer"
+									className="flex h-9 w-9 items-center justify-center rounded-pill glass-chip cursor-pointer"
 								>
 									<X size={15} />
 								</button>
@@ -436,7 +436,7 @@ export function GoLiveSheet({
 											type="button"
 											onClick={() => void copyValue(row.kind, row.value)}
 											aria-label={t("golive.obs.copy")}
-											className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg glass-chip backdrop-blur-md backdrop-saturate-150 cursor-pointer"
+											className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg glass-chip cursor-pointer"
 										>
 											{copied === row.kind ? (
 												<Check
@@ -458,7 +458,7 @@ export function GoLiveSheet({
 										href={`${XSTREAM_WEB_URL}/stream/${obsInfo.streamId}`}
 										target="_blank"
 										rel="noopener noreferrer"
-										className="flex-1 h-11 flex items-center justify-center gap-2 rounded-pill glass-chip backdrop-blur-md backdrop-saturate-150 font-sans text-[13px] font-semibold"
+										className="flex-1 h-11 flex items-center justify-center gap-2 rounded-pill glass-chip font-sans text-[13px] font-semibold"
 									>
 										<ArrowSquareOut size={15} />
 										{t("golive.obs.open")}
@@ -489,7 +489,7 @@ export function GoLiveSheet({
 											<button
 												type="button"
 												onClick={() => void openPreview()}
-												className="mt-1 px-4 h-9 rounded-pill glass-chip backdrop-blur-md backdrop-saturate-150 text-sm font-semibold font-sans cursor-pointer"
+												className="mt-1 px-4 h-9 rounded-pill glass-chip text-sm font-semibold font-sans cursor-pointer"
 											>
 												{t("rail.retry")}
 											</button>
@@ -504,7 +504,7 @@ export function GoLiveSheet({
 												muted
 												className="absolute inset-0 w-full h-full object-cover [transform:scaleX(-1)]"
 											/>
-											<span className="absolute top-3 left-3 flex items-center gap-1.5 rounded-pill glass-chip backdrop-blur-md backdrop-saturate-150 px-2.5 h-6 text-[10.5px] font-bold tracking-wide font-sans">
+											<span className="absolute top-3 left-3 flex items-center gap-1.5 rounded-pill glass-chip px-2.5 h-6 text-[10.5px] font-bold tracking-wide font-sans">
 												<span className="relative flex h-1.5 w-1.5">
 													<span className="absolute inline-flex h-full w-full rounded-pill bg-danger opacity-70 animate-ping" />
 													<span className="relative inline-flex h-1.5 w-1.5 rounded-pill bg-danger" />
@@ -543,7 +543,7 @@ export function GoLiveSheet({
 									)
 								) : (
 									<div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-10 text-center">
-										<span className="flex h-12 w-12 items-center justify-center rounded-pill glass-chip backdrop-blur-md backdrop-saturate-150">
+										<span className="flex h-12 w-12 items-center justify-center rounded-pill glass-chip ">
 											{source === "screen" ? (
 												<Monitor size={22} />
 											) : (
@@ -567,7 +567,7 @@ export function GoLiveSheet({
 									type="button"
 									onClick={close}
 									aria-label="Close"
-									className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-pill glass-chip backdrop-blur-md backdrop-saturate-150 cursor-pointer"
+									className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-pill glass-chip cursor-pointer"
 								>
 									<X size={15} />
 								</button>
@@ -634,7 +634,7 @@ export function GoLiveSheet({
 												"flex items-center justify-center gap-1.5 rounded-pill h-9 font-sans text-[12px] font-semibold transition-colors cursor-pointer",
 												source === value
 													? "glass-chip-active"
-													: "glass-chip backdrop-blur-md backdrop-saturate-150",
+													: "glass-chip ",
 											)}
 										>
 											<Icon
@@ -778,7 +778,7 @@ export function GoLiveSheet({
 																	"flex items-center gap-1.5 px-2.5 h-7 rounded-pill text-[11.5px] font-medium font-sans cursor-pointer",
 																	category === c.label
 																		? "glass-chip-active"
-																		: "glass-chip backdrop-blur-md backdrop-saturate-150",
+																		: "glass-chip ",
 																)}
 															>
 																<span className="leading-none">
@@ -833,7 +833,7 @@ export function GoLiveSheet({
 																					"flex items-center gap-1.5 px-2.5 h-7 rounded-pill text-[11.5px] font-medium font-sans cursor-pointer",
 																					category === c.label
 																						? "glass-chip-active"
-																						: "glass-chip backdrop-blur-md backdrop-saturate-150",
+																						: "glass-chip ",
 																				)}
 																			>
 																				<span className="leading-none">

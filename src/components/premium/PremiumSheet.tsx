@@ -322,7 +322,7 @@ export function PremiumSheet() {
               type="button"
               onClick={() => setOpen(false)}
               aria-label={t("common.cancel")}
-              className="absolute right-4 top-4 z-10 flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill glass-tile backdrop-blur-md text-muted transition-colors hover:text-primary"
+              className="absolute right-4 top-4 z-10 flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill glass-tile text-muted transition-colors hover:text-primary"
             >
               <X size={15} weight="bold" />
             </button>
@@ -365,7 +365,7 @@ export function PremiumSheet() {
             <>
               {/* status card, only while a subscription is live */}
               {live && (
-                <div className="mx-6 mt-2 rounded-xl glass-tile backdrop-blur-md p-4">
+                <div className="mx-6 mt-2 rounded-xl glass-tile p-4">
                   <div className="flex items-center justify-between gap-3">
                     <span
                       className={clsx(
@@ -413,7 +413,7 @@ export function PremiumSheet() {
                     key={perk.title}
                     className="flex items-center gap-3.5 rounded-xl px-2.5 py-2.5"
                   >
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl glass-tile backdrop-blur-md">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl glass-tile ">
                       {perk.icon}
                     </span>
                     <span className="min-w-0">
@@ -445,7 +445,7 @@ export function PremiumSheet() {
                           aria-pressed={on}
                           className={clsx(
                             "relative flex-1 cursor-pointer rounded-xl px-2 pb-3 pt-3.5 text-center transition-all",
-                            on ? "" : "glass-tile backdrop-blur-md",
+                            on ? "" : "glass-tile ",
                           )}
                           style={
                             on

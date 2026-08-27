@@ -322,7 +322,7 @@ export default function MediaEditor({
                 type="button"
                 onClick={onClose}
                 aria-label="Discard edits"
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill glass-chip backdrop-blur-md backdrop-saturate-150 transition-colors cursor-pointer"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill glass-chip transition-colors cursor-pointer"
               >
                 <X size={17} weight="bold" />
               </button>
@@ -510,7 +510,7 @@ export default function MediaEditor({
                           "h-8 px-3 rounded-pill text-[13px] font-medium font-sans transition-colors whitespace-nowrap cursor-pointer tabular-nums",
                           doc.aspectId === id
                             ? "glass-chip-active"
-                            : "glass-chip backdrop-blur-md backdrop-saturate-150",
+                            : "glass-chip ",
                         )}
                         aria-pressed={doc.aspectId === id}
                       >
@@ -524,7 +524,7 @@ export default function MediaEditor({
                     type="button"
                     onClick={applyRotate}
                     aria-label="Rotate 90 degrees"
-                    className="flex h-10 w-10 items-center justify-center rounded-pill glass-chip backdrop-blur-md backdrop-saturate-150 transition-colors cursor-pointer"
+                    className="flex h-10 w-10 items-center justify-center rounded-pill glass-chip transition-colors cursor-pointer"
                   >
                     <ArrowClockwise size={17} weight="bold" />
                   </button>
@@ -534,7 +534,7 @@ export default function MediaEditor({
                     aria-label="Flip horizontally"
                     className={clsx(
                       "flex h-10 w-10 items-center justify-center rounded-pill transition-colors cursor-pointer",
-                      doc.flipH ? "glass-chip-active" : "glass-chip backdrop-blur-md backdrop-saturate-150",
+                      doc.flipH ? "glass-chip-active" : "glass-chip ",
                     )}
                     aria-pressed={doc.flipH}
                   >

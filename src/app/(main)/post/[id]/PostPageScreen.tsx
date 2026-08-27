@@ -160,18 +160,14 @@ export default function PostPageScreen() {
 
 				// One extra request, and only for replies. The id may arrive raw
 				// or populated depending on the endpoint, so handle both.
-				console.log("[probe] parentPost raw =", p.parentPost, "isReply =", p.isReply);
 				const parentId =
 					p.parentPost && typeof p.parentPost === "object"
 						? p.parentPost._id
 						: p.parentPost;
 				if (parentId) {
-					void getPostByIdAction(String(parentId))
-						.then((res) => {
-							console.log("[probe] parent fetch:", res.success, res.data?._id, res.message);
-							if (res.success && res.data) setParent(toPostProps(res.data));
-						})
-						.catch((e) => console.log("[probe] parent fetch threw:", String(e)));
+					void getPostByIdAction(String(parentId)).then((res) => {
+						if (res.success && res.data) setParent(toPostProps(res.data));
+					});
 				} else {
 					setParent(null);
 				}

@@ -680,5 +680,19 @@
   "voice.endedByHost": "The host ended this space",
   "voice.linkGone": "That space doesn't exist anymore",
   "voice.linkScheduled": "That space hasn't started yet — it's in Upcoming",
-  "voice.linkOver": "That space has already ended"
+  "voice.linkOver": "That space has already ended",
+  "community.edit": "Edit community",
+  "community.delete": "Delete community",
+  "community.deleteTitle": "Delete this community?",
+  "community.deleteBody": "The community and every post inside it will be permanently deleted. This can't be undone.",
+  "community.deleteConfirm": "Yes, delete it",
+  "community.deletedToast": "Community deleted",
+  "community.removedToast": "Member removed",
+  "community.removeTitle": "Remove this member?",
+  "community.removeBody": "They'll be removed and won't be able to rejoin.",
+  "community.remove": "Remove",
+  "community.nameLocked": "The name can't be changed — links use it.",
+  "community.changeAvatar": "Change avatar",
+  "community.descriptionLabel": "Description",
+  "community.categoryLabel": "Category"
 }

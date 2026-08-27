@@ -92,7 +92,7 @@ export default function StickerTray({
                 "h-8 px-3 rounded-pill font-sans text-[12px] font-semibold transition-colors cursor-pointer",
                 tab === t.id
                   ? "glass-chip-active"
-                  : "glass-chip backdrop-blur-md",
+                  : "glass-chip ",
               )}
             >
               {t.label}
@@ -103,7 +103,7 @@ export default function StickerTray({
           type="button"
           onClick={onClose}
           aria-label="Close stickers"
-          className="flex h-9 w-9 items-center justify-center rounded-pill glass-chip backdrop-blur-md backdrop-saturate-150 transition-colors cursor-pointer"
+          className="flex h-9 w-9 items-center justify-center rounded-pill glass-chip transition-colors cursor-pointer"
         >
           <X size={15} weight="bold" />
         </button>

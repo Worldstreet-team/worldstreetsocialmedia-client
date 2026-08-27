@@ -176,7 +176,7 @@ export default function SpaceRoom({
                   type="button"
                   onClick={shareRoom}
                   aria-label={t("voice.share")}
-                  className="flex h-9 items-center gap-1.5 rounded-pill glass-chip backdrop-blur-md px-3 font-sans text-[12px] font-semibold transition-colors cursor-pointer"
+                  className="flex h-9 items-center gap-1.5 rounded-pill glass-chip px-3 font-sans text-[12px] font-semibold transition-colors cursor-pointer"
                 >
                   <LinkSimple size={14} weight="bold" />
                   {t("voice.share")}
@@ -185,7 +185,7 @@ export default function SpaceRoom({
                   type="button"
                   onClick={onMinimize}
                   aria-label={t("voice.minimize")}
-                  className="flex h-9 w-9 items-center justify-center rounded-pill glass-chip backdrop-blur-md transition-colors cursor-pointer"
+                  className="flex h-9 w-9 items-center justify-center rounded-pill glass-chip transition-colors cursor-pointer"
                 >
                   <ArrowsInSimple size={15} weight="bold" />
                 </button>
@@ -341,7 +341,7 @@ export default function SpaceRoom({
                     !canSpeak || audio !== "listening"
                       ? "glass-chip opacity-40 cursor-not-allowed"
                       : muted
-                        ? "glass-chip backdrop-blur-md cursor-pointer"
+                        ? "glass-chip cursor-pointer"
                         : "bg-danger text-white cursor-pointer",
                   )}
                 >
@@ -358,7 +358,7 @@ export default function SpaceRoom({
                   aria-label={t("voice.raiseHand")}
                   className={clsx(
                     "flex h-10 w-10 items-center justify-center rounded-pill transition-colors cursor-pointer",
-                    hand ? "glass-chip-active" : "glass-chip backdrop-blur-md",
+                    hand ? "glass-chip-active" : "glass-chip ",
                   )}
                 >
                   <HandPalm size={16} weight="bold" />
@@ -388,7 +388,7 @@ export default function SpaceRoom({
                 <button
                   type="button"
                   onClick={onLeave}
-                  className="flex items-center gap-1.5 rounded-pill glass-chip backdrop-blur-md px-4 h-10 font-sans text-[12.5px] font-semibold transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-pill glass-chip px-4 h-10 font-sans text-[12.5px] font-semibold transition-colors cursor-pointer"
                 >
                   <SignOut size={14} weight="bold" />
                   {t("voice.leave")}

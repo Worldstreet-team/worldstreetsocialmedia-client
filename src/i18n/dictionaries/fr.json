@@ -641,5 +641,19 @@
   "voice.endedByHost": "L'hôte a mis fin à ce salon",
   "voice.linkGone": "Ce salon n'existe plus",
   "voice.linkScheduled": "Ce salon n'a pas encore commencé — il est dans À venir",
-  "voice.linkOver": "Ce salon est déjà terminé"
+  "voice.linkOver": "Ce salon est déjà terminé",
+  "community.edit": "Modifier la communauté",
+  "community.delete": "Supprimer la communauté",
+  "community.deleteTitle": "Supprimer cette communauté ?",
+  "community.deleteBody": "La communauté et toutes ses publications seront définitivement supprimées. C'est irréversible.",
+  "community.deleteConfirm": "Oui, supprimer",
+  "community.deletedToast": "Communauté supprimée",
+  "community.removedToast": "Membre retiré",
+  "community.removeTitle": "Retirer ce membre ?",
+  "community.removeBody": "Il sera retiré et ne pourra pas revenir.",
+  "community.remove": "Retirer",
+  "community.nameLocked": "Le nom ne peut pas changer — les liens l'utilisent.",
+  "community.changeAvatar": "Changer l'avatar",
+  "community.descriptionLabel": "Description",
+  "community.categoryLabel": "Catégorie"
 }

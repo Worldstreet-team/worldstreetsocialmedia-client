@@ -21,6 +21,7 @@ import { useState, useRef, useEffect } from "react";
 import { mainNav, moreItem, youNav, type SidebarItem } from "@/data/sidebar";
 import { useAtomValue, useSetAtom } from "jotai";
 import { userAtom } from "@/store/user.atom";
+import { ECOSYSTEM } from "@/data/ecosystem";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { unreadMessagesCountAtom } from "@/store/messageCache";
 import { liveSpacesCountAtom } from "@/store/voice.atom";
@@ -47,20 +48,6 @@ import { useT } from "@/i18n/client";
    share one trading desk, which is why both point at /trade. The hub's
  "Community" entry is deliberately omitted here this app already has
    its own Communities section in the nav above. */
-const ECOSYSTEM = [
-	{ title: "Forex Markets", href: "https://dashboard.worldstreetgold.com/trade" },
-	{
-		title: "Cryptocurrencies",
-		href: "https://dashboard.worldstreetgold.com/trade",
-	},
-	{ title: "Vivid AI", href: "https://worldstreetgold.com/vivid" },
-	{ title: "Academy", href: "https://academy.worldstreetgold.com" },
-	{ title: "e-Commerce", href: "https://shop.worldstreetgold.com" },
-	{ title: "Xstream", href: "https://xtreme.worldstreetgold.com" },
-	{ title: "Prediction", href: "https://prediction.worldstreetgold.com" },
-	{ title: "Arcade", href: "https://arcade.worldstreetgold.com" },
-	{ title: "Vision", href: "https://vision.worldstreetgold.com" },
-];
 
 /* Section eyebrow — the landing page's uppercase-tracking micro-label. */
 function Eyebrow({ children }: { children: React.ReactNode }) {

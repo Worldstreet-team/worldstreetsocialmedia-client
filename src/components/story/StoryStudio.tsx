@@ -962,7 +962,7 @@ export default function StoryStudio({
         "group flex flex-col items-center justify-center gap-3 bg-[#171412] hover:bg-[#1c1917] transition-colors cursor-pointer",
       )}
     >
-      <span className="relative flex h-16 w-16 items-center justify-center rounded-pill glass-chip backdrop-blur-md backdrop-saturate-150 transition-colors">
+      <span className="relative flex h-16 w-16 items-center justify-center rounded-pill glass-chip transition-colors">
         <Images size={26} weight="light" />
       </span>
       <span className="relative font-display text-[17px] font-semibold tracking-tight">
@@ -1257,7 +1257,7 @@ export default function StoryStudio({
             type="button"
             onClick={onClose}
             aria-label="Close story studio"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill glass-chip backdrop-blur-md backdrop-saturate-150 transition-colors cursor-pointer"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill glass-chip transition-colors cursor-pointer"
           >
             <X size={17} weight="bold" />
           </button>
