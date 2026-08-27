@@ -106,6 +106,24 @@ export default function ExploreClient({
     }
   }, []);
 
+  /**
+   * Keep the search term in the URL without going through the router.
+   *
+   * Two things this must not do, both of which it used to:
+   *
+   * 1. Pass `null` as the state. The App Router keeps its own tree in
+   *    `window.history.state`; nulling it leaves the entry with no router
+   *    state, and a later back/forward then restores the wrong page —
+   *    which is why leaving explore could bounce you back to it. Pass the
+   *    existing state straight through instead.
+   * 2. Hardcode "/explore". Locale-prefixed paths (/es/explore) are a
+   *    rewrite in proxy.ts, so a literal path silently dropped the prefix.
+   *    location.pathname already carries it.
+   */
+  const syncUrl = useCallback((url: string) => {
+    window.history.replaceState(window.history.state, "", url);
+  }, []);
+
   useEffect(() => {
     const trimmed = query.trim();
 
@@ -114,7 +132,7 @@ export default function ExploreClient({
       setPostResults([]);
       setUsersLoading(false);
       setPostsLoading(false);
-      window.history.replaceState(null, "", "/explore");
+      syncUrl(window.location.pathname);
       return;
     }
 
@@ -122,13 +140,15 @@ export default function ExploreClient({
     setPostsLoading(true);
 
     const handler = setTimeout(() => {
-      window.history.replaceState(null, "", `/explore?q=${encodeURIComponent(trimmed)}`);
+      syncUrl(
+        `${window.location.pathname}?q=${encodeURIComponent(trimmed)}`,
+      );
       void searchUsers(trimmed);
       void searchPosts(trimmed);
     }, 400);
 
     return () => clearTimeout(handler);
-  }, [query, searchUsers, searchPosts]);
+  }, [query, searchUsers, searchPosts, syncUrl]);
 
   /** Every entry point into search goes through here. */
   const runSearch = useCallback((term: string) => {
