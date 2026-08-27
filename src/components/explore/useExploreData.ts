@@ -15,8 +15,7 @@ import {
   trendsLoadedAtom,
 } from "@/store/trends.atom";
 import { suggestionsAtom, suggestionsLoadedAtom } from "@/store/suggestions.atom";
-import { DEFAULT_AVATAR } from "@/const";
-import { formatTimeAgo } from "@/lib/utils";
+import { mapApiPost } from "@/lib/post-mapper";
 import type { SpaceRow } from "@/components/voice/SpaceCard";
 import type { CommunityRow } from "./CommunityStrip";
 import type { StreetPost } from "./StreetGrid";
@@ -72,29 +71,7 @@ export function useExploreData() {
       // The gateway shape is not guaranteed; guard both arrays.
       setTrends(res.data?.trendsForYou ?? []);
       setPopularPosts(
-        (res.data?.popularTweets ?? []).map((post: any) => ({
-          id: post._id,
-          author: {
-            id: post.author?._id || post.author?.userId,
-            name:
-              post.author?.firstName && post.author?.lastName
-                ? `${post.author.firstName} ${post.author.lastName}`
-                : post.author?.username || "Unknown",
-            username: post.author?.username,
-            avatar: post.author?.avatar || DEFAULT_AVATAR,
-            isVerified: post.author?.isVerified,
-            verification: post.author?.verification,
-          },
-          content: post.content,
-          mentions: post.mentions,
-          sale: post.sale,
-          images: post.images,
-          videos: post.videos,
-          timestamp: formatTimeAgo(post.createdAt),
-          stats: post.stats,
-          isLiked: post.isLiked,
-          isBookmarked: post.isBookmarked,
-        })),
+        (res.data?.popularTweets ?? []).map(mapApiPost),
       );
       setTrendsLoaded(true);
       setPopularLoaded(true);

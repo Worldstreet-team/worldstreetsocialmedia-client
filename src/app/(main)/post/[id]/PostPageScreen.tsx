@@ -9,9 +9,9 @@ import { PostSkeleton } from "@/components/feed/PostSkeleton";
 import { getPostByIdAction, getPostCommentsAction } from "@/lib/post.actions";
 import { ArrowLeft, Search } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { mapApiPost } from "@/lib/post-mapper";
 import { formatTimeAgo } from "@/lib/utils";
 import { useT } from "@/i18n/client";
-import { DEFAULT_AVATAR } from "@/const";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { useAtom } from "jotai";
 import {
@@ -122,30 +122,7 @@ export default function PostPageScreen() {
 	}, [cachedPost]);
 
 	const toPostProps = useCallback(
-		(p: any, isDetail = false): PostProps => ({
-			id: p._id,
-			author: {
-				id: p.author?._id || p.author?.userId,
-				name:
-					p.author?.firstName && p.author?.lastName
-						? `${p.author.firstName} ${p.author.lastName}`
-						: p.author?.username || "Unknown",
-				username: p.author?.username,
-				avatar: p.author?.avatar || DEFAULT_AVATAR,
-				isVerified: p.author?.isVerified,
-				verification: p.author?.verification,
-			},
-			content: p.content,
-			mentions: p.mentions,
-			sale: p.sale,
-			images: p.images,
-			videos: p.videos,
-			timestamp: formatTimeAgo(p.createdAt),
-			stats: p.stats,
-			isLiked: p.isLiked,
-			isBookmarked: p.isBookmarked,
-			isDetail,
-		}),
+		(p: any, isDetail = false): PostProps => ({ ...mapApiPost(p), isDetail }),
 		[],
 	);
 
@@ -173,90 +150,18 @@ export default function PostPageScreen() {
 					setParent(null);
 				}
 
-				setPost({
-					id: p._id,
-					author: {
-						id: p.author._id || p.author.userId,
-						name:
-							p.author.firstName && p.author.lastName
-								? `${p.author.firstName} ${p.author.lastName}`
-								: p.author.username || "Unknown",
-						username: p.author.username,
-						avatar:
-							p.author.avatar || DEFAULT_AVATAR,
-						isVerified: p.author.isVerified,
-						verification: p.author.verification,
-					},
-					content: p.content,
-					mentions: p.mentions,
-					sale: p.sale,
-					images: p.images,
-					videos: p.videos,
-					timestamp: formatTimeAgo(p.createdAt),
-					stats: p.stats,
-					isLiked: p.isLiked,
-					isBookmarked: p.isBookmarked,
-					isDetail: true,
-				});
+				setPost(toPostProps(p, true));
 
 				// Update Cache
-				updatePostCache({
-					postId: p._id,
-					post: {
-						id: p._id,
-						author: {
-							id: p.author._id || p.author.userId,
-							name:
-								p.author.firstName && p.author.lastName
-									? `${p.author.firstName} ${p.author.lastName}`
-									: p.author.username || "Unknown",
-							username: p.author.username,
-							avatar:
-								p.author.avatar || DEFAULT_AVATAR,
-							isVerified: p.author.isVerified,
-							verification: p.author.verification,
-						},
-						content: p.content,
-						mentions: p.mentions,
-						sale: p.sale,
-						images: p.images,
-						videos: p.videos,
-						timestamp: formatTimeAgo(p.createdAt),
-						stats: p.stats,
-						isLiked: p.isLiked,
-						isBookmarked: p.isBookmarked,
-						isDetail: true,
-					},
-				});
+				updatePostCache({ postId: p._id, post: toPostProps(p, true) });
 			} else {
 				toast("Post not found", { type: "error" });
 			}
 
 			if (commentsRes.success) {
-				const mappedComments = commentsRes.data.map((c: any) => ({
-					id: c._id,
-					author: {
-						id: c.author._id || c.author.userId,
-						name:
-							c.author.firstName && c.author.lastName
-								? `${c.author.firstName} ${c.author.lastName}`
-								: c.author.username || "Unknown",
-						username: c.author.username,
-						avatar:
-							c.author.avatar || DEFAULT_AVATAR,
-						isVerified: c.author.isVerified,
-						verification: c.author.verification,
-					},
-					content: c.content,
-					mentions: c.mentions,
-					sale: c.sale,
-					images: c.images,
-					videos: c.videos,
-					timestamp: formatTimeAgo(c.createdAt),
-					stats: c.stats || { replies: 0, reposts: 0, likes: 0 },
-					isLiked: c.isLiked,
-					isBookmarked: c.isBookmarked,
-				}));
+				const mappedComments = commentsRes.data.map((c: any) =>
+					toPostProps(c),
+				);
 				setComments(mappedComments);
 			}
 		} catch (error) {

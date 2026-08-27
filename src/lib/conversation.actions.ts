@@ -24,9 +24,16 @@ export async function startConversationAction(recipientId: string) {
 		);
 
 		return response.data;
-	} catch (error) {
-		console.error("Error starting conversation:", error);
-		return { success: false, error: "Failed to start conversation" };
+	} catch (error: any) {
+		console.error("Error starting conversation:", error?.message || error);
+		// Forward the gateway's reason. A 403 here is a rule the person can
+		// act on (follow them back), not a generic failure, and swallowing it
+		// left the UI saying only "could not open the conversation".
+		return {
+			success: false,
+			error:
+				error?.response?.data?.message ?? "Failed to start conversation",
+		};
 	}
 }
 

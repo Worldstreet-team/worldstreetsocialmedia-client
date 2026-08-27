@@ -39,7 +39,9 @@ export default function NewConversationModal({
 	const [searchQuery, setSearchQuery] = useState("");
 	const [startingWith, setStartingWith] = useState<string | null>(null);
 
-	// Fetch followers + following on open
+	// Only people who follow you back, because those are the only threads
+	// the gateway will open. This is the INTERSECTION of followers and
+	// following, not the union it used to be.
 	useEffect(() => {
 		if (!isOpen || !currentUserId) return;
 
@@ -51,26 +53,26 @@ export default function NewConversationModal({
 					getFollowingAction(currentUserId),
 				]);
 
-				const allUsers: UserItem[] = [];
+				const followerIds = new Set<string>(
+					followersRes.success && followersRes.data
+						? followersRes.data.map((u: any) => String(u._id))
+						: [],
+				);
+
+				const mutuals: UserItem[] = [];
 				const seenIds = new Set<string>();
 
-				const addUsers = (data: any[]) => {
-					for (const user of data) {
-						if (!seenIds.has(user._id)) {
-							seenIds.add(user._id);
-							allUsers.push(user);
-						}
-					}
-				};
-
-				if (followersRes.success && followersRes.data) {
-					addUsers(followersRes.data);
-				}
 				if (followingRes.success && followingRes.data) {
-					addUsers(followingRes.data);
+					for (const user of followingRes.data) {
+						const id = String(user._id);
+						// You follow them (this list) AND they follow you.
+						if (!followerIds.has(id) || seenIds.has(id)) continue;
+						seenIds.add(id);
+						mutuals.push(user);
+					}
 				}
 
-				setUsers(allUsers);
+				setUsers(mutuals);
 			} catch (error) {
 				console.error("Failed to fetch users:", error);
 				toast.error("Failed to load contacts");
@@ -188,7 +190,7 @@ export default function NewConversationModal({
 									<span className="text-sm">
 										{searchQuery.trim()
 											? `No results for "${searchQuery}"`
-											: "No followers or following yet"}
+											: "You can only message people who follow you back"}
 									</span>
 								</div>
 							) : (

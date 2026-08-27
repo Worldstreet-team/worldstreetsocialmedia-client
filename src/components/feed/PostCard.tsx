@@ -1002,7 +1002,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                 <div className="h-32 w-full rounded-lg bg-gradient-to-br from-brand/15 via-raised to-sunken" />
                                 <div className="h-3 w-[52%] rounded-sm bg-raised" />
                             </div>
-                            <div className="absolute inset-0 flex items-center justify-center backdrop-blur-xl backdrop-saturate-150 glass-veil">
+                            <div className="absolute inset-0 flex items-center justify-center backdrop-blur-3xl backdrop-saturate-150 glass-veil">
                                 <div className="flex flex-col items-center gap-2.5 px-6 text-center">
                                     <span className="flex h-11 w-11 items-center justify-center rounded-pill glass-chip">
                                         <LockSimple size={19} weight="fill" />

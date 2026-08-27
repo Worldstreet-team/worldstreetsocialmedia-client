@@ -37,6 +37,7 @@ export function ProfileHeader({
   onEdit,
   onFollowToggle,
   onMessage,
+  canMessage,
   onBlock,
   onUnblock,
   onReport,
@@ -60,6 +61,7 @@ export function ProfileHeader({
   onEdit: () => void;
   onFollowToggle: () => void;
   onMessage: () => void;
+  canMessage?: boolean;
   onBlock: () => void;
   onUnblock: () => void;
   onReport: () => void;
@@ -170,14 +172,16 @@ export function ProfileHeader({
       <div className="mt-2 flex min-h-[52px] justify-end gap-2 px-4 py-3">
         {!isMe && !blockedByThem && !blockedByYou && (
           <>
-            <button
-              type="button"
-              aria-label={t("profile.message")}
-              onClick={onMessage}
-              className={iconButton}
-            >
-              <Mail className="h-[18px] w-[18px]" />
-            </button>
+            {canMessage && (
+              <button
+                type="button"
+                aria-label={t("profile.message")}
+                onClick={onMessage}
+                className={iconButton}
+              >
+                <Mail className="h-[18px] w-[18px]" />
+              </button>
+            )}
             <div className="relative" ref={menuRef}>
               <button
                 type="button"

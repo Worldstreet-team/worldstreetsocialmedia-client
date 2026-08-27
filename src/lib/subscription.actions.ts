@@ -31,6 +31,8 @@ export interface SubscriptionState {
 		creatorAnalytics: boolean;
 		tier?: MembershipTier | null;
 		vividCreditGrant?: number;
+		/** Gold only: may list posts for sale. */
+		canSellPosts?: boolean;
 		/** May summon @vivid — tagging her triggers an AI reply. */
 		canTagVivid?: boolean;
 	};

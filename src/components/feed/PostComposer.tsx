@@ -16,6 +16,7 @@ import { VanishingPlaceholder } from "@/components/ui/VanishingPlaceholder";
 import { useT } from "@/i18n/client";
 import { useUser } from "@clerk/nextjs";
 import { createPostAction } from "@/lib/post.actions";
+import { getSubscriptionAction } from "@/lib/subscription.actions";
 import { getCommunitiesAction } from "@/lib/community.actions";
 import {
 	AudienceLock,
@@ -135,6 +136,21 @@ const CharacterRing = ({ length }: { length: number }) => {
 	);
 };
 
+/**
+ * Whether the signed-in member may sell posts (Gold only), fetched once per
+ * session. UX-only — the gateway 403s a non-Gold sale regardless; this just
+ * keeps the toggle out of composers it would only disappoint.
+ */
+let canSellPromise: Promise<boolean> | null = null;
+function fetchCanSell(): Promise<boolean> {
+	canSellPromise ??= getSubscriptionAction()
+		.then((res) =>
+			res.success ? Boolean(res.data.entitlements?.canSellPosts) : false,
+		)
+		.catch(() => false);
+	return canSellPromise;
+}
+
 export const PostComposer = ({
 	onPostSuccess,
 	onPostStart,
@@ -161,6 +177,16 @@ export const PostComposer = ({
 	// floor and $1,000 ceiling are enforced by the gateway — the UI only
 	// keeps the button honest.
 	const [selling, setSelling] = useState(false);
+	const [canSell, setCanSell] = useState(false);
+	useEffect(() => {
+		let cancelled = false;
+		fetchCanSell().then((ok) => {
+			if (!cancelled) setCanSell(ok);
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 	const [salePrice, setSalePrice] = useState("");
 	const salePriceMinor = selling
 		? Math.round(Number.parseFloat(salePrice || "0") * 100)
@@ -779,6 +805,7 @@ export const PostComposer = ({
 					{/* Sell this post: a quiet row until armed, then the price field
 					    appears inline with the split spelled out — the 60/40 is shown
 					    to the SELLER here, never to the buyer on the paywall. */}
+					{canSell && (
 					<div className="mt-2 flex flex-wrap items-center gap-2">
 						<button
 							type="button"
@@ -825,6 +852,7 @@ export const PostComposer = ({
 							</>
 						)}
 					</div>
+					)}
 
 					<div className="flex items-center justify-between mt-1 pt-2 sm:mt-2 sm:pt-3 border-t border-hairline/60">
 						<div className="flex items-center gap-2 relative">

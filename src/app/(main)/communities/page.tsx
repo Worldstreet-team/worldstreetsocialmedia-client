@@ -25,44 +25,11 @@ import {
 	getCommunityHomeAction,
 	toggleCommunityAction,
 } from "@/lib/community.actions";
-import { formatTimeAgo } from "@/lib/utils";
-import { DEFAULT_AVATAR } from "@/const";
+import { mapApiPost as mapPost } from "@/lib/post-mapper";
 import { useT } from "@/i18n/client";
 
 type Tab = "home" | "explore";
 
-function mapPost(post: any): PostProps {
-	return {
-		id: post._id,
-		author: {
-			id: post.author?._id || post.author,
-			name:
-				post.author?.firstName && post.author?.lastName
-					? `${post.author.firstName} ${post.author.lastName}`
-					: post.author?.username || "Unknown",
-			username: post.author?.username || "unknown",
-			avatar: post.author?.avatar || DEFAULT_AVATAR,
-			isVerified: post.author?.isVerified || false,
-			badges: post.author?.badges,
-		},
-		content: post.content,
-		mentions: post.mentions,
-		sale: post.sale,
-		timestamp: formatTimeAgo(post.createdAt),
-		images: post.images,
-		videos: post.videos,
-		stats: post.stats || { replies: 0, reposts: 0, likes: 0 },
-		isLiked: post.isLiked,
-		isBookmarked: post.isBookmarked,
-		community: post.community
-			? {
-					id: String(post.community._id ?? post.community),
-					name: post.community.name,
-					slug: post.community.slug,
-				}
-			: undefined,
-	};
-}
 
 /**
  * Communities.

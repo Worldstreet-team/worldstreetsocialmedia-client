@@ -712,5 +712,7 @@
   "post.unlocked.toast": "Post unlocked",
   "chat.gift": "Send a gift",
   "chat.wallet": "Wallet:",
-  "chat.giftFailed": "Couldn't send the gift"
+  "chat.giftFailed": "Couldn't send the gift",
+  "chat.joinedRow": "joined",
+  "chat.likedRow": "liked this stream"
 }

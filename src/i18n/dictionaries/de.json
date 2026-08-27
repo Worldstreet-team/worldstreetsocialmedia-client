@@ -673,5 +673,7 @@
   "post.unlocked.toast": "Beitrag freigeschaltet",
   "chat.gift": "Geschenk senden",
   "chat.wallet": "Wallet:",
-  "chat.giftFailed": "Geschenk konnte nicht gesendet werden"
+  "chat.giftFailed": "Geschenk konnte nicht gesendet werden",
+  "chat.joinedRow": "ist dabei",
+  "chat.likedRow": "gefällt dieser Stream"
 }

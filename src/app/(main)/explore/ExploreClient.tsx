@@ -13,8 +13,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Tabs } from "@/components/ui/Tabs";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { useT } from "@/i18n/client";
-import { formatTimeAgo } from "@/lib/utils";
-import { DEFAULT_AVATAR } from "@/const";
+import { mapApiPost } from "@/lib/post-mapper";
 import { useAtom } from "jotai";
 import { followingIdsAtom } from "@/store/ui.atom";
 import type { SpaceRow } from "@/components/voice/SpaceCard";
@@ -97,29 +96,7 @@ export default function ExploreClient({
       const res = await searchPostsAction(q);
       setPostResults(
         res.success
-          ? res.data.map((post: any) => ({
-              id: post._id,
-              author: {
-                id: post.author._id || post.author.userId,
-                name:
-                  post.author.firstName && post.author.lastName
-                    ? `${post.author.firstName} ${post.author.lastName}`
-                    : post.author.username || "Unknown",
-                username: post.author.username,
-                avatar: post.author.avatar || DEFAULT_AVATAR,
-                isVerified: post.author.isVerified,
-                verification: post.author.verification,
-              },
-              content: post.content,
-              mentions: post.mentions,
-              sale: post.sale,
-              images: post.images,
-              videos: post.videos,
-              timestamp: formatTimeAgo(post.createdAt),
-              stats: post.stats,
-              isLiked: post.isLiked,
-              isBookmarked: post.isBookmarked,
-            }))
+          ? res.data.map(mapApiPost)
           : [],
       );
     } catch {

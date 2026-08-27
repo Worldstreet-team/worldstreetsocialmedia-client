@@ -1,6 +1,6 @@
 "use client";
 
-import { formatTimeAgo, mainScrollTop, mainScroller } from "@/lib/utils";
+import { mainScrollTop, mainScroller } from "@/lib/utils";
 
 import {
 	useState,
@@ -40,6 +40,7 @@ import { useFeedEvents } from "@/hooks/useUserEvents";
 import { cacheKeys, invalidate, invalidatePrefix } from "@/lib/cache";
 import { loadFeedSnapshot, saveFeedSnapshot } from "@/lib/feedCache";
 import { userAtom } from "@/store/user.atom";
+import { mapApiPost } from "@/lib/post-mapper";
 
 /**
  * A post the realtime `feed` channel has announced but the timeline has not
@@ -71,59 +72,6 @@ const PILL_DELAY_MS = 1000;
 /** Ceiling on the preload map — a tab left open must not grow without bound. */
 const MAX_PRELOADED = 30;
 
-/**
- * Gateway post -> PostProps. One mapper, so a post that arrives in a feed page
- * and the same post fetched by id render identically — before this existed the
- * mapping was inlined and only the paginated path had it.
- */
-function mapApiPost(post: any): PostProps {
-	return {
-		id: post._id,
-		author: {
-			id: post.author._id,
-			name:
-				post.author.firstName && post.author.lastName
-					? `${post.author.firstName} ${post.author.lastName}`
-					: post.author.username,
-			username: post.author.username,
-			avatar: post.author.avatar || DEFAULT_AVATAR,
-			isVerified: post.author.isVerified,
-			verification: post.author.verification,
-			badges: post.author.badges,
-		},
-		content: post.content,
-		mentions: post.mentions,
-		sale: post.sale,
-		timestamp: formatTimeAgo(post.createdAt),
-		images: post.images,
-		videos: post.videos,
-		stats: post.stats || { replies: 0, reposts: 0, likes: 0, views: 0 },
-		isLiked: post.isLiked,
-		isBookmarked: post.isBookmarked,
-		type: post.type,
-		live: post.live,
-		promoted: Boolean(post.promoted),
-		// Only the feed pipeline populates `repostOf`; `GET /api/posts/:id`
-		// leaves it as a bare id, which would otherwise render as an empty
-		// quoted-post block with no author and no text.
-		repostOf:
-			post.repostOf && typeof post.repostOf === "object" && post.repostOf._id
-				? {
-						id: post.repostOf._id,
-						authorName:
-							post.repostOf.author?.firstName && post.repostOf.author?.lastName
-								? `${post.repostOf.author.firstName} ${post.repostOf.author.lastName}`
-								: (post.repostOf.author?.username ?? ""),
-						username: post.repostOf.author?.username ?? "",
-						avatar: post.repostOf.author?.avatar || DEFAULT_AVATAR,
-						isVerified: post.repostOf.author?.isVerified,
-						content: post.repostOf.content ?? "",
-						image: post.repostOf.images?.[0],
-						timestamp: formatTimeAgo(post.repostOf.createdAt),
-					}
-				: undefined,
-	};
-}
 
 /**
  * Merge keeping the FIRST occurrence of each id, so ordering expresses

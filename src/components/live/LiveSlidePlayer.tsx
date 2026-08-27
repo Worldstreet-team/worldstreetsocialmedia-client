@@ -130,7 +130,9 @@ export function LiveSlidePlayer({
 				playsInline
 				muted
 				className={clsx(
-					"absolute inset-0 h-full w-full object-contain transition-opacity",
+					// Same rule as the video-post layer in the slide: the
+					// picture is decoration, the controls above it own the taps.
+					"pointer-events-none absolute inset-0 h-full w-full object-contain transition-opacity",
 					state === "playing" ? "opacity-100" : "opacity-0",
 				)}
 			/>

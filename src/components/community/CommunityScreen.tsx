@@ -24,8 +24,7 @@ import {
 } from "@/lib/community.actions";
 import { ManageCommunity } from "@/components/community/ManageCommunity";
 import { resolveCategoryLabel } from "@/lib/categories";
-import { formatTimeAgo } from "@/lib/utils";
-import { DEFAULT_AVATAR } from "@/const";
+import { mapApiPost as mapPost } from "@/lib/post-mapper";
 import { useT } from "@/i18n/client";
 
 interface CommunityDetail {
@@ -55,33 +54,6 @@ interface CommunityDetail {
 	}[];
 }
 
-function mapPost(post: any): PostProps {
-	return {
-		id: post._id,
-		author: {
-			id: post.author?._id || post.author,
-			name:
-				post.author?.firstName && post.author?.lastName
-					? `${post.author.firstName} ${post.author.lastName}`
-					: post.author?.username || "Unknown",
-			username: post.author?.username || "unknown",
-			avatar: post.author?.avatar || DEFAULT_AVATAR,
-			isVerified: post.author?.isVerified || false,
-			badges: post.author?.badges,
-		},
-		content: post.content,
-		mentions: post.mentions,
-		sale: post.sale,
-		timestamp: formatTimeAgo(post.createdAt),
-		images: post.images,
-		videos: post.videos,
-		stats: post.stats || { replies: 0, reposts: 0, likes: 0 },
-		isLiked: post.isLiked,
-		isBookmarked: post.isBookmarked,
-		// Inside the community itself the label is redundant, so it is left
-		// off here on purpose. The aggregated Home feed sets it.
-	};
-}
 
 /**
  * A community as a place: header, membership, and its own timeline.

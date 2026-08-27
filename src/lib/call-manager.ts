@@ -225,8 +225,12 @@ class CallManager {
 				conversationId,
 				video: isVideo,
 			});
-		} catch {
-			this.fail("Couldn't reach the other person");
+		} catch (err: any) {
+			// A 403 here is a rule (not mutual, or blocked), not a network
+			// problem. Saying "couldn't reach them" for a refusal sends the
+			// caller off debugging their connection.
+			const reason = err?.response?.data?.message;
+			this.fail(reason || "Couldn't reach the other person");
 			return;
 		}
 

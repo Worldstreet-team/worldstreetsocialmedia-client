@@ -31,13 +31,14 @@ import {
 	unfollowUserAction,
 } from "@/lib/user.actions";
 import { getUserFeedAction } from "@/lib/feed.actions";
+import { getPostByIdAction } from "@/lib/post.actions";
+import { useFeedEvents } from "@/hooks/useUserEvents";
 import { getCommunitiesAction } from "@/lib/community.actions";
 import { getUserStoriesAction } from "@/lib/stories.actions";
 import { StoryViewer, type RailEntry } from "@/components/feed/StoryViewer";
 import { startConversationAction } from "@/lib/conversation.actions";
 import { useLiveNow } from "@/hooks/useLiveNow";
-import { formatTimeAgo } from "@/lib/utils";
-import { DEFAULT_AVATAR } from "@/const";
+import { mapApiPost as mapPost } from "@/lib/post-mapper";
 import { useT } from "@/i18n/client";
 import { userAtom } from "@/store/user.atom";
 import {
@@ -95,31 +96,6 @@ function readIsFollowing(profile: any, currentUser: any): boolean {
 	return false;
 }
 
-function mapPost(post: any): PostProps {
-	return {
-		id: post._id,
-		author: {
-			id: post.author?._id || post.author,
-			name:
-				post.author?.firstName && post.author?.lastName
-					? `${post.author.firstName} ${post.author.lastName}`
-					: post.author?.username || "Unknown",
-			username: post.author?.username || "unknown",
-			avatar: post.author?.avatar || DEFAULT_AVATAR,
-			isVerified: post.author?.isVerified || false,
-			badges: post.author?.badges,
-		},
-		content: post.content,
-		mentions: post.mentions,
-		sale: post.sale,
-		timestamp: formatTimeAgo(post.createdAt),
-		images: post.images,
-		videos: post.videos,
-		stats: post.stats || { replies: 0, reposts: 0, likes: 0 },
-		isLiked: post.isLiked,
-		isBookmarked: post.isBookmarked,
-	};
-}
 
 export default function Profile({ username }: { username?: string }) {
 	const router = useRouter();
@@ -284,6 +260,45 @@ export default function Profile({ username }: { username?: string }) {
 		};
 	}, [profileUser?.userId, activeTab]);
 
+	// The profile page subscribed to nothing, so a new post by this person —
+	// including your own, seconds after publishing it — only showed up after a
+	// reload. Engagement counts are already live here because every card reads
+	// the shared store; this closes the last gap, the arrival of the post
+	// itself, off the same single feed subscription.
+	useFeedEvents((event, data) => {
+		const ownerProfileId = profileUser?._id;
+		if (event !== "post" || !ownerProfileId) return;
+		if (!data.author || String(data.author) !== String(ownerProfileId)) return;
+		// A community post belongs to its community page, same rule the home
+		// timeline follows — the profile query filters it out too.
+		if (data.community) return;
+
+		// Every cached tab for this person is stale now, not just the visible
+		// one, so switching tabs does not resurrect the old list.
+		if (profileUser.userId) {
+			invalidatePrefix(cacheKeys.userPostsAll(profileUser.userId));
+		}
+
+		const postId = data.postId ? String(data.postId) : "";
+		// Only the posts tab lists top-level posts. Replies publish on the
+		// post channel rather than the feed, so the replies tab stays a fetch.
+		if (!postId || activeTab !== "posts") return;
+
+		void getPostByIdAction(postId)
+			.then((result: any) => {
+				if (!(result?.success && result.data)) return;
+				const mapped = mapPost(result.data);
+				setFeedPosts((prev) =>
+					prev.some((post) => post.id === mapped.id)
+						? prev
+						: [mapped, ...prev],
+				);
+			})
+			.catch(() => {
+				// Silent: the invalidation above means the next mount is correct.
+			});
+	});
+
 	// Street and Media split one media fetch: video posts vs everything else.
 	const visiblePosts = useMemo(() => {
 		// Drop bodyless rows first, so the empty state below counts what will
@@ -399,7 +414,10 @@ export default function Profile({ username }: { username?: string }) {
 		const res: any = await startConversationAction(profileUser.userId);
 		const id = res?._id || res?.data?._id;
 		if (id) router.push(`/messages/${id}`);
-		else toast("Could not open the conversation", { type: "error" });
+		else
+			toast(res?.error ?? "Could not open the conversation", {
+				type: "error",
+			});
 	}, [profileUser?.userId, router, toast]);
 
 	if (loadingProfile && !profileUser) return <ProfileSkeleton />;
@@ -432,6 +450,12 @@ export default function Profile({ username }: { username?: string }) {
 		(typeof profileUser.followsYou === "boolean"
 			? profileUser.followsYou
 			: Boolean(currentUser && profileUser.following?.includes(currentUser._id)));
+
+	// Messaging and calling are mutual: the gateway rejects a thread between
+	// people who do not follow each other, so the icon that would open one
+	// does not appear either. Showing a button that always errors is worse
+	// than showing nothing.
+	const canMessage = !isMe && isFollowing && followsYou;
 
 	const emptyIcon =
 		activeTab === "likes"
@@ -511,6 +535,7 @@ export default function Profile({ username }: { username?: string }) {
 				onEdit={() => setIsEditProfileOpen(true)}
 				onFollowToggle={handleFollowToggle}
 				onMessage={handleMessage}
+				canMessage={canMessage}
 				onBlock={() => setIsBlockModalOpen(true)}
 				onUnblock={handleUnblock}
 				onReport={() => setIsReportOpen(true)}

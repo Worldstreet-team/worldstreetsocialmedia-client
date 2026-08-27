@@ -673,5 +673,7 @@
   "post.unlocked.toast": "Publicación desbloqueada",
   "chat.gift": "Enviar un regalo",
   "chat.wallet": "Cartera:",
-  "chat.giftFailed": "No se pudo enviar el regalo"
+  "chat.giftFailed": "No se pudo enviar el regalo",
+  "chat.joinedRow": "se unió",
+  "chat.likedRow": "le gustó este directo"
 }

@@ -408,16 +408,30 @@ function VerticalSurface() {
 	}, [liveRoom]);
 
 	// ── URL follows the active slide, so every slide is shareable ────────
+	//
+	// Raw `replaceState` rather than `router.replace`, because this fires on
+	// every slide change and a real navigation would re-render the route and
+	// restart whatever is playing.
+	//
+	// The pathname guard is belt and braces. `slides` is a dependency and the
+	// background discovery pass hands back a new array every time it merges,
+	// so this can re-run in the window after a link has started navigating
+	// away but before the surface unmounts — and rewriting the URL there would
+	// cancel the navigation silently. Once the router has moved on, leave the
+	// URL alone.
 	useEffect(() => {
 		const slide = slides[active];
 		if (!slide) return;
+		if (window.location.pathname !== "/live") return;
 		const params = new URLSearchParams();
 		if (tab === "live") params.set("tab", "live");
 		if (slide.streamId) params.set("s", slide.streamId);
 		else if (slide.postId) params.set("v", slide.postId);
 		if (demo) params.set("demo", "1");
 		const qs = params.toString();
-		window.history.replaceState(null, "", qs ? `/live?${qs}` : "/live");
+		const next = qs ? `/live?${qs}` : "/live";
+		if (next === window.location.pathname + window.location.search) return;
+		window.history.replaceState(null, "", next);
 	}, [active, slides, tab, demo]);
 
 	// ── telemetry + tail prefetch ────────────────────────────────────────
@@ -711,7 +725,13 @@ function VerticalSurface() {
 								// eslint-disable-next-line jsx-a11y/media-has-caption
 								<video
 									src={slide.videoUrl}
-									className="absolute inset-0 w-full h-full object-contain"
+									// The media layer is decoration and must not take
+									// pointer events. It is `inset-0`, so its box covers
+									// the whole slide including the letterbox bars — a tap
+									// on the author row or the caption landed on the video
+									// instead of the link under the cursor, and nothing
+									// happened. There are no video controls to lose.
+									className="pointer-events-none absolute inset-0 w-full h-full object-contain"
 									autoPlay={isActive}
 									muted={muted || !isActive}
 									playsInline
