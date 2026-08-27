@@ -39,6 +39,7 @@ import MediaModal from "../ui/MediaModal";
 import { PencilSimple } from "@phosphor-icons/react";
 import MediaEditor from "@/components/editor/MediaEditor";
 import { VoiceMessage } from "./VoiceMessage";
+import { ConversationList } from "./ConversationList";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCall } from "@/providers/CallProvider";
 import { useChatSignals } from "@/hooks/useChatSignals";
@@ -278,6 +279,13 @@ export const MessageBox = ({
 	// Picker follows the app theme instead of hardcoding dark.
 	const { resolvedTheme } = useTheme();
 	const [showNewConversationModal, setShowNewConversationModal] = useState(false);
+	// The header count is the sum of the rows, derived — never its own state.
+	// A second copy of a number that is already on screen is a number that
+	// will disagree with it.
+	const totalUnread = conversations.reduce(
+		(n, c) => n + (c.unreadCount || 0),
+		0,
+	);
 
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const activeIdRef = useRef<string | null>(null);
@@ -824,10 +832,27 @@ export const MessageBox = ({
 						: "flex",
 				)}
 			>
-				<div className="p-4 border-b border-hairline">
-					<h1 className="font-display text-lg font-semibold mb-4">{t("nav.messages")}</h1>
+				<div className="border-b border-hairline px-4 pb-3 pt-4">
+					<div className="mb-3 flex items-center gap-2">
+						<h1 className="font-display text-lg font-semibold">
+							{t("nav.messages")}
+						</h1>
+						{totalUnread > 0 && (
+							<span className="flex h-5 min-w-5 items-center justify-center rounded-pill bg-brand px-1.5 font-sans text-[11px] font-bold tabular-nums text-brand-on">
+								{totalUnread}
+							</span>
+						)}
+						<button
+							type="button"
+							onClick={() => setShowNewConversationModal(true)}
+							aria-label={t("messages.newChat")}
+							className="ml-auto flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill bg-chip text-muted transition-colors hover:text-primary"
+						>
+							<PencilSimple size={16} weight="bold" />
+						</button>
+					</div>
 					<div className="relative">
-						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle" />
+						<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" />
 						<input
 							type="text"
 							placeholder={t("messages.searchPlaceholder")}
@@ -835,7 +860,7 @@ export const MessageBox = ({
 							onChange={(e) => setSearchQuery(e.target.value)}
 							ref={searchInputRef}
 							// text-base below sm stops iOS zooming the pane on focus.
-							className="w-full bg-surface border border-hairline rounded-pill pl-10 pr-4 py-2.5 text-base sm:text-sm text-primary placeholder:text-subtle focus:border-brand/60 outline-none transition-colors"
+							className="w-full rounded-pill bg-sunken py-2.5 pl-10 pr-4 text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised sm:text-sm"
 						/>
 					</div>
 				</div>
@@ -843,69 +868,17 @@ export const MessageBox = ({
 				{/* pb-nav: the conversation list is the one messages view where the
 				    fixed mobile bottom nav is still on screen. */}
 				<div className="flex-1 overflow-y-auto overscroll-contain pb-nav md:pb-0">
-					{isLoadingConversations ? (
-						<div className="p-4 text-center text-muted font-sans text-sm">Loading conversations...</div>
-					) : conversations.length === 0 ? (
-						<div className="p-6 text-center text-muted font-sans text-sm">
-							No conversations yet. Start one and it lands here.
-						</div>
-					) : (
-						conversations
-							.filter((c) =>
-								`${c.otherParticipant.firstName} ${c.otherParticipant.lastName}`
-									.toLowerCase()
-									.includes(searchQuery.toLowerCase()),
-							)
-							.map((conv) => (
-								<button
-									key={conv._id}
-									onClick={() => {
-										setActiveConversation(conv);
-										router.push(`/messages/${conv._id}`);
-									}}
-									className={clsx(
-										"w-full p-4 flex gap-3 hover:bg-surface border-b border-hairline/50 transition-colors cursor-pointer",
-										activeConversation?._id === conv._id &&
-											"bg-surface border-l-2 border-l-brand",
-									)}
-								>
-									<div className="relative shrink-0">
-										<span className="relative block h-12 w-12 overflow-hidden rounded-pill bg-raised">
-											<SafeAvatar src={conv.otherParticipant.avatar} />
-										</span>
-										{/* A count, not a bare dot: "3 waiting" and "1 waiting"
-										    looked identical before. */}
-										<Badge
-											count={conv.unreadCount}
-											className="absolute -top-1 -right-1"
-										/>
-									</div>
-									<div className="flex-1 min-w-0 text-left">
-										<div className="flex justify-between items-center gap-2">
-											<span className="font-semibold text-sm truncate">
-												{conv.otherParticipant.firstName}{" "}
-												{conv.otherParticipant.lastName}
-											</span>
-											<span className="text-xs text-muted tabular-nums shrink-0">
-												{conv.lastMessageAt
-													? format(new Date(conv.lastMessageAt), "MMM d")
-													: ""}
-											</span>
-										</div>
-										<p
-											className={clsx(
-												"text-sm truncate",
-												conv.unreadCount > 0
-													? "text-primary font-semibold"
-													: "text-muted",
-											)}
-										>
-											{conv.lastMessage?.content || t("messages.noMessages")}
-										</p>
-									</div>
-								</button>
-							))
-					)}
+					<ConversationList
+						conversations={conversations as any}
+						loading={isLoadingConversations}
+						query={searchQuery}
+						activeId={activeConversation?._id}
+						myProfileId={myProfileId}
+						onOpen={(conv) => {
+							setActiveConversation(conv as any);
+							router.push(`/messages/${conv._id}`);
+						}}
+					/>
 				</div>
 			</div>
 
