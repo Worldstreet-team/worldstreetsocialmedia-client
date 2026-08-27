@@ -36,6 +36,10 @@ export function mapApiPost(post: any): PostProps {
 		content: post.content,
 		mentions: post.mentions,
 		sale: post.sale,
+		// Pre-translated by the gateway during feed assembly, so the post can
+		// paint in the reader's language on the FIRST render — no request, no
+		// visible rewrite a beat later.
+		translation: post.translation,
 		timestamp: formatTimeAgo(post.createdAt),
 		images: post.images,
 		videos: post.videos,

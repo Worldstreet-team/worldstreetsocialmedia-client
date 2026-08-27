@@ -2,6 +2,8 @@
 
 import { BACKEND_URL } from "@/const";
 import { auth } from "@clerk/nextjs/server";
+import { cookies } from "next/headers";
+import { LOCALE_COOKIE, isLocale } from "@/i18n/config";
 import axios from "axios";
 
 const API_URL = BACKEND_URL;
@@ -14,6 +16,10 @@ export async function getFeedAction(
 	const { getToken } = await auth();
 	const accessToken = await getToken();
 
+	const jar = await cookies();
+	const cookieLocale = jar.get(LOCALE_COOKIE)?.value;
+	const locale = isLocale(cookieLocale) ? cookieLocale : "";
+
 	if (!accessToken) {
 		console.log("FeedAction: No token");
 		return { success: false, message: "Unauthorized: No access token found" };
@@ -21,7 +27,15 @@ export async function getFeedAction(
 
 	try {
 		const response = await axios.get(`${API_URL}/api/feed`, {
-			params: { limit, mode, ...(cursor ? { cursor } : {}) },
+			// The gateway translates the page before responding when it knows
+			// the reader's language, so posts arrive already readable instead
+			// of rewriting themselves a beat after they paint.
+			params: {
+				limit,
+				mode,
+				...(cursor ? { cursor } : {}),
+				...(locale ? { locale } : {}),
+			},
 			headers: {
 				Authorization: `Bearer ${accessToken}`,
 			},
