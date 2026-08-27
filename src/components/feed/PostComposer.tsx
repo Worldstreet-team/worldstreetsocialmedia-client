@@ -385,6 +385,12 @@ export const PostComposer = ({
 		[],
 	);
 
+	// Mirror of the gateway's multer/controller caps (post.routes.ts /
+	// createPost). Checked here so an oversized pick fails in one frame with
+	// a clear message instead of after uploading 50MB to earn a 413.
+	const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+	const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+
 	const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
 		// Disable if link preview exists
 		if (linkPreview) return;
@@ -399,6 +405,11 @@ export const PostComposer = ({
 				return;
 			}
 			if (video) {
+				if (video.size > MAX_VIDEO_BYTES) {
+					toast("Videos are capped at 50MB", { type: "error" });
+					if (fileInputRef.current) fileInputRef.current.value = "";
+					return;
+				}
 				setMediaItems([
 					{
 						url: URL.createObjectURL(video),
@@ -409,8 +420,17 @@ export const PostComposer = ({
 				if (fileInputRef.current) fileInputRef.current.value = "";
 				return;
 			}
+			const oversized = files.filter(
+				(f) =>
+					!f.type.startsWith("video/") && f.size > MAX_IMAGE_BYTES,
+			);
+			if (oversized.length > 0) {
+				toast("Images are capped at 8MB each", { type: "error" });
+			}
 			const remainingSlots = 4 - mediaItems.length;
-			const filesToProcess = files.slice(0, remainingSlots);
+			const filesToProcess = files
+				.filter((f) => f.size <= MAX_IMAGE_BYTES)
+				.slice(0, remainingSlots);
 
 			const newItems: MediaItem[] = filesToProcess.map((file) => ({
 				url: URL.createObjectURL(file),
@@ -425,11 +445,16 @@ export const PostComposer = ({
 
 	// Paste an image (screenshot, copied file) straight into the composer.
 	const handlePaste = (e: React.ClipboardEvent) => {
-		const files = Array.from(e.clipboardData.files).filter((f) =>
+		const pasted = Array.from(e.clipboardData.files).filter((f) =>
 			f.type.startsWith("image/"),
 		);
-		if (files.length === 0 || linkPreview) return;
+		if (pasted.length === 0 || linkPreview) return;
 		e.preventDefault();
+		const files = pasted.filter((f) => f.size <= MAX_IMAGE_BYTES);
+		if (files.length < pasted.length) {
+			toast("Images are capped at 8MB each", { type: "error" });
+			if (files.length === 0) return;
+		}
 		const remainingSlots = 4 - mediaItems.length;
 		const newItems: MediaItem[] = files
 			.slice(0, remainingSlots)

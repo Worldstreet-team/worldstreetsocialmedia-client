@@ -528,6 +528,16 @@ html {
   animation: ws-rise var(--ws-motion-slow) var(--ws-ease) backwards;
 }
 
+/* The orchestrated entrance plays ONCE per browser session. After it has
+   played (html.ws-intro-done, stamped pre-paint by the inline script in the
+   root layout), every animate-rise — the intro cascade, the per-navigation
+   template replay, staggered rails — renders settled instead of re-animating
+   on each load. Micro-motion (likes, tabs, pills) is framer-driven and
+   untouched. */
+html.ws-intro-done .animate-rise {
+  animation: none;
+}
+
 /* Skeleton shimmer (04-components "Skeleton"): white @4% sweep on bg/raised,
    looping at --ws-motion-slow. Goes static under reduced motion via the
    prefers-reduced-motion block above. */

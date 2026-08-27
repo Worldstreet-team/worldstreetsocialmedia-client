@@ -149,6 +149,18 @@ export default async function RootLayout({
                 <body
                     className={`${publicSans.variable} ${poppins.variable} ${instrumentSerif.variable} ${archivoBlack.variable} ${bebasNeue.variable} ${caveat.variable} ${jetbrainsMono.variable} antialiased`}
                 >
+                    {/* The intro cascade plays once per browser session.
+                        Inline + synchronous so the ws-intro-done stamp lands
+                        before first paint — a useEffect would flash one frame
+                        of replayed animation on every load. After the first
+                        visit's intro finishes (1.6s), the flag is set and the
+                        class applied live, so later navigations and reloads
+                        render settled (globals.css: html.ws-intro-done). */}
+                    <script
+                        dangerouslySetInnerHTML={{
+                            __html: `try{var k="ws-intro-played",h=document.documentElement;if(sessionStorage.getItem(k)){h.classList.add("ws-intro-done")}else{setTimeout(function(){try{sessionStorage.setItem(k,"1")}catch(e){}h.classList.add("ws-intro-done")},1600)}}catch(e){}`,
+                        }}
+                    />
                     {/* Keyboard users jump the nav rails straight to the timeline. */}
                     <a
                         href="#main-content"

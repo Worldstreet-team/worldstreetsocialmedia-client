@@ -14,6 +14,7 @@ import { useAppPathname } from "@/i18n/useAppPathname";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { useAtom } from "jotai";
 import {
+	railFetchedAtAtom,
 	suggestionsAtom,
 	suggestionsLoadedAtom,
 } from "@/store/suggestions.atom";
@@ -27,6 +28,9 @@ import { UserBadges } from "@/components/ui/UserBadges";
 import { resolveCategoryLabel } from "@/lib/categories";
 import clsx from "clsx";
 
+/** How long rail data (suggestions + trends) serves from memory before a
+ *  quiet revalidate. Matches the gateway's own who-to-follow cache TTL. */
+const RAIL_TTL_MS = 5 * 60_000;
 
 export function RightSidebar() {
 	const t = useT();
@@ -41,6 +45,7 @@ export function RightSidebar() {
 	);
 	const [trends, setTrends] = useAtom(trendsAtom);
 	const [isTrendsLoaded, setIsTrendsLoaded] = useAtom(trendsLoadedAtom);
+	const [railFetchedAt, setRailFetchedAt] = useAtom(railFetchedAtAtom);
 	// Live presence is realtime (Ably) and sourced from Xstream, so your own
 	// broadcast shows here the moment it starts.
 	const { entries: liveNow } = useLiveNow();
@@ -57,9 +62,20 @@ export function RightSidebar() {
 	// skeletons must never be a terminal state.
 	const fetchAll = useCallback(async () => {
 		setFailed(false);
+		// `loaded` used to be a permanent per-tab freeze (and Explore warming
+		// the same atoms froze the rail before it ever fetched here). Loaded
+		// AND fresh serves from memory; loaded-but-stale revalidates quietly
+		// behind the already-rendered list.
+		const fresh = Date.now() - railFetchedAt < RAIL_TTL_MS;
+		const needWho = !(isSuggestionsLoaded && fresh);
+		const needTrends = !(isTrendsLoaded && fresh);
+		// Stamp only when a request actually went out — an unconditional
+		// stamp changes the atom this callback depends on and loops the
+		// mount effect.
+		if (needWho || needTrends) setRailFetchedAt(Date.now());
 		const [who, explore] = await Promise.allSettled([
-			isSuggestionsLoaded ? null : getWhoToFollowAction(),
-			isTrendsLoaded ? null : getExploreDataAction(),
+			needWho ? getWhoToFollowAction() : null,
+			needTrends ? getExploreDataAction() : null,
 		]);
 		if (who.status === "fulfilled" && who.value) {
 			if (who.value.success && Array.isArray(who.value.data)) {
@@ -76,6 +92,8 @@ export function RightSidebar() {
 	}, [
 		isSuggestionsLoaded,
 		isTrendsLoaded,
+		railFetchedAt,
+		setRailFetchedAt,
 		setSuggestions,
 		setIsSuggestionsLoaded,
 		setTrends,

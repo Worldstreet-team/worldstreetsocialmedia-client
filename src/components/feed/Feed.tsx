@@ -38,6 +38,7 @@ import { DEFAULT_AVATAR } from "@/const";
 import { useT } from "@/i18n/client";
 import { useFeedEvents } from "@/hooks/useUserEvents";
 import { cacheKeys, invalidate, invalidatePrefix } from "@/lib/cache";
+import { loadFeedSnapshot, saveFeedSnapshot } from "@/lib/feedCache";
 import { userAtom } from "@/store/user.atom";
 
 /**
@@ -238,6 +239,15 @@ export default function Feed() {
 		);
 	}, [autoTranslate, feedState.posts, setTranslations]);
 
+	// Persist the top of the For-You timeline as the next session's first
+	// paint. Keyed per user; posts-change only (live counts ride the separate
+	// engagement store, so this doesn't rewrite on every like).
+	useEffect(() => {
+		if (me?._id && feedState.mode === "foryou" && feedState.posts.length > 0) {
+			saveFeedSnapshot(String(me._id), feedState.posts);
+		}
+	}, [feedState.posts, feedState.mode, me?._id]);
+
 	// Both tabs are now server queries, so what came back IS what to show —
 	// minus anything with no body at all, which would paint a card of chrome
 	// around nothing. This used to filter the For-You page by
@@ -262,7 +272,28 @@ export default function Feed() {
 				}, 10);
 			}
 		} else {
-			fetchFeed();
+			// Fresh page load (the atom is memory-only): paint the last-known
+			// snapshot immediately and revalidate silently underneath, instead
+			// of holding the reader on a skeleton for the whole round trip.
+			// Snapshots are For-You only — Following is chronological, where a
+			// stale page misleads rather than helps.
+			const snapshot =
+				tab === "foryou" && me?._id
+					? loadFeedSnapshot(String(me._id))
+					: null;
+			if (snapshot) {
+				setFeedState((prev) => ({
+					...prev,
+					posts: snapshot,
+					cursor: null,
+					hasMore: true,
+					mode: tab,
+				}));
+				setLoading(false);
+				void fetchFeed(true, { silent: true });
+			} else {
+				fetchFeed();
+			}
 		}
 
 		// Save scroll position on unmount
@@ -373,8 +404,11 @@ export default function Feed() {
 		faces.push({ key, avatar: resolved[i] ?? "" });
 	}
 
-	const fetchFeed = async (reset = false) => {
-		if (reset) {
+	const fetchFeed = async (reset = false, opts?: { silent?: boolean }) => {
+		// A silent reset revalidates behind an already-painted snapshot —
+		// flipping to the skeleton would throw away exactly what the snapshot
+		// bought.
+		if (reset && !opts?.silent) {
 			setLoading(true);
 		}
 
