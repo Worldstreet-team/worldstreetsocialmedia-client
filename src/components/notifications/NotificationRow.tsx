@@ -184,7 +184,10 @@ export function NotificationRow({
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              onFollowBack(lead.userId);
+              // Profile id, not the Clerk id: this is the key
+              // `followingIdsAtom` is built from everywhere else, and a
+              // mismatch here is why the button never turned to "Aligned".
+              if (lead?._id) onFollowBack(lead._id);
             }}
             disabled={followed}
             className={clsx(
@@ -194,7 +197,9 @@ export function NotificationRow({
                 : "cursor-pointer bg-primary text-page hover:bg-muted",
             )}
           >
-            {followed ? t("community.joined") : t("notif.followBack")}
+            {/* You align with a person; you JOIN a community. Borrowing the
+                community string made an alignment read "Joined". */}
+            {followed ? t("profile.followingState") : t("notif.followBack")}
           </button>
         )}
       </span>

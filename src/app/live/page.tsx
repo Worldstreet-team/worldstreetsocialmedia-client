@@ -565,11 +565,17 @@ function VerticalSurface() {
 	};
 
 	const follow = async (slide: Slide) => {
-		if (!slide.authorId) return;
-		setFollowedIds((prev) => [...prev, slide.authorId!]);
-		const res = await followUserAction(slide.authorId);
+		// A live stream comes from Xstream, which knows the broadcaster by its
+		// own user id — meaningless to this gateway. The handle is the only
+		// identifier both sides share, and the gateway resolves it. Before
+		// this the button was simply inert on every live broadcast.
+		const target = slide.authorId ?? slide.username;
+		if (!target) return;
+		setFollowedIds((prev) => (prev.includes(target) ? prev : [...prev, target]));
+		const res = await followUserAction(target);
 		if (!res.success) {
-			setFollowedIds((prev) => prev.filter((id) => id !== slide.authorId));
+			setFollowedIds((prev) => prev.filter((id) => id !== target));
+			toast(res.message || t("rail.followFailed"), { type: "error" });
 		}
 	};
 
@@ -747,8 +753,8 @@ function VerticalSurface() {
 				const isActive = idx === active;
 				const isSelf =
 					me?._id === slide.authorId || me?.userId === slide.authorId;
-				const followed = slide.authorId
-					? followedIds.includes(slide.authorId)
+				const followed = (slide.authorId ?? slide.username)
+					? followedIds.includes((slide.authorId ?? slide.username) as string)
 					: true;
 				return (
 					<section

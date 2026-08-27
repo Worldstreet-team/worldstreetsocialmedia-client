@@ -25,6 +25,7 @@ import { BACKEND_URL, DEFAULT_AVATAR } from "@/const";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { useToast } from "@/components/ui/Toast/ToastContext";
+import { useT } from "@/i18n/client";
 import { useSetAtom } from "jotai";
 import { userAtom } from "@/store/user.atom";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
@@ -90,6 +91,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 	const [suggestedUsers, setSuggestedUsers] = useState<any[]>([]);
 	const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 	const { toast } = useToast();
+	const t = useT();
 	const [followedUsers, setFollowedUsers] = useState<string[]>([]);
 	const setActiveUser = useSetAtom(userAtom);
 
@@ -642,8 +644,8 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 													type="button"
 												>
 													{followedUsers.includes(user._id)
-														? "Following"
-														: "Follow"}
+														? t("profile.followingState")
+														: t("profile.follow")}
 												</button>
 											</div>
 										))}

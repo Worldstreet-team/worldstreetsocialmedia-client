@@ -1,5 +1,12 @@
 import type { ProfileBadge } from "@/components/ui/UserBadges";
 export interface NotificationSender {
+  /**
+   * The Mongo profile id. The gateway has always populated it, but this type
+   * never declared it, so every follow-back reached for `userId` (the CLERK
+   * id) instead — and `followingIdsAtom` is keyed on profile ids everywhere
+   * else in the app. The comparison could never match.
+   */
+  _id: string;
   userId: string;
   firstName?: string;
   lastName?: string;
