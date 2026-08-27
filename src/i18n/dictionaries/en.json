@@ -734,5 +734,6 @@
   "search.searching": "Searching…",
   "chat.walletUnavailable": "Wallet unavailable",
   "chat.walletUnreachable": "Can't reach the wallet",
-  "chat.walletSignedOut": "Sign in to gift"
+  "chat.walletSignedOut": "Sign in to gift",
+  "profile.followingState": "Following"
 }

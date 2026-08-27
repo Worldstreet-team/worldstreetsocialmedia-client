@@ -695,5 +695,6 @@
   "search.searching": "Suche…",
   "chat.walletUnavailable": "Wallet nicht verfügbar",
   "chat.walletUnreachable": "Wallet nicht erreichbar",
-  "chat.walletSignedOut": "Zum Schenken anmelden"
+  "chat.walletSignedOut": "Zum Schenken anmelden",
+  "profile.followingState": "Folge ich"
 }
