@@ -138,11 +138,15 @@ export const MobileBottomNav = () => {
 									    resolves it to the finished W. */}
 									<span
 										className={clsx(
-											"flex h-[26px] w-[26px] items-center justify-center rounded-[7px] transition-colors",
+											"flex h-[30px] w-[30px] items-center justify-center rounded-[7px] transition-colors",
 											ecosystemOpen && "bg-raised",
 										)}
 									>
-										<BrandMark size={22} />
+										{/* Bigger than the 22px Phosphor glyphs beside it on
+										    purpose: the W is a thin two-stroke outline, so at
+										    a matched size it reads lighter than the solid
+										    duotone icons it sits between. */}
+										<BrandMark size={27} />
 									</span>
 									{/* The name, not "More" — this tab is the brand. */}
 									<span className="max-w-full truncate px-0.5 font-sans text-[10px] font-medium leading-none whitespace-nowrap text-muted">

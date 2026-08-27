@@ -1,6 +1,9 @@
 import clsx from "clsx";
 import Image from "next/image";
 
+/** Intrinsic aspect of the cloud artwork (389x256). */
+const MARK_RATIO = 389 / 256;
+
 /**
  * The W on its own, drawing itself on the same 5.2s track as the full lockup.
  *
@@ -70,15 +73,19 @@ export function BrandRitual({
 		<span
 			className={clsx("inline-flex items-center gap-2 min-w-0", className)}
 		>
+			{/* The natural-ratio artwork, not the square one. Squaring pads the
+			    cloud with ~34% empty height, so a `size` of 26 was drawing a
+			    17px cloud — the mark read far smaller than the number implied.
+			    `size` is the cloud's HEIGHT here and the width follows it. */}
 			<Image
-				src="/images/worldspace-mark.png"
+				src="/images/worldspace-wordmark.png"
 				alt=""
-				width={size}
+				width={Math.round(size * MARK_RATIO)}
 				height={size}
 				aria-hidden
 				priority
 				className="shrink-0 object-contain"
-				style={{ width: size, height: size }}
+				style={{ height: size, width: Math.round(size * MARK_RATIO) }}
 			/>
 
 			{eyebrow ? (

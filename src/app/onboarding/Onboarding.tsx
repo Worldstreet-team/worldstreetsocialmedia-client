@@ -218,7 +218,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 		<div className="min-h-dvh ambient-field flex items-center justify-center p-4 py-8">
 			<div className="w-full max-w-md glass-card backdrop-blur-2xl backdrop-saturate-150 rounded-xl p-6 sm:p-8 relative overflow-hidden animate-rise">
 				<div className="relative z-10 flex flex-col items-center text-center space-y-8">
-					<BrandRitual size={24} wordSize={14} />
+					<BrandRitual size={34} wordSize={18} />
 
 					{/* Progress */}
 					<div className="flex gap-2" aria-hidden="true">

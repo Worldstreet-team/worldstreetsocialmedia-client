@@ -150,7 +150,7 @@ export function LeftSidebar() {
 				{/* Same brand ritual the mobile top bar plays — the rail is where
 				    the hub runs it, so the two apps now behave identically. */}
 				<Link href="/" className="flex items-center gap-2 group">
-					<BrandRitual size={26} wordSize={17} />
+					<BrandRitual size={34} wordSize={19} />
 				</Link>
 			</div>
 
