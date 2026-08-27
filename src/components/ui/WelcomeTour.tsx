@@ -42,11 +42,12 @@ const Kbd = ({ children }: { children: React.ReactNode }) => (
   </kbd>
 );
 
-const STEPS = [
+const ALL_STEPS = [
   {
     key: "welcome",
     title: "Welcome to WorldSpace",
- body: "This is the social side of the WorldStreet ecosystem share ideas, follow traders and creators, and talk markets with the people trading them.",
+    body:
+      "This is the social side of the WorldStreet ecosystem. Share ideas, follow traders and creators, and talk markets with the people trading them.",
     // The cloud, in both cuts. This was /images/logo.png — the retired gold W —
     // under a "Socials" eyebrow, so the first thing a new account ever saw was
     // the OLD brand and the OLD product name.
@@ -133,6 +134,21 @@ const STEPS = [
     ),
   },
 ];
+
+/**
+ * How many of the authored steps the tour actually shows.
+ *
+ * One, deliberately. The other three are kept above rather than deleted —
+ * they are written, retoned to the current brand and working — so restoring
+ * the full walkthrough is this number, not a rewrite. A first run should not
+ * hold someone behind three taps before they reach the thing they came for.
+ *
+ * Everything downstream reads STEPS, so at one the footer already resolves
+ * correctly on its own: no Back button, and the CTA is the finish action
+ * rather than "Next".
+ */
+const SHOWN_STEPS = 1;
+const STEPS = ALL_STEPS.slice(0, SHOWN_STEPS);
 
 export function WelcomeTour() {
   const [open, setOpen] = useAtom(welcomeTourOpenAtom);
@@ -259,11 +275,20 @@ export function WelcomeTour() {
           </div>
 
           {/* Footer: dots + controls */}
-          <div className="flex shrink-0 items-center justify-between gap-3 px-5 sm:px-6 pb-5">
+          <div
+            className={`flex shrink-0 items-center gap-3 px-5 sm:px-6 pb-5 ${
+              STEPS.length > 1 ? "justify-between" : "justify-end"
+            }`}
+          >
             {/* The onboarding's segment rail, not a growing dot. Equal
                 segments show how far through you are AND how much is left —
                 a single wide pill among small dots shows only where you are.
-                Same control, same grammar, one flow. */}
+                Same control, same grammar, one flow.
+
+                Hidden at a single step: one segment is a bar that is always
+                full, which measures nothing and only reads as progress that
+                is somehow already over. */}
+            {STEPS.length > 1 && (
             <div
               className="flex w-[124px] shrink-0 items-center gap-1.5"
               role="progressbar"
@@ -281,6 +306,7 @@ export function WelcomeTour() {
                 />
               ))}
             </div>
+            )}
 
             <div className="flex items-center gap-2 shrink-0">
               {step > 0 && (
