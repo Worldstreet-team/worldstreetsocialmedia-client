@@ -5,9 +5,11 @@ import Image from "next/image";
 import clsx from "clsx";
 import {
   At,
+  Bell,
   Broadcast,
   ChatCircle,
   Heart,
+  Quotes,
   Repeat,
   UserPlus,
   type Icon,
@@ -24,9 +26,16 @@ import { senderName, type NotificationGroup, type NotificationType } from "./typ
  * Colours follow the app-wide notification map (like = danger, follow =
  * primary, reply = muted, repost = success, mention = gold, live = danger).
  */
+const FALLBACK_CHIP = {
+  classes: "bg-raised text-muted",
+  glyph: Bell,
+  weight: "fill" as const,
+};
+
 const CHIP: Record<NotificationType, { classes: string; glyph: Icon; weight: "fill" | "bold" }> = {
   like: { classes: "bg-danger/15 text-danger", glyph: Heart, weight: "fill" },
   repost: { classes: "bg-success/15 text-success", glyph: Repeat, weight: "bold" },
+  quote: { classes: "bg-success/15 text-success", glyph: Quotes, weight: "fill" },
   reply: { classes: "bg-raised text-muted", glyph: ChatCircle, weight: "fill" },
   follow: { classes: "bg-primary/12 text-primary", glyph: UserPlus, weight: "fill" },
   mention: { classes: "bg-brand/15 text-gold", glyph: At, weight: "bold" },
@@ -59,7 +68,12 @@ export function NotificationRow({
 }) {
   const t = useT();
   const { type, senders, post } = group;
-  const chip = CHIP[type];
+  // Never index this map blind. The gateway's enum is the source of truth and
+  // it already had a type this client did not know ("quote"): CHIP[type] came
+  // back undefined and reading .glyph threw, which the error boundary turned
+  // into a dead Notifications page for everyone with one quote in their feed.
+  // A type we cannot name is worth showing as generic activity, not a crash.
+  const chip = CHIP[type] ?? FALLBACK_CHIP;
   const Glyph = chip.glyph;
   const lead = senders[0];
 

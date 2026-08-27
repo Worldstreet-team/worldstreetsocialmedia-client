@@ -331,6 +331,7 @@
   "notif.new": "atividade nova",
   "notif.verb.like": "curtiu sua publicação",
   "notif.verb.repost": "republicou sua publicação",
+  "notif.verb.quote": "citou sua publicação",
   "notif.verb.reply": "respondeu à sua publicação",
   "notif.verb.follow": "começou a seguir você",
   "notif.verb.mention": "mencionou você",
@@ -655,5 +656,19 @@
   "community.nameLocked": "O nome não pode ser alterado — os links usam-no.",
   "community.changeAvatar": "Mudar avatar",
   "community.descriptionLabel": "Descrição",
-  "community.categoryLabel": "Categoria"
+  "community.categoryLabel": "Categoria",
+  "composer.sellPost": "Vender esta publicação",
+  "composer.sellingOn": "À venda",
+  "composer.sellPrice": "Preço em dólares",
+  "composer.sellBounds": "Entre $0,50 e $1.000",
+  "composer.sellSplit": "Você fica com 60% de cada desbloqueio",
+  "post.locked.title": "Publicação bloqueada",
+  "post.locked.sub": "Pague uma vez para revelá-la",
+  "post.locked.cta": "Desbloquear por {price}",
+  "post.locked.unlocking": "Desbloqueando…",
+  "post.locked.insufficient": "Recarregue sua carteira para desbloquear",
+  "post.locked.failed": "Falha ao desbloquear, tente novamente",
+  "post.forSale.selling": "À venda · {price}",
+  "post.forSale.sold": "{count} vendidos",
+  "post.unlocked.toast": "Publicação desbloqueada"
 }

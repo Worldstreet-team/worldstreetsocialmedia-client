@@ -331,6 +331,7 @@
   "notif.new": "nouvelle activité",
   "notif.verb.like": "a aimé votre post",
   "notif.verb.repost": "a reposté votre post",
+  "notif.verb.quote": "a cité votre post",
   "notif.verb.reply": "a répondu à votre post",
   "notif.verb.follow": "vous suit",
   "notif.verb.mention": "vous a mentionné",
@@ -655,5 +656,19 @@
   "community.nameLocked": "Le nom ne peut pas changer — les liens l'utilisent.",
   "community.changeAvatar": "Changer l'avatar",
   "community.descriptionLabel": "Description",
-  "community.categoryLabel": "Catégorie"
+  "community.categoryLabel": "Catégorie",
+  "composer.sellPost": "Vendre ce post",
+  "composer.sellingOn": "En vente",
+  "composer.sellPrice": "Prix en dollars",
+  "composer.sellBounds": "Entre 0,50 $ et 1 000 $",
+  "composer.sellSplit": "Vous gardez 60 % de chaque déblocage",
+  "post.locked.title": "Post verrouillé",
+  "post.locked.sub": "Payez une fois pour le révéler",
+  "post.locked.cta": "Débloquer pour {price}",
+  "post.locked.unlocking": "Déblocage…",
+  "post.locked.insufficient": "Rechargez votre portefeuille pour débloquer",
+  "post.locked.failed": "Échec du déblocage, réessayez",
+  "post.forSale.selling": "En vente · {price}",
+  "post.forSale.sold": "{count} vendus",
+  "post.unlocked.toast": "Post débloqué"
 }

@@ -12,6 +12,7 @@ export interface NotificationSender {
 export type NotificationType =
   | "like"
   | "repost"
+  | "quote"
   | "follow"
   | "reply"
   | "mention"

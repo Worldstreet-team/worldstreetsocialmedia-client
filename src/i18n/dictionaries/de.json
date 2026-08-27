@@ -331,6 +331,7 @@
   "notif.new": "neue Aktivität",
   "notif.verb.like": "gefällt dein Beitrag",
   "notif.verb.repost": "hat deinen Beitrag geteilt",
+  "notif.verb.quote": "hat deinen Beitrag zitiert",
   "notif.verb.reply": "hat auf deinen Beitrag geantwortet",
   "notif.verb.follow": "folgt dir jetzt",
   "notif.verb.mention": "hat dich erwähnt",
@@ -655,5 +656,19 @@
   "community.nameLocked": "Der Name ist fest — Links verwenden ihn.",
   "community.changeAvatar": "Avatar ändern",
   "community.descriptionLabel": "Beschreibung",
-  "community.categoryLabel": "Kategorie"
+  "community.categoryLabel": "Kategorie",
+  "composer.sellPost": "Beitrag verkaufen",
+  "composer.sellingOn": "Zum Verkauf",
+  "composer.sellPrice": "Preis in Dollar",
+  "composer.sellBounds": "Zwischen $0,50 und $1.000",
+  "composer.sellSplit": "Du behältst 60 % jedes Freischaltens",
+  "post.locked.title": "Gesperrter Beitrag",
+  "post.locked.sub": "Einmal zahlen, um ihn freizuschalten",
+  "post.locked.cta": "Für {price} freischalten",
+  "post.locked.unlocking": "Wird freigeschaltet…",
+  "post.locked.insufficient": "Lade dein Wallet auf, um freizuschalten",
+  "post.locked.failed": "Freischalten fehlgeschlagen, versuche es erneut",
+  "post.forSale.selling": "Zum Verkauf · {price}",
+  "post.forSale.sold": "{count} verkauft",
+  "post.unlocked.toast": "Beitrag freigeschaltet"
 }

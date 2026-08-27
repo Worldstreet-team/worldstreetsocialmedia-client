@@ -370,6 +370,7 @@
   "notif.new": "new activity",
   "notif.verb.like": "liked your post",
   "notif.verb.repost": "reposted your post",
+  "notif.verb.quote": "quoted your post",
   "notif.verb.reply": "replied to your post",
   "notif.verb.follow": "followed you",
   "notif.verb.mention": "mentioned you",
@@ -694,5 +695,19 @@
   "community.nameLocked": "The name can't be changed — links use it.",
   "community.changeAvatar": "Change avatar",
   "community.descriptionLabel": "Description",
-  "community.categoryLabel": "Category"
+  "community.categoryLabel": "Category",
+  "composer.sellPost": "Sell this post",
+  "composer.sellingOn": "Selling",
+  "composer.sellPrice": "Price in dollars",
+  "composer.sellBounds": "Between $0.50 and $1,000",
+  "composer.sellSplit": "You keep 60% of every unlock",
+  "post.locked.title": "Locked post",
+  "post.locked.sub": "Pay once to reveal this post",
+  "post.locked.cta": "Unlock for {price}",
+  "post.locked.unlocking": "Unlocking…",
+  "post.locked.insufficient": "Top up your wallet to unlock this post",
+  "post.locked.failed": "Could not unlock, try again",
+  "post.forSale.selling": "For sale · {price}",
+  "post.forSale.sold": "{count} sold",
+  "post.unlocked.toast": "Post unlocked"
 }
