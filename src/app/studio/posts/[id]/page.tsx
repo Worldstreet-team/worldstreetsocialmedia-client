@@ -10,6 +10,15 @@ import {
 	WindowSwitch,
 	fmt,
 } from "@/components/studio/studio-ui";
+
+/** A stat tile in its own glass cell — the drilldown's four-up header. */
+function StatTileCell(props: React.ComponentProps<typeof StatTile>) {
+	return (
+		<div className="glass-panel backdrop-blur-xl backdrop-saturate-150 border glass-divider rounded-2xl">
+			<StatTile {...props} />
+		</div>
+	);
+}
 import {
 	BarList,
 	TrendChart,
@@ -69,11 +78,11 @@ export default function StudioPostDrilldown({
 					<Link
 						href="/studio/posts"
 						aria-label={t("studio.back")}
-						className="flex h-9 w-9 shrink-0 items-center justify-center rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors"
+						className="flex h-9 w-9 shrink-0 items-center justify-center rounded-pill glass-chip backdrop-blur-md transition-colors"
 					>
 						<ArrowLeft size={16} />
 					</Link>
-					<h1 className="font-sans text-[15px] font-semibold text-primary truncate max-w-[48ch]">
+					<h1 className="font-sans text-[15px] font-semibold glass-ink truncate max-w-[48ch]">
 						{data?.post.content || t("studio.mediaPost")}
 					</h1>
 				</div>
@@ -83,33 +92,33 @@ export default function StudioPostDrilldown({
 			{loading && !data ? (
 				<div className="grid grid-cols-2 md:grid-cols-4 gap-3">
 					{[1, 2, 3, 4].map((i) => (
-						<div key={i} className="rounded-xl h-[76px] skeleton" />
+						<div key={i} className="rounded-2xl h-[96px] bg-[#fafaf9]/[0.05] animate-pulse" />
 					))}
 				</div>
 			) : data ? (
 				<>
 					<div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-						<StatTile
+						<StatTileCell
 							label={t("studio.impressions")}
 							value={fmt(data.stats.impressions)}
 						/>
-						<StatTile
+						<StatTileCell
 							label={t("studio.engagements")}
 							value={fmt(data.stats.engagements)}
 						/>
-						<StatTile
+						<StatTileCell
 							label={t("studio.engagementRate")}
 							value={`${data.stats.engagementRate}%`}
 						/>
-						<StatTile
+						<StatTileCell
 							label={t("studio.avgDwell")}
 							value={`${(data.stats.avgDwellMs / 1000).toFixed(1)}s`}
 						/>
 					</div>
 
 					<div className="grid md:grid-cols-2 gap-3 mt-3">
-						<section className="rounded-xl border border-hairline bg-surface/60 p-3.5">
-							<h2 className="font-sans text-[13px] font-semibold text-muted mb-4">
+						<section className="glass-panel backdrop-blur-xl backdrop-saturate-150 border glass-divider rounded-2xl p-4">
+							<h2 className="glass-eyebrow font-sans mb-4">
 								{t("studio.daily")}
 							</h2>
 							{data.stats.daily.length > 0 ? (
@@ -119,15 +128,15 @@ export default function StudioPostDrilldown({
 									engagementsLabel={t("studio.engagements")}
 								/>
 							) : (
-								<p className="font-sans text-sm text-subtle py-8 text-center">
+								<p className="font-sans text-sm glass-ink-faint py-8 text-center">
 									{t("studio.noData")}
 								</p>
 							)}
 						</section>
 
 						<div className="flex flex-col gap-4">
-							<section className="rounded-xl border border-hairline bg-surface/60 p-3.5">
-								<h2 className="font-sans text-[13px] font-semibold text-muted mb-3">
+							<section className="glass-panel backdrop-blur-xl backdrop-saturate-150 border glass-divider rounded-2xl p-4">
+								<h2 className="glass-eyebrow font-sans mb-3">
 									{t("studio.byAction")}
 								</h2>
 								<div className="flex flex-col gap-2">
@@ -136,12 +145,12 @@ export default function StudioPostDrilldown({
 											key={a}
 											className="flex items-center justify-between font-sans text-[13.5px]"
 										>
-											<span className="text-muted capitalize">
+											<span className="glass-ink-dim capitalize">
 												{t(`post.${a}` as string) !== `post.${a}`
 													? t(`post.${a}`)
 													: a.replace("_", " ")}
 											</span>
-											<span className="text-primary tabular-nums font-medium">
+											<span className="glass-ink tabular-nums font-medium">
 												{fmt(data.stats.actions[a] ?? 0)}
 											</span>
 										</div>
@@ -149,12 +158,12 @@ export default function StudioPostDrilldown({
 								</div>
 							</section>
 
-							<section className="rounded-xl border border-hairline bg-surface/60 p-3.5">
-								<h2 className="font-sans text-[13px] font-semibold text-muted mb-3">
+							<section className="glass-panel backdrop-blur-xl backdrop-saturate-150 border glass-divider rounded-2xl p-4">
+								<h2 className="glass-eyebrow font-sans mb-3">
 									{t("studio.bySurface")}
 								</h2>
 								{data.stats.surfaces.length === 0 ? (
-									<p className="font-sans text-sm text-subtle">
+									<p className="font-sans text-sm glass-ink-faint">
 										{t("studio.noData")}
 									</p>
 								) : (
@@ -168,12 +177,12 @@ export default function StudioPostDrilldown({
 								)}
 							</section>
 
-							<section className="rounded-xl border border-hairline bg-surface/60 p-3.5">
-								<h2 className="font-sans text-[13px] font-semibold text-muted mb-3">
+							<section className="glass-panel backdrop-blur-xl backdrop-saturate-150 border glass-divider rounded-2xl p-4">
+								<h2 className="glass-eyebrow font-sans mb-3">
 									{t("studio.topCountries")}
 								</h2>
 								{data.stats.byCountry.length === 0 ? (
-									<p className="font-sans text-sm text-subtle">
+									<p className="font-sans text-sm glass-ink-faint">
 										{t("studio.noData")}
 									</p>
 								) : (
@@ -191,7 +200,7 @@ export default function StudioPostDrilldown({
 					</div>
 				</>
 			) : (
-				<p className="font-sans text-sm text-subtle py-10 text-center">
+				<p className="font-sans text-sm glass-ink-faint py-10 text-center">
 					{t("studio.noData")}
 				</p>
 			)}

@@ -9,7 +9,7 @@ import {
 	updateCampaignAction,
 } from "@/lib/campaign.actions";
 import { useToast } from "@/components/ui/Toast/ToastContext";
-import { fmt } from "@/components/studio/studio-ui";
+import { PageHead, fmt } from "@/components/studio/studio-ui";
 
 interface Campaign {
 	_id: string;
@@ -56,25 +56,26 @@ export default function StudioPromotions() {
 
 	return (
 		<div>
-			<p className="font-sans text-[13px] text-muted mb-3 max-w-[68ch]">
-				{t("studio.promo.caption")}
-			</p>
+			<PageHead
+				title={t("studio.nav.promotions")}
+				caption={t("studio.promo.caption")}
+			/>
 
 			{loading ? (
 				<div className="space-y-3">
 					{[1, 2].map((i) => (
-						<div key={i} className="rounded-xl h-24 skeleton" />
+						<div key={i} className="rounded-2xl h-24 bg-[#fafaf9]/[0.05] animate-pulse" />
 					))}
 				</div>
 			) : campaigns.length === 0 ? (
-				<div className="rounded-xl border border-hairline bg-surface/60 p-8 text-center">
-					<span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-pill bg-raised text-subtle">
+				<div className="glass-panel backdrop-blur-xl backdrop-saturate-150 border glass-divider rounded-2xl p-8 text-center">
+					<span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-pill bg-[#fafaf9]/[0.07] glass-ink-faint">
 						<Megaphone size={22} />
 					</span>
-					<p className="font-sans text-sm text-muted">
+					<p className="font-sans text-sm glass-ink-dim">
 						{t("studio.promo.empty")}
 					</p>
-					<p className="font-sans text-[12.5px] text-subtle mt-1">
+					<p className="font-sans text-[12.5px] glass-ink-faint mt-1">
 						{t("studio.promo.emptyHint")}
 					</p>
 				</div>
@@ -90,9 +91,9 @@ export default function StudioPromotions() {
 								? usd(c.spentUsdMinor / c.stats.engagements)
  : "";
 						return (
-							<div key={c._id} className="rounded-xl border border-hairline bg-surface/60 p-3.5">
+							<div key={c._id} className="glass-panel backdrop-blur-xl backdrop-saturate-150 border glass-divider rounded-2xl p-4">
 								<div className="flex items-start justify-between gap-3">
-									<p className="font-sans text-[14px] text-primary line-clamp-1 min-w-0">
+									<p className="font-sans text-[14px] glass-ink line-clamp-1 min-w-0">
 										{c.post?.content || t("studio.mediaPost")}
 									</p>
 									<span
@@ -101,7 +102,7 @@ export default function StudioPromotions() {
 											c.status === "active" &&
 												"bg-success/10 text-success",
 											c.status === "paused" &&
-												"bg-raised text-muted",
+												"bg-[#fafaf9]/[0.09] glass-ink-dim",
 											c.status === "exhausted" &&
 												"bg-danger/10 text-danger",
 										)}
@@ -111,7 +112,7 @@ export default function StudioPromotions() {
 								</div>
 
 								<div className="mt-3">
-									<div className="flex items-center justify-between font-sans text-[12.5px] text-muted mb-1 tabular-nums">
+									<div className="flex items-center justify-between font-sans text-[12.5px] glass-ink-dim mb-1 tabular-nums">
 										<span>
 											{usd(c.spentUsdMinor)} / {usd(c.budgetUsdMinor)}
 										</span>
@@ -119,13 +120,13 @@ export default function StudioPromotions() {
 											{t("studio.promo.bid")} {usd(c.bidUsdMinor)}
 										</span>
 									</div>
-									<div className="h-1.5 rounded-pill bg-raised overflow-hidden">
+									<div className="h-1.5 rounded-pill bg-[#fafaf9]/[0.08] overflow-hidden">
 										<div
 											className={clsx(
 												"h-full rounded-pill",
 												c.status === "exhausted"
 													? "bg-danger/70"
-													: "bg-brand/80",
+													: "bg-gradient-to-r from-gold/60 to-gold",
 											)}
 											style={{ width: `${pct}%` }}
 										/>
@@ -133,7 +134,7 @@ export default function StudioPromotions() {
 								</div>
 
 								<div className="flex items-center justify-between gap-3 mt-3 flex-wrap">
-									<div className="flex items-center gap-4 font-sans text-[12.5px] text-muted tabular-nums">
+									<div className="flex items-center gap-4 font-sans text-[12.5px] glass-ink-dim tabular-nums">
 										<span>
 											{fmt(c.stats.impressions)}{" "}
 											{t("studio.impressions").toLowerCase()}
@@ -159,7 +160,7 @@ export default function StudioPromotions() {
 																: "active",
 													})
 												}
-												className="h-8 px-3.5 rounded-pill bg-raised/70 text-primary font-sans text-[12.5px] font-semibold hover:bg-raised transition-colors cursor-pointer disabled:opacity-50"
+												className="h-8 px-3.5 rounded-pill glass-chip backdrop-blur-md font-sans text-[12.5px] font-semibold transition-colors cursor-pointer disabled:opacity-50"
 											>
 												{c.status === "active"
 													? t("studio.promo.pause")
@@ -172,7 +173,7 @@ export default function StudioPromotions() {
 											onClick={() =>
 												mutate(c._id, { addBudgetUsdMinor: 500 })
 											}
-											className="h-8 px-3.5 rounded-pill bg-primary text-page font-sans text-[12.5px] font-semibold hover:bg-muted transition-colors cursor-pointer disabled:opacity-50"
+											className="h-8 px-3.5 rounded-pill glass-cta font-sans text-[12.5px] font-semibold transition-colors cursor-pointer disabled:opacity-50 active:brightness-95"
 										>
 											{t("studio.promo.topUp")}
 										</button>

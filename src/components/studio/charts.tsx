@@ -138,7 +138,7 @@ export function TrendChart({
 							x2={width - M.right}
 							y1={y(v)}
 							y2={y(v)}
-							className="stroke-hairline"
+							stroke="rgb(255 255 255 / 0.08)"
 							strokeWidth={1}
 							strokeDasharray={v === 0 ? undefined : "3 5"}
 						/>
@@ -146,7 +146,8 @@ export function TrendChart({
 							x={M.left - 8}
 							y={y(v) + 3.5}
 							textAnchor="end"
-							className="fill-[var(--ws-text-subtle,#79716b)] font-sans tabular-nums"
+							fill="rgb(255 255 255 / 0.35)"
+							className="font-sans tabular-nums"
 							fontSize={10.5}
 						>
 							{fmt(v)}
@@ -161,7 +162,8 @@ export function TrendChart({
 						x={x(i)}
 						y={H - 7}
 						textAnchor="middle"
-						className="fill-[var(--ws-text-subtle,#79716b)] font-sans"
+						fill="rgb(255 255 255 / 0.35)"
+						className="font-sans"
 						fontSize={10.5}
 					>
 						{dateLabel(points[i].date)}
@@ -172,11 +174,26 @@ export function TrendChart({
 				<g className="text-gold">
 					<defs>
 						<linearGradient id="ws-trend-fill" x1="0" y1="0" x2="0" y2="1">
-							<stop offset="0%" stopColor="currentColor" stopOpacity="0.28" />
+							<stop offset="0%" stopColor="currentColor" stopOpacity="0.32" />
 							<stop offset="100%" stopColor="currentColor" stopOpacity="0.02" />
 						</linearGradient>
+						{/* The glow is a blurred copy of the line underneath it — a
+						    filter on the line itself would blur the crisp stroke. */}
+						<filter id="ws-trend-glow" x="-20%" y="-40%" width="140%" height="180%">
+							<feGaussianBlur stdDeviation="5" />
+						</filter>
 					</defs>
 					<path d={areaPath} fill="url(#ws-trend-fill)" />
+					<path
+						d={linePath("impressions")}
+						fill="none"
+						stroke="currentColor"
+						strokeWidth={3}
+						strokeOpacity={0.45}
+						strokeLinejoin="round"
+						strokeLinecap="round"
+						filter="url(#ws-trend-glow)"
+					/>
 					<path
 						d={linePath("impressions")}
 						fill="none"
@@ -191,11 +208,10 @@ export function TrendChart({
 				<path
 					d={linePath("engagements")}
 					fill="none"
-					stroke="currentColor"
 					strokeWidth={1.75}
 					strokeLinejoin="round"
 					strokeLinecap="round"
-					className="text-primary/50"
+					stroke="rgb(255 255 255 / 0.45)"
 				/>
 
 				{/* hover crosshair + markers */}
@@ -206,21 +222,23 @@ export function TrendChart({
 							x2={x(hover)}
 							y1={M.top}
 							y2={M.top + innerH}
-							className="stroke-hairline"
+							stroke="rgb(255 255 255 / 0.18)"
 							strokeWidth={1}
 						/>
 						<circle
 							cx={x(hover)}
 							cy={y(hovered.impressions)}
 							r={4}
-							className="fill-gold stroke-page"
+							className="fill-gold"
+							stroke="#0c0a09"
 							strokeWidth={2}
 						/>
 						<circle
 							cx={x(hover)}
 							cy={y(hovered.engagements)}
 							r={3.5}
-							className="fill-primary stroke-page"
+							fill="#fafaf9"
+							stroke="#0c0a09"
 							strokeWidth={2}
 						/>
 					</g>
@@ -230,30 +248,30 @@ export function TrendChart({
 			{/* tooltip */}
 			{hover !== null && hovered && (
 				<div
-					className="pointer-events-none absolute top-1 -translate-x-1/2 rounded-lg bg-surface border border-hairline shadow-nav px-3 py-2 font-sans whitespace-nowrap"
+					className="pointer-events-none absolute top-1 -translate-x-1/2 rounded-lg glass-dock backdrop-blur-md border glass-divider px-3 py-2 font-sans whitespace-nowrap"
 					style={{ left: tipLeft }}
 				>
-					<p className="text-[11px] text-subtle mb-0.5">
+					<p className="text-[11px] glass-ink-faint mb-0.5">
 						{dateLabel(hovered.date)}
 					</p>
-					<p className="text-[12px] text-primary tabular-nums">
-						<span className="inline-block w-2 h-2 rounded-[2px] bg-brand mr-1.5" />
+					<p className="text-[12px] glass-ink tabular-nums">
+						<span className="inline-block w-2 h-2 rounded-[2px] bg-gold mr-1.5" />
 						{fmt(hovered.impressions)} {impressionsLabel.toLowerCase()}
 					</p>
-					<p className="text-[12px] text-primary tabular-nums">
-						<span className="inline-block w-2 h-2 rounded-[2px] bg-primary/50 mr-1.5" />
+					<p className="text-[12px] glass-ink tabular-nums">
+						<span className="inline-block w-2 h-2 rounded-[2px] bg-[#fafaf9]/50 mr-1.5" />
 						{fmt(hovered.engagements)} {engagementsLabel.toLowerCase()}
 					</p>
 				</div>
 			)}
 
 			<div className="flex items-center gap-4 mt-2">
-				<span className="flex items-center gap-1.5 font-sans text-[12px] text-muted">
-					<span className="w-2.5 h-2.5 rounded-[3px] bg-brand" />
+				<span className="flex items-center gap-1.5 font-sans text-[12px] glass-ink-dim">
+					<span className="w-2.5 h-2.5 rounded-[3px] bg-gold" />
 					{impressionsLabel}
 				</span>
-				<span className="flex items-center gap-1.5 font-sans text-[12px] text-muted">
-					<span className="w-2.5 h-2.5 rounded-[3px] bg-primary/50" />
+				<span className="flex items-center gap-1.5 font-sans text-[12px] glass-ink-dim">
+					<span className="w-2.5 h-2.5 rounded-[3px] bg-[#fafaf9]/50" />
 					{engagementsLabel}
 				</span>
 			</div>
@@ -281,19 +299,19 @@ export function BarList({
 				return (
 					<div key={item.key}>
 						<div className="flex items-center justify-between font-sans text-[13px] mb-1">
-							<span className="text-primary font-medium truncate min-w-0">
+							<span className="glass-ink font-medium truncate min-w-0">
 								{item.label || unknownLabel || item.key}
 							</span>
-							<span className="text-muted tabular-nums shrink-0 ml-3">
+							<span className="glass-ink-dim tabular-nums shrink-0 ml-3">
 								{fmt(item.value)}
-								<span className="text-subtle ml-1.5">
+								<span className="glass-ink-faint ml-1.5">
 									{pct >= 1 ? Math.round(pct) : "<1"}%
 								</span>
 							</span>
 						</div>
-						<div className="h-2 rounded-pill bg-raised overflow-hidden">
+						<div className="h-2 rounded-pill bg-[#fafaf9]/[0.08] overflow-hidden">
 							<div
-								className="h-full bg-brand/75 rounded-pill"
+								className="h-full rounded-pill bg-gradient-to-r from-gold/60 to-gold"
 								style={{ width: `${Math.max(2, pct)}%` }}
 							/>
 						</div>
@@ -314,4 +332,116 @@ export function countryLabel(code: string, locale: string): string {
 	} catch {
 		return code;
 	}
+}
+
+/**
+ * A stat tile's pulse: the metric's daily shape, no axes, no labels — the
+ * number above it carries the magnitude, this carries the motion.
+ */
+export function Sparkline({
+	values,
+	className,
+}: {
+	values: number[];
+	className?: string;
+}) {
+	const W = 200;
+	const H = 44;
+	// One point can't draw a line; mirror it into a flat run.
+	const pts = values.length === 1 ? [values[0], values[0]] : values;
+	const max = Math.max(1, ...pts);
+	const x = (i: number) => (i / (pts.length - 1)) * W;
+	const y = (v: number) => H - 3 - (v / max) * (H - 8);
+	const line = pts
+		.map((v, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(v).toFixed(1)}`)
+		.join(" ");
+	const area = `${line} L${W},${H} L0,${H} Z`;
+	// Gradient ids are global to the page; derive one per shape so two
+	// sparklines never share (and thus fight over) a def.
+	const gid = `ws-spark-${pts.length}-${Math.round(max)}`;
+	return (
+		<svg
+			viewBox={`0 0 ${W} ${H}`}
+			preserveAspectRatio="none"
+			aria-hidden
+			className={className ?? "block h-11 w-full text-gold"}
+		>
+			<defs>
+				<linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+					<stop offset="0%" stopColor="currentColor" stopOpacity="0.3" />
+					<stop offset="100%" stopColor="currentColor" stopOpacity="0" />
+				</linearGradient>
+			</defs>
+			<path d={area} fill={`url(#${gid})`} />
+			<path
+				d={line}
+				fill="none"
+				stroke="currentColor"
+				strokeWidth={2}
+				strokeLinejoin="round"
+				strokeLinecap="round"
+				vectorEffect="non-scaling-stroke"
+			/>
+		</svg>
+	);
+}
+
+/**
+ * Engagement rate as a radial dial. A rate is a proportion, and a ring says
+ * "share of a whole" the way no bare percentage string can. Capped at 100
+ * so an outlier week can't wrap the ring into a lie.
+ */
+export function RadialRate({
+	value,
+	label,
+	size = 132,
+}: {
+	/** Percentage, 0–100. */
+	value: number;
+	label: string;
+	size?: number;
+}) {
+	const stroke = 10;
+	const r = (size - stroke) / 2;
+	const c = 2 * Math.PI * r;
+	const frac = Math.min(100, Math.max(0, value)) / 100;
+	return (
+		<div
+			className="relative"
+			style={{ width: size, height: size }}
+			role="img"
+			aria-label={`${label}: ${value}%`}
+		>
+			<svg width={size} height={size} className="-rotate-90">
+				<circle
+					cx={size / 2}
+					cy={size / 2}
+					r={r}
+					fill="none"
+					stroke="rgb(255 255 255 / 0.08)"
+					strokeWidth={stroke}
+				/>
+				<circle
+					cx={size / 2}
+					cy={size / 2}
+					r={r}
+					fill="none"
+					stroke="var(--ws-brand-primary, #EAB308)"
+					strokeWidth={stroke}
+					strokeLinecap="round"
+					strokeDasharray={c}
+					strokeDashoffset={c * (1 - frac)}
+					style={{
+						transition:
+							"stroke-dashoffset var(--ws-motion-slow, 320ms) var(--ws-ease)",
+					}}
+				/>
+			</svg>
+			<div className="absolute inset-0 flex flex-col items-center justify-center">
+				<span className="font-display text-[22px] font-semibold leading-none glass-ink tabular-nums">
+					{value}%
+				</span>
+			</div>
+		</div>
+	);
 }

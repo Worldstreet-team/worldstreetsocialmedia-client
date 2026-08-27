@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { Broadcast, Star, Trash } from "@phosphor-icons/react";
 import { useT } from "@/i18n/client";
+import { PageHead } from "@/components/studio/studio-ui";
 import {
 	createPresetAction,
 	deletePresetAction,
@@ -72,12 +73,13 @@ export default function StudioLive() {
 
 	return (
 		<div>
-			<p className="font-sans text-[13px] text-muted mb-3 max-w-[68ch]">
-				{t("studio.live.caption")}
-			</p>
+			<PageHead
+				title={t("studio.nav.live")}
+				caption={t("studio.live.caption")}
+			/>
 
-			<section className="rounded-xl border border-hairline bg-surface/60 p-3.5 mb-3">
-				<h2 className="font-sans text-[13px] font-semibold text-muted mb-3">
+			<section className="glass-panel backdrop-blur-xl backdrop-saturate-150 border glass-divider rounded-2xl p-4 mb-3">
+				<h2 className="glass-eyebrow font-sans mb-3">
 					{t("studio.live.new")}
 				</h2>
 				<div className="flex flex-col sm:flex-row gap-2.5">
@@ -86,14 +88,14 @@ export default function StudioLive() {
 						onChange={(e) => setName(e.target.value)}
 						placeholder={t("studio.live.name")}
 						maxLength={60}
-						className="flex-1 h-10 rounded-lg bg-sunken border border-hairline px-3.5 font-sans text-base sm:text-sm text-primary placeholder:text-subtle outline-none focus:border-brand/60"
+						className="flex-1 h-10 rounded-lg glass-input px-3.5 font-sans text-base sm:text-sm outline-none"
 					/>
 					<input
 						value={title}
 						onChange={(e) => setTitle(e.target.value)}
 						placeholder={t("studio.live.titlePh")}
 						maxLength={120}
-						className="flex-1 h-10 rounded-lg bg-sunken border border-hairline px-3.5 font-sans text-base sm:text-sm text-primary placeholder:text-subtle outline-none focus:border-brand/60"
+						className="flex-1 h-10 rounded-lg glass-input px-3.5 font-sans text-base sm:text-sm outline-none"
 					/>
 				</div>
 				<div className="flex items-center gap-1.5 mt-3 flex-wrap">
@@ -105,8 +107,8 @@ export default function StudioLive() {
 							className={clsx(
 								"h-7 px-3 rounded-pill font-sans text-[12px] font-medium transition-colors cursor-pointer",
 								category === c.value
-									? "bg-primary text-page font-semibold"
-									: "bg-raised/60 text-muted hover:text-primary",
+									? "glass-chip-active font-semibold"
+									: "glass-chip backdrop-blur-md",
 							)}
 						>
 							{c.label}
@@ -116,7 +118,7 @@ export default function StudioLive() {
 						type="button"
 						onClick={create}
 						disabled={!name.trim() || saving}
-						className="ml-auto h-9 px-4 rounded-pill bg-brand text-brand-on font-sans text-[13px] font-semibold hover:bg-brand-active transition-colors cursor-pointer disabled:opacity-50"
+						className="ml-auto h-9 px-4 rounded-pill glass-cta font-sans text-[13px] font-semibold transition-colors cursor-pointer disabled:opacity-50 active:brightness-95"
 					>
 						{t("studio.live.save")}
 					</button>
@@ -124,13 +126,13 @@ export default function StudioLive() {
 			</section>
 
 			{loading ? (
-				<div className="rounded-xl h-20 skeleton" />
+				<div className="rounded-2xl h-20 bg-[#fafaf9]/[0.05] animate-pulse" />
 			) : presets.length === 0 ? (
-				<div className="rounded-xl border border-hairline bg-surface/60 p-8 text-center">
-					<span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-pill bg-raised text-subtle">
+				<div className="glass-panel backdrop-blur-xl backdrop-saturate-150 border glass-divider rounded-2xl p-8 text-center">
+					<span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-pill bg-[#fafaf9]/[0.07] glass-ink-faint">
 						<Broadcast size={22} />
 					</span>
-					<p className="font-sans text-sm text-muted">
+					<p className="font-sans text-sm glass-ink-dim">
 						{t("studio.live.empty")}
 					</p>
 				</div>
@@ -139,18 +141,18 @@ export default function StudioLive() {
 					{presets.map((p) => (
 						<div
 							key={p.id}
-							className="rounded-xl border border-hairline bg-surface/60 px-4 py-3 flex items-center gap-3"
+							className="glass-panel backdrop-blur-xl backdrop-saturate-150 border glass-divider rounded-2xl px-4 py-3 flex items-center gap-3"
 						>
 							<div className="flex-1 min-w-0">
-								<p className="font-sans text-[14.5px] font-semibold text-primary truncate">
+								<p className="font-sans text-[14.5px] font-semibold glass-ink truncate">
 									{p.name}
 									{p.isDefault && (
-										<span className="ml-2 rounded-pill bg-brand/10 text-gold px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide">
+										<span className="ml-2 rounded-pill bg-gold/15 text-gold px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide">
 											{t("studio.live.default")}
 										</span>
 									)}
 								</p>
-								<p className="font-sans text-[12.5px] text-subtle truncate">
+								<p className="font-sans text-[12.5px] glass-ink-faint truncate">
  {p.title || ""} ·{" "}
 									{CATEGORIES.find((c) => c.value === p.category)?.label ??
 										p.category}
@@ -165,7 +167,7 @@ export default function StudioLive() {
 									}}
 									aria-label={t("studio.live.makeDefault")}
 									title={t("studio.live.makeDefault")}
-									className="flex h-10 w-10 items-center justify-center rounded-pill text-subtle hover:text-gold hover:bg-brand/10 transition-colors cursor-pointer"
+									className="flex h-10 w-10 items-center justify-center rounded-pill glass-ink-faint hover:text-gold hover:bg-gold/10 transition-colors cursor-pointer"
 								>
 									<Star size={17} />
 								</button>
@@ -177,7 +179,7 @@ export default function StudioLive() {
 									await load();
 								}}
 								aria-label={t("studio.live.delete")}
-								className="flex h-10 w-10 items-center justify-center rounded-pill text-subtle hover:text-danger hover:bg-danger/10 transition-colors cursor-pointer"
+								className="flex h-10 w-10 items-center justify-center rounded-pill glass-ink-faint hover:text-danger hover:bg-danger/10 transition-colors cursor-pointer"
 							>
 								<Trash size={17} />
 							</button>

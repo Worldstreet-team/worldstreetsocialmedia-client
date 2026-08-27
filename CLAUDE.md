@@ -418,6 +418,31 @@ against an endpoint that didn't exist, so every mark-read 404'd).
 Voice notes and media attachments were **not** broken — `POST
 /api/messages/upload` → R2 works; verified end to end.
 
+## Creator Studio (glass rewrite 2026-08-26)
+
+The Studio is a **glass surface** now (the owner extended the editors' glass
+exception to it): fixed-dark chrome in both themes, an ambient brand-tinted
+radial backdrop that the panel blur refracts, floating rail dock, and a
+12-col bento overview. Everything themes through `glass-*` utilities plus the
+brand token — never theme tokens (`bg-surface`/`text-primary` flip in light
+mode and break on the dark veil), and never hardcoded brand hexes (the
+Worldspace rebrand moves `--ws-brand-primary`; the Studio must follow it).
+
+- **Creator-gated**: LeftSidebar and MobileNavigation hide the Studio entry
+  unless `user.role === "creator"` (`role` rides `x-user-data`). The route
+  stays reachable — deep links get the become-a-creator pitch, and the
+  gateway still 403s data for non-creators (verified-subscriber analytics
+  perk aside).
+- **/studio/apps is a redirect** to /studio — the ecosystem strip is a card
+  on the overview now. It must mirror the ratified platform list (no
+  "Wallet"; that ruling has bitten twice).
+- `studio-ui.tsx` is the kit (GlassCell/CellHead/StatTile/MetricRow/
+  WindowSwitch/PageHead); `charts.tsx` carries TrendChart (glow + gradient),
+  BarList, Sparkline, RadialRate — all hand-rolled SVG, no chart lib, keep it
+  that way.
+- Charts use **fixed glass inks** (`rgb(255 255 255 / …)`) for grid/axis text
+  and the brand token for the data series.
+
 ## Local dev = real Clerk, real gateway
 
 There is no mock/fixture mode. The former `MOCK_AUTH` machinery (Turbopack
