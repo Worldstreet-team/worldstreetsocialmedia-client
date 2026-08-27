@@ -190,24 +190,28 @@ export function WelcomeTour() {
           {/* Hero band */}
           {/* The same artwork the onboarding flow stands on, so the tour reads
               as the end of that journey rather than a different product. Two
-              cuts swapped on the theme attribute; the overlay dissolves it into
-              the panel and carries a wash of brand so the picture belongs to
-              this palette instead of sitting on top of it. No border — depth is
-              the fade, per the overlay grammar. */}
-          <div className="relative flex h-[210px] shrink-0 items-end justify-center overflow-hidden bg-sunken bg-cover bg-center bg-[url('/images/onboarding/backdrop-dark.webp')] pb-6 [[data-ws-theme='platform-light']_&]:bg-[url('/images/onboarding/backdrop-light.webp')] sm:h-[240px]">
-            {/* The picture runs to the panel's own top edge — no band, no
-                hairline — and dissolves downward into the surface so the copy
-                below reads as the same object rather than a caption under a
-                photo. The brand wash is what stops it looking like stock art
-                dropped into our palette. */}
+              cuts swapped on the theme attribute, and the picture runs to the
+              panel's own top edge — no band, no hairline. */}
+          <div className="relative flex h-[210px] shrink-0 items-end justify-center overflow-hidden pb-6 sm:h-[240px]">
+            {/* BLENDED, not veiled. This used to be a `surface` gradient laid
+                OVER the artwork, which is a different thing: it greyed the
+                picture from the very first pixel (25% at the top) and the band
+                still ended on a visible edge. Masking fades the artwork's own
+                alpha instead, so it reads at full strength up top and genuinely
+                dissolves into whatever the panel is painted with — there is no
+                film in front of it and no seam where it stops.
+
+                The stops ease rather than ramping linearly: a straight alpha
+                ramp across a photograph bands visibly in the mid-tones. The
+                brand wash shares the wrapper so the tint fades WITH the
+                picture instead of outliving it as a rectangle. */}
             <span
               aria-hidden
-              className="pointer-events-none absolute inset-0 bg-gradient-to-b from-surface/25 via-surface/55 to-surface"
-            />
-            <span
-              aria-hidden
-              className="pointer-events-none absolute inset-0 bg-brand/10"
-            />
+              className="pointer-events-none absolute inset-0 [-webkit-mask-image:linear-gradient(to_bottom,#000_0%,#000_34%,rgb(0_0_0/0.62)_58%,rgb(0_0_0/0.24)_78%,transparent_100%)] [mask-image:linear-gradient(to_bottom,#000_0%,#000_34%,rgb(0_0_0/0.62)_58%,rgb(0_0_0/0.24)_78%,transparent_100%)]"
+            >
+              <span className="absolute inset-0 bg-cover bg-center bg-[url('/images/onboarding/backdrop-dark.webp')] [[data-ws-theme='platform-light']_&]:bg-[url('/images/onboarding/backdrop-light.webp')]" />
+              <span className="absolute inset-0 bg-brand/10" />
+            </span>
             {/* The close control rides ON the artwork, so the header no longer
                 costs a strip of panel above the picture. */}
             <button
