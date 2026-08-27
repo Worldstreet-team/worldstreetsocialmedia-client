@@ -31,6 +31,8 @@ export function TrendingList({
     <ExploreSection
       label={t("explore.section.trending")}
       delay={delay}
+      collapsible
+      sectionId="trending"
       trailing={
         <span className="shrink-0 font-sans text-[10px] font-semibold uppercase tracking-wider text-gold">
           {t("rail.scope")}

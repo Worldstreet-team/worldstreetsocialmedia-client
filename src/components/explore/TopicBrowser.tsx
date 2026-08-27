@@ -28,7 +28,12 @@ export function TopicBrowser({
   const active = VERTICALS.find((v) => v.id === vertical);
 
   return (
-    <ExploreSection label={t("explore.section.topics")} delay={delay}>
+    <ExploreSection
+      label={t("explore.section.topics")}
+      delay={delay}
+      collapsible
+      sectionId="topics"
+    >
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {VERTICALS.map((v) => {
           const Icon = VERTICAL_ICON[v.id];

@@ -32,7 +32,12 @@ export function PeopleStrip({
   if (!loading && shown.length === 0) return null;
 
   return (
-    <ExploreSection label={t("explore.section.people")} delay={delay}>
+    <ExploreSection
+      label={t("explore.section.people")}
+      delay={delay}
+      collapsible
+      sectionId="people"
+    >
       <div className="-mx-2 flex flex-col">
         {loading
           ? [0, 1, 2].map((i) => (

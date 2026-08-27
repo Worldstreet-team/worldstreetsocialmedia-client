@@ -2,7 +2,13 @@
 
 import { formatTimeAgo, mainScrollTop, mainScroller } from "@/lib/utils";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import {
+	useState,
+	useEffect,
+	useMemo,
+	useRef,
+	useSyncExternalStore,
+} from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAtom, useAtomValue } from "jotai";
 import { feedAtom } from "@/store/feed.atom";
@@ -12,16 +18,106 @@ import { prefetchTranslations } from "@/lib/translate.prefetch";
 import { PostCard, PostProps } from "@/components/feed/PostCard";
 import { PostComposer } from "@/components/feed/PostComposer";
 import { getFeedAction } from "@/lib/feed.actions";
+import { getPostByIdAction } from "@/lib/post.actions";
 // 03-icons: `plus`, `user-plus` and `arrow-up` are all in the standardized set.
 import { ArrowUp, Plus, UserPlus } from "lucide-react";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { PostSkeleton } from "@/components/feed/PostSkeleton";
 import { ImpressionSensor } from "@/components/feed/ImpressionSensor";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import {
+	peekHandle,
+	requestHandle,
+	subscribeMentions,
+} from "@/lib/mentionCache";
 import { DEFAULT_AVATAR } from "@/const";
 import { useT } from "@/i18n/client";
 import { useFeedEvents } from "@/hooks/useUserEvents";
 import { userAtom } from "@/store/user.atom";
+
+/**
+ * A post the realtime `feed` channel has announced but the timeline has not
+ * shown yet. `postId` is what makes the pill honest: the announced post is
+ * fetched by that id on click, so what was counted is what appears.
+ */
+interface PendingPost {
+	postId: string;
+	author: string;
+	username: string;
+}
+
+/** Faces in the stack before the rest collapse into "+n". */
+const MAX_FACES = 3;
+/** Ceiling on the by-id fetch, for a tab left open all afternoon. */
+const MAX_PENDING_FETCH = 20;
+
+/**
+ * Gateway post -> PostProps. One mapper, so a post that arrives in a feed page
+ * and the same post fetched by id render identically — before this existed the
+ * mapping was inlined and only the paginated path had it.
+ */
+function mapApiPost(post: any): PostProps {
+	return {
+		id: post._id,
+		author: {
+			id: post.author._id,
+			name:
+				post.author.firstName && post.author.lastName
+					? `${post.author.firstName} ${post.author.lastName}`
+					: post.author.username,
+			username: post.author.username,
+			avatar: post.author.avatar || DEFAULT_AVATAR,
+			isVerified: post.author.isVerified,
+			verification: post.author.verification,
+			badges: post.author.badges,
+		},
+		content: post.content,
+		mentions: post.mentions,
+		timestamp: formatTimeAgo(post.createdAt),
+		images: post.images,
+		videos: post.videos,
+		stats: post.stats || { replies: 0, reposts: 0, likes: 0, views: 0 },
+		isLiked: post.isLiked,
+		isBookmarked: post.isBookmarked,
+		type: post.type,
+		live: post.live,
+		promoted: Boolean(post.promoted),
+		// Only the feed pipeline populates `repostOf`; `GET /api/posts/:id`
+		// leaves it as a bare id, which would otherwise render as an empty
+		// quoted-post block with no author and no text.
+		repostOf:
+			post.repostOf && typeof post.repostOf === "object" && post.repostOf._id
+				? {
+						id: post.repostOf._id,
+						authorName:
+							post.repostOf.author?.firstName && post.repostOf.author?.lastName
+								? `${post.repostOf.author.firstName} ${post.repostOf.author.lastName}`
+								: (post.repostOf.author?.username ?? ""),
+						username: post.repostOf.author?.username ?? "",
+						avatar: post.repostOf.author?.avatar || DEFAULT_AVATAR,
+						isVerified: post.repostOf.author?.isVerified,
+						content: post.repostOf.content ?? "",
+						image: post.repostOf.images?.[0],
+						timestamp: formatTimeAgo(post.repostOf.createdAt),
+					}
+				: undefined,
+	};
+}
+
+/**
+ * Merge keeping the FIRST occurrence of each id, so ordering expresses
+ * precedence. Without this, any repeat fetch of the same page (StrictMode
+ * double-effect, remount, retry) appends duplicates and React throws "two
+ * children with the same key".
+ */
+function mergeById(posts: PostProps[]): PostProps[] {
+	const byId = new Map<string, PostProps>();
+	for (const post of posts) {
+		if (!byId.has(post.id)) byId.set(post.id, post);
+	}
+	return [...byId.values()];
+}
 
 export default function Feed() {
 	const t = useT();
@@ -35,9 +131,13 @@ export default function Feed() {
 	const translationsRef = useRef(translations);
 	translationsRef.current = translations;
 	const [loading, setLoading] = useState(true);
-	// New posts arrive as a count, not as a jump: yanking the timeline under
-	// someone mid-read is worse than letting them choose when to see them.
-	const [pendingPosts, setPendingPosts] = useState(0);
+	// New posts announce themselves, they don't jump in: yanking the timeline
+	// under someone mid-read is worse than letting them choose when to see
+	// them. Held as the actual posts rather than a count so the pill can show
+	// who posted, and so the click can fetch exactly what it advertised.
+	const [pending, setPending] = useState<PendingPost[]>([]);
+	const [refreshing, setRefreshing] = useState(false);
+	const refreshingRef = useRef(false);
 	const me = useAtomValue(userAtom);
 	const [isPosting, setIsPosting] = useState(false);
 	const [showBackToTop, setShowBackToTop] = useState(false);
@@ -157,8 +257,55 @@ export default function Feed() {
 		// Your own post already appears optimistically.
 		if (data.author && me?._id && String(data.author) === String(me._id))
 			return;
-		setPendingPosts((n) => n + 1);
+		// A community post belongs to its community page — the gateway's home
+		// feed query filters `community: null`, so counting one here would
+		// promise a post the timeline is never allowed to show.
+		if (data.community) return;
+
+		const postId = data.postId ? String(data.postId) : "";
+		const username = data.username ? String(data.username) : "";
+		// Warm the shared handle cache now, so the face is resolved by the time
+		// the pill paints. A burst of posts costs one batched request.
+		if (username) requestHandle(username);
+
+		setPending((prev) =>
+			postId && prev.some((p) => p.postId === postId)
+				? prev
+				: [
+						...prev,
+						{ postId, author: String(data.author ?? ""), username },
+					],
+		);
 	});
+
+	// The shared handle cache resolves asynchronously (one batched request for a
+	// burst of posts), so the pill has to re-render when an answer lands. The
+	// snapshot is a newline-joined string — a value React can compare, unlike a
+	// fresh array — which is why a resolution elsewhere on the page costs a
+	// string compare and no render here. Same pattern as `Mention`.
+	const pendingAvatars = useSyncExternalStore(
+		subscribeMentions,
+		() =>
+			pending
+				.map((p) => (p.username ? (peekHandle(p.username)?.avatar ?? "") : ""))
+				.join("\n"),
+		() => "",
+	);
+
+	// One face per person, in the order they posted — five posts from one
+	// account is one avatar, not five. Unresolved handles carry an empty src and
+	// fall through to SafeAvatar's DEFAULT_AVATAR rather than holding the pill
+	// back until the lookup returns.
+	const resolved = pendingAvatars.split("\n");
+	const faces: { key: string; avatar: string }[] = [];
+	const seenAuthors = new Set<string>();
+	for (let i = 0; i < pending.length; i++) {
+		const key =
+			pending[i].username || pending[i].author || pending[i].postId;
+		if (!key || seenAuthors.has(key)) continue;
+		seenAuthors.add(key);
+		faces.push({ key, avatar: resolved[i] ?? "" });
+	}
 
 	const fetchFeed = async (reset = false) => {
 		if (reset) {
@@ -171,70 +318,16 @@ export default function Feed() {
 
 			if (result.success && result.data) {
 				const apiPosts = result.data.posts;
-				const mappedPosts: PostProps[] = apiPosts.map((post: any) => ({
-					id: post._id,
-					author: {
-						id: post.author._id,
-						name:
-							post.author.firstName && post.author.lastName
-								? `${post.author.firstName} ${post.author.lastName}`
-								: post.author.username,
-						username: post.author.username,
-						avatar: post.author.avatar || DEFAULT_AVATAR,
-						isVerified: post.author.isVerified,
-						verification: post.author.verification,
-						badges: post.author.badges,
-					},
-					content: post.content,
-					mentions: post.mentions,
-					timestamp: formatTimeAgo(post.createdAt),
-					images: post.images,
-					videos: post.videos,
-					stats: post.stats || { replies: 0, reposts: 0, likes: 0, views: 0 },
-					isLiked: post.isLiked,
-					isBookmarked: post.isBookmarked,
-					type: post.type,
-					live: post.live,
-					promoted: Boolean(post.promoted),
-					repostOf: post.repostOf
-						? {
-								id: post.repostOf._id,
-								authorName:
-									post.repostOf.author?.firstName &&
-									post.repostOf.author?.lastName
-										? `${post.repostOf.author.firstName} ${post.repostOf.author.lastName}`
-										: (post.repostOf.author?.username ?? ""),
-								username: post.repostOf.author?.username ?? "",
-								avatar:
-									post.repostOf.author?.avatar || DEFAULT_AVATAR,
-								isVerified: post.repostOf.author?.isVerified,
-								verification: post.repostOf.author?.verification,
-								content: post.repostOf.content ?? "",
-								image: post.repostOf.images?.[0],
-								timestamp: formatTimeAgo(post.repostOf.createdAt),
-							}
-						: undefined,
+				const mappedPosts: PostProps[] = apiPosts.map(mapApiPost);
+
+				setFeedState((prev) => ({
+					...prev,
+					posts: mergeById(
+						reset ? mappedPosts : [...prev.posts, ...mappedPosts],
+					),
+					cursor: result.data.nextCursor ?? null,
+					hasMore: Boolean(result.data.hasMore),
 				}));
-
-				setFeedState((prev) => {
-					// Merge by id. Without this, any repeat fetch of the same
-					// page (StrictMode double-effect, remount, retry) appends
-					// duplicates and React throws "two children with the same key".
-					const merged = reset
-						? mappedPosts
-						: [...prev.posts, ...mappedPosts];
-					const byId = new Map<string, PostProps>();
-					for (const post of merged) {
-						if (!byId.has(post.id)) byId.set(post.id, post);
-					}
-
-					return {
-						...prev,
-						posts: [...byId.values()],
-						cursor: result.data.nextCursor ?? null,
-						hasMore: Boolean(result.data.hasMore),
-					};
-				});
 			} else {
 				if (result.message) toast(result.message, { type: "error" });
 			}
@@ -243,6 +336,69 @@ export default function Feed() {
 			toast("Failed to load feed", { type: "error" });
 		} finally {
 			setLoading(false);
+		}
+	};
+
+	/**
+	 * Actually load what the pill advertised.
+	 *
+	 * A plain `fetchFeed(true)` is not enough, and that is why this used to read
+	 * as "it just scrolls back up": `GET /api/feed` page 1 is the *ranked* feed,
+	 * and the ranker scores a post as
+	 * `(0.1 + ln(1 + likes + 2·replies + 3·reposts)) × exp(−ageHours/24) × …`.
+	 * A seconds-old post has no engagement, so it sits at the 0.1 floor while
+	 * anything from the last day with a couple of likes scores an order of
+	 * magnitude higher — the announced post is at the *bottom* of the ranking,
+	 * never in the top ten the refresh returns. The reader got the same ten
+	 * posts back, and the only visible effect was the scroll.
+	 *
+	 * So the announced posts are fetched by id and prepended, which is
+	 * independent of ranking, while the page refresh runs alongside to bring the
+	 * rest of the timeline (and its counts) up to date.
+	 */
+	const showNewPosts = async () => {
+		if (refreshingRef.current) return;
+		refreshingRef.current = true;
+		setRefreshing(true);
+
+		// Snapshot: anything that arrives while these requests are in flight is
+		// still pending afterwards, so the pill re-appears for it.
+		const claimed = pending;
+		const ids = claimed
+			.map((p) => p.postId)
+			.filter(Boolean)
+			.slice(-MAX_PENDING_FETCH);
+
+		mainScroller().scrollTo({ top: 0, behavior: "smooth" });
+
+		try {
+			const [, announced] = await Promise.all([
+				fetchFeed(true),
+				Promise.all(ids.map((id) => getPostByIdAction(id))),
+			]);
+
+			const fresh: PostProps[] = [];
+			for (const result of announced) {
+				// A 404 here is legitimate — deleted, or from someone who blocked
+				// you since. Skipping it is the whole point of asking.
+				if (result.success && result.data) fresh.push(mapApiPost(result.data));
+			}
+			// Newest first, above the page the refresh just installed. The reset
+			// has already queued its own update, so this updater runs on top of
+			// it; mergeById keeps the prepended copy and drops the ranked one.
+			fresh.reverse();
+
+			if (fresh.length > 0) {
+				setFeedState((prev) => ({
+					...prev,
+					posts: mergeById([...fresh, ...prev.posts]),
+				}));
+			}
+
+			setPending((prev) => prev.filter((p) => !claimed.includes(p)));
+		} finally {
+			refreshingRef.current = false;
+			setRefreshing(false);
 		}
 	};
 
@@ -291,24 +447,60 @@ export default function Feed() {
 
 	return (
 		<div className="w-full min-w-0 pb-nav md:pb-20">
-			{/* New posts announce themselves; the reader decides when to jump. */}
+			{/* New posts announce themselves; the reader decides when to jump.
+			    The stack says WHO posted before the click — a name you follow is
+			    worth interrupting a read for, a count on its own isn't. */}
 			<AnimatePresence>
-				{pendingPosts > 0 && (
+				{pending.length > 0 && (
 					<motion.button
 						type="button"
 						initial={{ opacity: 0, y: -8, x: "-50%" }}
 						animate={{ opacity: 1, y: 0, x: "-50%" }}
 						exit={{ opacity: 0, transition: { duration: 0.12 } }}
 						transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-						onClick={() => {
-							setPendingPosts(0);
-							mainScroller().scrollTo({ top: 0, behavior: "smooth" });
-							void fetchFeed(true);
-						}}
-						className="fixed top-[72px] md:top-16 left-1/2 z-sticky flex items-center gap-1.5 h-9 pl-3.5 pr-4 rounded-pill bg-brand text-brand-on shadow-nav font-sans text-[13px] font-semibold hover:bg-brand-active transition-colors cursor-pointer"
+						onClick={showNewPosts}
+						disabled={refreshing}
+						aria-busy={refreshing}
+						className="fixed top-[72px] md:top-16 left-1/2 z-sticky flex items-center gap-2 h-10 pl-2.5 pr-4 rounded-pill bg-brand text-brand-on shadow-nav font-sans text-[13px] font-semibold hover:bg-brand-active transition-colors cursor-pointer disabled:cursor-default"
 					>
-						<ArrowUp className="w-[14px] h-[14px]" />
-						{pendingPosts} {t("feed.newPosts")}
+						{refreshing ? (
+							<span
+								aria-hidden
+								className="w-[14px] h-[14px] rounded-pill border-2 border-brand-on/30 border-t-brand-on animate-spin"
+							/>
+						) : (
+							<ArrowUp className="w-[14px] h-[14px]" />
+						)}
+
+						{faces.length > 0 && (
+							<span className="flex items-center">
+								{faces.slice(0, MAX_FACES).map((face) => (
+									<span
+										key={face.key}
+										className="relative w-6 h-6 shrink-0 overflow-hidden rounded-pill bg-raised ring-2 ring-page -ml-2 first:ml-0"
+									>
+										<SafeAvatar src={face.avatar} />
+									</span>
+								))}
+								{/* min-w, not a fixed w, so "+12" cannot spill out of
+								    its circle. */}
+								{faces.length > MAX_FACES && (
+									<span className="relative flex h-6 min-w-6 shrink-0 items-center justify-center rounded-pill bg-raised px-1.5 text-primary text-[11px] font-semibold tabular-nums ring-2 ring-page -ml-2">
+										+{faces.length - MAX_FACES}
+									</span>
+								)}
+							</span>
+						)}
+
+						<span className="tabular-nums">
+							{refreshing
+								? t("feed.newPosts.loading")
+								: `${pending.length} ${
+										pending.length === 1
+											? t("feed.newPosts.one")
+											: t("feed.newPosts")
+									}`}
+						</span>
 					</motion.button>
 				)}
 			</AnimatePresence>

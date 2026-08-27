@@ -45,6 +45,7 @@ import ConfirmModal from "@/components/ui/ConfirmModal";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import ImageModal from "@/components/ui/ImageModal";
 import { renderRichText } from "@/components/ui/RichText";
+import { VideoPlayer } from "@/components/ui/VideoPlayer";
 import { Radio } from "lucide-react";
 import { promotePostAction } from "@/lib/campaign.actions";
 import { repostPostAction } from "@/lib/post.actions";
@@ -1009,12 +1010,9 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                             onClick={(e) => e.stopPropagation()}
                         >
                             {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                            <video
+                            <VideoPlayer
                                 src={post.videos[0]}
-                                className="w-full max-h-[560px] aspect-video object-contain bg-sunken"
-                                controls
-                                playsInline
-                                preload="metadata"
+                                className="w-full max-h-[560px] aspect-video"
                             />
                         </div>
                     )}

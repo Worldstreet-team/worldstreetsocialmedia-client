@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { VideoPlayer } from "@/components/ui/VideoPlayer";
 import Image from "next/image";
 import {
 	Search,
@@ -207,7 +208,7 @@ const Attachment = ({
 					/>
 				</div>
 			) : (
-				<video src={displaySrc} controls className="w-full max-h-64" />
+				<VideoPlayer src={displaySrc} className="w-full max-h-64 aspect-video" />
 			)}
 		</div>
 	);
