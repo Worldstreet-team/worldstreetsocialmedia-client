@@ -8,16 +8,16 @@ import { BrandMark } from "@/components/layout/BrandRitual";
 // Nav uses Phosphor with weight="fill" on the active tab, matching the rail.
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import {
-	Bell,
 	ChatCircleDots,
 	House,
 	MagnifyingGlass,
+	UserCircle,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { BadgedIcon } from "@/components/ui/Badge";
 import { useAtomValue } from "jotai";
 import { unreadMessagesCountAtom } from "@/store/messageCache";
-import { unreadNotificationsCountAtom } from "@/store/ui.atom";
+import { userAtom } from "@/store/user.atom";
 import { useT } from "@/i18n/client";
 
 const navIcon = (Icon: PhosphorIcon) => {
@@ -38,14 +38,14 @@ const CENTER_SLOT = 2;
 const HomeIcon = navIcon(House);
 const SearchIcon = navIcon(MagnifyingGlass);
 const MessageIcon = navIcon(ChatCircleDots);
-const BellIcon = navIcon(Bell);
+const ProfileIcon = navIcon(UserCircle);
 
 export const MobileBottomNav = () => {
 	const t = useT();
 	const pathname = useAppPathname();
 	const [ecosystemOpen, setEcosystemOpen] = useState(false);
 	const unreadMessages = useAtomValue(unreadMessagesCountAtom);
-	const unreadNotifications = useAtomValue(unreadNotificationsCountAtom);
+	const user = useAtomValue(userAtom);
 
 	const navItems = [
 		{
@@ -61,18 +61,19 @@ export const MobileBottomNav = () => {
 			active: pathname.startsWith("/explore"),
 		},
 		{
-			href: "/notifications",
-			icon: BellIcon,
-			label: t("nav.notifications"),
-			active: pathname === "/notifications",
-			badge: unreadNotifications,
-		},
-		{
 			href: "/messages",
 			icon: MessageIcon,
 			label: t("nav.messages"),
 			active: pathname.startsWith("/messages"),
 			badge: unreadMessages,
+		},
+		{
+			// Right end, where a thumb reaches last — you go to your own profile
+			// deliberately, not while skimming.
+			href: user?.username ? `/profile/${user.username}` : "/profile",
+			icon: ProfileIcon,
+			label: t("nav.profile"),
+			active: pathname.startsWith("/profile"),
 		},
 	];
 

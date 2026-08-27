@@ -11,8 +11,6 @@ import clsx from "clsx";
 import {
 	ArrowsIn,
 	ArrowsOut,
-	MagnifyingGlassMinus,
-	MagnifyingGlassPlus,
 	Pause,
 	Play,
 	SpeakerSimpleHigh,
@@ -250,8 +248,11 @@ export function VideoPlayer({
 	const progress = duration > 0 ? (current / duration) * 100 : 0;
 	const bufferedPct = duration > 0 ? (buffered / duration) * 100 : 0;
 
+	// No chip fill per button. Six glass pills in a row inside a feed-width
+	// card read as clutter; the bar is already the glass surface, so the
+	// controls sit on it and only light up on hover.
 	const btn =
-		"flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill glass-chip transition-colors";
+		"flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill glass-ink transition-colors hover:bg-white/10";
 
 	return (
 		<div
@@ -377,7 +378,7 @@ export function VideoPlayer({
 						: "pointer-events-none opacity-0",
 				)}
 			>
-				<div className="flex items-center gap-2 rounded-xl glass-dock backdrop-blur-xl backdrop-saturate-150 glass-ink px-2 py-1.5">
+				<div className="flex items-center gap-1.5 rounded-xl glass-dock backdrop-blur-xl backdrop-saturate-150 glass-ink px-1.5 py-1">
 					<button
 						type="button"
 						onClick={toggle}
@@ -390,10 +391,6 @@ export function VideoPlayer({
 							<Play size={15} weight="fill" />
 						)}
 					</button>
-
-					<span className="shrink-0 font-sans text-[11.5px] tabular-nums glass-ink-dim">
-						{clock(current)}
-					</span>
 
 					{/* track: buffered underneath, played on top */}
 					<div
@@ -409,7 +406,7 @@ export function VideoPlayer({
 						aria-valuemax={Math.round(duration)}
 						aria-valuenow={Math.round(current)}
 						tabIndex={0}
-						className="group/track relative h-6 min-w-0 flex-1 cursor-pointer touch-none"
+						className="group/track relative mx-1 h-6 min-w-0 flex-1 cursor-pointer touch-none"
 					>
 						<span className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 overflow-hidden rounded-pill bg-[#fafaf9]/20">
 							<span
@@ -430,30 +427,12 @@ export function VideoPlayer({
 						/>
 					</div>
 
-					<span className="shrink-0 font-sans text-[11.5px] tabular-nums glass-ink-faint">
-						{clock(duration)}
+					{/* One readout, not two flanking the track. Elapsed is the
+					    number people actually read; the total rides with it. */}
+					<span className="shrink-0 px-0.5 font-sans text-[11.5px] tabular-nums glass-ink-dim">
+						{clock(current)}
+						<span className="glass-ink-faint"> / {clock(duration)}</span>
 					</span>
-
-					{/* Pinch is the real gesture, but it is invisible and a mouse
-					    has no pinch — so the bar carries it too. */}
-					<button
-						type="button"
-						onClick={() => applyZoom(zoom - 0.5)}
-						aria-label="Zoom out"
-						disabled={!zoomed}
-						className={clsx(btn, !zoomed && "opacity-40")}
-					>
-						<MagnifyingGlassMinus size={15} weight="bold" />
-					</button>
-					<button
-						type="button"
-						onClick={() => applyZoom(zoom + 0.5)}
-						aria-label="Zoom in"
-						disabled={zoom >= MAX_ZOOM}
-						className={clsx(btn, zoom >= MAX_ZOOM && "opacity-40")}
-					>
-						<MagnifyingGlassPlus size={15} weight="bold" />
-					</button>
 
 					<button
 						type="button"

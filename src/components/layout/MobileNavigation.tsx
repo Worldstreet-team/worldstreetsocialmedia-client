@@ -25,6 +25,7 @@ import { LanguageMenu } from "@/components/ui/LanguageMenu";
 import { useT } from "@/i18n/client";
 
 import { BrandRitual } from "@/components/layout/BrandRitual";
+import { NotificationsPopover } from "@/components/layout/NotificationsPopover";
 import { FeedHeaderActions } from "@/components/feed/FeedHeaderActions";
 import { unreadMessagesCountAtom } from "@/store/messageCache";
 import {
@@ -120,6 +121,10 @@ export function MobileNavigation() {
 						>
 							<MagnifyingGlass size={20} />
 						</button>
+						{/* Notifications moved UP out of the bottom bar: it is
+						    something you check, not somewhere you navigate, and it
+						    was holding a permanent tab slot for a glance. */}
+						<NotificationsPopover />
 						<FeedHeaderActions compact />
 					</div>
 				</div>
