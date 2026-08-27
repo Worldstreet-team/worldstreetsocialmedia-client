@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback,
+	Fragment,
+} from "react";
 import { VideoPlayer } from "@/components/ui/VideoPlayer";
 import {
 	Search,
@@ -104,6 +106,20 @@ interface Message {
 	/** Present when this message is a reply to a story. */
 	storyRef?: { story: string; thumbnail: string; authorUsername: string };
 	createdAt: string;
+}
+
+/**
+ * "Today" / "Yesterday" / a date. Read months later, a bare "h:mm a" on every
+ * bubble tells you the time of day and nothing about the day.
+ */
+function dayLabel(iso: string) {
+	const d = new Date(iso);
+	const today = new Date();
+	const yday = new Date();
+	yday.setDate(today.getDate() - 1);
+	if (d.toDateString() === today.toDateString()) return "Today";
+	if (d.toDateString() === yday.toDateString()) return "Yesterday";
+	return format(d, d.getFullYear() === today.getFullYear() ? "MMM d" : "MMM d, yyyy");
 }
 
 interface Conversation {
@@ -984,25 +1000,63 @@ export const MessageBox = ({
 						</div>
 					</div>
 
-					<div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-4 sm:p-6 space-y-4 bg-sunken/30">
+					<div className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-sunken/30 px-4 py-4 sm:p-6">
 						{isLoadingMessages && (
 							<div className="text-center text-muted font-sans text-sm">
 								Loading history...
 							</div>
 						)}
-						{messages.map((m) => {
+						{messages.map((m, mi) => {
 							const isMe =
 								m.sender._id === myProfileId || m._id.startsWith("temp-");
+							const prev = messages[mi - 1];
+							const next = messages[mi + 1];
+							// A day separator wherever the calendar turns over, so a
+							// thread read months later still says when things happened.
+							const showDay =
+								!prev ||
+								new Date(prev.createdAt).toDateString() !==
+									new Date(m.createdAt).toDateString();
+							// A run is the same person inside five minutes. Without
+							// this, five quick lines rendered as five separate events,
+							// each with its own timestamp — the visual weight of a
+							// conversation that never happened that way.
+							const sameRunAsPrev =
+								!!prev &&
+								prev.type !== "call" &&
+								(prev.sender._id === m.sender._id ||
+									(isMe && prev._id.startsWith("temp-"))) &&
+								!showDay &&
+								new Date(m.createdAt).getTime() -
+									new Date(prev.createdAt).getTime() <
+									5 * 60 * 1000;
+							const endsRun =
+								!next ||
+								next.type === "call" ||
+								next.sender._id !== m.sender._id ||
+								new Date(next.createdAt).getTime() -
+									new Date(m.createdAt).getTime() >=
+									5 * 60 * 1000 ||
+								new Date(next.createdAt).toDateString() !==
+									new Date(m.createdAt).toDateString();
 							// A call isn't something either side said, so it gets a
 							// centred chip instead of a bubble on one shore.
 							if (m.type === "call") {
 								return <CallLogRow key={m._id} content={m.content} />;
 							}
 							return (
+								<Fragment key={m._id}>
+									{showDay && (
+										<div className="flex justify-center py-2">
+											<span className="rounded-pill bg-raised px-3 py-1 font-sans text-[11px] font-semibold text-muted">
+												{dayLabel(m.createdAt)}
+											</span>
+										</div>
+									)}
 								<div
-									key={m._id}
 									className={clsx(
-										"flex flex-col mb-4",
+										"flex flex-col",
+										sameRunAsPrev ? "mt-0.5" : "mt-4",
 										isMe ? "items-end" : "items-start",
 									)}
 								>
@@ -1076,20 +1130,25 @@ export const MessageBox = ({
 											</p>
 										)}
 									</div>
-									<span className="text-xs text-muted mt-1 flex items-center gap-1 tabular-nums">
-										{format(new Date(m.createdAt), "h:mm a")}
-										{isMe && (
-											<MessageTicks
-												state={tickStateFor({
-													id: m._id,
-													createdAt: m.createdAt,
-													deliveredAt: chat.deliveredAt,
-													readAt: chat.readAt,
-												})}
-											/>
-										)}
-									</span>
+									{/* One stamp per run, on its last line. A time under
+									    every bubble is noise the eye has to step over. */}
+									{endsRun && (
+										<span className="mt-1 flex items-center gap-1 font-sans text-[11px] tabular-nums text-subtle">
+											{format(new Date(m.createdAt), "h:mm a")}
+											{isMe && (
+												<MessageTicks
+													state={tickStateFor({
+														id: m._id,
+														createdAt: m.createdAt,
+														deliveredAt: chat.deliveredAt,
+														readAt: chat.readAt,
+													})}
+												/>
+											)}
+										</span>
+									)}
 								</div>
+								</Fragment>
 							);
 						})}
 						{chat.peerTyping && <TypingIndicator />}
