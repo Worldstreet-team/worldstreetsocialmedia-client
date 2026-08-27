@@ -200,7 +200,7 @@ export async function getViewerTokenAction(streamId: string) {
 	const token = await getToken();
 	try {
 		const res = await axios.get(
-			`${XSTREAM_API_URL}/v1/streams/${streamId}/token`,
+			`${XSTREAM_API_URL}/v1/streams/${streamId}/token?platform=worldspace`,
 			{
 				headers: token ? { Authorization: `Bearer ${token}` } : undefined,
 				timeout: 10_000,

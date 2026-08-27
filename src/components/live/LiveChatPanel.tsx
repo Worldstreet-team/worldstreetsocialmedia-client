@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import clsx from "clsx";
-import { Gift, PaperPlaneTilt } from "@phosphor-icons/react";
+import { Gift, HandWaving, Heart, PaperPlaneTilt } from "@phosphor-icons/react";
 import type { Room } from "livekit-client";
 import { DEFAULT_AVATAR, XSTREAM_API_URL } from "@/const";
 import { useT } from "@/i18n/client";
@@ -16,7 +16,8 @@ export interface ChatMsg {
 	isMod?: boolean;
 	platform?: "xstream" | "worldspace";
 	content: string;
-	type: "text" | "tip" | "reaction";
+	/** "join" and "like" are display-only system rows, never sent. */
+	type: "text" | "tip" | "reaction" | "join" | "like";
 	tipAmount?: string;
 	tipCurrency?: string;
 	emoji?: string;
@@ -128,6 +129,34 @@ export function LiveChatPanel({
 			const handler = (payload: Uint8Array) => {
 				try {
 					const data = JSON.parse(new TextDecoder().decode(payload));
+					// Engagement events render as quiet system rows — the
+					// "X joined" / "X liked" handshake both platforms share.
+					if (data.__evt === "join" && data.username) {
+						append({
+							id: `join-${data.username}-${Date.now()}`,
+							username: String(data.username),
+							avatar: "",
+							platform:
+								data.platform === "socials" || data.platform === "worldspace"
+									? "worldspace"
+									: "xstream",
+							content: "",
+							type: "join",
+							timestamp: timeLabel(),
+						} as ChatMsg);
+						return;
+					}
+					if (data.__evt === "like" && data.username) {
+						append({
+							id: `like-${data.username}-${Date.now()}`,
+							username: String(data.username),
+							avatar: "",
+							content: "",
+							type: "like",
+							timestamp: timeLabel(),
+						} as ChatMsg);
+						return;
+					}
 					if (data.__evt || !data.type || !data.username) return;
 					append({
 						...data,
@@ -300,7 +329,34 @@ export function LiveChatPanel({
 					</p>
 				)}
 				{messages.map((msg) =>
-					msg.type === "tip" ? (
+					msg.type === "join" || msg.type === "like" ? (
+						// System rows: one quiet line, no bubble — the room's
+						// pulse, not someone speaking.
+						<div
+							key={msg.id}
+							className="flex items-center gap-1.5 px-1 py-0.5"
+						>
+							{msg.type === "like" ? (
+								<Heart size={11} weight="fill" className="shrink-0 text-danger" />
+							) : (
+								<HandWaving
+									size={11}
+									weight="fill"
+									className={clsx("shrink-0", inkFaint)}
+								/>
+							)}
+							<span
+								className={clsx("font-sans text-[11.5px] truncate", inkFaint)}
+							>
+								<span className={clsx("font-semibold", inkDim)}>
+									{msg.username}
+								</span>{" "}
+								{msg.type === "like"
+									? t("chat.likedRow")
+									: t("chat.joinedRow")}
+							</span>
+						</div>
+					) : msg.type === "tip" ? (
 						<div
 							key={msg.id}
 							className="flex items-center gap-2 rounded-lg bg-gold/10 px-2.5 py-2"
