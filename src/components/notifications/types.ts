@@ -8,6 +8,13 @@ export interface NotificationSender {
    */
   _id: string;
   userId: string;
+  /**
+   * Whether the VIEWER already follows this sender, answered by the gateway.
+   * The client used to infer it from a session-only atom that seeds empty, so
+   * after any reload it believed you followed nobody and offered "follow back"
+   * for people you had followed months ago.
+   */
+  isFollowing?: boolean;
   firstName?: string;
   lastName?: string;
   username: string;

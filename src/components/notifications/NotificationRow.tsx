@@ -76,6 +76,9 @@ export function NotificationRow({
   const chip = CHIP[type] ?? FALLBACK_CHIP;
   const Glyph = chip.glyph;
   const lead = senders[0];
+  // Server truth first; `followed` is the optimistic session override, so the
+  // button still disappears the instant you press it, before any refetch.
+  const alreadyFollowing = followed || Boolean(lead?.isFollowing);
 
   const href =
     type === "follow"
@@ -195,17 +198,19 @@ export function NotificationRow({
               // mismatch here is why the button never turned to "Aligned".
               if (lead?._id) onFollowBack(lead._id);
             }}
-            disabled={followed}
+            disabled={alreadyFollowing}
             className={clsx(
               "mt-1.5 h-8 w-fit shrink-0 rounded-pill px-3.5 font-sans text-[12px] font-semibold transition-colors",
-              followed
+              alreadyFollowing
                 ? "cursor-default bg-raised text-muted"
                 : "cursor-pointer bg-primary text-page hover:bg-muted",
             )}
           >
             {/* You align with a person; you JOIN a community. Borrowing the
                 community string made an alignment read "Joined". */}
-            {followed ? t("profile.followingState") : t("notif.followBack")}
+            {alreadyFollowing
+              ? t("profile.followingState")
+              : t("notif.followBack")}
           </button>
         )}
       </span>
