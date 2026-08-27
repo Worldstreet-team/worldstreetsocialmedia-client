@@ -73,10 +73,16 @@ export function BrandRitual({
 		<span
 			className={clsx("inline-flex items-center gap-2 min-w-0", className)}
 		>
-			{/* The natural-ratio artwork, not the square one. Squaring pads the
-			    cloud with ~34% empty height, so a `size` of 26 was drawing a
-			    17px cloud — the mark read far smaller than the number implied.
-			    `size` is the cloud's HEIGHT here and the width follows it. */}
+			{/* `unoptimized`: this is a 12KB asset drawn at ~34px, so the responsive
+			    pipeline has nothing to optimise — and it was actively BREAKING the
+			    mark. The generated element sat in the DOM with a valid srcset and
+			    `currentSrc === ""`: the browser never selected a source, so the
+			    logo simply never appeared. Serving the file directly is both
+			    smaller in bytes shipped and, more to the point, reliable.
+
+			    The natural-ratio artwork, not the square one — squaring pads the
+			    cloud with ~34% empty height, so `size` would draw a much smaller
+			    cloud than the number implies. `size` is its HEIGHT here. */}
 			<Image
 				src="/images/worldspace-wordmark.png"
 				alt=""
@@ -84,6 +90,7 @@ export function BrandRitual({
 				height={size}
 				aria-hidden
 				priority
+				unoptimized
 				className="shrink-0 object-contain"
 				style={{ height: size, width: Math.round(size * MARK_RATIO) }}
 			/>

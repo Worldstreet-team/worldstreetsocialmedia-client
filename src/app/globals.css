@@ -655,11 +655,16 @@ html.ws-intro-done .animate-rise {
 .glass-tile:hover {
   background: rgb(255 255 255 / 0.1);
 }
+/* Light mode derives the tile from the INK, not from white. A white-on-white
+   tile (0.6 white on a 0.66-white card) was invisible — the onboarding topic
+   chips read as bare floating text with no hit area, which is exactly what
+   they looked like. Deriving from the text colour means the wash inverts with
+   the theme instead of vanishing into whichever surface it lands on. */
 [data-ws-theme="platform-light"] .glass-tile {
-  background: rgb(255 255 255 / 0.6);
+  background: color-mix(in srgb, var(--ws-text-primary) 6%, transparent);
 }
 [data-ws-theme="platform-light"] .glass-tile:hover {
-  background: rgb(255 255 255 / 0.85);
+  background: color-mix(in srgb, var(--ws-text-primary) 11%, transparent);
 }
 
 /* Selected. Gold rim rather than a gold fill — the DS reserves large gold

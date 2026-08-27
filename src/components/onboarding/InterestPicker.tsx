@@ -62,7 +62,12 @@ export function InterestPicker({
 				/>
 			</div>
 
-			<div className="max-h-[min(360px,42dvh)] overflow-y-auto overscroll-contain pr-1 space-y-5 text-left">
+			{/* The cap is a HEIGHT BUDGET, not a taste call: the card also carries
+			    a lockup, progress, heading, caption, search field, count and two
+			    buttons. At 42dvh the whole thing overran the viewport and pushed
+			    "Create profile" below the fold — the one control the step exists
+			    to reach. 32dvh keeps the CTA on screen down to a laptop. */}
+			<div className="max-h-[min(300px,32dvh)] overflow-y-auto overscroll-contain pr-1 space-y-5 text-left">
 				{groups.map(({ vertical, items }) => (
 					<section key={vertical.id} className="space-y-2">
 						<div className="px-0.5">
