@@ -25,16 +25,17 @@ import { SafeAvatar } from "@/components/ui/SafeAvatar";
 let consumedStorySignal: number | null = null;
 
 /** Sustained downward travel before the rail gets out of the way. */
-const COLLAPSE_AFTER_DOWN_PX = 48;
+const COLLAPSE_AFTER_DOWN_PX = 120;
 /**
  * Sustained UPWARD travel before the rail comes back. Deliberately large and
  * deliberately not symmetric with the collapse distance: reappearing pushes
  * the whole column down under the reader's eyes, so it must be something they
  * clearly meant. A flick, a rubber-band bounce or a trackpad tremor used to
- * clear the old 12px threshold and the rail would pop in mid-sentence. Roughly
- * two deliberate swipes back up.
+ * clear the old 12px threshold and the rail would pop in mid-sentence. This is
+ * several deliberate swipes back up — the rail is not urgent, and reaching the
+ * top brings it back regardless.
  */
-const REVEAL_AFTER_UP_PX = 160;
+const REVEAL_AFTER_UP_PX = 280;
 /** Below this the rail is simply part of the top of the page. */
 const NEAR_TOP_PX = 64;
 /** Ignore sub-pixel and jitter deltas, small enough that real travel still accumulates. */
@@ -76,7 +77,9 @@ function useCollapseOnScrollDown() {
 			collapsedRef.current = next;
 			downTravel = 0;
 			upTravel = 0;
-			settleUntil = performance.now() + 400; // > the 320ms motion-slow beat
+			// Must outlast the motion-slow beat the wrapper animates on, or the
+			// reflow it causes is read as reader travel and toggles us back.
+			settleUntil = performance.now() + 460;
 			setCollapsed(next);
 		};
 
@@ -192,9 +195,12 @@ export function StoriesRail() {
 		    content's own height, so nothing has to know how tall the rail is
 		    (and the two shapes are different heights). The border and padding
 		    live inside, so a collapsed rail leaves no stray hairline behind. */}
+		{/* motion-slow, not the 120ms default: this moves the whole column
+		    under the reader, which at the fast tier reads as a snap. It is a
+		    page section revealing, which is exactly what the slow tier is for. */}
 		<div
 			className={clsx(
-				"grid transition-[grid-template-rows,opacity]",
+				"grid transition-[grid-template-rows,opacity] duration-[var(--ws-motion-slow)]",
 				collapsed ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100",
 			)}
 			aria-hidden={collapsed}

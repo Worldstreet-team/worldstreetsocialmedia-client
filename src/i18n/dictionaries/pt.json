@@ -700,5 +700,7 @@
   "profile.followingState": "Seguindo",
   "post.forSale.preview": "Ver como comprador",
   "post.forSale.exitPreview": "Sair da pré-visualização",
-  "post.translated": "Traduzido"
+  "post.translated": "Traduzido",
+  "rail.spaces.prev": "Space anterior",
+  "rail.spaces.next": "Próximo space"
 }

@@ -4,9 +4,9 @@ import clsx from "clsx";
 import { motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { useAtomValue } from "jotai";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { UserBadges } from "@/components/ui/UserBadges";
-import { MicrophoneStage } from "@phosphor-icons/react";
+import { CaretLeft, CaretRight, MicrophoneStage } from "@phosphor-icons/react";
 import { SectionHead } from "@/components/layout/SectionHead";
 import { EqBars, spaceBackground } from "@/components/voice/SpaceCard";
 import { useRealtime } from "@/components/providers/RealtimeProvider";
@@ -166,6 +166,10 @@ function SpaceRow({ space, live }: { space: Space; live: boolean }) {
  * grammar — same eyebrow, same ringed avatar, same row hover — so it reads
  * as part of the rail rather than a widget bolted on.
  *
+ * A CAROUSEL rather than a stack: five stacked rooms ate most of the rail's
+ * height and pushed everything below it off-screen. One room at a time, paged
+ * by hand, so the section costs one row however many rooms are running.
+ *
  * Absent entirely when there is nothing live and nothing scheduled; an
  * empty section is worse than no section.
  */
@@ -175,6 +179,10 @@ export function SpacesRail({ delay = 210 }: { delay?: number }) {
 	const refreshTick = useAtomValue(voiceRefreshAtom);
 	const [live, setLive] = useState<Space[]>([]);
 	const [upcoming, setUpcoming] = useState<Space[]>([]);
+	const trackRef = useRef<HTMLDivElement>(null);
+	const [page, setPage] = useState(0);
+	// Smooth paging is motion; honour the reader's setting like everything else.
+	const reduced = useReducedMotion();
 
 	const load = useCallback(async () => {
 		const res = await getSpacesAction();
@@ -199,7 +207,54 @@ export function SpacesRail({ delay = 210 }: { delay?: number }) {
 		return () => channel.unsubscribe(onEvent);
 	}, [client, load]);
 
-	if (live.length === 0 && upcoming.length === 0) return null;
+	// A room ending can shorten the list under a reader parked on the last
+	// page, which would leave the counter reading "3/2" and both arrows dead.
+	const slideCount = live.length + upcoming.length;
+	useEffect(() => {
+		setPage((current) => Math.max(0, Math.min(current, slideCount - 1)));
+	}, [slideCount]);
+
+	// Live rooms first, then scheduled — one flat list so paging is linear.
+	const slides = [
+		...live.map((space) => ({ space, live: true })),
+		...upcoming.map((space) => ({ space, live: false })),
+	];
+
+	// Measure a real slide rather than the scroller: the track carries px-3, so
+	// clientWidth is 24px wider than a slide and paging by it drifts a little
+	// further out of alignment with every press.
+	const slideWidth = () => {
+		const el = trackRef.current;
+		if (!el) return 1;
+		const first = el.firstElementChild as HTMLElement | null;
+		return first?.offsetWidth || el.clientWidth || 1;
+	};
+
+	// The scroller is the source of truth for which page we are on: it also
+	// moves under trackpad swipes and keyboard, so reading it back keeps the
+	// counter and arrows honest however the reader got there.
+	const syncPage = () => {
+		const el = trackRef.current;
+		if (!el) return;
+		setPage(Math.round(el.scrollLeft / slideWidth()));
+	};
+
+	const goTo = (index: number) => {
+		const el = trackRef.current;
+		if (!el) return;
+		const clamped = Math.max(0, Math.min(index, slides.length - 1));
+		el.scrollTo({
+			left: clamped * slideWidth(),
+			behavior: reduced ? "auto" : "smooth",
+		});
+	};
+
+	if (slides.length === 0) return null;
+
+	const atStart = page <= 0;
+	const atEnd = page >= slides.length - 1;
+	const arrow =
+		"flex h-6 w-6 items-center justify-center rounded-pill text-subtle transition-colors hover:bg-raised hover:text-primary disabled:pointer-events-none disabled:opacity-30";
 
 	return (
 		<section className="animate-rise" style={{ animationDelay: `${delay}ms` }}>
@@ -208,20 +263,54 @@ export function SpacesRail({ delay = 210 }: { delay?: number }) {
 				label={t("rail.spaces")}
 				live={live.length > 0}
 				trailing={
-					<Link
-						href="/voice"
-						className="font-sans text-[11px] font-semibold text-gold hover:underline"
-					>
-						{t("rail.seeAll")}
-					</Link>
+					<span className="flex items-center gap-1">
+						{/* Controls only exist when there is somewhere to go. */}
+						{slides.length > 1 && (
+							<>
+								<button
+									type="button"
+									onClick={() => goTo(page - 1)}
+									disabled={atStart}
+									aria-label={t("rail.spaces.prev")}
+									className={arrow}
+								>
+									<CaretLeft size={13} weight="bold" />
+								</button>
+								<span className="font-sans text-[11px] tabular-nums text-subtle">
+									{page + 1}/{slides.length}
+								</span>
+								<button
+									type="button"
+									onClick={() => goTo(page + 1)}
+									disabled={atEnd}
+									aria-label={t("rail.spaces.next")}
+									className={arrow}
+								>
+									<CaretRight size={13} weight="bold" />
+								</button>
+							</>
+						)}
+						<Link
+							href="/voice"
+							className="ml-1 font-sans text-[11px] font-semibold text-gold hover:underline"
+						>
+							{t("rail.seeAll")}
+						</Link>
+					</span>
 				}
 			/>
-			<div className="flex flex-col gap-2 px-3">
-				{live.map((space) => (
-					<SpaceRow key={space.id} space={space} live />
-				))}
-				{upcoming.map((space) => (
-					<SpaceRow key={space.id} space={space} live={false} />
+			{/* One room per page. Snap keeps a hand-swipe landing on a room
+			    rather than between two, and the scroller stays the source of
+			    truth for `page`. */}
+			<div
+				ref={trackRef}
+				onScroll={syncPage}
+				className="flex snap-x snap-mandatory overflow-x-auto px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+			>
+				{slides.map(({ space, live: isLive }) => (
+					<div key={space.id} className="w-full shrink-0 snap-start">
+						<SpaceRow space={space} live={isLive} />
+					</div>
 				))}
 			</div>
 		</section>

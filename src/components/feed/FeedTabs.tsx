@@ -2,14 +2,12 @@
 
 import clsx from "clsx";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom } from "jotai";
 import { Clock, Sparkle, Users, UsersThree } from "@phosphor-icons/react";
 import { feedTabAtom } from "@/store/ui.atom";
-import { userAtom } from "@/store/user.atom";
 import { getCommunitiesAction } from "@/lib/community.actions";
-import { CATEGORIES, LEGACY_CATEGORY_ALIASES } from "@/data/categories";
 import { useT } from "@/i18n/client";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
@@ -20,19 +18,16 @@ interface CommunityChip {
 	avatar?: string;
 }
 
-const CATEGORY_BY_ID = new Map(CATEGORIES.map((c) => [c.id, c]));
-
 /**
  * The feed bar: rounded chips, the CURRENT tab pinned left and never
- * scrolling away. The scroller behind it carries the other timeline, The
- * Street, Space Voice — then the communities you have actually JOINED
- * (name + avatar, not a generic link) and your interest categories, the
- * same vector the ranking algorithm personalizes on.
+ * scrolling away. The scroller behind it carries the other two timelines and
+ * then the communities you have actually JOINED (name + avatar, not a generic
+ * link). Nothing else — destinations and topic browsing both belong
+ * elsewhere, and anything extra here buries the communities.
  */
 export function FeedTabs() {
 	const t = useT();
 	const [tab, setTab] = useAtom(feedTabAtom);
-	const user = useAtomValue(userAtom);
 	const [myCommunities, setMyCommunities] = useState<CommunityChip[]>([]);
 
 	useEffect(() => {
@@ -56,24 +51,6 @@ export function FeedTabs() {
 			cancelled = true;
 		};
 	}, []);
-
-	// Interest ids → labels (legacy ids migrated through the alias table).
-	const categoryChips = useMemo(() => {
-		const seen = new Set<string>();
-		const out: { id: string; label: string }[] = [];
-		for (const raw of user?.interests ?? []) {
-			// Old profiles stored display labels ("Technology"); the alias
-			// table keys are lowercase, current ids are lowercase kebab.
-			const lower = raw.toLowerCase();
-			const id = LEGACY_CATEGORY_ALIASES[lower] ?? lower;
-			if (seen.has(id)) continue;
-			seen.add(id);
-			const cat = CATEGORY_BY_ID.get(id);
-			if (cat) out.push({ id: cat.id, label: cat.label });
-			if (out.length >= 6) break;
-		}
-		return out;
-	}, [user?.interests]);
 
 	const chip =
 		"relative flex items-center gap-1.5 h-9 px-3.5 rounded-pill font-sans text-[13.5px] whitespace-nowrap transition-colors shrink-0";
@@ -169,20 +146,11 @@ export function FeedTabs() {
 					</Link>
 				)}
 
- {/* Interest categories the algorithm's personalization axes,
-				    surfaced. Tap one to explore it. */}
-				{categoryChips.length > 0 && (
-					<span className="h-5 w-px shrink-0 bg-hairline/60" />
-				)}
-				{categoryChips.map((c) => (
-					<Link
-						key={c.id}
-						href={`/explore?q=${encodeURIComponent(c.label)}`}
-						className={clsx(chip, idle)}
-					>
-						{c.label}
-					</Link>
-				))}
+				{/* Interest-category chips used to trail the communities here.
+				    They made the row long enough to always need scrolling and
+				    pushed the communities — the thing people actually navigate
+				    to — out of sight. Browsing by topic still lives on Explore,
+				    where it belongs. */}
 			</div>
 		</div>
 	);

@@ -166,6 +166,8 @@
   "rail.spaces": "Space Voice",
   "rail.spaces.listening": "listening",
   "rail.spaces.going": "going",
+  "rail.spaces.prev": "Previous space",
+  "rail.spaces.next": "Next space",
   "rail.stories": "Stories",
   "composer.media": "Media",
   "composer.emoji": "Emoji",
