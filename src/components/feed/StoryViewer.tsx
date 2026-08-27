@@ -2,9 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Download, Send, Volume2, VolumeX, X } from "lucide-react";
+import clsx from "clsx";
+import { Download, Eye, Send, Volume2, VolumeX, X } from "lucide-react";
 
-import { replyToStoryAction, viewStoryAction } from "@/lib/stories.actions";
+import {
+	getStoryViewersAction,
+	replyToStoryAction,
+	viewStoryAction,
+} from "@/lib/stories.actions";
+import { UserBadges } from "@/components/ui/UserBadges";
 import { StoryPaywall } from "@/components/feed/StoryPaywall";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { useAtomValue } from "jotai";
@@ -85,6 +91,25 @@ export function StoryViewer({
 	const [unlockedIds, setUnlockedIds] = useState<Set<string>>(
 		() => new Set(entry.stories.filter((s) => s.unlocked).map((s) => s.id)),
 	);
+	/**
+	 * Who watched this story. The gateway has served this since stories
+	 * shipped and `getStoryViewersAction` existed — nothing ever called it, so
+	 * the answer to "who saw my story" was unreachable from the UI.
+	 * Owner-only: the endpoint 403s anyone who is not the author.
+	 */
+	const [viewers, setViewers] = useState<
+		{
+			id: string;
+			username: string;
+			avatar: string;
+			isVerified: boolean;
+			name: string;
+		}[]
+	>([]);
+	const [viewsCount, setViewsCount] = useState(0);
+	const [viewersOpen, setViewersOpen] = useState(false);
+	const [viewersLoading, setViewersLoading] = useState(false);
+
 	const [paywall, setPaywall] = useState<null | { fromScreenshot: boolean }>(
 		null,
 	);
@@ -105,6 +130,25 @@ export function StoryViewer({
 		},
 		[entry.stories.length, onClose],
 	);
+
+	// Your own story: load who has seen it. Per slide, because each one has
+	// its own audience — the count on slide 3 is not the count on slide 1.
+	useEffect(() => {
+		if (!entry.isSelf || !story) return;
+		let cancelled = false;
+		setViewers([]);
+		setViewsCount(0);
+		setViewersLoading(true);
+		void getStoryViewersAction(story.id).then((res) => {
+			if (cancelled) return;
+			setViewers(res.viewers);
+			setViewsCount(res.viewsCount);
+			setViewersLoading(false);
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, [entry.isSelf, story?.id]);
 
 	useEffect(() => {
 		if (!story) return;
@@ -399,6 +443,107 @@ export function StoryViewer({
 						className="absolute inset-y-0 right-0 w-2/3 z-10 cursor-pointer"
 						onClick={() => advance(1)}
 					/>
+
+					{/* Your own story gets the audience where the reply bar would be
+					    — the bottom strip is otherwise dead space on your own
+					    slides, and "who saw this" is the only thing you open your
+					    own story to find out. */}
+					{entry.isSelf && (
+						<div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-page via-page/80 to-transparent px-3 pb-3 pt-6">
+							<button
+								type="button"
+								onClick={() => viewsCount > 0 && setViewersOpen(true)}
+								disabled={viewsCount === 0}
+								className={clsx(
+									"flex h-11 w-full items-center justify-center gap-2 rounded-pill font-sans text-[14px] font-medium transition-colors",
+									viewsCount > 0
+										? "cursor-pointer bg-page/60 text-primary hover:bg-raised"
+										: "text-subtle",
+								)}
+							>
+								<Eye className="h-[18px] w-[18px]" />
+								{viewersLoading ? (
+									<span className="text-muted">{t("story.viewersLoading")}</span>
+								) : (
+									<>
+										{/* tabular-nums: a count that changes as people watch. */}
+										<span className="tabular-nums">{viewsCount}</span>
+										<span>
+											{viewsCount === 1
+												? t("story.viewer")
+												: t("story.viewers")}
+										</span>
+									</>
+								)}
+							</button>
+						</div>
+					)}
+
+					{/* The list itself. A sheet rather than a route: you are mid-story
+					    and must come back to it, which a navigation would break. */}
+					<AnimatePresence>
+						{viewersOpen && (
+							<motion.div
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
+								exit={{ opacity: 0 }}
+								transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+								className="absolute inset-0 z-30 flex flex-col justify-end"
+							>
+								<button
+									type="button"
+									aria-label={t("fab.close")}
+									onClick={() => setViewersOpen(false)}
+									className="absolute inset-0 cursor-default bg-scrim"
+								/>
+								<motion.div
+									initial={{ y: 24 }}
+									animate={{ y: 0 }}
+									exit={{ y: 24 }}
+									transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+									className="relative max-h-[62%] overflow-y-auto overscroll-contain rounded-t-xl bg-surface pb-3"
+								>
+									<div className="sticky top-0 flex items-center gap-2 bg-surface px-4 pb-2 pt-4">
+										<Eye className="h-4 w-4 text-muted" />
+										<span className="font-sans text-[14px] font-semibold text-primary">
+											<span className="tabular-nums">{viewsCount}</span>{" "}
+											{viewsCount === 1 ? t("story.viewer") : t("story.viewers")}
+										</span>
+									</div>
+									{viewers.map((v) => (
+										<a
+											key={v.id}
+											href={`/profile/${v.username}`}
+											className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-raised"
+										>
+											<span className="relative h-9 w-9 shrink-0 overflow-hidden rounded-pill bg-raised">
+												<SafeAvatar src={v.avatar} />
+											</span>
+											<span className="min-w-0 flex-1">
+												<span className="flex items-center gap-1">
+													<span className="truncate font-sans text-[14px] font-semibold text-primary">
+														{v.name || v.username}
+													</span>
+													<UserBadges isVerified={v.isVerified} size={13} />
+												</span>
+												<span className="block truncate font-sans text-[12.5px] text-muted">
+													@{v.username}
+												</span>
+											</span>
+										</a>
+									))}
+									{/* The count can exceed the list: viewers is a capped
+									    populate, and an account deleted since watching leaves
+									    a view with nobody to show. */}
+									{viewers.length === 0 && (
+										<p className="px-4 py-6 text-center font-sans text-[13px] text-subtle">
+											{t("story.viewersEmpty")}
+										</p>
+									)}
+								</motion.div>
+							</motion.div>
+						)}
+					</AnimatePresence>
 
 					{/* reply bar: a DM in place. Not shown on your own stories. */}
 					{!entry.isSelf && (

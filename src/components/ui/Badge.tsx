@@ -25,6 +25,16 @@ const BASE_COUNT =
 
 const BASE_DOT = "pointer-events-none inline-block h-2 w-2 rounded-pill";
 
+/**
+ * `danger` is the DEFAULT (owner ruling 2026-08-27, via Greg): an unread badge
+ * is an alert, not a brand moment, and red is what a count on a bell means
+ * everywhere else on a phone. It was `brand`, which the cyan rebrand turned
+ * into a cyan dot on a cyan-accented nav — legible, but it stopped reading as
+ * "you have something waiting".
+ *
+ * This is also why gold/brand stays reserved: the one place it appears on the
+ * nav is the ACTIVE tab, so a brand-coloured badge competed with it.
+ */
 const TONE: Record<BadgeTone, string> = {
   brand: "bg-brand text-brand-on",
   danger: "bg-danger text-page",
@@ -45,7 +55,7 @@ export function Badge({
   count,
   dot = false,
   max = 99,
-  tone = "brand",
+  tone = "danger",
   ring = true,
   label,
   className,
