@@ -33,7 +33,7 @@ interface CallContextType extends CallState {
 
 const CallContext = createContext<CallContextType | null>(null);
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || BACKEND_URL;
+const API_URL = BACKEND_URL;
 
 export const useCall = () => {
 	const context = useContext(CallContext);

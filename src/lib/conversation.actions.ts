@@ -4,7 +4,7 @@ import { BACKEND_URL } from "@/const";
 import { auth } from "@clerk/nextjs/server";
 import axios from "axios";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || BACKEND_URL;
+const API_URL = BACKEND_URL;
 
 export async function startConversationAction(recipientId: string) {
 	try {

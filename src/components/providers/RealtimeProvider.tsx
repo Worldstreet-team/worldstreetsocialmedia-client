@@ -11,7 +11,7 @@ import {
 	createContext,
 	useContext,
 } from "react";
-import { BACKEND_URL } from "@/const";
+import { BACKEND_ORIGIN } from "@/const";
 
 interface RealtimeContextType {
 	isConnected: boolean;
@@ -29,9 +29,7 @@ export default function RealtimeProvider({ children }: PropsWithChildren) {
 	const { user, isLoaded } = useUser();
 	const [client, setClient] = useState<Ably.Realtime | null>(null);
 
-	const API_URL =
-		(process.env.NEXT_PUBLIC_API_URL || BACKEND_URL).replace(/\/api\/?$/, "") ||
-		BACKEND_URL;
+	const API_URL = BACKEND_ORIGIN;
 
 	useEffect(() => {
 		if (!isLoaded || !user) return;
