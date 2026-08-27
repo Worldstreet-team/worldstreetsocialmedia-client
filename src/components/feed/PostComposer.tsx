@@ -141,14 +141,43 @@ const CharacterRing = ({ length }: { length: number }) => {
  * session. UX-only — the gateway 403s a non-Gold sale regardless; this just
  * keeps the toggle out of composers it would only disappoint.
  */
-let canSellPromise: Promise<boolean> | null = null;
-function fetchCanSell(): Promise<boolean> {
-	canSellPromise ??= getSubscriptionAction()
+/** Duration of a picked video, from the metadata the browser already reads. */
+function readVideoDuration(file: File): Promise<number | null> {
+	return new Promise((resolve) => {
+		const url = URL.createObjectURL(file);
+		const el = document.createElement("video");
+		el.preload = "metadata";
+		el.onloadedmetadata = () => {
+			URL.revokeObjectURL(url);
+			resolve(Number.isFinite(el.duration) ? el.duration : null);
+		};
+		el.onerror = () => {
+			URL.revokeObjectURL(url);
+			resolve(null);
+		};
+		el.src = url;
+	});
+}
+
+/** The composer's slice of this account's entitlements. One request per page
+ *  load, shared by every composer instance. */
+let limitsPromise: Promise<{
+	canSell: boolean;
+	videoMaxSeconds: number | null;
+}> | null = null;
+function fetchComposerLimits() {
+	limitsPromise ??= getSubscriptionAction()
 		.then((res) =>
-			res.success ? Boolean(res.data.entitlements?.canSellPosts) : false,
+			res.success
+				? {
+						canSell: Boolean(res.data.entitlements?.canSellPosts),
+						videoMaxSeconds:
+							res.data.entitlements?.videoMaxSeconds ?? null,
+					}
+				: { canSell: false, videoMaxSeconds: null },
 		)
-		.catch(() => false);
-	return canSellPromise;
+		.catch(() => ({ canSell: false, videoMaxSeconds: null }));
+	return limitsPromise;
 }
 
 export const PostComposer = ({
@@ -178,10 +207,14 @@ export const PostComposer = ({
 	// keeps the button honest.
 	const [selling, setSelling] = useState(false);
 	const [canSell, setCanSell] = useState(false);
+	const [videoSeconds, setVideoSeconds] = useState<number | null>(null);
+	const [videoLimit, setVideoLimit] = useState<number | null>(null);
 	useEffect(() => {
 		let cancelled = false;
-		fetchCanSell().then((ok) => {
-			if (!cancelled) setCanSell(ok);
+		fetchComposerLimits().then((limits) => {
+			if (cancelled) return;
+			setCanSell(limits.canSell);
+			setVideoLimit(limits.videoMaxSeconds);
 		});
 		return () => {
 			cancelled = true;
@@ -462,6 +495,19 @@ export const PostComposer = ({
 					if (fileInputRef.current) fileInputRef.current.value = "";
 					return;
 				}
+				// Video length is a tier perk, so the gateway has to be told how
+				// long this clip is. Measured here because the browser already
+				// decodes the metadata for the preview; the failure path leaves
+				// it undefined and the gateway rejects rather than guesses.
+				void readVideoDuration(video).then((secs) => {
+					setVideoSeconds(secs);
+					if (secs && videoLimit && secs > videoLimit) {
+						toast(
+							`Your plan allows videos up to ${videoLimit}s — this one is ${Math.round(secs)}s`,
+							{ type: "error" },
+						);
+					}
+				});
 				setMediaItems([
 					{
 						url: URL.createObjectURL(video),
@@ -562,6 +608,9 @@ export const PostComposer = ({
 			mediaItems.forEach((item) => {
 				if (item.type === "video") {
 					formData.append("video", item.file);
+					if (videoSeconds) {
+						formData.append("videoDurationSeconds", String(Math.round(videoSeconds)));
+					}
 				} else {
 					formData.append("images", item.file);
 				}

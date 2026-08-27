@@ -29,6 +29,8 @@ export interface SubscriptionState {
 		postCharBudget: number;
 		mediaSlots: number;
 		creatorAnalytics: boolean;
+		/** Seconds of video this tier may post. */
+		videoMaxSeconds?: number;
 		tier?: MembershipTier | null;
 		vividCreditGrant?: number;
 		/** Gold only: may list posts for sale. */
