@@ -87,3 +87,9 @@ export const searchSeedAtom = atom("");
  * whichever copy is showing renders what the other one fetched.
  */
 export const storyRailAtom = atom<any[]>([]);
+
+/**
+ * Profile ids currently online, from the global presence channel.
+ * A Set because every consumer asks "is this one id in there?".
+ */
+export const onlineIdsAtom = atom<Set<string>>(new Set<string>());

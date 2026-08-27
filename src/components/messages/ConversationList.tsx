@@ -2,6 +2,7 @@
 
 import clsx from "clsx";
 import { useMemo } from "react";
+import { useAtomValue } from "jotai";
 import {
 	Camera,
 	MicrophoneStage,
@@ -15,6 +16,7 @@ import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { useT } from "@/i18n/client";
 import { formatTimeAgo } from "@/lib/utils";
+import { onlineIdsAtom } from "@/store/ui.atom";
 
 export interface ConversationRowUser {
 	_id: string;
@@ -89,6 +91,7 @@ export function ConversationList({
 	onOpen: (conv: ConversationRow) => void;
 }) {
 	const t = useT();
+	const online = useAtomValue(onlineIdsAtom);
 
 	// Name, handle AND the last line. Searching messages by the words you
 	// remember from them is the whole point of a search box in an inbox; this
@@ -183,6 +186,14 @@ export function ConversationList({
 							<span className="relative block h-12 w-12 overflow-hidden rounded-pill bg-raised">
 								<SafeAvatar src={u.avatar} />
 							</span>
+							{/* Ringed in the page colour so the dot reads as ON the
+							    avatar rather than floating beside it. */}
+							{online.has(u._id) && (
+								<span
+									aria-label="Online"
+									className="absolute bottom-0 right-0 h-3 w-3 rounded-pill bg-success ring-2 ring-page"
+								/>
+							)}
 							<Badge
 								count={conv.unreadCount}
 								ring

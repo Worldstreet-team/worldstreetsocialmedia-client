@@ -23,6 +23,7 @@ import GlobalMessageListener from "@/components/providers/GlobalMessageListener"
 import { CommandPalette } from "@/components/ui/CommandPalette";
 import { SearchWindow } from "@/components/search/SearchWindow";
 import { MediaGuard } from "@/components/providers/MediaGuard";
+import { PresenceSync } from "@/components/providers/PresenceSync";
 import { WelcomeTour } from "@/components/ui/WelcomeTour";
 import { PremiumSheet } from "@/components/premium/PremiumSheet";
 import { CreateFab } from "@/components/ui/CreateFab";
@@ -204,6 +205,7 @@ export default async function RootLayout({
                                         <CommandPalette />
                                         <SearchWindow />
                                         <MediaGuard />
+                                        <PresenceSync />
                                         <WelcomeTour />
                                         <PremiumSheet />
                                         <CreateFab />

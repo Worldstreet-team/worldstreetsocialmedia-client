@@ -50,6 +50,8 @@ import { BACKEND_ORIGIN } from "@/const";
 
 const API_URL = BACKEND_ORIGIN;
 import { useAtom, useSetAtom } from "jotai";
+import { useAtomValue } from "jotai";
+import { onlineIdsAtom } from "@/store/ui.atom";
 import { activeConversationIdAtom, messageCacheAtom, unreadMessagesCountAtom } from "@/store/messageCache";
 import NewConversationModal from "./NewConversationModal";
 
@@ -282,6 +284,10 @@ export const MessageBox = ({
 	// The header count is the sum of the rows, derived — never its own state.
 	// A second copy of a number that is already on screen is a number that
 	// will disagree with it.
+	// Global presence first, thread presence second. The per-conversation set
+	// only contains people who have THIS thread open, so on its own it read
+	// "offline" for someone plainly using the app in another tab.
+	const onlineIds = useAtomValue(onlineIdsAtom);
 	const totalUnread = conversations.reduce(
 		(n, c) => n + (c.unreadCount || 0),
 		0,
@@ -776,6 +782,10 @@ export const MessageBox = ({
 		conversationId: activeConversation?._id ?? null,
 		myProfileId: myProfileId ?? null,
 	});
+	const peerOnline =
+		chat.peerOnline ||
+		(!!activeConversation?.otherParticipant?._id &&
+			onlineIds.has(activeConversation.otherParticipant._id));
 	const chatRef = useRef(chat);
 	chatRef.current = chat;
 
@@ -903,7 +913,7 @@ export const MessageBox = ({
 								</h2>
 								{chat.peerTyping ? (
 									<p className="text-xs text-gold truncate">typing…</p>
-								) : chat.peerOnline ? (
+								) : peerOnline ? (
 									<p className="flex items-center gap-1.5 text-xs text-muted truncate">
 										<span className="h-1.5 w-1.5 shrink-0 rounded-pill bg-success" />
 										Online
