@@ -37,7 +37,11 @@ const BASE_DOT = "pointer-events-none inline-block h-2 w-2 rounded-pill";
  */
 const TONE: Record<BadgeTone, string> = {
   brand: "bg-brand text-brand-on",
-  danger: "bg-danger text-page",
+  /* White, not `text-page`. On dark, page ink is near-black on red — which is
+     legible but reads as a warning chip rather than a notification count. Every
+     platform draws this as white on red, and it is the same white in both
+     themes because the badge fill does not change with the theme. */
+  danger: "bg-danger text-white",
   neutral: "bg-raised text-primary",
 };
 

@@ -1,9 +1,6 @@
 import clsx from "clsx";
 import Image from "next/image";
 
-/** Intrinsic aspect of the cloud artwork (389x256). */
-const MARK_RATIO = 389 / 256;
-
 /**
  * The W on its own, drawing itself on the same 5.2s track as the full lockup.
  *
@@ -73,26 +70,38 @@ export function BrandRitual({
 		<span
 			className={clsx("inline-flex items-center gap-2 min-w-0", className)}
 		>
-			{/* `unoptimized`: this is a 12KB asset drawn at ~34px, so the responsive
-			    pipeline has nothing to optimise — and it was actively BREAKING the
-			    mark. The generated element sat in the DOM with a valid srcset and
-			    `currentSrc === ""`: the browser never selected a source, so the
-			    logo simply never appeared. Serving the file directly is both
-			    smaller in bytes shipped and, more to the point, reliable.
+			{/* TWO cuts, swapped by CSS rather than by JS. The difference is the
+			    glow under the cloud: the dark cut carries a WHITE glow and the
+			    light cut a BLACK shadow, so each is invisible on the other's
+			    ground. Reading the theme in JS would need the theme before first
+			    paint, which is a hydration mismatch waiting to happen; a CSS
+			    swap just works, including during SSR.
 
-			    The natural-ratio artwork, not the square one — squaring pads the
-			    cloud with ~34% empty height, so `size` would draw a much smaller
-			    cloud than the number implies. `size` is its HEIGHT here. */}
+			    `unoptimized`: ~13KB drawn at ~34px, so the responsive pipeline
+			    has nothing to optimise — and it previously BROKE the mark, which
+			    sat in the DOM with a valid srcset and `currentSrc === ""`, so the
+			    logo never appeared at all. */}
 			<Image
-				src="/images/worldspace-wordmark.png"
+				src="/images/worldspace-mark-dark.png"
 				alt=""
-				width={Math.round(size * MARK_RATIO)}
+				width={size}
 				height={size}
 				aria-hidden
 				priority
 				unoptimized
-				className="shrink-0 object-contain"
-				style={{ height: size, width: Math.round(size * MARK_RATIO) }}
+				className="shrink-0 object-contain [[data-ws-theme='platform-light']_&]:hidden"
+				style={{ height: size, width: size }}
+			/>
+			<Image
+				src="/images/worldspace-mark-light.png"
+				alt=""
+				width={size}
+				height={size}
+				aria-hidden
+				priority
+				unoptimized
+				className="hidden shrink-0 object-contain [[data-ws-theme='platform-light']_&]:block"
+				style={{ height: size, width: size }}
 			/>
 
 			{eyebrow ? (
