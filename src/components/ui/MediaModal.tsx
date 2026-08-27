@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { OverlayHeader, useOverlayDismiss } from "@/components/ui/Overlay";
 
 export interface MediaItem {
 	url: string;
@@ -16,6 +17,14 @@ interface MediaModalProps {
 	initialIndex?: number;
 }
 
+/**
+ * The DM lightbox — images and video, full-bleed.
+ *
+ * Deliberately NOT an `OverlayPanel`: full-bleed media is not a plate, and it
+ * needs an opaque ground rather than the grammar's 50% wash. It does take the
+ * grammar's close chip (`OverlayHeader`) and `useOverlayDismiss` for Escape
+ * and the scroll lock; the arrow keys stay local.
+ */
 export default function MediaModal({
 	isOpen,
 	onClose,
@@ -24,16 +33,10 @@ export default function MediaModal({
 }: MediaModalProps) {
 	const [currentIndex, setCurrentIndex] = useState(initialIndex);
 
+	useOverlayDismiss(isOpen, onClose);
+
 	useEffect(() => {
-		if (isOpen) {
-			setCurrentIndex(initialIndex);
-			document.body.style.overflow = "hidden"; // Prevent background scrolling
-		} else {
-			document.body.style.overflow = "unset";
-		}
-		return () => {
-			document.body.style.overflow = "unset";
-		};
+		if (isOpen) setCurrentIndex(initialIndex);
 	}, [isOpen, initialIndex]);
 
 	const handleNext = useCallback(
@@ -55,14 +58,13 @@ export default function MediaModal({
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (!isOpen) return;
-			if (e.key === "Escape") onClose();
 			if (e.key === "ArrowRight") handleNext();
 			if (e.key === "ArrowLeft") handlePrev();
 		};
 
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [isOpen, onClose, handleNext, handlePrev]);
+	}, [isOpen, handleNext, handlePrev]);
 
 	if (!isOpen) return null;
 
@@ -72,6 +74,7 @@ export default function MediaModal({
 		<AnimatePresence>
 			{isOpen && (
 				<motion.div
+					key="media-modal"
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
 					exit={{ opacity: 0 }}
@@ -82,19 +85,6 @@ export default function MediaModal({
 						onClose();
 					}}
 				>
-					{/* Close Button */}
-					<button
-						type="button"
-						onClick={(e) => {
-							e.stopPropagation();
-							onClose();
-						}}
-						aria-label="Close media viewer"
-						className="absolute top-[calc(1rem+env(safe-area-inset-top,0px))] right-4 z-10 h-11 w-11 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
-					>
-						<X className="w-6 h-6" />
-					</button>
-
 					{/* Navigation Arrows */}
 					{media.length > 1 && (
 						<>
@@ -159,6 +149,19 @@ export default function MediaModal({
 						)}
 					</div>
 				</motion.div>
+			)}
+			{isOpen && (
+				/* The grammar's close chip, on its own click-through layer: the
+				   strip beside it still dismisses like the rest of the ground,
+				   and the chip's own click never doubles back into it. */
+				<div
+					key="media-modal-chrome"
+					className="pointer-events-none fixed inset-x-0 top-[env(safe-area-inset-top,0px)] z-modal [&_button]:pointer-events-auto"
+				>
+					<OverlayHeader onClose={onClose} closeLabel="Close media viewer">
+						<span className="flex-1" aria-hidden />
+					</OverlayHeader>
+				</div>
 			)}
 		</AnimatePresence>
 	);

@@ -7,13 +7,17 @@ import {
   FloppyDisk,
   ImageSquare,
   Spinner,
-  X,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { motion, useReducedMotion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import CalendarField from "@/components/ui/CalendarField";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
+import {
+  OverlayHeader,
+  OverlayPanel,
+  OverlayScrim,
+  useOverlayDismiss,
+} from "@/components/ui/Overlay";
 import GlassSelect from "@/components/ui/GlassSelect";
 import { useT } from "@/i18n/client";
 import {
@@ -21,8 +25,6 @@ import {
   storyCanvasCss,
 } from "@/lib/editor/storyBackgrounds";
 import { uploadSpaceCoverAction } from "@/lib/space.actions";
-
-const EASE = [0.2, 0, 0, 1] as const;
 
 /** The scheduled space being edited, when the sheet opens in edit mode. */
 export interface EditableSpace {
@@ -102,7 +104,6 @@ export default function CreateSpaceSheet({
   onSave,
 }: CreateSpaceSheetProps) {
   const t = useT();
-  const reduce = useReducedMotion();
   const isEdit = Boolean(editing);
   const [title, setTitle] = useState(editing?.title ?? "");
   const [description, setDescription] = useState(editing?.description ?? "");
@@ -125,6 +126,9 @@ export default function CreateSpaceSheet({
   const fileRef = useRef<HTMLInputElement>(null);
 
   const valid = title.trim().length >= 3 && (mode === "now" || when.length > 0);
+
+  // Esc + the body scroll lock come from the overlay grammar now.
+  useOverlayDismiss(true, onClose);
 
   const pickCover = async (file: File) => {
     setCoverError("");
@@ -150,70 +154,41 @@ export default function CreateSpaceSheet({
     }
   };
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   return (
     <ConfirmModalPortal>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.2, ease: EASE }}
-        className="fixed inset-0 z-modal flex items-end sm:items-center justify-center glass-veil-sheer backdrop-blur-md backdrop-saturate-150 sm:p-6"
-        onClick={onClose}
+      <OverlayScrim onClose={onClose} label={t("common.close")} />
+      <OverlayPanel
+        variant="sheet"
+        label={isEdit ? t("voice.editSpace") : t("voice.create")}
       >
-        <motion.div
-          initial={
-            reduce ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.985 }
-          }
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.32, ease: EASE }}
-          role="dialog"
-          aria-modal="true"
-          aria-label={isEdit ? t("voice.editSpace") : t("voice.create")}
-          className="w-full sm:max-w-[440px] glass-dock backdrop-blur-xl backdrop-saturate-150 glass-ink rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 pb-safe"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <span className="glass-eyebrow font-sans block">
-                {t("voice.eyebrow")}
-              </span>
-              <h2 className="mt-2 font-display text-[22px] font-semibold leading-tight tracking-tight">
-                {isEdit ? t("voice.editSpace") : t("voice.create")}
-              </h2>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill glass-chip transition-colors cursor-pointer"
-            >
-              <X size={16} weight="bold" />
-            </button>
+        <OverlayHeader onClose={onClose} closeLabel={t("common.close")}>
+          <div className="min-w-0 flex-1">
+            <span className="block font-sans text-[10px] font-bold uppercase tracking-[0.14em] text-subtle">
+              {t("voice.eyebrow")}
+            </span>
+            <h2 className="truncate font-sans text-[14px] font-semibold leading-tight text-primary">
+              {isEdit ? t("voice.editSpace") : t("voice.create")}
+            </h2>
           </div>
+        </OverlayHeader>
 
-          <div className="mt-5 space-y-4">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-5">
+          <div className="space-y-4">
             <div>
               <label
                 htmlFor="space-title"
-                className="glass-eyebrow font-sans block"
+                className="block font-sans text-[10px] font-bold uppercase tracking-[0.14em] text-subtle"
               >
                 {t("voice.titleLabel")}
               </label>
-              <div className="mt-2 rounded-xl glass-input px-3.5 py-3">
+              <div className="mt-2 rounded-xl bg-sunken px-3.5 py-3 transition-colors focus-within:bg-raised">
                 <input
                   id="space-title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   maxLength={96}
                   placeholder={t("voice.placeholder")}
-                  className="w-full bg-transparent font-sans text-[15px] font-medium outline-none placeholder:text-[#fafaf9]/32"
+                  className="w-full bg-transparent font-sans text-base font-medium text-primary outline-none placeholder:text-subtle sm:text-[15px]"
                 />
               </div>
             </div>
@@ -221,11 +196,11 @@ export default function CreateSpaceSheet({
             <div>
               <label
                 htmlFor="space-description"
-                className="glass-eyebrow font-sans block"
+                className="block font-sans text-[10px] font-bold uppercase tracking-[0.14em] text-subtle"
               >
                 {t("voice.descriptionLabel")}
               </label>
-              <div className="mt-2 rounded-xl glass-input px-3.5 py-3">
+              <div className="mt-2 rounded-xl bg-sunken px-3.5 py-3 transition-colors focus-within:bg-raised">
                 <textarea
                   id="space-description"
                   value={description}
@@ -233,13 +208,13 @@ export default function CreateSpaceSheet({
                   maxLength={280}
                   rows={2}
                   placeholder={t("voice.descriptionPlaceholder")}
-                  className="w-full resize-none bg-transparent font-sans text-[13px] leading-relaxed outline-none placeholder:text-[#fafaf9]/32"
+                  className="w-full resize-none bg-transparent font-sans text-base leading-relaxed text-primary outline-none placeholder:text-subtle sm:text-[13px]"
                 />
               </div>
             </div>
 
             <div>
-              <span className="glass-eyebrow font-sans block">
+              <span className="block font-sans text-[10px] font-bold uppercase tracking-[0.14em] text-subtle">
                 {t("voice.coverLabel")}
               </span>
               <div className="mt-2 grid grid-cols-7 gap-2">
@@ -288,7 +263,7 @@ export default function CreateSpaceSheet({
                     "relative h-11 rounded-[10px] overflow-hidden transition-opacity cursor-pointer",
                     coverImage
                       ? "opacity-100"
-                      : "border border-dashed border-[#fafaf9]/25 opacity-70 hover:opacity-100",
+                      : "border border-dashed border-hairline opacity-70 hover:opacity-100",
                     uploading && "cursor-wait",
                   )}
                   style={
@@ -301,7 +276,14 @@ export default function CreateSpaceSheet({
                       : undefined
                   }
                 >
-                  <span className="absolute inset-0 flex items-center justify-center text-[#fafaf9]">
+                  <span
+                    className={clsx(
+                      "absolute inset-0 flex items-center justify-center",
+                      // White only when it sits on the uploaded art; on the
+                      // bare panel it needs theme ink to be visible at all.
+                      coverImage ? "text-[#fafaf9]" : "text-muted",
+                    )}
+                  >
                     {uploading ? (
                       <Spinner size={14} weight="bold" className="animate-spin" />
                     ) : coverImage ? (
@@ -331,20 +313,20 @@ export default function CreateSpaceSheet({
                     setCoverImage("");
                     setCoverError("");
                   }}
-                  className="mt-2 font-sans text-[12px] text-[#fafaf9]/55 underline underline-offset-2 transition-colors hover:text-[#fafaf9] cursor-pointer"
+                  className="mt-2 cursor-pointer font-sans text-[12px] text-muted underline underline-offset-2 transition-colors hover:text-primary"
                 >
                   {t("voice.removeCover")}
                 </button>
               )}
               {coverError && (
-                <p className="mt-2 font-sans text-[12px] text-[#f87171]">
+                <p className="mt-2 font-sans text-[12px] text-danger">
                   {coverError}
                 </p>
               )}
             </div>
 
             <div>
-              <span className="glass-eyebrow font-sans block">
+              <span className="block font-sans text-[10px] font-bold uppercase tracking-[0.14em] text-subtle">
                 {isEdit ? t("voice.reschedule") : t("voice.when")}
               </span>
               {/* Editing never converts a scheduled space into a live one —
@@ -368,8 +350,8 @@ export default function CreateSpaceSheet({
                     className={clsx(
                       "flex items-center justify-center gap-2 rounded-xl px-3 py-3 font-sans text-[13px] font-semibold transition-colors cursor-pointer",
                       mode === id
-                        ? "glass-chip-active"
-                        : "bg-[#fafaf9]/[0.05] hover:bg-[#fafaf9]/[0.1]",
+                        ? "bg-primary text-page"
+                        : "bg-chip text-muted hover:text-primary",
                     )}
                   >
                     <Icon size={15} weight="bold" />
@@ -386,7 +368,7 @@ export default function CreateSpaceSheet({
 
             {communities.length > 0 && !isEdit && (
               <div>
-                <span className="glass-eyebrow font-sans block">
+                <span className="block font-sans text-[10px] font-bold uppercase tracking-[0.14em] text-subtle">
                   {t("voice.communityLabel")}
                 </span>
                 <GlassSelect
@@ -401,60 +383,62 @@ export default function CreateSpaceSheet({
                 />
               </div>
             )}
-
-            <button
-              type="button"
-              disabled={busy || uploading || !valid}
-              onClick={() => {
-                if (isEdit) {
-                  // Send the whole editable surface: the sheet is the source
-                  // of truth for these fields while it's open, and "" is a
-                  // real value for coverImage (it clears back to the preset).
-                  onSave?.({
-                    title: title.trim(),
-                    description: description.trim(),
-                    cover,
-                    coverImage,
-                    ...(when && when !== initialWhen
-                      ? { scheduledFor: new Date(when).toISOString() }
-                      : {}),
-                  });
-                  return;
-                }
-                onCreate(
-                  title.trim(),
-                  // ISO, not the raw local "YYYY-MM-DDTHH:mm": the gateway
-                  // parses in *its* timezone, so the raw string booked the
-                  // wrong instant for any non-UTC host. Edit already did
-                  // this — and silently "corrected" the create-time error,
-                  // which is what kept the bug hidden.
-                  mode === "later" && when
-                    ? new Date(when).toISOString()
-                    : undefined,
-                  communityId || undefined,
-                  description.trim() || undefined,
-                  cover,
-                  coverImage || undefined,
-                );
-              }}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-pill glass-cta font-sans text-[14px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer active:brightness-95"
-            >
-              {busy ? (
-                <span className="h-4 w-4 animate-spin rounded-pill border-2 border-[#0c0a09]/25 border-t-[#0c0a09]" />
-              ) : isEdit ? (
-                <FloppyDisk size={16} weight="bold" />
-              ) : (
-                <Broadcast size={16} weight="bold" />
-              )}
-              {isEdit
-                ? t("voice.saveChanges")
-                : mode === "later"
-                  ? t("voice.schedule")
-                  : t("voice.goLiveNow")}
-            </button>
           </div>
-        </motion.div>
-      </motion.div>
+        </div>
+
+        <div className="shrink-0 px-4 pb-[calc(16px+var(--ws-safe-bottom))] pt-2">
+          <button
+            type="button"
+            disabled={busy || uploading || !valid}
+            onClick={() => {
+              if (isEdit) {
+                // Send the whole editable surface: the sheet is the source
+                // of truth for these fields while it's open, and "" is a
+                // real value for coverImage (it clears back to the preset).
+                onSave?.({
+                  title: title.trim(),
+                  description: description.trim(),
+                  cover,
+                  coverImage,
+                  ...(when && when !== initialWhen
+                    ? { scheduledFor: new Date(when).toISOString() }
+                    : {}),
+                });
+                return;
+              }
+              onCreate(
+                title.trim(),
+                // ISO, not the raw local "YYYY-MM-DDTHH:mm": the gateway
+                // parses in *its* timezone, so the raw string booked the
+                // wrong instant for any non-UTC host. Edit already did
+                // this — and silently "corrected" the create-time error,
+                // which is what kept the bug hidden.
+                mode === "later" && when
+                  ? new Date(when).toISOString()
+                  : undefined,
+                communityId || undefined,
+                description.trim() || undefined,
+                cover,
+                coverImage || undefined,
+              );
+            }}
+            className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-pill bg-brand font-sans text-[14px] font-semibold text-brand-on transition-colors hover:bg-brand-active active:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {busy ? (
+              <span className="h-4 w-4 animate-spin rounded-pill border-2 border-current/30 border-t-current" />
+            ) : isEdit ? (
+              <FloppyDisk size={16} weight="bold" />
+            ) : (
+              <Broadcast size={16} weight="bold" />
+            )}
+            {isEdit
+              ? t("voice.saveChanges")
+              : mode === "later"
+                ? t("voice.schedule")
+                : t("voice.goLiveNow")}
+          </button>
+        </div>
+      </OverlayPanel>
     </ConfirmModalPortal>
   );
 }

@@ -1,8 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import clsx from "clsx";
+import { AnimatePresence } from "framer-motion";
 import { CaretDown, Check, Globe, UsersThree } from "@phosphor-icons/react";
+import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
+import {
+  OverlayHeader,
+  OverlayPanel,
+  OverlayScrim,
+  useOverlayDismiss,
+} from "@/components/ui/Overlay";
 import { useT } from "@/i18n/client";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
@@ -34,21 +42,10 @@ export function AudiencePicker({
 }) {
   const t = useT();
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+  // Esc, the body scroll lock and the click-catcher are the overlay grammar's
+  // job now — the scrim closes what the outside-mousedown listener used to.
+  const close = useCallback(() => setOpen(false), []);
+  useOverlayDismiss(open, close);
 
   // Nothing to choose between: one destination is not a picker.
   if (locked && !value) return null;
@@ -57,12 +54,12 @@ export function AudiencePicker({
   const label = value ? value.name : t("community.audience.everyone");
 
   return (
-    <div ref={ref} className="relative">
+    <>
       <button
         type="button"
         disabled={locked}
         onClick={() => setOpen((v) => !v)}
-        aria-haspopup={locked ? undefined : "listbox"}
+        aria-haspopup={locked ? undefined : "dialog"}
         aria-expanded={locked ? undefined : open}
         aria-label={t("community.audience.label")}
         className={clsx(
@@ -88,52 +85,69 @@ export function AudiencePicker({
         {!locked && <CaretDown size={11} weight="bold" className="shrink-0 opacity-70" />}
       </button>
 
-      {open && !locked && (
-        <div
-          role="listbox"
-          className="absolute left-0 top-full z-dropdown mt-1.5 max-h-64 w-[248px] overflow-y-auto rounded-xl border border-hairline bg-surface py-1.5 shadow-nav"
-        >
-          <Option
-            selected={!value}
-            onSelect={() => {
-              onChange(null);
-              setOpen(false);
-            }}
-            icon={
-              <span className="flex h-7 w-7 items-center justify-center rounded-pill bg-raised text-muted">
-                <Globe size={14} weight="bold" />
-              </span>
-            }
-            label={t("community.audience.everyone")}
-          />
+      <ConfirmModalPortal>
+        <AnimatePresence>
+          {open && !locked && (
+            <>
+              {/* A picker is not a modal: the composer you are addressing
+                  stays visible behind it on desktop. */}
+              <OverlayScrim onClose={close} dim={false} label={t("common.close")} />
+              <OverlayPanel variant="anchored" label={t("community.audience.label")}>
+                <OverlayHeader
+                  title={t("community.audience.label")}
+                  onClose={close}
+                  closeLabel={t("common.close")}
+                />
+                <div
+                  role="listbox"
+                  aria-label={t("community.audience.label")}
+                  className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[calc(8px+var(--ws-safe-bottom))]"
+                >
+                  <Option
+                    selected={!value}
+                    onSelect={() => {
+                      onChange(null);
+                      setOpen(false);
+                    }}
+                    icon={
+                      <span className="flex h-7 w-7 items-center justify-center rounded-pill bg-raised text-muted">
+                        <Globe size={14} weight="bold" />
+                      </span>
+                    }
+                    label={t("community.audience.everyone")}
+                  />
 
-          {communities.length > 0 && <div className="my-1.5 h-px bg-hairline" />}
+                  {communities.length > 0 && <div className="my-1.5 h-px bg-hairline" />}
 
-          {communities.map((c) => (
-            <Option
-              key={c.id}
-              selected={value?.id === c.id}
-              onSelect={() => {
-                onChange(c);
-                setOpen(false);
-              }}
-              icon={
-                <span className="relative h-7 w-7 shrink-0 overflow-hidden rounded-lg bg-raised">
-                  {c.avatar ? (
-                    <SafeAvatar src={c.avatar} className="object-cover" sizes="28px" />
-                  ) : (
-                    <span className="flex h-full w-full items-center justify-center font-display text-[12px] font-semibold text-gold">
-                      {c.name.charAt(0).toUpperCase()}
-                    </span>
-                  )}
-                </span>
-              }
-              label={c.name}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+                  {communities.map((c) => (
+                    <Option
+                      key={c.id}
+                      selected={value?.id === c.id}
+                      onSelect={() => {
+                        onChange(c);
+                        setOpen(false);
+                      }}
+                      icon={
+                        <span className="relative h-7 w-7 shrink-0 overflow-hidden rounded-lg bg-raised">
+                          {c.avatar ? (
+                            <SafeAvatar src={c.avatar} className="object-cover" sizes="28px" />
+                          ) : (
+                            <span className="flex h-full w-full items-center justify-center font-display text-[12px] font-semibold text-gold">
+                              {c.name.charAt(0).toUpperCase()}
+                            </span>
+                          )}
+                        </span>
+                      }
+                      label={c.name}
+                    />
+                  ))}
+                </div>
+              </OverlayPanel>
+            </>
+          )}
+        </AnimatePresence>
+      </ConfirmModalPortal>
+    </>
   );
 }
 
@@ -154,7 +168,7 @@ function Option({
       role="option"
       aria-selected={selected}
       onClick={onSelect}
-      className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-raised"
+      className="flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-left transition-colors hover:bg-raised"
     >
       {icon}
       <span className="min-w-0 flex-1 truncate font-sans text-[13.5px] text-primary">

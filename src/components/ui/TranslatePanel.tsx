@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { motion } from "framer-motion";
 import clsx from "clsx";
 import {
 	ChartLineUp,
@@ -12,8 +11,13 @@ import {
 	Translate,
 	TrendDown,
 	TrendUp,
-	X,
 } from "@phosphor-icons/react";
+import {
+	OverlayHeader,
+	OverlayPanel,
+	OverlayScrim,
+	useOverlayDismiss,
+} from "@/components/ui/Overlay";
 import { LOCALES, type Locale } from "@/i18n/config";
 import { useT } from "@/i18n/client";
 import { translatePostToAction } from "@/lib/translate.actions";
@@ -45,13 +49,9 @@ export function TranslatePanel({
 
 	const decoded = useMemo(() => decodePost(content), [content]);
 
-	useEffect(() => {
-		const onKey = (e: KeyboardEvent) => {
-			if (e.key === "Escape") onClose();
-		};
-		document.addEventListener("keydown", onKey);
-		return () => document.removeEventListener("keydown", onKey);
-	}, [onClose]);
+	// Mounted only while open, so the overlay is always "open" to the hook —
+	// it carries Escape and the scroll lock for the page underneath.
+	useOverlayDismiss(true, onClose);
 
 	useEffect(() => {
 		if (cache[target]) return;
@@ -99,40 +99,17 @@ export function TranslatePanel({
 	if (typeof document === "undefined") return null;
 
 	return createPortal(
-		<motion.div
-			initial={{ opacity: 0 }}
-			animate={{ opacity: 1 }}
-			exit={{ opacity: 0 }}
-			transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-			onClick={onClose}
-			className="fixed inset-0 z-modal bg-scrim flex items-end sm:items-center justify-center sm:p-4"
-		>
-			<motion.div
-				initial={{ opacity: 0, scale: 0.98, y: 8 }}
-				animate={{ opacity: 1, scale: 1, y: 0 }}
-				transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-				onClick={(e) => e.stopPropagation()}
-				role="dialog"
-				aria-modal="true"
-				aria-label={t("translate.panel")}
-				className="w-full sm:max-w-[520px] max-h-[85dvh] flex flex-col bg-surface border border-hairline rounded-t-xl sm:rounded-xl shadow-nav overflow-hidden"
-			>
-				<div className="flex items-center gap-3 px-4 py-3 border-b border-hairline shrink-0">
-					<span className="flex h-9 w-9 items-center justify-center rounded-pill bg-brand/10 text-gold">
+		<>
+			<OverlayScrim onClose={onClose} label={t("fab.close")} />
+			<OverlayPanel variant="sheet" label={t("translate.panel")}>
+				<OverlayHeader onClose={onClose} closeLabel={t("fab.close")}>
+					<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-pill bg-brand/10 text-gold">
 						<Translate size={17} />
 					</span>
-					<h2 className="flex-1 font-display text-[16px] font-semibold text-primary">
+					<h2 className="flex-1 truncate font-display text-[16px] font-semibold text-primary">
 						{t("translate.panel")}
 					</h2>
-					<button
-						type="button"
-						onClick={onClose}
-						aria-label={t("fab.close")}
-						className="flex h-10 w-10 items-center justify-center rounded-pill text-subtle hover:text-primary hover:bg-raised transition-colors cursor-pointer"
-					>
-						<X size={17} />
-					</button>
-				</div>
+				</OverlayHeader>
 
 				{/* language tabs */}
 				<div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-hairline shrink-0 overflow-x-auto [scrollbar-width:none]">
@@ -275,8 +252,8 @@ export function TranslatePanel({
 						</>
 					)}
 				</div>
-			</motion.div>
-		</motion.div>,
+			</OverlayPanel>
+		</>,
 		document.body,
 	);
 }

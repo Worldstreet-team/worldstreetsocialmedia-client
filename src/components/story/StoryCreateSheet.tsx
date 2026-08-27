@@ -1,9 +1,14 @@
 "use client";
 
-import { ImageSquare, Microphone, TextAa, X } from "@phosphor-icons/react";
+import { ImageSquare, Microphone, TextAa } from "@phosphor-icons/react";
 import { motion, useReducedMotion } from "framer-motion";
-import { useEffect } from "react";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
+import {
+  OverlayHeader,
+  OverlayPanel,
+  OverlayScrim,
+  useOverlayDismiss,
+} from "@/components/ui/Overlay";
 import {
   STORY_BACKGROUNDS,
   storyCanvasCss,
@@ -95,54 +100,26 @@ export default function StoryCreateSheet({
 }: StoryCreateSheetProps) {
   const reduce = useReducedMotion();
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  // Esc + the body scroll lock come from the overlay grammar now.
+  useOverlayDismiss(true, onClose);
 
   return (
     <ConfirmModalPortal>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.2, ease: EASE }}
-        className="fixed inset-0 z-modal flex items-end sm:items-center justify-center glass-veil-sheer backdrop-blur-md backdrop-saturate-150 sm:p-6"
-        onClick={onClose}
-      >
-        <motion.div
-          initial={
-            reduce ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.985 }
-          }
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.32, ease: EASE }}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Create a story"
-          className="w-full sm:max-w-[440px] glass-dock backdrop-blur-xl backdrop-saturate-150 glass-ink rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 pb-safe"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <span className="glass-eyebrow font-sans block">New</span>
-              <h2 className="font-display text-[22px] leading-tight font-semibold tracking-tight mt-2">
-                Create a story
-              </h2>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill glass-chip transition-colors cursor-pointer"
-            >
-              <X size={16} weight="bold" />
-            </button>
+      <OverlayScrim onClose={onClose} />
+      <OverlayPanel variant="sheet" label="Create a story">
+        <OverlayHeader onClose={onClose}>
+          <div className="min-w-0 flex-1">
+            <span className="block font-sans text-[10px] font-bold uppercase tracking-[0.14em] text-subtle">
+              New
+            </span>
+            <h2 className="truncate font-sans text-[14px] font-semibold leading-tight text-primary">
+              Create a story
+            </h2>
           </div>
+        </OverlayHeader>
 
-          <div className="mt-5 grid grid-cols-3 gap-2">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(20px+var(--ws-safe-bottom))]">
+          <div className="grid grid-cols-3 gap-2">
             {LANES.map(({ kind, label, hint, icon: Icon }, i) => (
               <motion.button
                 key={kind}
@@ -156,29 +133,29 @@ export default function StoryCreateSheet({
                   delay: reduce ? 0 : 0.06 + i * 0.05,
                 }}
                 // Flat by request: a plain wash, no sheen, no chrome.
-                className="flex flex-col items-center gap-2.5 rounded-xl bg-[#fafaf9]/[0.05] hover:bg-[#fafaf9]/[0.1] transition-colors px-3 pt-4 pb-3.5 text-center cursor-pointer"
+                className="flex cursor-pointer flex-col items-center gap-2.5 rounded-xl bg-chip px-3 pt-4 pb-3.5 text-center transition-colors hover:bg-raised"
               >
                 <span className="relative flex h-16 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px]">
                   <LanePreview kind={kind} />
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <Icon size={13} weight="bold" className="text-[#fafaf9]/70" />
-                  <span className="font-sans text-[13px] font-semibold glass-ink">
+                  <Icon size={13} weight="bold" className="text-muted" />
+                  <span className="font-sans text-[13px] font-semibold text-primary">
                     {label}
                   </span>
                 </span>
-                <span className="block font-sans text-[11px] leading-snug glass-ink-dim">
+                <span className="block font-sans text-[11px] leading-snug text-muted">
                   {hint}
                 </span>
               </motion.button>
             ))}
           </div>
 
-          <p className="mt-4 text-center font-sans text-[11px] glass-ink-faint">
+          <p className="mt-4 text-center font-sans text-[11px] text-subtle">
             Stories disappear after 24 hours
           </p>
-        </motion.div>
-      </motion.div>
+        </div>
+      </OverlayPanel>
     </ConfirmModalPortal>
   );
 }

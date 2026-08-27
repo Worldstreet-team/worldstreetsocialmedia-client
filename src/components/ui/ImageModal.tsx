@@ -1,8 +1,9 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { OverlayHeader, useOverlayDismiss } from "@/components/ui/Overlay";
 
 interface ImageModalProps {
 	isOpen: boolean;
@@ -12,9 +13,14 @@ interface ImageModalProps {
 }
 
 /**
- * Lightbox, on-token: z-modal, near-opaque page fill (a lightbox needs more
- * than overlay/scrim's 60%), controls on the surface ladder with color-only
- * hovers (never scale), counter in tabular numerals.
+ * Lightbox, on-token: z-modal, opaque page fill, controls on the surface
+ * ladder with color-only hovers (never scale), counter in tabular numerals.
+ *
+ * Deliberately NOT an `OverlayPanel`: a lightbox is full-bleed media, not a
+ * plate, and it needs an opaque ground rather than the grammar's 50% wash —
+ * a photo read through a half-lit feed is a worse photo. What it does take
+ * from the grammar is the close chip (`OverlayHeader`) and `useOverlayDismiss`
+ * for Escape and the scroll lock; the arrow keys stay local.
  */
 export default function ImageModal({
 	isOpen,
@@ -24,16 +30,10 @@ export default function ImageModal({
 }: ImageModalProps) {
 	const [currentIndex, setCurrentIndex] = useState(initialIndex);
 
+	useOverlayDismiss(isOpen, onClose);
+
 	useEffect(() => {
-		if (isOpen) {
-			setCurrentIndex(initialIndex);
-			document.body.style.overflow = "hidden"; // Prevent background scrolling
-		} else {
-			document.body.style.overflow = "unset";
-		}
-		return () => {
-			document.body.style.overflow = "unset";
-		};
+		if (isOpen) setCurrentIndex(initialIndex);
 	}, [isOpen, initialIndex]);
 
 	const handleNext = useCallback(
@@ -55,14 +55,13 @@ export default function ImageModal({
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (!isOpen) return;
-			if (e.key === "Escape") onClose();
 			if (e.key === "ArrowRight") handleNext();
 			if (e.key === "ArrowLeft") handlePrev();
 		};
 
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [isOpen, onClose, handleNext, handlePrev]);
+	}, [isOpen, handleNext, handlePrev]);
 
 	if (!isOpen) return null;
 
@@ -70,6 +69,7 @@ export default function ImageModal({
 		<AnimatePresence>
 			{isOpen && (
 				<motion.div
+					key="image-modal"
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
 					exit={{ opacity: 0 }}
@@ -80,19 +80,6 @@ export default function ImageModal({
 						onClose();
 					}}
 				>
-					{/* Close Button */}
-					<button
-						type="button"
-						aria-label="Close image viewer"
-						onClick={(e) => {
-							e.stopPropagation();
-							onClose();
-						}}
-						className="absolute top-[calc(1rem+env(safe-area-inset-top,0px))] right-4 z-10 h-11 w-11 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
-					>
-						<X className="w-5 h-5" />
-					</button>
-
 					{/* Navigation Arrows */}
 					{images.length > 1 && (
 						<>
@@ -142,6 +129,19 @@ export default function ImageModal({
 						)}
 					</div>
 				</motion.div>
+			)}
+			{isOpen && (
+				/* The grammar's close chip, on its own click-through layer: the
+				   strip beside it still dismisses like the rest of the ground,
+				   and the chip's own click never doubles back into it. */
+				<div
+					key="image-modal-chrome"
+					className="pointer-events-none fixed inset-x-0 top-[env(safe-area-inset-top,0px)] z-modal [&_button]:pointer-events-auto"
+				>
+					<OverlayHeader onClose={onClose} closeLabel="Close image viewer">
+						<span className="flex-1" aria-hidden />
+					</OverlayHeader>
+				</div>
 			)}
 		</AnimatePresence>
 	);

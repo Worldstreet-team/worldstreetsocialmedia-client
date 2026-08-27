@@ -109,13 +109,13 @@ export default function GlassSelect({
         aria-expanded={open}
         aria-controls={listId}
         aria-label={label}
-        className="flex w-full items-center gap-2 rounded-xl glass-input px-3.5 py-3 text-left transition-colors cursor-pointer"
+        className="flex w-full cursor-pointer items-center gap-2 rounded-xl bg-sunken px-3.5 py-3 text-left transition-colors"
       >
         {icon && <span className="shrink-0 opacity-75">{icon}</span>}
         <span
           className={clsx(
             "min-w-0 flex-1 truncate font-sans text-[13px] font-medium",
-            current ? "glass-ink" : "text-[#fafaf9]/40",
+            current ? "text-primary" : "text-subtle",
           )}
         >
           {current?.label ?? placeholder ?? ""}
@@ -148,7 +148,10 @@ export default function GlassSelect({
                 : { top: rect.bottom + 6 }),
               maxHeight: MENU_MAX,
             }}
-            className="z-toast overflow-y-auto no-scrollbar rounded-xl glass-dock backdrop-blur-xl backdrop-saturate-150 py-1.5"
+            /* Theme-following now: this menu opens inside sheets that turn
+               white in light mode, where fixed-dark creator glass read as a
+               black slab with invisible ink. */
+            className="z-toast overflow-y-auto no-scrollbar rounded-xl glass-frost backdrop-blur-2xl backdrop-saturate-150 py-1.5"
           >
             {options.map((option) => {
               const active = option.id === value;
@@ -168,11 +171,11 @@ export default function GlassSelect({
                   )}
                 >
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-sans text-[13px] font-medium glass-ink">
+                    <span className="block truncate font-sans text-[13px] font-medium text-primary">
                       {option.label}
                     </span>
                     {option.hint && (
-                      <span className="block truncate font-sans text-[11px] glass-ink-dim">
+                      <span className="block truncate font-sans text-[11px] text-muted">
                         {option.hint}
                       </span>
                     )}

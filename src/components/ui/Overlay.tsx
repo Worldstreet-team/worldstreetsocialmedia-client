@@ -122,18 +122,25 @@ export function OverlayPanel({
 	variant = "center",
 	className,
 	label,
+	role = "dialog",
 	children,
 }: {
 	variant?: OverlayVariant;
 	className?: string;
 	/** Accessible name. A dialog without one is unnavigable by screen reader. */
 	label: string;
+	/**
+	 * `alertdialog` for a destructive confirm — it tells a screen reader this
+	 * interrupts for a decision rather than merely opening. Hardcoding
+	 * `dialog` here quietly downgraded every confirm in the app.
+	 */
+	role?: "dialog" | "alertdialog";
 	children: React.ReactNode;
 }) {
 	const motionProps = variant === "center" ? centerMotion : anchoredMotion;
 	return (
 		<motion.div
-			role="dialog"
+			role={role}
 			aria-modal="true"
 			aria-label={label}
 			{...motionProps}

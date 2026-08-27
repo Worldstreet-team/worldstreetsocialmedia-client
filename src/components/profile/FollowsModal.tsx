@@ -1,9 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { getFollowersAction, getFollowingAction } from "@/lib/user.actions";
 import { Tabs } from "@/components/ui/Tabs";
+import {
+	OverlayHeader,
+	OverlayPanel,
+	OverlayScrim,
+	useOverlayDismiss,
+} from "@/components/ui/Overlay";
 import { useT } from "@/i18n/client";
 import { Skeleton } from "@/components/ui/Skeleton";
 import Link from "next/link";
@@ -53,16 +59,11 @@ export default function FollowsModal({
 	const currentUser = useAtomValue(userAtom);
 	const t = useT();
 
+	// Esc + the body scroll lock come from the overlay grammar now.
+	useOverlayDismiss(isOpen, onClose);
+
 	useEffect(() => {
-		if (isOpen) {
-			document.body.style.overflow = "hidden";
-			setActiveTab(initialTab); // Sync on open
-		} else {
-			document.body.style.overflow = "unset";
-		}
-		return () => {
-			document.body.style.overflow = "unset";
-		};
+		if (isOpen) setActiveTab(initialTab); // Sync on open
 	}, [isOpen, initialTab]);
 
 	useEffect(() => {
@@ -117,28 +118,24 @@ export default function FollowsModal({
 		<ConfirmModalPortal>
 			<AnimatePresence>
 				{isOpen && (
-					<div className="fixed inset-0 z-modal flex items-center justify-center p-4">
-						<motion.div
-							initial={{ opacity: 0 }}
-							animate={{ opacity: 1 }}
-							exit={{ opacity: 0 }}
-							onClick={onClose}
-							className="absolute inset-0 bg-scrim"
-						/>
-						<motion.div
-							initial={{ opacity: 0, scale: 0.98, y: 8 }}
-							animate={{ opacity: 1, scale: 1, y: 0 }}
-							exit={{ opacity: 0, scale: 0.98, y: 8 }}
-							transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-							className="relative flex max-h-[80dvh] w-full max-w-md flex-col overflow-hidden rounded-xl bg-surface/85 text-primary shadow-nav backdrop-blur-xl backdrop-saturate-150"
+					<>
+						<OverlayScrim onClose={onClose} label={t("common.close")} />
+						<OverlayPanel
+							variant="center"
+							label={t(
+								activeTab === "followers"
+									? "profile.followers"
+									: "profile.following",
+							)}
 						>
 							{/* THE Tabs component — pill chips, the app's one tab grammar.
 							    This was a hand-rolled underline pair, which is exactly
 							    the second tab language that control exists to prevent.
 							    The counts ride along as badges: "how many" is the
 							    question this modal is opened to answer, and it used to
-							    make you count rows to find out. */}
-							<div className="px-1 pt-1">
+							    make you count rows to find out. The tabs ARE the
+							    header row, so the close chip sits beside them. */}
+							<OverlayHeader onClose={onClose} closeLabel={t("common.close")}>
 								<Tabs
 									items={[
 										{
@@ -155,8 +152,9 @@ export default function FollowsModal({
 									value={activeTab}
 									onChange={setActiveTab}
 									ariaLabel={t("profile.followers")}
+									className="min-w-0 flex-1"
 								/>
-							</div>
+							</OverlayHeader>
 
 							{/* List Content */}
 							{/* min-h capped against the viewport: a hard 300px floor
@@ -256,8 +254,8 @@ export default function FollowsModal({
 									</div>
 								)}
 							</div>
-						</motion.div>
-					</div>
+						</OverlayPanel>
+					</>
 				)}
 			</AnimatePresence>
 		</ConfirmModalPortal>
