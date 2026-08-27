@@ -202,18 +202,7 @@ function userDataHeader(profile: unknown): string {
 		// 2. Prevent users who ALREADY have a profile from re-onboarding.
 		// Decided from the sync result, not the cookie — a cleared cookie must
 		// not reopen onboarding for an existing profile.
-		//
-		// `?preview=1` opens it anyway, in DEVELOPMENT ONLY. Working on this
-		// flow otherwise means having an account that has not completed it, and
-		// the alternative — flipping `onboardingCompleted` on a real profile —
-		// writes to the shared database, so it would push that person into
-		// onboarding in production too. The NODE_ENV guard is the whole point:
-		// this can never reopen onboarding on a deployed build.
-		const previewOnboarding =
-			process.env.NODE_ENV !== "production" &&
-			req.nextUrl.searchParams.get("preview") === "1";
-
-		if (isOnboardingPath && userExistsInDb?.profile && !previewOnboarding) {
+		if (isOnboardingPath && userExistsInDb?.profile) {
 			return NextResponse.redirect(new URL(withLocale("/") || "/", req.url));
 		}
 

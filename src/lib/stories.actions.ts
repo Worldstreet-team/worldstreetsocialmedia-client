@@ -142,3 +142,25 @@ export async function unlockStoryAction(storyId: string) {
 		};
 	}
 }
+
+/**
+ * Delete your own story. Author-only, enforced server-side.
+ *
+ * Stories expire by themselves, which is presumably why this never existed —
+ * but "I posted the wrong thing" is not answered by waiting 24 hours, and
+ * every other kind of content in the app can be deleted.
+ */
+export async function deleteStoryAction(storyId: string) {
+	const headers = await bearer();
+	if (!headers) return { success: false as const, message: "Unauthorized" };
+	try {
+		await axios.delete(`${BACKEND_URL}/api/stories/${storyId}`, { headers });
+		return { success: true as const };
+	} catch (error: any) {
+		return {
+			success: false as const,
+			message:
+				error.response?.data?.message || "Could not delete the story",
+		};
+	}
+}

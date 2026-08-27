@@ -3,13 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
-import { Download, Eye, Send, Volume2, VolumeX, X } from "lucide-react";
+import { Download, Eye, Send, Trash2, Volume2, VolumeX, X } from "lucide-react";
 
 import {
+	deleteStoryAction,
 	getStoryViewersAction,
 	replyToStoryAction,
 	viewStoryAction,
 } from "@/lib/stories.actions";
+import ConfirmModal from "@/components/ui/ConfirmModal";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { StoryPaywall } from "@/components/feed/StoryPaywall";
 import { useToast } from "@/components/ui/Toast/ToastContext";
@@ -108,6 +110,8 @@ export function StoryViewer({
 	>([]);
 	const [viewsCount, setViewsCount] = useState(0);
 	const [viewersOpen, setViewersOpen] = useState(false);
+	const [confirmDelete, setConfirmDelete] = useState(false);
+	const [deleting, setDeleting] = useState(false);
 	const [viewersLoading, setViewersLoading] = useState(false);
 
 	const [paywall, setPaywall] = useState<null | { fromScreenshot: boolean }>(
@@ -130,6 +134,31 @@ export function StoryViewer({
 		},
 		[entry.stories.length, onClose],
 	);
+
+	/**
+	 * Delete this slide. The viewer has to react in place: if there are other
+	 * slides we move to one, and only close when the last is gone — dropping
+	 * the reader back to the feed after deleting one of five would lose their
+	 * place for no reason.
+	 */
+	const removeStory = async () => {
+		if (!story || deleting) return;
+		setDeleting(true);
+		const res = await deleteStoryAction(story.id);
+		setDeleting(false);
+		setConfirmDelete(false);
+		if (!res.success) {
+			toast(res.message ?? t("story.deleteFailed"), { type: "error" });
+			return;
+		}
+		toast(t("story.deleted"), { type: "success" });
+		entry.stories.splice(index, 1);
+		if (entry.stories.length === 0) {
+			onClose();
+			return;
+		}
+		setIndex((i) => Math.min(i, entry.stories.length - 1));
+	};
 
 	// Your own story: load who has seen it. Per slide, because each one has
 	// its own audience — the count on slide 3 is not the count on slide 1.
@@ -449,7 +478,7 @@ export function StoryViewer({
 					    slides, and "who saw this" is the only thing you open your
 					    own story to find out. */}
 					{entry.isSelf && (
-						<div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-page via-page/80 to-transparent px-3 pb-3 pt-6">
+						<div className="absolute inset-x-0 bottom-0 z-20 flex items-center gap-2 bg-gradient-to-t from-page via-page/80 to-transparent px-3 pb-3 pt-6">
 							<button
 								type="button"
 								onClick={() => viewsCount > 0 && setViewersOpen(true)}
@@ -476,8 +505,33 @@ export function StoryViewer({
 									</>
 								)}
 							</button>
+							{/* Destructive, so it is an icon with a confirm rather than a
+							    second wide button competing with the count. */}
+							<button
+								type="button"
+								onClick={() => setConfirmDelete(true)}
+								disabled={deleting}
+								aria-label={t("story.delete")}
+								className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-page/60 text-muted transition-colors hover:bg-raised hover:text-danger disabled:cursor-default"
+							>
+								{deleting ? (
+									<span className="h-4 w-4 animate-spin rounded-pill border-2 border-current/30 border-t-current" />
+								) : (
+									<Trash2 className="h-[18px] w-[18px]" />
+								)}
+							</button>
 						</div>
 					)}
+
+					<ConfirmModal
+						isOpen={confirmDelete}
+						onClose={() => setConfirmDelete(false)}
+						onConfirm={() => void removeStory()}
+						title={t("story.delete")}
+						message={t("story.deleteConfirm")}
+						confirmText={t("story.delete")}
+						isDestructive
+					/>
 
 					{/* The list itself. A sheet rather than a route: you are mid-story
 					    and must come back to it, which a navigation would break. */}

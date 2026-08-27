@@ -7,7 +7,6 @@ import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Mail, MoreHorizontal } from "lucide-react";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
-import { UserBadges } from "@/components/ui/UserBadges";
 import { useT } from "@/i18n/client";
 
 /**
@@ -118,13 +117,14 @@ export function ProfileHeader({
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div className="flex min-w-0 flex-col">
-          <h1 className="flex min-w-0 items-center gap-1 font-sans text-lg font-bold leading-5 text-primary">
-            <span className="truncate">{fullName}</span>
-            {isVerified && (
-              <span className="flex shrink-0">
-                <UserBadges isVerified badges={badges} size={15} />
-              </span>
-            )}
+          {/* No badges here. This bar is ALWAYS on screen, and ProfileAbout
+              renders the same marks a couple of hundred pixels below it — so
+              the tick appeared twice at once on every profile. The bar is
+              navigation (back, whose profile, how many posts); the marks
+              belong with the identity block that carries the handle, bio and
+              counts. */}
+          <h1 className="min-w-0 truncate font-sans text-lg font-bold leading-5 text-primary">
+            {fullName}
           </h1>
           <span className="font-sans text-xs tabular-nums text-muted">
             {postsCount.toLocaleString()} {t("profile.posts")}
