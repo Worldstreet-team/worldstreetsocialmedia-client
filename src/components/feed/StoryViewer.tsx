@@ -349,22 +349,30 @@ export function StoryViewer({
 						/>
 					)}
 
-					{/* Forensic watermark: the viewer's own handle tiled faintly over
-					    the frame. Screenshots on the web cannot be blanked, so the
+					{/* Forensic watermark: the viewer's own handle tiled over the
+					    frame. Screenshots on the web cannot be blanked, so the
 					    deterrent is traceability — any capture that leaks carries
-					    the account it was taken from. Skipped on your own stories. */}
+					    the account it was taken from. Skipped on your own stories.
+					    Fixed white, NOT `text-primary`: this chrome is dark in both
+					    themes, so the theme-following token painted the mark in
+					    near-black ink for anyone on light mode and it disappeared
+					    entirely. It also has to survive a bright frame, hence the
+					    shadow — a deterrent nobody can see deters nobody. */}
 					{!entry.isSelf && viewer?.username && (
 						<div
 							aria-hidden
-							className="pointer-events-none absolute inset-0 z-[15] overflow-hidden opacity-[0.07]"
+							className="pointer-events-none absolute inset-0 z-[15] overflow-hidden opacity-[0.17]"
 							style={{ transform: "rotate(-24deg) scale(1.5)" }}
 						>
 							<div className="flex h-full flex-col justify-around">
 								{[0, 1, 2, 3, 4, 5].map((row) => (
 									<div
 										key={row}
-										className="flex gap-10 whitespace-nowrap font-sans text-[13px] font-semibold text-primary"
-										style={{ marginLeft: row % 2 ? "-60px" : "0" }}
+										className="flex gap-10 whitespace-nowrap font-sans text-[13px] font-semibold text-white"
+										style={{
+											marginLeft: row % 2 ? "-60px" : "0",
+											textShadow: "0 1px 2px rgba(0,0,0,0.55)",
+										}}
 									>
 										{[0, 1, 2, 3].map((col) => (
 											<span key={col}>@{viewer.username}</span>
