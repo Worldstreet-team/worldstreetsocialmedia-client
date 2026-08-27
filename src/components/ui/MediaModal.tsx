@@ -139,6 +139,9 @@ export default function MediaModal({
 								key={`video-${currentIndex}`}
 								src={currentItem.url}
 								controls
+								/* The policy VideoPlayer has always had: the browser's own
+								   menu offers "Save video as" and routes around us. */
+								controlsList="nodownload"
 								autoPlay
 								initial={{ opacity: 0, scale: 0.98 }}
 								animate={{ opacity: 1, scale: 1 }}

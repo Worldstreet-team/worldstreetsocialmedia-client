@@ -15,7 +15,12 @@ import clsx from "clsx";
 import { REGIONS, MIN_INTERESTS, MAX_INTERESTS } from "@/data/categories";
 import { InterestPicker } from "@/components/onboarding/InterestPicker";
 import { BrandRitual } from "@/components/layout/BrandRitual";
-import { followUserAction, getWhoToFollowAction } from "@/lib/user.actions";
+import {
+	checkUsernameAction,
+	followUserAction,
+	getWhoToFollowAction,
+} from "@/lib/user.actions";
+import { USERNAME_RE } from "@/lib/username";
 import axios from "axios";
 import { BACKEND_URL, DEFAULT_AVATAR } from "@/const";
 import { useRouter } from "next/navigation";
@@ -68,7 +73,14 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 	const [bio, setBio] = useState("");
 	const router = useRouter();
 	const [loading, setLoading] = useState(false);
-	const [_, setError] = useState("");
+	const [error, setError] = useState("");
+	/**
+	 * Handle availability, resolved as they type. `idle` before they have typed
+	 * anything legal — an empty field is not an error, it is just empty.
+	 */
+	const [handleState, setHandleState] = useState<
+		"idle" | "checking" | "ok" | "taken" | "invalid"
+	>("idle");
 	const [suggestedUsers, setSuggestedUsers] = useState<any[]>([]);
 	const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 	const { toast } = useToast();
@@ -127,6 +139,38 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 		fetchSuggestions();
 	}, [step]);
 
+	// Debounced: 400ms after they stop typing, not per keystroke. The response
+	// is discarded if the field moved on while it was in flight, so a slow
+	// answer for "sara" can never label "sarah_codes" as taken.
+	useEffect(() => {
+		const handle = username.replace(/^@+/, "");
+		if (!handle) {
+			setHandleState("idle");
+			return;
+		}
+		if (!USERNAME_RE.test(handle)) {
+			setHandleState("invalid");
+			return;
+		}
+		setHandleState("checking");
+		let cancelled = false;
+		const timer = setTimeout(async () => {
+			const res = await checkUsernameAction(handle);
+			if (cancelled) return;
+			setHandleState(
+				res.reason === "taken"
+					? "taken"
+					: res.reason === "invalid"
+						? "invalid"
+						: "ok",
+			);
+		}, 400);
+		return () => {
+			cancelled = true;
+			clearTimeout(timer);
+		};
+	}, [username]);
+
 	const toggleInterest = (id: string) => {
 		setFormData((prev) => ({
 			...prev,
@@ -159,16 +203,23 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 
 			setStep(4); // → what's new
 		} catch (err: any) {
-			if (err.response?.status === 401 && !overrideToken) {
-				// await refreshAndRetry(submitProfile);
-			} else {
-				const errorMsg =
-					err.response?.data?.message ||
-					err.message ||
-					"Failed to create profile";
-				setError(errorMsg);
-				toast(errorMsg, { type: "error" });
-			}
+			// A 401 used to hit an empty branch (the retry was commented out), so
+			// an expired token showed NOTHING: no toast, no message, loading off,
+			// and a Continue button that did nothing forever. Every failure now
+			// says something, and a stale session says what to do about it.
+			const status = err.response?.status;
+			const errorMsg =
+				status === 401
+					? "Your session expired. Refresh the page and try again."
+					: status === 409
+						? "That username was just taken. Go back and pick another."
+						: err.response?.data?.message ||
+							err.message ||
+							"Failed to create profile";
+			setError(errorMsg);
+			toast(errorMsg, { type: "error" });
+			// Send them back to the field that is actually wrong.
+			if (status === 409) setStep(1);
 		} finally {
 			setLoading(false);
 		}
@@ -195,10 +246,14 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 	const handleContinue = () => {
 		if (step === 1) {
 			if (!username) return;
-			if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-				toast("Username can only contain letters, numbers, and underscores", {
+			if (!USERNAME_RE.test(username)) {
+				toast("Username must be 3-20 letters, numbers or underscores", {
 					type: "error",
 				});
+				return;
+			}
+			if (handleState === "taken") {
+				toast("That username is taken", { type: "error" });
 				return;
 			}
 			const cleanedUsername = username.replace(/^@+/, "");
@@ -233,6 +288,19 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 						))}
 					</div>
 
+					{/* The error was stored and never rendered — every failure relied
+					    on a toast, which is exactly the wrong surface for a blocked
+					    submit: it disappears, and it can be missed entirely. This
+					    stays until the next attempt. */}
+					{error && (
+						<p
+							role="alert"
+							className="w-full rounded-lg bg-danger/10 px-4 py-3 text-left font-sans text-[13px] text-danger"
+						>
+							{error}
+						</p>
+					)}
+
 					{/* STEP 1: IDENTITY */}
 					{step === 1 && (
 						<div className="space-y-8 w-full animate-rise">
@@ -266,9 +334,34 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 												if (/^[a-zA-Z0-9_]*$/.test(val)) setUsername(val);
 											}}
 											placeholder="sarah_codes"
+											aria-describedby="username-status"
+											aria-invalid={
+												handleState === "taken" || handleState === "invalid"
+											}
 											className="glass-tile w-full text-primary rounded-pill py-3 h-14 pl-8 pr-4 font-medium outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-subtle font-sans text-base transition-colors"
 										/>
 									</div>
+									{/* Says WHY Continue is disabled. aria-live because this is
+									    the one field that can block the whole flow, and
+									    min-h-4 so the card does not jump as it changes. */}
+									<p
+										id="username-status"
+										aria-live="polite"
+										className={clsx(
+											"min-h-4 pl-4 font-sans text-[12px]",
+											handleState === "taken" || handleState === "invalid"
+												? "text-danger"
+												: handleState === "ok"
+													? "text-success"
+													: "text-subtle",
+										)}
+									>
+										{handleState === "checking" && "Checking…"}
+										{handleState === "ok" && "Available"}
+										{handleState === "taken" && "That username is taken"}
+										{handleState === "invalid" &&
+											"3-20 letters, numbers or underscores"}
+									</p>
 								</div>
 
 								<div className="space-y-2 text-left">
@@ -293,7 +386,12 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 
 							<button
 								onClick={handleContinue}
-								disabled={!username}
+								disabled={
+									!username ||
+									handleState === "taken" ||
+									handleState === "invalid" ||
+									handleState === "checking"
+								}
 								className={primaryBtn}
 								type="button"
 							>

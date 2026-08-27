@@ -46,12 +46,9 @@ import { useChatSignals } from "@/hooks/useChatSignals";
 import { TypingIndicator } from "@/components/messages/TypingIndicator";
 import { MessageTicks, tickStateFor } from "@/components/messages/MessageTicks";
 import { CallLogRow } from "@/components/messages/CallLogRow";
-import { BACKEND_URL } from "@/const";
+import { BACKEND_ORIGIN } from "@/const";
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || BACKEND_URL).replace(
-	/\/api\/?$/,
-	"",
-);
+const API_URL = BACKEND_ORIGIN;
 import { useAtom, useSetAtom } from "jotai";
 import { activeConversationIdAtom, messageCacheAtom, unreadMessagesCountAtom } from "@/store/messageCache";
 import NewConversationModal from "./NewConversationModal";
