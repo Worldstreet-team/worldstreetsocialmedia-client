@@ -130,4 +130,13 @@ export const cacheKeys = {
 	userPosts: (userId: string, tab: string) => `userPosts:${userId}:${tab}`,
 	userPostsAll: (userId: string) => `userPosts:${userId}:`,
 	communities: () => "communities:mine",
+	/**
+	 * Shared reads — each of these was fetched independently by two different
+	 * components, every one with its own atom, loaded flag and timestamp. Same
+	 * key here means the SECOND caller gets the first one's result, and two
+	 * mounting at once share a single request rather than racing.
+	 */
+	exploreData: () => "explore:data",
+	whoToFollow: () => "explore:whoToFollow",
+	notifications: () => "notifications:list",
 } as const;

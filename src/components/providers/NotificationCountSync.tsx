@@ -9,6 +9,11 @@ import {
   notificationsLoadedAtom,
 } from "@/store/notifications.atom";
 import { getNotificationsAction } from "@/lib/notification.actions";
+import { cacheKeys, fetchCached, invalidate } from "@/lib/cache";
+
+/** Notifications arrive as realtime events, so a minute of reuse costs nothing
+ *  in freshness and removes a duplicate request on every notifications visit. */
+const NOTIFICATIONS_TTL = 60_000;
 import { useUserEvents } from "@/hooks/useUserEvents";
 
 /**
@@ -28,7 +33,7 @@ export function NotificationCountSync() {
 
   useEffect(() => {
     let cancelled = false;
-    getNotificationsAction().then((res) => {
+    fetchCached(cacheKeys.notifications(), getNotificationsAction, NOTIFICATIONS_TTL).then((res) => {
       if (cancelled) return;
       if (res.success && Array.isArray(res.data)) {
         setNotifications(res.data);
@@ -42,7 +47,10 @@ export function NotificationCountSync() {
   }, [setCount, setNotifications, setLoaded]);
 
   const refresh = () => {
-    void getNotificationsAction().then((res) => {
+    // Something arrived: the cached copy is stale by definition, so drop it
+    // before refetching or fetchCached would hand back the old list.
+    invalidate(cacheKeys.notifications());
+    void fetchCached(cacheKeys.notifications(), getNotificationsAction, NOTIFICATIONS_TTL).then((res) => {
       if (res.success && Array.isArray(res.data)) setNotifications(res.data);
     });
   };

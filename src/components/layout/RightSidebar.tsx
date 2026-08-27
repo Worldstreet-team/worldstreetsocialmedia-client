@@ -25,6 +25,7 @@ import { useT } from "@/i18n/client";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { resolveCategoryLabel } from "@/lib/categories";
+import { cacheKeys, fetchCached } from "@/lib/cache";
 import clsx from "clsx";
 
 /** How long rail data (suggestions + trends) serves from memory before a
@@ -97,8 +98,12 @@ export function RightSidebar() {
 			setRailFetchedAt(Date.now());
 			try {
 				const [who, explore] = await Promise.allSettled([
-					needWho ? getWhoToFollowAction() : null,
-					needTrends ? getExploreDataAction() : null,
+					needWho
+					? fetchCached(cacheKeys.whoToFollow(), getWhoToFollowAction, RAIL_TTL_MS)
+					: null,
+					needTrends
+					? fetchCached(cacheKeys.exploreData(), getExploreDataAction, RAIL_TTL_MS)
+					: null,
 				]);
 				// Keyed on whether a request actually went out, NOT on whether it
 				// came back with a value: failure has to be a terminal state with

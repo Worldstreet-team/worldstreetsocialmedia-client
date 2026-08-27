@@ -13,6 +13,9 @@ import {
   markNotificationsReadAction,
 } from "@/lib/notification.actions";
 import { followUserAction } from "@/lib/user.actions";
+import { cacheKeys, fetchCached, invalidate } from "@/lib/cache";
+
+const NOTIFICATIONS_TTL = 60_000;
 import { useUserEvents } from "@/hooks/useUserEvents";
 import { useLiveEvents } from "@/hooks/useLiveNow";
 import {
@@ -92,7 +95,15 @@ export default function NotificationsPage() {
     async (opts: { merge?: boolean } = {}) => {
       setLoading(true);
       setFailed(false);
-      const res = await getNotificationsAction();
+      // Shares the list NotificationCountSync already fetched on app load —
+      // arriving here used to fire a second identical request. A pull-to-
+      // refresh or a realtime arrival invalidates the key, so this is reuse,
+      // not staleness.
+      const res = await fetchCached(
+        cacheKeys.notifications(),
+        getNotificationsAction,
+        NOTIFICATIONS_TTL,
+      );
       if (res.success && Array.isArray(res.data)) {
         const rows = res.data as AppNotification[];
         const fresh = rows.filter((r) => !r.read).map((r) => r._id);
@@ -142,6 +153,9 @@ export default function NotificationsPage() {
   const showPending = useCallback(() => {
     setPending(0);
     mainScroller().scrollTo({ top: 0, behavior: "smooth" });
+    // Explicit refresh: drop the shared entry first, or fetchCached hands back
+    // exactly the list this button exists to replace.
+    invalidate(cacheKeys.notifications());
     void load({ merge: true });
   }, [load]);
 
@@ -159,12 +173,18 @@ export default function NotificationsPage() {
   }, []);
 
   const followBack = useCallback(
-    async (userId: string) => {
-      setFollowingIds((prev) => [...prev, userId]);
-      const res = await followUserAction(userId);
+    async (profileId: string) => {
+      // Without this guard a sender whose profile has since been deleted
+      // sent `undefined` down the wire, the gateway answered 404, and the
+      // user saw "Failed to align" for a row they could never act on.
+      if (!profileId) return;
+      setFollowingIds((prev) =>
+        prev.includes(profileId) ? prev : [...prev, profileId],
+      );
+      const res = await followUserAction(profileId);
       if (!res.success) {
-        setFollowingIds((prev) => prev.filter((x) => x !== userId));
-        toast(t("rail.followFailed"), { type: "error" });
+        setFollowingIds((prev) => prev.filter((x) => x !== profileId));
+        toast(res.message || t("rail.followFailed"), { type: "error" });
       }
     },
     [setFollowingIds, toast, t],
@@ -248,7 +268,13 @@ export default function NotificationsPage() {
             icon={AlertTriangle}
             title={t("notif.error.title")}
             caption={t("notif.error.caption")}
-            action={{ label: t("common.retry"), onClick: () => void load() }}
+            action={{
+              label: t("common.retry"),
+              onClick: () => {
+                invalidate(cacheKeys.notifications());
+                void load();
+              },
+            }}
           />
         ) : groups.length === 0 ? (
           <EmptyState
@@ -265,7 +291,7 @@ export default function NotificationsPage() {
               isLive={group.post?._id ? liveStreams.has(group.post._id) : false}
               onOpen={openGroup}
               onFollowBack={followBack}
-              followed={followingIds.includes(group.senders[0]?.userId)}
+              followed={followingIds.includes(group.senders[0]?._id)}
               delay={Math.min(i * 30, 300)}
             />
           ))
