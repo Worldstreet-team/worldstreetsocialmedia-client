@@ -14,6 +14,48 @@ export interface LiveEntry {
 }
 
 /**
+ * ONE live-streams store for the whole app.
+ *
+ * Every consumer used to own its poll and its own copy of the answer, so a
+ * profile page with the right rail ran three timers and three requests for
+ * one piece of shared truth — and each new surface that wanted a live badge
+ * added another. Now the first subscriber starts the poll, the last one to
+ * leave stops it, and everyone reads the same snapshot.
+ *
+ * A shared cache also means arriving on a page renders what is already known
+ * instead of a fetch: navigation costs nothing until the poll or an Ably
+ * event actually changes something.
+ */
+let sharedEntries: LiveEntry[] = [];
+let sharedLoaded = false;
+let inFlight: Promise<void> | null = null;
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+const subscribers = new Set<() => void>();
+
+function emit() {
+	for (const fn of subscribers) fn();
+}
+
+/** Coalesced: concurrent callers share one request, not one each. */
+function loadLive(): Promise<void> {
+	if (inFlight) return inFlight;
+	inFlight = listLiveStreamsAction()
+		.then((res: any) => {
+			if (res.success) sharedEntries = res.streams;
+			sharedLoaded = true;
+			emit();
+		})
+		.catch(() => {
+			sharedLoaded = true;
+			emit();
+		})
+		.finally(() => {
+			inFlight = null;
+		});
+	return inFlight;
+}
+
+/**
  * Who is live, right now. Xstream is the source of truth (not the stories
  * rail, which only carried other people's auto-stories and left your own
  * broadcast invisible). Ably's "live" channel pushes start and end events so
@@ -22,35 +64,42 @@ export interface LiveEntry {
  */
 export function useLiveNow(pollMs = 20_000) {
 	const { client } = useRealtime();
-	const [entries, setEntries] = useState<LiveEntry[]>([]);
-	const [loaded, setLoaded] = useState(false);
-
-	const refresh = useCallback(async () => {
-		const res = await listLiveStreamsAction();
-		if (res.success) setEntries(res.streams);
-		setLoaded(true);
-	}, []);
+	const [, bump] = useState(0);
 
 	useEffect(() => {
-		void refresh();
-		const poll = setInterval(() => void refresh(), pollMs);
-		return () => clearInterval(poll);
-	}, [refresh, pollMs]);
+		const onChange = () => bump((n) => n + 1);
+		subscribers.add(onChange);
+		// Render what is already known; only fetch if nobody has yet.
+		if (!sharedLoaded) void loadLive();
+		if (!pollTimer) pollTimer = setInterval(() => void loadLive(), pollMs);
+		return () => {
+			subscribers.delete(onChange);
+			// Last one out turns off the poll — a backgrounded surface should
+			// not keep the app talking to the gateway.
+			if (subscribers.size === 0 && pollTimer) {
+				clearInterval(pollTimer);
+				pollTimer = null;
+			}
+		};
+	}, [pollMs]);
 
-	// Instant reaction to the gateway's Ably broadcasts.
+	// Instant reaction to the gateway's Ably broadcasts. Subscribing per
+	// consumer is fine — Ably multiplexes one channel — and the load it
+	// triggers is coalesced.
 	useEffect(() => {
 		if (!client) return;
 		const channel = client.channels.get("live");
-		const onEvent = () => void refresh();
+		const onEvent = () => void loadLive();
 		void channel.subscribe("started", onEvent);
 		void channel.subscribe("ended", onEvent);
 		return () => {
 			channel.unsubscribe("started", onEvent);
 			channel.unsubscribe("ended", onEvent);
 		};
-	}, [client, refresh]);
+	}, [client]);
 
-	return { entries, loaded, refresh };
+	const refresh = useCallback(() => loadLive(), []);
+	return { entries: sharedEntries, loaded: sharedLoaded, refresh };
 }
 
 /**

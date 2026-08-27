@@ -216,6 +216,34 @@ export function SpacesRail({ delay = 210 }: { delay?: number }) {
 		setPage((current) => Math.max(0, Math.min(current, slideCount - 1)));
 	}, [slideCount]);
 
+	/**
+	 * Hold the carousel where the reader left it.
+	 *
+	 * This section re-renders often and for reasons that have nothing to do
+	 * with the reader: a listener count ticks, the `spaces` channel fires, and
+	 * the live rail above it polls every 20 seconds. Under
+	 * `scroll-snap-type: mandatory` the browser re-snaps whenever the content
+	 * inside the scroller changes, which slid the carousel back on its own —
+	 * it read as autoplay. Re-assert the page we are supposed to be on after
+	 * a CONTENT update, without animation so a correction is never mistaken
+	 * for a deliberate move.
+	 *
+	 * Deliberately not keyed on `page`: paging scrolls smoothly and `syncPage`
+	 * updates `page` part-way through, so correcting on that would snap the
+	 * animation dead half-way. The page is read from a ref instead — this
+	 * effect only ever runs when the rooms themselves changed.
+	 */
+	const pageRef = useRef(0);
+	pageRef.current = page;
+	useEffect(() => {
+		const el = trackRef.current;
+		if (!el) return;
+		const target = pageRef.current * slideStep();
+		if (Math.abs(el.scrollLeft - target) > 1) {
+			el.scrollTo({ left: target, behavior: "auto" });
+		}
+	}, [live, upcoming]);
+
 	// Live rooms first, then scheduled — one flat list so paging is linear.
 	const slides = [
 		...live.map((space) => ({ space, live: true })),
