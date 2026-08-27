@@ -181,7 +181,7 @@ function VerticalSurface() {
 				streamId: st.id,
 				liveTitle: st.title,
 				category: st.category,
-				likes: 0,
+				likes: Number(st.likes ?? 0),
 				replies: 0,
 				isLiked: false,
 				isBookmarked: false,
@@ -201,7 +201,7 @@ function VerticalSurface() {
 							streamId: want,
 							liveTitle: info.stream.title,
 							category: info.stream.category,
-							likes: 0,
+							likes: Number((info.stream as any).likes ?? 0),
 							replies: 0,
 							isLiked: false,
 							isBookmarked: false,
@@ -461,10 +461,55 @@ function VerticalSurface() {
 		active,
 	);
 
-	const patchSlide = (key: string, patch: Partial<Slide>) =>
+	// Memoized deliberately: this is in the dependency list of effects that
+	// fetch. As a plain function it was a new value on every render, so those
+	// effects re-ran on every render — refetching in a loop and overwriting
+	// optimistic state (a like would land, then immediately snap back).
+	const patchSlide = useCallback((key: string, patch: Partial<Slide>) => {
 		setSlides((prev) =>
 			prev.map((s) => (s.key === key ? { ...s, ...patch } : s)),
 		);
+	}, []);
+
+	// ── the active stream's like state ───────────────────────────────────
+	//
+	// The listing carries the total, but whether YOU have liked it is
+	// per-viewer and only Xstream knows. Fetched for the active slide alone
+	// rather than the whole rail: a stream you never reach costs nothing, and
+	// this is one small request per broadcast you actually watch.
+	const activeStreamId = slides[active]?.streamId;
+	const activeSlideKey = slides[active]?.key;
+	const likeSyncedRef = useRef<string | null>(null);
+	useEffect(() => {
+		if (!activeStreamId || !activeSlideKey) return;
+		// One sync per broadcast. Re-running would fight the optimistic
+		// toggle: the fetch resolves after the tap and would put the old
+		// answer back.
+		if (likeSyncedRef.current === activeStreamId) return;
+		likeSyncedRef.current = activeStreamId;
+		let cancelled = false;
+		(async () => {
+			try {
+				const token = await (window as any).Clerk?.session?.getToken();
+				if (!token) return;
+				const res = await fetch(
+					`${XSTREAM_API_URL}/v1/streams/${activeStreamId}/like`,
+					{ headers: { Authorization: `Bearer ${token}` } },
+				);
+				const body = await res.json().catch(() => null);
+				if (cancelled || !body?.data) return;
+				patchSlide(activeSlideKey, {
+					likes: Number(body.data.likes ?? 0),
+					isLiked: Boolean(body.data.liked),
+				});
+			} catch {
+				// A rail that shows the listing's total is fine; leave it be.
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [activeStreamId, activeSlideKey, patchSlide]);
 
 	const toggleLike = async (slide: Slide) => {
 		// A live slide's heart is the STREAM's like, shared with Xstream —
@@ -826,34 +871,31 @@ function VerticalSurface() {
 
 						{/* action rail — overlaid on phones, beside the stage on desktop */}
 						<div className="absolute right-3 bottom-8 z-10 flex flex-col items-center gap-3.5 text-white lg:static lg:z-auto lg:self-end lg:pb-10">
+							{/* The heart is NOT gated on `postId`. `toggleLike` has
+							    always known how to like a stream — it calls Xstream's
+							    own like endpoint so the count is shared with Xstream —
+							    but the button lived inside the post-only group, so a
+							    live broadcast rendered a rail with no like at all. */}
+							<button
+								type="button"
+								onClick={() => toggleLike(slide)}
+								aria-label={t("post.like")}
+								className="flex flex-col items-center gap-1 cursor-pointer"
+							>
+								<motion.span
+									animate={{ scale: slide.isLiked ? [1, 1.25, 1] : 1 }}
+									transition={{ duration: 0.25, ease: [0.2, 0, 0, 1] }}
+									className={clsx(railBtn, slide.isLiked && "text-danger")}
+								>
+									<Heart size={22} weight={slide.isLiked ? "fill" : "regular"} />
+								</motion.span>
+								<span className="text-[11.5px] font-semibold font-sans tabular-nums text-white/85">
+									{fmt(slide.likes)}
+								</span>
+							</button>
+
 							{slide.postId && (
 								<>
-									<button
-										type="button"
-										onClick={() => toggleLike(slide)}
-										aria-label={t("post.like")}
-										className="flex flex-col items-center gap-1 cursor-pointer"
-									>
-										<motion.span
-											animate={{
-												scale: slide.isLiked ? [1, 1.25, 1] : 1,
-											}}
-											transition={{
-												duration: 0.25,
-												ease: [0.2, 0, 0, 1],
-											}}
-											className={clsx(railBtn, slide.isLiked && "text-danger")}
-										>
-											<Heart
-												size={22}
-												weight={slide.isLiked ? "fill" : "regular"}
-											/>
-										</motion.span>
-										<span className="text-[11.5px] font-semibold font-sans tabular-nums text-white/85">
-											{fmt(slide.likes)}
-										</span>
-									</button>
-
 									<button
 										type="button"
 										onClick={() => openComments(slide)}
@@ -917,40 +959,58 @@ function VerticalSurface() {
 				);
 			})}
 
-			{/* ── live chat drawer (shared cross-platform panel) ── */}
+			{/* ── live chat: the same anchored popover the post comments use ── */}
 			<AnimatePresence>
 				{chatFor?.streamId && (
 					<>
+						{/* Invisible on desktop on purpose: a popover is not a modal,
+						    and dimming a live broadcast to read its chat is exactly
+						    backwards. Dimmed on mobile, where the sheet owns the screen. */}
 						<motion.button
 							type="button"
-							aria-label="Close"
+							aria-label={t("common.close")}
 							initial={{ opacity: 0 }}
 							animate={{ opacity: 1 }}
 							exit={{ opacity: 0 }}
 							transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
 							onClick={() => setChatFor(null)}
-							className="fixed inset-0 z-modal bg-black/40 cursor-default"
+							className="fixed inset-0 z-modal cursor-default bg-black/45 sm:bg-transparent"
 						/>
 						<motion.aside
-							initial={{ x: "100%" }}
-							animate={{ x: 0 }}
-							exit={{ x: "100%" }}
-							transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
-							className="fixed right-0 top-0 bottom-0 z-modal w-[400px] max-w-[94vw] glass-panel backdrop-blur-2xl backdrop-saturate-150 !rounded-none flex flex-col"
+							initial={{ opacity: 0, y: 16, scale: 0.98 }}
+							animate={{ opacity: 1, y: 0, scale: 1 }}
+							exit={{ opacity: 0, y: 16, scale: 0.98 }}
+							transition={{ duration: 0.26, ease: [0.2, 0, 0, 1] }}
+							style={{ transformOrigin: "bottom right" }}
+							className={clsx(
+								"fixed z-modal flex flex-col overflow-hidden glass-panel backdrop-blur-2xl backdrop-saturate-150",
+								// mobile: bottom sheet
+								"inset-x-0 bottom-0 max-h-[74vh] rounded-t-2xl",
+								// desktop: floating popover, not a full-height drawer
+								"sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-[380px] sm:max-h-[min(600px,72vh)] sm:rounded-2xl",
+							)}
 						>
-							<div className="flex items-center gap-2 px-4 h-14 border-b border-white/8 shrink-0">
-								<h2 className="font-sans text-[15px] font-semibold glass-ink flex-1 truncate">
+							<span
+								aria-hidden
+								className="mx-auto mt-2 h-1 w-9 shrink-0 rounded-pill bg-white/25 sm:hidden"
+							/>
+
+							<div className="flex h-12 shrink-0 items-center gap-2 px-4">
+								<h2 className="flex-1 truncate font-sans text-[14px] font-semibold glass-ink">
 									{chatFor.liveTitle || chatFor.username}
 								</h2>
 								<button
 									type="button"
 									onClick={() => setChatFor(null)}
-									aria-label="Close"
-									className="flex h-9 w-9 items-center justify-center rounded-pill glass-chip cursor-pointer"
+									aria-label={t("common.close")}
+									/* A tint, not another blur — nesting backdrop-filter
+									   inside a blurred panel blurs the panel's own fill. */
+									className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-pill bg-white/10 glass-ink transition-colors hover:bg-white/[0.18]"
 								>
-									<X size={15} />
+									<X size={14} weight="bold" />
 								</button>
 							</div>
+
 							<LiveChatPanel
 								streamId={chatFor.streamId}
 								room={liveRoom}
@@ -963,7 +1023,7 @@ function VerticalSurface() {
 											}
 										: null
 								}
-								className="flex-1 min-h-0"
+								className="min-h-0 flex-1"
 							/>
 						</motion.aside>
 					</>

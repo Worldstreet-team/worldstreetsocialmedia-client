@@ -244,6 +244,10 @@ export async function listLiveStreamsAction() {
 				title: String(st.title ?? ""),
 				category: String(st.category ?? ""),
 				viewers: Number(st.viewers ?? 0),
+				// The rail renders a heart for live streams too, so the count
+				// has to travel with the listing — otherwise every broadcast
+				// shows 0 until someone clicks it.
+				likes: Number(st.likes ?? 0),
 				username: String(st.streamerId?.username ?? ""),
 				avatar: String(st.streamerId?.avatar ?? ""),
 			}));
