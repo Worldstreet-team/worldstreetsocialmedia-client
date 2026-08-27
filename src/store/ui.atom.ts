@@ -93,3 +93,6 @@ export const storyRailAtom = atom<any[]>([]);
  * A Set because every consumer asks "is this one id in there?".
  */
 export const onlineIdsAtom = atom<Set<string>>(new Set<string>());
+
+/** The docked messenger panel on the right rail. */
+export const messageDockOpenAtom = atom(false);

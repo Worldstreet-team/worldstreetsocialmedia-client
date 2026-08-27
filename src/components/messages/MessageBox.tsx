@@ -911,7 +911,7 @@ export const MessageBox = ({
 			{/* Chat Area */}
 			{activeConversation ? (
 				<div className="flex-1 min-w-0 flex flex-col">
-					<div className="h-16 shrink-0 border-b border-hairline flex items-center justify-between gap-2 px-2 md:px-6">
+					<div className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-hairline bg-page/80 px-2 backdrop-blur-xl md:px-6">
 						<div className="flex items-center gap-2 md:gap-3 min-w-0">
 							<button
 								type="button"
@@ -921,7 +921,23 @@ export const MessageBox = ({
 							>
 								<ArrowLeft className="w-5 h-5" />
 							</button>
-							<SafeAvatar src={activeConversation.otherParticipant.avatar} width={40} height={40} className="rounded-full shrink-0 w-10 h-10 object-cover" alt="avatar" />
+							<span className="relative shrink-0">
+								<SafeAvatar
+									src={activeConversation.otherParticipant.avatar}
+									width={40}
+									height={40}
+									className="h-10 w-10 rounded-pill object-cover"
+									alt="avatar"
+								/>
+								{/* The dot belongs on the face, not in a line of text
+								    below it — it is the first thing you look for. */}
+								{peerOnline && (
+									<span
+										aria-hidden
+										className="absolute bottom-0 right-0 h-3 w-3 rounded-pill bg-success ring-2 ring-page"
+									/>
+								)}
+							</span>
 							<div className="min-w-0">
 								<h2 className="font-semibold text-sm truncate">
 									{activeConversation.otherParticipant.firstName}{" "}
@@ -945,7 +961,7 @@ export const MessageBox = ({
 							<button
 								type="button"
 								aria-label="Start voice call"
-								className="h-11 w-11 md:h-10 md:w-10 flex items-center justify-center rounded-pill hover:bg-raised hover:text-primary transition-colors cursor-pointer"
+								className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary md:h-10 md:w-10"
 								onClick={() =>
 									startCall({
 										conversationId: activeConversation._id,
@@ -968,7 +984,7 @@ export const MessageBox = ({
 							<button
 								type="button"
 								aria-label="Start video call"
-								className="h-11 w-11 md:h-10 md:w-10 flex items-center justify-center rounded-pill hover:bg-raised hover:text-primary transition-colors cursor-pointer"
+								className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary md:h-10 md:w-10"
 								onClick={() =>
 									startCall({
 										conversationId: activeConversation._id,
@@ -993,7 +1009,7 @@ export const MessageBox = ({
 							<button
 								type="button"
 								aria-label="Conversation info"
-								className="hidden sm:flex h-11 w-11 md:h-10 md:w-10 items-center justify-center rounded-pill hover:bg-raised hover:text-primary transition-colors cursor-pointer"
+								className="hidden h-11 w-11 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary sm:flex md:h-10 md:w-10"
 							>
 								<Info className="w-5 h-5" />
 							</button>
@@ -1161,7 +1177,7 @@ export const MessageBox = ({
 						{/* Preview Area */}
 						{selectedFile && previewUrl && (
 							<div className="mb-2 relative inline-block">
-								<div className="relative rounded-lg overflow-hidden border border-hairline">
+								<div className="relative overflow-hidden rounded-xl bg-sunken">
 									{selectedFile.type.startsWith("image") ? (
 										<img
 											src={previewUrl}
@@ -1180,7 +1196,7 @@ export const MessageBox = ({
 									type="button"
 									onClick={clearSelectedFile}
 									aria-label="Remove attachment"
-									className="absolute -top-2.5 -right-2.5 flex h-9 w-9 items-center justify-center bg-raised rounded-pill text-muted hover:text-primary border border-hairline transition-colors"
+									className="absolute -right-2.5 -top-2.5 flex h-9 w-9 items-center justify-center rounded-pill bg-raised text-muted transition-colors hover:text-primary"
 								>
 									<X className="w-3.5 h-3.5" />
 								</button>
@@ -1190,7 +1206,7 @@ export const MessageBox = ({
 										type="button"
 										onClick={() => setEditingAttachment(true)}
 										aria-label="Edit image"
-										className="absolute -top-2.5 -left-2.5 flex h-9 w-9 items-center justify-center bg-raised rounded-pill text-muted hover:text-primary border border-hairline transition-colors"
+										className="absolute -left-2.5 -top-2.5 flex h-9 w-9 items-center justify-center rounded-pill bg-raised text-muted transition-colors hover:text-primary"
 									>
 										<PencilSimple size={15} weight="bold" />
 									</button>
@@ -1228,7 +1244,7 @@ export const MessageBox = ({
 											}}
 											className="flex flex-col items-center gap-2 p-3 hover:bg-raised rounded-lg transition-colors min-w-[80px] cursor-pointer"
 										>
-											<div className="w-10 h-10 rounded-pill bg-raised flex items-center justify-center border border-hairline">
+											<div className="flex h-10 w-10 items-center justify-center rounded-pill bg-chip">
 												<ImageIcon className="w-5 h-5 text-primary" />
 											</div>
 											<span className="text-xs text-muted">Photo</span>
@@ -1243,7 +1259,7 @@ export const MessageBox = ({
 											}}
 											className="flex flex-col items-center gap-2 p-3 hover:bg-raised rounded-lg transition-colors min-w-[80px] cursor-pointer"
 										>
-											<div className="w-10 h-10 rounded-pill bg-raised flex items-center justify-center border border-hairline">
+											<div className="flex h-10 w-10 items-center justify-center rounded-pill bg-chip">
 												<Video className="w-5 h-5 text-primary" />
 											</div>
 											<span className="text-xs text-muted">Video</span>
@@ -1261,8 +1277,8 @@ export const MessageBox = ({
 									// Colors + the 45° rotate only (transform is in-budget).
 									"flex h-11 w-11 shrink-0 items-center justify-center rounded-pill transition-[transform,background-color,color]",
 									showAttachMenu
-										? "bg-primary text-page rotate-45"
-										: "bg-surface text-muted border border-hairline hover:text-primary hover:bg-raised",
+										? "rotate-45 bg-primary text-page"
+										: "bg-chip text-muted hover:text-primary",
 								)}
 							>
 								<Plus className="w-6 h-6" />
@@ -1279,7 +1295,7 @@ export const MessageBox = ({
 
 							{/* Recording UI */}
 							{isRecording ? (
-								<div className="flex-1 min-w-0 bg-surface border border-hairline rounded-pill h-[56px] flex items-center px-3 sm:px-6 gap-2 sm:gap-4">
+								<div className="flex h-[56px] min-w-0 flex-1 items-center gap-2 rounded-pill bg-sunken px-3 sm:gap-4 sm:px-6">
 									{/* Recording dot sanctioned live-state loop (06-motion):
 										    opacity-only pulse while recording is active. */}
 										<div className="w-3 h-3 shrink-0 rounded-full bg-danger animate-pulse" />
@@ -1304,8 +1320,9 @@ export const MessageBox = ({
 									</button>
 								</div>
 							) : (
-								/* Text Input Pill */
-								<div className="flex-1 min-w-0 bg-surface border border-hairline rounded-xl flex items-center px-3 sm:px-4 py-1.5 gap-1 sm:gap-2 focus-within:border-brand/60 transition-colors">
+								/* A fill that lifts on focus. The bordered card read as
+								   a form field in an app that has none anywhere else. */
+								<div className="flex min-w-0 flex-1 items-center gap-1 rounded-2xl bg-sunken px-3 py-1.5 transition-colors focus-within:bg-raised sm:gap-2 sm:px-4">
 									<textarea
 										value={messageInput}
 										onChange={(e) => {

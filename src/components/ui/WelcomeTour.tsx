@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { X } from "@phosphor-icons/react";
 import { useAtom } from "jotai";
 import {
   CandlestickChart,
@@ -12,7 +13,6 @@ import {
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import {
-  OverlayHeader,
   OverlayPanel,
   OverlayScrim,
   useOverlayDismiss,
@@ -37,7 +37,7 @@ const ECOSYSTEM_CHIPS = [
 ];
 
 const Kbd = ({ children }: { children: React.ReactNode }) => (
-  <kbd className="inline-flex items-center rounded-sm border border-hairline bg-raised px-2 h-6 font-sans text-[11px] font-medium text-primary">
+  <kbd className="inline-flex h-7 items-center rounded-md bg-primary/10 px-2 font-sans text-[11px] font-semibold text-primary">
     {children}
   </kbd>
 );
@@ -78,19 +78,17 @@ const STEPS = [
     title: "Built for market talk",
  body: "Tag tickers with $cashtags and topics with #hashtags they link straight to search, so every conversation is one tap from the posts behind it.",
     hero: (
-      <div className="flex flex-col items-center gap-3">
-        <span className="flex h-14 w-14 items-center justify-center rounded-lg bg-convert/10">
-          <CandlestickChart className="h-7 w-7 text-gold" strokeWidth={2} />
+      // The entities themselves, at the size you would actually read them —
+      // a chart glyph in a gold-era `bg-convert` tile said nothing the copy
+      // did not. `text-gold` IS the brand ink token, so this follows the cyan.
+      <span className="flex items-center gap-2 font-sans text-[15px] font-semibold">
+        <span className="rounded-md bg-brand/15 px-2.5 py-1 text-gold">
+          $WST
         </span>
-        <span className="flex items-baseline gap-2 font-sans">
-          <span className="rounded-sm bg-convert/10 px-1.5 py-0.5 text-[13px] font-medium text-gold">
-            $WST
-          </span>
-          <span className="rounded-sm bg-raised px-1.5 py-0.5 text-[13px] font-medium text-primary">
-            #gold
-          </span>
+        <span className="rounded-md bg-primary/10 px-2.5 py-1 text-primary">
+          #gold
         </span>
-      </div>
+      </span>
     ),
   },
   {
@@ -98,10 +96,12 @@ const STEPS = [
     title: "One account, every platform",
     body: "Your WorldStreet account works across Academy, Xstream, Shop and your Dashboard wallet. Jump between them any time from the More menu.",
     hero: (
-      <div className="flex items-center gap-3">
+      // Borderless: the fill is the chip. A hairline box around each icon was
+      // four more edges on a panel whose whole grammar is fill and shadow.
+      <div className="flex items-center gap-2.5">
         {ECOSYSTEM_CHIPS.map(({ icon: Icon, label }) => (
           <div key={label} className="flex flex-col items-center gap-1.5">
-            <span className="flex h-11 w-11 items-center justify-center rounded-md bg-raised border border-hairline">
+            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
               <Icon className="h-5 w-5 text-primary" strokeWidth={2} />
             </span>
             <span className="font-sans text-[10px] text-muted">{label}</span>
@@ -186,11 +186,6 @@ export function WelcomeTour() {
           label="Welcome to WorldSpace"
           className="max-w-[440px]"
         >
-          <OverlayHeader onClose={dismiss} closeLabel="Skip tour">
-            <span className="flex-1 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">
-              Getting started
-            </span>
-          </OverlayHeader>
 
           {/* Hero band */}
           {/* The same artwork the onboarding flow stands on, so the tour reads
@@ -199,15 +194,30 @@ export function WelcomeTour() {
               the panel and carries a wash of brand so the picture belongs to
               this palette instead of sitting on top of it. No border — depth is
               the fade, per the overlay grammar. */}
-          <div className="relative flex h-[120px] shrink-0 items-center justify-center overflow-hidden bg-sunken bg-cover bg-center bg-[url('/images/onboarding/backdrop-dark.webp')] [[data-ws-theme='platform-light']_&]:bg-[url('/images/onboarding/backdrop-light.webp')] sm:h-[150px]">
+          <div className="relative flex h-[210px] shrink-0 items-end justify-center overflow-hidden bg-sunken bg-cover bg-center bg-[url('/images/onboarding/backdrop-dark.webp')] pb-6 [[data-ws-theme='platform-light']_&]:bg-[url('/images/onboarding/backdrop-light.webp')] sm:h-[240px]">
+            {/* The picture runs to the panel's own top edge — no band, no
+                hairline — and dissolves downward into the surface so the copy
+                below reads as the same object rather than a caption under a
+                photo. The brand wash is what stops it looking like stock art
+                dropped into our palette. */}
             <span
               aria-hidden
-              className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-surface/45 to-surface"
+              className="pointer-events-none absolute inset-0 bg-gradient-to-b from-surface/25 via-surface/55 to-surface"
             />
             <span
               aria-hidden
               className="pointer-events-none absolute inset-0 bg-brand/10"
             />
+            {/* The close control rides ON the artwork, so the header no longer
+                costs a strip of panel above the picture. */}
+            <button
+              type="button"
+              onClick={dismiss}
+              aria-label="Skip tour"
+              className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-pill bg-page/50 text-primary backdrop-blur-md transition-colors hover:bg-page/70"
+            >
+              <X size={16} weight="bold" />
+            </button>
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={current.key}
@@ -271,7 +281,7 @@ export function WelcomeTour() {
                 <button
                   type="button"
                   onClick={() => setStep((s) => s - 1)}
-                  className="h-11 sm:h-9 px-4 rounded-pill font-sans text-[13px] font-semibold text-primary border border-hairline hover:bg-raised transition-colors cursor-pointer"
+                  className="h-11 sm:h-9 cursor-pointer rounded-pill bg-primary/10 px-4 font-sans text-[13px] font-semibold text-primary transition-colors hover:bg-primary/[0.16]"
                 >
                   Back
                 </button>

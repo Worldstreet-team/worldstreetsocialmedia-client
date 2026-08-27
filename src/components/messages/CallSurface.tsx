@@ -24,12 +24,24 @@ import { SafeAvatar } from "@/components/ui/SafeAvatar";
 /**
  * The one on-screen surface for a call, in both of its states:
  *  - **maximized** — a full modal (video fills it, voice shows the avatar)
- *  - **minimized** — a dock in the corner, so the call keeps running while
- *    you read the rest of the app
+ *  - **minimized** — a picture-in-picture dock in the corner, so the call
+ *    keeps running while you read the rest of the app
  *
  * Both render from the same state, so minimizing never tears down media —
  * it only changes where the tracks are painted.
+ *
+ * **A call is a media surface, so it is fixed-dark in both themes** — the same
+ * ruling as the live page and the media editors. Chrome comes from the
+ * fixed-white glass family (`glass-dock` / `glass-chip` / `glass-ink` /
+ * `glass-cta`), never from theme tokens, which would invert underneath the
+ * picture in light mode. No borders, no drop shadows, no gradients: depth is
+ * fill contrast only. The end-call button is the one red control on the
+ * surface; everything else is a glass chip, and an engaged toggle (muted mic,
+ * camera off) inverts to the flat-white `glass-cta`.
  */
+
+/** The one easing. */
+const EASE = [0.2, 0, 0, 1] as const;
 
 /** Attach a LiveKit track to a media element for as long as it is mounted. */
 function useAttach(
@@ -119,7 +131,57 @@ function statusLine(
 	return "Calling…";
 }
 
-/** Round control button. `tone` picks the affordance, not a raw colour. */
+/**
+ * Three breathing dots. The states people stare at — ringing, connecting —
+ * need something alive next to the words, or a stalled call and a working one
+ * look identical. Opacity only.
+ */
+function PendingDots({ className }: { className?: string }) {
+	return (
+		<span aria-hidden className={clsx("inline-flex items-center gap-[3px]", className)}>
+			{[0, 1, 2].map((i) => (
+				<motion.span
+					key={i}
+					className="h-[3px] w-[3px] rounded-pill bg-current"
+					animate={{ opacity: [0.25, 1, 0.25] }}
+					transition={{
+						duration: 1.4,
+						repeat: Number.POSITIVE_INFINITY,
+						ease: "easeInOut",
+						delay: i * 0.16,
+					}}
+				/>
+			))}
+		</span>
+	);
+}
+
+/**
+ * "Weak connection" — the other state people stare at. It pulses instead of
+ * going amber: status ink is a theme token and this surface is fixed-dark.
+ */
+function WeakChip({ compact }: { compact?: boolean }) {
+	return (
+		<motion.span
+			className={clsx(
+				"flex items-center gap-1.5 rounded-pill glass-chip-canvas backdrop-blur-md glass-ink",
+				compact ? "h-6 px-2 text-[11px]" : "h-7 px-2.5 text-[12px] font-medium",
+			)}
+			animate={{ opacity: [1, 0.55, 1] }}
+			transition={{ duration: 1.8, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+		>
+			<WifiSlash size={compact ? 12 : 14} weight="fill" />
+			Weak connection
+		</motion.span>
+	);
+}
+
+/**
+ * Round control button. `tone` picks the affordance, not a raw colour:
+ * `danger` is the single red control on the surface, `cta` is the flat-white
+ * glass CTA, `neutral` is a glass chip that inverts to the CTA fill when the
+ * toggle it owns is engaged (muted, camera off) — the language phones use.
+ */
 function ControlButton({
 	label,
 	onClick,
@@ -130,7 +192,7 @@ function ControlButton({
 }: {
 	label: string;
 	onClick: () => void;
-	tone?: "neutral" | "danger" | "success";
+	tone?: "neutral" | "danger" | "cta";
 	active?: boolean;
 	size?: "sm" | "lg";
 	children: React.ReactNode;
@@ -142,16 +204,12 @@ function ControlButton({
 			title={label}
 			onClick={onClick}
 			className={clsx(
-				"flex items-center justify-center rounded-pill transition-colors cursor-pointer",
+				"flex shrink-0 items-center justify-center rounded-pill transition-colors cursor-pointer",
+				// Hit targets never drop below 40×40, whatever the glyph does.
 				size === "lg" ? "h-14 w-14" : "h-10 w-10",
-				tone === "danger" && "bg-danger text-primary hover:opacity-90",
-				tone === "success" && "bg-success text-page hover:opacity-90",
-				tone === "neutral" &&
-					(active
-						? "bg-raised text-primary hover:bg-hairline"
-						: // "Off" reads as a filled, inverted chip — the same
-							// language mute buttons use on phones.
-							"bg-primary text-page hover:opacity-90"),
+				tone === "danger" && "bg-danger text-white hover:opacity-90",
+				tone === "cta" && "glass-cta",
+				tone === "neutral" && (active ? "glass-chip" : "glass-cta"),
 			)}
 		>
 			{children}
@@ -188,6 +246,7 @@ export function CallSurface() {
 
 	const showVideoStage = isVideo && (remoteVideoOn || camOn);
 	const line = statusLine(status, isIncoming, isVideo, endReason, elapsed);
+	const pending = status === "ringing" || status === "connecting";
 
 	if (!open || !peer) return null;
 
@@ -204,56 +263,85 @@ export function CallSurface() {
 						initial={{ opacity: 0, y: 8, scale: 0.98 }}
 						animate={{ opacity: 1, y: 0, scale: 1 }}
 						exit={{ opacity: 0, y: 8, scale: 0.98 }}
-						transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-						className="fixed bottom-4 right-4 z-modal w-[268px] overflow-hidden rounded-xl border border-hairline bg-surface shadow-nav"
+						transition={{ duration: 0.26, ease: EASE }}
+						className="group fixed bottom-4 right-4 z-modal w-[228px] overflow-hidden rounded-2xl glass-dock backdrop-blur-2xl backdrop-saturate-150"
 					>
+						{/* The whole dock is the expand target — a PiP tile you tap to
+						    come back. The two controls sit above it. */}
 						<button
 							type="button"
 							onClick={() => call.setMinimized(false)}
 							aria-label="Expand call"
-							className="block w-full cursor-pointer text-left"
-						>
-							<div className="relative h-[124px] w-full bg-sunken">
+							className="absolute inset-0 cursor-pointer"
+						/>
+
+						<div className="pointer-events-none relative">
+							<div className="relative h-[128px] w-full overflow-hidden glass-well">
 								{showVideoStage && remoteVideo ? (
 									<VideoTile track={remoteVideo} />
 								) : (
 									<div className="flex h-full w-full items-center justify-center">
-										<SafeAvatar src={avatar} width={48} height={48} className="h-12 w-12 rounded-pill object-cover" />
+										<SafeAvatar
+											src={avatar}
+											width={52}
+											height={52}
+											className="h-[52px] w-[52px] rounded-pill object-cover"
+										/>
 									</div>
 								)}
-								<span className="absolute right-2 top-2 rounded-pill bg-scrim px-2 py-0.5 text-[11px] text-primary">
-									<CornersOut size={12} weight="bold" className="inline" />
-								</span>
-							</div>
-						</button>
 
-						<div className="flex items-center gap-2 px-3 py-2.5">
-							<div className="min-w-0 flex-1">
-								<p className="truncate text-[13px] font-medium text-primary">
-									{peer.name}
-								</p>
-								<p className="text-[11px] tabular-nums text-muted">{line}</p>
-							</div>
-							<ControlButton
-								label={micOn ? "Mute microphone" : "Unmute microphone"}
-								onClick={call.toggleMic}
-								active={micOn}
-								size="sm"
-							>
-								{micOn ? (
-									<Microphone size={17} weight="fill" />
-								) : (
-									<MicrophoneSlash size={17} weight="fill" />
+								{/* Expand affordance: reads as a control, brightens with
+								    the dock so the whole tile is obviously tappable. */}
+								<span className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-pill glass-chip-canvas backdrop-blur-md glass-ink transition-colors group-hover:bg-white/25">
+									<CornersOut size={13} weight="bold" />
+								</span>
+
+								{poorConnection && (
+									<span className="absolute bottom-2 left-2">
+										<WeakChip compact />
+									</span>
 								)}
-							</ControlButton>
-							<ControlButton
-								label="End call"
-								onClick={call.endCall}
-								tone="danger"
-								size="sm"
-							>
-								<PhoneDisconnect size={17} weight="fill" />
-							</ControlButton>
+								{!micOn && !poorConnection && (
+									<span className="absolute bottom-2 left-2 flex h-6 items-center gap-1 rounded-pill glass-chip-canvas backdrop-blur-md px-2 text-[11px] glass-ink">
+										<MicrophoneSlash size={12} weight="fill" />
+										Muted
+									</span>
+								)}
+							</div>
+
+							<div className="flex items-center gap-1.5 px-2.5 py-2">
+								<div className="min-w-0 flex-1">
+									<p className="truncate text-[12.5px] font-semibold glass-ink">
+										{peer.name}
+									</p>
+									<p className="flex items-center gap-1.5 text-[11px] tabular-nums glass-ink-dim">
+										<span className="truncate">{line}</span>
+										{pending && <PendingDots />}
+									</p>
+								</div>
+								<div className="pointer-events-auto flex items-center gap-1">
+									<ControlButton
+										label={micOn ? "Mute microphone" : "Unmute microphone"}
+										onClick={call.toggleMic}
+										active={micOn}
+										size="sm"
+									>
+										{micOn ? (
+											<Microphone size={17} weight="fill" />
+										) : (
+											<MicrophoneSlash size={17} weight="fill" />
+										)}
+									</ControlButton>
+									<ControlButton
+										label="End call"
+										onClick={call.endCall}
+										tone="danger"
+										size="sm"
+									>
+										<PhoneDisconnect size={17} weight="fill" />
+									</ControlButton>
+								</div>
+							</div>
 						</div>
 					</motion.div>
 				) : (
@@ -262,19 +350,20 @@ export function CallSurface() {
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
-						transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-						className="fixed inset-0 z-modal flex items-center justify-center bg-scrim p-4"
+						transition={{ duration: 0.2, ease: EASE }}
+						className="fixed inset-0 z-modal flex items-center justify-center glass-scrim p-3 sm:p-4"
 					>
 						<motion.div
 							initial={{ opacity: 0, y: 8, scale: 0.98 }}
 							animate={{ opacity: 1, y: 0, scale: 1 }}
 							exit={{ opacity: 0, y: 8, scale: 0.98 }}
-							transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+							transition={{ duration: 0.26, ease: EASE }}
 							className={clsx(
-								"relative flex w-full flex-col overflow-hidden rounded-xl border border-hairline bg-surface shadow-nav",
+								"relative flex w-full flex-col overflow-hidden rounded-2xl",
 								showVideoStage
-									? "h-[min(86vh,720px)] max-w-4xl"
-									: "max-w-sm px-6 py-8",
+									? // The picture is the ground; nothing sits behind it.
+										"h-[min(88vh,760px)] max-w-4xl glass-well"
+									: "max-w-[380px] glass-dock backdrop-blur-2xl backdrop-saturate-150",
 							)}
 						>
 							{/* Minimize is available the moment there is a call to
@@ -285,10 +374,10 @@ export function CallSurface() {
 									onClick={() => call.setMinimized(true)}
 									aria-label="Minimize call"
 									className={clsx(
-										"absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-pill transition-colors cursor-pointer",
+										"absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-pill transition-colors cursor-pointer glass-ink",
 										showVideoStage
-											? "bg-scrim text-primary hover:bg-raised"
-											: "text-muted hover:bg-raised hover:text-primary",
+											? "glass-chip-canvas backdrop-blur-md"
+											: "glass-chip",
 									)}
 								>
 									<CornersIn size={18} weight="bold" />
@@ -296,157 +385,227 @@ export function CallSurface() {
 							)}
 
 							{showVideoStage ? (
-								<div className="relative flex-1 bg-sunken">
+								<div className="relative h-full w-full">
 									{remoteVideo && remoteVideoOn ? (
 										<VideoTile track={remoteVideo} />
 									) : (
-										<div className="flex h-full w-full flex-col items-center justify-center gap-3">
-											<SafeAvatar src={avatar} width={96} height={96} className="h-24 w-24 rounded-pill object-cover" />
-											<p className="text-sm text-muted">
-												{peer.name}'s camera is off
+										<div className="flex h-full w-full flex-col items-center justify-center gap-4 px-6 text-center">
+											<SafeAvatar
+												src={avatar}
+												width={104}
+												height={104}
+												className="h-[104px] w-[104px] rounded-pill object-cover"
+											/>
+											<p className="flex items-center gap-2 text-[14px] glass-ink-dim">
+												{status === "connected"
+													? `${peer.name}'s camera is off`
+													: line}
+												{pending && <PendingDots />}
 											</p>
 										</div>
 									)}
 
-									{/* Self view, picture-in-picture. */}
-									{camOn && localVideo && (
-										<div className="absolute bottom-4 right-4 h-[132px] w-[99px] overflow-hidden rounded-lg border border-hairline bg-sunken shadow-nav">
-											<VideoTile track={localVideo} mirrored />
-										</div>
-									)}
-
-									<div className="absolute left-4 top-4 flex items-center gap-2">
-										<span className="rounded-pill bg-scrim px-2.5 py-1 text-[13px] font-medium text-primary">
-											{peer.name}
+									{/* Identity and state, top-left, over the picture. */}
+									<div className="absolute left-3 top-3 z-10 flex max-w-[calc(100%-72px)] flex-wrap items-center gap-1.5">
+										<span className="flex h-8 items-center gap-2 rounded-pill glass-chip-canvas backdrop-blur-md px-3 text-[12.5px] font-semibold glass-ink">
+											<span className="truncate">{peer.name}</span>
+											<span className="font-medium tabular-nums glass-ink-dim">
+												{line}
+											</span>
+											{pending && <PendingDots className="glass-ink-dim" />}
 										</span>
 										{remoteMuted && (
-											<span className="flex items-center gap-1 rounded-pill bg-scrim px-2.5 py-1 text-[11px] text-muted">
+											<span className="flex h-7 items-center gap-1.5 rounded-pill glass-chip-canvas backdrop-blur-md px-2.5 text-[12px] glass-ink">
 												<MicrophoneSlash size={13} weight="fill" />
 												Muted
 											</span>
 										)}
-										{poorConnection && (
-											<span className="flex items-center gap-1 rounded-pill bg-scrim px-2.5 py-1 text-[11px] text-warning">
-												<WifiSlash size={13} weight="fill" />
-												Weak connection
-											</span>
-										)}
+										{poorConnection && <WeakChip />}
 									</div>
 
-									<span className="absolute bottom-4 left-4 rounded-pill bg-scrim px-2.5 py-1 text-[13px] tabular-nums text-primary">
-										{line}
-									</span>
+									{/* Self view, picture-in-picture. Parked above the
+									    control bar so the two never collide. */}
+									{camOn && localVideo && (
+										<div className="absolute bottom-[86px] right-3 z-10 h-[124px] w-[93px] overflow-hidden rounded-xl glass-well">
+											<VideoTile track={localVideo} mirrored />
+											{!micOn && (
+												<span className="absolute bottom-1.5 left-1.5 flex h-6 w-6 items-center justify-center rounded-pill glass-chip-canvas backdrop-blur-md glass-ink">
+													<MicrophoneSlash size={12} weight="fill" />
+												</span>
+											)}
+										</div>
+									)}
+
+									{error && (
+										<div className="absolute inset-x-0 bottom-[86px] z-10 flex justify-center px-4">
+											<span className="rounded-pill bg-danger px-3 py-1.5 text-[12.5px] font-medium text-white">
+												{error}
+											</span>
+										</div>
+									)}
+
+									{/* Controls float on their own glass bar — narrow
+									    enough that the picture keeps the frame. */}
+									<div className="absolute inset-x-0 bottom-0 z-10 flex justify-center p-3">
+										<div className="flex items-center gap-2.5 rounded-pill glass-dock backdrop-blur-xl backdrop-saturate-150 px-3 py-2">
+											<Controls
+												call={call}
+												status={status}
+												isIncoming={isIncoming}
+												micOn={micOn}
+												camOn={camOn}
+												line={line}
+											/>
+										</div>
+									</div>
 								</div>
 							) : (
-								<div className="flex flex-col items-center text-center">
-									<div className="relative">
-										<SafeAvatar src={avatar} width={112} height={112} className="h-28 w-28 rounded-pill object-cover" />
-										{status === "ringing" && (
-											// A slow breathing ring, not a spinner — it says
-											// "waiting on a person", not "loading".
-											<motion.span
-												aria-hidden
-												className="absolute inset-0 rounded-pill border-2 border-brand"
-												animate={{ opacity: [0.7, 0, 0.7], scale: [1, 1.18, 1] }}
-												transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
+								<>
+									<div className="flex flex-col items-center px-6 pb-8 pt-12 text-center">
+										<div className="relative">
+											{status === "ringing" && (
+												// A slow breathing halo, not a spinner — it says "waiting on a
+												// person", not "loading". A soft fill rather than a ring: there
+												// are no borders on this surface.
+												<motion.span
+													aria-hidden
+													className="absolute -inset-2 rounded-pill bg-white/20"
+													animate={{ opacity: [0.5, 0, 0.5], scale: [0.94, 1.14, 0.94] }}
+													transition={{
+														duration: 2,
+														repeat: Number.POSITIVE_INFINITY,
+														ease: "easeOut",
+													}}
+												/>
+											)}
+											<SafeAvatar
+												src={avatar}
+												width={112}
+												height={112}
+												className="relative h-28 w-28 rounded-pill object-cover"
 											/>
+										</div>
+
+										<h2 className="mt-5 font-display text-xl font-semibold glass-ink">
+											{peer.name}
+										</h2>
+										<p className="mt-1.5 flex items-center gap-2 text-sm tabular-nums glass-ink-dim">
+											{line}
+											{pending && <PendingDots />}
+										</p>
+										{peer.username && (
+											<p className="mt-0.5 text-[13px] glass-ink-faint">
+												@{peer.username}
+											</p>
+										)}
+
+										{remoteMuted && status === "connected" && (
+											<p className="mt-3 flex items-center gap-1.5 rounded-pill glass-chip px-2.5 py-1 text-[12px]">
+												<MicrophoneSlash size={13} weight="fill" />
+												{peer.name} is muted
+											</p>
+										)}
+										{poorConnection && (
+											<span className="mt-3">
+												<WeakChip />
+											</span>
+										)}
+										{error && (
+											<p className="mt-3 rounded-pill bg-danger px-3 py-1.5 text-[12.5px] font-medium text-white">
+												{error}
+											</p>
 										)}
 									</div>
 
-									<h2 className="mt-5 font-display text-xl font-semibold text-primary">
-										{peer.name}
-									</h2>
-									<p className="mt-1 text-sm tabular-nums text-muted">{line}</p>
-									{peer.username && (
-										<p className="mt-0.5 text-[13px] text-subtle">
-											@{peer.username}
-										</p>
-									)}
-
-									{remoteMuted && status === "connected" && (
-										<p className="mt-2 flex items-center gap-1 text-[13px] text-muted">
-											<MicrophoneSlash size={14} weight="fill" />
-											{peer.name} is muted
-										</p>
-									)}
-									{poorConnection && (
-										<p className="mt-2 flex items-center gap-1 text-[13px] text-warning">
-											<WifiSlash size={14} weight="fill" />
-											Weak connection
-										</p>
-									)}
-									{error && (
-										<p className="mt-2 text-[13px] text-danger">{error}</p>
-									)}
-								</div>
+									{/* The glass bar, full width at the foot of the panel. */}
+									<div className="glass-tray flex items-center justify-center gap-3 px-5 py-5">
+										<Controls
+											call={call}
+											status={status}
+											isIncoming={isIncoming}
+											micOn={micOn}
+											camOn={camOn}
+											line={line}
+										/>
+									</div>
+								</>
 							)}
-
-							{/* Controls */}
-							<div
-								className={clsx(
-									"flex items-center justify-center gap-3",
-									showVideoStage
-										? "border-t border-hairline bg-surface px-4 py-4"
-										: "mt-8",
-								)}
-							>
-								{status === "ringing" && isIncoming ? (
-									<>
-										<ControlButton
-											label="Decline call"
-											onClick={call.declineCall}
-											tone="danger"
-										>
-											<PhoneDisconnect size={24} weight="fill" />
-										</ControlButton>
-										<ControlButton
-											label="Accept call"
-											onClick={call.acceptCall}
-											tone="success"
-										>
-											<Phone size={24} weight="fill" />
-										</ControlButton>
-									</>
-								) : status === "ended" ? (
-									<p className="text-sm text-muted">{line}</p>
-								) : (
-									<>
-										<ControlButton
-											label={micOn ? "Mute microphone" : "Unmute microphone"}
-											onClick={call.toggleMic}
-											active={micOn}
-										>
-											{micOn ? (
-												<Microphone size={22} weight="fill" />
-											) : (
-												<MicrophoneSlash size={22} weight="fill" />
-											)}
-										</ControlButton>
-										<ControlButton
-											label={camOn ? "Turn camera off" : "Turn camera on"}
-											onClick={call.toggleCam}
-											active={camOn}
-										>
-											{camOn ? (
-												<VideoCamera size={22} weight="fill" />
-											) : (
-												<VideoCameraSlash size={22} weight="fill" />
-											)}
-										</ControlButton>
-										<ControlButton
-											label="End call"
-											onClick={call.endCall}
-											tone="danger"
-										>
-											<PhoneDisconnect size={24} weight="fill" />
-										</ControlButton>
-									</>
-								)}
-							</div>
 						</motion.div>
 					</motion.div>
 				)}
 			</AnimatePresence>
+		</>
+	);
+}
+
+/**
+ * The control set, identical on the video bar and the voice bar so the two
+ * states share one muscle memory. Incoming rings swap it for decline/accept;
+ * an ended call swaps it for the reason.
+ */
+function Controls({
+	call,
+	status,
+	isIncoming,
+	micOn,
+	camOn,
+	line,
+}: {
+	call: ReturnType<typeof useCall>;
+	status: string;
+	isIncoming: boolean;
+	micOn: boolean;
+	camOn: boolean;
+	line: string;
+}) {
+	if (status === "ringing" && isIncoming) {
+		return (
+			<>
+				<ControlButton
+					label="Decline call"
+					onClick={call.declineCall}
+					tone="danger"
+				>
+					<PhoneDisconnect size={24} weight="fill" />
+				</ControlButton>
+				<ControlButton label="Accept call" onClick={call.acceptCall} tone="cta">
+					<Phone size={24} weight="fill" />
+				</ControlButton>
+			</>
+		);
+	}
+
+	if (status === "ended") {
+		return <p className="px-2 text-sm glass-ink-dim">{line}</p>;
+	}
+
+	return (
+		<>
+			<ControlButton
+				label={micOn ? "Mute microphone" : "Unmute microphone"}
+				onClick={call.toggleMic}
+				active={micOn}
+			>
+				{micOn ? (
+					<Microphone size={22} weight="fill" />
+				) : (
+					<MicrophoneSlash size={22} weight="fill" />
+				)}
+			</ControlButton>
+			<ControlButton
+				label={camOn ? "Turn camera off" : "Turn camera on"}
+				onClick={call.toggleCam}
+				active={camOn}
+			>
+				{camOn ? (
+					<VideoCamera size={22} weight="fill" />
+				) : (
+					<VideoCameraSlash size={22} weight="fill" />
+				)}
+			</ControlButton>
+			<ControlButton label="End call" onClick={call.endCall} tone="danger">
+				<PhoneDisconnect size={24} weight="fill" />
+			</ControlButton>
 		</>
 	);
 }
