@@ -637,5 +637,9 @@
   "studio.live.notifyOn": "Benachrichtigt Follower",
   "studio.live.notifyOff": "Lautlos",
   "studio.promo.soonTitle": "Promotions kommen bald",
-  "studio.promo.soonBody": "Das Kampagnen-Tooling steht, ist aber noch nicht aktiv. Bald kannst du von hier aus einen Beitrag in die Für-dich-Timeline bringen."
+  "studio.promo.soonBody": "Das Kampagnen-Tooling steht, ist aber noch nicht aktiv. Bald kannst du von hier aus einen Beitrag in die Für-dich-Timeline bringen.",
+  "voice.endedByHost": "Der Host hat diesen Raum beendet",
+  "voice.linkGone": "Diesen Raum gibt es nicht mehr",
+  "voice.linkScheduled": "Dieser Raum hat noch nicht begonnen — siehe Anstehend",
+  "voice.linkOver": "Dieser Raum ist bereits vorbei"
 }

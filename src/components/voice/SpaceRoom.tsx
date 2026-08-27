@@ -22,7 +22,7 @@ import {
   spaceBackground,
   type SpaceRow,
 } from "@/components/voice/SpaceCard";
-import { useSpaceAudio } from "@/hooks/useSpaceAudio";
+import type { useSpaceAudio } from "@/hooks/useSpaceAudio";
 import { useSpaceRoom } from "@/hooks/useSpaceRoom";
 import { useT } from "@/i18n/client";
 import { storyCanvasCss } from "@/lib/editor/storyBackgrounds";
@@ -32,6 +32,12 @@ const REACTIONS = ["👏", "🔥", "💛", "📈", "😂"];
 
 interface SpaceRoomProps {
   row: SpaceRow;
+  /**
+   * The audio connection, owned by VoiceRoomHost. It lives up there — not
+   * here — because this component unmounts on minimize, and audio that dies
+   * the moment you dock the room makes the dock a lie.
+   */
+  audio: ReturnType<typeof useSpaceAudio>;
   /** Collapse to the floating dock — the room keeps running. */
   onMinimize: () => void;
   /** Leave for good (listeners). */
@@ -60,6 +66,7 @@ function elapsedLabel(startedAt?: string) {
  */
 export default function SpaceRoom({
   row,
+  audio: audioConn,
   onMinimize,
   onLeave,
   onEnd,
@@ -75,7 +82,7 @@ export default function SpaceRoom({
     muted,
     speakingIds,
     toggleMute,
-  } = useSpaceAudio(row.id, row.status === "live");
+  } = audioConn;
   /**
    * Hand the mic to someone who asked for it.
    *

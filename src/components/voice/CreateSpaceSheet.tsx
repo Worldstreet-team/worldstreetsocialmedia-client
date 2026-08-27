@@ -423,7 +423,14 @@ export default function CreateSpaceSheet({
                 }
                 onCreate(
                   title.trim(),
-                  mode === "later" ? when : undefined,
+                  // ISO, not the raw local "YYYY-MM-DDTHH:mm": the gateway
+                  // parses in *its* timezone, so the raw string booked the
+                  // wrong instant for any non-UTC host. Edit already did
+                  // this — and silently "corrected" the create-time error,
+                  // which is what kept the bug hidden.
+                  mode === "later" && when
+                    ? new Date(when).toISOString()
+                    : undefined,
                   communityId || undefined,
                   description.trim() || undefined,
                   cover,

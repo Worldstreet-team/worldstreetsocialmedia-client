@@ -5,14 +5,13 @@ import { formatTimeAgo, mainScrollTop, mainScroller } from "@/lib/utils";
 import {
 	useState,
 	useEffect,
-	useMemo,
 	useRef,
 	useSyncExternalStore,
 } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAtom, useAtomValue } from "jotai";
 import { feedAtom } from "@/store/feed.atom";
-import { feedTabAtom, followingIdsAtom } from "@/store/ui.atom";
+import { feedTabAtom } from "@/store/ui.atom";
 import { autoTranslateAtom, translationsAtom } from "@/store/translate.atom";
 import { prefetchTranslations } from "@/lib/translate.prefetch";
 import { PostCard, PostProps } from "@/components/feed/PostCard";
@@ -47,10 +46,24 @@ interface PendingPost {
 	username: string;
 }
 
+/** Posts per page. Matches the gateway's own default. */
+const FEED_PAGE_SIZE = 10;
 /** Faces in the stack before the rest collapse into "+n". */
 const MAX_FACES = 3;
 /** Ceiling on the by-id fetch, for a tab left open all afternoon. */
 const MAX_PENDING_FETCH = 20;
+/**
+ * How long a post waits between arriving and being announced.
+ *
+ * Two reasons, and the second is the one that matters. A pill that appears on
+ * the same frame as the event reads as a twitch next to whatever the reader is
+ * doing; a beat's delay makes it feel like it settled in. And the beat is
+ * exactly the window the preload needs, so by the time the pill is offering
+ * the post, the post is usually already in memory.
+ */
+const PILL_DELAY_MS = 1000;
+/** Ceiling on the preload map — a tab left open must not grow without bound. */
+const MAX_PRELOADED = 30;
 
 /**
  * Gateway post -> PostProps. One mapper, so a post that arrives in a feed page
@@ -123,7 +136,6 @@ export default function Feed() {
 	const t = useT();
 	const [feedState, setFeedState] = useAtom(feedAtom);
 	const tab = useAtomValue(feedTabAtom);
-	const followingIds = useAtomValue(followingIdsAtom);
 	const autoTranslate = useAtomValue(autoTranslateAtom);
 	const [translations, setTranslations] = useAtom(translationsAtom);
 	// Read through a ref inside the prefetch so a page landing mid-flight
@@ -138,6 +150,22 @@ export default function Feed() {
 	const [pending, setPending] = useState<PendingPost[]>([]);
 	const [refreshing, setRefreshing] = useState(false);
 	const refreshingRef = useRef(false);
+	/**
+	 * Announced posts, fetched the moment they are announced rather than on
+	 * click. The click then has nothing to wait for.
+	 */
+	const preloadedRef = useRef<Map<string, PostProps>>(new Map());
+	/** Pending announce timers, so unmounting mid-beat doesn't set state. */
+	const announceTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(
+		new Set(),
+	);
+	/**
+	 * Posts prepended by the pill. A `fetchFeed(true)` REPLACES the list with
+	 * the ranked page, and the ranker puts a seconds-old post nowhere near the
+	 * first ten — so without re-pinning these, the background reconcile would
+	 * quietly delete the very posts the click just delivered.
+	 */
+	const prependedRef = useRef<PostProps[]>([]);
 	const me = useAtomValue(userAtom);
 	const [isPosting, setIsPosting] = useState(false);
 	const [showBackToTop, setShowBackToTop] = useState(false);
@@ -213,17 +241,11 @@ export default function Feed() {
 		);
 	}, [autoTranslate, feedState.posts, setTranslations]);
 
-	// "Following" filters the loaded timeline by who this session follows
-	// (followingIdsAtom grows as Follow buttons are clicked).
-	const visiblePosts = useMemo(
-		() =>
-			tab === "following"
-				? feedState.posts.filter((p) =>
-						followingIds.includes(p.author.id),
-					)
-				: feedState.posts,
-		[tab, feedState.posts, followingIds],
-	);
+	// Both tabs are now server queries, so what came back IS what to show.
+	// This used to filter the For-You page by `followingIdsAtom`, which only
+	// fills as you press Follow in the current session — so Following was
+	// empty after every reload no matter how many people you followed.
+	const visiblePosts = feedState.posts;
 
 	useEffect(() => {
 		// Disable browser's automatic scroll restoration to handle it manually
@@ -231,7 +253,8 @@ export default function Feed() {
 			window.history.scrollRestoration = "manual";
 		}
 
-		if (feedState.posts.length > 0) {
+		// Cached posts only stand in for a fetch if they are THIS tab's posts.
+		if (feedState.posts.length > 0 && feedState.mode === tab) {
 			setLoading(false);
 			// Restore scroll position with a slight delay to ensure DOM is ready
 			if (feedState.scrollPosition > 0) {
@@ -252,6 +275,19 @@ export default function Feed() {
 		};
 	}, []);
 
+	// Switching tab switches the QUERY, so it has to refetch. Skipped on the
+	// first run — the mount effect above already decided whether to fetch.
+	const loadedTabRef = useRef(tab);
+	useEffect(() => {
+		if (loadedTabRef.current === tab) return;
+		loadedTabRef.current = tab;
+		// Posts pinned by the pill belong to the tab they were fetched for.
+		prependedRef.current = [];
+		setPending([]);
+		setFeedState((prev) => ({ ...prev, posts: [], cursor: null, mode: tab }));
+		void fetchFeed(true);
+	}, [tab]);
+
 	useFeedEvents((event, data) => {
 		if (event !== "post") return;
 		// Your own post already appears optimistically.
@@ -268,15 +304,46 @@ export default function Feed() {
 		// the pill paints. A burst of posts costs one batched request.
 		if (username) requestHandle(username);
 
-		setPending((prev) =>
-			postId && prev.some((p) => p.postId === postId)
-				? prev
-				: [
-						...prev,
-						{ postId, author: String(data.author ?? ""), username },
-					],
-		);
+		// Preload starts IMMEDIATELY, not after the announce beat and not on
+		// click — the whole point is that the post is already here when the
+		// reader asks for it. A failure is silent: the click re-fetches
+		// anything missing, so this is an optimisation, never a dependency.
+		if (postId && !preloadedRef.current.has(postId)) {
+			void getPostByIdAction(postId)
+				.then((result) => {
+					if (!result.success || !result.data) return;
+					preloadedRef.current.set(postId, mapApiPost(result.data));
+					while (preloadedRef.current.size > MAX_PRELOADED) {
+						const oldest = preloadedRef.current.keys().next().value;
+						if (oldest === undefined) break;
+						preloadedRef.current.delete(oldest);
+					}
+				})
+				.catch(() => {});
+		}
+
+		// The announce itself waits a beat. Scheduled per event rather than
+		// debounced: a burst of five posts should still end up as five faces,
+		// each a second after its own arrival.
+		const timer = setTimeout(() => {
+			announceTimersRef.current.delete(timer);
+			setPending((prev) =>
+				postId && prev.some((p) => p.postId === postId)
+					? prev
+					: [...prev, { postId, author: String(data.author ?? ""), username }],
+			);
+		}, PILL_DELAY_MS);
+		announceTimersRef.current.add(timer);
 	});
+
+	// A timer that fires after unmount would set state on a dead component.
+	useEffect(() => {
+		const timers = announceTimersRef.current;
+		return () => {
+			for (const timer of timers) clearTimeout(timer);
+			timers.clear();
+		};
+	}, []);
 
 	// The shared handle cache resolves asynchronously (one batched request for a
 	// burst of posts), so the pill has to re-render when an answer lands. The
@@ -314,7 +381,13 @@ export default function Feed() {
 
 		try {
 			const currentCursor = reset ? null : feedState.cursor;
-			const result = await getFeedAction(currentCursor);
+			// The tab IS the query. Passing it was the missing half of the
+			// Following tab: the gateway has a chronological following page
+			// built on the server's own follow list, and this client never
+			// asked for it — it filtered the ranked For-You page client-side
+			// instead, against an atom that only fills as you click Follow and
+			// is empty after every reload.
+			const result = await getFeedAction(currentCursor, FEED_PAGE_SIZE, tab);
 
 			if (result.success && result.data) {
 				const apiPosts = result.data.posts;
@@ -323,10 +396,16 @@ export default function Feed() {
 				setFeedState((prev) => ({
 					...prev,
 					posts: mergeById(
-						reset ? mappedPosts : [...prev.posts, ...mappedPosts],
+						reset
+							? // Re-pin what the pill delivered. The ranked page will not
+								// contain a post published seconds ago, so a bare reset
+								// would drop it straight back out of the timeline.
+								[...prependedRef.current, ...mappedPosts]
+							: [...prev.posts, ...mappedPosts],
 					),
 					cursor: result.data.nextCursor ?? null,
 					hasMore: Boolean(result.data.hasMore),
+					mode: tab,
 				}));
 			} else {
 				if (result.message) toast(result.message, { type: "error" });
@@ -356,50 +435,66 @@ export default function Feed() {
 	 * independent of ranking, while the page refresh runs alongside to bring the
 	 * rest of the timeline (and its counts) up to date.
 	 */
-	const showNewPosts = async () => {
+	/** Put posts on top, and remember them so a reset cannot drop them. */
+	const prependPosts = (fresh: PostProps[]) => {
+		if (fresh.length === 0) return;
+		prependedRef.current = mergeById([
+			...fresh,
+			...prependedRef.current,
+		]).slice(0, MAX_PENDING_FETCH);
+		setFeedState((prev) => ({
+			...prev,
+			posts: mergeById([...fresh, ...prev.posts]),
+		}));
+	};
+
+	const showNewPosts = () => {
 		if (refreshingRef.current) return;
-		refreshingRef.current = true;
-		setRefreshing(true);
 
-		// Snapshot: anything that arrives while these requests are in flight is
-		// still pending afterwards, so the pill re-appears for it.
-		const claimed = pending;
-		const ids = claimed
-			.map((p) => p.postId)
-			.filter(Boolean)
-			.slice(-MAX_PENDING_FETCH);
+		// Snapshot: anything that arrives while this runs stays pending, so the
+		// pill re-appears for it.
+		const claimed = pending.slice(-MAX_PENDING_FETCH);
+		const ready = claimed.filter((p) => preloadedRef.current.has(p.postId));
+		const missing = claimed.filter((p) => !preloadedRef.current.has(p.postId));
 
+		// ── Synchronous: everything the preload already has goes in NOW ──
+		// No await before this point, so the posts are on screen in the same
+		// frame as the click rather than after a round trip.
+		prependPosts(
+			ready
+				.map((p) => preloadedRef.current.get(p.postId))
+				.filter((post): post is PostProps => Boolean(post))
+				.reverse(),
+		);
+		// Only the delivered ones leave the pill. Anything still being fetched
+		// keeps its face up, with the spinner, until it actually arrives —
+		// which is the honest thing to show.
+		setPending((prev) => prev.filter((p) => !ready.includes(p)));
 		mainScroller().scrollTo({ top: 0, behavior: "smooth" });
 
-		try {
-			const [, announced] = await Promise.all([
-				fetchFeed(true),
-				Promise.all(ids.map((id) => getPostByIdAction(id))),
-			]);
+		// ── Background: whatever the preload missed, plus a reconcile ──
+		void (async () => {
+			refreshingRef.current = true;
+			setRefreshing(true);
+			try {
+				const [, announced] = await Promise.all([
+					fetchFeed(true),
+					Promise.all(missing.map((p) => getPostByIdAction(p.postId))),
+				]);
 
-			const fresh: PostProps[] = [];
-			for (const result of announced) {
-				// A 404 here is legitimate — deleted, or from someone who blocked
-				// you since. Skipping it is the whole point of asking.
-				if (result.success && result.data) fresh.push(mapApiPost(result.data));
+				const late: PostProps[] = [];
+				for (const result of announced) {
+					// A 404 here is legitimate — deleted, or from someone who has
+					// blocked you since. Skipping it is the point of asking.
+					if (result.success && result.data) late.push(mapApiPost(result.data));
+				}
+				prependPosts(late.reverse());
+				setPending((prev) => prev.filter((p) => !missing.includes(p)));
+			} finally {
+				refreshingRef.current = false;
+				setRefreshing(false);
 			}
-			// Newest first, above the page the refresh just installed. The reset
-			// has already queued its own update, so this updater runs on top of
-			// it; mergeById keeps the prepended copy and drops the ranked one.
-			fresh.reverse();
-
-			if (fresh.length > 0) {
-				setFeedState((prev) => ({
-					...prev,
-					posts: mergeById([...fresh, ...prev.posts]),
-				}));
-			}
-
-			setPending((prev) => prev.filter((p) => !claimed.includes(p)));
-		} finally {
-			refreshingRef.current = false;
-			setRefreshing(false);
-		}
+		})();
 	};
 
 	const handlePostStart = () => {
@@ -523,7 +618,7 @@ export default function Feed() {
 						className="fixed bottom-nav md:bottom-8 left-1/2 z-sticky flex items-center gap-1.5 h-10 md:h-9 pl-3.5 pr-4 rounded-pill bg-raised border border-hairline shadow-nav font-sans text-[13px] font-medium text-primary hover:bg-track transition-colors cursor-pointer"
 					>
 						<ArrowUp className="w-[14px] h-[14px]" />
-						Top
+						{t("feed.backtotop")}
 					</motion.button>
 				)}
 			</AnimatePresence>

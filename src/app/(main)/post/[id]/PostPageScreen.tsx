@@ -33,6 +33,11 @@ export default function PostPageScreen() {
 	const cachedPost = postCache[postId];
 	const [post, setPost] = useState<PostProps | null>(cachedPost || null);
 	const [comments, setComments] = useState<PostProps[]>([]);
+	// The post this one is replying to. Opening a reply used to show it alone,
+	// with no sign of what it answered — every notification deep-link and every
+	// shared reply URL lost its context. Fetched only when the focused post is
+	// itself a reply, so ordinary posts pay nothing.
+	const [parent, setParent] = useState<PostProps | null>(null);
 
 	// An open thread should grow as people reply, and its counts should track
 	// what everyone else is doing, without a refresh.
@@ -116,6 +121,33 @@ export default function PostPageScreen() {
 		}
 	}, [cachedPost]);
 
+	const toPostProps = useCallback(
+		(p: any, isDetail = false): PostProps => ({
+			id: p._id,
+			author: {
+				id: p.author?._id || p.author?.userId,
+				name:
+					p.author?.firstName && p.author?.lastName
+						? `${p.author.firstName} ${p.author.lastName}`
+						: p.author?.username || "Unknown",
+				username: p.author?.username,
+				avatar: p.author?.avatar || DEFAULT_AVATAR,
+				isVerified: p.author?.isVerified,
+				verification: p.author?.verification,
+			},
+			content: p.content,
+			mentions: p.mentions,
+			images: p.images,
+			videos: p.videos,
+			timestamp: formatTimeAgo(p.createdAt),
+			stats: p.stats,
+			isLiked: p.isLiked,
+			isBookmarked: p.isBookmarked,
+			isDetail,
+		}),
+		[],
+	);
+
 	const fetchPostData = useCallback(async () => {
 		try {
 			const [postRes, commentsRes] = await Promise.all([
@@ -125,6 +157,25 @@ export default function PostPageScreen() {
 
 			if (postRes.success) {
 				const p = postRes.data;
+
+				// One extra request, and only for replies. The id may arrive raw
+				// or populated depending on the endpoint, so handle both.
+				console.log("[probe] parentPost raw =", p.parentPost, "isReply =", p.isReply);
+				const parentId =
+					p.parentPost && typeof p.parentPost === "object"
+						? p.parentPost._id
+						: p.parentPost;
+				if (parentId) {
+					void getPostByIdAction(String(parentId))
+						.then((res) => {
+							console.log("[probe] parent fetch:", res.success, res.data?._id, res.message);
+							if (res.success && res.data) setParent(toPostProps(res.data));
+						})
+						.catch((e) => console.log("[probe] parent fetch threw:", String(e)));
+				} else {
+					setParent(null);
+				}
+
 				setPost({
 					id: p._id,
 					author: {
@@ -214,7 +265,7 @@ export default function PostPageScreen() {
 		} finally {
 			setLoading(false);
 		}
-	}, [postId, toast, updatePostCache]);
+	}, [postId, toast, updatePostCache, toPostProps]);
 
 	useEffect(() => {
 		if (postId) {
@@ -285,6 +336,20 @@ export default function PostPageScreen() {
 					{t("post.title")}
 				</h1>
 			</header>
+
+			{/* Thread ancestry: the post being replied to sits above the focused
+			    one, joined by a vertical rule so the two read as one thread
+			    rather than two unrelated cards. Muted, because the reply is
+			    what the reader came for. */}
+			{parent && (
+				<div className="relative border-b border-hairline">
+					<PostCard post={parent} />
+					<span
+						aria-hidden
+						className="absolute left-[38px] bottom-0 h-4 w-0.5 translate-y-full bg-hairline"
+					/>
+				</div>
+			)}
 
 			<div className="border-b border-hairline">
 				<PostCard post={post} />

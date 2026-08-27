@@ -267,3 +267,17 @@ export async function uploadSpaceCoverAction(form: FormData) {
 		};
 	}
 }
+
+/** One space by id, any status — the deep-link resolver. */
+export async function getSpaceAction(id: string) {
+	const headers = await bearer();
+	if (!headers) return { success: false as const };
+	try {
+		const res = await axios.get(`${BACKEND_URL}/api/spaces/${id}`, {
+			headers,
+		});
+		return { success: true as const, space: res.data?.space };
+	} catch {
+		return { success: false as const };
+	}
+}

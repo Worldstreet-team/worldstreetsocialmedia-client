@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/Toast/ToastContext";
 import { EqBars, spaceBackground } from "@/components/voice/SpaceCard";
 import SpaceRoom from "@/components/voice/SpaceRoom";
 import { useT } from "@/i18n/client";
+import { useSpaceAudio } from "@/hooks/useSpaceAudio";
 import { useSpaceHeartbeat } from "@/hooks/useSpaceHeartbeat";
 import { isDemoId } from "@/lib/demoSeed";
 import { endSpaceAction, leaveSpaceAction } from "@/lib/space.actions";
@@ -32,6 +33,14 @@ export default function VoiceRoomHost() {
 
   // Hooks can't sit behind the early return below, so the heartbeat reads the
   // session defensively and simply does nothing when there isn't one.
+  // The audio connection lives HERE, above the maximize/minimize split, so
+  // docking the room never tears it down. It used to live inside SpaceRoom,
+  // which unmounts on minimize — the dock said "in the room" over dead air.
+  const audio = useSpaceAudio(
+    session && !isDemoId(session.row.id) ? session.row.id : null,
+    session?.row.status === "live",
+  );
+
   const hostedId =
     session?.row.isHost && !isDemoId(session.row.id) ? session.row.id : null;
   useSpaceHeartbeat({
@@ -44,6 +53,17 @@ export default function VoiceRoomHost() {
       bumpRefresh((n) => n + 1);
     },
   });
+
+  // The host ended the space (or the sweep reaped it): LiveKit deleted the
+  // room and every listener was disconnected with ROOM_DELETED. Close the
+  // session here — this also covers the minimized dock, which used to sit
+  // in the corner advertising a room that no longer existed.
+  useEffect(() => {
+    if (!audio.ended || !session || session.row.isHost) return;
+    toast(t("voice.endedByHost"), { type: "success" });
+    setSession(null);
+    bumpRefresh((n) => n + 1);
+  }, [audio.ended, session, toast, t, setSession, bumpRefresh]);
 
   if (!session) return null;
   const { row, minimized } = session;
@@ -72,6 +92,7 @@ export default function VoiceRoomHost() {
     return (
       <SpaceRoom
         row={row}
+        audio={audio}
         onMinimize={() => setSession({ row, minimized: true })}
         onLeave={leave}
         onEnd={end}

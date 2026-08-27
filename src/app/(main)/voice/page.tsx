@@ -24,6 +24,7 @@ import { demoLiveSpaces, demoUpcomingSpaces, isDemoId } from "@/lib/demoSeed";
 import {
   cancelSpaceAction,
   createSpaceAction,
+  getSpaceAction,
   getSpacesAction,
   joinSpaceAction,
   startSpaceAction,
@@ -177,16 +178,33 @@ function VoiceDirectory() {
     }
   };
 
-  // A shared /voice/<id> link lands here as ?s=<id>: open that room as soon
-  // as the directory knows about it, once.
+  // A shared /voice/<id> link lands here as ?s=<id>. Live rooms open
+  // directly; anything else resolves by id and gets an honest answer —
+  // a link to a scheduled/ended room used to silently do nothing at all.
   useEffect(() => {
     const want = deepLinkRef.current;
-    if (!want || live.length === 0) return;
+    if (!want || loading) return;
     const found = live.find((r) => r.id === want);
     if (found) {
       deepLinkRef.current = null;
       void openRoom(found);
+      return;
     }
+    deepLinkRef.current = null;
+    void getSpaceAction(want).then((res) => {
+      if (!res.success || !res.space) {
+        toast(t("voice.linkGone"), { type: "error" });
+        return;
+      }
+      if (res.space.status === "live") {
+        void openRoom(res.space as SpaceRow);
+      } else if (res.space.status === "scheduled") {
+        // It's in the upcoming list below; the toast points there.
+        toast(t("voice.linkScheduled"), { type: "success" });
+      } else {
+        toast(t("voice.linkOver"), { type: "error" });
+      }
+    });
   });
 
   const remind = async (row: SpaceRow) => {

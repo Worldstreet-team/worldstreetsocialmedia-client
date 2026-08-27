@@ -26,6 +26,10 @@ export type AudioState =
 export function useSpaceAudio(spaceId: string | null, live: boolean) {
   const [state, setState] = useState<AudioState>("idle");
   const [canSpeak, setCanSpeak] = useState(false);
+  // The room was deleted out from under us — the host ended the space (or
+  // the sweep reaped it). Distinct from "failed": nothing is broken, it's
+  // over, and the UI should say so instead of showing a dead mic.
+  const [ended, setEnded] = useState(false);
   const [muted, setMuted] = useState(true);
   const [speakingIds, setSpeakingIds] = useState<string[]>([]);
   const roomRef = useRef<Room | null>(null);
@@ -51,6 +55,7 @@ export function useSpaceAudio(spaceId: string | null, live: boolean) {
           Room: LKRoom,
           RoomEvent,
           Track,
+          DisconnectReason,
         } = await import("livekit-client");
         room = new LKRoom({ adaptiveStream: true });
         roomRef.current = room;
@@ -73,9 +78,32 @@ export function useSpaceAudio(spaceId: string | null, live: boolean) {
             setSpeakingIds(speakers.map((s) => s.identity));
           }
         });
-        room.on(RoomEvent.Disconnected, () => {
-          if (!cancelled) setState("failed");
+        room.on(RoomEvent.Disconnected, (reason) => {
+          if (cancelled) return;
+          // Ending a space now deletes the LiveKit room server-side, which
+          // lands here as ROOM_DELETED for everyone still connected.
+          if (reason === DisconnectReason.ROOM_DELETED) {
+            setEnded(true);
+            setState("idle");
+          } else {
+            setState("failed");
+          }
         });
+        // A mic grant/revoke flips the live connection's permission from
+        // the gateway (updateParticipant). Track it so the mic button
+        // appears the moment the host grants, with no rejoin.
+        room.on(
+          RoomEvent.ParticipantPermissionsChanged,
+          (_prev, participant) => {
+            if (cancelled || !room) return;
+            if (participant.identity === room.localParticipant.identity) {
+              const can = Boolean(participant.permissions?.canPublish);
+              setCanSpeak(can);
+              // A revoked speaker is force-muted by LiveKit; reflect it.
+              if (!can) setMuted(true);
+            }
+          },
+        );
 
         // Relay-only ICE, same as the broadcaster dock: direct UDP dies on
         // some networks and takes the connection with it.
@@ -100,6 +128,7 @@ export function useSpaceAudio(spaceId: string | null, live: boolean) {
       setCanSpeak(false);
       setMuted(true);
       setSpeakingIds([]);
+      setEnded(false);
     };
   }, [spaceId, live]);
 
@@ -116,5 +145,5 @@ export function useSpaceAudio(spaceId: string | null, live: boolean) {
     }
   }, [muted, canSpeak]);
 
-  return { state, canSpeak, muted, speakingIds, toggleMute };
+  return { state, canSpeak, muted, speakingIds, toggleMute, ended };
 }

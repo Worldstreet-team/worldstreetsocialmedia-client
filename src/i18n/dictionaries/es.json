@@ -637,5 +637,9 @@
   "studio.live.notifyOn": "Avisa a seguidores",
   "studio.live.notifyOff": "Silencioso",
   "studio.promo.soonTitle": "Las promociones llegan pronto",
-  "studio.promo.soonBody": "Las campañas están listas pero aún no activadas. Pronto podrás promocionar una publicación en el timeline Para ti desde aquí."
+  "studio.promo.soonBody": "Las campañas están listas pero aún no activadas. Pronto podrás promocionar una publicación en el timeline Para ti desde aquí.",
+  "voice.endedByHost": "El anfitrión terminó esta sala",
+  "voice.linkGone": "Esa sala ya no existe",
+  "voice.linkScheduled": "Esa sala aún no ha empezado: está en Próximas",
+  "voice.linkOver": "Esa sala ya terminó"
 }

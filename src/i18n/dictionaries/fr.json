@@ -637,5 +637,9 @@
   "studio.live.notifyOn": "Prévient les abonnés",
   "studio.live.notifyOff": "Silencieux",
   "studio.promo.soonTitle": "Les promotions arrivent bientôt",
-  "studio.promo.soonBody": "L'outil de campagnes est prêt mais pas encore activé. Vous pourrez bientôt promouvoir un post dans le fil Pour vous depuis ici."
+  "studio.promo.soonBody": "L'outil de campagnes est prêt mais pas encore activé. Vous pourrez bientôt promouvoir un post dans le fil Pour vous depuis ici.",
+  "voice.endedByHost": "L'hôte a mis fin à ce salon",
+  "voice.linkGone": "Ce salon n'existe plus",
+  "voice.linkScheduled": "Ce salon n'a pas encore commencé — il est dans À venir",
+  "voice.linkOver": "Ce salon est déjà terminé"
 }

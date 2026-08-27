@@ -676,5 +676,9 @@
   "studio.live.notifyOn": "Notifies followers",
   "studio.live.notifyOff": "Silent",
   "studio.promo.soonTitle": "Promotions are coming soon",
-  "studio.promo.soonBody": "Campaign tooling is built but not switched on yet. You'll be able to promote a post into the For You timeline from here."
+  "studio.promo.soonBody": "Campaign tooling is built but not switched on yet. You'll be able to promote a post into the For You timeline from here.",
+  "voice.endedByHost": "The host ended this space",
+  "voice.linkGone": "That space doesn't exist anymore",
+  "voice.linkScheduled": "That space hasn't started yet — it's in Upcoming",
+  "voice.linkOver": "That space has already ended"
 }
