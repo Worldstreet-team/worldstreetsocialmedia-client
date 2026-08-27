@@ -465,6 +465,56 @@ dashboard work here:
   renders after mount only (the user atom hydrates client-side; rendering
   it during SSR causes a hydration mismatch that throws the shell away).
 
+## Overlays: one grammar (ratified 2026-08-27)
+
+`src/components/ui/Overlay.tsx` is THE shape of every popover, sheet, select
+and modal. It was extracted from the home search window after an audit found
+forty-odd overlays each with its own scrim opacity, radius, easing and close
+affordance. Do not hand-roll a `fixed inset-0` again.
+
+- `OverlayScrim` — flat wash, never blurred. `dim={false}` for a desktop
+  popover: a popover is not a modal, and dimming the thing you are acting on
+  is backwards. It still dims on phones, where the panel owns the screen.
+- `OverlayPanel` — `variant`: `center` (plate from the top: search, palette),
+  `anchored` (bottom sheet on a phone, floating card on desktop: comments,
+  chat, menus), `sheet` (forms and flows). Pass `role="alertdialog"` for a
+  destructive confirm.
+- `OverlayHeader` — title + the standard close chip, or your own control via
+  `children`.
+- `useOverlayDismiss(open, onClose)` — Esc and body scroll lock. Most overlays
+  were missing one or both.
+
+**One blur per stack.** The panel carries `backdrop-blur`; the scrim never
+does. **`glass-frost` follows the theme**, so ink inside comes from theme
+tokens (`text-primary`/`text-muted`/`text-subtle`) and fills from
+`bg-brand`/`bg-primary`/`bg-chip`/`bg-sunken` — NEVER `glass-ink` or
+`glass-cta`, which are fixed-white and vanish on the light panel. The
+fixed-white glass family stays only where a control sits **on artwork or
+video** (story canvases, the media editors, the live surface).
+
+Deliberately NOT migrated, and they must stay that way: `MediaEditor`,
+`VideoEditor`, `StoryStudio`, `StoryViewer`, `CallSurface`, `PremiumSheet`
+and `app/live/page.tsx`. Those are the sanctioned fixed-dark creator glass
+(see the 2026-08-25 owner ruling above) — they sit over media in both themes.
+The two lightboxes (`ImageModal`, `MediaModal`) take the header and the
+dismiss hook but keep their own opaque ground: no variant models full-bleed
+media, and a viewer wants black behind it, not a 50% wash.
+
+## Presence: who is online (added 2026-08-27)
+
+One global Ably channel, `presence`, entered once on connect by
+`components/providers/PresenceSync.tsx`. The token mints `clientId` as the
+profile id, so the presence set IS the set of online profiles — no payload.
+Read it anywhere through `onlineIdsAtom` (a `Set<string>`).
+
+Presence on `conversation:<id>` still exists and still answers a different,
+narrower question: is this person in THIS thread right now. It is not a
+substitute — using it alone is why the chat header said "offline" about
+someone plainly using the app in another tab.
+
+One global set is right at this size and will not stay right: every client
+holds every online member. Shard on a hash of the profile id when it hurts.
+
 ## Local dev = real Clerk, real gateway
 
 There is no mock/fixture mode. The former `MOCK_AUTH` machinery (Turbopack
