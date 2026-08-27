@@ -50,6 +50,8 @@ interface Slide {
 	key: string;
 	postId?: string;
 	authorId?: string;
+	/** Server truth for whether the viewer already follows this author. */
+	authorIsFollowing?: boolean;
 	username: string;
 	avatar: string;
 	content: string;
@@ -113,6 +115,7 @@ function VerticalSurface() {
 		key: `post-${p._id}`,
 		postId: p._id,
 		authorId: p.author?._id,
+		authorIsFollowing: Boolean(p.author?.isFollowing),
 		username: p.author?.username ?? "",
 		avatar: p.author?.avatar || DEFAULT_AVATAR,
 		content: p.content ?? "",
@@ -753,8 +756,13 @@ function VerticalSurface() {
 				const isActive = idx === active;
 				const isSelf =
 					me?._id === slide.authorId || me?.userId === slide.authorId;
+				// Server truth first, session atom as the optimistic override.
+				// The atom alone seeds empty, so after a reload every author
+				// looked unfollowed and the button was offered to people the
+				// viewer had aligned with long ago.
 				const followed = (slide.authorId ?? slide.username)
-					? followedIds.includes((slide.authorId ?? slide.username) as string)
+					? slide.authorIsFollowing ||
+						followedIds.includes((slide.authorId ?? slide.username) as string)
 					: true;
 				return (
 					<section
