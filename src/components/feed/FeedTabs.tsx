@@ -5,13 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAtom, useAtomValue } from "jotai";
-import {
-	Microphone,
-	MonitorPlay,
-	Sparkle,
-	Users,
-	UsersThree,
-} from "@phosphor-icons/react";
+import { Clock, Sparkle, Users, UsersThree } from "@phosphor-icons/react";
 import { feedTabAtom } from "@/store/ui.atom";
 import { userAtom } from "@/store/user.atom";
 import { getCommunitiesAction } from "@/lib/community.actions";
@@ -85,9 +79,14 @@ export function FeedTabs() {
 		"relative flex items-center gap-1.5 h-9 px-3.5 rounded-pill font-sans text-[13.5px] whitespace-nowrap transition-colors shrink-0";
 	const idle = "font-medium text-muted hover:text-primary hover:bg-raised/50";
 
+	// The three timelines, in the order they are offered: ranked, then the
+	// people you chose, then raw chronological. "Newest" is the escape hatch —
+	// somewhere to go when the ranked feed feels stale, without it having to
+	// re-rank For You into a recency list.
 	const TABS = [
 		{ key: "foryou" as const, label: t("feed.tab.foryou"), Icon: Sparkle },
 		{ key: "following" as const, label: t("feed.tab.following"), Icon: Users },
+		{ key: "newest" as const, label: t("feed.tab.newest"), Icon: Clock },
 	];
 	const active = TABS.find((x) => x.key === tab) ?? TABS[0];
 	const rest = TABS.filter((x) => x.key !== active.key);
@@ -137,14 +136,10 @@ export function FeedTabs() {
 						{x.label}
 					</button>
 				))}
-				<Link href="/live" className={clsx(chip, idle)}>
-					<MonitorPlay size={15} weight="duotone" />
-					{t("nav.videos")}
-				</Link>
-				<Link href="/voice" className={clsx(chip, idle)}>
-					<Microphone size={15} weight="duotone" />
-					{t("nav.voice")}
-				</Link>
+				{/* The Street (/live) and Space (/voice) used to sit here. They
+				    are destinations, not timelines — mixing them into the
+				    timeline row made every tab press feel like it might navigate
+				    away. Both still live in the nav rails. */}
 
 				{/* YOUR communities, by name. The generic link only appears when
 				    you haven't joined any yet. */}

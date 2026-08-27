@@ -7,6 +7,7 @@
   "nav.profile": "Profile",
   "feed.tab.foryou": "For you",
   "feed.tab.following": "Following",
+  "feed.tab.newest": "Newest",
   "feed.empty.title": "Your timeline is empty",
   "feed.empty.caption": "Posts from people you follow show up here. Write the first one.",
   "feed.empty.action": "Write a post",

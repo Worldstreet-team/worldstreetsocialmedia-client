@@ -1,7 +1,13 @@
 import { atom } from "jotai";
 
-/** Which timeline the feed header tabs show. */
-export const feedTabAtom = atom<"foryou" | "following">("foryou");
+/**
+ * Which timeline the feed header tabs show. Each is a different gateway
+ * QUERY, not a client-side filter: "foryou" is ranked, "following" is
+ * chronological among people you follow, "newest" is chronological across
+ * everyone — the escape hatch from ranking.
+ */
+export type FeedTab = "foryou" | "following" | "newest";
+export const feedTabAtom = atom<FeedTab>("foryou");
 
 /** Ctrl/Cmd+K command palette. Written by triggers, read by <CommandPalette>. */
 export const commandPaletteOpenAtom = atom(false);

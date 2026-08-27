@@ -11,7 +11,7 @@ const API_URL = BACKEND_URL;
 export async function getFeedAction(
 	cursor: string | null = null,
 	limit: number = 10,
-	mode: "foryou" | "following" = "foryou",
+	mode: "foryou" | "following" | "newest" = "foryou",
 ) {
 	const { getToken } = await auth();
 	const accessToken = await getToken();

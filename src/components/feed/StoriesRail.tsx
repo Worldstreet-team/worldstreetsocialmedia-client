@@ -24,10 +24,30 @@ import { SafeAvatar } from "@/components/ui/SafeAvatar";
    act on it. Module scope outlives the mounts. */
 let consumedStorySignal: number | null = null;
 
+/** Sustained downward travel before the rail gets out of the way. */
+const COLLAPSE_AFTER_DOWN_PX = 48;
 /**
- * Collapse the rail while the reader is moving down the column and bring it
- * back the moment they head up — the same grammar as a hiding top bar, so the
- * feed gains a rail's worth of height without the rail ever being unreachable.
+ * Sustained UPWARD travel before the rail comes back. Deliberately large and
+ * deliberately not symmetric with the collapse distance: reappearing pushes
+ * the whole column down under the reader's eyes, so it must be something they
+ * clearly meant. A flick, a rubber-band bounce or a trackpad tremor used to
+ * clear the old 12px threshold and the rail would pop in mid-sentence. Roughly
+ * two deliberate swipes back up.
+ */
+const REVEAL_AFTER_UP_PX = 160;
+/** Below this the rail is simply part of the top of the page. */
+const NEAR_TOP_PX = 64;
+/** Ignore sub-pixel and jitter deltas, small enough that real travel still accumulates. */
+const NOISE_FLOOR_PX = 4;
+
+/**
+ * Collapse the rail while the reader moves down the column, and bring it back
+ * only after they have deliberately travelled back up — or when they reach the
+ * top, where it is just part of the page.
+ *
+ * The asymmetry is the whole point. Distance ACCUMULATES in one direction and
+ * resets the moment the direction flips, so a jiggle never crosses either
+ * threshold; only sustained travel does.
  *
  * Reads the shared `#ws-main-scroll` container rather than the window: the
  * column scrolls inside itself, so window scroll never moves.
@@ -41,6 +61,8 @@ function useCollapseOnScrollDown() {
 		if (!scroller) return;
 
 		let last = scroller.scrollTop;
+		let downTravel = 0;
+		let upTravel = 0;
 		// Toggling RESIZES this scroller — the rail is a sibling above it, so
 		// collapsing hands the column ~100px of height back. That reflow can
 		// clamp scrollTop and emit a scroll event of its own, which reads as
@@ -48,6 +70,15 @@ function useCollapseOnScrollDown() {
 		// the rail then oscillates for as long as the feedback loop runs.
 		// Ignoring events until the height transition has settled breaks it.
 		let settleUntil = 0;
+
+		const apply = (next: boolean) => {
+			if (next === collapsedRef.current) return;
+			collapsedRef.current = next;
+			downTravel = 0;
+			upTravel = 0;
+			settleUntil = performance.now() + 400; // > the 320ms motion-slow beat
+			setCollapsed(next);
+		};
 
 		const onScroll = () => {
 			const y = scroller.scrollTop;
@@ -58,16 +89,28 @@ function useCollapseOnScrollDown() {
 				return;
 			}
 			const dy = y - last;
-			// Deadband, wide enough that a fingertip resting on the glass or a
-			// rubber-band bounce cannot flip the rail.
-			if (Math.abs(dy) < 12) return;
+			if (Math.abs(dy) < NOISE_FLOOR_PX) return;
 			last = y;
-			// Near the top the rail is always available, whatever the direction.
-			const next = y > 64 && dy > 0;
-			if (next === collapsedRef.current) return;
-			collapsedRef.current = next;
-			settleUntil = performance.now() + 400; // > the 320ms motion-slow beat
-			setCollapsed(next);
+
+			// A change of direction is a new gesture: forget the old one.
+			if (dy > 0) {
+				downTravel += dy;
+				upTravel = 0;
+			} else {
+				upTravel += -dy;
+				downTravel = 0;
+			}
+
+			// At the top the rail always belongs on screen.
+			if (y <= NEAR_TOP_PX) {
+				apply(false);
+				return;
+			}
+			if (!collapsedRef.current && downTravel >= COLLAPSE_AFTER_DOWN_PX) {
+				apply(true);
+			} else if (collapsedRef.current && upTravel >= REVEAL_AFTER_UP_PX) {
+				apply(false);
+			}
 		};
 
 		scroller.addEventListener("scroll", onScroll, { passive: true });

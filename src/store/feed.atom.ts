@@ -1,5 +1,6 @@
 import { atom } from "jotai";
 import { PostProps } from "@/components/feed/PostCard";
+import type { FeedTab } from "@/store/ui.atom";
 
 interface FeedState {
 	posts: PostProps[];
@@ -7,11 +8,11 @@ interface FeedState {
 	hasMore: boolean;
 	scrollPosition: number;
 	/**
-	 * Which tab these posts were fetched for. The two tabs are different
-	 * QUERIES on the gateway, not two views of one list, so remembering this is
-	 * what stops a remount serving For-You posts under the Following tab.
+	 * Which tab these posts were fetched for. The tabs are different QUERIES
+	 * on the gateway, not views of one list, so remembering this is what stops
+	 * a remount serving For-You posts under Following or Newest.
 	 */
-	mode: "foryou" | "following";
+	mode: FeedTab;
 }
 
 export const feedAtom = atom<FeedState>({

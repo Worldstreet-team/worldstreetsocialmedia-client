@@ -223,8 +223,14 @@ export default function Feed() {
 			// Fresh page load (the atom is memory-only): paint the last-known
 			// snapshot immediately and revalidate silently underneath, instead
 			// of holding the reader on a skeleton for the whole round trip.
-			// Snapshots are For-You only — Following is chronological, where a
-			// stale page misleads rather than helps.
+			// This is what makes a refresh mid-background-load feel instant —
+			// whatever we last had is on screen before the network is asked
+			// for anything.
+			//
+			// For-You only, deliberately: that timeline is ranked, so a
+			// slightly stale version is still a reasonable answer. Following
+			// and Newest are chronological, where showing yesterday's order
+			// under a heading that promises recency is a lie, not a cache.
 			const snapshot =
 				tab === "foryou" && me?._id
 					? loadFeedSnapshot(String(me._id))
@@ -388,12 +394,16 @@ export default function Feed() {
 					hasMore: Boolean(result.data.hasMore),
 					mode: tab,
 				}));
-			} else {
+			} else if (!opts?.silent) {
 				if (result.message) toast(result.message, { type: "error" });
 			}
 		} catch (error) {
 			console.error("Failed to fetch feed:", error);
-			toast("Failed to load feed", { type: "error" });
+			// A background refresh that fails must stay silent: the reader
+			// already has a usable timeline on screen, and a toast about a
+			// request they never asked for reads as the app breaking. The
+			// foreground path still reports, because there it IS the answer.
+			if (!opts?.silent) toast("Failed to load feed", { type: "error" });
 		} finally {
 			setLoading(false);
 		}
@@ -459,8 +469,12 @@ export default function Feed() {
 			refreshingRef.current = true;
 			setRefreshing(true);
 			try {
+				// Silent: the posts the reader asked for are already on screen.
+				// A non-silent reset here flipped the whole timeline back to
+				// skeletons for the length of a round trip — blanking the very
+				// thing the tap just delivered.
 				const [, announced] = await Promise.all([
-					fetchFeed(true),
+					fetchFeed(true, { silent: true }),
 					Promise.all(missing.map((p) => getPostByIdAction(p.postId))),
 				]);
 
@@ -526,8 +540,10 @@ export default function Feed() {
 
 			setIsPosting(false);
 		} else {
-			// Keep isPosting true while fetching
-			await fetchFeed(true);
+			// Keep isPosting true while fetching. Silent: the composer's own
+			// spinner already says work is happening, so the timeline should
+			// stay readable rather than collapse into skeletons behind it.
+			await fetchFeed(true, { silent: true });
 			setIsPosting(false);
 		}
 	};
