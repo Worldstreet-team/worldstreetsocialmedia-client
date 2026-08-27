@@ -2,7 +2,13 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { X, Search, Loader2 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
+import {
+	OverlayHeader,
+	OverlayPanel,
+	OverlayScrim,
+	useOverlayDismiss,
+} from "@/components/ui/Overlay";
 import { getFollowersAction, getFollowingAction } from "@/lib/user.actions";
 import { startConversationAction } from "@/lib/conversation.actions";
 import { UserBadges } from "@/components/ui/UserBadges";
@@ -123,45 +129,15 @@ export default function NewConversationModal({
 		}
 	};
 
+	useOverlayDismiss(isOpen, onClose);
+
 	return (
 		<AnimatePresence>
 			{isOpen && (
 				<>
-					{/* Backdrop */}
-					<motion.div
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						exit={{ opacity: 0 }}
-						onClick={onClose}
-						className="fixed inset-0 bg-scrim z-modal"
-					/>
-
-					{/* Modal */}
-					<motion.div
-						initial={{ opacity: 0, scale: 0.98, y: 8 }}
-						animate={{ opacity: 1, scale: 1, y: 0 }}
-						exit={{ opacity: 0, scale: 0.98, y: 8 }}
-						transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-						// Full-bleed sheet on mobile — pt-safe/pb-safe keep the header
-						// off the notch and the list off the home indicator.
-						className="fixed inset-0 pt-safe pb-safe md:pt-0 md:pb-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[480px] md:max-h-[600px] md:rounded-xl bg-surface border border-hairline shadow-nav z-modal flex flex-col overflow-hidden"
-					>
-						{/* Header */}
-						<div className="flex shrink-0 items-center justify-between p-2 sm:p-4 border-b border-hairline">
-							<div className="flex items-center gap-2 sm:gap-4 min-w-0">
-								<button
-									type="button"
-									onClick={onClose}
-									aria-label="Close"
-									className="flex h-11 w-11 shrink-0 items-center justify-center rounded-pill hover:bg-raised transition-colors text-muted hover:text-primary"
-								>
-									<X className="w-5 h-5" />
-								</button>
-								<h2 className="font-display text-lg font-semibold text-primary truncate">
-									New Conversation
-								</h2>
-							</div>
-						</div>
+					<OverlayScrim onClose={onClose} />
+					<OverlayPanel variant="sheet" label="New conversation">
+						<OverlayHeader title="New conversation" onClose={onClose} />
 
 						{/* Search */}
 						<div className="shrink-0 p-4 border-b border-hairline">
@@ -227,7 +203,7 @@ export default function NewConversationModal({
 								))
 							)}
 						</div>
-					</motion.div>
+					</OverlayPanel>
 				</>
 			)}
 		</AnimatePresence>
