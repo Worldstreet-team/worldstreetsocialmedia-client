@@ -271,3 +271,36 @@ export async function resolveHandlesAction(usernames: string[]) {
 		return { success: false as const, users: [] };
 	}
 }
+
+/**
+ * Is this handle free? Answered where it is asked (onboarding step 1) rather
+ * than at submit — the profile POST used to be the first time anyone learned
+ * a username was taken, two steps later.
+ */
+export async function checkUsernameAction(username: string) {
+	const { getToken } = await auth();
+	const accessToken = await getToken();
+	if (!accessToken) {
+		return { available: false as const, reason: "error" as const, message: "" };
+	}
+	try {
+		const res = await axios.get(`${API_URL}/api/users/username-available`, {
+			params: { u: username },
+			headers: { Authorization: `Bearer ${accessToken}` },
+			timeout: 8000,
+		});
+		return {
+			available: Boolean(res.data?.available),
+			reason: String(res.data?.reason ?? "ok") as
+				| "ok"
+				| "taken"
+				| "invalid"
+				| "error",
+			message: String(res.data?.message ?? ""),
+		};
+	} catch {
+		// Network failure must NOT block the flow: the gateway re-checks on
+		// submit, so an unreachable check is a missing hint, not a wall.
+		return { available: true as const, reason: "error" as const, message: "" };
+	}
+}
