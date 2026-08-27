@@ -1,11 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { AnimatePresence } from "framer-motion";
 import { CaretRight } from "@phosphor-icons/react";
 import { useT } from "@/i18n/client";
 import { getCreatorPostsAction } from "@/lib/creator.actions";
 import { PostStats } from "@/components/studio/PostStats";
-import { X } from "@phosphor-icons/react";
+import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
+import {
+	OverlayHeader,
+	OverlayPanel,
+	OverlayScrim,
+	useOverlayDismiss,
+} from "@/components/ui/Overlay";
 import { PageHead, fmt } from "@/components/studio/studio-ui";
 import { formatTimeAgo } from "@/lib/utils";
 
@@ -26,14 +33,11 @@ export default function StudioPosts() {
 	// /studio/posts/[id] still exists for deep links.
 	const [openId, setOpenId] = useState<string | null>(null);
 
-	useEffect(() => {
-		if (!openId) return;
-		const onKey = (e: KeyboardEvent) => {
-			if (e.key === "Escape") setOpenId(null);
-		};
-		document.addEventListener("keydown", onKey);
-		return () => document.removeEventListener("keydown", onKey);
-	}, [openId]);
+	// Escape AND the body scroll lock now — the local keydown listener that
+	// used to sit here left the list scrolling behind the drilldown.
+	const closeDrilldown = useCallback(() => setOpenId(null), []);
+	useOverlayDismiss(Boolean(openId), closeDrilldown);
+
 	const [cursor, setCursor] = useState<string | null>(null);
 	const [loading, setLoading] = useState(true);
 
@@ -108,35 +112,50 @@ export default function StudioPosts() {
 				)}
 			</div>
 
-			{openId && (
-				<div
-					className="fixed inset-0 z-modal flex items-start justify-center overflow-y-auto bg-black/60 p-4 sm:p-8"
-					onClick={() => setOpenId(null)}
-				>
-					<div
-						role="dialog"
-						aria-modal="true"
-						className="w-full max-w-4xl rounded-2xl bg-[#0F0E0D] p-5"
-						onClick={(e) => e.stopPropagation()}
-					>
-						<div className="mb-4 flex items-center justify-between gap-3">
-							<h2 className="min-w-0 truncate font-sans text-[15px] font-semibold glass-ink">
-								{rows.find((r) => r.id === openId)?.content ||
-									t("studio.mediaPost")}
-							</h2>
-							<button
-								type="button"
-								onClick={() => setOpenId(null)}
-								aria-label={t("studio.back")}
-								className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-[#fafaf9]/[0.06] glass-ink-dim transition-colors hover:glass-ink hover:bg-[#fafaf9]/[0.1]"
-							>
-								<X size={15} weight="bold" />
-							</button>
-						</div>
-						<PostStats id={openId} />
-					</div>
-				</div>
-			)}
+			{/* A drilldown is a modal, not a page. On the standard grammar it is
+			    the `center` plate — widened, because a stats table is not a
+			    sentence and two buttons. Ink inside comes from theme tokens: the
+			    panel is `glass-frost`, which follows the theme, unlike the
+			    fixed-dark chrome the studio list is drawn on. */}
+			<ConfirmModalPortal>
+				<AnimatePresence>
+					{openId && (
+						<OverlayScrim
+							key="drilldown-scrim"
+							onClose={closeDrilldown}
+							label={t("studio.back")}
+						/>
+					)}
+					{openId && (
+						<OverlayPanel
+							key="drilldown-panel"
+							variant="center"
+							label={
+								rows.find((r) => r.id === openId)?.content ||
+								t("studio.mediaPost")
+							}
+							/* The Studio is deliberately fixed-dark in both themes, and
+							   PostStats renders #171614 cards. A frost panel put those
+							   dark cards on a white sheet in light mode, so this one
+							   owns its ground. */
+							ground="none"
+							className="border border-hairline bg-[#171614] shadow-nav sm:w-[min(880px,94vw)]"
+						>
+							<OverlayHeader
+								title={
+									rows.find((r) => r.id === openId)?.content ||
+									t("studio.mediaPost")
+								}
+								onClose={closeDrilldown}
+								closeLabel={t("studio.back")}
+							/>
+							<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-[calc(20px+var(--ws-safe-bottom))]">
+								<PostStats id={openId} />
+							</div>
+						</OverlayPanel>
+					)}
+				</AnimatePresence>
+			</ConfirmModalPortal>
 
 			{cursor && (
 				<button

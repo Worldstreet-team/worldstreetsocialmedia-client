@@ -7,12 +7,19 @@ import {
   Trash,
   UserMinus,
   UsersThree,
-  X,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ConfirmModal from "@/components/ui/ConfirmModal";
+import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
+import {
+  OverlayHeader,
+  OverlayPanel,
+  OverlayScrim,
+  useOverlayDismiss,
+} from "@/components/ui/Overlay";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { CATEGORIES as TAXONOMY } from "@/data/categories";
@@ -54,23 +61,12 @@ export function ManageCommunity({
   const [editing, setEditing] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+  // The scrim catches the outside click and the hook owns Escape plus the body
+  // scroll lock — the pair of hand-rolled document listeners that used to live
+  // here did the first two and never locked the page behind the menu.
+  const close = useCallback(() => setOpen(false), []);
+  useOverlayDismiss(open, close);
 
   const doDelete = async () => {
     setConfirmDelete(false);
@@ -84,65 +80,93 @@ export function ManageCommunity({
   };
 
   return (
-    <div ref={wrapRef} className="relative">
+    <div className="relative">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label={t("community.manage")}
-        aria-haspopup="menu"
+        aria-haspopup="dialog"
         aria-expanded={open}
         className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-raised hover:text-primary"
       >
         <DotsThree size={20} weight="bold" />
       </button>
 
-      {open && (
-        <div
-          role="menu"
-          className="absolute right-0 top-full z-dropdown mt-2 w-[196px] overflow-hidden rounded-xl border border-hairline bg-surface py-1 shadow-nav"
-        >
-          {[
-            {
-              id: "edit",
-              label: t("community.edit"),
-              icon: PencilSimple,
-              danger: false,
-              run: () => setEditing(true),
-            },
-            {
-              id: "members",
-              label: t("community.members.title"),
-              icon: UsersThree,
-              danger: false,
-              run: () => setMembersOpen(true),
-            },
-            {
-              id: "delete",
-              label: t("community.delete"),
-              icon: Trash,
-              danger: true,
-              run: () => setConfirmDelete(true),
-            },
-          ].map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setOpen(false);
-                item.run();
-              }}
-              className={clsx(
-                "flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[13px] font-medium transition-colors hover:bg-raised",
-                item.danger ? "text-danger" : "text-primary",
-              )}
+      {/* The owner menu, on the standard overlay grammar's `anchored` panel —
+          the variant for menus. `aria-haspopup` says "dialog" now because the
+          panel IS one; the list of actions keeps its menu semantics inside. */}
+      <ConfirmModalPortal>
+        <AnimatePresence>
+          {open && (
+            // A menu is not a modal: the community page you are managing stays
+            // lit behind it on desktop.
+            <OverlayScrim
+              key="manage-scrim"
+              onClose={close}
+              dim={false}
+              label={t("common.close")}
+            />
+          )}
+          {open && (
+            <OverlayPanel
+              key="manage-panel"
+              variant="anchored"
+              label={t("community.manage")}
             >
-              <item.icon size={15} weight="bold" />
-              {item.label}
-            </button>
-          ))}
-        </div>
-      )}
+              <OverlayHeader
+                title={t("community.manage")}
+                onClose={close}
+                closeLabel={t("common.close")}
+              />
+              <div
+                role="menu"
+                className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[calc(8px+var(--ws-safe-bottom))]"
+              >
+                {[
+                  {
+                    id: "edit",
+                    label: t("community.edit"),
+                    icon: PencilSimple,
+                    danger: false,
+                    run: () => setEditing(true),
+                  },
+                  {
+                    id: "members",
+                    label: t("community.members.title"),
+                    icon: UsersThree,
+                    danger: false,
+                    run: () => setMembersOpen(true),
+                  },
+                  {
+                    id: "delete",
+                    label: t("community.delete"),
+                    icon: Trash,
+                    danger: true,
+                    run: () => setConfirmDelete(true),
+                  },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setOpen(false);
+                      item.run();
+                    }}
+                    className={clsx(
+                      "flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-left font-sans text-[13px] font-medium transition-colors hover:bg-raised",
+                      item.danger ? "text-danger" : "text-primary",
+                    )}
+                  >
+                    <item.icon size={15} weight="bold" />
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </OverlayPanel>
+          )}
+        </AnimatePresence>
+      </ConfirmModalPortal>
 
       {editing && (
         <EditCommunitySheet
@@ -204,13 +228,9 @@ function EditCommunitySheet({
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  // Mounted only while open, so the hook is armed unconditionally — Escape and
+  // the scroll lock, which the local keydown listener only half-covered.
+  useOverlayDismiss(true, onClose);
 
   useEffect(
     () => () => {
@@ -237,116 +257,102 @@ function EditCommunitySheet({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-modal flex items-end justify-center bg-scrim sm:items-center sm:p-6"
-      onClick={onClose}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={t("community.edit")}
-        className="w-full rounded-t-xl border border-hairline bg-surface p-5 shadow-nav sm:max-w-[440px] sm:rounded-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="font-display text-[18px] font-semibold text-primary">
-            {t("community.edit")}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t("common.back")}
-            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-raised hover:text-primary"
-          >
-            <X size={16} weight="bold" />
-          </button>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            aria-label={t("community.changeAvatar")}
-            className="group relative h-16 w-16 shrink-0 cursor-pointer overflow-hidden rounded-xl bg-raised"
-          >
-            {avatarPreview || community.avatar ? (
-              <SafeAvatar src={avatarPreview ?? community.avatar} className="object-cover" sizes="64px" />
-            ) : (
-              <span className="flex h-full w-full items-center justify-center font-display text-2xl font-semibold text-gold">
-                {community.name.charAt(0).toUpperCase()}
-              </span>
-            )}
-            <span className="absolute inset-0 flex items-center justify-center bg-scrim opacity-0 transition-opacity group-hover:opacity-100">
-              <Camera size={18} className="text-primary" />
-            </span>
-          </button>
-          <div className="min-w-0">
-            <p className="truncate font-sans text-[15px] font-semibold text-primary">
-              {community.name}
-            </p>
-            <p className="font-sans text-[12px] text-subtle">
-              {t("community.nameLocked")}
-            </p>
-          </div>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (!f) return;
-              setAvatarFile(f);
-              setAvatarPreview(URL.createObjectURL(f));
-            }}
-          />
-        </div>
-
-        <label className="mt-4 block">
-          <span className="font-sans text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle">
-            {t("community.descriptionLabel")}
-          </span>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            maxLength={280}
-            rows={3}
-            className="mt-1.5 w-full resize-none rounded-lg border border-hairline bg-sunken px-3 py-2.5 font-sans text-sm text-primary outline-none placeholder:text-subtle focus:border-brand/60"
-          />
-        </label>
-
-        <span className="mt-3 block font-sans text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle">
-          {t("community.categoryLabel")}
-        </span>
-        <div className="mt-1.5 flex max-h-32 flex-wrap gap-1.5 overflow-y-auto">
-          {TAXONOMY.slice(0, 30).map((c) => (
+    // A form that wants the width: the grammar's `sheet`.
+    <ConfirmModalPortal>
+      <OverlayScrim onClose={onClose} label={t("common.back")} />
+      <OverlayPanel variant="sheet" label={t("community.edit")}>
+        <OverlayHeader
+          title={t("community.edit")}
+          onClose={onClose}
+          closeLabel={t("common.back")}
+        />
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-[calc(20px+var(--ws-safe-bottom))]">
+          <div className="flex items-center gap-3">
             <button
-              key={c.id}
               type="button"
-              onClick={() => setCategory(c.id)}
-              aria-pressed={category === c.id}
-              className={clsx(
-                "h-7 cursor-pointer rounded-pill px-2.5 font-sans text-[12px] font-medium transition-colors",
-                category === c.id
-                  ? "bg-primary text-page font-semibold"
-                  : "bg-raised text-muted hover:text-primary",
-              )}
+              onClick={() => fileRef.current?.click()}
+              aria-label={t("community.changeAvatar")}
+              className="group relative h-16 w-16 shrink-0 cursor-pointer overflow-hidden rounded-xl bg-raised"
             >
-              {c.label}
+              {avatarPreview || community.avatar ? (
+                <SafeAvatar src={avatarPreview ?? community.avatar} className="object-cover" sizes="64px" />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center font-display text-2xl font-semibold text-gold">
+                  {community.name.charAt(0).toUpperCase()}
+                </span>
+              )}
+              <span className="absolute inset-0 flex items-center justify-center bg-scrim opacity-0 transition-opacity group-hover:opacity-100">
+                <Camera size={18} className="text-primary" />
+              </span>
             </button>
-          ))}
-        </div>
+            <div className="min-w-0">
+              <p className="truncate font-sans text-[15px] font-semibold text-primary">
+                {community.name}
+              </p>
+              <p className="font-sans text-[12px] text-subtle">
+                {t("community.nameLocked")}
+              </p>
+            </div>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                setAvatarFile(f);
+                setAvatarPreview(URL.createObjectURL(f));
+              }}
+            />
+          </div>
 
-        <button
-          type="button"
-          onClick={save}
-          disabled={saving}
-          className="mt-5 flex h-11 w-full cursor-pointer items-center justify-center rounded-pill bg-primary font-sans text-[14px] font-semibold text-page transition-colors hover:bg-muted disabled:opacity-50"
-        >
-          {t("voice.saveChanges")}
-        </button>
-      </div>
-    </div>
+          <label className="mt-4 block">
+            <span className="font-sans text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle">
+              {t("community.descriptionLabel")}
+            </span>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              maxLength={280}
+              rows={3}
+              className="mt-1.5 w-full resize-none rounded-lg border border-hairline bg-sunken px-3 py-2.5 font-sans text-sm text-primary outline-none placeholder:text-subtle focus:border-brand/60"
+            />
+          </label>
+
+          <span className="mt-3 block font-sans text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle">
+            {t("community.categoryLabel")}
+          </span>
+          <div className="mt-1.5 flex max-h-32 flex-wrap gap-1.5 overflow-y-auto">
+            {TAXONOMY.slice(0, 30).map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => setCategory(c.id)}
+                aria-pressed={category === c.id}
+                className={clsx(
+                  "h-7 cursor-pointer rounded-pill px-2.5 font-sans text-[12px] font-medium transition-colors",
+                  category === c.id
+                    ? "bg-primary text-page font-semibold"
+                    : "bg-chip text-muted hover:text-primary",
+                )}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={save}
+            disabled={saving}
+            className="mt-5 flex h-11 w-full cursor-pointer items-center justify-center rounded-pill bg-primary font-sans text-[14px] font-semibold text-page transition-colors hover:bg-muted disabled:opacity-50"
+          >
+            {t("voice.saveChanges")}
+          </button>
+        </div>
+      </OverlayPanel>
+    </ConfirmModalPortal>
   );
 }
 
@@ -382,14 +388,12 @@ function MembersSheet({
     setLoading(false);
   };
 
+  // Mounted only while open, so the hook is armed unconditionally.
+  useOverlayDismiss(true, onClose);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only
   useEffect(() => {
     void load(0);
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-    // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only
   }, []);
 
   const doRemove = async () => {
@@ -407,32 +411,17 @@ function MembersSheet({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-modal flex items-end justify-center bg-scrim sm:items-center sm:p-6"
-      onClick={onClose}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={t("community.members.title")}
-        className="flex max-h-[80dvh] w-full flex-col rounded-t-xl border border-hairline bg-surface shadow-nav sm:max-w-[420px] sm:rounded-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between gap-3 border-b border-hairline px-5 py-4">
-          <h2 className="font-display text-[18px] font-semibold text-primary">
-            {t("community.members.title")}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t("common.back")}
-            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-raised hover:text-primary"
-          >
-            <X size={16} weight="bold" />
-          </button>
-        </div>
+    // The roster is a flow that wants the width: the grammar's `sheet`.
+    <ConfirmModalPortal>
+      <OverlayScrim onClose={onClose} label={t("common.back")} />
+      <OverlayPanel variant="sheet" label={t("community.members.title")}>
+        <OverlayHeader
+          title={t("community.members.title")}
+          onClose={onClose}
+          closeLabel={t("common.back")}
+        />
 
-        <div className="flex-1 overflow-y-auto px-2 py-2">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[calc(8px+var(--ws-safe-bottom))]">
           {loading ? (
             <p className="py-8 text-center font-sans text-sm text-subtle">…</p>
           ) : (
@@ -479,8 +468,11 @@ function MembersSheet({
             </button>
           )}
         </div>
-      </div>
+      </OverlayPanel>
 
+      {/* A SIBLING of the panel, not a child of the scrim. Nested inside the
+          old click-catcher its clicks bubbled through the React tree and shut
+          the roster out from under the confirm. */}
       <ConfirmModal
         isOpen={Boolean(removeTarget)}
         onClose={() => setRemoveTarget(null)}
@@ -491,6 +483,6 @@ function MembersSheet({
         cancelText={t("voice.keepIt")}
         isDestructive
       />
-    </div>
+    </ConfirmModalPortal>
   );
 }

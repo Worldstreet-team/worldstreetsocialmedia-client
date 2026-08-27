@@ -2,16 +2,21 @@
 
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import clsx from "clsx";
 import { ImageSquare, VideoCamera, X } from "@phosphor-icons/react";
 import { useT } from "@/i18n/client";
 import { quotePostAction } from "@/lib/post.actions";
 import { useToast } from "@/components/ui/Toast/ToastContext";
+import {
+	OverlayHeader,
+	OverlayPanel,
+	OverlayScrim,
+	useOverlayDismiss,
+} from "@/components/ui/Overlay";
 
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
-const EASE = [0.2, 0, 0, 1] as const;
 const MAX_CHARS = 280;
 const MAX_IMAGES = 4;
 
@@ -33,7 +38,8 @@ type Attachment = { file: File; url: string; kind: "image" | "video" };
  * video like one. The old version accepted text alone and the action only ever
  * sent `{ content }`, so there was nothing to attach media to.
  *
- * Portaled so no card can clip it.
+ * On the standard overlay grammar (`sheet` — it is a form), portaled so no
+ * card can clip it.
  */
 export function QuoteModal({
 	target,
@@ -44,7 +50,6 @@ export function QuoteModal({
 }) {
 	const t = useT();
 	const { toast } = useToast();
-	const reduce = useReducedMotion();
 
 	const [content, setContent] = useState("");
 	const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -61,11 +66,8 @@ export function QuoteModal({
 		[attachments],
 	);
 
-	useEffect(() => {
-		const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-		document.addEventListener("keydown", onKey);
-		return () => document.removeEventListener("keydown", onKey);
-	}, [onClose]);
+	// Esc + body scroll lock. Mounted only while open, so `open` is constant.
+	useOverlayDismiss(true, onClose);
 
 	const hasVideo = attachments.some((a) => a.kind === "video");
 	const imageCount = attachments.filter((a) => a.kind === "image").length;
@@ -127,39 +129,15 @@ export function QuoteModal({
 
 	return createPortal(
 		<AnimatePresence>
-			<motion.div
-				initial={{ opacity: 0 }}
-				animate={{ opacity: 1 }}
-				exit={{ opacity: 0 }}
-				transition={{ duration: 0.2, ease: EASE }}
-				className="fixed inset-0 z-modal flex items-end justify-center glass-veil-sheer backdrop-blur-md backdrop-saturate-150 sm:items-center sm:p-6"
-				onClick={onClose}
-			>
-				<motion.div
-					initial={reduce ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.985 }}
-					animate={{ opacity: 1, y: 0, scale: 1 }}
-					exit={reduce ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.985 }}
-					transition={{ duration: 0.32, ease: EASE }}
-					role="dialog"
-					aria-modal="true"
-					aria-label={t("post.quote")}
-					className="max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl glass-dock backdrop-blur-xl backdrop-saturate-150 glass-ink p-5 pb-safe sm:max-w-[460px] sm:rounded-2xl sm:p-6"
-					onClick={(e) => e.stopPropagation()}
-				>
-					<div className="mb-4 flex items-start justify-between gap-3">
-						<h2 className="font-display text-[19px] font-semibold leading-tight">
-							{t("post.quote")}
-						</h2>
-						<button
-							type="button"
-							onClick={onClose}
-							aria-label={t("common.close")}
-							className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill glass-chip transition-colors"
-						>
-							<X size={15} weight="bold" />
-						</button>
-					</div>
+			<OverlayScrim key="quote-scrim" onClose={onClose} label={t("common.close")} />
+			<OverlayPanel key="quote-panel" variant="sheet" label={t("post.quote")}>
+				<OverlayHeader
+					title={t("post.quote")}
+					onClose={onClose}
+					closeLabel={t("common.close")}
+				/>
 
+				<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-1">
 					<textarea
 						value={content}
 						onChange={(e) =>
@@ -168,7 +146,7 @@ export function QuoteModal({
 						placeholder={t("quote.placeholder")}
 						autoFocus
 						rows={3}
-						className="w-full resize-none rounded-xl glass-input px-3.5 py-3 font-sans text-[15px] glass-ink outline-none placeholder:text-[#fafaf9]/35"
+						className="w-full resize-none rounded-xl bg-sunken px-3.5 py-3 font-sans text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised sm:text-[15px]"
 					/>
 
 					{attachments.length > 0 && (
@@ -181,7 +159,7 @@ export function QuoteModal({
 							{attachments.map((a, i) => (
 								<div
 									key={a.url}
-									className="relative overflow-hidden rounded-xl glass-card"
+									className="relative overflow-hidden rounded-xl bg-chip"
 								>
 									{a.kind === "video" ? (
 										// eslint-disable-next-line jsx-a11y/media-has-caption
@@ -198,6 +176,8 @@ export function QuoteModal({
 											className="aspect-square w-full object-cover"
 										/>
 									)}
+									{/* Sits ON the artwork, so it keeps the fixed-dark
+									    canvas chip rather than a theme tint. */}
 									<button
 										type="button"
 										onClick={() => removeAt(i)}
@@ -212,87 +192,86 @@ export function QuoteModal({
 					)}
 
 					{/* the original, pinned */}
-					<div className="mt-3 rounded-xl glass-card p-3">
+					<div className="mt-3 rounded-xl bg-chip p-3">
 						<div className="mb-1 flex items-center gap-2">
 							<span className="relative h-5 w-5 shrink-0 overflow-hidden rounded-pill">
 								<SafeAvatar src={target.avatar} className="object-cover" />
 							</span>
-							<span className="truncate font-sans text-[13px] font-semibold glass-ink">
+							<span className="truncate font-sans text-[13px] font-semibold text-primary">
 								{target.authorName}
 							</span>
-							<span className="truncate font-sans text-[12px] glass-ink-faint">
+							<span className="truncate font-sans text-[12px] text-subtle">
 								@{target.username} · {target.timestamp}
 							</span>
 						</div>
-						<p className="line-clamp-3 whitespace-pre-wrap font-sans text-[14px] glass-ink-dim">
+						<p className="line-clamp-3 whitespace-pre-wrap font-sans text-[14px] text-muted">
 							{target.content}
 						</p>
 					</div>
+				</div>
 
-					<div className="mt-4 flex items-center justify-between gap-3">
-						<div className="flex items-center gap-1">
-							<button
-								type="button"
-								onClick={() => imageInputRef.current?.click()}
-								disabled={hasVideo || imageCount >= MAX_IMAGES}
-								aria-label={t("composer.media")}
-								className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill glass-chip transition-colors disabled:cursor-not-allowed disabled:opacity-40"
-							>
-								<ImageSquare size={17} />
-							</button>
-							<button
-								type="button"
-								onClick={() => videoInputRef.current?.click()}
-								disabled={imageCount > 0}
-								aria-label={t("composer.video")}
-								className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill glass-chip transition-colors disabled:cursor-not-allowed disabled:opacity-40"
-							>
-								<VideoCamera size={17} />
-							</button>
-							<span
-								className={clsx(
-									"ml-1.5 font-sans text-[12px] tabular-nums",
-									remaining <= 28 ? "glass-ink" : "glass-ink-faint",
-								)}
-							>
-								{remaining}
-							</span>
-						</div>
-
-						{/* White CTA: gold never sits on a blurred backdrop. */}
+				<div className="flex shrink-0 items-center justify-between gap-3 px-4 pb-[calc(16px+var(--ws-safe-bottom))] pt-3">
+					<div className="flex items-center gap-1">
 						<button
 							type="button"
-							disabled={!canPost}
-							onClick={submit}
-							className="h-10 cursor-pointer rounded-pill glass-cta px-6 font-sans text-[14px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+							onClick={() => imageInputRef.current?.click()}
+							disabled={hasVideo || imageCount >= MAX_IMAGES}
+							aria-label={t("composer.media")}
+							className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill bg-chip text-muted transition-colors hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
 						>
-							{busy ? t("quote.posting") : t("composer.post")}
+							<ImageSquare size={17} />
 						</button>
+						<button
+							type="button"
+							onClick={() => videoInputRef.current?.click()}
+							disabled={imageCount > 0}
+							aria-label={t("composer.video")}
+							className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill bg-chip text-muted transition-colors hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+						>
+							<VideoCamera size={17} />
+						</button>
+						<span
+							className={clsx(
+								"ml-1.5 font-sans text-[12px] tabular-nums",
+								remaining <= 28 ? "text-primary" : "text-subtle",
+							)}
+						>
+							{remaining}
+						</span>
 					</div>
 
-					<input
-						ref={imageInputRef}
-						type="file"
-						accept="image/*"
-						multiple
-						className="hidden"
-						onChange={(e) => {
-							addFiles(e.target.files, "image");
-							e.target.value = "";
-						}}
-					/>
-					<input
-						ref={videoInputRef}
-						type="file"
-						accept="video/*"
-						className="hidden"
-						onChange={(e) => {
-							addFiles(e.target.files, "video");
-							e.target.value = "";
-						}}
-					/>
-				</motion.div>
-			</motion.div>
+					<button
+						type="button"
+						disabled={!canPost}
+						onClick={submit}
+						className="h-10 cursor-pointer rounded-pill bg-brand px-6 font-sans text-[14px] font-semibold text-brand-on transition-colors hover:bg-brand-active disabled:cursor-not-allowed disabled:opacity-40"
+					>
+						{busy ? t("quote.posting") : t("composer.post")}
+					</button>
+				</div>
+
+				<input
+					ref={imageInputRef}
+					type="file"
+					accept="image/*"
+					multiple
+					className="hidden"
+					onChange={(e) => {
+						addFiles(e.target.files, "image");
+						e.target.value = "";
+					}}
+				/>
+				<input
+					ref={videoInputRef}
+					type="file"
+					accept="video/*"
+					className="hidden"
+					onChange={(e) => {
+						addFiles(e.target.files, "video");
+						e.target.value = "";
+					}}
+				/>
+			</OverlayPanel>
 		</AnimatePresence>,
 		document.body,
 	);

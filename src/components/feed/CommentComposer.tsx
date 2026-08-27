@@ -1,10 +1,18 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useCallback, useState, useRef, useEffect } from "react";
 import Image from "next/image";
+import { AnimatePresence } from "framer-motion";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { Image as ImageIcon, Smile, Send, X, User } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
+import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
+import {
+	OverlayHeader,
+	OverlayPanel,
+	OverlayScrim,
+	useOverlayDismiss,
+} from "@/components/ui/Overlay";
 import { replyToPostAction } from "@/lib/post.actions";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import EmojiPicker, { type EmojiClickData, Theme } from "emoji-picker-react";
@@ -35,27 +43,15 @@ export const CommentComposer = ({
 	const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
 	const fileInputRef = useRef<HTMLInputElement>(null);
-	const emojiPickerRef = useRef<HTMLDivElement>(null);
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
 	const { toast } = useToast();
 	// Picker follows the app theme instead of hardcoding dark.
 	const { resolvedTheme } = useTheme();
 
-	// Close emoji picker when clicking outside
-	useEffect(() => {
-		function handleClickOutside(event: MouseEvent) {
-			if (
-				emojiPickerRef.current &&
-				!emojiPickerRef.current.contains(event.target as Node)
-			) {
-				setShowEmojiPicker(false);
-			}
-		}
-		document.addEventListener("mousedown", handleClickOutside);
-		return () => {
-			document.removeEventListener("mousedown", handleClickOutside);
-		};
-	}, []);
+	// The overlay scrim is the click-catcher now; Esc and the scroll lock
+	// come from the shared dismiss hook.
+	const closeEmoji = useCallback(() => setShowEmojiPicker(false), []);
+	useOverlayDismiss(showEmojiPicker, closeEmoji);
 
 	// Auto-resize textarea
 	useEffect(() => {
@@ -226,27 +222,46 @@ export const CommentComposer = ({
 								</span>
 							</button>
 
-							{/* Centred on touch, anchored under the button from sm up 
-							    a 320px popover 72px in from the edge overflowed every
-							    small phone. Same treatment as PostComposer. */}
-							{showEmojiPicker && (
-								<div
-									className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 sm:absolute sm:left-0 sm:top-12 sm:translate-x-0 sm:translate-y-0 w-[min(320px,calc(100vw-2rem))] max-h-[70dvh] z-dropdown animate-rise ws-emoji-picker"
-									ref={emojiPickerRef}
-								>
-									<EmojiPicker
-										onEmojiClick={onEmojiClick}
-										theme={
-											resolvedTheme === "light"
-												? Theme.LIGHT
-												: Theme.DARK
-										}
-										width="100%"
-										height={360}
-										lazyLoadEmojis={true}
-									/>
-								</div>
-							)}
+							{/* A picker, not a modal: bottom sheet on a phone,
+							    floating card on desktop, and the page behind
+							    stays undimmed there. */}
+							<ConfirmModalPortal>
+								<AnimatePresence>
+									{showEmojiPicker && (
+										<>
+											<OverlayScrim
+												key="emoji-scrim"
+												onClose={closeEmoji}
+												dim={false}
+												label="Close"
+											/>
+											<OverlayPanel
+												key="emoji-panel"
+												variant="anchored"
+												label="Emoji"
+											>
+												<OverlayHeader
+													title="Emoji"
+													onClose={closeEmoji}
+												/>
+												<div className="ws-emoji-picker min-h-0 flex-1 overflow-hidden px-2 pb-[calc(8px+var(--ws-safe-bottom))]">
+													<EmojiPicker
+														onEmojiClick={onEmojiClick}
+														theme={
+															resolvedTheme === "light"
+																? Theme.LIGHT
+																: Theme.DARK
+														}
+														width="100%"
+														height={360}
+														lazyLoadEmojis={true}
+													/>
+												</div>
+											</OverlayPanel>
+										</>
+									)}
+								</AnimatePresence>
+							</ConfirmModalPortal>
 						</div>
 
 						<button

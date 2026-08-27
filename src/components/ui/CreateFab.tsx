@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppPathname } from "@/i18n/useAppPathname";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -17,6 +17,7 @@ import {
   GoLiveSheet,
   type GoLivePreset,
 } from "@/components/feed/GoLiveSheet";
+import { OverlayScrim, useOverlayDismiss } from "@/components/ui/Overlay";
 import { listPresetsAction } from "@/lib/creator.actions";
 import { liveSessionAtom } from "@/store/live.atom";
 import { DraftsSheet } from "@/components/ui/DraftsSheet";
@@ -93,15 +94,10 @@ export function CreateFab() {
     };
   }, [pathname]);
 
-  // Escape closes the fan before anything else reacts to it.
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open]);
+  // Escape closes the fan before anything else reacts to it, and the page
+  // behind the scrim stays put — both from the shared dismiss hook.
+  const closeFan = useCallback(() => setOpen(false), []);
+  useOverlayDismiss(open, closeFan);
 
   const goHomeThen = (after: () => void) => {
     if (pathname !== "/") router.push("/");
@@ -162,16 +158,10 @@ export function CreateFab() {
     <>
       <AnimatePresence>
         {open && visible && (
-          <motion.button
+          <OverlayScrim
             key="fab-scrim"
-            type="button"
-            aria-label={t("fab.close")}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.12 } }}
-            transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-            onClick={() => setOpen(false)}
-            className="fixed inset-0 z-dropdown glass-scrim backdrop-blur-xl backdrop-saturate-150 cursor-default"
+            onClose={closeFan}
+            label={t("fab.close")}
           />
         )}
       </AnimatePresence>
@@ -199,7 +189,13 @@ export function CreateFab() {
         }}
         // bottom-nav = the sanctioned clearance token over the mobile tab bar
         // (64px bar + safe area + 16px), replacing the hardcoded bottom-24 guess.
-        className="fixed bottom-nav right-4 md:bottom-6 md:right-6 z-dropdown flex flex-col items-end gap-3"
+        // The fan rides at z-modal while open so it clears the shared scrim
+        // (also z-modal, but earlier in the DOM); closed, it drops back to
+        // z-dropdown so real modals stack over it.
+        className={clsx(
+          "fixed bottom-nav right-4 md:bottom-6 md:right-6 flex flex-col items-end gap-3",
+          open ? "z-modal" : "z-dropdown",
+        )}
       >
         <AnimatePresence>
           {open &&

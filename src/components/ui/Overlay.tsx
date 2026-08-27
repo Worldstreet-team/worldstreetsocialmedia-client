@@ -33,6 +33,9 @@ const EASE = [0.2, 0, 0, 1] as const;
 export const overlayPanelClass =
 	"glass-frost backdrop-blur-2xl backdrop-saturate-150 overflow-hidden flex flex-col";
 
+/** Same box, no glass fill — for callers that own their ground. */
+export const overlayPanelBare = "overflow-hidden flex flex-col";
+
 /** Drops down from the top. For search, command and anything centred. */
 export const centerMotion = {
 	initial: { opacity: 0, y: -10, scale: 0.985 },
@@ -121,12 +124,27 @@ const VARIANT: Record<OverlayVariant, string> = {
 export function OverlayPanel({
 	variant = "center",
 	className,
+	style,
+	ground = "frost",
 	label,
 	role = "dialog",
 	children,
 }: {
 	variant?: OverlayVariant;
 	className?: string;
+	/** Inline positioning, for a panel anchored to a measured trigger rect. */
+	style?: React.CSSProperties;
+	/**
+	 * `frost` is the default and what almost everything wants.
+	 *
+	 * `none` drops the glass fill so the caller can own the ground. Needed in
+	 * two places: a media lightbox wants black behind the picture, not a 50%
+	 * wash; and the Creator Studio is deliberately fixed-dark, so a frost
+	 * panel there put its dark cards on a white sheet in light mode. The fill
+	 * has to be dropped rather than overridden — `.glass-frost` is unlayered
+	 * CSS, so a layered `bg-*` utility loses the cascade to it.
+	 */
+	ground?: "frost" | "none";
 	/** Accessible name. A dialog without one is unnavigable by screen reader. */
 	label: string;
 	/**
@@ -144,8 +162,15 @@ export function OverlayPanel({
 			aria-modal="true"
 			aria-label={label}
 			{...motionProps}
-			style={variant === "anchored" ? { transformOrigin: "bottom right" } : undefined}
-			className={clsx(overlayPanelClass, VARIANT[variant], className)}
+			style={{
+				...(variant === "anchored" ? { transformOrigin: "bottom right" } : null),
+				...style,
+			}}
+			className={clsx(
+				ground === "frost" ? overlayPanelClass : overlayPanelBare,
+				VARIANT[variant],
+				className,
+			)}
 		>
 			{/* Grab handle, phones only, and only where the panel rises from the
 			    bottom edge — it is a lie on a centred plate. */}

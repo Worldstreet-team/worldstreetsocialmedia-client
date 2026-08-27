@@ -15,9 +15,17 @@ import {
 	UserCircle,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { AnimatePresence } from "framer-motion";
 import { BadgedIcon } from "@/components/ui/Badge";
+import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
+import {
+	OverlayHeader,
+	OverlayPanel,
+	OverlayScrim,
+	useOverlayDismiss,
+} from "@/components/ui/Overlay";
 import Image from "next/image";
-import { useState, useRef, useEffect } from "react";
+import { useCallback, useState, useEffect, useRef} from "react";
 import { mainNav, moreItem, youNav, type SidebarItem } from "@/data/sidebar";
 import { useAtomValue, useSetAtom } from "jotai";
 import { userAtom } from "@/store/user.atom";
@@ -73,7 +81,6 @@ export function LeftSidebar() {
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [productsOpen, setProductsOpen] = useState(false);
 	const [langOpen, setLangOpen] = useState(false);
-	const menuRef = useRef<HTMLDivElement>(null);
 
 	// Theme is only knowable client-side; render the toggle after mount so
 	// SSR and the first client paint agree.
@@ -82,16 +89,41 @@ export function LeftSidebar() {
 	useEffect(() => setMounted(true), []);
 	const isLight = mounted && resolvedTheme === "light";
 
+	// The click-catcher is the scrim's job now, and Escape plus the scroll lock
+	// are the dismiss hook's — the hand-rolled mousedown listener that used to
+	// live here handled outside-click only. The language sub-menu still has to
+	// fold when the account menu shuts, which is the one thing left.
+	const closeMenu = useCallback(() => setMenuOpen(false), []);
+	/**
+	 * The panel is portalled (the rail is sticky, so it owns a stacking
+	 * context a z-modal scrim would sit above), which means it cannot inherit
+	 * the rail's position. Measured from the trigger instead: an account menu
+	 * that opens bottom-RIGHT of a screen when you clicked bottom-LEFT reads
+	 * as a different control entirely.
+	 */
+	const triggerRef = useRef<HTMLButtonElement | null>(null);
+	const [anchor, setAnchor] = useState<{ left: number; bottom: number } | null>(
+		null,
+	);
 	useEffect(() => {
-		const handleClickOutside = (event: MouseEvent) => {
-			if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-				setMenuOpen(false);
+		if (!menuOpen) return;
+		const measure = () => {
+			const r = triggerRef.current?.getBoundingClientRect();
+			if (r) {
+				setAnchor({
+					left: Math.round(r.left),
+					bottom: Math.round(window.innerHeight - r.top + 8),
+				});
 			}
 		};
+		measure();
+		window.addEventListener("resize", measure);
+		return () => window.removeEventListener("resize", measure);
+	}, [menuOpen]);
+	useOverlayDismiss(menuOpen, closeMenu);
+
+	useEffect(() => {
 		if (!menuOpen) setLangOpen(false);
-		if (menuOpen) document.addEventListener("mousedown", handleClickOutside);
-		return () =>
-			document.removeEventListener("mousedown", handleClickOutside);
 	}, [menuOpen]);
 
 	// Keyed on labelKey, not the display title: labelKey is the stable i18n
@@ -283,55 +315,107 @@ export function LeftSidebar() {
 				<div
 					className="mb-6 mt-4 px-2 relative animate-rise"
 					style={{ animationDelay: "360ms" }}
-					ref={menuRef}
 				>
-					{menuOpen && (
-						<div className="absolute bottom-full left-0 w-[230px] card-depth overflow-hidden mb-3 z-dropdown animate-rise py-1">
-							<Link
-								href={
-									user.username ? `/profile/${user.username}` : "/profile"
-								}
-								onClick={() => setMenuOpen(false)}
-								className="w-full text-left px-3.5 py-2.5 hover:bg-raised text-sm text-primary font-sans font-medium flex items-center gap-2.5 transition-colors"
-							>
-								<UserCircle size={16} />
-								{t("nav.viewProfile")}
-							</Link>
-							<button
-								type="button"
-								onClick={() =>
-									withThemeTransition(() =>
-										setTheme(isLight ? "dark" : "light"),
-									)
-								}
-								className="w-full text-left px-3.5 py-2.5 hover:bg-raised text-sm text-primary font-sans font-medium flex items-center gap-2.5 transition-colors cursor-pointer"
-							>
-								{mounted && isLight ? (
-									<Moon size={16} />
-								) : (
-									<Sun size={16} />
-								)}
-								{mounted && isLight ? t("nav.darkMode") : t("nav.lightMode")}
-							</button>
-							<LanguageMenu
-								expanded={langOpen}
-								onToggle={() => setLangOpen((v) => !v)}
-							/>
-							<div className="my-1 border-t border-hairline" />
-							<button
-								type="button"
-								className="w-full text-left px-3.5 py-2.5 hover:bg-raised text-sm text-danger font-sans font-medium flex items-center gap-2.5 transition-colors cursor-pointer"
-								onClick={() => handleSignOut(signOut)}
-							>
-								<SignOut size={16} />
-								{t("nav.logout")} @{user.username}
-							</button>
-						</div>
-					)}
+					{/* The account menu, on the standard overlay grammar: `anchored`
+					    — the variant for menus — portalled out of the rail so the
+					    scrim can sit at `z-modal` over the whole page. As a sticky
+					    element the rail is its own stacking context, so an in-place
+					    panel could never rise above the scrim that dismisses it. */}
+					<ConfirmModalPortal>
+						<AnimatePresence>
+							{menuOpen && (
+								// A menu is not a modal: the feed stays lit behind it
+								// on desktop, and dims only where the panel owns the
+								// screen.
+								<OverlayScrim
+									key="account-scrim"
+									onClose={closeMenu}
+									dim={false}
+									label={t("common.close")}
+								/>
+							)}
+							{menuOpen && (
+								<OverlayPanel
+									key="account-panel"
+									variant="anchored"
+									label={`@${user.username}`}
+									// Neutralise the variant's bottom-right desktop
+									// parking so the measured anchor wins.
+									className="sm:right-auto sm:bottom-auto sm:!w-[260px]"
+									style={
+										anchor
+											? {
+													// Phones keep the bottom sheet; only the
+													// desktop card follows the trigger.
+													...(window.innerWidth >= 640
+														? { left: anchor.left, bottom: anchor.bottom }
+														: null),
+													transformOrigin: "bottom left",
+												}
+											: undefined
+									}
+								>
+									<OverlayHeader
+										title={`@${user.username}`}
+										onClose={closeMenu}
+										closeLabel={t("common.close")}
+									/>
+									<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[calc(6px+var(--ws-safe-bottom))]">
+										<Link
+											href={
+												user.username
+													? `/profile/${user.username}`
+													: "/profile"
+											}
+											onClick={closeMenu}
+											className="w-full text-left px-3.5 py-2.5 hover:bg-raised text-sm text-primary font-sans font-medium flex items-center gap-2.5 transition-colors"
+										>
+											<UserCircle size={16} />
+											{t("nav.viewProfile")}
+										</Link>
+										<button
+											type="button"
+											onClick={() =>
+												withThemeTransition(() =>
+													setTheme(isLight ? "dark" : "light"),
+												)
+											}
+											className="w-full text-left px-3.5 py-2.5 hover:bg-raised text-sm text-primary font-sans font-medium flex items-center gap-2.5 transition-colors cursor-pointer"
+										>
+											{mounted && isLight ? (
+												<Moon size={16} />
+											) : (
+												<Sun size={16} />
+											)}
+											{mounted && isLight
+												? t("nav.darkMode")
+												: t("nav.lightMode")}
+										</button>
+										<LanguageMenu
+											expanded={langOpen}
+											onToggle={() => setLangOpen((v) => !v)}
+										/>
+										<div className="my-1 border-t border-hairline" />
+										<button
+											type="button"
+											className="w-full text-left px-3.5 py-2.5 hover:bg-raised text-sm text-danger font-sans font-medium flex items-center gap-2.5 transition-colors cursor-pointer"
+											onClick={() => handleSignOut(signOut)}
+										>
+											<SignOut size={16} />
+											{t("nav.logout")} @{user.username}
+										</button>
+									</div>
+								</OverlayPanel>
+							)}
+						</AnimatePresence>
+					</ConfirmModalPortal>
 
 					<button
 						type="button"
+						ref={triggerRef}
 						onClick={() => setMenuOpen((v) => !v)}
+						aria-haspopup="dialog"
+						aria-expanded={menuOpen}
 						className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-surface transition-colors text-left group cursor-pointer"
 					>
 						<div className="relative w-10 h-10 rounded-pill overflow-hidden border border-hairline shrink-0">

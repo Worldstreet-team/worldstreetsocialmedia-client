@@ -1,14 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useClerk } from "@clerk/nextjs";
 import { useAtomValue } from "jotai";
 import { Download, PauseCircle, Trash2 } from "lucide-react";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import ConfirmModal from "@/components/ui/ConfirmModal";
+import {
+	OverlayHeader,
+	OverlayPanel,
+	OverlayScrim,
+	useOverlayDismiss,
+} from "@/components/ui/Overlay";
 import { useToast } from "@/components/ui/Toast/ToastContext";
-import { motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import {
 	deactivateAccountAction,
 	deleteAccountAction,
@@ -18,14 +24,16 @@ import { userAtom } from "@/store/user.atom";
 import { handleSignOut } from "@/lib/utils";
 import { useT } from "@/i18n/client";
 
-const EASE = [0.2, 0, 0, 1] as const;
-
 /**
  * Export, deactivate and delete.
  *
  * Deletion asks for the handle typed out rather than an OK button: it is the
  * one action here that cannot be undone, and a confirmation you can dismiss by
  * reflex is not a confirmation.
+ *
+ * Both confirms carry `role="alertdialog"`, not `dialog` — deactivate through
+ * ConfirmModal's `isDestructive`, delete explicitly below. It is what tells a
+ * screen reader this interrupted you for a decision.
  */
 export function AccountLifecycle() {
 	const t = useT();
@@ -89,6 +97,11 @@ export function AccountLifecycle() {
 	const confirmMatches =
 		confirmText.trim().toLowerCase() === (user?.username ?? "").toLowerCase();
 
+	// Escape and the body scroll lock, which the hand-rolled panel had neither
+	// of — you could scroll settings behind a confirm you could not dismiss.
+	const closeDelete = useCallback(() => setDeleteOpen(false), []);
+	useOverlayDismiss(deleteOpen, closeDelete);
+
 	return (
 		<>
 			<Action
@@ -130,73 +143,78 @@ export function AccountLifecycle() {
 				isDestructive
 			/>
 
-			{deleteOpen && (
-				<ConfirmModalPortal>
-					<motion.div
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						transition={{ duration: 0.2, ease: EASE }}
-						className="fixed inset-0 z-modal flex items-end justify-center bg-scrim sm:items-center sm:p-6"
-						onClick={() => setDeleteOpen(false)}
-					>
-						<motion.div
-							initial={{ opacity: 0, y: 20, scale: 0.985 }}
-							animate={{ opacity: 1, y: 0, scale: 1 }}
-							transition={{ duration: 0.32, ease: EASE }}
-							role="dialog"
-							aria-modal="true"
-							aria-label={t("settings.delete.title")}
-							className="w-full max-w-[420px] rounded-t-2xl border border-hairline bg-surface p-5 shadow-nav sm:rounded-2xl sm:p-6"
-							onClick={(e) => e.stopPropagation()}
+			{/* The one confirm in the app that cannot be a ConfirmModal: it asks
+			    you to TYPE the handle. Same grammar regardless — the centred
+			    plate, `alertdialog` because it interrupts for a decision. */}
+			<ConfirmModalPortal>
+				<AnimatePresence>
+					{deleteOpen && (
+						<OverlayScrim
+							key="delete-scrim"
+							onClose={closeDelete}
+							label={t("common.cancel")}
+						/>
+					)}
+					{deleteOpen && (
+						<OverlayPanel
+							key="delete-panel"
+							variant="center"
+							role="alertdialog"
+							label={t("settings.delete.title")}
+							className="max-w-[420px]"
 						>
-							<h2 className="font-display text-[19px] font-semibold leading-tight text-primary">
-								{t("settings.delete.title")}
-							</h2>
-							<p className="mt-1.5 font-sans text-[13.5px] leading-relaxed text-muted">
-								{t("settings.delete.confirm")}
-							</p>
-
-							<label
-								htmlFor="delete-confirm"
-								className="mt-4 block font-sans text-[11px] font-bold uppercase tracking-[0.14em] text-subtle"
-							>
-								{t("settings.delete.typeLabel").replace(
-									"{username}",
-									user?.username ?? "",
-								)}
-							</label>
-							<input
-								id="delete-confirm"
-								value={confirmText}
-								onChange={(e) => setConfirmText(e.target.value)}
-								autoComplete="off"
-								className="mt-1.5 w-full rounded-xl bg-sunken px-3.5 py-3 font-sans text-[15px] text-primary outline-none placeholder:text-subtle"
-								placeholder={user?.username ?? ""}
+							<OverlayHeader
+								title={t("settings.delete.title")}
+								onClose={closeDelete}
+								closeLabel={t("common.cancel")}
 							/>
+							<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-[calc(20px+var(--ws-safe-bottom))]">
+								<p className="font-sans text-[13.5px] leading-relaxed text-muted">
+									{t("settings.delete.confirm")}
+								</p>
 
-							<div className="mt-5 flex gap-2">
-								<button
-									type="button"
-									onClick={() => setDeleteOpen(false)}
-									className="h-10 flex-1 cursor-pointer rounded-pill bg-raised font-sans text-[13px] font-semibold text-primary transition-colors hover:bg-surface"
+								<label
+									htmlFor="delete-confirm"
+									className="mt-4 block font-sans text-[11px] font-bold uppercase tracking-[0.14em] text-subtle"
 								>
-									{t("common.cancel")}
-								</button>
-								<button
-									type="button"
-									onClick={remove}
-									disabled={!confirmMatches || deleting}
-									className="h-10 flex-1 cursor-pointer rounded-pill bg-danger font-sans text-[13px] font-semibold text-page transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-								>
-									{deleting
-										? t("settings.delete.deleting")
-										: t("settings.delete.cta")}
-								</button>
+									{t("settings.delete.typeLabel").replace(
+										"{username}",
+										user?.username ?? "",
+									)}
+								</label>
+								<input
+									id="delete-confirm"
+									value={confirmText}
+									onChange={(e) => setConfirmText(e.target.value)}
+									autoComplete="off"
+									className="mt-1.5 w-full rounded-xl bg-sunken px-3.5 py-3 font-sans text-[15px] text-primary outline-none placeholder:text-subtle"
+									placeholder={user?.username ?? ""}
+								/>
+
+								<div className="mt-5 flex gap-2">
+									<button
+										type="button"
+										onClick={closeDelete}
+										className="h-10 flex-1 cursor-pointer rounded-pill bg-chip font-sans text-[13px] font-semibold text-primary transition-colors hover:bg-raised"
+									>
+										{t("common.cancel")}
+									</button>
+									<button
+										type="button"
+										onClick={remove}
+										disabled={!confirmMatches || deleting}
+										className="h-10 flex-1 cursor-pointer rounded-pill bg-danger font-sans text-[13px] font-semibold text-page transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+									>
+										{deleting
+											? t("settings.delete.deleting")
+											: t("settings.delete.cta")}
+									</button>
+								</div>
 							</div>
-						</motion.div>
-					</motion.div>
-				</ConfirmModalPortal>
-			)}
+						</OverlayPanel>
+					)}
+				</AnimatePresence>
+			</ConfirmModalPortal>
 		</>
 	);
 }

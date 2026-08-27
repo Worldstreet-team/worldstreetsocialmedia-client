@@ -8,16 +8,22 @@ import {
   GraduationCap,
   ShoppingBag,
   Wallet,
-  X,
 } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import {
+  OverlayHeader,
+  OverlayPanel,
+  OverlayScrim,
+  useOverlayDismiss,
+} from "@/components/ui/Overlay";
 import { welcomeTourOpenAtom } from "@/store/ui.atom";
 
 /**
  * First-run tour — four steps that place Social inside the WorldStreet
  * ecosystem. Auto-opens once (localStorage), replayable from the command
- * palette. z-modal + scrim; steps slide 8px at motion-base per 06-motion.
+ * palette. On the standard overlay grammar (`center` — a centred dialog);
+ * steps still slide 8px at motion-base per 06-motion.
  */
 
 const SEEN_KEY = "ws-social-welcome-v1";
@@ -132,29 +138,27 @@ export function WelcomeTour() {
     if (open) setStep(0);
   }, [open]);
 
-  // Lock page scroll behind the overlay.
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [open]);
-
-  const finish = (thenFocusComposer = false) => {
-    localStorage.setItem(SEEN_KEY, "1");
-    setOpen(false);
-    if (thenFocusComposer) {
-      const el = document.querySelector<HTMLTextAreaElement>(
-        "#post-composer-input",
-      );
-      if (el) {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-        el.focus();
+  const finish = useCallback(
+    (thenFocusComposer = false) => {
+      localStorage.setItem(SEEN_KEY, "1");
+      setOpen(false);
+      if (thenFocusComposer) {
+        const el = document.querySelector<HTMLTextAreaElement>(
+          "#post-composer-input",
+        );
+        if (el) {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          el.focus();
+        }
       }
-    }
-  };
+    },
+    [setOpen],
+  );
+
+  // Esc + the page scroll lock behind the overlay. Skipping the tour with
+  // Escape counts as seeing it, exactly like the scrim and the close chip.
+  const dismiss = useCallback(() => finish(), [finish]);
+  useOverlayDismiss(open, dismiss);
 
   const isLast = step === STEPS.length - 1;
   const current = STEPS[step];
@@ -162,106 +166,91 @@ export function WelcomeTour() {
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-modal flex items-center justify-center px-4">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: EASE }}
-            className="absolute inset-0 bg-scrim"
-            onClick={() => finish()}
-          />
+        <OverlayScrim key="tour-scrim" onClose={dismiss} label="Skip tour" />
+      )}
+      {open && (
+        <OverlayPanel
+          key="tour-panel"
+          variant="center"
+          label="Welcome to WorldSpace"
+          className="max-w-[440px]"
+        >
+          <OverlayHeader onClose={dismiss} closeLabel="Skip tour">
+            <span className="flex-1 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">
+              Getting started
+            </span>
+          </OverlayHeader>
 
-          <motion.div
-            role="dialog"
-            aria-modal="true"
-            aria-label="Welcome to WorldSpace"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            transition={{ duration: 0.2, ease: EASE }}
-            className="relative w-full max-w-[440px] max-h-[90dvh] overflow-y-auto overscroll-contain bg-surface border border-hairline rounded-xl shadow-nav"
-          >
-            <button
-              type="button"
-              aria-label="Skip tour"
-              onClick={() => finish()}
-              className="absolute top-1 right-1 z-10 flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center rounded-pill text-subtle hover:text-primary hover:bg-raised transition-colors cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
+          {/* Hero band */}
+          <div className="h-[120px] sm:h-[150px] shrink-0 bg-sunken border-y border-hairline flex items-center justify-center overflow-hidden">
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={current.key}
+                initial={{ opacity: 0, x: 8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, transition: { duration: 0.12 } }}
+                transition={{ duration: 0.2, ease: EASE }}
+              >
+                {current.hero}
+              </motion.div>
+            </AnimatePresence>
+          </div>
 
-            {/* Hero band */}
-            <div className="h-[120px] sm:h-[150px] bg-sunken border-b border-hairline flex items-center justify-center overflow-hidden">
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.div
-                  key={current.key}
-                  initial={{ opacity: 0, x: 8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, transition: { duration: 0.12 } }}
-                  transition={{ duration: 0.2, ease: EASE }}
-                >
-                  {current.hero}
-                </motion.div>
-              </AnimatePresence>
+          {/* Copy */}
+          <div className="min-h-[128px] flex-1 overflow-y-auto overscroll-contain px-5 sm:px-6 pt-5 pb-4">
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={current.key}
+                initial={{ opacity: 0, x: 8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, transition: { duration: 0.12 } }}
+                transition={{ duration: 0.2, ease: EASE }}
+              >
+                <h2 className="font-display font-semibold text-xl text-primary mb-2">
+                  {current.title}
+                </h2>
+                <p className="font-sans text-[15px] leading-relaxed text-muted">
+                  {current.body}
+                </p>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {/* Footer: dots + controls */}
+          <div className="flex shrink-0 items-center justify-between gap-3 px-5 sm:px-6 pb-5">
+            <div className="flex items-center gap-1.5 shrink-0" aria-hidden="true">
+              {STEPS.map((s, i) => (
+                <span
+                  key={s.key}
+                  className={`h-1.5 rounded-pill transition-[width,background-color] ${
+                    i === step ? "w-5 bg-brand" : "w-1.5 bg-track"
+                  }`}
+                />
+              ))}
             </div>
 
-            {/* Copy */}
-            <div className="px-5 sm:px-6 pt-5 pb-4 min-h-[128px]">
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.div
-                  key={current.key}
-                  initial={{ opacity: 0, x: 8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, transition: { duration: 0.12 } }}
-                  transition={{ duration: 0.2, ease: EASE }}
-                >
-                  <h2 className="font-display font-semibold text-xl text-primary mb-2">
-                    {current.title}
-                  </h2>
-                  <p className="font-sans text-[15px] leading-relaxed text-muted">
-                    {current.body}
-                  </p>
-                </motion.div>
-              </AnimatePresence>
-            </div>
-
-            {/* Footer: dots + controls */}
-            <div className="flex items-center justify-between gap-3 px-5 sm:px-6 pb-5">
-              <div className="flex items-center gap-1.5 shrink-0" aria-hidden="true">
-                {STEPS.map((s, i) => (
-                  <span
-                    key={s.key}
-                    className={`h-1.5 rounded-pill transition-[width,background-color] ${
-                      i === step ? "w-5 bg-brand" : "w-1.5 bg-track"
-                    }`}
-                  />
-                ))}
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                {step > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setStep((s) => s - 1)}
-                    className="h-11 sm:h-9 px-4 rounded-pill font-sans text-[13px] font-semibold text-primary border border-hairline hover:bg-raised transition-colors cursor-pointer"
-                  >
-                    Back
-                  </button>
-                )}
+            <div className="flex items-center gap-2 shrink-0">
+              {step > 0 && (
                 <button
                   type="button"
-                  onClick={() =>
-                    isLast ? finish(true) : setStep((s) => s + 1)
-                  }
-                  className="h-11 sm:h-9 px-[18px] rounded-pill font-sans text-[13px] font-semibold bg-brand text-brand-on hover:bg-brand-active transition-colors cursor-pointer whitespace-nowrap"
+                  onClick={() => setStep((s) => s - 1)}
+                  className="h-11 sm:h-9 px-4 rounded-pill font-sans text-[13px] font-semibold text-primary border border-hairline hover:bg-raised transition-colors cursor-pointer"
                 >
-                  {isLast ? "Start posting" : "Next"}
+                  Back
                 </button>
-              </div>
+              )}
+              <button
+                type="button"
+                onClick={() =>
+                  isLast ? finish(true) : setStep((s) => s + 1)
+                }
+                className="h-11 sm:h-9 px-[18px] rounded-pill font-sans text-[13px] font-semibold bg-brand text-brand-on hover:bg-brand-active transition-colors cursor-pointer whitespace-nowrap"
+              >
+                {isLast ? "Start posting" : "Next"}
+              </button>
             </div>
-          </motion.div>
-        </div>
+          </div>
+        </OverlayPanel>
       )}
     </AnimatePresence>
   );

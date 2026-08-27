@@ -11,16 +11,22 @@ import {
 } from "@/lib/user.actions";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import { overlayPanelClass } from "@/components/ui/Overlay";
 
 /**
  * Glass profile preview on hovering an @handle.
  *
- * Deliberately the same chrome as MentionAutocomplete: both are surfaces that
- * float over the feed off the back of an @, so they read as one family —
- * translucent dark glass, white ink, white CTA. Per the glass contract in
- * globals.css the `glass-*` classes carry colour only; the blur must come from
- * Tailwind's own backdrop utilities at the usage site or the compiled CSS
- * silently drops it.
+ * Wears the overlay grammar's panel — `overlayPanelClass`, so it is the same
+ * theme-following frost at the same radius as every other floating surface —
+ * but deliberately takes NOTHING else from it. A hover card is not a modal:
+ * a dismissing scrim would swallow the pointer the instant the card appeared,
+ * and a body scroll lock would freeze the page under a preview you never
+ * asked to open. `useOverlayDismiss` and `OverlayScrim` are therefore absent
+ * on purpose; the hover-intent timers below are the whole dismissal story.
+ *
+ * Ink and fills come from theme tokens rather than the fixed-white `glass-*`
+ * family: `glass-frost` follows the theme, so white ink vanishes on the light
+ * panel. The only fixed-white left is the banner scrim, which sits on artwork.
  *
  * Wraps its children (the mention chip); after a short hover intent delay it
  * fetches the profile once (module cache — every later hover anywhere in the
@@ -155,12 +161,10 @@ export function ProfileHoverCard({
 						onMouseEnter={() => window.clearTimeout(timers.current.close)}
 						onMouseLeave={scheduleClose}
 						style={{ top: pos.top, left: pos.left, width: CARD_W }}
-						className="glass-panel fixed z-dropdown overflow-hidden shadow-[0_24px_60px_-20px_rgb(0_0_0/0.75)] ring-1 ring-white/10 backdrop-blur-2xl backdrop-saturate-150 animate-rise"
+						/* z-dropdown, not z-modal: nothing dismisses this, so it must
+						   never outrank a real overlay that does. */
+						className={`${overlayPanelClass} fixed z-dropdown rounded-2xl animate-rise`}
 					>
-						{/* Top sheen — the light-from-above cue that makes glass read
-						    as a pane rather than a flat translucent box. */}
-						<span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/20" />
-
 						{/* Banner well. Without a banner this is a gold wash rather
 						    than dead space — a brand moment, never a gold fill. */}
 						<div className="relative h-16 w-full overflow-hidden">
@@ -183,7 +187,7 @@ export function ProfileHoverCard({
 							<div className="-mt-8 flex items-end justify-between">
 								<Link
 									href={`/profile/${profile.username}`}
-									className="relative block h-16 w-16 overflow-hidden rounded-pill bg-black/40 ring-2 ring-white/20"
+									className="relative block h-16 w-16 overflow-hidden rounded-pill bg-raised ring-2 ring-page"
 								>
 									<SafeAvatar src={profile.avatar} className="object-cover" />
 								</Link>
@@ -192,12 +196,16 @@ export function ProfileHoverCard({
 										type="button"
 										onClick={handleFollow}
 										disabled={busy}
-										className="glass-cta h-9 shrink-0 cursor-pointer rounded-pill px-4 font-sans text-[13px] font-semibold transition-colors disabled:opacity-60"
+										/* Follow is a REPEATED action, so it takes the
+										   bg-primary/text-page pattern the rest of the app
+										   uses for it — gold stays reserved for the one
+										   primary CTA on a surface. */
+										className="h-9 shrink-0 cursor-pointer rounded-pill bg-primary px-4 font-sans text-[13px] font-semibold text-page transition-colors hover:bg-muted disabled:opacity-60"
 									>
 										Follow
 									</button>
 								) : (
-									<span className="glass-chip h-9 shrink-0 rounded-pill px-4 font-sans text-[13px] font-semibold leading-9">
+									<span className="h-9 shrink-0 rounded-pill bg-chip px-4 font-sans text-[13px] font-semibold leading-9 text-primary">
 										Following
 									</span>
 								)}
@@ -208,7 +216,7 @@ export function ProfileHoverCard({
 								className="mt-2.5 block min-w-0"
 							>
 								<span className="flex min-w-0 items-center gap-1">
-									<span className="glass-ink truncate font-sans text-[15px] font-bold hover:underline">
+									<span className="truncate font-sans text-[15px] font-bold text-primary hover:underline">
 										{name}
 									</span>
 									<UserBadges
@@ -218,26 +226,26 @@ export function ProfileHoverCard({
 										size={14}
 									/>
 								</span>
-								<span className="glass-ink-dim block truncate font-sans text-[13px]">
+								<span className="block truncate font-sans text-[13px] text-muted">
 									@{profile.username}
 								</span>
 							</Link>
 
 							{profile.bio && (
-								<p className="glass-ink mt-2 line-clamp-2 font-sans text-[13px] leading-snug opacity-90">
+								<p className="mt-2 line-clamp-2 font-sans text-[13px] leading-snug text-primary opacity-90">
 									{profile.bio}
 								</p>
 							)}
 
-							<div className="glass-divider mt-3 flex gap-4 border-t pt-2.5 font-sans text-[13px]">
-								<span className="glass-ink-dim tabular-nums">
-									<strong className="glass-ink font-semibold">
+							<div className="mt-3 flex gap-4 border-t border-hairline pt-2.5 font-sans text-[13px]">
+								<span className="tabular-nums text-muted">
+									<strong className="font-semibold text-primary">
 										{profile.followingCount ?? 0}
 									</strong>{" "}
 									Following
 								</span>
-								<span className="glass-ink-dim tabular-nums">
-									<strong className="glass-ink font-semibold">
+								<span className="tabular-nums text-muted">
+									<strong className="font-semibold text-primary">
 										{profile.followersCount ?? 0}
 									</strong>{" "}
 									Followers

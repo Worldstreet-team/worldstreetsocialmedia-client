@@ -4,8 +4,9 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { userAtom } from "@/store/user.atom";
 import { useClerk } from "@clerk/nextjs";
 import { useAppPathname } from "@/i18n/useAppPathname";
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useTheme } from "next-themes";
+import { AnimatePresence } from "framer-motion";
 import {
 	ArrowUpRight,
 	CaretDown,
@@ -13,7 +14,6 @@ import {
 	Moon,
 	SignOut,
 	Sun,
-	X,
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { sidebarList } from "@/data/sidebar";
@@ -25,6 +25,12 @@ import { LanguageMenu } from "@/components/ui/LanguageMenu";
 import { useT } from "@/i18n/client";
 
 import { BrandRitual } from "@/components/layout/BrandRitual";
+import {
+	OverlayHeader,
+	OverlayPanel,
+	OverlayScrim,
+	useOverlayDismiss,
+} from "@/components/ui/Overlay";
 import { NotificationsPopover } from "@/components/layout/NotificationsPopover";
 import { FeedHeaderActions } from "@/components/feed/FeedHeaderActions";
 import { unreadMessagesCountAtom } from "@/store/messageCache";
@@ -62,17 +68,11 @@ export function MobileNavigation() {
 		setIsOpen(false);
 	}, [pathname]);
 
-	// Prevent scrolling when sidebar is open
-	useEffect(() => {
-		if (isOpen) {
-			document.body.style.overflow = "hidden";
-		} else {
-			document.body.style.overflow = "unset";
-		}
-		return () => {
-			document.body.style.overflow = "unset";
-		};
-	}, [isOpen]);
+	// Escape and the body scroll lock are the overlay grammar's job now; the
+	// scrim catches the outside tap. The hand-rolled overflow effect that used
+	// to live here did half of that and left Escape unhandled.
+	const closeDrawer = useCallback(() => setIsOpen(false), []);
+	useOverlayDismiss(isOpen, closeDrawer);
 
 	if (!user) return null;
 
@@ -130,168 +130,169 @@ export function MobileNavigation() {
 				</div>
 			</header>
 
-			{/* Sidebar Drawer. CSS transitions, not framer: they run on the
-			    compositor once started, so a busy main thread (dev hydration,
-			    translation churn) can't freeze the panel mid-slide — which the
-			    rAF-driven version visibly did. Always mounted; `inert` keeps the
-			    closed panel out of the tab order. */}
-			{/* Backdrop */}
-			<div
-				onClick={() => setIsOpen(false)}
-				aria-hidden="true"
-				className={clsx(
-					"fixed inset-0 bg-scrim z-dropdown md:hidden transition-opacity duration-[var(--ws-motion-slow)]",
-					isOpen ? "opacity-100" : "opacity-0 pointer-events-none",
-				)}
-			/>
-
-			{/* Drawer */}
-			<div
-				inert={!isOpen || undefined}
-				className={clsx(
-					// Sheets/drawers slide at motion-slow with the one easing —
-					// no spring physics in the motion system.
-					"fixed top-0 bottom-0 left-0 w-[80%] max-w-[300px] bg-page border-r border-hairline z-dropdown flex flex-col md:hidden pt-safe pb-safe transition-transform duration-[var(--ws-motion-slow)]",
-					isOpen ? "translate-x-0" : "-translate-x-full",
-				)}
-			>
-				{/* Drawer Header */}
-				<div className="p-4 border-b border-hairline flex items-center justify-between gap-2">
-					<div className="flex items-center gap-3 min-w-0">
-						<div className="relative w-10 h-10 shrink-0 rounded-full overflow-hidden border border-hairline">
-							<SafeAvatar src={user.avatar} className="object-cover" alt={user.username || "User"} />
-						</div>
-						<div className="flex flex-col min-w-0">
-							<span className="font-bold text-primary text-sm truncate font-sans">
-								{fullName}
-							</span>
-							<span className="text-subtle text-[13px] truncate font-sans">
-								@{user.username}
-							</span>
-						</div>
-					</div>
-					<button
-						type="button"
-						onClick={() => setIsOpen(false)}
-						aria-label="Close navigation menu"
-						className="flex h-11 w-11 shrink-0 items-center justify-center hover:bg-surface rounded-pill text-muted transition-colors"
-					>
-						<X size={20} />
-					</button>
-				</div>
-
-				{/* Navigation Links */}
-				<nav className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
-					{sidebarList
-						// Studio is creator-only; mirror the desktop rail's gate.
-						.filter(
-							(item) =>
-								item.title !== "Studio" || user?.role === "creator",
-						)
-						.map((item) => {
-						const rowClasses = (isActive: boolean) =>
-							clsx(
-								// Same row language as the desktop rail:
-								// pill rows, active = bg/chip + semibold.
-								"flex items-center gap-3 px-4 py-3 rounded-pill transition-colors font-sans relative",
-								isActive
-									? "bg-chip text-primary font-semibold"
-									: "text-muted hover:text-primary hover:bg-surface",
-							);
-
-						// The Products entry is a disclosure over the ecosystem
-						// links, not a route — href="#" renders an inert row.
-						if (item.isDropdown) {
-							return (
-								<div key={item.labelKey}>
-									<button
-										type="button"
-										onClick={() => setProductsOpen((v) => !v)}
-										aria-expanded={productsOpen}
-										className={clsx(rowClasses(false), "w-full cursor-pointer")}
-									>
-										<item.icon isActive={false} />
-										<span className="flex-1 text-left">{t(item.labelKey)}</span>
-										<CaretDown
-											size={14}
-											className={clsx(
-												"transition-transform",
-												productsOpen && "rotate-180",
-											)}
-										/>
-									</button>
-									{productsOpen &&
-										item.dropdownItems?.map((product) => (
-											<a
-												key={product.title}
-												href={product.link}
-												target="_blank"
-												rel="noopener noreferrer"
-												className="flex items-center gap-2 pl-[52px] pr-4 py-2.5 rounded-pill text-muted hover:text-primary hover:bg-surface transition-colors font-sans text-sm"
-											>
-												{product.title}
-												<ArrowUpRight size={13} />
-											</a>
-										))}
-								</div>
-							);
-						}
-
-						const isActive = pathname === item.link;
-						const href =
-							item.labelKey === "nav.profile" && user?.username
-								? `/profile/${user.username}`
-								: item.link;
-
-						const badgeCount = badgeForNavKey(
-							item.labelKey,
-							unreadNotifications,
-							unreadCount,
-						);
-
-						return (
-							<Link
-								key={item.labelKey}
-								href={href}
-								className={rowClasses(isActive)}
-								onClick={() => setIsOpen(false)}
-							>
-								<BadgedIcon count={badgeCount} label={t(item.labelKey)}>
-									<item.icon isActive={isActive} />
-								</BadgedIcon>
-								<span>{t(item.labelKey)}</span>
-							</Link>
-						);
-					})}
-				</nav>
-
-				{/* Footer Actions */}
-				<div className="p-4 border-t border-hairline">
-					<button
-						type="button"
-						onClick={() =>
-							withThemeTransition(() => setTheme(isLight ? "dark" : "light"))
-						}
-						className="w-full flex items-center gap-3 px-4 py-3 rounded-pill text-muted hover:text-primary hover:bg-surface transition-colors font-sans font-medium text-sm cursor-pointer"
-					>
-						{mounted && isLight ? <Moon size={20} /> : <Sun size={20} />}
-						{mounted && isLight ? t("nav.darkMode") : t("nav.lightMode")}
-					</button>
-					<div className="pb-1">
-						<LanguageMenu
-							expanded={langOpen}
-							onToggle={() => setLangOpen((v) => !v)}
+			{/* The navigation drawer, on the standard overlay grammar. It used to
+			    be an always-mounted left drawer with its own scrim, its own CSS
+			    slide and `inert` to keep the closed panel out of the tab order;
+			    it now mounts on open as the grammar's `sheet` — the variant for a
+			    flow that wants the width — so unmounting does the `inert` job and
+			    OverlayScrim/useOverlayDismiss own the tap-out, Escape and the
+			    scroll lock. */}
+			<AnimatePresence>
+				{isOpen && (
+					// The drawer is a phones-only surface; the wrapper carries the
+					// `md:hidden` the old backdrop had, since OverlayScrim is
+					// deliberately class-free.
+					<div key="nav-scrim" className="md:hidden">
+						<OverlayScrim
+							onClose={closeDrawer}
+							label="Close navigation menu"
 						/>
 					</div>
-					<button
-						onClick={() => handleSignOut(signOut)}
-						className="w-full flex items-center gap-3 px-4 py-3 text-danger hover:bg-surface rounded-pill transition-colors font-sans font-bold text-sm cursor-pointer"
+				)}
+				{isOpen && (
+					<OverlayPanel
+						key="nav-panel"
+						variant="sheet"
+						label="Navigation menu"
+						className="md:hidden"
 					>
-						<SignOut size={20} />
-						{t("nav.logout")}
-					</button>
-				</div>
-			</div>
+						{/* Identity replaces the header title outright — whose menu
+						    this is IS the heading. */}
+						<OverlayHeader
+							onClose={closeDrawer}
+							closeLabel="Close navigation menu"
+						>
+							<div className="flex items-center gap-2.5 min-w-0 flex-1">
+								<div className="relative w-8 h-8 shrink-0 rounded-full overflow-hidden border border-hairline">
+									<SafeAvatar src={user.avatar} className="object-cover" alt={user.username || "User"} />
+								</div>
+								<div className="flex flex-col min-w-0">
+									<span className="font-bold text-primary text-[14px] truncate font-sans leading-tight">
+										{fullName}
+									</span>
+									<span className="text-subtle text-[12px] truncate font-sans leading-tight">
+										@{user.username}
+									</span>
+								</div>
+							</div>
+						</OverlayHeader>
+
+						{/* Navigation Links */}
+						<nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-2 flex flex-col gap-1">
+							{sidebarList
+								// Studio is creator-only; mirror the desktop rail's gate.
+								.filter(
+									(item) =>
+										item.title !== "Studio" || user?.role === "creator",
+								)
+								.map((item) => {
+								const rowClasses = (isActive: boolean) =>
+									clsx(
+										// Same row language as the desktop rail:
+										// pill rows, active = bg/chip + semibold.
+										"flex items-center gap-3 px-4 py-3 rounded-pill transition-colors font-sans relative",
+										isActive
+											? "bg-chip text-primary font-semibold"
+											: "text-muted hover:text-primary hover:bg-raised",
+									);
+
+								// The Products entry is a disclosure over the ecosystem
+								// links, not a route — href="#" renders an inert row.
+								if (item.isDropdown) {
+									return (
+										<div key={item.labelKey}>
+											<button
+												type="button"
+												onClick={() => setProductsOpen((v) => !v)}
+												aria-expanded={productsOpen}
+												className={clsx(rowClasses(false), "w-full cursor-pointer")}
+											>
+												<item.icon isActive={false} />
+												<span className="flex-1 text-left">{t(item.labelKey)}</span>
+												<CaretDown
+													size={14}
+													className={clsx(
+														"transition-transform",
+														productsOpen && "rotate-180",
+													)}
+												/>
+											</button>
+											{productsOpen &&
+												item.dropdownItems?.map((product) => (
+													<a
+														key={product.title}
+														href={product.link}
+														target="_blank"
+														rel="noopener noreferrer"
+														className="flex items-center gap-2 pl-[52px] pr-4 py-2.5 rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors font-sans text-sm"
+													>
+														{product.title}
+														<ArrowUpRight size={13} />
+													</a>
+												))}
+										</div>
+									);
+								}
+
+								const isActive = pathname === item.link;
+								const href =
+									item.labelKey === "nav.profile" && user?.username
+										? `/profile/${user.username}`
+										: item.link;
+
+								const badgeCount = badgeForNavKey(
+									item.labelKey,
+									unreadNotifications,
+									unreadCount,
+								);
+
+								return (
+									<Link
+										key={item.labelKey}
+										href={href}
+										className={rowClasses(isActive)}
+										onClick={closeDrawer}
+									>
+										<BadgedIcon count={badgeCount} label={t(item.labelKey)}>
+											<item.icon isActive={isActive} />
+										</BadgedIcon>
+										<span>{t(item.labelKey)}</span>
+									</Link>
+								);
+							})}
+						</nav>
+
+						{/* Footer Actions. The bottom edge is the phone's, so the
+						    home indicator gets its clearance here rather than on a
+						    wrapper the panel no longer has. */}
+						<div className="shrink-0 border-t border-hairline px-3 pt-2 pb-[calc(8px+var(--ws-safe-bottom))]">
+							<button
+								type="button"
+								onClick={() =>
+									withThemeTransition(() => setTheme(isLight ? "dark" : "light"))
+								}
+								className="w-full flex items-center gap-3 px-4 py-3 rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors font-sans font-medium text-sm cursor-pointer"
+							>
+								{mounted && isLight ? <Moon size={20} /> : <Sun size={20} />}
+								{mounted && isLight ? t("nav.darkMode") : t("nav.lightMode")}
+							</button>
+							<div className="pb-1">
+								<LanguageMenu
+									expanded={langOpen}
+									onToggle={() => setLangOpen((v) => !v)}
+								/>
+							</div>
+							<button
+								onClick={() => handleSignOut(signOut)}
+								className="w-full flex items-center gap-3 px-4 py-3 text-danger hover:bg-raised rounded-pill transition-colors font-sans font-bold text-sm cursor-pointer"
+							>
+								<SignOut size={20} />
+								{t("nav.logout")}
+							</button>
+						</div>
+					</OverlayPanel>
+				)}
+			</AnimatePresence>
 		</>
 	);
 }
