@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Street Voice",
+  title: "Space Voice",
 };
 
 export default function VoiceLayout({

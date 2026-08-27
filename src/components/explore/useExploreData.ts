@@ -83,6 +83,7 @@ export function useExploreData() {
             username: post.author?.username,
             avatar: post.author?.avatar || DEFAULT_AVATAR,
             isVerified: post.author?.isVerified,
+            verification: post.author?.verification,
           },
           content: post.content,
           mentions: post.mentions,

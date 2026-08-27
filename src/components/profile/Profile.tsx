@@ -36,9 +36,36 @@ import { formatTimeAgo } from "@/lib/utils";
 import { DEFAULT_AVATAR } from "@/const";
 import { useT } from "@/i18n/client";
 import { userAtom } from "@/store/user.atom";
-import { profileCacheAtom, userPostsCacheAtom } from "@/store/profileCache";
+import {
+	cacheKeys,
+	fetchCached,
+	invalidate,
+	invalidatePrefix,
+	isFresh,
+	readCache,
+	writeCache,
+} from "@/lib/cache";
+import { useCachedResource } from "@/hooks/useCachedResource";
 
 /** Which endpoint backs each tab. Street and Media share one media fetch. */
+/**
+ * A profile is mostly identity — name, bio, avatar, counts — which does not
+ * move minute to minute, so five minutes of "don't ask again" is invisible to
+ * the reader. Anything that DOES move (following, block, edit) invalidates the
+ * key directly, so this is the ceiling on staleness, not the latency of a change.
+ */
+const PROFILE_TTL = 5 * 60_000;
+/** Posts move faster than identity, so a shorter ceiling. */
+const POSTS_TTL = 60_000;
+
+/** Patch block state into the cached copy without forcing a re-request. */
+function setBlockedInCache(handle: string | undefined, blocked: boolean) {
+	if (!handle) return;
+	const key = cacheKeys.profile(handle);
+	const cached = readCache<any>(key);
+	if (cached) writeCache(key, { ...cached.data, isBlockedByYou: blocked });
+}
+
 const FETCH_FOR: Record<ProfileTab, "posts" | "replies" | "media" | "likes"> = {
 	posts: "posts",
 	replies: "replies",
@@ -97,8 +124,6 @@ export default function Profile({ username }: { username?: string }) {
 	const { entries: liveEntries } = useLiveNow();
 
 	const [profileUser, setProfileUser] = useState<any>(null);
-	const [profileCache, setProfileCache] = useAtom(profileCacheAtom);
-	const [userPostsCache, setUserPostsCache] = useAtom(userPostsCacheAtom);
 
 	const [loadingProfile, setLoadingProfile] = useState(true);
 	const [notFound, setNotFound] = useState(false);
@@ -135,44 +160,45 @@ export default function Profile({ username }: { username?: string }) {
 		}
 	}, [currentUser, isMe]);
 
+	// /profile with no username used to read the hydrated atom and stop
+	// there, so your own profile rendered without counts, interests or
+	// block state. Resolve the handle, then read like any other profile.
+	const handle = username || currentUser?.username || null;
+
+	// Cached read: a profile visited in the last few minutes renders from
+	// memory with no request at all, and a stale one renders immediately while
+	// it revalidates. Mutations below invalidate the key rather than each
+	// surface refetching on its own schedule.
+	const {
+		data: cachedProfile,
+		loading: profileFetching,
+		error: profileError,
+	} = useCachedResource(
+		handle ? cacheKeys.profile(handle) : null,
+		async () => {
+			const result = await getProfileByUsernameAction(handle as string);
+			if (!result.success) throw new Error(result.message || "not found");
+			return result.data;
+		},
+		{ ttl: PROFILE_TTL },
+	);
+
 	useEffect(() => {
-		// /profile with no username used to read the hydrated atom and stop
-		// there, so your own profile rendered without counts, interests or
-		// block state. Resolve the handle, then fetch like any other profile.
-		const handle = username || currentUser?.username;
-		if (!handle) return;
+		if (!cachedProfile) return;
+		setProfileUser(cachedProfile);
+		setFollowersCount(cachedProfile.followersCount || 0);
+		setIsFollowing(readIsFollowing(cachedProfile, currentUser));
+	}, [cachedProfile, currentUser]);
 
-		let cancelled = false;
-		const run = async () => {
-			setLoadingProfile(true);
+	useEffect(() => {
+		setLoadingProfile(Boolean(handle) && profileFetching);
+	}, [handle, profileFetching]);
 
-			const cached = profileCache[handle];
-			if (cached) {
-				setProfileUser(cached);
-				setFollowersCount(cached.followersCount || 0);
-				setIsFollowing(readIsFollowing(cached, currentUser));
-				setLoadingProfile(false);
-			}
-
-			const result = await getProfileByUsernameAction(handle);
-			if (cancelled) return;
-
-			if (result.success) {
-				setProfileUser(result.data);
-				setProfileCache((prev) => ({ ...prev, [handle]: result.data }));
-				setFollowersCount(result.data.followersCount || 0);
-				setIsFollowing(readIsFollowing(result.data, currentUser));
-			} else if (!cached) {
-				setNotFound(true);
-			}
-			setLoadingProfile(false);
-		};
-
-		void run();
-		return () => {
-			cancelled = true;
-		};
-	}, [username, currentUser?.username]);
+	useEffect(() => {
+		// Only a failure with nothing to fall back on is a 404 — a failed
+		// revalidation of a profile we already have is not.
+		if (profileError && !cachedProfile) setNotFound(true);
+	}, [profileError, cachedProfile]);
 
 	// Communities are only shown on your own profile: the gateway's list
 	// carries the viewer's membership, not the profile owner's.
@@ -216,26 +242,38 @@ export default function Profile({ username }: { username?: string }) {
 		if (!profileUser?.userId) return;
 
 		const kind = FETCH_FOR[activeTab];
-		const cacheKey = `${profileUser.userId}-${kind}`;
-		const cached = userPostsCache[cacheKey];
-		if (cached) {
-			setFeedPosts(cached);
+		const key = cacheKeys.userPosts(profileUser.userId, kind);
+		const cached = readCache<PostProps[]>(key);
+
+		// Show whatever we have straight away — switching tabs back and forth
+		// used to be free only because the old cache never expired at all.
+		if (cached) setFeedPosts(cached.data);
+		if (isFresh(cached, POSTS_TTL)) {
+			setLoadingFeed(false);
 			return;
 		}
 
 		let cancelled = false;
-		setLoadingFeed(true);
-		void getUserFeedAction(profileUser.userId, kind).then((result) => {
-			if (cancelled) return;
-			if (result.success && Array.isArray(result.data)) {
-				const mapped = result.data.map(mapPost);
-				setFeedPosts(mapped);
-				setUserPostsCache((prev) => ({ ...prev, [cacheKey]: mapped }));
-			} else {
-				setFeedPosts([]);
-			}
-			setLoadingFeed(false);
-		});
+		setLoadingFeed(!cached);
+		void fetchCached<PostProps[]>(
+			key,
+			async () => {
+				const result = await getUserFeedAction(profileUser.userId, kind);
+				if (!(result.success && Array.isArray(result.data))) return [];
+				return result.data.map(mapPost);
+			},
+			POSTS_TTL,
+		)
+			.then((posts) => {
+				if (cancelled) return;
+				setFeedPosts(posts);
+				setLoadingFeed(false);
+			})
+			.catch(() => {
+				if (cancelled) return;
+				if (!cached) setFeedPosts([]);
+				setLoadingFeed(false);
+			});
 		return () => {
 			cancelled = true;
 		};
@@ -265,21 +303,32 @@ export default function Profile({ username }: { username?: string }) {
 			setIsFollowing(wasFollowing);
 			setFollowersCount(previousCount);
 			toast(t("rail.followFailed"), { type: "error" });
-		} else if (username) {
-			setProfileCache((prev) => {
-				const cached = prev[username];
-				if (!cached) return prev;
-				return {
-					...prev,
-					[username]: {
-						...cached,
-						followersCount: wasFollowing ? previousCount - 1 : previousCount + 1,
+		} else {
+			// Write the new truth into the cache rather than dropping the key:
+			// the optimistic UI already shows it, so an invalidate here would
+			// make the counts flicker back on the next read.
+			const handleKey = profileUser.username;
+			if (handleKey) {
+				const key = cacheKeys.profile(handleKey);
+				const cached = readCache<any>(key);
+				if (cached) {
+					writeCache(key, {
+						...cached.data,
+						followersCount: wasFollowing
+							? previousCount - 1
+							: previousCount + 1,
 						followers: wasFollowing
-							? cached.followers?.filter((id) => id !== currentUser._id)
-							: [...(cached.followers || []), currentUser._id],
-					},
-				};
-			});
+							? cached.data.followers?.filter(
+									(id: string) => id !== currentUser._id,
+								)
+							: [...(cached.data.followers || []), currentUser._id],
+					});
+				}
+			}
+			// Our own following count moved too, and that lives on our profile.
+			if (currentUser.username) {
+				invalidate(cacheKeys.profile(currentUser.username));
+			}
 		}
 		setFollowLoading(false);
 	}, [
@@ -288,8 +337,6 @@ export default function Profile({ username }: { username?: string }) {
 		followLoading,
 		isFollowing,
 		followersCount,
-		username,
-		setProfileCache,
 		toast,
 		t,
 	]);
@@ -308,13 +355,8 @@ export default function Profile({ username }: { username?: string }) {
 		}
 		toast(t("safety.blocked.toast"));
 		setProfileUser((prev: any) => ({ ...prev, isBlockedByYou: true }));
-		if (username) {
-			setProfileCache((prev) => ({
-				...prev,
-				[username]: { ...prev[username], isBlockedByYou: true },
-			}));
-		}
-	}, [profileUser?._id, username, setProfileCache, toast, t]);
+		setBlockedInCache(profileUser.username, true);
+	}, [profileUser?._id, profileUser?.username, toast, t]);
 
 	// `_id`, not `userId` — the gateway resolves both now, but the follow
 	// handler two functions up already passes `_id` and these should agree.
@@ -338,13 +380,10 @@ export default function Profile({ username }: { username?: string }) {
 		}
 		toast(t("safety.unblocked.toast"));
 		setProfileUser((prev: any) => ({ ...prev, isBlockedByYou: false }));
-		if (username) {
-			setProfileCache((prev) => ({
-				...prev,
-				[username]: { ...prev[username], isBlockedByYou: false },
-			}));
-		}
-	}, [profileUser?._id, username, setProfileCache, toast, t]);
+		setBlockedInCache(profileUser.username, false);
+		// Blocking hid their posts; unblocking has to let them back in.
+		invalidatePrefix(cacheKeys.userPostsAll(profileUser.userId));
+	}, [profileUser?._id, profileUser?.username, profileUser?.userId, toast, t]);
 
 	const handleMessage = useCallback(async () => {
 		if (!profileUser?.userId) return;
@@ -362,7 +401,7 @@ export default function Profile({ username }: { username?: string }) {
 				<EmptyState
 					icon={Search}
 					title="This account doesn't exist"
-					caption={`@${username} isn't on WorldStreet Social. Try searching for another account.`}
+					caption={`@${username} isn't on Worldspace. Try searching for another account.`}
 					action={{ label: t("common.back"), onClick: () => router.back() }}
 				/>
 			</div>

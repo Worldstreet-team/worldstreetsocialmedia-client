@@ -92,6 +92,7 @@ export default function PostPageScreen() {
 							username: raw.author?.username ?? "",
 							avatar: raw.author?.avatar ?? "",
 							isVerified: raw.author?.isVerified,
+							verification: raw.author?.verification,
 						},
 						content: raw.content ?? "",
 						timestamp: formatTimeAgo(raw.createdAt),
@@ -136,6 +137,7 @@ export default function PostPageScreen() {
 						avatar:
 							p.author.avatar || DEFAULT_AVATAR,
 						isVerified: p.author.isVerified,
+						verification: p.author.verification,
 					},
 					content: p.content,
 					mentions: p.mentions,
@@ -163,6 +165,7 @@ export default function PostPageScreen() {
 							avatar:
 								p.author.avatar || DEFAULT_AVATAR,
 							isVerified: p.author.isVerified,
+							verification: p.author.verification,
 						},
 						content: p.content,
 						mentions: p.mentions,
@@ -192,6 +195,7 @@ export default function PostPageScreen() {
 						avatar:
 							c.author.avatar || DEFAULT_AVATAR,
 						isVerified: c.author.isVerified,
+						verification: c.author.verification,
 					},
 					content: c.content,
 					mentions: c.mentions,

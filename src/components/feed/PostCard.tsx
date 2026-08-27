@@ -66,6 +66,8 @@ export interface PostProps {
         username: string;
         avatar: string;
         isVerified?: boolean;
+        /** Membership tier behind the tick, so it renders in its own metal. */
+        verification?: { tier?: "bronze" | "silver" | "gold" } | null;
         /** Earned marks rendered after the name, alongside the tick. */
         badges?: ProfileBadge[];
     };
@@ -570,10 +572,16 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                             >
                                 {post.author.name}
                             </Link>
-                            {/* Gold seal badge the one VerifiedIcon everywhere. */}
+                            {/* The one seal everywhere; its metal is the author's
+                                membership tier (bronze / silver / gold). */}
                             {post.author.isVerified && (
                                 <span className="shrink-0 flex">
-                                    <UserBadges isVerified badges={post.author.badges} size={16} />
+                                    <UserBadges
+                                        isVerified
+                                        verification={post.author.verification}
+                                        badges={post.author.badges}
+                                        size={16}
+                                    />
                                 </span>
                             )}
                             <Link

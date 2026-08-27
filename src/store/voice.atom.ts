@@ -23,7 +23,7 @@ export const voiceRefreshAtom = atom(0);
 /**
  * How many rooms are live right now, app-wide.
  *
- * Drives the pulse on the Street Voice nav item. Deliberately a *count* the
+ * Drives the pulse on the Space Voice nav item. Deliberately a *count* the
  * nav renders as a dot rather than a number: "3" beside a nav item reads as
  * three unread things waiting for you, and a live room is not an inbox. The
  * count is still carried so the label can say how many are on.

@@ -10,6 +10,7 @@ import { PromoBanners } from "@/components/feed/PromoBanners";
 import { SidebarWallet } from "@/components/layout/SidebarWallet";
 import { SectionHead } from "@/components/layout/SectionHead";
 import { SpacesRail } from "@/components/layout/SpacesRail";
+import { useAppPathname } from "@/i18n/useAppPathname";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { useAtom } from "jotai";
 import {
@@ -23,11 +24,17 @@ import { DEFAULT_AVATAR, XSTREAM_WEB_URL } from "@/const";
 import { useT } from "@/i18n/client";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";
+import { resolveCategoryLabel } from "@/lib/categories";
 import clsx from "clsx";
 
 
 export function RightSidebar() {
 	const t = useT();
+	// Explore IS the discovery page: trends and people-to-follow are its main
+	// content. The rail keeps what Explore does not show (wallet, promos, live,
+	// spaces) and drops the two sections that would otherwise be duplicated
+	// side by side on the same screen.
+	const onExplore = useAppPathname().startsWith("/explore");
 	const [suggestions, setSuggestions] = useAtom(suggestionsAtom);
 	const [isSuggestionsLoaded, setIsSuggestionsLoaded] = useAtom(
 		suggestionsLoadedAtom,
@@ -182,12 +189,14 @@ export function RightSidebar() {
 				</section>
 			)}
 
-			{/* Street Voice — live audio rooms, then what's scheduled next.
+			{/* Space Voice — live audio rooms, then what's scheduled next.
 			    Directly under Live now so everything happening right now is
 			    one block of the column. */}
 			<SpacesRail />
 
-			{/* Happening now ranked topics, category chips, no hashtag framing. */}
+			{/* Happening now ranked topics, category chips, no hashtag framing.
+			    Shown on every page including Explore: the rail is trending's one
+			    home, which is why Explore's own column no longer repeats it. */}
 			<section className="animate-rise" style={{ animationDelay: "240ms" }}>
 				<SectionHead
 					icon={<Fire size={13} weight="fill" />}
@@ -206,13 +215,13 @@ export function RightSidebar() {
 								type="button"
 								onClick={() => setCategory(c)}
 								className={clsx(
-									"px-2.5 h-6 rounded-pill text-[11px] font-medium font-sans transition-colors cursor-pointer capitalize",
+									"px-2.5 h-6 rounded-pill text-[11px] font-medium font-sans transition-colors cursor-pointer",
 									category === c
 										? "bg-primary text-page"
 										: "bg-raised text-muted hover:text-primary",
 								)}
 							>
-								{c}
+								{resolveCategoryLabel(c)}
 							</button>
 						))}
 					</div>
@@ -239,15 +248,44 @@ export function RightSidebar() {
 									<span className="pt-0.5 font-mono text-[13px] text-gold tabular-nums select-none">
 										{String(i + 1).padStart(2, "0")}
 									</span>
-									<span className="flex flex-col min-w-0">
+									<span className="flex flex-col min-w-0 flex-1">
 										<span className="font-semibold text-primary text-[15px] truncate leading-snug">
 											{trend.title.replace(/^#/, "")}
 										</span>
 										<span className="text-[12px] text-subtle font-sans tabular-nums">
-											{trend.category ? `${trend.category} · ` : ""}
+											{trend.category ? `${resolveCategoryLabel(trend.category)} · ` : ""}
 											{trend.posts}
 										</span>
 									</span>
+
+									{/* Who is actually posting into this tag. A trend with five
+									    real faces behind it reads very differently from a bare
+									    count, which is the whole reason the gateway dedupes
+									    authors per hashtag. */}
+									{trend.people?.length > 0 && (
+										<span className="flex shrink-0 items-center self-center pl-1">
+											{trend.people
+												.slice(0, 5)
+												.map((person: any, pi: number) => (
+													<span
+														key={person.username}
+														title={`@${person.username}`}
+														className="relative -ml-2 h-6 w-6 shrink-0 overflow-hidden rounded-pill bg-raised ring-2 ring-page first:ml-0"
+														// Intra-row stacking only, far below the
+														// z-sticky floor. Earlier faces sit on top so
+														// the pile reads left-to-right.
+														style={{ zIndex: 5 - pi }}
+													>
+														<SafeAvatar src={person.avatar} />
+													</span>
+												))}
+											{(trend.peopleCount ?? 0) > 5 && (
+												<span className="relative -ml-2 flex h-6 shrink-0 items-center rounded-pill bg-raised px-1.5 font-sans text-[10px] font-bold tabular-nums text-muted ring-2 ring-page">
+													+{trend.peopleCount - 5}
+												</span>
+											)}
+										</span>
+									)}
 								</Link>
 							))
 					) : failed ? (
@@ -282,8 +320,10 @@ export function RightSidebar() {
 				</div>
 			</section>
 
-			{/* Suggested for you names always resolve (username fallback). */}
-			<section className="animate-rise" style={{ animationDelay: "300ms" }}>
+			{/* Suggested for you names always resolve (username fallback).
+			    Hidden on Explore, which lists People to follow in its own column. */}
+			{!onExplore && (
+				<section className="animate-rise" style={{ animationDelay: "300ms" }}>
 				<SectionHead
 					icon={<UserPlus size={13} weight="duotone" />}
 					label={t("rail.suggested")}
@@ -333,6 +373,7 @@ export function RightSidebar() {
 													</span>
 													<UserBadges
 														isVerified={user.isVerified}
+																verification={(user as any).verification}
 														badges={user.badges}
 														size={14}
 													/>
@@ -368,7 +409,8 @@ export function RightSidebar() {
 						</button>
 					)}
 				</div>
-			</section>
+				</section>
+			)}
 
 			<footer className="px-3 mt-auto pb-2">
 				<p className="text-[10px] text-subtle font-sans">

@@ -12,7 +12,7 @@ export interface StreetPost {
 }
 
 /**
- * Six vertical video tiles into The Street.
+ * Six vertical video tiles into The Space.
  *
  * The feed returns no poster frame, so each tile seeks its own video to 0.1s
  * with preload="metadata" to get one. Never autoplay: six decoding videos on

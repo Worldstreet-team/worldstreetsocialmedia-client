@@ -214,8 +214,8 @@ export default function SpaceRoom({
                 className={clsx(
                   "relative h-20 w-20 overflow-hidden rounded-pill bg-[#1c1917] ring-offset-2 ring-offset-transparent transition-all",
                   hostSpeaking
-                    ? "ring-[3px] ring-[#EAB308]"
-                    : "ring-2 ring-[#EAB308]/45",
+                    ? "ring-[3px] ring-brand"
+                    : "ring-2 ring-brand/45",
                 )}
               >
                 <SafeAvatar src={row.host.avatar} />
@@ -230,7 +230,7 @@ export default function SpaceRoom({
                   size={13}
                 />
               </span>
-              <span className="rounded-pill bg-[#EAB308]/15 px-2.5 py-px font-sans text-[10px] font-bold uppercase tracking-[0.1em] text-gold">
+              <span className="rounded-pill bg-brand/15 px-2.5 py-px font-sans text-[10px] font-bold uppercase tracking-[0.1em] text-gold">
                 {t("voice.hostBadge")}
               </span>
             </div>

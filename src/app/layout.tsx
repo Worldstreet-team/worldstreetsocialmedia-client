@@ -101,11 +101,11 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
     title: {
-        default: "WorldStreet Social",
-        template: "%s · WorldStreet Social",
+        default: "Worldspace",
+        template: "%s · Worldspace",
     },
     description:
- "WorldStreet Social share ideas, follow traders and creators, and talk markets across the WorldStreet ecosystem.",
+ "Worldspace share ideas, follow traders and creators, and talk markets across the WorldStreet ecosystem.",
 };
 
 export default async function RootLayout({
@@ -116,7 +116,19 @@ export default async function RootLayout({
     const headersList = await headers();
     const userData = headersList.get("x-user-data");
 
-    const parsedUser = userData ? JSON.parse(userData) : null;
+    // A malformed header must not take the whole app down. This parse used to
+    // throw straight through the root layout — an unrecoverable server error,
+    // which is what the "Something went wrong" screen with a digest was.
+    // Degrading to null costs one client-side profile fetch; throwing costs
+    // the entire page.
+    let parsedUser: unknown = null;
+    if (userData) {
+        try {
+            parsedUser = JSON.parse(userData);
+        } catch (error) {
+            console.error("Malformed x-user-data header, ignoring:", error);
+        }
+    }
 
     const headerLocale = headersList.get(LOCALE_HEADER);
     const locale = isLocale(headerLocale) ? headerLocale : "en";

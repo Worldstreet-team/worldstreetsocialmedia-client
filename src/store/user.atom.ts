@@ -19,6 +19,12 @@ export interface User {
 	followingCount: number;
 	postsCount: number;
 	isVerified: boolean;
+	/** Membership provenance; `tier` decides the tick's metal. */
+	verification?: {
+		since?: string;
+		source?: "subscription" | "grant" | "legacy";
+		tier?: "bronze" | "silver" | "gold";
+	};
 	/** Earned marks (competition standings), separate from verification. */
 	badges?: {
 		type: "wolf";

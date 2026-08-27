@@ -1176,7 +1176,7 @@ export default function StoryStudio({
             <span
               className={clsx(
                 "relative h-5 w-9 shrink-0 rounded-pill transition-colors",
-                allowSave ? "bg-[#EAB308]" : "bg-[#fafaf9]/20",
+                allowSave ? "bg-brand" : "bg-[#fafaf9]/20",
               )}
             >
               <span

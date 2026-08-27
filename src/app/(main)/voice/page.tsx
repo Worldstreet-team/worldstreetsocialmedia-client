@@ -34,7 +34,7 @@ import { voiceRefreshAtom, voiceSessionAtom } from "@/store/voice.atom";
 const POLL_MS = 20_000;
 
 /**
- * Street Voice — the rooms directory. Live rooms carry their mesh art in a
+ * Space Voice — the rooms directory. Live rooms carry their mesh art in a
  * responsive grid; scheduled rooms queue underneath. Opening a live room
  * drops into the Spaces-style stage (SpaceRoom); creating one goes through
  * the frosted sheet. A poll plus the gateway's `spaces` Ably events (once

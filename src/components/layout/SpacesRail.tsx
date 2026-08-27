@@ -161,7 +161,7 @@ function SpaceRow({ space, live }: { space: Space; live: boolean }) {
 
 
 /**
- * Street Voice in the right rail: live audio rooms first, then what's
+ * Space Voice in the right rail: live audio rooms first, then what's
  * scheduled next. Sits directly under Live now so everything happening
  * right now is one block of the column, and borrows that section's
  * grammar — same eyebrow, same ringed avatar, same row hover — so it reads

@@ -16,6 +16,7 @@ import { CaretDown } from "@phosphor-icons/react";
 import { InterestPicker } from "@/components/onboarding/InterestPicker";
 import { CATEGORIES, MAX_INTERESTS } from "@/data/categories";
 import { normalizeCategoryIds } from "@/lib/categories";
+import { cacheKeys, writeCache } from "@/lib/cache";
 
 interface EditProfileModalProps {
 	user: any;
@@ -207,6 +208,12 @@ export default function EditProfileModal({
 		if (result.success) {
 			// Update local atom
 			setUser(result.data);
+			// The edited profile is cached under its handle and may be on
+			// screen behind this modal; write the fresh copy in so it updates
+			// without waiting for the TTL to lapse.
+			if (result.data?.username) {
+				writeCache(cacheKeys.profile(result.data.username), result.data);
+			}
 			toast("Profile updated successfully", { type: "success" });
 			onClose();
 		} else {

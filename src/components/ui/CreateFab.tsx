@@ -52,7 +52,12 @@ export function CreateFab() {
       const res = await listPresetsAction();
       if (!res.success) return;
       const def = res.presets.find((p: any) => p.isDefault) ?? res.presets[0];
-      if (def) setPreset({ title: def.title, category: def.category });
+      if (def)
+				setPreset({
+					category: def.category,
+					source: def.source,
+					notifyFollowers: def.notifyFollowers,
+				});
     })();
   }, []);
   const setDraftsOpen = useSetAtom(draftsOpenAtom);

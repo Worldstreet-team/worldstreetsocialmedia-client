@@ -1,6 +1,8 @@
 "use client";
 
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { useT } from "@/i18n/client";
+import { resolveCategoryLabel } from "@/lib/categories";
 import type { TrendingTopic } from "@/store/trends.atom";
 import { ExploreSection } from "./ExploreSection";
 
@@ -68,15 +70,37 @@ export function TrendingList({
                 <span className="select-none pt-0.5 font-mono text-[13px] tabular-nums text-gold">
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                <span className="flex min-w-0 flex-col">
+                <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate font-sans text-[15px] font-semibold leading-snug text-primary">
                     {title}
                   </span>
                   <span className="font-sans text-[12px] tabular-nums text-subtle">
-                    {trend.category ? `${trend.category} · ` : ""}
+                    {trend.category ? `${resolveCategoryLabel(trend.category)} · ` : ""}
                     {trend.posts}
                   </span>
                 </span>
+
+                {/* Who is posting into this tag: five faces, then the rest as
+                    a count. Same treatment as the rail. */}
+                {trend.people && trend.people.length > 0 && (
+                  <span className="flex shrink-0 items-center self-center pl-1">
+                    {trend.people.slice(0, 5).map((person, pi) => (
+                      <span
+                        key={person.username}
+                        title={`@${person.username}`}
+                        className="relative -ml-2 h-6 w-6 shrink-0 overflow-hidden rounded-pill bg-raised ring-2 ring-page first:ml-0"
+                        style={{ zIndex: 5 - pi }}
+                      >
+                        <SafeAvatar src={person.avatar} />
+                      </span>
+                    ))}
+                    {(trend.peopleCount ?? 0) > 5 && (
+                      <span className="relative -ml-2 flex h-6 shrink-0 items-center rounded-pill bg-raised px-1.5 font-sans text-[10px] font-bold tabular-nums text-muted ring-2 ring-page">
+                        +{(trend.peopleCount ?? 0) - 5}
+                      </span>
+                    )}
+                  </span>
+                )}
               </button>
             );
           })}

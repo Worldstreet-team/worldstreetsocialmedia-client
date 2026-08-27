@@ -182,6 +182,7 @@ export default function Feed() {
 						username: post.author.username,
 						avatar: post.author.avatar || DEFAULT_AVATAR,
 						isVerified: post.author.isVerified,
+						verification: post.author.verification,
 						badges: post.author.badges,
 					},
 					content: post.content,
@@ -207,6 +208,7 @@ export default function Feed() {
 								avatar:
 									post.repostOf.author?.avatar || DEFAULT_AVATAR,
 								isVerified: post.repostOf.author?.isVerified,
+								verification: post.repostOf.author?.verification,
 								content: post.repostOf.content ?? "",
 								image: post.repostOf.images?.[0],
 								timestamp: formatTimeAgo(post.repostOf.createdAt),
@@ -261,6 +263,7 @@ export default function Feed() {
 					username: newPost.author.username,
 					avatar: newPost.author.avatar || DEFAULT_AVATAR,
 					isVerified: newPost.author.isVerified,
+					verification: newPost.author.verification,
 				},
 				content: newPost.content,
 				timestamp: "Just now",

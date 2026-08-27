@@ -28,7 +28,7 @@ import { badgeForNavKey, unreadNotificationsCountAtom } from "@/store/ui.atom";
 import { handleSignOut } from "@/lib/utils";
 import { withThemeTransition } from "@/lib/theme-transition";
 import { mainScroller } from "@/lib/utils";
-import { SealCheck } from "@phosphor-icons/react";
+import VerifiedIcon from "@/assets/icons/VerifiedIcon";
 import { premiumOpenAtom } from "@/store/ui.atom";
 import { BrandRitual } from "@/components/layout/BrandRitual";
 import { LanguageMenu } from "@/components/ui/LanguageMenu";
@@ -163,7 +163,7 @@ export function LeftSidebar() {
 				{/* Same brand ritual the mobile top bar plays — the rail is where
 				    the hub runs it, so the two apps now behave identically. */}
 				<Link href="/" className="flex items-center gap-2 group">
-					<BrandRitual size={26} wordSize={15} eyebrow="Social" />
+					<BrandRitual size={26} wordSize={17} />
 				</Link>
 			</div>
 
@@ -171,7 +171,14 @@ export function LeftSidebar() {
 				{mainNav.map((item, i) => renderItem(item, i, 60))}
 
 				<Eyebrow>{t("nav.you")}</Eyebrow>
-				{youNav.map((item, i) => renderItem(item, i, 240))}
+				{youNav
+					// The Studio is a creator tool; for everyone else the nav entry
+					// is an ad for a door they can't open. The route stays reachable
+					// (deep links get the become-a-creator pitch), only the nav hides.
+					.filter(
+						(item) => item.title !== "Studio" || user?.role === "creator",
+					)
+					.map((item, i) => renderItem(item, i, 240))}
 
 				{/* Premium opens the subscription sheet rather than navigating.
 				    Gold seal at rest: the row advertises the tick by wearing it. */}
@@ -182,7 +189,7 @@ export function LeftSidebar() {
 					style={{ animationDelay: "280ms" }}
 				>
 					<span className="inline-flex w-[22px] h-[22px] items-center justify-center">
-						<SealCheck size={22} weight="duotone" className="text-gold" />
+						<VerifiedIcon size={{ width: "22", height: "22" }} />
 					</span>
 					<span className="text-[15px] font-sans">{t("nav.premium")}</span>
 				</button>
@@ -354,6 +361,7 @@ export function LeftSidebar() {
 								</span>
 								<UserBadges
 									isVerified={user.isVerified}
+									verification={user.verification}
 									badges={(user as any).badges}
 									size={13}
 								/>

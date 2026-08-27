@@ -42,7 +42,7 @@ export function SidebarWallet() {
 
 	return (
 		<a
-			href="https://worldstreetgold.com/wallet"
+			href="https://worldstreetgold.com/welcome"
 			target="_blank"
 			rel="noopener noreferrer"
 			className="group relative block overflow-hidden rounded-xl transition-opacity hover:opacity-95"

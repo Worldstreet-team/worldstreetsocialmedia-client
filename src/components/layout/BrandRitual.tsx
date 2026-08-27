@@ -18,12 +18,19 @@ import clsx from "clsx";
 export function BrandRitual({
 	size = 22,
 	wordSize = 14,
+	word = "Worldspace",
 	eyebrow,
 	className,
 }: {
 	size?: number;
 	wordSize?: number;
-	/** Renders the stacked lockup with this word as the gold eyebrow. */
+	/**
+	 * The wordmark. This app is Worldspace, one word. It used to be hardcoded
+	 * to "WorldStreet" with the product as a gold eyebrow underneath, which
+	 * read as "WorldStreet's Space" rather than as a product name.
+	 */
+	word?: string;
+	/** Optional gold eyebrow under the wordmark. */
 	eyebrow?: string;
 	className?: string;
 }) {
@@ -57,7 +64,7 @@ export function BrandRitual({
 						className="font-display font-semibold text-primary tracking-tight truncate"
 						style={{ fontSize: wordSize }}
 					>
-						WorldStreet
+						{word}
 					</span>
 					<span className="font-sans text-[10px] font-semibold uppercase tracking-[2px] text-gold">
 						{eyebrow}
@@ -68,7 +75,8 @@ export function BrandRitual({
 					className="ws-brand-word font-display font-bold tracking-tight text-primary"
 					style={{ fontSize: wordSize }}
 				>
-					WorldStreet<i>.</i>
+					{word}
+					<i>.</i>
 				</span>
 			)}
 		</span>

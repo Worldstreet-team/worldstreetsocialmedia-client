@@ -31,12 +31,12 @@ const TOTAL_STEPS = 5;
 const WHATS_NEW = [
 	{
 		icon: MonitorPlay,
-		title: "The Street",
+		title: "The Space",
 		blurb: "A full-screen video feed. Swipe it like a reel, not a timeline.",
 	},
 	{
 		icon: Microphone,
-		title: "Street Voice",
+		title: "Space Voice",
 		blurb: "Live audio rooms — drop in, listen, or ask for the mic.",
 	},
 	{
@@ -413,7 +413,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 						<div className="space-y-6 w-full animate-rise">
 							<div className="space-y-2">
 								<h1 className="font-display text-2xl font-semibold text-primary">
-									The Street has a new look
+									The Space has a new look
 								</h1>
 								<p className="text-muted text-sm font-sans">
 									WorldStreet is more than a timeline now. Here's what's

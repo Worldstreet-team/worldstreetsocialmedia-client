@@ -32,7 +32,9 @@ export default function MainLayout({
 				{/* Stories head every column in the group and never scroll away:
 				    they sit outside the scroll container, which is what "fixed"
 				    means here rather than a sticky offset stack. */}
-				<div className="shrink-0 border-b border-hairline py-2">
+				{/* The rail owns its own border and padding so both collapse
+				    with it when the reader scrolls down. */}
+				<div className="shrink-0">
 					<StoriesRail />
 				</div>
 				<div id="ws-main-scroll" className="min-h-0 flex-1 overflow-y-auto">

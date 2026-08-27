@@ -102,7 +102,7 @@ export function MobileNavigation() {
 					    the wordmark walks in — the hub's brand ritual. */}
 					<Link
 						href="/"
-						aria-label="WorldStreet Social home"
+						aria-label="Worldspace home"
 						className="absolute left-1/2 -translate-x-1/2 flex h-11 items-center justify-center px-2 rounded-pill active:bg-raised transition-colors"
 					>
 						<BrandRitual />
@@ -179,7 +179,13 @@ export function MobileNavigation() {
 
 				{/* Navigation Links */}
 				<nav className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
-					{sidebarList.map((item) => {
+					{sidebarList
+						// Studio is creator-only; mirror the desktop rail's gate.
+						.filter(
+							(item) =>
+								item.title !== "Studio" || user?.role === "creator",
+						)
+						.map((item) => {
 						const rowClasses = (isActive: boolean) =>
 							clsx(
 								// Same row language as the desktop rail:

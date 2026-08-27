@@ -40,6 +40,7 @@ interface HoverProfile {
 	banner?: string;
 	bio?: string;
 	isVerified?: boolean;
+	verification?: { tier?: "bronze" | "silver" | "gold" } | null;
 	badges?: { type: "wolf"; tier?: string }[];
 	followersCount: number;
 	followingCount: number;
@@ -216,6 +217,7 @@ export function ProfileHoverCard({
 									</span>
 									<UserBadges
 										isVerified={profile.isVerified}
+										verification={profile.verification}
 										badges={profile.badges as never}
 										size={14}
 									/>

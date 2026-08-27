@@ -22,7 +22,7 @@ export interface RoomReaction {
 let reactionSeq = 0;
 
 /**
- * The live layer of a Street Voice room, carried on Ably channel
+ * The live layer of a Space Voice room, carried on Ably channel
  * `space:<id>`: presence gives the real listener list (who is here, hands
  * raised), and lightweight `reaction` messages float over the stage.
  *

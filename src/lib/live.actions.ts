@@ -222,10 +222,22 @@ export async function getViewerTokenAction(streamId: string) {
 /** Everything currently live, for the rail rings and the live directory. */
 export async function listLiveStreamsAction() {
 	try {
+		// live=true is not optional: without it the endpoint returns page 1 of
+		// EVERY stream ever created, sorted by viewers descending. With 700+
+		// records, a stream that just went live has ~0 viewers and sorts below
+		// every ended stream that ever accumulated a handful, so it is never in
+		// the page and the rail renders empty while someone is broadcasting.
+		//
+		// Passing it also opts into the server's stale-stream reconciliation,
+		// which drops streams whose LiveKit room has gone away. sort=recent so
+		// the newest broadcast leads rather than the biggest.
 		const res = await axios.get(`${XSTREAM_API_URL}/v1/streams`, {
+			params: { live: "true", sort: "recent", limit: 50 },
 			timeout: 10_000,
 		});
 		const streams = (res.data?.data?.streams ?? [])
+			// Belt and braces: the server already filtered, but a stale record
+			// slipping through would otherwise show a dead ring.
 			.filter((st: any) => st.isLive)
 			.map((st: any) => ({
 				id: String(st._id ?? st.id),

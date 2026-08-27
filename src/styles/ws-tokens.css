@@ -6,8 +6,9 @@
    This app renders the "platform" theme (see <html data-ws-theme> in layout.tsx).
    --------------------------------------------------------------------------- */
 /* WorldStreet Design Tokens — v2, adopted 2026-08-05 from dashboard-revamp/
-   (the worldstreetgold.com hub). ONE look for the whole ecosystem: warm stone
-   + gold, two modes — dark (default) and light.
+   (the worldstreetgold.com hub). Worldspace runs stone + BLUE; the rest of the
+   ecosystem is still stone + gold, so this file has deliberately diverged.
+   Two modes: dark (default) and light.
 
    Canonical vocabulary = the hub's shadcn names (--background, --card,
    --primary, --credit, …). Every legacy `--ws-*` name from v1 is kept as an
@@ -41,8 +42,8 @@
   --card-foreground: oklch(0.986 0.002 67.8);
   --popover: #1C1917;
   --popover-foreground: oklch(0.986 0.002 67.8);
-  --primary: oklch(0.795 0.184 86.047);           /* gold */
-  --primary-foreground: oklch(0.147 0.004 49.3);
+  --primary: #2563EB;                             /* brand blue */
+  --primary-foreground: #FFFFFF;
   --secondary: #292524;
   --secondary-foreground: oklch(0.985 0 0);
   --muted: #292524;
@@ -76,13 +77,16 @@
   --sidebar-ring: oklch(0.547 0.021 43.1);
 
   /* ws-only extras with no shadcn counterpart — mode-specific values */
-  --ws-brand-active: #FACC15;
-  --ws-brand-dim: #CA8A04;
-  --ws-brand-gold-text: #EAB308;                   /* gold as TEXT — dark only */
+  --ws-brand-active: #3B82F6;                      /* hover lifts on dark */
+  --ws-brand-dim: #1D4ED8;
+  /* Brand as TEXT on the dark page: 7.8:1, comfortably AA. The token keeps
+     its historic name so ~100 `text-gold` call sites did not all have to
+     churn; it means "brand ink", and it is blue now. */
+  --ws-brand-gold-text: #60A5FA;
   --ws-overlay-scrim: rgba(0, 0, 0, 0.60);
   /* Ambient page glow — the ONLY permitted large-area brand color, as 1-2
      huge blurred radials behind all surfaces, hero-scale pages only. */
-  --ws-glow-brand: rgba(234, 179, 8, 0.07);
+  --ws-glow-brand: rgba(37, 99, 235, 0.10);
 }
 
 /* ── Light — the hub's paper mode. Money 700s (emerald-500 lands ~2.4:1 on
@@ -130,11 +134,11 @@
   --sidebar-border: oklch(0.922 0.005 34.3);
   --sidebar-ring: oklch(0.714 0.014 41.2);
 
-  --ws-brand-active: #CA8A04;
-  --ws-brand-dim: #A16207;
-  --ws-brand-gold-text: #A16207;                   /* raw gold on white is 1.9:1 */
+  --ws-brand-active: #1D4ED8;                      /* hover deepens on paper */
+  --ws-brand-dim: #1E40AF;
+  --ws-brand-gold-text: #1D4ED8;                   /* 6.4:1 on paper */
   --ws-overlay-scrim: rgba(24, 24, 27, 0.45);
-  --ws-glow-brand: rgba(202, 138, 4, 0.05);
+  --ws-glow-brand: rgba(29, 78, 216, 0.06);
 }
 
 /* ── Shared, mode-independent ─────────────────────────────────────────── */
@@ -150,12 +154,12 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 
-  /* Charts — 5-step gold ramp, same in both modes */
-  --chart-1: oklch(0.905 0.182 98.111);
-  --chart-2: oklch(0.795 0.184 86.047);
-  --chart-3: oklch(0.681 0.162 75.834);
-  --chart-4: oklch(0.554 0.135 66.442);
-  --chart-5: oklch(0.476 0.114 61.907);
+  /* Charts — 5-step blue ramp, same in both modes */
+  --chart-1: #93C5FD;
+  --chart-2: #60A5FA;
+  --chart-3: #3B82F6;
+  --chart-4: #2563EB;
+  --chart-5: #1D4ED8;
 
   /* Type — Poppins display / Public Sans UI everywhere (Xstream and Shop's
      Space Grotesk/Inter pairing retired with their palettes). Money and
@@ -233,8 +237,10 @@
   --ws-text-primary: oklch(0.986 0.002 67.8);
   --ws-text-muted: #A8A29E;
   --ws-text-subtle: #78716C;
-  --ws-brand-primary: oklch(0.795 0.184 86.047);
-  --ws-brand-on-primary: oklch(0.147 0.004 49.3);
+  --ws-brand-primary: #2563EB;
+  /* The load-bearing flip: gold needed DARK ink on it, blue needs WHITE.
+     White on #2563EB is 5.2:1; the old stone ink would have been 3.4:1. */
+  --ws-brand-on-primary: #FFFFFF;
   --ws-status-success: #10B981;
   --ws-status-warning: #F59E0B;
   --ws-status-warning-chip: rgba(245, 158, 11, 0.14);
@@ -262,8 +268,8 @@
   --ws-text-primary: oklch(0.147 0.004 49.3);
   --ws-text-muted: oklch(0.547 0.021 43.1);
   --ws-text-subtle: oklch(0.553 0.013 58.1);
-  --ws-brand-primary: oklch(0.852 0.199 91.936);
-  --ws-brand-on-primary: oklch(0.147 0.004 49.3);
+  --ws-brand-primary: #2563EB;
+  --ws-brand-on-primary: #FFFFFF;
   --ws-status-success: #047857;
   --ws-status-warning: #B45309;
   --ws-status-warning-chip: rgba(180, 83, 9, 0.10);

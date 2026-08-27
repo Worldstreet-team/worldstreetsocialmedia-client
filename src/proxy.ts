@@ -67,6 +67,81 @@ export default clerkMiddleware(async (auth, req) => {
 	// feed for anyone who already has a profile.
 	const isOnboardingPath =
 		pathname === "/onboarding" || pathname.startsWith("/onboarding/");
+/**
+ * Serialize a profile for the `x-user-data` request header.
+ *
+ * Two ways the raw profile breaks this header, both of which surfaced as the
+ * app's "Something went wrong" digest error (layout.tsx JSON.parse throwing
+ * during SSR, which is unrecoverable):
+ *
+ * 1. SIZE. Node caps request headers at 16KB. The profile embeds the full
+ *    followers/following/blocked id arrays, so the header grew with every new
+ *    follower — @GregWS reached 18KB and @Protek 21KB, i.e. already broken,
+ *    and every account was on the same path. The client never reads those
+ *    arrays off userAtom (it uses followersCount/followingCount), so dropping
+ *    them takes 21KB down to under 1KB and removes the growth entirely.
+ *
+ * 2. NON-ASCII. Headers are ByteStrings; an emoji or accent anywhere in a
+ *    name or bio throws "Cannot convert argument to a ByteString" when the
+ *    header is set. JSON.stringify leaves those characters raw, so they are
+ *    escaped to \uXXXX here — still valid JSON, restored intact by JSON.parse.
+ */
+const HEADER_BUDGET = 8000;
+
+/**
+ * Exactly the fields `User` (store/user.atom.ts) declares, and nothing else.
+ *
+ * An allow-list rather than stripping known-bad keys: the profile document
+ * grows over time, and the next array added to it must not be able to break
+ * every request before anyone notices.
+ */
+const CLIENT_PROFILE_FIELDS = [
+	"_id",
+	"userId",
+	"username",
+	"email",
+	"firstName",
+	"lastName",
+	"role",
+	"avatar",
+	"banner",
+	"bio",
+	"location",
+	"website",
+	"interests",
+	"bookmarks",
+	"followersCount",
+	"followingCount",
+	"postsCount",
+	"isVerified",
+	"verification",
+	"badges",
+	"notificationPrefs",
+	"onboardingCompleted",
+	"createdAt",
+] as const;
+
+function userDataHeader(profile: unknown): string {
+	const source = (profile ?? {}) as Record<string, unknown>;
+	const slim: Record<string, unknown> = {};
+	for (const key of CLIENT_PROFILE_FIELDS) {
+		if (source[key] !== undefined) slim[key] = source[key];
+	}
+
+	let json = JSON.stringify(slim);
+	// bookmarks is the only unbounded array the client still reads. If a heavy
+	// bookmarker ever approaches the cap, ship the profile without it and let
+	// the bookmarks page fetch its own data — a refetch is cheap, a header
+	// that breaks every request is not.
+	if (json.length > HEADER_BUDGET) {
+		json = JSON.stringify({ ...slim, bookmarks: [] });
+	}
+	return json.replace(
+		/[\u0080-\uFFFF]/g,
+		(ch) => `\\u${ch.charCodeAt(0).toString(16).padStart(4, "0")}`,
+	);
+}
+
 	const hasProfile = req.cookies.get("has_profile")?.value === "true";
 
 	if (isOnboardingPath && !hasProfile) return respond();
@@ -83,7 +158,7 @@ export default clerkMiddleware(async (auth, req) => {
 			Date.now() - cached.at < PROFILE_CACHE_TTL_MS &&
 			!isOnboardingPath
 		) {
-			requestHeaders.set("x-user-data", JSON.stringify(cached.profile));
+			requestHeaders.set("x-user-data", userDataHeader(cached.profile));
 			const response = respond();
 			response.cookies.set("has_profile", "true", {
 				path: "/",
@@ -120,7 +195,7 @@ export default clerkMiddleware(async (auth, req) => {
 
 		// 3. They exist: set the cookie, forward the profile, continue
 		if (userExistsInDb?.profile) {
-			requestHeaders.set("x-user-data", JSON.stringify(userExistsInDb.profile));
+			requestHeaders.set("x-user-data", userDataHeader(userExistsInDb.profile));
 			profileCache.set(userId, {
 				profile: userExistsInDb.profile,
 				at: Date.now(),

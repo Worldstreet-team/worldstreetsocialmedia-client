@@ -11,7 +11,7 @@
  *
  * Colors here are deliberate literals, not classes: they are canvas paint
  * over a photo (theme-independent) and mirror the token values — gold
- * #EAB308 (brand), #FAFAF9 / #0C0A09 (ink/paper), #EF4444 / #10B981
+ * #2563EB (brand), #FAFAF9 / #0C0A09 (ink/paper), #EF4444 / #10B981
  * (status danger/success).
  */
 
@@ -110,7 +110,7 @@ export const PILL_RADIUS = 0.38; // × font size
 export const STROKE_WIDTH_FRACTION = 0.012;
 
 export const STROKE_COLORS = [
-  "#EAB308",
+  "#2563EB",
   "#FAFAF9",
   "#0C0A09",
   "#EF4444",
@@ -119,7 +119,7 @@ export const STROKE_COLORS = [
 
 export const INK_LIGHT = "#FAFAF9";
 export const INK_DARK = "#0C0A09";
-export const INK_GOLD = "#EAB308";
+export const INK_GOLD = "#2563EB";
 
 export interface TextPalette {
   id: string;

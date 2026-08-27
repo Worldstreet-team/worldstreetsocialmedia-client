@@ -43,6 +43,7 @@ export interface MentionUser {
 	lastName?: string;
 	avatar?: string;
 	isVerified?: boolean;
+	verification?: { tier?: "bronze" | "silver" | "gold" } | null;
 }
 
 /** The `@token` the caret currently sits inside, or null. */
@@ -202,6 +203,7 @@ export function MentionAutocomplete({
 										<span className="shrink-0 flex">
 											<UserBadges
 											isVerified={u.isVerified}
+											verification={u.verification}
 											badges={(u as any).badges}
 											size={12}
 										/>

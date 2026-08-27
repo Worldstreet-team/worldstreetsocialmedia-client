@@ -254,3 +254,20 @@ export async function searchUsersAction(query: string) {
 		};
 	}
 }
+
+/** Which of these handles are real accounts, and what a mention chip needs. */
+export async function resolveHandlesAction(usernames: string[]) {
+	const { getToken } = await auth();
+	const accessToken = await getToken();
+	if (!accessToken) return { success: false as const, users: [] };
+	try {
+		const res = await axios.post(
+			`${API_URL}/api/users/resolve`,
+			{ usernames },
+			{ headers: { Authorization: `Bearer ${accessToken}` } },
+		);
+		return { success: true as const, users: res.data?.users ?? [] };
+	} catch {
+		return { success: false as const, users: [] };
+	}
+}

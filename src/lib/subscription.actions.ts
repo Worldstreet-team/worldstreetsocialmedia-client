@@ -10,10 +10,14 @@ async function bearer() {
 	return token ? { Authorization: `Bearer ${token}` } : null;
 }
 
+export type MembershipTier = "bronze" | "silver" | "gold";
+
 export interface SubscriptionState {
 	available: boolean;
 	priceUsdMinor: number;
 	subscription: {
+		/** Which level is live, so the sheet can mark it and the tick can match. */
+		tier?: MembershipTier;
 		status: "active" | "past_due" | "canceled" | "expired";
 		currentPeriodEnd: string;
 		cancelAtPeriodEnd: boolean;
@@ -25,9 +29,13 @@ export interface SubscriptionState {
 		postCharBudget: number;
 		mediaSlots: number;
 		creatorAnalytics: boolean;
+		tier?: MembershipTier | null;
+		vividCreditGrant?: number;
 		/** May summon @vivid — tagging her triggers an AI reply. */
 		canTagVivid?: boolean;
 	};
+	/** The full price ladder, so the client never hardcodes an amount. */
+	tiers?: { id: MembershipTier; priceUsdMinor: number }[];
 	badges: { type: string; tier?: string; season?: string }[];
 	/** Vivid AI credit meter — null for non-premium accounts. */
 	vividCredits: {
@@ -51,11 +59,17 @@ export async function getSubscriptionAction() {
 	}
 }
 
-export async function subscribeAction() {
+export async function subscribeAction(tier: MembershipTier = "gold") {
 	const headers = await bearer();
 	if (!headers) return { success: false as const, message: "Unauthorized" };
 	try {
-		const res = await axios.post(`${BACKEND_URL}/api/subscription`, {}, { headers });
+		// Only the tier travels. The gateway looks the price up server-side —
+		// a client-sent amount would let anyone buy gold for a cent.
+		const res = await axios.post(
+			`${BACKEND_URL}/api/subscription`,
+			{ tier },
+			{ headers },
+		);
 		return { success: true as const, data: res.data };
 	} catch (error: any) {
 		return {

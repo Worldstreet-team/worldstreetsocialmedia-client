@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { SealCheck } from "@phosphor-icons/react";
+import VerifiedIcon from "@/assets/icons/VerifiedIcon";
 import { useSetAtom } from "jotai";
 import WolfIcon from "@/assets/icons/WolfIcon";
 import { MarketSquareLockup } from "@/assets/icons/MarketMark";
@@ -55,11 +55,11 @@ export function PromoBanners() {
 			cta: t("promo.premium.cta"),
 			onOpen: () => setPremiumOpen(true),
 			mark: (
-				<SealCheck
-					size={44}
-					weight="fill"
-					className="text-gold drop-shadow-[0_2px_18px_rgba(234,179,8,0.6)]"
-				/>
+				// The real badge component, not a lookalike: this advert sells the
+				// tick, so it shows the tick.
+				<span className="drop-shadow-[0_2px_18px_rgba(234,179,8,0.55)]">
+					<VerifiedIcon size={{ width: "44", height: "44" }} />
+				</span>
 			),
 		},
 		{

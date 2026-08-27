@@ -31,7 +31,7 @@ const CATEGORY_BY_ID = new Map(CATEGORIES.map((c) => [c.id, c]));
 /**
  * The feed bar: rounded chips, the CURRENT tab pinned left and never
  * scrolling away. The scroller behind it carries the other timeline, The
- * Street, Street Voice — then the communities you have actually JOINED
+ * Street, Space Voice — then the communities you have actually JOINED
  * (name + avatar, not a generic link) and your interest categories, the
  * same vector the ranking algorithm personalizes on.
  */

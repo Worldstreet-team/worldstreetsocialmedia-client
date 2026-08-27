@@ -39,7 +39,7 @@ const Kbd = ({ children }: { children: React.ReactNode }) => (
 const STEPS = [
   {
     key: "welcome",
-    title: "Welcome to WorldStreet Social",
+    title: "Welcome to Worldspace",
  body: "This is the social side of the WorldStreet ecosystem share ideas, follow traders and creators, and talk markets with the people trading them.",
     hero: (
       <div className="flex flex-col items-center gap-3">
@@ -175,7 +175,7 @@ export function WelcomeTour() {
           <motion.div
             role="dialog"
             aria-modal="true"
-            aria-label="Welcome to WorldStreet Social"
+            aria-label="Welcome to Worldspace"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}

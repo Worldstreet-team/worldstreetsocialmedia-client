@@ -37,6 +37,7 @@ import { PencilSimple } from "@phosphor-icons/react";
 import MediaEditor from "@/components/editor/MediaEditor";
 import VideoEditor from "@/components/editor/VideoEditor";
 import type { EditDocument } from "@/lib/editor/document";
+import { suggestCategories } from "@/lib/categories";
 import { POST_CHAR_BUDGET } from "@/const";
 import {
 	MentionAutocomplete,

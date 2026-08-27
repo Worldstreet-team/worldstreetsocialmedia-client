@@ -281,9 +281,12 @@ export function TrendChart({
 }
 
 /**
- * The stat-card pulse: the metric's daily shape as micro-bars, current day
- * in brand. Bars, not a line — at 44px tall a line is noise, bars are still
- * legible, and the highlighted last bar answers "and today?" at a glance.
+ * The stat-card pulse: the metric's daily shape as micro-bars, peak in brand.
+ *
+ * Bars, not a line — at 40px tall a line is noise. The peak is highlighted
+ * rather than the latest day, because a young account's latest day is
+ * usually zero and a brand-coloured 2px stub reads as a stray underline
+ * rather than as "today".
  */
 export function MiniBars({ values }: { values: number[] }) {
 	// More than ~20 bars in 90px turns to moiré; bucket wider windows down.
@@ -303,6 +306,7 @@ export function MiniBars({ values }: { values: number[] }) {
 	const W = 96;
 	const HH = 40;
 	const max = Math.max(1, ...bars);
+	const peak = bars.indexOf(Math.max(...bars));
 	const gap = 2.5;
 	const bw = (W - gap * (bars.length - 1)) / Math.max(1, bars.length);
 
@@ -323,7 +327,7 @@ export function MiniBars({ values }: { values: number[] }) {
 						height={h}
 						rx={1.5}
 						fill={
-							i === bars.length - 1
+							i === peak && v > 0
 								? "var(--ws-brand-primary, #EAB308)"
 								: "rgb(255 255 255 / 0.14)"
 						}

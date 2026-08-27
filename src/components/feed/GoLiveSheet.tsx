@@ -78,6 +78,9 @@ type LinkState =
 export interface GoLivePreset {
 	title?: string;
 	category?: string;
+	/** Capture source the creator saved — camera or an OBS/RTMP ingress. */
+	source?: "camera" | "obs";
+	notifyFollowers?: boolean;
 }
 
 /** Glass popover select — replaces the bare native <select> device pickers. */
@@ -164,7 +167,11 @@ export function GoLiveSheet({
 	// No prefilled title: the broadcaster names their own stream, and cannot
 	// start without one.
 	const [title, setTitle] = useState("");
-	const [notifyFollowers, setNotifyFollowers] = useState(true);
+	// Both of these are what the preset exists to remember: the sheet used
+	// to ask every stream and forget the answer.
+	const [notifyFollowers, setNotifyFollowers] = useState(
+		preset?.notifyFollowers ?? true,
+	);
 	const me = useAtomValue(userAtom);
 	const [category, setCategory] = useState(() => {
 		const raw = preset?.category ?? "";
@@ -174,7 +181,9 @@ export function GoLiveSheet({
 	const [pickerOpen, setPickerOpen] = useState(false);
 	const [search, setSearch] = useState("");
 	const [openVertical, setOpenVertical] = useState<string | null>(null);
-	const [source, setSource] = useState<GoLiveSource>("camera");
+	const [source, setSource] = useState<GoLiveSource>(
+		preset?.source === "obs" ? "obs" : "camera",
+	);
 	const [nativeMode, setNativeMode] = useState(true);
 	const [link, setLink] = useState<LinkState>({ kind: "checking" });
 	const [cams, setCams] = useState<MediaDeviceInfo[]>([]);

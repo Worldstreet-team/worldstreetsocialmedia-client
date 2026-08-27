@@ -108,6 +108,7 @@ export default function ExploreClient({
                 username: post.author.username,
                 avatar: post.author.avatar || DEFAULT_AVATAR,
                 isVerified: post.author.isVerified,
+                verification: post.author.verification,
               },
               content: post.content,
               mentions: post.mentions,
@@ -281,14 +282,20 @@ export default function ExploreClient({
 
           <TopicBrowser onPick={runSearch} delay={280} />
 
-          <TrendingList
-            trends={trends}
-            loading={loading.trends}
-            failed={trendsFailed}
-            onRetry={retryTrends}
-            onPick={runSearch}
-            delay={340}
-          />
+          {/* Trending lives in the right rail — but that rail is hidden below
+              lg, which left trending unreachable on a phone entirely. Render
+              it here for exactly those widths, so it still never appears
+              twice on one screen. */}
+          <div className="lg:hidden">
+            <TrendingList
+              trends={trends}
+              loading={loading.trends}
+              failed={trendsFailed}
+              onRetry={retryTrends}
+              onPick={runSearch}
+              delay={340}
+            />
+          </div>
 
           <CommunityStrip
             communities={communities}

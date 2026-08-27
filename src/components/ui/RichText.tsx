@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import VerifiedIcon from "@/assets/icons/VerifiedIcon";
-import { ProfileHoverCard } from "@/components/ui/ProfileHoverCard";
+import { Mention } from "@/components/ui/Mention";
+import { seedHandles } from "@/lib/mentionCache";
 
 /**
  * Entity-aware post text. Turns URLs, $cashtags, #hashtags and @mentions into
@@ -31,11 +31,9 @@ export function renderRichText(
   text: string,
   opts?: { mentions?: MentionMeta[] },
 ): ReactNode[] {
-  const verified = new Set(
-    (opts?.mentions ?? [])
-      .filter((m) => m.isVerified)
-      .map((m) => m.username.toLowerCase()),
-  );
+  // Seed the shared cache from what the post stored at write time, so those
+  // chips need no lookup at all.
+  if (opts?.mentions?.length) seedHandles(opts.mentions);
   const entity = new RegExp(ENTITY_SOURCE, "gu");
   const nodes: ReactNode[] = [];
   let last = 0;
@@ -83,23 +81,11 @@ export function renderRichText(
         </Link>,
       );
     } else if (mention) {
-      // The tick rides inside the chip when the post's stored mention
-      // metadata says the tagged account is verified — same seal as names.
-      const isVerifiedMention = verified.has(mention.slice(1).toLowerCase());
-      nodes.push(
-        <ProfileHoverCard key={key} username={mention.slice(1)}>
-          <Link
-            href={`/profile/${mention.slice(1)}`}
-            onClick={stop}
-            className="relative z-10 pointer-events-auto inline-flex items-center gap-0.5 rounded-pill bg-brand/[0.10] px-1.5 py-px text-[13px] font-semibold tracking-tight text-gold hover:bg-brand/20 transition-colors"
-          >
-            {mention}
-            {isVerifiedMention && (
-              <VerifiedIcon size={{ width: "12", height: "12" }} />
-            )}
-          </Link>
-        </ProfileHoverCard>,
-      );
+      // Mention resolves itself: it only becomes a chip once the account is
+      // known to exist, and carries that person's avatar and marks when it
+      // does. Anything the post already knows was seeded above, so stored
+      // mentions paint correctly on the first render with no request.
+      nodes.push(<Mention key={key} handle={mention.slice(1)} />);
     }
 
     last = match.index + full.length;

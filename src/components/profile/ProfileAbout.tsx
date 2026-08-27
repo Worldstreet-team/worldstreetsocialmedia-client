@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Calendar, Link as LinkIcon, MapPin } from "lucide-react";
@@ -17,6 +18,8 @@ export interface CommunityChip {
   slug: string;
   avatar?: string;
 }
+
+const BIO_TRUNCATE_LENGTH = 160;
 
 /**
  * Identity, bio, metadata, and the two things that were fetched but never
@@ -61,6 +64,8 @@ export function ProfileAbout({
 }) {
   const t = useT();
   const topics = resolveCategories(interests, 8);
+  const [isBioExpanded, setIsBioExpanded] = useState(false);
+  const bioTruncated = (bio?.length ?? 0) > BIO_TRUNCATE_LENGTH;
 
   const joined = new Date(createdAt || Date.now()).toLocaleDateString(t.locale, {
     month: "long",
@@ -89,7 +94,26 @@ export function ProfileAbout({
       {/* break-words: one long unbroken token (a URL, a wallet address) used to
           push the whole column past the viewport. */}
       <div className="break-words font-sans text-[15px] leading-relaxed text-primary">
-        {bio ? renderRichText(bio) : <span className="text-subtle">{t("profile.noBio")}</span>}
+        {bio ? (
+          <>
+            {renderRichText(
+              isBioExpanded || !bioTruncated
+                ? bio
+                : `${bio.slice(0, BIO_TRUNCATE_LENGTH)}...`,
+            )}
+            {bioTruncated && (
+              <button
+                type="button"
+                onClick={() => setIsBioExpanded((prev) => !prev)}
+                className="block font-medium text-gold hover:underline"
+              >
+                {isBioExpanded ? t("profile.bioSeeLess") : t("profile.bioSeeMore")}
+              </button>
+            )}
+          </>
+        ) : (
+          <span className="text-subtle">{t("profile.noBio")}</span>
+        )}
       </div>
 
       <div className="mt-1 flex flex-wrap gap-x-4 gap-y-2 font-sans text-[14px] text-muted">

@@ -7,7 +7,7 @@ import { getSpacesAction } from "@/lib/space.actions";
 import { liveSpacesCountAtom, voiceRefreshAtom } from "@/store/voice.atom";
 
 /**
- * Keeps the "rooms are live" pulse on the Street Voice nav honest from
+ * Keeps the "rooms are live" pulse on the Space Voice nav honest from
  * anywhere in the app.
  *
  * No polling: the gateway publishes started/ended/cancelled on the `spaces`

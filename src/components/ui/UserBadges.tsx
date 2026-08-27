@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import VerifiedIcon from "@/assets/icons/VerifiedIcon";
+import VerifiedIcon, { type VerifiedTier } from "@/assets/icons/VerifiedIcon";
 import WolfIcon from "@/assets/icons/WolfIcon";
 import TeamIcon from "@/assets/icons/TeamIcon";
 
@@ -21,11 +21,14 @@ export interface ProfileBadge {
  */
 export function UserBadges({
 	isVerified,
+	verification,
 	badges,
 	size = 13,
 	className,
 }: {
 	isVerified?: boolean;
+	/** Membership provenance from the profile; its `tier` colours the tick. */
+	verification?: { tier?: VerifiedTier } | null;
 	badges?: ProfileBadge[];
 	size?: number;
 	className?: string;
@@ -37,7 +40,10 @@ export function UserBadges({
 	return (
 		<span className={clsx("inline-flex shrink-0 items-center gap-0.5", className)}>
 			{isVerified && (
-				<VerifiedIcon size={{ width: String(size), height: String(size) }} />
+				<VerifiedIcon
+					size={{ width: String(size), height: String(size) }}
+					tier={verification?.tier}
+				/>
 			)}
 			{dev && <TeamIcon size={size + 1} />}
 			{wolf && (

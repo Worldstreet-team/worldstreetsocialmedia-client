@@ -380,14 +380,14 @@ export default function OverlayLayer({
       {guides.x !== null && (
         <span
           aria-hidden="true"
-          className="absolute inset-y-0 w-px bg-[#EAB308]"
+          className="absolute inset-y-0 w-px bg-brand"
           style={{ left: `${guides.x * 100}%` }}
         />
       )}
       {guides.y !== null && (
         <span
           aria-hidden="true"
-          className="absolute inset-x-0 h-px bg-[#EAB308]"
+          className="absolute inset-x-0 h-px bg-brand"
           style={{ top: `${guides.y * 100}%` }}
         />
       )}

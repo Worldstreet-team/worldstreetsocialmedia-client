@@ -103,6 +103,9 @@ export default function StudioOverview() {
 	// calls. Without its own flag the card showed "you haven't posted yet"
 	// while the request was still in flight — an empty state that lies.
 	const [postsLoading, setPostsLoading] = useState(true);
+	// "You haven't posted yet" is a lie when the request simply failed; keep
+	// the two apart so a broken fetch never reads as an empty account.
+	const [postsError, setPostsError] = useState<string | null>(null);
 	const [days, setDays] = useState(28);
 	const [notCreator, setNotCreator] = useState(false);
 	const [busy, setBusy] = useState(false);
@@ -110,38 +113,45 @@ export default function StudioOverview() {
 
 	const load = useCallback(async (windowDays: number) => {
 		setLoading(true);
-		const wantBaseline = windowDays * 2 <= 90;
-		const [curRes, doubleRes] = await Promise.all([
-			getCreatorStatsAction(windowDays),
-			wantBaseline ? getCreatorStatsAction(windowDays * 2) : null,
-		]);
+		const curRes = await getCreatorStatsAction(windowDays);
 		if (curRes.success && curRes.data) {
-			setStats(curRes.data);
+			setStats(curRes.data as Stats);
 			setNotCreator(false);
-			if (doubleRes?.success && doubleRes.data) {
-				// prev period = double window minus current window.
-				const d = doubleRes.data as Stats;
-				const c = curRes.data as Stats;
-				setPrev({
-					...d,
-					impressions: d.impressions - c.impressions,
-					engagements: d.engagements - c.engagements,
-					engagementRate:
-						d.impressions - c.impressions > 0
-							? Math.round(
-									((d.engagements - c.engagements) /
-										(d.impressions - c.impressions)) *
-										1000,
-								) / 10
-							: 0,
-				});
-			} else {
-				setPrev(null);
-			}
 		} else if ((curRes as any).notCreator) {
 			setNotCreator(true);
 		}
+		// Paint as soon as the window itself lands. The baseline is only
+		// needed for the delta chips, and blocking the whole overview on a
+		// second round trip made first paint twice as slow for a comparison
+		// nobody is waiting on.
 		setLoading(false);
+
+		if (!curRes.success || !curRes.data) return;
+		// The server clamps the window at 90d, so a doubled window past that
+		// would silently return the same range and produce a fake "no change".
+		if (windowDays * 2 > 90) {
+			setPrev(null);
+			return;
+		}
+		const c = curRes.data as Stats;
+		const doubleRes = await getCreatorStatsAction(windowDays * 2);
+		if (!doubleRes.success || !doubleRes.data) {
+			setPrev(null);
+			return;
+		}
+		const d = doubleRes.data as Stats;
+		const prevImpressions = d.impressions - c.impressions;
+		setPrev({
+			...d,
+			impressions: prevImpressions,
+			engagements: d.engagements - c.engagements,
+			engagementRate:
+				prevImpressions > 0
+					? Math.round(
+							((d.engagements - c.engagements) / prevImpressions) * 1000,
+						) / 10
+					: 0,
+		});
 	}, []);
 
 	useEffect(() => {
@@ -152,13 +162,19 @@ export default function StudioOverview() {
 		void getCreatorPostsAction()
 			.then((res) => {
 				if (res.success && Array.isArray(res.posts)) {
+					setPostsError(null);
 					setTopPosts(
 						[...(res.posts as TopPost[])]
 							.sort((a, b) => (b.stats.views ?? 0) - (a.stats.views ?? 0))
 							.slice(0, 5),
 					);
+				} else {
+					setPostsError(
+						(res as { message?: string }).message ?? "Request failed",
+					);
 				}
 			})
+			.catch((err) => setPostsError(String(err?.message ?? err)))
 			.finally(() => setPostsLoading(false));
 	}, []);
 
@@ -361,6 +377,8 @@ export default function StudioOverview() {
 								/>
 							))}
 						</div>
+					) : postsError ? (
+						<CellEmpty>{postsError}</CellEmpty>
 					) : topPosts.length === 0 ? (
 						<CellEmpty>{t("studio.noPosts")}</CellEmpty>
 					) : (

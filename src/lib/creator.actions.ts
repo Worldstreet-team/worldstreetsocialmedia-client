@@ -104,8 +104,9 @@ export async function listPresetsAction() {
 
 export async function createPresetAction(body: {
 	name: string;
-	title?: string;
 	category?: string;
+	source?: "camera" | "obs";
+	notifyFollowers?: boolean;
 	isDefault?: boolean;
 }) {
 	const headers = await bearer();
@@ -127,8 +128,9 @@ export async function updatePresetAction(
 	id: string,
 	body: {
 		name?: string;
-		title?: string;
 		category?: string;
+		source?: "camera" | "obs";
+		notifyFollowers?: boolean;
 		isDefault?: boolean;
 	},
 ) {

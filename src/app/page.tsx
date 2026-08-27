@@ -22,7 +22,7 @@ export default async function Home() {
 					{/* Stories above everything, fixed: they sit outside the
 					    scroll container, same structure as the (main) layout. */}
 					<div
-						className="shrink-0 border-b border-hairline py-2 animate-rise"
+						className="shrink-0 animate-rise"
 						style={{ animationDelay: "40ms" }}
 					>
 						<StoriesRail />

@@ -26,6 +26,7 @@ import { LiveSlidePlayer } from "@/components/live/LiveSlidePlayer";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { DEFAULT_AVATAR } from "@/const";
 import { useLiveEvents } from "@/hooks/useLiveNow";
+import { useVideoBuffer } from "@/hooks/useVideoBuffer";
 import { useT } from "@/i18n/client";
 import { demoStreetSlides } from "@/lib/demoSeed";
 import { getVideoFeedAction } from "@/lib/feed.actions";
@@ -298,6 +299,14 @@ function VerticalSurface() {
 		return () => clearTimeout(timer);
 	}, [active, slides, hasMore, cursor, loadStreet, tab]);
 
+	// The prefetch above pulls the next PAGE of slides; this pulls the next
+	// slides' actual video bytes, so a flick lands on a playing frame rather
+	// than on a black plate that then starts downloading.
+	useVideoBuffer(
+		slides.map((s) => s.videoUrl),
+		active,
+	);
+
 	const patchSlide = (key: string, patch: Partial<Slide>) =>
 		setSlides((prev) =>
 			prev.map((s) => (s.key === key ? { ...s, ...patch } : s)),
@@ -533,6 +542,9 @@ function VerticalSurface() {
 									muted={muted || !isActive}
 									playsInline
 									loop
+									// The neighbours are one flick away; letting them sit
+									// at metadata-only defeats the buffer above.
+									preload="auto"
 									onPlay={() => {
 										if (slide.postId && !startedRef.current.has(slide.postId)) {
 											startedRef.current.add(slide.postId);

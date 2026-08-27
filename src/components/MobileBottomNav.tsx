@@ -108,17 +108,16 @@ export const MobileBottomNav = () => {
 			    stacked in the same corner — CreateFab (root layout) is the one
 			    create entry point now.
 
-			    Floating glass bar (owner ruling 2026-08-26): this and the
-			    media editors are the sanctioned exceptions to the ecosystem
-			    no-backdrop-blur rule. It's inset from all three edges and
-			    rounded, so the feed scrolls *under* it — `--ws-nav-float`
-			    feeds the pb-nav/bottom-nav clearance so nothing hides beneath. */}
-			<div
-				className="fixed left-3 right-3 z-sticky md:hidden rounded-pill glass-nav backdrop-blur-xl backdrop-saturate-150 overflow-hidden"
-				style={{
-					bottom: "calc(var(--ws-safe-bottom) + var(--ws-nav-float))",
-				}}
-			>
+			    Docked glass bar (owner ruling 2026-08-27): flush to the bottom
+			    edge and full-bleed rather than floating, but still glass —
+			    this and the media editors remain the sanctioned exceptions to
+			    the ecosystem no-backdrop-blur rule. The feed still scrolls
+			    under it, so `pb-nav`/`bottom-nav` clearance still applies. */}
+			<div className="fixed inset-x-0 bottom-0 z-sticky md:hidden border-t border-hairline glass-nav backdrop-blur-xl backdrop-saturate-150">
+				{/* Docked means the bar now sits UNDER the home indicator, so it
+				    owns the safe-area inset again (a floating bar cleared it via
+				    its own `bottom` offset instead). */}
+				<div style={{ paddingBottom: "var(--ws-safe-bottom)" }}>
 				<div className="flex justify-between items-center h-16 px-1">
 					{navItems.map((item) => (
 						<Link
@@ -129,7 +128,7 @@ export const MobileBottomNav = () => {
 								// `.glass-nav` follows the theme, so the ink is the
 								// normal token pair — text-gold resolves to the AA
 								// dark gold on paper and bright gold on stone.
-								"flex flex-col items-center justify-center gap-1 w-full h-full min-w-0 rounded-pill active:bg-primary/10 transition-colors",
+								"flex flex-col items-center justify-center gap-1 w-full h-full min-w-0 active:bg-primary/10 transition-colors",
 								item.active ? "text-gold" : "text-muted",
 							)}
 						>
@@ -148,10 +147,8 @@ export const MobileBottomNav = () => {
 							</span>
 						</Link>
 					))}
+					</div>
 				</div>
-				{/* No safe-area spacer any more — the bar floats ABOVE the home
-				    indicator (its `bottom` already adds the inset) instead of
-				    running underneath it. */}
 			</div>
 		</>
 	);

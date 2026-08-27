@@ -49,9 +49,11 @@
   --ws-mobile-nav-h: 64px;
   --ws-safe-bottom: env(safe-area-inset-bottom, 0px);
   --ws-safe-top: env(safe-area-inset-top, 0px);
-  /* The bar floats now (owner ruling): it sits this far off the bottom edge
-       and inset from the sides, so clearance has to carry the float gap too. */
-  --ws-nav-float: 10px;
+  /* The bar is docked again (owner ruling 2026-08-27): flush to the bottom
+       edge, full-bleed, still glass. Kept as a token rather than deleted so
+       every `pb-nav`/`bottom-nav` call site keeps one source of truth — set
+       it back above 0 to float the bar again. */
+  --ws-nav-float: 0px;
   --ws-nav-clearance: calc(
     var(--ws-mobile-nav-h) +
     var(--ws-safe-bottom) +
@@ -499,7 +501,7 @@ html {
    motion-slow with the one easing. `backwards` fill so a delayed element stays
    hidden until its turn — stagger with an inline animation-delay. Goes
    instant under prefers-reduced-motion via the global block above. */
-/* Street Voice equaliser bars (SpaceCard/SpaceRoom). Scale-only, so it
+/* Space Voice equaliser bars (SpaceCard/SpaceRoom). Scale-only, so it
    respects the animate-transform-and-opacity-only rule. */
 @keyframes ws-eq {
   0%,
@@ -652,6 +654,17 @@ html {
 
 /* Selected. Gold rim rather than a gold fill — the DS reserves large gold
    fills for the one primary CTA on a surface. */
+/* Frosted sheet panel: the premium sheet's ground. Follows the theme —
+   a dark frost on stone, a white frost on paper — translucent enough that
+   the page reads through the blur. No border, no gradient, no shadow; the
+   frost IS the surface. Needs backdrop-blur-* at the usage site. */
+.glass-frost {
+  background: rgb(20 18 17 / 0.82);
+}
+[data-ws-theme="platform-light"] .glass-frost {
+  background: rgb(255 255 255 / 0.86);
+}
+
 .glass-tile-on,
 .glass-tile-on:hover {
   background: color-mix(in srgb, var(--ws-brand-primary) 14%, transparent);

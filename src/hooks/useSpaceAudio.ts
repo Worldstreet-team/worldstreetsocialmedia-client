@@ -12,7 +12,7 @@ export type AudioState =
   | "failed";
 
 /**
- * Live audio for a Street Voice room.
+ * Live audio for a Space Voice room.
  *
  * The gateway is the authority: it knows who hosts the space and mints a
  * token that can publish only for them. Everyone else gets a

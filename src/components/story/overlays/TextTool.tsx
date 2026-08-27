@@ -145,7 +145,7 @@ export default function TextTool({
             }}
             maxLength={120}
             spellCheck={false}
-            className="absolute inset-0 h-full w-full bg-transparent text-transparent caret-[#EAB308] outline-none resize-none overflow-hidden text-center"
+            className="absolute inset-0 h-full w-full bg-transparent text-transparent caret-brand outline-none resize-none overflow-hidden text-center"
             style={{
               fontFamily: fontFamilyFor(style, fonts),
               fontWeight: fontWeightFor(style),
