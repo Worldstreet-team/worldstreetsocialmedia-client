@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import {
     ClerkProvider,
@@ -15,6 +16,7 @@ import { LocaleProvider } from "@/i18n/client";
 import { LOCALE_HEADER, isLocale } from "@/i18n/config";
 import { headers } from "next/headers";
 import RealtimeProvider from "@/components/providers/RealtimeProvider";
+import AnalyticsProvider from "@/components/providers/AnalyticsProvider";
 import { CallProvider } from "@/providers/CallProvider";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import GlobalMessageListener from "@/components/providers/GlobalMessageListener";
@@ -176,6 +178,9 @@ export default async function RootLayout({
                             <RealtimeProvider>
                                 <CallProvider>
                                     <ToastProvider>
+                                    <Suspense fallback={null}>
+                                      <AnalyticsProvider />
+                                    </Suspense>
                                         <GlobalMessageListener />
                                         <NotificationCountSync />
                                         <SpacesLiveSync />

@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { Fragment, useState } from "react";
 import { useAppPathname } from "@/i18n/useAppPathname";
 import { EcosystemSheet } from "@/components/layout/EcosystemSheet";
+import { BrandMark } from "@/components/layout/BrandRitual";
 // Nav uses Phosphor with weight="fill" on the active tab, matching the rail.
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import {
@@ -129,26 +129,24 @@ export const MobileBottomNav = () => {
 									onClick={() => setEcosystemOpen(true)}
 									aria-haspopup="dialog"
 									aria-expanded={ecosystemOpen}
-									aria-label="More from WorldStreet"
 									className="flex h-full w-full min-w-0 flex-col items-center justify-center gap-1 transition-colors active:bg-primary/10"
 								>
+									{/* The real animated mark, not the flat PNG: it draws
+									    itself on the same 5.2s ritual as the rail's lockup
+									    and strokes in the brand token, so it follows the
+									    palette. Its own reduced-motion rule in globals.css
+									    resolves it to the finished W. */}
 									<span
 										className={clsx(
 											"flex h-[26px] w-[26px] items-center justify-center rounded-[7px] transition-colors",
 											ecosystemOpen && "bg-raised",
 										)}
 									>
-										<Image
-											src="/images/wsa-mark.png"
-											alt=""
-											width={22}
-											height={22}
-											aria-hidden
-											className="h-[22px] w-[22px] object-contain"
-										/>
+										<BrandMark size={22} />
 									</span>
+									{/* The name, not "More" — this tab is the brand. */}
 									<span className="max-w-full truncate px-0.5 font-sans text-[10px] font-medium leading-none whitespace-nowrap text-muted">
-										{t("nav.more")}
+										WorldStreet
 									</span>
 								</button>
 							)}

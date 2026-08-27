@@ -798,6 +798,23 @@ html {
   }
 }
 
+/* ── ONE BLUR PER STACK ──────────────────────────────────────────────
+   A backdrop-filter is a separate compositing pass over everything behind
+   it, and it can only blur what is already there. Nesting them stacks cost
+   for no image: the sheets used to run scrim -> panel -> chip, three passes
+   deep, and the third had nothing left to blur, so it only added milk.
+
+   The rule: the OUTERMOST surface that separates content from chrome carries
+   `backdrop-blur-*`. Everything inside it is a plain tint on that surface.
+   `.glass-chip` is already `rgb(255 255 255 / 0.1)` — a highlight ON the
+   glass, never another pane of it, so it needs no blur of its own.
+
+   A chip DOES take the blur when it is the outermost layer: floating over
+   fullscreen video or over the story canvas, where nothing above it has
+   frosted the backdrop yet. 37 redundant passes were removed on 2026-08-26;
+   do not add them back by pattern-matching a sibling component.
+   ──────────────────────────────────────────────────────────────────── */
+
 /* ── Promo ambience ─────────────────────────────────────────────────
    The blurred head of a promo card. The images ship pre-blurred (a big
    runtime backdrop-filter on a scrolling rail is not worth the paint), so

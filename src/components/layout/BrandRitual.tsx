@@ -1,6 +1,39 @@
 import clsx from "clsx";
 
 /**
+ * The W on its own, drawing itself on the same 5.2s track as the full lockup.
+ *
+ * Split out so the mobile bar's brand tab is the SAME mark as the rail's,
+ * rather than the flat wsa-mark PNG standing in for it — the PNG cannot be
+ * stroked, so it can never draw on, and it does not follow the brand token
+ * when the palette moves.
+ */
+export function BrandMark({
+	size = 22,
+	className,
+}: {
+	size?: number;
+	className?: string;
+}) {
+	return (
+		<svg
+			className={clsx("ws-brand-mark", className)}
+			style={{ width: size }}
+			viewBox="0 0 435.32 245.73"
+			xmlns="http://www.w3.org/2000/svg"
+			aria-hidden="true"
+			focusable="false"
+		>
+			<polygon pathLength={1} points="0,0 159.68,0 217.66,102.5 139.01,245.73" />
+			<polygon
+				pathLength={1}
+				points="435.32,0 275.64,0 217.66,102.5 296.32,245.73"
+			/>
+		</svg>
+	);
+}
+
+/**
  * The animated brand lockup: the W draws itself, floods gold, and the
  * wordmark walks in beside it — the same 5.2s ritual the hub plays in its
  * sidebar (components/system/SidebarBrand), so the mark reads as one brand
@@ -38,23 +71,7 @@ export function BrandRitual({
 		<span
 			className={clsx("inline-flex items-center gap-2 min-w-0", className)}
 		>
-			<svg
-				className="ws-brand-mark"
-				style={{ width: size }}
-				viewBox="0 0 435.32 245.73"
-				xmlns="http://www.w3.org/2000/svg"
-				aria-hidden="true"
-				focusable="false"
-			>
-				<polygon
-					pathLength={1}
-					points="0,0 159.68,0 217.66,102.5 139.01,245.73"
-				/>
-				<polygon
-					pathLength={1}
-					points="435.32,0 275.64,0 217.66,102.5 296.32,245.73"
-				/>
-			</svg>
+			<BrandMark size={size} />
 
 			{eyebrow ? (
 				// One animated wrapper so the name and the eyebrow walk in
