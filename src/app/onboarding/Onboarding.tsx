@@ -287,7 +287,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 		// pane over a flat colour is just a grey box, which is what the radial
 		// `ambient-field` stand-in was compensating for.
 		<div className="onboarding-backdrop flex min-h-dvh items-center justify-center p-4 py-8">
-			<div className="animate-rise glass-card relative isolate w-full max-w-[420px] overflow-hidden rounded-xl p-6 shadow-sheet backdrop-blur-2xl backdrop-saturate-150 sm:p-9">
+			<div className="animate-rise glass-card relative isolate w-full max-w-[420px] overflow-hidden rounded-xl p-6 shadow-sheet backdrop-blur-lg backdrop-saturate-150 sm:p-9">
 				<div className="relative z-10 flex flex-col items-center gap-7 text-center">
 					<BrandRitual size={34} wordSize={18} />
 

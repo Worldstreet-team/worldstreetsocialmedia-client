@@ -1067,36 +1067,51 @@ video,
    phone, rather than the backdrop sliding under it. */
 .onboarding-backdrop {
   background-color: var(--ws-bg-page);
-  background-image: url("/images/onboarding/backdrop-dark.webp");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
+  /* Two layers, gradient FIRST so it paints over the art and dissolves it
+     into the page. `cover` was filling the viewport with a zoomed-in crop of
+     a 2:3 portrait; sizing by height instead keeps the whole composition
+     intact, anchored top-centre, and lets the page take back the lower two
+     thirds. Nothing is behind the card except the fade. */
+  background-image:
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      transparent 30%,
+      color-mix(in srgb, var(--ws-bg-page) 45%, transparent) 50%,
+      color-mix(in srgb, var(--ws-bg-page) 85%, transparent) 68%,
+      var(--ws-bg-page) 84%
+    ),
+    url("/images/onboarding/backdrop-dark.webp");
+  /* `cover` anchored to the TOP, not the centre: the art fills the width as a
+     header band and the gradient takes the lower half back to page colour.
+     Sizing by height instead made a 333px strip the 420px card sat right on
+     top of, so none of it was visible. */
+  background-size:
+    100% 100%,
+    cover;
+  background-position:
+    center top,
+    center top;
+  background-repeat: no-repeat, no-repeat;
 }
 [data-ws-theme="platform-light"] .onboarding-backdrop {
-  background-image: url("/images/onboarding/backdrop-light.webp");
+  background-image:
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      transparent 30%,
+      color-mix(in srgb, var(--ws-bg-page) 45%, transparent) 50%,
+      color-mix(in srgb, var(--ws-bg-page) 85%, transparent) 68%,
+      var(--ws-bg-page) 84%
+    ),
+    url("/images/onboarding/backdrop-light.webp");
 }
 
-/* The artwork is busy in places (icon clusters, dotted paths) and the card
-   sits right on top of it. This veil buys back the contrast the text needs
-   without flattening the picture into a solid panel. */
-.onboarding-backdrop::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(
-    62% 48% at 50% 50%,
-    rgb(0 0 0 / 0.55),
-    rgb(0 0 0 / 0.2) 70%,
-    transparent
-  );
-}
-[data-ws-theme="platform-light"] .onboarding-backdrop::before {
-  background: radial-gradient(
-    62% 48% at 50% 50%,
-    rgb(255 255 255 / 0.72),
-    rgb(255 255 255 / 0.35) 70%,
-    transparent
-  );
-}
+/* Tried a widened canvas so the whole 2:3 composition would fit a landscape
+   viewport. It was worse: padding it to 16:9 put the artwork directly BEHIND
+   the card and left the sides empty black. Sizing by height and fading it out
+   does the same job without a second asset. */
+
+/* The ::before veil that used to sit here is gone: the gradient layer above
+   already dissolves the art into the page, and running both crushed the
+   picture to near-black. */
