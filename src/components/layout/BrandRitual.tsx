@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import Image from "next/image";
 
 /**
  * The W on its own, drawing itself on the same 5.2s track as the full lockup.
@@ -34,19 +35,17 @@ export function BrandMark({
 }
 
 /**
- * The animated brand lockup: the W draws itself, floods gold, and the
- * wordmark walks in beside it — the same 5.2s ritual the hub plays in its
- * sidebar (components/system/SidebarBrand), so the mark reads as one brand
- * across the ecosystem. The keyframes live in globals.css
- * (`.ws-brand-mark` / `.ws-brand-word`).
+ * The WorldSpace lockup: the cloud mark plus the wordmark walking in beside it
+ * (`.ws-brand-word`, still on the 5.2s track from globals.css).
  *
- * The geometry is the hub's exact polygon pair, not the wsa-mark PNG: the
- * draw-on effect needs real paths to stroke.
+ * The mark is the CLOUD, not the ecosystem W. They are two different brands:
+ * this app is WorldSpace and the cloud is its logo, while the W belongs to
+ * WorldStreet, the parent — which is why the mobile bar's WorldStreet tab
+ * still renders `BrandMark` and this does not. Mixing them made the app look
+ * like it was called WorldStreet.
  *
- * Two shapes, both animated on the same track:
- *  - inline (mobile top bar) — mark + "WorldStreet."
- *  - stacked (desktop rail)  — mark + "WorldStreet" over a gold eyebrow,
- *    which is the ratified ecosystem lockup (04-components → TopNav).
+ * The cloud does not draw itself the way the W does: it is raster artwork, and
+ * there is nothing to stroke. The wordmark keeps its entrance.
  */
 export function BrandRitual({
 	size = 22,
@@ -71,7 +70,16 @@ export function BrandRitual({
 		<span
 			className={clsx("inline-flex items-center gap-2 min-w-0", className)}
 		>
-			<BrandMark size={size} />
+			<Image
+				src="/images/worldspace-mark.png"
+				alt=""
+				width={size}
+				height={size}
+				aria-hidden
+				priority
+				className="shrink-0 object-contain"
+				style={{ width: size, height: size }}
+			/>
 
 			{eyebrow ? (
 				// One animated wrapper so the name and the eyebrow walk in
