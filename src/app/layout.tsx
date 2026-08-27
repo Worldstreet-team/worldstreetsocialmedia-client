@@ -21,6 +21,7 @@ import { CallProvider } from "@/providers/CallProvider";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import GlobalMessageListener from "@/components/providers/GlobalMessageListener";
 import { CommandPalette } from "@/components/ui/CommandPalette";
+import { SearchWindow } from "@/components/search/SearchWindow";
 import { WelcomeTour } from "@/components/ui/WelcomeTour";
 import { PremiumSheet } from "@/components/premium/PremiumSheet";
 import { CreateFab } from "@/components/ui/CreateFab";
@@ -200,6 +201,7 @@ export default async function RootLayout({
 										<MessageCountSync />
 										<EngagementSync />
                                         <CommandPalette />
+                                        <SearchWindow />
                                         <WelcomeTour />
                                         <PremiumSheet />
                                         <CreateFab />

@@ -19,7 +19,7 @@ import {
 	suggestionsLoadedAtom,
 } from "@/store/suggestions.atom";
 import { trendsAtom, trendsLoadedAtom } from "@/store/trends.atom";
-import { commandPaletteOpenAtom, followingIdsAtom } from "@/store/ui.atom";
+import { followingIdsAtom, searchOpenAtom } from "@/store/ui.atom";
 import { getExploreDataAction } from "@/lib/post.actions";
 import { DEFAULT_AVATAR, XSTREAM_WEB_URL } from "@/const";
 import { useT } from "@/i18n/client";
@@ -56,7 +56,9 @@ export function RightSidebar() {
 	const [followedIds, setFollowedIds] = useAtom(followingIdsAtom);
 	const [trendsExpanded, setTrendsExpanded] = useState(false);
 	const [suggestionsExpanded, setSuggestionsExpanded] = useState(false);
-	const setPaletteOpen = useAtom(commandPaletteOpenAtom)[1];
+	// This box says "Search" and now searches. It used to open the command
+	// palette, which could navigate and compose but could not find a user.
+	const setSearchOpen = useAtom(searchOpenAtom)[1];
 
 	// A failed fetch marks the section loaded-with-error and offers a retry —
 	// skeletons must never be a terminal state.
@@ -77,14 +79,26 @@ export function RightSidebar() {
 			needWho ? getWhoToFollowAction() : null,
 			needTrends ? getExploreDataAction() : null,
 		]);
-		if (who.status === "fulfilled" && who.value) {
-			if (who.value.success && Array.isArray(who.value.data)) {
+		// Keyed on whether a request actually went out, NOT on whether it came
+		// back with a value. A rejected action left the `loaded` flag false
+		// while the timestamp above had already been stamped — so `fetchAll`
+		// got a new identity, the mount effect re-ran, stamped again, failed
+		// again, forever. React eventually threw "maximum update depth
+		// exceeded" and the rail sat on skeletons for the whole session.
+		// Failure has to be a terminal state with a retry, exactly as the
+		// comment above this function says.
+		if (needWho) {
+			if (
+				who.status === "fulfilled" &&
+				who.value?.success &&
+				Array.isArray(who.value.data)
+			) {
 				setSuggestions(who.value.data);
 			} else setFailed(true);
 			setIsSuggestionsLoaded(true);
 		}
-		if (explore.status === "fulfilled" && explore.value) {
-			if (explore.value.success) {
+		if (needTrends) {
+			if (explore.status === "fulfilled" && explore.value?.success) {
 				setTrends(explore.value.data?.trendsForYou ?? []);
 			} else setFailed(true);
 			setIsTrendsLoaded(true);
@@ -133,10 +147,9 @@ export function RightSidebar() {
 
 	return (
 		<aside className="w-[350px] shrink-0 hidden lg:flex flex-col gap-7 sticky top-0 h-dvh py-4 pl-8 pr-4 overflow-y-auto no-scrollbar">
-			{/* Search opens the Ctrl/Cmd+K command palette. */}
 			<button
 				type="button"
-				onClick={() => setPaletteOpen(true)}
+				onClick={() => setSearchOpen(true)}
 				style={{ animationDelay: "60ms" }}
 				className="relative mt-2 shrink-0 flex items-center w-full h-10 bg-chip rounded-pill pl-[42px] pr-3 font-sans text-sm text-subtle hover:text-muted transition-colors cursor-pointer animate-rise"
 			>
@@ -145,8 +158,11 @@ export function RightSidebar() {
 					className="absolute left-4 top-1/2 -translate-y-1/2 text-subtle pointer-events-none"
 				/>
 				<span className="flex-1 text-left">{t("rail.search")}</span>
-				<kbd className="flex items-center gap-1 rounded-sm bg-raised px-1.5 h-5 text-[10px] text-subtle">
-					Ctrl K
+				{/* `/` opens search; Ctrl+K is the command palette, a different
+				    surface. Naming the wrong one here is how people learn the
+				    wrong shortcut. */}
+				<kbd className="flex h-5 items-center gap-1 rounded-sm bg-raised px-1.5 text-[10px] text-subtle">
+					/
 				</kbd>
 			</button>
 

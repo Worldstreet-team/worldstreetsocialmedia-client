@@ -58,3 +58,14 @@ export const badgeForNavKey = (
 		: labelKey === "nav.messages"
 			? messages
 			: 0;
+
+/**
+ * The search window. Separate from `commandPaletteOpenAtom` on purpose: the
+ * palette is for commands (navigate, compose, replay the tour), search is for
+ * content (people, posts, communities, topics). Folding search into the
+ * palette is what left the rail's search box unable to find a single user.
+ */
+export const searchOpenAtom = atom(false);
+
+/** Seeds the search window's input, so a caller can hand it a query. */
+export const searchSeedAtom = atom("");

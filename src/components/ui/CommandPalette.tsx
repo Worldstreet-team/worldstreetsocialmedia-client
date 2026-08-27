@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import type { LucideIcon } from "lucide-react";
 // 03-icons: everything here stays inside the standardized lucide set —
 // house/search/bell/message-circle/bookmark for nav, plus for create.
@@ -18,7 +18,12 @@ import {
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { commandPaletteOpenAtom, welcomeTourOpenAtom } from "@/store/ui.atom";
+import {
+  commandPaletteOpenAtom,
+  searchOpenAtom,
+  searchSeedAtom,
+  welcomeTourOpenAtom,
+} from "@/store/ui.atom";
 import { userAtom } from "@/store/user.atom";
 
 /**
@@ -42,6 +47,8 @@ const GROUP_ORDER = ["Actions", "Navigate"] as const;
 
 export function CommandPalette() {
   const [open, setOpen] = useAtom(commandPaletteOpenAtom);
+  const setSearchOpen = useSetAtom(searchOpenAtom);
+  const setSearchSeed = useSetAtom(searchSeedAtom);
   const setTourOpen = useAtom(welcomeTourOpenAtom)[1];
   const user = useAtomValue(userAtom);
   const router = useRouter();
@@ -76,8 +83,10 @@ export function CommandPalette() {
     }
   }, [close, router]);
 
-  // Global shortcuts: Ctrl/Cmd+K toggles, Esc closes. When nothing has
-  // focus, `/` opens the palette and `n` jumps to the composer.
+  // Global shortcuts: Ctrl/Cmd+K toggles the palette, Esc closes. When
+  // nothing has focus, `/` opens SEARCH — the palette is for commands, and
+  // slash means search everywhere else on the web — and `n` jumps to the
+  // composer.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
@@ -100,7 +109,7 @@ export function CommandPalette() {
 
       if (e.key === "/") {
         e.preventDefault();
-        setOpen(true);
+        setSearchOpen(true);
       } else if (e.key.toLowerCase() === "n") {
         e.preventDefault();
         focusComposer();
@@ -108,7 +117,7 @@ export function CommandPalette() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, close, setOpen, focusComposer]);
+  }, [open, close, setOpen, setSearchOpen, focusComposer]);
 
   // Lock page scroll behind the overlay.
   useEffect(() => {
@@ -216,7 +225,12 @@ export function CommandPalette() {
         label: `Search for "${query.trim()}"`,
         keywords: "",
         icon: Search,
-        run: () => go(`/explore?q=${encodeURIComponent(query.trim())}`),
+        run: () => {
+          const q = query.trim();
+          close();
+          setSearchSeed(q);
+          setSearchOpen(true);
+        },
       });
     }
 
