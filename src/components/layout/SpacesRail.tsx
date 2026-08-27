@@ -222,13 +222,18 @@ export function SpacesRail({ delay = 210 }: { delay?: number }) {
 		...upcoming.map((space) => ({ space, live: false })),
 	];
 
-	// Measure a real slide rather than the scroller: the track carries px-3, so
-	// clientWidth is 24px wider than a slide and paging by it drifts a little
-	// further out of alignment with every press.
-	const slideWidth = () => {
+	// One page of travel: the distance between two slides' left edges, which
+	// is slide width PLUS the gap. Measuring the gap rather than assuming it
+	// means the number stays right if the spacing is ever retuned. Falls back
+	// to the slide's own width for a single slide, where there is no gap to
+	// measure and no paging to do. Never the scroller's clientWidth — the
+	// track carries px-3, so that is 24px too wide and drifts every press.
+	const slideStep = () => {
 		const el = trackRef.current;
 		if (!el) return 1;
-		const first = el.firstElementChild as HTMLElement | null;
+		const first = el.children[0] as HTMLElement | undefined;
+		const second = el.children[1] as HTMLElement | undefined;
+		if (first && second) return second.offsetLeft - first.offsetLeft;
 		return first?.offsetWidth || el.clientWidth || 1;
 	};
 
@@ -238,7 +243,7 @@ export function SpacesRail({ delay = 210 }: { delay?: number }) {
 	const syncPage = () => {
 		const el = trackRef.current;
 		if (!el) return;
-		setPage(Math.round(el.scrollLeft / slideWidth()));
+		setPage(Math.round(el.scrollLeft / slideStep()));
 	};
 
 	const goTo = (index: number) => {
@@ -246,7 +251,7 @@ export function SpacesRail({ delay = 210 }: { delay?: number }) {
 		if (!el) return;
 		const clamped = Math.max(0, Math.min(index, slides.length - 1));
 		el.scrollTo({
-			left: clamped * slideWidth(),
+			left: clamped * slideStep(),
 			behavior: reduced ? "auto" : "smooth",
 		});
 	};
@@ -312,7 +317,7 @@ export function SpacesRail({ delay = 210 }: { delay?: number }) {
 			<div
 				ref={trackRef}
 				onScroll={syncPage}
-				className="flex snap-x snap-mandatory overflow-x-auto px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+				className="flex snap-x snap-mandatory gap-2 overflow-x-auto px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 			>
 				{slides.map(({ space, live: isLive }) => (
 					<div key={space.id} className="w-full shrink-0 snap-start">
