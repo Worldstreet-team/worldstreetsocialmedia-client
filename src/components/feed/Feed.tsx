@@ -60,15 +60,19 @@ const MAX_FACES = 3;
 /** Ceiling on the by-id fetch, for a tab left open all afternoon. */
 const MAX_PENDING_FETCH = 20;
 /**
- * How long a post waits between arriving and being announced.
+ * How long posts accumulate before the pill offers them.
  *
- * Two reasons, and the second is the one that matters. A pill that appears on
- * the same frame as the event reads as a twitch next to whatever the reader is
- * doing; a beat's delay makes it feel like it settled in. And the beat is
- * exactly the window the preload needs, so by the time the pill is offering
- * the post, the post is usually already in memory.
+ * This is a batching window, not a cosmetic beat. Announcing per post meant a
+ * timer, a state update and a re-render for every post published anywhere on
+ * the platform, plus an immediate fetch for each — work that scales with how
+ * busy everyone else is, on every open tab. One window collapses a whole burst
+ * into a single update, and gives the preloads two minutes of quiet time to
+ * land before anything is offered to the reader.
+ *
+ * Two minutes is also long enough that the pill reads as news rather than a
+ * twitch: a reader mid-sentence is not interrupted by someone else typing.
  */
-const PILL_DELAY_MS = 1000;
+const PILL_DELAY_MS = 120_000;
 /** Ceiling on the preload map — a tab left open must not grow without bound. */
 const MAX_PRELOADED = 30;
 
@@ -114,6 +118,12 @@ export default function Feed() {
 	const announceTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(
 		new Set(),
 	);
+	/** Posts that have arrived but are not yet offered — the current window. */
+	const bufferRef = useRef<PendingPost[]>([]);
+	/** The open batching window, if any. One at a time. */
+	const windowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	/** Preloads in flight, so a burst can't fetch the same post twice. */
+	const inFlightRef = useRef<Set<string>>(new Set());
 	/**
 	 * Posts prepended by the pill. A `fetchFeed(true)` REPLACES the list with
 	 * the ranked page, and the ranker puts a seconds-old post nowhere near the
@@ -265,8 +275,10 @@ export default function Feed() {
 	useEffect(() => {
 		if (loadedTabRef.current === tab) return;
 		loadedTabRef.current = tab;
-		// Posts pinned by the pill belong to the tab they were fetched for.
+		// Posts pinned by the pill belong to the tab they were fetched for —
+		// and so does anything still waiting in the batching window.
 		prependedRef.current = [];
+		bufferRef.current = [];
 		setPending([]);
 		setFeedState((prev) => ({ ...prev, posts: [], cursor: null, mode: tab }));
 		void fetchFeed(true);
@@ -288,11 +300,28 @@ export default function Feed() {
 		// the pill paints. A burst of posts costs one batched request.
 		if (username) requestHandle(username);
 
-		// Preload starts IMMEDIATELY, not after the announce beat and not on
-		// click — the whole point is that the post is already here when the
-		// reader asks for it. A failure is silent: the click re-fetches
-		// anything missing, so this is an optimisation, never a dependency.
-		if (postId && !preloadedRef.current.has(postId)) {
+		if (!postId) return;
+
+		// Buffer it. Nothing is announced on arrival any more — the window
+		// below decides when, and the reader is not interrupted before then.
+		if (!bufferRef.current.some((p) => p.postId === postId)) {
+			bufferRef.current.push({
+				postId,
+				author: String(data.author ?? ""),
+				username,
+			});
+		}
+
+		// Preload during the window, capped. Uncapped, a busy two minutes is
+		// one request per post arriving platform-wide — the exact load this
+		// window exists to avoid. The pill only ever claims MAX_PENDING_FETCH
+		// posts, so fetching past that buys nothing.
+		if (
+			!preloadedRef.current.has(postId) &&
+			!inFlightRef.current.has(postId) &&
+			inFlightRef.current.size + preloadedRef.current.size < MAX_PENDING_FETCH
+		) {
+			inFlightRef.current.add(postId);
 			void getPostByIdAction(postId)
 				.then((result) => {
 					if (!result.success || !result.data) return;
@@ -303,29 +332,51 @@ export default function Feed() {
 						preloadedRef.current.delete(oldest);
 					}
 				})
-				.catch(() => {});
+				.catch(() => {})
+				.finally(() => inFlightRef.current.delete(postId));
 		}
 
-		// The announce itself waits a beat. Scheduled per event rather than
-		// debounced: a burst of five posts should still end up as five faces,
-		// each a second after its own arrival.
+		// One window timer for the whole burst, opened by the first post and
+		// not restarted by the rest — so a steady stream of posts still
+		// surfaces every PILL_DELAY_MS rather than never (a debounce that
+		// resets on each arrival would starve on a busy platform).
+		if (windowTimerRef.current) return;
 		const timer = setTimeout(() => {
 			announceTimersRef.current.delete(timer);
-			setPending((prev) =>
-				postId && prev.some((p) => p.postId === postId)
-					? prev
-					: [...prev, { postId, author: String(data.author ?? ""), username }],
+			windowTimerRef.current = null;
+			// Announce only what is actually in hand. The pill promises a post
+			// that opens instantly, and one still in flight cannot keep that
+			// promise — it stays buffered and goes out with the next window,
+			// which the next arrival opens. Anything neither loaded nor still
+			// loading is dropped on purpose: a preload that failed usually
+			// means deleted, or an author who has since blocked you, and the
+			// post arrives through normal pagination if it does still exist.
+			const buffered = bufferRef.current;
+			const ready = buffered.filter((p) => preloadedRef.current.has(p.postId));
+			bufferRef.current = buffered.filter(
+				(p) => !preloadedRef.current.has(p.postId) && inFlightRef.current.has(p.postId),
 			);
+			if (ready.length === 0) return;
+			setPending((prev) => {
+				const seen = new Set(prev.map((p) => p.postId));
+				const fresh = ready.filter((p) => !seen.has(p.postId));
+				return fresh.length === 0 ? prev : [...prev, ...fresh];
+			});
 		}, PILL_DELAY_MS);
+		windowTimerRef.current = timer;
 		announceTimersRef.current.add(timer);
 	});
 
 	// A timer that fires after unmount would set state on a dead component.
 	useEffect(() => {
 		const timers = announceTimersRef.current;
+		const buffer = bufferRef;
+		const openWindow = windowTimerRef;
 		return () => {
 			for (const timer of timers) clearTimeout(timer);
 			timers.clear();
+			openWindow.current = null;
+			buffer.current = [];
 		};
 	}, []);
 
