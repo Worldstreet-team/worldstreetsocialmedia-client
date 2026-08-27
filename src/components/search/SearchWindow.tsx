@@ -2,7 +2,8 @@
 
 import clsx from "clsx";
 import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
+import { OverlayPanel, OverlayScrim } from "@/components/ui/Overlay";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { MagnifyingGlass, X } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -220,33 +221,10 @@ export function SearchWindow() {
 		<AnimatePresence>
 			{open && (
 				<>
-					{/* Flat, never blurred: the panel owns the one blur in this
-					    stack, and stacking a second one greys the whole page. */}
-					<motion.button
-						type="button"
-						aria-label={t("common.close")}
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						exit={{ opacity: 0 }}
-						transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-						onClick={close}
-						className="fixed inset-0 z-modal cursor-default bg-black/50"
-					/>
+					<OverlayScrim onClose={close} label={t("common.close")} />
 
-					<motion.div
-						role="dialog"
-						aria-modal="true"
-						aria-label={t("search.title")}
-						initial={{ opacity: 0, y: -10, scale: 0.985 }}
-						animate={{ opacity: 1, y: 0, scale: 1 }}
-						exit={{ opacity: 0, y: -10, scale: 0.985 }}
-						transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
-						className={clsx(
-							"fixed left-1/2 top-[7vh] z-modal flex w-[min(680px,94vw)] -translate-x-1/2 flex-col",
-							"max-h-[78vh] overflow-hidden rounded-2xl glass-frost",
-							"backdrop-blur-2xl backdrop-saturate-150",
-						)}
-					>
+
+					<OverlayPanel variant="center" label={t("search.title")}>
 						{/* ── query ── */}
 						<div className="flex h-14 shrink-0 items-center gap-3 px-4">
 							<MagnifyingGlass
@@ -478,7 +456,7 @@ export function SearchWindow() {
 								</Link>
 							)}
 						</div>
-					</motion.div>
+					</OverlayPanel>
 				</>
 			)}
 		</AnimatePresence>

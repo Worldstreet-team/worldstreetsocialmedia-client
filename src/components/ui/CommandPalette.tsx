@@ -1,6 +1,7 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
+import { OverlayPanel, OverlayScrim } from "@/components/ui/Overlay";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import type { LucideIcon } from "lucide-react";
 // 03-icons: everything here stays inside the standardized lucide set —
@@ -266,28 +267,18 @@ export function CommandPalette() {
       {open && (
         // dvh + a shallower top offset on phones: at 15vh of the *expanded*
         // viewport the panel started below the fold once the keyboard opened.
-        <div className="fixed inset-0 z-modal flex items-start justify-center px-4 pt-[8dvh] sm:pt-[15dvh]">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-            className="absolute inset-0 glass-veil-sheer backdrop-blur-md backdrop-saturate-150"
-            onClick={close}
-          />
+        <>
+          {/* The scrim used to be blurred too. Two backdrop-filters stacked
+              turned the page behind into soup — the panel owns the blur. */}
+          <OverlayScrim onClose={close} label="Close command menu" />
 
-          <motion.div
-            role="dialog"
-            aria-modal="true"
-            aria-label="Command menu"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-            className="relative w-full max-w-[560px] max-h-[84dvh] flex flex-col glass-dock backdrop-blur-xl backdrop-saturate-150 glass-ink rounded-2xl overflow-hidden"
+          <OverlayPanel
+            variant="center"
+            label="Command menu"
+            className="max-w-[560px]"
           >
-            <div className="flex shrink-0 items-center gap-3 px-4 h-13 border-b border-[#fafaf9]/8">
-              <Search className="w-4 h-4 shrink-0 text-[#fafaf9]/45" />
+            <div className="flex h-13 shrink-0 items-center gap-3 border-b border-hairline px-4">
+              <Search className="h-4 w-4 shrink-0 text-subtle" />
               <input
                 // biome-ignore lint/a11y/noAutofocus: focus belongs in the palette the moment it opens
                 autoFocus
@@ -300,9 +291,9 @@ export function CommandPalette() {
                 onKeyDown={onInputKeyDown}
                 placeholder="Search WorldStreet pages and actions…"
                 // text-base below sm so focusing it doesn't zoom iOS Safari.
-                className="flex-1 min-w-0 bg-transparent font-sans text-base sm:text-sm glass-ink placeholder:text-[#fafaf9]/35 outline-none"
+                className="min-w-0 flex-1 bg-transparent font-sans text-base text-primary outline-none placeholder:text-subtle sm:text-sm"
               />
-              <kbd className="hidden sm:flex items-center rounded-sm glass-chip px-1.5 h-5 text-[10px] font-sans">
+              <kbd className="hidden h-5 items-center rounded-sm bg-chip px-1.5 font-sans text-[10px] text-muted sm:flex">
                 esc
               </kbd>
             </div>
@@ -312,7 +303,7 @@ export function CommandPalette() {
               className="flex-1 min-h-0 max-h-[360px] overflow-y-auto overscroll-contain py-2"
             >
               {items.length === 0 && (
-                <p className="px-4 py-6 text-center font-sans text-sm glass-ink-dim">
+                <p className="px-4 py-6 text-center font-sans text-sm text-muted">
                   Nothing matches. Try a page name like Explore.
                 </p>
               )}
@@ -338,8 +329,8 @@ export function CommandPalette() {
                           onMouseEnter={() => setActiveIndex(index)}
                           className={`w-full flex items-center gap-3 px-4 h-12 sm:h-11 font-sans text-sm font-medium text-left transition-colors cursor-pointer ${
                             active
-                              ? "bg-[#fafaf9]/10 glass-ink"
-                              : "glass-ink-dim"
+                              ? "bg-chip text-primary"
+                              : "text-muted"
                           }`}
                         >
                           {item.icon ? (
@@ -366,13 +357,13 @@ export function CommandPalette() {
 
             {/* Keyboard legend is meaningless on a touch device and it's the
                 first thing to cost vertical room there. */}
-            <div className="hidden sm:flex shrink-0 items-center gap-4 px-4 h-9 border-t border-[#fafaf9]/8 font-sans text-[11px] glass-ink-faint">
+            <div className="hidden h-9 shrink-0 items-center gap-4 border-t border-hairline px-4 font-sans text-[11px] text-subtle sm:flex">
               <span>↑↓ navigate</span>
               <span>↵ open</span>
               <span>esc close</span>
             </div>
-          </motion.div>
-        </div>
+          </OverlayPanel>
+        </>
       )}
     </AnimatePresence>
   );
