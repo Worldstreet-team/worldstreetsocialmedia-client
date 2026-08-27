@@ -112,6 +112,9 @@ export interface PostProps {
     };
     content: string;
     timestamp: string;
+    /** Server-side translation resolved before the page was sent. Present
+     *  only when the post is not already in the reader's language. */
+    translation?: { text: string; source?: string | null; target?: string };
     /** Denormalized @mention metadata (verified ticks on mention chips). */
     mentions?: { username: string; isVerified?: boolean }[];
     /** Paid post. When locked, the gateway has already stripped content and
@@ -225,13 +228,21 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
     // views of a translated post cost one indexed read.
     const [autoTranslate, setAutoTranslate] = useAtom(autoTranslateAtom);
     const translations = useAtomValue(translationsAtom);
-    const [translation, setTranslation] = useState<string | null>(null);
+    // Seeded from the server's pre-translation: initial state, not an effect,
+    // so the very first render is already in the reader's language. Without
+    // this the post would paint in its original language and swap after a
+    // round trip — the flicker this whole path exists to avoid.
+    const [translation, setTranslation] = useState<string | null>(
+        postProp.translation?.text ?? null,
+    );
     const [translationSource, setTranslationSource] = useState<string | null>(
-        null,
+        postProp.translation?.source ?? null,
     );
     const [translating, setTranslating] = useState(false);
     const [showOriginal, setShowOriginal] = useState(false);
-    const [translateChecked, setTranslateChecked] = useState(false);
+    const [translateChecked, setTranslateChecked] = useState(
+        Boolean(postProp.translation?.text),
+    );
     const [translateOpen, setTranslateOpen] = useState(false);
     // A live card that keeps its LIVE badge after the broadcast ends is the
     // most visible kind of stale state. Listen and flip it.
