@@ -59,6 +59,28 @@ import { TranslatePanel } from "@/components/ui/TranslatePanel";
 import ReportSheet from "@/components/safety/ReportSheet";
 import { blockUserAction } from "@/lib/user.actions";
 
+/**
+ * Does this post have anything to show?
+ *
+ * A card whose body is blank still paints its avatar, name, timestamp and the
+ * whole action row, so it reads as a post someone made by accident — the
+ * timeline looks broken rather than empty. Rows the gateway sends with no
+ * substance are dropped by the LIST, not by the card: returning null from
+ * PostCard would leave the wrapper's hairline behind as a stray divider.
+ *
+ * Media counts as substance on its own — a photo post has no text by design —
+ * and so does a live block or a quoted post.
+ */
+export function hasRenderableBody(post: PostProps): boolean {
+    return Boolean(
+        post.content?.trim() ||
+            post.images?.length ||
+            post.videos?.length ||
+            post.live ||
+            post.repostOf,
+    );
+}
+
 export interface PostProps {
     id: string;
     author: {
@@ -863,7 +885,12 @@ export const PostCard = memo(({ post }: { post: PostProps }) => {
                             </span>
                         </Link>
                     )}
-                    <p className="text-primary whitespace-pre-wrap mb-1.5 font-normal leading-[1.55] text-[15px] font-sans tracking-tight pointer-events-none">
+                    {/* overflow-wrap:anywhere, not break-words: a caption like
+                        "Worldstreet#SouthSouthRegion#BeninRepublicZone#TogosubZone"
+                        is ONE unbreakable run, and break-word only breaks a word
+                        that alone cannot fit. Without this the run pinned the line
+                        and made the whole column scroll sideways. */}
+                    <p className="text-primary whitespace-pre-wrap [overflow-wrap:anywhere] mb-1.5 font-normal leading-[1.55] text-[15px] font-sans tracking-tight pointer-events-none">
                         {showingTranslation
                             ? formattedTranslation
                             : formattedContent}

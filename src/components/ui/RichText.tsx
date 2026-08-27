@@ -64,7 +64,7 @@ export function renderRichText(
           key={key}
           href={`/explore?q=${encodeURIComponent(cashtag.slice(1))}`}
           onClick={stop}
-          className="relative z-10 pointer-events-auto rounded-sm bg-convert/[0.13] px-1.5 py-px text-[13px] font-semibold tracking-tight text-gold hover:bg-convert/20 transition-colors"
+          className="relative z-10 pointer-events-auto rounded-sm bg-convert/[0.13] px-1.5 py-px text-[13px] font-semibold tracking-tight text-gold hover:bg-convert/20 transition-colors break-words"
         >
           {cashtag}
         </Link>,
@@ -75,7 +75,7 @@ export function renderRichText(
           key={key}
           href={`/explore?q=${encodeURIComponent(hashtag.slice(1))}`}
           onClick={stop}
-          className="text-gold hover:underline relative z-10 pointer-events-auto"
+          className="text-gold hover:underline relative z-10 pointer-events-auto break-words"
         >
           {hashtag}
         </Link>,

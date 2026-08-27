@@ -14,7 +14,11 @@ import { feedAtom } from "@/store/feed.atom";
 import { feedTabAtom } from "@/store/ui.atom";
 import { autoTranslateAtom, translationsAtom } from "@/store/translate.atom";
 import { prefetchTranslations } from "@/lib/translate.prefetch";
-import { PostCard, PostProps } from "@/components/feed/PostCard";
+import {
+	hasRenderableBody,
+	PostCard,
+	PostProps,
+} from "@/components/feed/PostCard";
 import { PostComposer } from "@/components/feed/PostComposer";
 import { getFeedAction } from "@/lib/feed.actions";
 import { getPostByIdAction } from "@/lib/post.actions";
@@ -241,11 +245,13 @@ export default function Feed() {
 		);
 	}, [autoTranslate, feedState.posts, setTranslations]);
 
-	// Both tabs are now server queries, so what came back IS what to show.
-	// This used to filter the For-You page by `followingIdsAtom`, which only
-	// fills as you press Follow in the current session — so Following was
-	// empty after every reload no matter how many people you followed.
-	const visiblePosts = feedState.posts;
+	// Both tabs are now server queries, so what came back IS what to show —
+	// minus anything with no body at all, which would paint a card of chrome
+	// around nothing. This used to filter the For-You page by
+	// `followingIdsAtom`, which only fills as you press Follow in the current
+	// session, so Following was empty after every reload however many people
+	// you followed.
+	const visiblePosts = feedState.posts.filter(hasRenderableBody);
 
 	useEffect(() => {
 		// Disable browser's automatic scroll restoration to handle it manually

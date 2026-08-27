@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { useAtom, useAtomValue } from "jotai";
 import { Grid3x3, Heart, MessageCircle, Plus, Search, Video } from "lucide-react";
 
-import { PostCard, type PostProps } from "@/components/feed/PostCard";
+import {
+	hasRenderableBody,
+	PostCard,
+	type PostProps,
+} from "@/components/feed/PostCard";
 import { PostSkeleton } from "@/components/feed/PostSkeleton";
 import { ProfileSkeleton } from "@/components/skeletons/ProfileSkeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -281,9 +285,13 @@ export default function Profile({ username }: { username?: string }) {
 
 	// Street and Media split one media fetch: video posts vs everything else.
 	const visiblePosts = useMemo(() => {
-		if (activeTab === "street") return feedPosts.filter((p) => p.videos?.length);
-		if (activeTab === "media") return feedPosts.filter((p) => !p.videos?.length);
-		return feedPosts;
+		// Drop bodyless rows first, so the empty state below counts what will
+		// actually render — otherwise a tab holding nothing but blank posts
+		// says "no posts yet" underneath a stack of empty cards.
+		const real = feedPosts.filter(hasRenderableBody);
+		if (activeTab === "street") return real.filter((p) => p.videos?.length);
+		if (activeTab === "media") return real.filter((p) => !p.videos?.length);
+		return real;
 	}, [feedPosts, activeTab]);
 
 	const handleFollowToggle = useCallback(async () => {

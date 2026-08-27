@@ -74,6 +74,10 @@ interface CommentRow {
 const fmt = (n: number) =>
 	n < 1000 ? String(n) : `${(n / 1000).toFixed(1).replace(/\.0$/, "")}K`;
 
+/** How often the live tab re-checks for new broadcasts when realtime is
+ *  quiet. Long enough to be invisible, short enough that nobody waits. */
+const LIVE_POLL_MS = 20_000;
+
 function VerticalSurface() {
 	const t = useT();
 	const { toast } = useToast();
@@ -155,7 +159,13 @@ function VerticalSurface() {
 		[],
 	);
 
-	const loadLive = useCallback(async () => {
+	/**
+	 * `quiet` is the background pass: it merges rather than replaces and never
+	 * touches the loading flag, so a stream that starts while you are watching
+	 * simply appears further down the feed. A plain replace would rebuild the
+	 * list under the viewer and restart whatever is playing.
+	 */
+	const loadLive = useCallback(async (quiet = false) => {
 		if (fetchingRef.current) return;
 		fetchingRef.current = true;
 		try {
@@ -197,19 +207,76 @@ function VerticalSurface() {
 					];
 				}
 			}
-			setSlides(mapped);
+			if (quiet) {
+				setSlides((prev) => {
+					// Nothing to preserve on the first pass.
+					if (prev.length === 0) return mapped;
+					const known = new Set(prev.map((s) => s.key));
+					const fresh = mapped.filter((s) => !known.has(s.key));
+					// Append only. Slides already on screen are left exactly
+					// where they are — a stream that has since ended flips to
+					// its ended state on its own inside LiveSlidePlayer, so
+					// pulling it out of the list would only move the ground
+					// under whoever is mid-scroll.
+					return fresh.length ? [...prev, ...fresh] : prev;
+				});
+			} else {
+				setSlides(mapped);
+			}
 			setHasMore(false);
 		} finally {
 			fetchingRef.current = false;
-			setLoading(false);
+			if (!quiet) setLoading(false);
 		}
 	}, []);
 
 	// The live tab is a presence list: rebuild it whenever someone starts or
 	// stops, so it never shows a stream that is already over.
 	useLiveEvents(() => {
-		if (tab === "live") void loadLive();
+		if (tab === "live") void loadLive(true);
 	});
+
+	/**
+	 * Background discovery.
+	 *
+	 * Realtime (`useLiveEvents`) is the fast path, but it is not a guarantee:
+	 * the Ably token round-trip can fail, a socket can drop, and someone can go
+	 * live during either. This poll is the floor under that — it runs only on
+	 * the live tab, pauses while the document is hidden (a backgrounded tab
+	 * should not keep polling), and merges quietly so the viewer never sees it
+	 * happen. It also fires once on becoming visible again, which is when the
+	 * list is most likely to be stale.
+	 */
+	useEffect(() => {
+		if (tab !== "live" || demo) return;
+
+		let timer: ReturnType<typeof setInterval> | null = null;
+		const start = () => {
+			if (timer) return;
+			timer = setInterval(() => void loadLive(true), LIVE_POLL_MS);
+		};
+		const stop = () => {
+			if (!timer) return;
+			clearInterval(timer);
+			timer = null;
+		};
+
+		const onVisibility = () => {
+			if (document.hidden) {
+				stop();
+			} else {
+				void loadLive(true);
+				start();
+			}
+		};
+
+		if (!document.hidden) start();
+		document.addEventListener("visibilitychange", onVisibility);
+		return () => {
+			stop();
+			document.removeEventListener("visibilitychange", onVisibility);
+		};
+	}, [tab, demo, loadLive]);
 
 	useEffect(() => {
 		setCursor(null);
@@ -776,88 +843,112 @@ function VerticalSurface() {
 				)}
 			</AnimatePresence>
 
-			{/* ── comment drawer for video posts ── */}
+			{/* ── comments: an anchored popover on desktop, a sheet on mobile ── */}
 			<AnimatePresence>
 				{commentsFor && (
 					<>
+						{/* Click-catcher. Dimmed on mobile where the sheet owns the
+						    screen; invisible on desktop, because a popover is not a
+						    modal and dimming the video you are commenting on is
+						    exactly backwards. */}
 						<motion.button
 							type="button"
-							aria-label="Close"
+							aria-label={t("common.close")}
 							initial={{ opacity: 0 }}
 							animate={{ opacity: 1 }}
 							exit={{ opacity: 0 }}
 							transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
 							onClick={() => setCommentsFor(null)}
-							className="fixed inset-0 z-modal bg-black/40 cursor-default"
+							className="fixed inset-0 z-modal cursor-default bg-black/45 sm:bg-transparent"
 						/>
 						<motion.aside
-							initial={{ x: "100%" }}
-							animate={{ x: 0 }}
-							exit={{ x: "100%" }}
-							transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
-							className="fixed right-0 top-0 bottom-0 z-modal w-[400px] max-w-[94vw] glass-panel backdrop-blur-2xl backdrop-saturate-150 !rounded-none flex flex-col"
+							initial={{ opacity: 0, y: 16, scale: 0.98 }}
+							animate={{ opacity: 1, y: 0, scale: 1 }}
+							exit={{ opacity: 0, y: 16, scale: 0.98 }}
+							transition={{ duration: 0.26, ease: [0.2, 0, 0, 1] }}
+							/* Grows from the bottom-right, where the comment button is,
+							   so the panel reads as coming out of the control. */
+							style={{ transformOrigin: "bottom right" }}
+							className={clsx(
+								"fixed z-modal flex flex-col overflow-hidden glass-panel backdrop-blur-2xl backdrop-saturate-150",
+								// mobile: bottom sheet
+								"inset-x-0 bottom-0 max-h-[74vh] rounded-t-2xl",
+								// desktop: floating popover, not a full-height drawer
+								"sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-[380px] sm:max-h-[min(600px,72vh)] sm:rounded-2xl",
+							)}
 						>
-							<div className="flex items-center gap-2 px-4 h-14 border-b border-white/8 shrink-0">
-								<h2 className="font-sans text-[15px] font-semibold glass-ink flex-1">
+							{/* Grab handle, mobile only. */}
+							<span
+								aria-hidden
+								className="mx-auto mt-2 h-1 w-9 shrink-0 rounded-pill bg-white/25 sm:hidden"
+							/>
+
+							<div className="flex h-12 shrink-0 items-center gap-2 px-4">
+								<h2 className="flex-1 font-sans text-[14px] font-semibold glass-ink">
 									{t("vertical.comments")}
-									<span className="glass-ink-faint font-normal ml-1.5 tabular-nums">
+									<span className="ml-1.5 font-normal tabular-nums glass-ink-faint">
 										{fmt(commentsFor.replies)}
 									</span>
 								</h2>
 								<button
 									type="button"
 									onClick={() => setCommentsFor(null)}
-									aria-label="Close"
-									className="flex h-9 w-9 items-center justify-center rounded-pill glass-chip cursor-pointer"
+									aria-label={t("common.close")}
+									/* A tint, not another blur — nesting backdrop-filter
+									   inside a blurred panel blurs the panel's own fill. */
+									className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-pill bg-white/10 glass-ink transition-colors hover:bg-white/[0.18]"
 								>
-									<X size={15} />
+									<X size={14} weight="bold" />
 								</button>
 							</div>
 
-							<div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 flex flex-col gap-4">
+							<div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto px-4 pb-2">
 								{commentsLoading ? (
 									[1, 2, 3].map((i) => (
-										<div key={i} className="flex gap-3">
-											<div className="w-8 h-8 rounded-full bg-white/10 animate-pulse shrink-0" />
+										<div key={i} className="flex gap-2.5">
+											<div className="h-8 w-8 shrink-0 animate-pulse rounded-pill bg-white/10" />
 											<div className="flex-1 space-y-2 py-0.5">
-												<div className="h-3 rounded bg-white/10 animate-pulse w-24" />
-												<div className="h-3 rounded bg-white/10 animate-pulse w-3/4" />
+												<div className="h-3 w-24 animate-pulse rounded bg-white/10" />
+												<div className="h-3 w-3/4 animate-pulse rounded bg-white/10" />
 											</div>
 										</div>
 									))
 								) : comments.length === 0 ? (
-									<p className="m-auto font-sans text-[13px] glass-ink-faint">
-										{t("vertical.noComments")}
-									</p>
+									<div className="m-auto flex flex-col items-center gap-1.5 py-8 text-center">
+										<span className="flex h-11 w-11 items-center justify-center rounded-pill bg-white/[0.08]">
+											<ChatCircle size={19} className="glass-ink-faint" />
+										</span>
+										<p className="font-sans text-[13px] glass-ink-dim">
+											{t("vertical.noComments")}
+										</p>
+									</div>
 								) : (
 									comments.map((c) => (
-										<div key={c.id} className="flex gap-3">
+										<div key={c.id} className="flex gap-2.5">
 											<Link
 												href={`/profile/${c.username}`}
-												className="relative w-8 h-8 rounded-pill overflow-hidden shrink-0 bg-white/10"
+												className="relative h-8 w-8 shrink-0 overflow-hidden rounded-pill bg-white/10"
 											>
-												<Image
-													src={c.avatar}
-													alt=""
-													fill
-													className="object-cover"
-												/>
+												<Image src={c.avatar} alt="" fill className="object-cover" />
 											</Link>
-											<div className="min-w-0 flex-1">
+											{/* The comment sits in its own tinted bubble so a
+											    wall of replies has rhythm instead of running
+											    together as one block of text. */}
+											<div className="min-w-0 flex-1 rounded-xl rounded-tl-[4px] bg-white/[0.07] px-3 py-2">
 												<span className="flex items-baseline gap-2">
 													<Link
 														href={`/profile/${c.username}`}
-														className="font-sans text-[13px] font-semibold glass-ink truncate hover:underline"
+														className="truncate font-sans text-[12.5px] font-semibold glass-ink hover:underline"
 													>
 														@{c.username}
 													</Link>
 													{c.timestamp && (
-														<span className="font-sans text-[11px] glass-ink-faint shrink-0">
+														<span className="shrink-0 font-sans text-[11px] glass-ink-faint">
 															{c.timestamp}
 														</span>
 													)}
 												</span>
-												<p className="font-sans text-[13.5px] glass-ink-dim leading-snug break-words">
+												<p className="break-words font-sans text-[13.5px] leading-snug glass-ink-dim">
 													{c.content}
 												</p>
 											</div>
@@ -866,26 +957,31 @@ function VerticalSurface() {
 								)}
 							</div>
 
-							<div className="flex items-center gap-2 p-3 border-t border-white/8 shrink-0">
-								<input
-									value={draft}
-									onChange={(e) => setDraft(e.target.value)}
-									onKeyDown={(e) => {
-										if (e.key === "Enter") void sendComment();
-									}}
-									placeholder={t("vertical.addComment")}
-									maxLength={280}
-									className="flex-1 min-w-0 h-10 rounded-pill glass-input px-4 font-sans text-[13.5px] outline-none"
-								/>
-								<button
-									type="button"
-									onClick={() => void sendComment()}
-									disabled={!draft.trim() || sending}
-									aria-label={t("chat.send")}
-									className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill glass-cta cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-								>
-									<PaperPlaneTilt size={16} weight="fill" />
-								</button>
+							{/* Composer: one field with the send control inside it, so the
+							    row reads as a single object rather than a box and a
+							    button that happen to be adjacent. */}
+							<div className="shrink-0 p-3 pb-safe sm:pb-3">
+								<div className="relative flex items-center">
+									<input
+										value={draft}
+										onChange={(e) => setDraft(e.target.value)}
+										onKeyDown={(e) => {
+											if (e.key === "Enter") void sendComment();
+										}}
+										placeholder={t("vertical.addComment")}
+										maxLength={280}
+										className="h-11 w-full rounded-pill bg-white/[0.09] pl-4 pr-12 font-sans text-[13.5px] glass-ink outline-none transition-colors placeholder:text-white/40 focus:bg-white/[0.14]"
+									/>
+									<button
+										type="button"
+										onClick={() => void sendComment()}
+										disabled={!draft.trim() || sending}
+										aria-label={t("chat.send")}
+										className="absolute right-1.5 flex h-8 w-8 cursor-pointer items-center justify-center rounded-pill glass-cta transition-opacity disabled:cursor-not-allowed disabled:opacity-35"
+									>
+										<PaperPlaneTilt size={14} weight="fill" />
+									</button>
+								</div>
 							</div>
 						</motion.aside>
 					</>
