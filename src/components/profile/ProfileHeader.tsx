@@ -276,10 +276,15 @@ export function ProfileHeader({
                 : "bg-primary text-page hover:bg-muted",
             )}
           >
+            {/* "Following", not "Joined": you follow a person, you join a
+                community — this was borrowing the community string. And its
+                own key, not the stats-row one: that noun reads as
+                "Abonnements"/"Subscriptions" in French, which is a list
+                heading, not a button state. */}
             {isFollowing
               ? hoveringFollow
                 ? t("profile.unfollow")
-                : t("community.joined")
+                : t("profile.followingState")
               : t("profile.follow")}
           </button>
         )}

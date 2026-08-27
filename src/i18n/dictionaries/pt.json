@@ -695,5 +695,9 @@
   "search.searching": "Pesquisando…",
   "chat.walletUnavailable": "Carteira indisponível",
   "chat.walletUnreachable": "Não foi possível contactar a carteira",
-  "chat.walletSignedOut": "Inicia sessão para presentear"
+  "chat.walletSignedOut": "Inicia sessão para presentear",
+  "profile.followingState": "Seguindo",
+  "post.forSale.preview": "Ver como comprador",
+  "post.forSale.exitPreview": "Sair da pré-visualização",
+  "post.translated": "Traduzido"
 }

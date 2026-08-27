@@ -16,6 +16,8 @@ import { UserBadges } from "@/components/ui/UserBadges";
 // 03-icons: Phosphor is reserved for the Social post-action row + overflow menu.
 import {
     BookmarkSimple,
+    Eye,
+    EyeSlash,
     LockSimple,
     ChartLineUp,
     ChatCircle,
@@ -93,7 +95,14 @@ export function hasRenderableBody(post: PostProps): boolean {
             post.images?.length ||
             post.videos?.length ||
             post.live ||
-            post.repostOf,
+            post.repostOf ||
+            // A locked paid post is empty ON PURPOSE — the gateway strips its
+            // body for anyone who has not bought it, which is exactly the
+            // shape this guard was written to discard. Without this line the
+            // paywall card was filtered out of every feed and profile, so a
+            // seller's post simply did not exist for anyone else: the wall
+            // worked perfectly and nobody could find the door.
+            post.sale?.locked,
     );
 }
 
@@ -540,7 +549,13 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
     // Paid post plumbing. `locked` drives the glass layer; the handler swaps
     // in the gateway's revealed copy on success. Errors speak in toasts, and
     // an empty wallet gets pointed at the wallet rather than a dead retry.
-    const saleLocked = Boolean(post.sale?.locked);
+    // A seller always sees their own post unlocked — correct, but it leaves
+    // them no way to confirm the paywall is actually up. This flips their view
+    // to the buyer's, which is the difference between trusting a label and
+    // seeing the wall.
+    const [previewAsBuyer, setPreviewAsBuyer] = useState(false);
+    const isSeller = Boolean(post.sale?.isSeller);
+    const saleLocked = Boolean(post.sale?.locked) || (isSeller && previewAsBuyer);
     const salePriceLabel = post.sale
         ? `$${(post.sale.priceUsdMinor / 100).toFixed(2).replace(/\.00$/, "")}`
         : "";
@@ -1026,9 +1041,10 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                     </span>
                                     <button
                                         type="button"
-                                        disabled={unlocking}
+                                        disabled={unlocking || isSeller}
                                         onClick={(e) => {
                                             e.stopPropagation();
+                                            if (isSeller) return;
                                             void handleUnlock();
                                         }}
                                         className="glass-cta mt-1 h-10 cursor-pointer rounded-pill px-5 font-sans text-[13px] font-semibold transition-colors disabled:opacity-60"
@@ -1046,13 +1062,32 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                     )}
 
                     {/* Seller's own view: the listing state, quietly. */}
-                    {post.sale && !saleLocked && post.sale.isSeller && (
-                        <p className="mb-1 font-sans text-[11.5px] font-semibold text-gold">
-                            {t("post.forSale.selling").replace("{price}", salePriceLabel)}
-                            {post.sale.salesCount
-                                ? ` · ${t("post.forSale.sold").replace("{count}", String(post.sale.salesCount))}`
-                                : ""}
-                        </p>
+                    {post.sale && isSeller && (
+                        <div className="mb-1 flex items-center gap-2">
+                            <span className="font-sans text-[11.5px] font-semibold text-gold">
+                                {t("post.forSale.selling").replace("{price}", salePriceLabel)}
+                                {post.sale.salesCount
+                                    ? ` · ${t("post.forSale.sold").replace("{count}", String(post.sale.salesCount))}`
+                                    : ""}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPreviewAsBuyer((v) => !v);
+                                }}
+                                className="relative z-10 pointer-events-auto flex h-7 items-center gap-1 rounded-pill bg-raised px-2 font-sans text-[11px] font-medium text-muted transition-colors hover:text-primary cursor-pointer"
+                            >
+                                {previewAsBuyer ? (
+                                    <EyeSlash size={12} weight="regular" />
+                                ) : (
+                                    <Eye size={12} weight="regular" />
+                                )}
+                                {previewAsBuyer
+                                    ? t("post.forSale.exitPreview")
+                                    : t("post.forSale.preview")}
+                            </button>
+                        </div>
                     )}
 
                     {/* overflow-wrap:anywhere, not break-words: a caption like
@@ -1093,10 +1128,14 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                             t("post.showTranslation")
                                         ) : (
                                             <>
-                                                {t("post.translatedFrom")}
+                                                {/* "Translated from Spanish"
+                                                    when the source is known;
+                                                    plain "Translated" when it
+                                                    is not — never a dangling
+                                                    "Translated from ·". */}
                                                 {translatedFromLabel
-                                                    ? ` ${translatedFromLabel}`
-                                                    : ""}
+                                                    ? `${t("post.translatedFrom")} ${translatedFromLabel}`
+                                                    : t("post.translated")}
                                                 {" · "}
                                                 {t("post.showOriginal")}
                                             </>
