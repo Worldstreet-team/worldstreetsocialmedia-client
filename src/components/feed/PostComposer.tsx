@@ -267,6 +267,32 @@ export const PostComposer = ({
 	// Picker follows the app theme instead of hardcoding dark.
 	const { resolvedTheme } = useTheme();
 
+	/**
+	 * Topics this post will be filed under.
+	 *
+	 * Derived, not stored: the suggestion list is recomputed from the debounced
+	 * draft and `removedTopics` is the only state, so a topic the author
+	 * dismissed can never re-appear as they keep typing. The ids ride along on
+	 * the post and are what the feed ranker matches against each reader's
+	 * interests — without them the interest boost has nothing to match, which
+	 * is exactly the state this composer was in.
+	 */
+	const [debouncedDraft, setDebouncedDraft] = useState("");
+	const [removedTopics, setRemovedTopics] = useState<string[]>([]);
+	useEffect(() => {
+		const timer = setTimeout(() => setDebouncedDraft(content), 250);
+		return () => clearTimeout(timer);
+	}, [content]);
+	const suggestedTopics = useMemo(
+		() =>
+			debouncedDraft.trim().length < 3
+				? []
+				: suggestCategories(debouncedDraft, { limit: 3 }).filter(
+						(c) => !removedTopics.includes(c.id),
+					),
+		[debouncedDraft, removedTopics],
+	);
+
 	// Detect links in content
 	useEffect(() => {
 		if (mediaItems.length > 0) {
@@ -556,6 +582,16 @@ export const PostComposer = ({
 				formData.append("linkPreview", JSON.stringify(linkPreview));
 			}
 
+			// Taxonomy ids for the ranker. The gateway sanitizes and caps these
+			// server-side; this is the signal that lets the feed match a post
+			// to a reader's interests at all.
+			if (suggestedTopics.length > 0) {
+				formData.append(
+					"categories",
+					JSON.stringify(suggestedTopics.map((c) => c.id)),
+				);
+			}
+
 			// Tagged users, resolved to ids client-side so the gateway does not
 			// have to re-parse @handles out of the body to know who to notify
 			// (in-app + email). Username rides along because the gateway's
@@ -576,6 +612,8 @@ export const PostComposer = ({
 
 			if (result.success) {
 				setContent("");
+				setDebouncedDraft("");
+				setRemovedTopics([]);
 				editorRef.current?.setText("");
 				// Revoke AFTER React commits the cleared state — a synchronous
 				// revoke leaves the still-mounted preview tiles pointing at
@@ -799,6 +837,36 @@ export const PostComposer = ({
 									onChange={setAudience}
 								/>
 							)}
+						</div>
+					)}
+
+					{/* Topics, derived from the draft. Removable — dismissing one
+					    records it in removedTopics so re-typing can't bring it
+					    back. These ids are what the ranker matches against each
+					    reader's interests. */}
+					{suggestedTopics.length > 0 && (
+						<div className="mt-2 flex flex-wrap items-center gap-1.5">
+							<span className="font-sans text-[12px] text-subtle">
+								Topics
+							</span>
+							{suggestedTopics.map((topic) => (
+								<span
+									key={topic.id}
+									className="inline-flex h-7 items-center gap-1 rounded-pill bg-raised/60 pl-2.5 pr-1 font-sans text-[12px] text-muted"
+								>
+									{topic.label}
+									<button
+										type="button"
+										onClick={() =>
+											setRemovedTopics((prev) => [...prev, topic.id])
+										}
+										aria-label={`Remove ${topic.label}`}
+										className="flex h-5 w-5 items-center justify-center rounded-pill text-subtle transition-colors hover:bg-raised hover:text-primary"
+									>
+										<X size={11} />
+									</button>
+								</span>
+							))}
 						</div>
 					)}
 
