@@ -23,6 +23,13 @@ import { DEFAULT_AVATAR } from "@/const";
  * Fill-mode by default — the parent supplies size, rounding and position.
  * Pass `width`/`height` together for a fixed-size avatar that carries its own
  * box instead.
+ *
+ * 3. **Lazy inside an overlay never loads.** next/image defaults to
+ *    `loading="lazy"`, and a lazy image mounted inside a freshly-portalled
+ *    modal or popover can have its intersection check never fire — the element
+ *    sits there with `currentSrc === ""` and `naturalWidth` 0 permanently. The
+ *    follows modal showed seven grey circles for this reason. Overlays pass
+ *    `eager`; the feed keeps lazy, where it is worth real bandwidth.
  */
 export function SafeAvatar({
 	src,
@@ -31,6 +38,7 @@ export function SafeAvatar({
 	width,
 	height,
 	alt = "",
+	eager = false,
 }: {
 	src?: string | null;
 	className?: string;
@@ -38,6 +46,9 @@ export function SafeAvatar({
 	width?: number;
 	height?: number;
 	alt?: string;
+	/** Load immediately. For avatars inside modals, popovers and other
+	 *  portalled overlays, where lazy loading can never trigger. */
+	eager?: boolean;
 }) {
 	const [failed, setFailed] = useState(false);
 	const resolved = failed || !src ? DEFAULT_AVATAR : src;
@@ -50,6 +61,7 @@ export function SafeAvatar({
 				width={width}
 				height={height}
 				className={className}
+				loading={eager ? "eager" : undefined}
 				onError={() => setFailed(true)}
 			/>
 		);
@@ -62,6 +74,7 @@ export function SafeAvatar({
 			fill
 			sizes={sizes}
 			className={className}
+			loading={eager ? "eager" : undefined}
 			onError={() => setFailed(true)}
 		/>
 	);

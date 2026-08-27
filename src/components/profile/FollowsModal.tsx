@@ -192,7 +192,7 @@ export default function FollowsModal({
 													href={`/profile/${user.username}`}
 													className="relative h-10 w-10 shrink-0 overflow-hidden rounded-pill bg-raised"
 												>
-													<SafeAvatar src={user.avatar} />
+													<SafeAvatar eager src={user.avatar} />
 												</Link>
 												<div className="flex flex-col flex-1 min-w-0">
 													<Link

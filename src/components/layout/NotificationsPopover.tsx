@@ -196,7 +196,7 @@ export function NotificationsPopover() {
 											)}
 										>
 											<span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-pill bg-raised">
-												<SafeAvatar src={lead?.avatar} />
+												<SafeAvatar src={lead?.avatar} eager />
 											</span>
 											<span className="min-w-0 flex-1">
 												<span className="flex items-center gap-1">
