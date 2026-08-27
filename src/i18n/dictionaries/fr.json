@@ -698,5 +698,6 @@
   "chat.walletSignedOut": "Connectez-vous pour offrir",
   "profile.followingState": "Abonné",
   "post.forSale.preview": "Vue acheteur",
-  "post.forSale.exitPreview": "Quitter l'aperçu"
+  "post.forSale.exitPreview": "Quitter l'aperçu",
+  "post.translated": "Traduit"
 }

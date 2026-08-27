@@ -737,5 +737,6 @@
   "chat.walletSignedOut": "Sign in to gift",
   "profile.followingState": "Following",
   "post.forSale.preview": "Preview as buyer",
-  "post.forSale.exitPreview": "Exit preview"
+  "post.forSale.exitPreview": "Exit preview",
+  "post.translated": "Translated"
 }
