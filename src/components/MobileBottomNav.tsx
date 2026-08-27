@@ -15,6 +15,7 @@ import {
 } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { BadgedIcon } from "@/components/ui/Badge";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { useAtomValue } from "jotai";
 import { unreadMessagesCountAtom } from "@/store/messageCache";
 import { userAtom } from "@/store/user.atom";
@@ -38,7 +39,31 @@ const CENTER_SLOT = 2;
 const HomeIcon = navIcon(House);
 const SearchIcon = navIcon(MagnifyingGlass);
 const MessageIcon = navIcon(ChatCircleDots);
-const ProfileIcon = navIcon(UserCircle);
+
+
+/**
+ * The profile tab shows YOUR FACE, not a generic person glyph. It is the one
+ * tab that is about a specific human, and an avatar says whose account this is
+ * at a glance — which a UserCircle never can. Falls back to the glyph only
+ * while the user atom is still hydrating.
+ */
+function makeProfileIcon(avatar?: string) {
+	const ProfileIcon = ({ isActive }: { isActive?: boolean }) =>
+		avatar ? (
+			<span
+				className={clsx(
+					"relative block h-[22px] w-[22px] overflow-hidden rounded-pill",
+					isActive ? "ring-2 ring-gold" : "ring-1 ring-hairline",
+				)}
+			>
+				<SafeAvatar src={avatar} className="object-cover" />
+			</span>
+		) : (
+			<UserCircle size={22} weight={isActive ? "fill" : "duotone"} aria-hidden />
+		);
+	ProfileIcon.displayName = "ProfileIcon";
+	return ProfileIcon;
+}
 
 export const MobileBottomNav = () => {
 	const t = useT();
@@ -46,6 +71,7 @@ export const MobileBottomNav = () => {
 	const [ecosystemOpen, setEcosystemOpen] = useState(false);
 	const unreadMessages = useAtomValue(unreadMessagesCountAtom);
 	const user = useAtomValue(userAtom);
+	const ProfileIcon = makeProfileIcon(user?.avatar);
 
 	const navItems = [
 		{

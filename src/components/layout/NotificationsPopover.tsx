@@ -1,18 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { Bell } from "@phosphor-icons/react";
-import { useAtom } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
 import clsx from "clsx";
 
 import { Badge } from "@/components/ui/Badge";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";
-import { getNotificationsAction } from "@/lib/notification.actions";
 import { unreadNotificationsCountAtom } from "@/store/ui.atom";
-import { senderName, type AppNotification } from "@/components/notifications/types";
+import {
+	notificationsAtom,
+	notificationsLoadedAtom,
+} from "@/store/notifications.atom";
+import { groupNotifications } from "@/components/notifications/notification-groups";
+import { senderName } from "@/components/notifications/types";
 import { formatTimeAgo } from "@/lib/utils";
 import { useT } from "@/i18n/client";
 
@@ -33,24 +38,44 @@ const PREVIEW_COUNT = 6;
 export function NotificationsPopover() {
 	const t = useT();
 	const [open, setOpen] = useState(false);
-	const [items, setItems] = useState<AppNotification[]>([]);
-	const [loading, setLoading] = useState(false);
-	const [loaded, setLoaded] = useState(false);
+	// Read, never fetched. NotificationCountSync already pulls this list once
+	// per app load and the realtime channel keeps it current, so opening the
+	// panel costs nothing and shows content immediately.
+	const all = useAtomValue(notificationsAtom);
+	const loaded = useAtomValue(notificationsLoadedAtom);
 	const [unread, setUnread] = useAtom(unreadNotificationsCountAtom);
-	const rootRef = useRef<HTMLDivElement>(null);
 
-	const load = useCallback(async () => {
-		setLoading(true);
-		try {
-			const res = await getNotificationsAction();
-			const list = res.success
-				? ((res.data?.notifications ?? res.data ?? []) as AppNotification[])
-				: [];
-			setItems(Array.isArray(list) ? list.slice(0, PREVIEW_COUNT) : []);
-			setLoaded(true);
-		} finally {
-			setLoading(false);
-		}
+	/**
+	 * GROUPED, the same way the full page groups them: "Ada and 4 others liked
+	 * your post" rather than five rows that each say "liked your post". Without
+	 * this the panel is six near-identical lines and the one thing that is not
+	 * a like scrolls out of sight.
+	 */
+	const groups = groupNotifications(all).slice(0, PREVIEW_COUNT);
+	const rootRef = useRef<HTMLDivElement>(null);
+	/** The portalled panel is NOT inside rootRef, so "outside" has to mean
+	 *  outside BOTH — without this, clicking a notification closed the panel
+	 *  before its own link could fire. */
+	const panelRef = useRef<HTMLDivElement>(null);
+	/**
+	 * Where to draw the panel. It is PORTALLED to the body rather than nested
+	 * under the bell, because the header is `z-sticky` and therefore its own
+	 * stacking context — a child at `z-dropdown` still cannot rise above a
+	 * sibling of the HEADER at the same z. The feed's sticky tab bar was
+	 * drawing straight through the middle of the panel. A portal escapes the
+	 * context; the anchor maths is the price.
+	 */
+	const [anchor, setAnchor] = useState<{ top: number; right: number } | null>(
+		null,
+	);
+	const [mounted, setMounted] = useState(false);
+	useEffect(() => setMounted(true), []);
+
+	const placePanel = useCallback(() => {
+		const el = rootRef.current;
+		if (!el) return;
+		const r = el.getBoundingClientRect();
+		setAnchor({ top: r.bottom + 4, right: window.innerWidth - r.right });
 	}, []);
 
 	// Outside click and Escape both close. Bound only while open, so the
@@ -58,16 +83,21 @@ export function NotificationsPopover() {
 	useEffect(() => {
 		if (!open) return;
 		const onDown = (e: MouseEvent) => {
-			if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+			const target = e.target as Node;
+			if (rootRef.current?.contains(target)) return;
+			if (panelRef.current?.contains(target)) return;
+			setOpen(false);
 		};
 		const onKey = (e: KeyboardEvent) => {
 			if (e.key === "Escape") setOpen(false);
 		};
 		document.addEventListener("mousedown", onDown);
 		document.addEventListener("keydown", onKey);
+		window.addEventListener("resize", placePanel);
 		return () => {
 			document.removeEventListener("mousedown", onDown);
 			document.removeEventListener("keydown", onKey);
+			window.removeEventListener("resize", placePanel);
 		};
 	}, [open]);
 
@@ -75,7 +105,7 @@ export function NotificationsPopover() {
 		const next = !open;
 		setOpen(next);
 		if (next) {
-			void load();
+			placePanel();
 			// Opening is seeing. The count clears here rather than waiting for
 			// the full page, which is what "already read that" should mean.
 			setUnread(0);
@@ -100,10 +130,13 @@ export function NotificationsPopover() {
 				)}
 			</button>
 
-			<AnimatePresence>
-				{open && (
-					<motion.div
-						role="dialog"
+			{mounted &&
+				createPortal(
+					<AnimatePresence>
+						{open && anchor && (
+							<motion.div
+								ref={panelRef}
+								role="dialog"
 						aria-label={t("nav.notifications")}
 						initial={{ opacity: 0, y: -6 }}
 						animate={{ opacity: 1, y: 0 }}
@@ -112,8 +145,9 @@ export function NotificationsPopover() {
 						// Anchored to the RIGHT edge and width-capped against the
 						// viewport: anchoring left would push a 320px panel off a
 						// small screen, since the bell sits near the right edge.
-						className="absolute right-0 top-full z-dropdown mt-1 w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-hairline bg-surface shadow-nav"
-					>
+						style={{ top: anchor.top, right: anchor.right }}
+								className="fixed z-dropdown w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl bg-surface/85 shadow-nav backdrop-blur-xl backdrop-saturate-150"
+							>
 						<div className="flex items-center justify-between px-3 pb-1.5 pt-3">
 							<span className="font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">
 								{t("nav.notifications")}
@@ -127,10 +161,15 @@ export function NotificationsPopover() {
 							</Link>
 						</div>
 
-						<div className="max-h-[min(340px,50dvh)] overflow-y-auto overscroll-contain">
-							{loading && !loaded ? (
+						{/* Capped in ROWS, not viewport height: a dvh cap lands
+						    wherever it lands and slices whichever row is there,
+						    which is what the panel was doing — two half-rows
+						    visible at once. Each row is 56px, so five rows end on
+						    a boundary and the sixth peeking is a scroll hint. */}
+						<div className="max-h-[280px] overflow-y-auto overscroll-contain">
+							{!loaded ? (
 								[0, 1, 2].map((i) => (
-									<div key={i} className="flex items-center gap-2.5 px-3 py-2.5">
+									<div key={i} className="flex h-14 items-center gap-2.5 px-3">
 										<div className="skeleton h-8 w-8 shrink-0 rounded-pill" />
 										<div className="min-w-0 flex-1">
 											<div className="skeleton mb-1.5 h-3 w-2/3 rounded-sm" />
@@ -138,49 +177,65 @@ export function NotificationsPopover() {
 										</div>
 									</div>
 								))
-							) : items.length === 0 ? (
+							) : groups.length === 0 ? (
 								<p className="px-3 py-6 text-center font-sans text-[13px] text-subtle">
 									{t("notif.empty.all.title")}
 								</p>
 							) : (
-								items.map((n) => (
-									<Link
-										key={n._id}
-										href="/notifications"
-										onClick={() => setOpen(false)}
-										className={clsx(
-											"flex items-start gap-2.5 px-3 py-2.5 transition-colors hover:bg-raised",
-											!n.read && "bg-brand/[0.06]",
-										)}
-									>
-										<span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-pill bg-raised">
-											<SafeAvatar src={n.sender?.avatar} />
-										</span>
-										<span className="min-w-0 flex-1">
-											<span className="flex items-center gap-1">
-												<span className="truncate font-sans text-[13.5px] font-semibold text-primary">
-													{senderName(n.sender)}
+								groups.map((g) => {
+									const lead = g.senders[0];
+									const others = g.senders.length - 1;
+									return (
+										<Link
+											key={g.key}
+											href="/notifications"
+											onClick={() => setOpen(false)}
+											className={clsx(
+												"flex h-14 items-center gap-2.5 px-3 transition-colors hover:bg-raised",
+												!g.read && "bg-brand/[0.06]",
+											)}
+										>
+											<span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-pill bg-raised">
+												<SafeAvatar src={lead?.avatar} />
+											</span>
+											<span className="min-w-0 flex-1">
+												<span className="flex items-center gap-1">
+													<span className="truncate font-sans text-[13.5px] font-semibold text-primary">
+														{senderName(lead)}
+													</span>
+													<UserBadges
+														isVerified={lead?.isVerified}
+														badges={lead?.badges}
+														size={12}
+													/>
+													{others > 0 && (
+														<span className="shrink-0 font-sans text-[12.5px] text-muted">
+															{others === 1
+																? t("notif.others.one")
+																: t("notif.others.many").replace(
+																		"{n}",
+																		String(others),
+																	)}
+														</span>
+													)}
 												</span>
-												<UserBadges
-													isVerified={n.sender?.isVerified}
-													badges={n.sender?.badges}
-													size={12}
-												/>
+												<span className="block truncate font-sans text-[12.5px] text-muted">
+													{t(`notif.verb.${g.type}`)}
+												</span>
 											</span>
-											<span className="block truncate font-sans text-[12.5px] text-muted">
-												{t(`notif.verb.${n.type}`)}
+											<span className="shrink-0 font-sans text-[11px] tabular-nums text-subtle">
+												{formatTimeAgo(g.createdAt)}
 											</span>
-										</span>
-										<span className="shrink-0 font-sans text-[11px] tabular-nums text-subtle">
-											{formatTimeAgo(n.createdAt)}
-										</span>
-									</Link>
-								))
+										</Link>
+									);
+								})
 							)}
-						</div>
-					</motion.div>
+							</div>
+						</motion.div>
+						)}
+					</AnimatePresence>,
+					document.body,
 				)}
-			</AnimatePresence>
 		</div>
 	);
 }

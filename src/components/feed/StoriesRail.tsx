@@ -11,6 +11,7 @@ import { useT } from "@/i18n/client";
 import { useLiveEvents } from "@/hooks/useLiveNow";
 import { useFeedEvents } from "@/hooks/useUserEvents";
 import { getStoriesAction } from "@/lib/stories.actions";
+import { userAtom } from "@/store/user.atom";
 import { StoryViewer, type RailEntry } from "@/components/feed/StoryViewer";
 import StoryCreateSheet, {
 	type StoryKind,
@@ -204,7 +205,15 @@ export function StoriesRail() {
 		if (event === "story" && isVisible()) void load();
 	});
 
+	const me = useAtomValue(userAtom);
 	const self = rail.find((r) => r.isSelf);
+	/**
+	 * Your face on the ring even with NO story posted. `self` only exists once
+	 * the rail has a story from you, so before your first one this fell through
+	 * to an empty grey circle — the one ring that is definitely you was the
+	 * only one with nobody in it.
+	 */
+	const selfAvatar = self?.author.avatar ?? me?.avatar;
 	const selfCover =
 		(self?.stories.find((s) => !s.seen) ?? self?.stories[0])?.media;
 	const others = rail.filter((r) => !r.isSelf);
@@ -273,7 +282,7 @@ export function StoriesRail() {
 						) : (
 							// No story yet: your own avatar. Dimmed only on the card,
 							// where an avatar-as-cover would otherwise read as a story.
-							<SafeAvatar src={self?.author.avatar} className="object-cover sm:opacity-40" alt={t("story.yours")} />
+							<SafeAvatar src={selfAvatar} className="object-cover sm:opacity-40" alt={t("story.yours")} />
 						)}
 
 						{/* Card-only: veils so the white ink below holds on any cover. */}
@@ -282,7 +291,7 @@ export function StoriesRail() {
 
 						{/* Card-only: avatar top left. */}
 						<span className="absolute left-2 top-2 hidden h-9 w-9 overflow-hidden rounded-pill ring-2 ring-white/90 sm:block">
-							<SafeAvatar src={self?.author.avatar} className="object-cover" />
+							<SafeAvatar src={selfAvatar} className="object-cover" />
 						</span>
 
 						{/* Card-only: name over the cover. */}

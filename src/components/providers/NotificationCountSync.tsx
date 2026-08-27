@@ -4,6 +4,10 @@ import { useEffect } from "react";
 import { useSetAtom } from "jotai";
 import { usePathname } from "next/navigation";
 import { unreadNotificationsCountAtom } from "@/store/ui.atom";
+import {
+  notificationsAtom,
+  notificationsLoadedAtom,
+} from "@/store/notifications.atom";
 import { getNotificationsAction } from "@/lib/notification.actions";
 import { useUserEvents } from "@/hooks/useUserEvents";
 
@@ -15,21 +19,38 @@ import { useUserEvents } from "@/hooks/useUserEvents";
  */
 export function NotificationCountSync() {
   const setCount = useSetAtom(unreadNotificationsCountAtom);
+  // The list itself is KEPT now, not discarded. This request already happened
+  // on every load; holding its result is what lets the header popover open
+  // with content instead of skeletons and a second identical fetch.
+  const setNotifications = useSetAtom(notificationsAtom);
+  const setLoaded = useSetAtom(notificationsLoadedAtom);
   const pathname = usePathname();
 
   useEffect(() => {
     let cancelled = false;
     getNotificationsAction().then((res) => {
-      if (!cancelled && res.success && Array.isArray(res.data)) {
+      if (cancelled) return;
+      if (res.success && Array.isArray(res.data)) {
+        setNotifications(res.data);
         setCount(res.data.filter((n: { read: boolean }) => !n.read).length);
       }
+      setLoaded(true);
     });
     return () => {
       cancelled = true;
     };
-  }, [setCount]);
+  }, [setCount, setNotifications, setLoaded]);
+
+  const refresh = () => {
+    void getNotificationsAction().then((res) => {
+      if (res.success && Array.isArray(res.data)) setNotifications(res.data);
+    });
+  };
 
   useUserEvents(() => {
+    // Something arrived, so the cached list is now behind. Refetch HERE, on the
+    // event, rather than polling or re-fetching every time the panel opens.
+    refresh();
     // On the notifications page the list owns the arrival: it shows a "new
     // activity" pill and zeroes the badge. Incrementing here too would leave
     // the badge contradicting the list the person is looking at.
