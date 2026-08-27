@@ -58,6 +58,26 @@ export default function ExploreClient({
 
   const [query, setQuery] = useState(initialQuery);
   const [tab, setTab] = useState<SearchTab>("top");
+  /**
+   * Adopt a NEW `initialQuery` when one actually arrives.
+   *
+   * `useState(initialQuery)` reads the prop once, on mount. Clicking a trend
+   * navigates to /explore?q=… while this component is already mounted, so
+   * React reuses the instance: the server re-renders with the new `q` and the
+   * state ignores it. First trend worked (arriving from another page mounts
+   * fresh), every trend after it changed the URL and nothing else.
+   *
+   * Compared against a ref of what we last adopted, NOT against `query` —
+   * typing deliberately drives the URL through history.replaceState, so
+   * `query` and `initialQuery` diverge constantly while someone types, and
+   * comparing them would wipe the box mid-word.
+   */
+  const adoptedQueryRef = useRef(initialQuery);
+  useEffect(() => {
+    if (initialQuery === adoptedQueryRef.current) return;
+    adoptedQueryRef.current = initialQuery;
+    setQuery(initialQuery);
+  }, [initialQuery]);
   const [userResults, setUserResults] = useState<UserResult[]>(initialResults);
   const [usersLoading, setUsersLoading] = useState(false);
   const [postResults, setPostResults] = useState<PostProps[]>([]);
