@@ -6,7 +6,6 @@ import Link from "next/link";
 import { AnimatePresence } from "framer-motion";
 import { Bell } from "@phosphor-icons/react";
 import { useAtom, useAtomValue } from "jotai";
-import clsx from "clsx";
 
 import { Badge } from "@/components/ui/Badge";
 import {
@@ -15,16 +14,18 @@ import {
 	OverlayScrim,
 	useOverlayDismiss,
 } from "@/components/ui/Overlay";
-import { SafeAvatar } from "@/components/ui/SafeAvatar";
-import { UserBadges } from "@/components/ui/UserBadges";
 import { unreadNotificationsCountAtom } from "@/store/ui.atom";
 import {
 	notificationsAtom,
 	notificationsLoadedAtom,
 } from "@/store/notifications.atom";
 import { groupNotifications } from "@/components/notifications/notification-groups";
-import { senderName } from "@/components/notifications/types";
-import { formatTimeAgo } from "@/lib/utils";
+import { NotificationRow } from "@/components/notifications/NotificationRow";
+import type { NotificationGroup } from "@/components/notifications/types";
+import { markNotificationsReadAction } from "@/lib/notification.actions";
+import { followUserAction } from "@/lib/user.actions";
+import { followingIdsAtom } from "@/store/ui.atom";
+import { useToast } from "@/components/ui/Toast/ToastContext";
 import { useT } from "@/i18n/client";
 
 /** How many fit before the panel stops being a glance and becomes a page. */
@@ -53,6 +54,31 @@ export function NotificationsPopover() {
 	// Read, never fetched. NotificationCountSync already pulls this list once
 	// per app load and the realtime channel keeps it current, so opening the
 	// panel costs nothing and shows content immediately.
+	const [followingIds, setFollowingIds] = useAtom(followingIdsAtom);
+	const { toast } = useToast();
+
+	// Same handlers as the page, so a row behaves identically wherever it is
+	// rendered — opening marks the group read, follow-back is optimistic.
+	const openGroup = useCallback((group: NotificationGroup) => {
+		void markNotificationsReadAction(group.ids);
+		setOpen(false);
+	}, []);
+
+	const followBack = useCallback(
+		async (profileId: string) => {
+			if (!profileId) return;
+			setFollowingIds((prev) =>
+				prev.includes(profileId) ? prev : [...prev, profileId],
+			);
+			const res = await followUserAction(profileId);
+			if (!res.success) {
+				setFollowingIds((prev) => prev.filter((x) => x !== profileId));
+				toast(res.message || "Could not follow", { type: "error" });
+			}
+		},
+		[setFollowingIds, toast],
+	);
+
 	const all = useAtomValue(notificationsAtom);
 	const loaded = useAtomValue(notificationsLoadedAtom);
 	const [unread, setUnread] = useAtom(unreadNotificationsCountAtom);
@@ -161,53 +187,17 @@ export function NotificationsPopover() {
 											{t("notif.empty.all.title")}
 										</p>
 									) : (
-										groups.map((g) => {
-											const lead = g.senders[0];
-											const others = g.senders.length - 1;
-											return (
-												<Link
-													key={g.key}
-													href="/notifications"
-													onClick={() => setOpen(false)}
-													className={clsx(
-														"flex h-14 items-center gap-2.5 px-3 transition-colors hover:bg-raised",
-														!g.read && "bg-brand/[0.06]",
-													)}
-												>
-													<span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-pill bg-raised">
-														<SafeAvatar src={lead?.avatar} eager />
-													</span>
-													<span className="min-w-0 flex-1">
-														<span className="flex items-center gap-1">
-															<span className="truncate font-sans text-[13.5px] font-semibold text-primary">
-																{senderName(lead)}
-															</span>
-															<UserBadges
-																isVerified={lead?.isVerified}
-																badges={lead?.badges}
-																size={12}
-															/>
-															{others > 0 && (
-																<span className="shrink-0 font-sans text-[12.5px] text-muted">
-																	{others === 1
-																		? t("notif.others.one")
-																		: t("notif.others.many").replace(
-																				"{n}",
-																				String(others),
-																			)}
-																</span>
-															)}
-														</span>
-														<span className="block truncate font-sans text-[12.5px] text-muted">
-															{t(`notif.verb.${g.type}`)}
-														</span>
-													</span>
-													<span className="shrink-0 font-sans text-[11px] tabular-nums text-subtle">
-														{formatTimeAgo(g.createdAt)}
-													</span>
-												</Link>
-											);
-										})
+										groups.map((g, i) => (
+											<NotificationRow
+												key={g.key}
+												group={g}
+												unread={!g.read}
+												onOpen={openGroup}
+												onFollowBack={followBack}
+												followed={followingIds.includes(g.senders[0]?._id)}
+												delay={Math.min(i * 30, 180)}
+											/>
+										))
 									)}
 								</div>
 							</OverlayPanel>
