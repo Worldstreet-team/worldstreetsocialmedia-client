@@ -16,7 +16,17 @@ import type { PostProps } from "@/components/feed/PostCard";
 
 const VERSION = "ws-feed-cache-v1";
 const MAX_POSTS = 15;
-const MAX_AGE_MS = 24 * 60 * 60 * 1000;
+/**
+ * How stale a snapshot may be before it is ignored.
+ *
+ * This exists for "you reloaded, or came back to the tab" — not "you came back
+ * tomorrow". At 24h it painted YESTERDAY'S top posts every morning before the
+ * revalidate landed, which is exactly what seeing the same post over and over
+ * feels like. Ten minutes keeps the instant paint where it is honest (a reload
+ * moments later genuinely should show the same feed) and falls through to a
+ * fresh fetch beyond that.
+ */
+const MAX_AGE_MS = 10 * 60 * 1000;
 
 interface FeedSnapshot {
 	posts: PostProps[];
