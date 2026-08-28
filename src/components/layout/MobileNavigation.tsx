@@ -90,17 +90,33 @@ export function MobileNavigation() {
 			    search, which had NO touch entry point at all, and Go Live. */}
 			<header className="fixed top-0 left-0 right-0 pt-safe bg-page border-b border-hairline z-sticky md:hidden">
 				<div className="relative h-14 flex items-center justify-between px-2">
-					{/* 44x44 target around a 32px avatar the glyph stays small,
-					    the tappable box doesn't. */}
+					{/* 44x44 target, small glyph — the tappable box doesn't shrink
+					    to match the mark.
+
+					    Two bars, the lower one half-length. Hand-drawn rather
+					    than taken from the icon set: every stock "list" glyph is
+					    two or three FULL-width bars, and the asymmetry is the
+					    whole point of the mark. */}
 					<button
 						type="button"
 						onClick={() => setIsOpen(true)}
 						aria-label="Open navigation menu"
-						className="flex h-11 w-11 shrink-0 items-center justify-center rounded-pill active:bg-raised transition-colors"
+						className="flex h-11 w-11 shrink-0 items-center justify-center rounded-pill text-primary active:bg-raised transition-colors"
 					>
-						<span className="relative block w-8 h-8 rounded-full overflow-hidden border border-hairline">
-							<SafeAvatar src={user.avatar} className="object-cover" alt={user.username || "User"} />
-						</span>
+						<svg
+							width="20"
+							height="20"
+							viewBox="0 0 20 20"
+							fill="none"
+							aria-hidden="true"
+						>
+							<path
+								d="M3 7h14M3 13h7"
+								stroke="currentColor"
+								strokeWidth="2"
+								strokeLinecap="round"
+							/>
+						</svg>
 					</button>
 
 					{/* The animated lockup, centred: the W draws, floods gold, and

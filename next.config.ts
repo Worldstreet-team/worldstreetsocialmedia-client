@@ -14,6 +14,16 @@ const nextConfig: NextConfig = {
 				pathname: "**",
 			},
 			{
+				// Our own origin. Brand accounts point their avatar at a static
+				// asset here rather than at an uploaded R2 blob, and the URL is
+				// absolute — not relative — so the native clients resolve it too.
+				// Without this entry next/image REJECTS the host and the whole
+				// profile route falls into the error boundary.
+				protocol: "https",
+				hostname: "social.worldstreetgold.com",
+				pathname: "**",
+			},
+			{
 				protocol: "https",
 				hostname: "lh3.googleusercontent.com",
 				pathname: "**",
