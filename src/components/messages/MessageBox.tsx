@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import dynamic from "next/dynamic";
 
 import { useState, useEffect, useRef, useCallback,
@@ -41,7 +43,12 @@ import { format } from "date-fns";
 import { formatTimeAgo } from "@/lib/utils";
 import { useRealtime } from "../providers/RealtimeProvider";
 import MediaModal from "../ui/MediaModal";
-import { CurrencyDollarSimple, PencilSimple } from "@phosphor-icons/react";
+import {
+	ArrowBendUpLeft,
+	CurrencyDollarSimple,
+	PencilSimple,
+	X as XIcon,
+} from "@phosphor-icons/react";
 // Loaded on first open, not on page load: the editors are the heaviest
 // client code in the app and they render only when someone opens one. The
 // host renders them conditionally, so next/dynamic defers the chunk until
@@ -110,6 +117,31 @@ interface UserProfile {
 	avatar: string;
 }
 
+/** One line describing a quoted message, whatever kind it is. */
+function quotedPreview(r: {
+	content?: string;
+	type?: string;
+	durationSec?: number;
+}): string {
+	if (r.content?.trim()) return r.content.trim();
+	switch (r.type) {
+		case "image":
+			return "Photo";
+		case "video":
+			return "Video";
+		case "audio":
+			return r.durationSec
+				? `Voice note · ${Math.floor(r.durationSec / 60)}:${String(
+						Math.round(r.durationSec % 60),
+					).padStart(2, "0")}`
+				: "Voice note";
+		case "payment":
+			return "Payment";
+		default:
+			return "Message";
+	}
+}
+
 interface Message {
 	_id: string;
 	conversationId: string;
@@ -119,9 +151,23 @@ interface Message {
 	type: "text" | "image" | "video" | "audio" | "file" | "call" | "payment";
 	/** USD minor units, payment messages only. */
 	amountMinor?: number;
+	/** Voice-note length, so a quoted voice note can say how long it is. */
+	durationSec?: number;
 	mediaUrl?: string;
 	/** Present when this message is a reply to a story. */
 	storyRef?: { story: string; thumbnail: string; authorUsername: string };
+	/**
+	 * The message this one answers, populated one level deep by the gateway.
+	 * A reply to a reply quotes only its immediate parent, so nothing nests.
+	 */
+	replyTo?: {
+		_id: string;
+		content: string;
+		type: Message["type"];
+		mediaUrl?: string;
+		durationSec?: number;
+		sender?: { username?: string; firstName?: string; lastName?: string };
+	} | null;
 	createdAt: string;
 }
 
@@ -359,6 +405,37 @@ export const MessageBox = ({
 		? messageCache[activeConversation._id] || []
 		: [];
 	const [messageInput, setMessageInput] = useState("");
+	/** The message the composer is currently answering, if any. */
+	const [replyTarget, setReplyTarget] = useState<Message | null>(null);
+	/** Briefly highlighted after a jump, so the eye lands on the right bubble. */
+	const [flashedId, setFlashedId] = useState<string | null>(null);
+
+	/**
+	 * Scroll to a quoted message and flash it.
+	 *
+	 * Only works for messages already rendered — the thread loads whole, so in
+	 * practice that is all of them. A quote whose original is missing (deleted,
+	 * or not yet loaded) simply does nothing rather than jumping somewhere
+	 * arbitrary.
+	 */
+	// Escape backs out of a reply. Bound only while one is pending, so it never
+	// competes with the modals and sheets that also listen for Escape.
+	useEffect(() => {
+		if (!replyTarget) return;
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === "Escape") setReplyTarget(null);
+		};
+		window.addEventListener("keydown", onKey);
+		return () => window.removeEventListener("keydown", onKey);
+	}, [replyTarget]);
+
+	const jumpToMessage = (id: string) => {
+		const el = document.getElementById(`msg-${id}`);
+		if (!el) return;
+		el.scrollIntoView({ behavior: "smooth", block: "center" });
+		setFlashedId(id);
+		setTimeout(() => setFlashedId((cur) => (cur === id ? null : cur)), 1200);
+	};
 	const [searchQuery, setSearchQuery] = useState("");
 	const [isLoadingConversations, setIsLoadingConversations] = useState(
 		initialConversations.length === 0,
@@ -814,6 +891,9 @@ export const MessageBox = ({
 
 		const tempId = `temp-${Date.now()}`;
 		const content = messageInput;
+		// Captured before the optimistic clear, so a fast second send cannot
+		// attach this reply to the wrong message.
+		const currentReply = replyTarget;
 		chat.notifyStoppedTyping();
 		const currentFile = selectedFile;
 		const currentPreview = previewUrl;
@@ -839,6 +919,16 @@ export const MessageBox = ({
 			content: content,
 			type: optimisticType as any,
 			mediaUrl: currentPreview || undefined,
+			replyTo: currentReply
+				? {
+						_id: currentReply._id,
+						content: currentReply.content,
+						type: currentReply.type,
+						mediaUrl: currentReply.mediaUrl,
+						durationSec: currentReply.durationSec,
+						sender: currentReply.sender,
+					}
+				: null,
 			createdAt: new Date().toISOString(),
 		};
 
@@ -851,6 +941,7 @@ export const MessageBox = ({
 		}));
 		scrollToBottom();
 		setMessageInput("");
+		setReplyTarget(null);
 		clearSelectedFile();
 		setIsUploading(true);
 
@@ -890,6 +981,9 @@ export const MessageBox = ({
 					content,
 					type: currentFile ? finalType : "text",
 					mediaUrl: mediaUrl || undefined,
+					// The gateway drops this unless it names a message in THIS
+					// thread, so a stale id degrades to a plain message.
+					replyTo: currentReply?._id,
 				},
 				{ headers: { Authorization: `Bearer ${token}` } },
 			);
@@ -1075,6 +1169,13 @@ export const MessageBox = ({
 							>
 								<ArrowLeft className="w-5 h-5" />
 							</button>
+							{/* The face and the name open the profile. Tapping the
+							    person you are talking to and having nothing happen is
+							    the first thing anyone tries in a thread. */}
+							<Link
+								href={`/profile/${activeConversation.otherParticipant.username}`}
+								className="flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 transition-colors hover:bg-raised md:gap-3"
+							>
 							<span className="relative shrink-0">
 								<SafeAvatar
 									src={activeConversation.otherParticipant.avatar}
@@ -1118,6 +1219,7 @@ export const MessageBox = ({
 									</p>
 								)}
 							</div>
+							</Link>
 						</div>
 						<div className="flex shrink-0 text-muted">
 							<button
@@ -1271,10 +1373,14 @@ export const MessageBox = ({
 										</div>
 									)}
 								<div
+									id={`msg-${m._id}`}
 									className={clsx(
-										"flex flex-col",
+										"group/msg flex flex-col scroll-mt-24",
 										sameRunAsPrev ? "mt-0.5" : "mt-4",
 										isMe ? "items-end" : "items-start",
+										// Jump target: a brief wash so the eye lands on the
+										// right bubble instead of hunting the thread.
+										flashedId === m._id && "rounded-xl bg-brand/10",
 									)}
 								>
 									<div
@@ -1313,6 +1419,39 @@ export const MessageBox = ({
 													],
 										)}
 									>
+										{/* What this message is answering. Tapping it jumps
+										    to the original and flashes it, so a reply to
+										    something far up the thread stays findable. */}
+										{m.replyTo && (
+											<button
+												type="button"
+												onClick={() => jumpToMessage(m.replyTo!._id)}
+												className={clsx(
+													"mb-1.5 flex w-full cursor-pointer items-stretch gap-2 rounded-[7px] px-2 py-1.5 text-left transition-opacity hover:opacity-80",
+													// Tinted against the bubble it sits in, not
+													// against the page: on my own gold bubble a
+													// surface-coloured quote would be a hole.
+													isMe ? "bg-black/15" : "bg-black/20",
+												)}
+											>
+												<span
+													className={clsx(
+														"w-[2px] shrink-0 rounded-pill",
+														isMe ? "bg-brand-on/50" : "bg-brand",
+													)}
+												/>
+												<span className="flex min-w-0 flex-col">
+													<span className="truncate font-sans text-[11.5px] font-semibold opacity-80">
+														{m.replyTo.sender?.username
+															? `@${m.replyTo.sender.username}`
+															: "Message"}
+													</span>
+													<span className="truncate font-sans text-[12.5px] opacity-70">
+														{quotedPreview(m.replyTo)}
+													</span>
+												</span>
+											</button>
+										)}
 										{m.type === "image" && m.mediaUrl && (
 											<Attachment
 												src={m.mediaUrl}
@@ -1372,6 +1511,25 @@ export const MessageBox = ({
 											</p>
 										)}
 									</div>
+									{/* Reply. Appears on hover on a pointer device and is
+									    always present on touch, where there is no hover to
+									    reveal it — a control you cannot discover is not a
+									    control. Call logs render on their own branch above
+									    and never reach here, so they need no guard. */}
+									{!m._id.startsWith("temp-") && (
+										<button
+											type="button"
+											onClick={() => setReplyTarget(m)}
+											aria-label="Reply to this message"
+											className={clsx(
+												"mt-0.5 flex h-8 items-center gap-1 rounded-pill px-2 font-sans text-[11.5px] font-medium text-subtle transition hover:bg-raised hover:text-muted",
+												"opacity-100 md:opacity-0 md:group-hover/msg:opacity-100 md:focus-visible:opacity-100",
+											)}
+										>
+											<ArrowBendUpLeft size={13} weight="bold" />
+											Reply
+										</button>
+									)}
 									{/* One stamp per run, on its last line. A time under
 									    every bubble is noise the eye has to step over. */}
 									{endsRun && (
@@ -1400,6 +1558,33 @@ export const MessageBox = ({
 					{/* shrink-0 + pb-safe: the composer is the flex row that must never
 					    be squeezed out, and it sits on the iOS home indicator. */}
 					<div className="shrink-0 p-3 sm:p-4 border-t border-hairline bg-page pb-safe">
+						{/* What you are answering, above the input, with a way out.
+						    Sending clears it; so does Escape, because a reply you
+						    cannot cancel is a trap. */}
+						{replyTarget && (
+							<div className="mb-2 flex items-stretch gap-2 rounded-[7px] bg-sunken px-2.5 py-2">
+								<span className="w-[2px] shrink-0 rounded-pill bg-brand" />
+								<span className="flex min-w-0 flex-1 flex-col">
+									<span className="truncate font-sans text-[11.5px] font-semibold text-muted">
+										Replying to{" "}
+										{replyTarget.sender?._id === myProfileId
+											? "yourself"
+											: `@${replyTarget.sender?.username ?? ""}`}
+									</span>
+									<span className="truncate font-sans text-[12.5px] text-subtle">
+										{quotedPreview(replyTarget)}
+									</span>
+								</span>
+								<button
+									type="button"
+									onClick={() => setReplyTarget(null)}
+									aria-label="Cancel reply"
+									className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-pill text-subtle transition-colors hover:bg-raised hover:text-primary"
+								>
+									<XIcon size={14} weight="bold" />
+								</button>
+							</div>
+						)}
 						{/* Preview Area */}
 						{selectedFile && previewUrl && (
 							<div className="mb-2 relative inline-block">

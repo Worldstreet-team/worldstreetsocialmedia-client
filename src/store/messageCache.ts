@@ -20,7 +20,21 @@ export interface Message {
 	type: "text" | "image" | "video" | "audio" | "file" | "call" | "payment";
 	/** USD minor units, payment messages only. */
 	amountMinor?: number;
+	/** Voice-note length, so a quoted voice note can say how long it is. */
+	durationSec?: number;
 	mediaUrl?: string;
+	/**
+	 * The message this one answers, populated one level deep by the gateway.
+	 * A reply to a reply quotes only its immediate parent, so nothing nests.
+	 */
+	replyTo?: {
+		_id: string;
+		content: string;
+		type: Message["type"];
+		mediaUrl?: string;
+		durationSec?: number;
+		sender?: { username?: string; firstName?: string; lastName?: string };
+	} | null;
 	createdAt: string;
 }
 
