@@ -5,7 +5,6 @@ import { createPortal } from "react-dom";
 import { useAtom, useAtomValue } from "jotai";
 import { storyRailAtom, storyStudioSignalAtom } from "@/store/ui.atom";
 import clsx from "clsx";
-import { usePathname } from "next/navigation";
 import { Plus } from "lucide-react";
 
 import { useT } from "@/i18n/client";
@@ -139,12 +138,15 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 	// story tiles pushed their actual content below the fold. The rail
 	// decides for itself so every mount point gets it right — the (main)
 	// layout is a server component and cannot read the route.
-	const railPath = usePathname();
 	// Not the same thing as `collapsed` below — that one is the scroll-away
-	// behaviour on the feed. This is "wear the small shape on this route".
-	// Only Spaces collapses. Messages had it too for a day and the owner
-	// vetoed it — the inbox pane is wide enough to wear the real tiles.
-	const circlesOnly = compact ?? railPath?.startsWith("/voice");
+	// behaviour on the feed. This is "wear the small circle shape".
+	//
+	// No route opts into it any more. Spaces and Messages both did for a day
+	// and the owner vetoed both: the rail should read the SAME everywhere,
+	// and the tall cover cards are that shape. Kept as a prop so a future
+	// cramped surface can ask for it explicitly, rather than a route being
+	// silently special-cased from in here.
+	const circlesOnly = compact ?? false;
 	const t = useT();
 	const [rail, setRail] = useAtom(storyRailAtom) as [
 		RailEntry[],
