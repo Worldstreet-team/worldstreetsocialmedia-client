@@ -31,13 +31,16 @@ export type NotificationType =
   | "reply"
   | "mention"
   | "live"
-  | "sale";
+  | "sale"
+  | "gift";
 
 export interface AppNotification {
   _id: string;
   type: NotificationType;
   sender: NotificationSender;
   post?: { _id: string; content?: string; images?: string[] };
+  /** USD minor units — money notifications only. */
+  amountMinor?: number;
   read: boolean;
   createdAt: string;
 }
@@ -48,6 +51,8 @@ export interface NotificationGroup {
   /** Newest first, deduped by userId. */
   senders: NotificationSender[];
   post?: AppNotification["post"];
+  /** Carried up from the newest member, for the money types. */
+  amountMinor?: number;
   /** Every member id, so tapping a group marks all of it read. */
   ids: string[];
   createdAt: string;

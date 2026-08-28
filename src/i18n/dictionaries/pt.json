@@ -728,5 +728,6 @@
   "voice.noMatches": "Nenhum espaço corresponde.",
   "notif.verb.sale": "comprou a sua publicação",
   "notif.empty.sales.title": "Ainda não há vendas",
-  "search.placeholder.people": "Pesquisar por nome ou utilizador"
+  "search.placeholder.people": "Pesquisar por nome ou utilizador",
+  "notif.verb.gift": "enviou-lhe um presente"
 }

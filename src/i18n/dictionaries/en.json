@@ -767,5 +767,6 @@
   "voice.noMatches": "No spaces match that.",
   "notif.verb.sale": "bought your post",
   "notif.empty.sales.title": "No sales yet",
-  "search.placeholder.people": "Search by name or handle"
+  "search.placeholder.people": "Search by name or handle",
+  "notif.verb.gift": "sent you a gift"
 }

@@ -9,6 +9,7 @@ import {
   Broadcast,
   ChatCircle,
   Coins,
+  Gift,
   Heart,
   Quotes,
   Repeat,
@@ -43,7 +44,12 @@ const CHIP: Record<NotificationType, { classes: string; glyph: Icon; weight: "fi
   live: { classes: "bg-danger/15 text-danger", glyph: Broadcast, weight: "fill" },
   // Money reads as money: the one chip in the success tone with a coin.
   sale: { classes: "bg-success/15 text-success", glyph: Coins, weight: "fill" },
+  gift: { classes: "bg-success/15 text-success", glyph: Gift, weight: "fill" },
 };
+
+/** Minor units to a readable figure. Money is never "1.2". */
+const money = (minor?: number) =>
+  minor == null ? null : `$${(minor / 100).toFixed(2)}`;
 
 /** Two lines of an excerpt, without relying on a line-clamp plugin. */
 const CLAMP_2 =
@@ -167,6 +173,14 @@ export function NotificationRow({
             </span>
           )}
           <span className="text-muted"> {t(`notif.verb.${type}`)}</span>
+          {/* The figure IS the notification for a money event; a sale that
+              does not say how much is a riddle. */}
+          {(type === "sale" || type === "gift") && money(group.amountMinor) && (
+            <span className="font-semibold text-success">
+              {" "}
+              {money(group.amountMinor)}
+            </span>
+          )}
           <span className="text-subtle"> · {formatTimeAgo(group.createdAt)}</span>
         </span>
 

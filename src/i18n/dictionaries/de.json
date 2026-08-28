@@ -728,5 +728,6 @@
   "voice.noMatches": "Kein Space passt dazu.",
   "notif.verb.sale": "hat deinen Beitrag gekauft",
   "notif.empty.sales.title": "Noch keine Verkäufe",
-  "search.placeholder.people": "Nach Name oder Handle suchen"
+  "search.placeholder.people": "Nach Name oder Handle suchen",
+  "notif.verb.gift": "hat dir ein Geschenk gesendet"
 }
