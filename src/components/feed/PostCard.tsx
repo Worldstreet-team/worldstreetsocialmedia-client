@@ -813,23 +813,6 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                     fallback={post.timestamp}
                                 />
                             </span>
-                            {/* Impressions, phones only: the action row has no
-                                room for them down here, and a metric reads fine
-                                beside the timestamp — both are about when and
-                                how far the post travelled. */}
-                            {(post.stats.views ?? 0) > 0 && (
-                                <span
-                                    className="flex shrink-0 items-center gap-1 text-subtle sm:hidden"
-                                    title={t("post.views")}
-                                    aria-label={t("post.views")}
-                                >
-                                    <span className="text-xs">•</span>
-                                    <Pulse size={13} weight="bold" />
-                                    <span className="font-sans text-[12.5px] tabular-nums">
-                                        {formatCount(post.stats.views ?? 0)}
-                                    </span>
-                                </span>
-                            )}
                             {post.promoted && (
                                 <span className="shrink-0 rounded-[4px] bg-raised px-1.5 py-px text-[10px] font-semibold tracking-wide text-subtle font-sans">
                                     {t("promo.label")}
@@ -1325,9 +1308,14 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                             onClick={(e) => e.stopPropagation()}
                         >
                             {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                            {/* aspect-video is only the placeholder that holds
+                                the space until the metadata lands; fitToMedia
+                                then swaps in the clip's real shape, so portrait
+                                video stops sitting between two black bars. */}
                             <VideoPlayer
                                 src={post.videos[0]}
-                                className="w-full max-h-[560px] aspect-video"
+                                fitToMedia
+                                className="w-full max-h-[600px] aspect-video"
                             />
                         </div>
                     )}
@@ -1342,7 +1330,10 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                             <img
                                 src={post.images[0]}
                                 alt="Post attachment"
-                                className="block h-auto w-auto max-w-full max-h-[500px] object-cover rounded-xl border border-hairline cursor-zoom-in hover:opacity-95 transition-opacity relative z-10"
+                                // object-contain, not cover: the box is already
+                                // sized by the image itself, so cover only ever
+                                // risked shaving an edge off a tall photo.
+                                className="block h-auto w-auto max-w-full max-h-[600px] object-contain rounded-xl border border-hairline cursor-zoom-in hover:opacity-95 transition-opacity relative z-10"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     e.preventDefault();
@@ -1392,17 +1383,17 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                         fill. 03-icons: this row is the ONE place Phosphor is
                         used instead of Lucide, matching mobile. */}
                     <div className="flex items-center justify-between text-muted mt-1.5 -mb-1.5 pointer-events-auto">
-                        <div className="flex flex-1 max-w-[425px] items-center justify-between -ml-2 sm:mr-6">
+                        <div className="flex min-w-0 flex-1 max-w-[425px] items-center justify-between -ml-2 sm:mr-6">
                         <Link
                             href={`/post/${post.id}`}
                             onClick={(e) => e.stopPropagation()}
                             aria-label="Reply"
                             className="flex items-center gap-0.5 hover:text-primary transition-colors group cursor-pointer"
                         >
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill group-hover:bg-primary/10 transition group-active:scale-[0.98]">
+                            <span className="flex h-10 w-[34px] shrink-0 items-center justify-center rounded-pill sm:w-10 group-hover:bg-primary/10 transition group-active:scale-[0.98]">
                                 <ChatCircle size={18} weight="regular" />
                             </span>
-                            <span className="text-[13px] font-sans tabular-nums">
+                            <span className="text-[12px] font-sans tabular-nums sm:text-[13px]">
                                 {formatCount(shownReplies)}
                             </span>
                         </Link>
@@ -1419,13 +1410,13 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                     reposted ? "text-success" : "hover:text-success",
                                 )}
                             >
-                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill group-hover:bg-success/10 transition group-active:scale-[0.98]">
+                                <span className="flex h-10 w-[34px] shrink-0 items-center justify-center rounded-pill sm:w-10 group-hover:bg-success/10 transition group-active:scale-[0.98]">
                                     <Repeat
                                         size={18}
                                         weight={reposted ? "fill" : "regular"}
                                     />
                                 </span>
-                                <span className="text-[13px] font-sans tabular-nums">
+                                <span className="text-[12px] font-sans tabular-nums sm:text-[13px]">
                                     {formatCount(
                                         (shownReposts ?? 0) + repostDelta,
                                     )}
@@ -1490,7 +1481,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                 isLiked ? "text-danger" : "hover:text-danger",
                             )}
                         >
-                            <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-pill group-hover:bg-danger/10 transition group-active:scale-[0.98]">
+                            <span className="relative flex h-10 w-[34px] shrink-0 items-center justify-center rounded-pill sm:w-10 group-hover:bg-danger/10 transition group-active:scale-[0.98]">
                                 {/* One-shot danger wash on like opacity-only,
                                     fades out over motion-slow and stays gone. */}
                                 <AnimatePresence>
@@ -1525,7 +1516,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                     />
                                 </motion.span>
                             </span>
-                            <span className="relative overflow-hidden text-[13px] font-sans tabular-nums">
+                            <span className="relative overflow-hidden text-[12px] font-sans tabular-nums sm:text-[13px]">
                                 <AnimatePresence mode="wait" initial={false}>
                                     {/* Count rolls 8px in the direction of change. */}
                                     <motion.span
@@ -1560,7 +1551,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                 isBookmarked ? "text-gold" : "hover:text-gold",
                             )}
                         >
-                            <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-pill group-hover:bg-gold/10 transition group-active:scale-[0.98]">
+                            <span className="relative flex h-10 w-[34px] shrink-0 items-center justify-center rounded-pill sm:w-10 group-hover:bg-gold/10 transition group-active:scale-[0.98]">
                                 <AnimatePresence>
                                     {isBookmarked && (
                                         <motion.span
@@ -1612,7 +1603,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                     : "hover:text-primary",
                             )}
                         >
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill group-hover:bg-primary/10 transition group-active:scale-[0.98]">
+                            <span className="flex h-10 w-[34px] shrink-0 items-center justify-center rounded-pill sm:w-10 group-hover:bg-primary/10 transition group-active:scale-[0.98]">
                                 <AnimatePresence mode="wait" initial={false}>
                                     {linkCopied ? (
                                         <motion.span
@@ -1658,16 +1649,24 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                         </div>
 
                         <div
-                            // Still hidden below sm, and measured rather than
-                            // assumed: at a 343px card this row needs 301px and
-                            // has 253. Views appear in the meta line up top on
-                            // phones instead — visible, and nothing overflows.
-                            className="hidden cursor-default select-none items-center gap-1.5 pr-0.5 text-subtle sm:flex"
+                            // Impressions belong at the end of this row, beside
+                            // the other numbers, the way every timeline shows
+                            // them — they used to be exiled to the meta line on
+                            // phones because five 40px buttons plus their counts
+                            // overflowed a 343px card.
+                            //
+                            // This is a metric, not a button: nothing taps it,
+                            // so it carries no hit target and costs only its own
+                            // glyph and digits. The room came from the buttons
+                            // narrowing to 36px below sm (they keep the full
+                            // 40px height, and 40px at every width from sm up).
+                            className="flex shrink-0 cursor-default select-none items-center gap-1 pr-0.5 text-subtle sm:gap-1.5"
                             title={t("post.views")}
                             aria-label={t("post.views")}
                         >
-                            <Pulse size={16} weight="bold" />
-                            <span className="text-[12.5px] font-medium font-sans tabular-nums">
+                            <Pulse size={15} weight="bold" className="sm:hidden" />
+                            <Pulse size={16} weight="bold" className="hidden sm:block" />
+                            <span className="text-[12px] font-medium font-sans tabular-nums sm:text-[12.5px]">
                                 {formatCount(post.stats.views ?? 0) || "0"}
                             </span>
                         </div>

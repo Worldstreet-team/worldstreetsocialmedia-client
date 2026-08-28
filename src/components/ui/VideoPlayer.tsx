@@ -47,11 +47,14 @@ export function VideoPlayer({
 	poster,
 	className,
 	rounded = true,
+	fitToMedia = false,
 }: {
 	src: string;
 	poster?: string;
 	className?: string;
 	rounded?: boolean;
+	/** Size the frame to the clip's own aspect ratio (feed/timeline usage). */
+	fitToMedia?: boolean;
 }) {
 	const wrapRef = useRef<HTMLDivElement | null>(null);
 	const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -60,6 +63,19 @@ export function VideoPlayer({
 	const [playing, setPlaying] = useState(false);
 	const [muted, setMuted] = useState(false);
 	const [duration, setDuration] = useState(0);
+	/**
+	 * The clip's own aspect ratio, once the metadata says what it is.
+	 *
+	 * Without it the frame was a fixed 16/9 box and every portrait video sat
+	 * in the middle of it between two black bars. Portrait is most of what
+	 * gets posted from a phone, so most videos in the feed were letterboxed.
+	 *
+	 * Clamped rather than trusted outright: a 9:16 clip at full height would
+	 * push the rest of the post off screen, so very tall media stops at 4:5
+	 * and keeps its bars — the same bound X uses. Everything between 4:5 and
+	 * 16:9, which is nearly everything, now fits its frame exactly.
+	 */
+	const [ratio, setRatio] = useState<number | null>(null);
 	const [current, setCurrent] = useState(0);
 	const [buffered, setBuffered] = useState(0);
 	const [chromeOn, setChromeOn] = useState(true);
@@ -262,6 +278,15 @@ export function VideoPlayer({
 				rounded && !full && "rounded-xl",
 				className,
 			)}
+			style={
+				// Full screen owns its own box; otherwise adopt the clip's shape
+				// once known. Until then the caller's placeholder ratio holds the
+				// space, so the frame resizes at most once and the feed below it
+				// never jumps twice.
+				fitToMedia && !full && ratio
+					? { aspectRatio: String(ratio) }
+					: undefined
+			}
 			onPointerMove={bump}
 			onPointerLeave={() => !pinned && setChromeOn(false)}
 			onKeyDown={(e) => {
@@ -315,7 +340,14 @@ export function VideoPlayer({
 				onPause={() => setPlaying(false)}
 				onWaiting={() => setWaiting(true)}
 				onPlaying={() => setWaiting(false)}
-				onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
+				onLoadedMetadata={(e) => {
+					const el = e.currentTarget;
+					setDuration(el.duration || 0);
+					if (el.videoWidth > 0 && el.videoHeight > 0) {
+						const r = el.videoWidth / el.videoHeight;
+						setRatio(Math.min(16 / 9, Math.max(4 / 5, r)));
+					}
+				}}
 				onTimeUpdate={(e) => {
 					if (scrubbing) return;
 					setCurrent(e.currentTarget.currentTime);

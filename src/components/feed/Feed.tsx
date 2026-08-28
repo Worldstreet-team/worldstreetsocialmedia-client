@@ -55,6 +55,17 @@ interface PendingPost {
 
 /** Posts per page. Matches the gateway's own default. */
 const FEED_PAGE_SIZE = 10;
+/**
+ * How many posts to keep loaded ahead of the reader, and the ceiling on pages
+ * fetched in one burst.
+ *
+ * 60 is roughly six screens of feed. The sentinel below starts topping up
+ * three screens out, so catching the loader now takes a deliberately fast
+ * flick rather than ordinary reading speed. The cap stops a short session
+ * from quietly paging through the entire timeline.
+ */
+const BUFFER_TARGET = 60;
+const MAX_CHAINED_PAGES = 4;
 /** Faces in the stack before the rest collapse into "+n". */
 const MAX_FACES = 3;
 /** Ceiling on the by-id fetch, for a tab left open all afternoon. */
@@ -163,22 +174,69 @@ export default function Feed({
 		}
 	}, [loading, feedState.posts.length]);
 
+	// Build the runway as soon as page one is on screen, in the background.
+	// Deferred past the intro so the fetch never competes with first paint —
+	// the reader is still on post one, and by the time they are scrolling
+	// there are already several screens beneath them.
+	useEffect(() => {
+		if (loading || feedState.posts.length === 0) return;
+		if (feedState.posts.length >= BUFFER_TARGET || !feedState.hasMore) return;
+		const timer = setTimeout(() => void fillBuffer(false), 600);
+		return () => clearTimeout(timer);
+		// Runs per tab: switching tab resets posts and re-arms this.
+	}, [loading, feedState.mode]);
+
 	// Infinite scroll: a sentinel above the "Show more" button auto-loads the
 	// next page as it approaches the viewport; the button stays as fallback.
 	const loadMoreRef = useRef<HTMLDivElement>(null);
 	const fetchingMoreRef = useRef(false);
+	// Pagination read through refs, not the atom.
+	//
+	// `fetchFeed` used to take the cursor from `feedState` in its closure, so
+	// two calls in the same tick both sent the SAME cursor and fetched the
+	// same page twice. That is why only one page could ever be in flight, and
+	// why the buffer could never be filled ahead of the reader. These are
+	// written the moment a response lands, so pages can be chained.
+	const cursorRef = useRef<string | null>(null);
+	const hasMoreRef = useRef(true);
+	const postCountRef = useRef(0);
 	const [isFetchingMore, setIsFetchingMore] = useState(false);
-	const loadMore = async () => {
+	/**
+	 * Keep a deep runway of posts loaded ahead of the reader.
+	 *
+	 * One page (10 posts) per trigger meant the buffer was only ever about a
+	 * screen deep, so a fast scroll caught up with the request and the reader
+	 * watched skeletons. This fills to BUFFER_TARGET instead, chaining pages
+	 * until the runway is deep enough or the feed runs out.
+	 *
+	 * `visible` is false for the background top-up: no spinner, because the
+	 * reader did not ask for anything and is nowhere near the end.
+	 */
+	const fillBuffer = async (visible: boolean) => {
 		if (fetchingMoreRef.current) return;
 		fetchingMoreRef.current = true;
-		setIsFetchingMore(true);
+		if (visible) setIsFetchingMore(true);
 		try {
-			await fetchFeed();
+			let pages = 0;
+			while (
+				hasMoreRef.current &&
+				postCountRef.current < BUFFER_TARGET &&
+				pages < MAX_CHAINED_PAGES
+			) {
+				await fetchFeed();
+				pages++;
+			}
+			// Reached the sentinel with the runway already full: still owe them
+			// one more page, or scrolling would simply stop.
+			if (visible && pages === 0 && hasMoreRef.current) {
+				await fetchFeed();
+			}
 		} finally {
 			fetchingMoreRef.current = false;
-			setIsFetchingMore(false);
+			if (visible) setIsFetchingMore(false);
 		}
 	};
+	const loadMore = () => fillBuffer(true);
 
 	useEffect(() => {
 		const node = loadMoreRef.current;
@@ -192,7 +250,9 @@ export default function Feed({
 			// reader arrives at the bottom at the same moment the request
 			// does — they see the spinner every time. Fetching this far ahead
 			// costs one extra page of posts and hides the seam completely.
-			{ rootMargin: "2400px 0px" },
+			// Three screens out on a tall phone. Paired with BUFFER_TARGET the
+			// request is normally already answered by the time this fires.
+			{ rootMargin: "3600px 0px" },
 		);
 		observer.observe(node);
 		return () => observer.disconnect();
@@ -235,6 +295,11 @@ export default function Feed({
 	// Until the mount effect moves the seed into the atom (and on the server,
 	// where effects never run), render straight from it — this line is what
 	// puts real posts in the streamed HTML.
+	// The atom is still the source of truth; the refs mirror it.
+	cursorRef.current = feedState.cursor;
+	hasMoreRef.current = feedState.hasMore;
+	postCountRef.current = feedState.posts.length;
+
 	const basePosts =
 		feedState.posts.length === 0 && initialRef.current && tab === "foryou"
 			? initialRef.current.posts
@@ -460,7 +525,7 @@ export default function Feed({
 		}
 
 		try {
-			const currentCursor = reset ? null : feedState.cursor;
+			const currentCursor = reset ? null : cursorRef.current;
 			// The tab IS the query. Passing it was the missing half of the
 			// Following tab: the gateway has a chronological following page
 			// built on the server's own follow list, and this client never
@@ -471,6 +536,13 @@ export default function Feed({
 
 			if (result.success && result.data) {
 				const apiPosts = result.data.posts;
+				// Written before setState so a chained call sees them now
+				// rather than one render later.
+				const nextCursor = result.data.nextCursor ?? null;
+				const more = Boolean(result.data.hasMore);
+				cursorRef.current = nextCursor;
+				hasMoreRef.current = more;
+				postCountRef.current += apiPosts.length;
 				const mappedPosts: PostProps[] = apiPosts.map(mapApiPost);
 
 				setFeedState((prev) => ({
@@ -483,8 +555,8 @@ export default function Feed({
 								[...prependedRef.current, ...mappedPosts]
 							: [...prev.posts, ...mappedPosts],
 					),
-					cursor: result.data.nextCursor ?? null,
-					hasMore: Boolean(result.data.hasMore),
+					cursor: nextCursor,
+					hasMore: more,
 					mode: tab,
 				}));
 			} else if (!opts?.silent) {
