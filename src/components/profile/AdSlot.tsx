@@ -530,6 +530,14 @@ function RatesSheet({
 		{ format: "audio", priceUsdMinor: 2500, enabled: false },
 	]);
 	const [saving, setSaving] = useState(false);
+	/**
+	 * What is IN the field, as text. Clamping inside onChange is why the
+	 * field was stuck at $1: clearing it parsed to NaN, the clamp snapped it
+	 * to the minimum, and the keystroke was eaten. While editing, anything
+	 * goes — validation happens once, at save, where an error can actually
+	 * be explained.
+	 */
+	const [priceDrafts, setPriceDrafts] = useState<Record<string, string>>({});
 
 	// Prefill from what is already published.
 	useEffect(() => {
@@ -551,6 +559,20 @@ function RatesSheet({
 
 	const save = async () => {
 		if (saving) return;
+		// The one place a price is judged: an enabled format whose field is
+		// empty or zero blocks the save with a message naming it, instead of
+		// being silently rewritten under the seller's cursor.
+		for (const row of rows) {
+			if (!row.enabled) continue;
+			const draft = priceDrafts[row.format];
+			const n = draft !== undefined ? Number(draft) : row.priceUsdMinor / 100;
+			if (!Number.isFinite(n) || n < 1) {
+				toast(`Set a daily price for ${FORMAT_META[row.format].label} (min $1)`, {
+					type: "error",
+				});
+				return;
+			}
+		}
 		setSaving(true);
 		try {
 			await authed(
@@ -636,20 +658,31 @@ function RatesSheet({
 											<span className="font-display text-[20px] font-semibold text-primary tabular-nums">
 												$
 												<input
-													type="number"
-													min={1}
-													value={(row.priceUsdMinor / 100).toString()}
-													onChange={(e) =>
-														update(row.format, {
-															priceUsdMinor: Math.max(
-																100,
-																Math.round(
-																	Number(e.target.value || 0) * 100,
-																),
-															),
-														})
+													type="text"
+													inputMode="decimal"
+													placeholder="20"
+													value={
+														priceDrafts[row.format] ??
+														(row.priceUsdMinor / 100).toString()
 													}
-													className="w-20 bg-transparent font-display text-[20px] font-semibold text-primary outline-none tabular-nums"
+													onChange={(e) => {
+														// digits and one dot; everything else
+														// never enters the field
+														const clean = e.target.value
+															.replace(/[^0-9.]/g, "")
+															.replace(/(\..*)\./g, "$1");
+														setPriceDrafts((prev) => ({
+															...prev,
+															[row.format]: clean,
+														}));
+														const n = Number(clean);
+														if (Number.isFinite(n) && n > 0) {
+															update(row.format, {
+																priceUsdMinor: Math.round(n * 100),
+															});
+														}
+													}}
+													className="w-20 bg-transparent font-display text-[20px] font-semibold text-primary outline-none tabular-nums placeholder:text-subtle"
 												/>
 											</span>
 											<span className="font-sans text-[12px] text-muted">

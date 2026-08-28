@@ -447,10 +447,11 @@ function ThreadView({
 	const myTurn = b.status === "requested" && b.awaitingActionFrom === role;
 	const cancellable = ["accepted", "live", "paused"].includes(b.status);
 	const [counterOpen, setCounterOpen] = useState(false);
+	// Text while editing — clamping keystrokes is how fields get stuck.
 	const [cPrice, setCPrice] = useState(
 		(b.agreedUsdMinor / 100).toString(),
 	);
-	const [cDays, setCDays] = useState(b.durationDays);
+	const [cDays, setCDays] = useState(String(b.durationDays));
 	const settledPeriods = periods.filter((p) =>
 		["captured", "released"].includes(p.status),
 	);
@@ -567,10 +568,16 @@ function ThreadView({
 							<span className="flex h-10 items-center rounded-lg bg-page/60 pl-3 font-sans text-[14px] text-subtle">
 								$
 								<input
-									type="number"
-									min={1}
+									type="text"
+									inputMode="decimal"
 									value={cPrice}
-									onChange={(e) => setCPrice(e.target.value)}
+									onChange={(e) =>
+										setCPrice(
+											e.target.value
+												.replace(/[^0-9.]/g, "")
+												.replace(/(\..*)\./g, "$1"),
+										)
+									}
 									className="h-10 w-full bg-transparent px-2 font-sans text-[14px] text-primary outline-none tabular-nums"
 								/>
 							</span>
@@ -580,11 +587,12 @@ function ThreadView({
 								Days
 							</span>
 							<input
-								type="number"
-								min={1}
-								max={30}
+								type="text"
+								inputMode="numeric"
 								value={cDays}
-								onChange={(e) => setCDays(Number(e.target.value))}
+								onChange={(e) =>
+									setCDays(e.target.value.replace(/[^0-9]/g, ""))
+								}
 								className="h-10 w-full rounded-lg bg-page/60 px-3 font-sans text-[14px] text-primary outline-none tabular-nums"
 							/>
 						</label>
@@ -592,13 +600,11 @@ function ThreadView({
 							type="button"
 							disabled={busy}
 							onClick={() => {
+								const price = Math.round(Number(cPrice || 0) * 100);
+								const days = Number(cDays || 0);
+								if (price < 100 || days < 1 || days > 30) return;
 								setCounterOpen(false);
-								onCounter(b._id, {
-									priceUsdMinor: Math.round(
-										Number(cPrice || 0) * 100,
-									),
-									days: cDays,
-								});
+								onCounter(b._id, { priceUsdMinor: price, days });
 							}}
 							className="h-10 shrink-0 rounded-pill bg-primary px-4 font-sans text-[13px] font-semibold text-page transition-colors hover:opacity-90 disabled:opacity-50 cursor-pointer"
 						>
@@ -734,7 +740,7 @@ function NewBookingSheet({
 	const { toast } = useToast();
 	const [username, setUsername] = useState(initialUsername);
 	const [format, setFormat] = useState<"image" | "video" | "audio">("image");
-	const [days, setDays] = useState(7);
+	const [days, setDays] = useState("7");
 	const [startAt, setStartAt] = useState(
 		new Date(Date.now() + 24 * 3600_000).toISOString().slice(0, 10),
 	);
@@ -774,10 +780,11 @@ function NewBookingSheet({
 		if (sending) return;
 		setSending(true);
 		try {
+			const runDays = Math.min(30, Math.max(1, Number(days || 0)));
 			await authed("post", "/api/ads/bookings", {
 				creatorUsername: handle,
 				format,
-				days,
+				days: runDays,
 				startAt: new Date(`${startAt}T00:00:00Z`).toISOString(),
 				note: note.trim() || undefined,
 				// The exact creative rides the request, so what the creator
@@ -864,11 +871,12 @@ function NewBookingSheet({
 								Days
 							</span>
 							<input
-								type="number"
-								min={1}
-								max={30}
+								type="text"
+								inputMode="numeric"
 								value={days}
-								onChange={(e) => setDays(Number(e.target.value))}
+								onChange={(e) =>
+									setDays(e.target.value.replace(/[^0-9]/g, ""))
+								}
 								className={field}
 							/>
 						</label>
@@ -919,12 +927,12 @@ function NewBookingSheet({
 					/>
 					<button
 						type="button"
-						disabled={!handle || sending}
+						disabled={!handle || sending || !(Number(days) >= 1)}
 						onClick={submit}
 						className="h-11 rounded-pill bg-brand font-sans text-[14px] font-semibold text-brand-on transition-colors hover:opacity-90 disabled:opacity-50 cursor-pointer"
 					>
-						{rate !== null
-							? `Request · ${usd(rate * days)} for ${days} day${days === 1 ? "" : "s"}`
+						{rate !== null && Number(days) > 0
+							? `Request · ${usd(rate * Number(days))} for ${days} day${days === "1" ? "" : "s"}`
 							: "Send request"}
 					</button>
 					{rate === null && handle && (
