@@ -19,7 +19,19 @@ import { useAtom, useAtomValue } from "jotai";
 import type { Room } from "livekit-client";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import {
+	Suspense,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+	useSyncExternalStore,
+} from "react";
+import {
+	peekHandle,
+	requestHandle,
+	subscribeMentions,
+} from "@/lib/mentionCache";
 import { LiveChatPanel } from "@/components/live/LiveChatPanel";
 import { LiveSlidePlayer } from "@/components/live/LiveSlidePlayer";
 import { useToast } from "@/components/ui/Toast/ToastContext";
@@ -508,6 +520,43 @@ function VerticalSurface() {
 	// rather than the whole rail: a stream you never reach costs nothing, and
 	// this is one small request per broadcast you actually watch.
 	const activeStreamId = slides[active]?.streamId;
+	/**
+	 * Which broadcaster handles are real accounts here.
+	 *
+	 * A live slide comes from Xstream, which has its own users — plenty of
+	 * them have never made a WorldSpace profile. The handle was the only
+	 * shared identifier, so Align was offered for everyone and, for those
+	 * people, the follow resolved to nothing: the button flipped on, the
+	 * request failed, and it flipped back with an error. An affordance for
+	 * something that cannot happen.
+	 *
+	 * Reuses the mention resolver rather than adding a second one — it
+	 * already batches a tick's worth of handles into one request and caches
+	 * `null` for "no such account", which is exactly the answer needed here.
+	 */
+	// A STRING snapshot, not an object: getSnapshot must return something
+	// that compares equal when nothing has changed, or the store re-renders
+	// forever. One character per slide — resolved / absent / still unknown.
+	useSyncExternalStore(
+		subscribeMentions,
+		() =>
+			slides
+				.map((s) => {
+					if (!s.streamId || s.authorId || !s.username) return "-";
+					const hit = peekHandle(s.username);
+					return hit ? "1" : hit === null ? "0" : "?";
+				})
+				.join(""),
+		() => "",
+	);
+	useEffect(() => {
+		for (const s of slides) {
+			// Post slides carry a real profile id already; only broadcasts
+			// need resolving.
+			if (s.streamId && !s.authorId && s.username) requestHandle(s.username);
+		}
+	}, [slides]);
+
 	const activeSlideKey = slides[active]?.key;
 
 	// Drive playback on every change of active slide: play the one on screen,
@@ -814,6 +863,14 @@ function VerticalSurface() {
 					? slide.authorIsFollowing ||
 						followedIds.includes((slide.authorId ?? slide.username) as string)
 					: true;
+				// A broadcast is only followable once its handle resolves to a
+				// real profile. `undefined` means the answer has not arrived —
+				// treated as "no", because offering the button and taking it
+				// away a beat later is worse than showing it a beat late.
+				const alignable =
+					!slide.streamId || Boolean(slide.authorId)
+						? true
+						: Boolean(slide.username && peekHandle(slide.username));
 				return (
 					<section
 						key={slide.key}
@@ -926,7 +983,7 @@ function VerticalSurface() {
 										>
 											@{slide.username}
 										</Link>
-										{!isSelf && !followed && (
+										{!isSelf && !followed && alignable && (
 											<button
 												type="button"
 												onClick={() => follow(slide)}
