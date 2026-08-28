@@ -579,6 +579,9 @@ export const MessageBox = ({
 					content: "",
 					type: "audio",
 					mediaUrl: url,
+					// The recorder counts this anyway; sending it lets the inbox
+					// preview say "0:23" instead of just "Voice note".
+					durationSec: recordingDuration,
 				},
 				{ headers: { Authorization: `Bearer ${token}` } },
 			);

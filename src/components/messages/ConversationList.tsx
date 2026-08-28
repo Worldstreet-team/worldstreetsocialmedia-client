@@ -36,6 +36,7 @@ export interface ConversationRow {
 		content?: string;
 		type?: string;
 		createdAt?: string;
+		durationSec?: number;
 		sender?: string | { _id?: string };
 	};
 	/** Not sent by the gateway today — see `rowTime`. Kept for callers. */
@@ -246,7 +247,10 @@ export function ConversationList({
 								)}
 								<span className="truncate">
 									{kind
-										? t(kind.key)
+										? conv.lastMessage?.type === "audio" &&
+											conv.lastMessage?.durationSec
+											? `${Math.floor(conv.lastMessage.durationSec / 60)}:${String(conv.lastMessage.durationSec % 60).padStart(2, "0")}`
+											: t(kind.key)
 										: conv.lastMessage?.content || t("messages.noMessages")}
 								</span>
 							</span>

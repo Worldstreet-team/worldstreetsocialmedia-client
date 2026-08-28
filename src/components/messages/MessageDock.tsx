@@ -9,6 +9,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ConversationList } from "@/components/messages/ConversationList";
+import { DockChat } from "@/components/messages/DockChat";
 import type { ConversationRow } from "@/components/messages/ConversationList";
 import { useT } from "@/i18n/client";
 import { getConversationsAction } from "@/lib/conversation.actions";
@@ -49,9 +50,13 @@ export function MessageDock() {
 	const [rows, setRows] = useState<ConversationRow[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [query, setQuery] = useState("");
+	const [activeChat, setActiveChat] = useState<ConversationRow | null>(null);
 	const [loaded, setLoaded] = useState(false);
 
-	const close = useCallback(() => setOpen(false), [setOpen]);
+	const close = useCallback(() => {
+		setOpen(false);
+		setActiveChat(null);
+	}, [setOpen]);
 
 	// Fetched on first open, not on mount: the dock is on every page, and an
 	// inbox request on every page load for a panel most people never open is
@@ -192,27 +197,56 @@ export function MessageDock() {
 							</button>
 						</div>
 
-						<div className="shrink-0 px-4 pb-3">
-							<input
-								value={query}
-								onChange={(e) => setQuery(e.target.value)}
-								placeholder={t("messages.searchPlaceholder")}
-								aria-label={t("messages.searchPlaceholder")}
-								className="w-full rounded-pill bg-sunken px-4 py-2 font-sans text-[13px] text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised"
-							/>
-						</div>
+						{/* Two panes on one rail: the list, and the chat that slides
+						    over it. Same trick as a phone navigation stack — back
+						    reverses the exact motion, so the panel reads as depth
+						    rather than replacement. */}
+						<div className="relative min-h-0 flex-1 overflow-hidden">
+							<motion.div
+								animate={{ x: activeChat ? "-24%" : "0%" }}
+								transition={{ duration: 0.26, ease: [0.2, 0, 0, 1] }}
+								className="flex h-full min-h-0 flex-col"
+							>
+								<div className="shrink-0 px-4 pb-3">
+									<input
+										value={query}
+										onChange={(e) => setQuery(e.target.value)}
+										placeholder={t("messages.searchPlaceholder")}
+										aria-label={t("messages.searchPlaceholder")}
+										className="w-full rounded-pill bg-sunken px-4 py-2 font-sans text-[13px] text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised"
+									/>
+								</div>
+								<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2">
+									<ConversationList
+										conversations={rows}
+										loading={loading}
+										query={query}
+										myProfileId={me._id}
+										onOpen={(c) => setActiveChat(c)}
+									/>
+								</div>
+							</motion.div>
 
-						<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2">
-							<ConversationList
-								conversations={rows}
-								loading={loading}
-								query={query}
-								myProfileId={me._id}
-								onOpen={(c) => {
-									router.push(`/messages/${c._id}`);
-									close();
-								}}
-							/>
+							<AnimatePresence>
+								{activeChat && (
+									<motion.div
+										initial={{ x: "100%" }}
+										animate={{ x: 0 }}
+										exit={{ x: "100%" }}
+										transition={{ duration: 0.26, ease: [0.2, 0, 0, 1] }}
+										/* Solid, not frost: this pane sits INSIDE the frosted
+										   panel, and a translucent layer over a translucent
+										   layer let the list ghost through the chat. */
+										className="absolute inset-0 flex flex-col bg-surface"
+									>
+										<DockChat
+											conversation={activeChat}
+											myProfileId={me._id}
+											onBack={() => setActiveChat(null)}
+										/>
+									</motion.div>
+								)}
+							</AnimatePresence>
 						</div>
 					</motion.aside>
 				)}
