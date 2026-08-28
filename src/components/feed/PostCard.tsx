@@ -1359,12 +1359,16 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                 ))}
                         </div>
                     )}
-                    {/* Post actions the interaction cluster sits flush left;
-                        impressions ride the right edge, isolated (a metric, not
-                        a button). 03-icons: this row is the ONE place Phosphor
-                        is used instead of Lucide, matching mobile. */}
+                    {/* Post actions the interaction cluster distributes across
+                        the row like X: flex-1 + max-w + justify-between puts
+                        reply/repost/like/bookmark/share at even intervals, each
+                        count riding beside its glyph; impressions ride the right
+                        edge, isolated (a metric, not a button). Idle glyphs are
+                        duotone — Phosphor's two-tone — active stays fill.
+                        03-icons: this row is the ONE place Phosphor is used
+                        instead of Lucide, matching mobile. */}
                     <div className="flex items-center justify-between text-muted mt-1.5 -mb-1.5 pointer-events-auto">
-                        <div className="flex items-center gap-0.5 sm:gap-2 -ml-2">
+                        <div className="flex flex-1 max-w-[425px] items-center justify-between -ml-2 sm:mr-6">
                         <Link
                             href={`/post/${post.id}`}
                             onClick={(e) => e.stopPropagation()}
@@ -1372,7 +1376,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                             className="flex items-center gap-0.5 hover:text-primary transition-colors group cursor-pointer"
                         >
                             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill group-hover:bg-primary/10 transition group-active:scale-[0.98]">
-                                <ChatCircle size={18} weight="bold" />
+                                <ChatCircle size={18} weight="duotone" />
                             </span>
                             <span className="text-[13px] font-sans tabular-nums">
                                 {formatCount(shownReplies)}
@@ -1394,7 +1398,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill group-hover:bg-success/10 transition group-active:scale-[0.98]">
                                     <Repeat
                                         size={18}
-                                        weight={reposted ? "fill" : "bold"}
+                                        weight={reposted ? "fill" : "duotone"}
                                     />
                                 </span>
                                 <span className="text-[13px] font-sans tabular-nums">
@@ -1492,8 +1496,8 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                     className="flex"
                                 >
                                     <Heart
-                                        size={17}
-                                        weight={isLiked ? "fill" : "bold"}
+                                        size={18}
+                                        weight={isLiked ? "fill" : "duotone"}
                                     />
                                 </motion.span>
                             </span>
@@ -1557,8 +1561,8 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                     className="flex"
                                 >
                                     <BookmarkSimple
-                                        size={17}
-                                        weight={isBookmarked ? "fill" : "bold"}
+                                        size={18}
+                                        weight={isBookmarked ? "fill" : "duotone"}
                                     />
                                 </motion.span>
                             </span>
@@ -1618,7 +1622,10 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                             }}
                                             className="flex"
                                         >
-                                            <PaperPlaneTilt size={17} />
+                                            <PaperPlaneTilt
+                                                size={18}
+                                                weight="duotone"
+                                            />
                                         </motion.span>
                                     )}
                                 </AnimatePresence>
@@ -1635,7 +1642,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                             title={t("post.views")}
                             aria-label={t("post.views")}
                         >
-                            <ChartLineUp size={15} weight="bold" />
+                            <ChartLineUp size={15} weight="duotone" />
                             <span className="text-[12.5px] font-medium font-sans tabular-nums">
                                 {formatCount(post.stats.views ?? 0) || "0"}
                             </span>

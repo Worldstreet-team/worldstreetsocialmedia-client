@@ -57,6 +57,7 @@ const API_URL = BACKEND_ORIGIN;
 import { useAtom, useSetAtom } from "jotai";
 import { useAtomValue } from "jotai";
 import { onlineIdsAtom } from "@/store/ui.atom";
+import { userAtom } from "@/store/user.atom";
 import { activeConversationIdAtom, messageCacheAtom, unreadMessagesCountAtom } from "@/store/messageCache";
 import NewConversationModal from "./NewConversationModal";
 
@@ -363,6 +364,10 @@ export const MessageBox = ({
 	// only contains people who have THIS thread open, so on its own it read
 	// "offline" for someone plainly using the app in another tab.
 	const onlineIds = useAtomValue(onlineIdsAtom);
+	// The PROFILE avatar, not Clerk's: they can differ, and every other
+	// surface renders the profile one — an optimistic bubble that wears a
+	// different face than your posts reads as someone else talking.
+	const me = useAtomValue(userAtom);
 	const totalUnread = conversations.reduce(
 		(n, c) => n + (c.unreadCount || 0),
 		0,
@@ -481,7 +486,7 @@ export const MessageBox = ({
 						firstName: user?.firstName || "",
 						lastName: user?.lastName || "",
 						username: user?.username || "",
-						avatar: user?.imageUrl || "",
+						avatar: me?.avatar || user?.imageUrl || "",
 					},
 					content: "",
 					type: "image",
@@ -555,7 +560,7 @@ export const MessageBox = ({
 					firstName: user?.firstName || "",
 					lastName: user?.lastName || "",
 					username: user?.username || "",
-					avatar: user?.imageUrl || "",
+					avatar: me?.avatar || user?.imageUrl || "",
 				},
 				content: "",
 				type: "audio",
@@ -815,7 +820,7 @@ export const MessageBox = ({
 				firstName: user?.firstName || "",
 				lastName: user?.lastName || "",
 				username: user?.username || "",
-				avatar: user?.imageUrl || "",
+				avatar: me?.avatar || user?.imageUrl || "",
 			},
 			content: content,
 			type: optimisticType as any,

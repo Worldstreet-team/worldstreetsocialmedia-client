@@ -4,12 +4,12 @@
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import {
 	Bell,
+	Binoculars,
 	BookmarkSimple,
 	Faders,
 	GearSix,
 	ChatCircleDots,
 	House,
-	MagnifyingGlass,
 	MonitorPlay,
 	SquaresFour,
 	UserCircle,
@@ -48,7 +48,9 @@ export const mainNav: SidebarItem[] = [
 		labelKey: "nav.explore",
 		title: "Explore",
 		link: "/explore",
-		icon: navIcon(MagnifyingGlass),
+		// Binoculars, not a magnifier (owner ruling 2026-08-28): the magnifier
+		// is search's glyph; Explore is about looking around, not looking up.
+		icon: navIcon(Binoculars),
 	},
 	{
 		labelKey: "nav.videos",

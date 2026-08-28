@@ -1,5 +1,6 @@
 import { atom } from "jotai";
 import { type PostProps } from "@/components/feed/PostCard";
+import type { StreetPost } from "@/components/explore/StreetGrid";
 
 export interface TrendingTopic {
 	title: string;
@@ -29,3 +30,11 @@ export const exploreFetchedAtAtom = atom<number>(0);
 
 export const popularPostsAtom = atom<PostProps[]>([]);
 export const popularPostsLoadedAtom = atom<boolean>(false);
+
+/**
+ * Explore's "street" video grid, same treatment: cached so a revisit paints
+ * instantly, timestamped so a stale copy revalidates quietly underneath.
+ */
+export const streetPostsAtom = atom<StreetPost[]>([]);
+export const streetLoadedAtom = atom<boolean>(false);
+export const streetFetchedAtAtom = atom<number>(0);

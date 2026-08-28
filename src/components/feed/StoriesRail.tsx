@@ -142,9 +142,9 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 	const railPath = usePathname();
 	// Not the same thing as `collapsed` below — that one is the scroll-away
 	// behaviour on the feed. This is "wear the small shape on this route".
-	const circlesOnly =
-		compact ??
-		(railPath?.startsWith("/voice") || railPath?.startsWith("/messages"));
+	// Only Spaces collapses. Messages had it too for a day and the owner
+	// vetoed it — the inbox pane is wide enough to wear the real tiles.
+	const circlesOnly = compact ?? railPath?.startsWith("/voice");
 	const t = useT();
 	const [rail, setRail] = useAtom(storyRailAtom) as [
 		RailEntry[],

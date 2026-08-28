@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Compass as CompassIcon, House, MagnifyingGlass, Plus } from "@phosphor-icons/react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useAtom, useSetAtom } from "jotai";
 import { Compass, UsersRound } from "lucide-react";
 
 import { PostCard, type PostProps } from "@/components/feed/PostCard";
@@ -26,9 +28,19 @@ import {
 	toggleCommunityAction,
 } from "@/lib/community.actions";
 import { mapApiPost as mapPost } from "@/lib/post-mapper";
+import {
+	communityDirAtom,
+	communityDirFetchedAtAtom,
+	communityDirLoadedAtom,
+	communityHomeAtom,
+	communityHomeFetchedAtAtom,
+} from "@/store/communities.atom";
 import { useT } from "@/i18n/client";
 
 type Tab = "home" | "explore";
+
+/** One easing for the lists breathing when a refresh lands. */
+const LIST_TRANSITION = { duration: 0.26, ease: [0.2, 0, 0, 1] as const };
 
 /**
  * Communities.
@@ -49,35 +61,51 @@ export default function CommunitiesPage() {
 	const [busy, setBusy] = useState(false);
 	const [query, setQuery] = useState("");
 
-	const [mine, setMine] = useState<RailCommunity[]>([]);
-	const [posts, setPosts] = useState<PostProps[]>([]);
-	const [cursor, setCursor] = useState<string | null>(null);
-	const [hasMore, setHasMore] = useState(false);
-	const [homeLoading, setHomeLoading] = useState(true);
-	const [loadingMore, setLoadingMore] = useState(false);
+	// Both halves are cached app-wide (stale-while-revalidate): a revisit
+	// paints the last result immediately and refreshes quietly underneath.
+	// Skeletons only on the genuinely first visit of a session.
+	const reduced = useReducedMotion();
+	const [home, setHome] = useAtom(communityHomeAtom);
+	const setHomeFetchedAt = useSetAtom(communityHomeFetchedAtAtom);
+	const [rows, setRows] = useAtom(communityDirAtom);
+	const [dirLoaded, setDirLoaded] = useAtom(communityDirLoadedAtom);
+	const setDirFetchedAt = useSetAtom(communityDirFetchedAtAtom);
 
-	const [rows, setRows] = useState<DiscoverCommunity[]>([]);
-	const [dirLoading, setDirLoading] = useState(true);
+	const mine: RailCommunity[] = home?.mine ?? [];
+	const posts: PostProps[] = home?.posts ?? [];
+	const cursor = home?.cursor ?? null;
+	const hasMore = home?.hasMore ?? false;
+
+	const [homeLoading, setHomeLoading] = useState(home === null);
+	const [loadingMore, setLoadingMore] = useState(false);
+	const [dirLoading, setDirLoading] = useState(!dirLoaded);
 
 	const loadHome = useCallback(async () => {
-		setHomeLoading(true);
 		const res = await getCommunityHomeAction(null);
 		if (res.success) {
-			setMine(res.communities);
-			setPosts(res.posts.map(mapPost));
-			setCursor(res.nextCursor ?? null);
-			setHasMore(Boolean(res.hasMore));
+			setHome({
+				mine: res.communities,
+				posts: res.posts.map(mapPost),
+				cursor: res.nextCursor ?? null,
+				hasMore: Boolean(res.hasMore),
+			});
+			setHomeFetchedAt(Date.now());
 		}
 		setHomeLoading(false);
-	}, []);
+	}, [setHome, setHomeFetchedAt]);
 
 	const loadDirectory = useCallback(async () => {
-		setDirLoading(true);
 		const res = await getCommunitiesAction();
-		if (res.success) setRows(res.communities);
+		if (res.success) {
+			setRows(res.communities);
+			setDirLoaded(true);
+			setDirFetchedAt(Date.now());
+		}
 		setDirLoading(false);
-	}, []);
+	}, [setRows, setDirLoaded, setDirFetchedAt]);
 
+	// Always revalidate on mount — quietly when the cache is warm; the
+	// loading flags above decide whether a skeleton fronts the fetch.
 	useEffect(() => {
 		void loadHome();
 		void loadDirectory();
@@ -88,12 +116,19 @@ export default function CommunitiesPage() {
 		setLoadingMore(true);
 		const res = await getCommunityHomeAction(cursor);
 		if (res.success) {
-			setPosts((prev) => [...prev, ...res.posts.map(mapPost)]);
-			setCursor(res.nextCursor ?? null);
-			setHasMore(Boolean(res.hasMore));
+			setHome((prev) =>
+				prev
+					? {
+							...prev,
+							posts: [...prev.posts, ...res.posts.map(mapPost)],
+							cursor: res.nextCursor ?? null,
+							hasMore: Boolean(res.hasMore),
+						}
+					: prev,
+			);
 		}
 		setLoadingMore(false);
-	}, [loadingMore, hasMore, cursor]);
+	}, [loadingMore, hasMore, cursor, setHome]);
 
 	const sentinel = useRef<HTMLDivElement>(null);
 	useEffect(() => {
@@ -306,9 +341,20 @@ export default function CommunitiesPage() {
 						/>
 					) : (
 						<div className="flex flex-col">
-							{(unjoined.length > 0 ? unjoined : filtered).map((row) => (
-								<DiscoverRow key={row.id} row={row} onToggle={toggle} />
-							))}
+							<AnimatePresence initial={false}>
+								{(unjoined.length > 0 ? unjoined : filtered).map((row) => (
+									<motion.div
+										key={row.id}
+										layout={!reduced}
+										initial={reduced ? false : { opacity: 0, y: 8 }}
+										animate={{ opacity: 1, y: 0 }}
+										exit={reduced ? undefined : { opacity: 0 }}
+										transition={LIST_TRANSITION}
+									>
+										<DiscoverRow row={row} onToggle={toggle} />
+									</motion.div>
+								))}
+							</AnimatePresence>
 						</div>
 					)}
 				</>

@@ -6,7 +6,7 @@
   "nav.bookmarks": "Lesezeichen",
   "nav.profile": "Profil",
   "feed.tab.foryou": "Für dich",
-  "feed.tab.following": "Verbündete",
+  "feed.tab.following": "Ausgerichtet",
   "feed.tab.newest": "Neueste",
   "feed.empty.title": "Deine Timeline ist leer",
   "feed.empty.caption": "Beiträge von Leuten, denen du folgst, erscheinen hier. Schreib den ersten.",
@@ -49,7 +49,7 @@
   "studio.impressions": "Impressionen",
   "studio.engagements": "Interaktionen",
   "studio.engagementRate": "Interaktionsrate",
-  "studio.followers": "Ausgerichtet",
+  "studio.followers": "Verbündete",
   "studio.posts": "Beiträge",
   "studio.daily": "Tägliche Impressionen",
   "studio.window": "letzte 28 Tage",
@@ -292,8 +292,8 @@
   "profile.bioSeeMore": "Mehr anzeigen",
   "profile.bioSeeLess": "Weniger anzeigen",
   "profile.joined": "Dabei seit",
-  "profile.following": "Verbündete",
-  "profile.followers": "Ausgerichtet",
+  "profile.following": "Ausgerichtet",
+  "profile.followers": "Verbündete",
   "profile.edit": "Profil bearbeiten",
   "profile.message": "Nachricht",
   "profile.more": "Weitere Optionen",
@@ -729,5 +729,6 @@
   "notif.verb.sale": "hat deinen Beitrag gekauft",
   "notif.empty.sales.title": "Noch keine Verkäufe",
   "search.placeholder.people": "Nach Name oder Handle suchen",
-  "notif.verb.gift": "hat dir ein Geschenk gesendet"
+  "notif.verb.gift": "hat dir ein Geschenk gesendet",
+  "messages.notMutual": "Du kannst nur deinen Verbündeten schreiben"
 }

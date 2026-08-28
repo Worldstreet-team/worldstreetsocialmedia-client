@@ -1,14 +1,21 @@
 "use client";
 
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { useT } from "@/i18n/client";
 import { resolveCategoryLabel } from "@/lib/categories";
 import type { TrendingTopic } from "@/store/trends.atom";
 import { ExploreSection } from "./ExploreSection";
 
+/** One easing for the list breathing when a revalidation lands. */
+const LIST_TRANSITION = { duration: 0.26, ease: [0.2, 0, 0, 1] as const };
+
 /**
  * Ranked trends. Rows are buttons, not links: they drive the search box on
  * this page rather than navigating, so the rank number stays meaningful.
+ *
+ * Rows carry framer `layout` so a background refresh reads as the list
+ * reordering, not a repaint: moved rows glide, new ones rise in 8px.
  */
 export function TrendingList({
   trends,
@@ -26,6 +33,7 @@ export function TrendingList({
   delay: number;
 }) {
   const t = useT();
+  const reduced = useReducedMotion();
 
   return (
     <ExploreSection
@@ -60,11 +68,17 @@ export function TrendingList({
         <p className="px-2 py-3 font-sans text-sm text-subtle">{t("rail.noTrends")}</p>
       ) : (
         <div className="-mx-2 flex flex-col">
+          <AnimatePresence initial={false}>
           {trends.slice(0, 8).map((trend, i) => {
             const title = trend.title.replace(/^#/, "");
             return (
-              <button
+              <motion.button
                 key={trend.title}
+                layout={!reduced}
+                initial={reduced ? false : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduced ? undefined : { opacity: 0 }}
+                transition={LIST_TRANSITION}
                 type="button"
                 onClick={() => onPick(title)}
                 className="flex w-full cursor-pointer items-start gap-3.5 rounded-xl px-2 py-2.5 text-left transition-colors hover:bg-surface"
@@ -103,9 +117,10 @@ export function TrendingList({
                     )}
                   </span>
                 )}
-              </button>
+              </motion.button>
             );
           })}
+          </AnimatePresence>
         </div>
       )}
     </ExploreSection>

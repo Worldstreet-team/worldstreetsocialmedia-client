@@ -6,7 +6,7 @@
   "nav.bookmarks": "Bookmarks",
   "nav.profile": "Profile",
   "feed.tab.foryou": "For you",
-  "feed.tab.following": "Allies",
+  "feed.tab.following": "Aligned",
   "feed.tab.newest": "Newest",
   "feed.empty.title": "Your timeline is empty",
   "feed.empty.caption": "Posts from people you align with show up here. Write the first one.",
@@ -49,7 +49,7 @@
   "studio.impressions": "Impressions",
   "studio.engagements": "Engagements",
   "studio.engagementRate": "Engagement rate",
-  "studio.followers": "Aligned",
+  "studio.followers": "Allies",
   "studio.posts": "Posts",
   "studio.daily": "Daily impressions",
   "studio.window": "last 28 days",
@@ -333,8 +333,8 @@
   "profile.bioSeeMore": "See more",
   "profile.bioSeeLess": "See less",
   "profile.joined": "Joined",
-  "profile.following": "Allies",
-  "profile.followers": "Aligned",
+  "profile.following": "Aligned",
+  "profile.followers": "Allies",
   "profile.edit": "Edit profile",
   "profile.message": "Message",
   "profile.more": "More options",
@@ -768,5 +768,6 @@
   "notif.verb.sale": "bought your post",
   "notif.empty.sales.title": "No sales yet",
   "search.placeholder.people": "Search by name or handle",
-  "notif.verb.gift": "sent you a gift"
+  "notif.verb.gift": "sent you a gift",
+  "messages.notMutual": "You can only message your Allies"
 }

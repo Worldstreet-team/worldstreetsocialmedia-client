@@ -2,8 +2,12 @@
 
 import Link from "next/link";
 import { Plus } from "@phosphor-icons/react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useT } from "@/i18n/client";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+
+/** One easing for the rail breathing when a refresh lands. */
+const LIST_TRANSITION = { duration: 0.26, ease: [0.2, 0, 0, 1] as const };
 
 export interface RailCommunity {
   id: string;
@@ -26,12 +30,22 @@ export function MyCommunitiesRail({
   onCreate: () => void;
 }) {
   const t = useT();
+  const reduced = useReducedMotion();
 
   return (
     <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <AnimatePresence initial={false}>
       {communities.map((c) => (
-        <Link
+        <motion.div
           key={c.id}
+          layout={!reduced}
+          initial={reduced ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={reduced ? undefined : { opacity: 0 }}
+          transition={LIST_TRANSITION}
+          className="shrink-0"
+        >
+        <Link
           href={`/communities/${c.slug}`}
           className="group flex w-[112px] shrink-0 flex-col gap-1.5"
         >
@@ -48,7 +62,9 @@ export function MyCommunitiesRail({
             {c.name}
           </span>
         </Link>
+        </motion.div>
       ))}
+      </AnimatePresence>
 
       <button
         type="button"

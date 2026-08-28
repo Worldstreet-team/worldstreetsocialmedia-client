@@ -68,10 +68,24 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
 
 	// Ably's clientId is the caller's profile id (the gateway mints it that
 	// way), which is exactly the key call channels are named after.
+	//
+	// It is NOT known when the client object is created — it arrives with the
+	// first token, after connect. This effect used to check it exactly once,
+	// at effect time, and the `client` reference never changes afterwards; on
+	// any load where the token fetch had not finished yet, the callee simply
+	// never subscribed to their own call channel. The phone could not ring
+	// because nobody was listening for it. Initialize on every (re)connect —
+	// the manager is idempotent per profile id.
 	useEffect(() => {
-		if (client?.auth.clientId) {
-			callManager.initialize(client.auth.clientId);
-		}
+		if (!client) return;
+		const init = () => {
+			if (client.auth.clientId) callManager.initialize(client.auth.clientId);
+		};
+		init();
+		client.connection.on("connected", init);
+		return () => {
+			client.connection.off("connected", init);
+		};
 	}, [client]);
 
 	useCallTones(state);

@@ -2,7 +2,8 @@
 
 import { MagnifyingGlass, Plus } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { useAtomValue, useSetAtom } from "jotai";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { Mic } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -41,9 +42,18 @@ import {
   startSpaceAction,
   updateSpaceAction,
 } from "@/lib/space.actions";
+import {
+  spacesFetchedAtAtom,
+  spacesLiveAtom,
+  spacesLoadedAtom,
+  spacesUpcomingAtom,
+} from "@/store/spaces.atom";
 import { voiceRefreshAtom, voiceSessionAtom } from "@/store/voice.atom";
 
 const POLL_MS = 20_000;
+
+/** One easing for the directory breathing when a refresh lands. */
+const LIST_TRANSITION = { duration: 0.26, ease: [0.2, 0, 0, 1] as const };
 
 /**
  * The vertical a space files under. `category` may be a taxonomy category
@@ -70,15 +80,37 @@ function VoiceDirectory() {
   const { toast } = useToast();
   const { client } = useRealtime();
   const params = useSearchParams();
-  const [live, setLive] = useState<SpaceRow[]>([]);
-  const [upcoming, setUpcoming] = useState<SpaceRow[]>([]);
+  const reduced = useReducedMotion();
+  // The directory is cached app-wide (stale-while-revalidate): a revisit
+  // paints the last result immediately and the poll/refetch converges it.
+  const [cachedLive, setCachedLive] = useAtom(spacesLiveAtom);
+  const [cachedUpcoming, setCachedUpcoming] = useAtom(spacesUpcomingAtom);
+  const [spacesLoaded, setSpacesLoaded] = useAtom(spacesLoadedAtom);
+  const setSpacesFetchedAt = useSetAtom(spacesFetchedAtAtom);
   const [communities, setCommunities] = useState<
     { id: string; name: string }[]
   >([]);
-  const [loading, setLoading] = useState(true);
+  // Skeletons only on the genuinely first visit of a session.
+  const [loading, setLoading] = useState(!spacesLoaded);
   const [creating, setCreating] = useState(() => params.get("create") === "1");
   // Design-review mode (?demo=1): seeded rows, clearly chipped, never default.
+  // Demo rows are merged at display time so they never enter the cache.
   const demo = params.get("demo") === "1";
+  const live = useMemo(
+    () => (demo ? [...cachedLive, ...demoLiveSpaces()] : cachedLive),
+    [cachedLive, demo],
+  );
+  const upcoming = useMemo(
+    () =>
+      demo
+        ? [...cachedUpcoming, ...demoUpcomingSpaces()].sort(
+            (a, b) =>
+              new Date(a.scheduledFor ?? 0).getTime() -
+              new Date(b.scheduledFor ?? 0).getTime(),
+          )
+        : cachedUpcoming,
+    [cachedUpcoming, demo],
+  );
   const [busy, setBusy] = useState(false);
   // Host escape hatches on a scheduled room: change it, or call it off.
   const [editing, setEditing] = useState<SpaceRow | null>(null);
@@ -96,16 +128,10 @@ function VoiceDirectory() {
   const load = useCallback(async () => {
     const res = await getSpacesAction();
     if (res.success) {
-      setLive(demo ? [...res.live, ...demoLiveSpaces()] : res.live);
-      setUpcoming(
-        demo
-          ? [...res.upcoming, ...demoUpcomingSpaces()].sort(
-              (a, b) =>
-                new Date(a.scheduledFor ?? 0).getTime() -
-                new Date(b.scheduledFor ?? 0).getTime(),
-            )
-          : res.upcoming,
-      );
+      setCachedLive(res.live);
+      setCachedUpcoming(res.upcoming);
+      setSpacesLoaded(true);
+      setSpacesFetchedAt(Date.now());
       // Keep the open room's header numbers fresh.
       setSession((prev) => {
         if (!prev) return prev;
@@ -115,7 +141,13 @@ function VoiceDirectory() {
     }
     setLoading(false);
     return res.success ? res : null;
-  }, [demo, setSession]);
+  }, [
+    setSession,
+    setCachedLive,
+    setCachedUpcoming,
+    setSpacesLoaded,
+    setSpacesFetchedAt,
+  ]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: refreshTick is the signal; its value is unused.
   useEffect(() => {
@@ -125,11 +157,7 @@ function VoiceDirectory() {
   useEffect(() => {
     // Demo rows paint immediately — the review shouldn't wait out a cold
     // gateway; real rows merge in whenever the fetch lands.
-    if (demo) {
-      setLive(demoLiveSpaces());
-      setUpcoming(demoUpcomingSpaces());
-      setLoading(false);
-    }
+    if (demo) setLoading(false);
     void load();
     const poll = setInterval(() => void load(), POLL_MS);
     return () => clearInterval(poll);
@@ -295,7 +323,7 @@ function VoiceDirectory() {
     }
     // Drop it from the list immediately: a cancelled room lingering under a
     // "cancelled" toast is the thing that makes people press it twice.
-    setUpcoming((prev) => prev.filter((r) => r.id !== row.id));
+    setCachedUpcoming((prev) => prev.filter((r) => r.id !== row.id));
     const res = await cancelSpaceAction(row.id);
     if (!res.success) {
       toast(res.message || t("voice.startFailed"), { type: "error" });
@@ -424,9 +452,20 @@ function VoiceDirectory() {
                 {t("voice.liveNow")}
               </h2>
               <div className="grid gap-3 sm:grid-cols-2">
-                {liveShown.map((row) => (
-                  <LiveSpaceCard key={row.id} row={row} onOpen={openRoom} />
-                ))}
+                <AnimatePresence initial={false}>
+                  {liveShown.map((row) => (
+                    <motion.div
+                      key={row.id}
+                      layout={!reduced}
+                      initial={reduced ? false : { opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={reduced ? undefined : { opacity: 0 }}
+                      transition={LIST_TRANSITION}
+                    >
+                      <LiveSpaceCard row={row} onOpen={openRoom} />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </div>
             </section>
           )}
@@ -437,23 +476,36 @@ function VoiceDirectory() {
                 {t("voice.upcoming")}
               </h2>
               <div className="flex flex-col gap-2.5">
-                <NextUpCard
-                  row={upcomingShown[0]}
-                  onRemind={remind}
-                  onStart={start}
-                  onEdit={setEditing}
-                  onCancel={setCancelTarget}
-                />
-                {upcomingShown.slice(1).map((row) => (
-                  <UpcomingSpaceRow
-                    key={row.id}
-                    row={row}
-                    onRemind={remind}
-                    onStart={start}
-                    onEdit={setEditing}
-                    onCancel={setCancelTarget}
-                  />
-                ))}
+                <AnimatePresence initial={false}>
+                  {upcomingShown.map((row, i) => (
+                    <motion.div
+                      key={row.id}
+                      layout={!reduced}
+                      initial={reduced ? false : { opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={reduced ? undefined : { opacity: 0 }}
+                      transition={LIST_TRANSITION}
+                    >
+                      {i === 0 ? (
+                        <NextUpCard
+                          row={row}
+                          onRemind={remind}
+                          onStart={start}
+                          onEdit={setEditing}
+                          onCancel={setCancelTarget}
+                        />
+                      ) : (
+                        <UpcomingSpaceRow
+                          row={row}
+                          onRemind={remind}
+                          onStart={start}
+                          onEdit={setEditing}
+                          onCancel={setCancelTarget}
+                        />
+                      )}
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </div>
             </section>
           )}

@@ -9,7 +9,11 @@ import {
 	OverlayScrim,
 	useOverlayDismiss,
 } from "@/components/ui/Overlay";
-import { getFollowersAction, getFollowingAction } from "@/lib/user.actions";
+import {
+	getFollowersAction,
+	getFollowingAction,
+	searchUsersAction,
+} from "@/lib/user.actions";
 import { startConversationAction } from "@/lib/conversation.actions";
 import { UserBadges } from "@/components/ui/UserBadges";
 
@@ -44,6 +48,24 @@ export default function NewConversationModal({
 	const [loading, setLoading] = useState(true);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [startingWith, setStartingWith] = useState<string | null>(null);
+	const [remote, setRemote] = useState<UserItem[]>([]);
+
+	// Typing searches EVERYONE, not just your contacts. Premium members can
+	// message anyone now, and even for free accounts the send gate is the
+	// honest arbiter — a modal that pre-filters to mutuals just looks broken
+	// when the person you searched for plainly exists.
+	useEffect(() => {
+		const q = searchQuery.trim();
+		if (!isOpen || q.length < 2) {
+			setRemote([]);
+			return;
+		}
+		const id = window.setTimeout(async () => {
+			const res = await searchUsersAction(q);
+			if (res.success && Array.isArray(res.data)) setRemote(res.data);
+		}, 300);
+		return () => window.clearTimeout(id);
+	}, [isOpen, searchQuery]);
 
 	// Only people who follow you back, because those are the only threads
 	// the gateway will open. This is the INTERSECTION of followers and
@@ -102,14 +124,18 @@ export default function NewConversationModal({
 	const filteredUsers = useMemo(() => {
 		if (!searchQuery.trim()) return users;
 		const q = searchQuery.toLowerCase();
-		return users.filter(
+		const locals = users.filter(
 			(u) =>
 				u.username?.toLowerCase().includes(q) ||
 				u.firstName?.toLowerCase().includes(q) ||
 				u.lastName?.toLowerCase().includes(q) ||
 				`${u.firstName} ${u.lastName}`.toLowerCase().includes(q),
 		);
-	}, [users, searchQuery]);
+		// Contacts first, then the wider directory, deduped: familiarity is
+		// still the best ranking signal a DM composer has.
+		const seen = new Set(locals.map((u) => String(u._id)));
+		return [...locals, ...remote.filter((u) => !seen.has(String(u._id)))];
+	}, [users, remote, searchQuery]);
 
 	const handleSelectUser = async (user: UserItem) => {
 		setStartingWith(user._id);
@@ -166,7 +192,7 @@ export default function NewConversationModal({
 									<span className="text-sm">
 										{searchQuery.trim()
 											? `No results for "${searchQuery}"`
-											: "You can only message people who follow you back"}
+											: "You can only message your Allies"}
 									</span>
 								</div>
 							) : (

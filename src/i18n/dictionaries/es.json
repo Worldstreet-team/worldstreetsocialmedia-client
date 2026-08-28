@@ -6,7 +6,7 @@
   "nav.bookmarks": "Guardados",
   "nav.profile": "Perfil",
   "feed.tab.foryou": "Para ti",
-  "feed.tab.following": "Aliados",
+  "feed.tab.following": "Alineados",
   "feed.tab.newest": "Más recientes",
   "feed.empty.title": "Tu cronología está vacía",
   "feed.empty.caption": "Las publicaciones de personas con las que te alineas aparecen aquí. Escribe la primera.",
@@ -49,7 +49,7 @@
   "studio.impressions": "Impresiones",
   "studio.engagements": "Interacciones",
   "studio.engagementRate": "Tasa de interacción",
-  "studio.followers": "Alineados",
+  "studio.followers": "Aliados",
   "studio.posts": "Publicaciones",
   "studio.daily": "Impresiones diarias",
   "studio.window": "últimos 28 días",
@@ -292,8 +292,8 @@
   "profile.bioSeeMore": "Ver más",
   "profile.bioSeeLess": "Ver menos",
   "profile.joined": "Se unió",
-  "profile.following": "Aliados",
-  "profile.followers": "Alineados",
+  "profile.following": "Alineados",
+  "profile.followers": "Aliados",
   "profile.edit": "Editar perfil",
   "profile.message": "Mensaje",
   "profile.more": "Más opciones",
@@ -729,5 +729,6 @@
   "notif.verb.sale": "compró tu publicación",
   "notif.empty.sales.title": "Aún no hay ventas",
   "search.placeholder.people": "Buscar por nombre o usuario",
-  "notif.verb.gift": "te envió un regalo"
+  "notif.verb.gift": "te envió un regalo",
+  "messages.notMutual": "Solo puedes escribir a tus Aliados"
 }

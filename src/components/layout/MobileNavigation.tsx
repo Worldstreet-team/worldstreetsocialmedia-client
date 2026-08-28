@@ -25,6 +25,7 @@ import { LanguageMenu } from "@/components/ui/LanguageMenu";
 import { useT } from "@/i18n/client";
 
 import { BrandRitual } from "@/components/layout/BrandRitual";
+import { SidebarWallet } from "@/components/layout/SidebarWallet";
 import {
 	OverlayHeader,
 	OverlayPanel,
@@ -177,8 +178,20 @@ export function MobileNavigation() {
 							</div>
 						</OverlayHeader>
 
-						{/* Navigation Links */}
-						<nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-2 flex flex-col gap-1">
+						{/* One scroll column owns everything between the identity
+						    header and the footer — the wallet strip scrolls WITH
+						    the links, so on a short screen nothing below it is
+						    unreachable. */}
+						<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-2">
+							{/* Wallet strip — same component as the desktop right
+							    rail; renders nothing when the wallet is
+							    unreachable, so the drawer just tightens up. */}
+							<div className="pb-2">
+								<SidebarWallet />
+							</div>
+
+							{/* Navigation Links */}
+							<nav className="flex flex-col gap-1">
 							{sidebarList
 								// Studio is creator-only; mirror the desktop rail's gate.
 								.filter(
@@ -260,7 +273,8 @@ export function MobileNavigation() {
 									</Link>
 								);
 							})}
-						</nav>
+							</nav>
+						</div>
 
 						{/* Footer Actions. The bottom edge is the phone's, so the
 						    home indicator gets its clearance here rather than on a

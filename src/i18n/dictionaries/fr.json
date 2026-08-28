@@ -6,7 +6,7 @@
   "nav.bookmarks": "Signets",
   "nav.profile": "Profil",
   "feed.tab.foryou": "Pour vous",
-  "feed.tab.following": "Alliés",
+  "feed.tab.following": "Alignés",
   "feed.tab.newest": "Plus récents",
   "feed.empty.title": "Votre fil est vide",
   "feed.empty.caption": "Les publications des personnes que vous suivez apparaissent ici. Écrivez la première.",
@@ -49,7 +49,7 @@
   "studio.impressions": "Impressions",
   "studio.engagements": "Interactions",
   "studio.engagementRate": "Taux d'interaction",
-  "studio.followers": "Alignés",
+  "studio.followers": "Alliés",
   "studio.posts": "Publications",
   "studio.daily": "Impressions quotidiennes",
   "studio.window": "28 derniers jours",
@@ -292,8 +292,8 @@
   "profile.bioSeeMore": "Voir plus",
   "profile.bioSeeLess": "Voir moins",
   "profile.joined": "Inscrit en",
-  "profile.following": "Alliés",
-  "profile.followers": "Alignés",
+  "profile.following": "Alignés",
+  "profile.followers": "Alliés",
   "profile.edit": "Modifier le profil",
   "profile.message": "Message",
   "profile.more": "Plus d'options",
@@ -729,5 +729,6 @@
   "notif.verb.sale": "a acheté votre publication",
   "notif.empty.sales.title": "Aucune vente",
   "search.placeholder.people": "Rechercher par nom ou identifiant",
-  "notif.verb.gift": "vous a envoyé un cadeau"
+  "notif.verb.gift": "vous a envoyé un cadeau",
+  "messages.notMutual": "Vous ne pouvez écrire qu'à vos Alliés"
 }

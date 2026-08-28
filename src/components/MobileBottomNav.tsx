@@ -10,7 +10,7 @@ import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import {
 	ChatCircleDots,
 	House,
-	MagnifyingGlass,
+	Binoculars,
 	UserCircle,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
@@ -37,7 +37,8 @@ const navIcon = (Icon: PhosphorIcon) => {
 const CENTER_SLOT = 2;
 
 const HomeIcon = navIcon(House);
-const SearchIcon = navIcon(MagnifyingGlass);
+// Binoculars matches the rail's Explore glyph (owner ruling 2026-08-28).
+const SearchIcon = navIcon(Binoculars);
 const MessageIcon = navIcon(ChatCircleDots);
 
 
