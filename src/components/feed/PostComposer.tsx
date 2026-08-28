@@ -153,20 +153,32 @@ const CharacterRing = ({ length }: { length: number }) => {
  * session. UX-only — the gateway 403s a non-Gold sale regardless; this just
  * keeps the toggle out of composers it would only disappoint.
  */
-/** Duration of a picked video, from the metadata the browser already reads. */
+/**
+ * Duration of a picked video, from the metadata the browser already reads.
+ *
+ * Resolves null when the browser cannot parse the container — HEVC off an
+ * iPhone is the everyday case — and the caller must treat that as "unknown",
+ * never as a reason to block the post. It also resolves null on a deadline:
+ * neither `loadedmetadata` nor `error` is guaranteed to fire, and without this
+ * the promise simply never settled.
+ */
 function readVideoDuration(file: File): Promise<number | null> {
 	return new Promise((resolve) => {
 		const url = URL.createObjectURL(file);
 		const el = document.createElement("video");
+		let settled = false;
+		const done = (value: number | null) => {
+			if (settled) return;
+			settled = true;
+			clearTimeout(timer);
+			URL.revokeObjectURL(url);
+			resolve(value);
+		};
+		const timer = setTimeout(() => done(null), 5_000);
 		el.preload = "metadata";
-		el.onloadedmetadata = () => {
-			URL.revokeObjectURL(url);
-			resolve(Number.isFinite(el.duration) ? el.duration : null);
-		};
-		el.onerror = () => {
-			URL.revokeObjectURL(url);
-			resolve(null);
-		};
+		el.onloadedmetadata = () =>
+			done(Number.isFinite(el.duration) ? el.duration : null);
+		el.onerror = () => done(null);
 		el.src = url;
 	});
 }
