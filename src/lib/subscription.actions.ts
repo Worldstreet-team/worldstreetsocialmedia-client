@@ -35,6 +35,8 @@ export interface SubscriptionState {
 		vividCreditGrant?: number;
 		/** Gold only: may list posts for sale. */
 		canSellPosts?: boolean;
+		/** Gold only: may sell the ad slot on their profile. */
+		canSellAdSpace?: boolean;
 		/** May summon @vivid — tagging her triggers an AI reply. */
 		canTagVivid?: boolean;
 	};
