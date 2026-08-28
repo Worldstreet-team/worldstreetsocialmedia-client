@@ -19,7 +19,7 @@ import {
     Eye,
     EyeSlash,
     LockSimple,
-    ChartLineUp,
+    Pulse,
     ChatCircle,
     Check,
     CircleNotch,
@@ -820,7 +820,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                     aria-label={t("post.views")}
                                 >
                                     <span className="text-xs">•</span>
-                                    <ChartLineUp size={13} weight="bold" />
+                                    <Pulse size={13} weight="bold" />
                                     <span className="font-sans text-[12.5px] tabular-nums">
                                         {formatCount(post.stats.views ?? 0)}
                                     </span>
@@ -1383,9 +1383,10 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                         reply/repost/like/bookmark/share at even intervals, each
                         count riding beside its glyph; impressions ride the right
                         edge, isolated (a metric, not a button). Idle glyphs are
-                        duotone — Phosphor's two-tone — active stays fill.
-                        03-icons: this row is the ONE place Phosphor is used
-                        instead of Lucide, matching mobile. */}
+                        regular weight — duotone's inner fill sits so close to
+                        bg-surface that the row muted itself — and active stays
+                        fill. 03-icons: this row is the ONE place Phosphor is
+                        used instead of Lucide, matching mobile. */}
                     <div className="flex items-center justify-between text-muted mt-1.5 -mb-1.5 pointer-events-auto">
                         <div className="flex flex-1 max-w-[425px] items-center justify-between -ml-2 sm:mr-6">
                         <Link
@@ -1395,7 +1396,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                             className="flex items-center gap-0.5 hover:text-primary transition-colors group cursor-pointer"
                         >
                             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill group-hover:bg-primary/10 transition group-active:scale-[0.98]">
-                                <ChatCircle size={18} weight="duotone" />
+                                <ChatCircle size={18} weight="regular" />
                             </span>
                             <span className="text-[13px] font-sans tabular-nums">
                                 {formatCount(shownReplies)}
@@ -1417,7 +1418,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill group-hover:bg-success/10 transition group-active:scale-[0.98]">
                                     <Repeat
                                         size={18}
-                                        weight={reposted ? "fill" : "duotone"}
+                                        weight={reposted ? "fill" : "regular"}
                                     />
                                 </span>
                                 <span className="text-[13px] font-sans tabular-nums">
@@ -1516,7 +1517,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                 >
                                     <Heart
                                         size={18}
-                                        weight={isLiked ? "fill" : "duotone"}
+                                        weight={isLiked ? "fill" : "regular"}
                                     />
                                 </motion.span>
                             </span>
@@ -1581,7 +1582,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                 >
                                     <BookmarkSimple
                                         size={18}
-                                        weight={isBookmarked ? "fill" : "duotone"}
+                                        weight={isBookmarked ? "fill" : "regular"}
                                     />
                                 </motion.span>
                             </span>
@@ -1643,7 +1644,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                         >
                                             <PaperPlaneTilt
                                                 size={18}
-                                                weight="duotone"
+                                                weight="regular"
                                             />
                                         </motion.span>
                                     )}
@@ -1661,7 +1662,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                             title={t("post.views")}
                             aria-label={t("post.views")}
                         >
-                            <ChartLineUp size={15} weight="duotone" />
+                            <Pulse size={16} weight="bold" />
                             <span className="text-[12.5px] font-medium font-sans tabular-nums">
                                 {formatCount(post.stats.views ?? 0) || "0"}
                             </span>
