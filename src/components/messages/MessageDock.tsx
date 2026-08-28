@@ -95,7 +95,8 @@ export function MessageDock() {
 		};
 	}, [open, close]);
 
-	// Signed out, or already looking at the inbox, the dock is noise.
+	// Signed out, or already looking at the inbox, the dock is noise. A call
+	// in progress also owns the corner — the call dock parks exactly here.
 	if (!me?._id || pathname?.startsWith("/messages")) return null;
 
 	const onlineCount = rows.filter((r) =>
@@ -104,43 +105,46 @@ export function MessageDock() {
 
 	return (
 		<>
-			{/* The rail. Hidden on phones, where the bottom nav already owns
-			    messages and a floating tab would sit on top of it. */}
-			<button
-				type="button"
-				onClick={() => setOpen((v) => !v)}
-				aria-expanded={open}
-				aria-label={t("nav.messages")}
-				className={clsx(
-					"fixed right-0 top-1/2 z-sticky hidden -translate-y-1/2 cursor-pointer items-center gap-2",
-					"rounded-l-2xl bg-surface py-4 pl-3 pr-2.5 text-muted transition-colors hover:text-primary lg:flex",
-					open && "pointer-events-none opacity-0",
-				)}
-				style={{ writingMode: "vertical-rl" }}
-			>
-				<ChatCircleDots size={18} weight="fill" className="rotate-90" />
-				<span className="font-sans text-[12px] font-semibold tracking-wide">
-					{t("nav.messages")}
-				</span>
-				{unread > 0 && (
-					<span className="flex h-4 min-w-4 items-center justify-center rounded-pill bg-brand px-1 font-sans text-[10px] font-bold tabular-nums text-brand-on">
-						{unread}
-					</span>
-				)}
-			</button>
+			{/* The station: a disc tucked into the right edge, half out of
+			    frame — the "cut out" look. Hover slides it fully into view;
+			    the badge rides outside the fold so a count is never hidden.
+			    Same element the panel morphs out of (layoutId below), so
+			    opening reads as the disc growing into the panel, not a popover
+			    appearing near it. */}
+			{!open && (
+				<motion.button
+					layoutId="ws-message-dock"
+					type="button"
+					onClick={() => setOpen(true)}
+					aria-expanded={open}
+					aria-label={t("nav.messages")}
+					transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
+					style={{ borderRadius: 24 }}
+					className={clsx(
+						"fixed right-0 top-1/2 z-sticky flex h-12 w-12 -translate-y-1/2 translate-x-[38%]",
+						"cursor-pointer items-center justify-center bg-surface text-muted",
+						"transition-[transform,color] hover:translate-x-1 hover:text-primary",
+					)}
+				>
+					<ChatCircleDots size={20} weight="fill" className="-translate-x-[19%]" />
+					{unread > 0 && (
+						<span className="absolute -top-1 left-0 flex h-4 min-w-4 items-center justify-center rounded-pill bg-brand px-1 font-sans text-[10px] font-bold tabular-nums text-brand-on ring-2 ring-page">
+							{unread}
+						</span>
+					)}
+				</motion.button>
+			)}
 
 			<AnimatePresence>
 				{open && (
 					<motion.aside
-						/* Rises from the bottom-right corner it is anchored to, the
-						   same gesture as every anchored popover in the app. */
-						initial={{ opacity: 0, y: 16, scale: 0.98 }}
-						animate={{ opacity: 1, y: 0, scale: 1 }}
-						exit={{ opacity: 0, y: 16, scale: 0.98 }}
-						transition={{ duration: 0.26, ease: [0.2, 0, 0, 1] }}
+						/* Shares layoutId with the disc, so it does not appear —
+						   it GROWS out of the station and shrinks back into it. */
+						layoutId="ws-message-dock"
+						transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
 						ref={panelRef}
 						tabIndex={-1}
-						style={{ transformOrigin: "bottom right" }}
+						style={{ borderRadius: 20 }}
 						/* Closing on blur is the dismissal, since there is no scrim.
 						   `relatedTarget === null` means focus left the document
 						   entirely — switching tabs should not shut your messages. */
@@ -154,8 +158,11 @@ export function MessageDock() {
 						}}
 						aria-label={t("nav.messages")}
 						className={clsx(
-							"glass-frost fixed bottom-4 right-4 z-dropdown hidden w-[360px] flex-col overflow-hidden",
-							"max-h-[min(620px,78vh)] rounded-2xl backdrop-blur-2xl backdrop-saturate-150 lg:flex",
+							"glass-frost fixed z-dropdown flex flex-col overflow-hidden backdrop-blur-2xl backdrop-saturate-150",
+							// Phones: a sheet pinned above the bottom nav, full width
+							// bar a gutter. Desktop: the corner card.
+							"inset-x-2 bottom-[calc(var(--ws-nav-clearance,64px)+8px)] max-h-[68vh]",
+							"sm:inset-x-auto sm:bottom-4 sm:right-4 sm:w-[360px] sm:max-h-[min(620px,78vh)]",
 						)}
 					>
 						<div className="flex h-12 shrink-0 items-center gap-2 px-4">

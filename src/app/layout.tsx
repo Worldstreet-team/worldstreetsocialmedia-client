@@ -104,6 +104,10 @@ export const viewport: Viewport = {
     initialScale: 1,
     // Browser chrome (mobile address bar, PWA title bar) matches the page.
     themeColor: "#0C0A09",
+    // The on-screen keyboard RESIZES the layout viewport instead of floating
+    // over it. Without this, a chat composer pinned to 100dvh sits underneath
+    // the keyboard on Android — you type into a field you cannot see.
+    interactiveWidget: "resizes-content",
 };
 
 export const metadata: Metadata = {

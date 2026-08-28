@@ -1058,7 +1058,31 @@ export const MessageBox = ({
 							// A call isn't something either side said, so it gets a
 							// centred chip instead of a bubble on one shore.
 							if (m.type === "call") {
-								return <CallLogRow key={m._id} content={m.content} />;
+								return (
+									<CallLogRow
+										key={m._id}
+										content={m.content}
+										at={m.createdAt}
+										onCallBack={(video) =>
+											startCall({
+												conversationId: activeConversation._id,
+												peer: {
+													id: activeConversation.otherParticipant?._id || "",
+													name:
+														`${activeConversation.otherParticipant?.firstName || ""} ${activeConversation.otherParticipant?.lastName || ""}`.trim() ||
+														activeConversation.otherParticipant?.username ||
+														"",
+													avatar:
+														activeConversation.otherParticipant?.avatar || "",
+													username:
+														activeConversation.otherParticipant?.username ||
+														"",
+												},
+												isVideo: video,
+											})
+										}
+									/>
+								);
 							}
 							return (
 								<Fragment key={m._id}>
@@ -1082,9 +1106,21 @@ export const MessageBox = ({
 											// hold a sentence without shredding it. Phones
 											// get 85%, desktop keeps the original ratio.
 											"max-w-[85%] sm:max-w-[70%] min-w-0 rounded-xl px-3.5 py-2 sm:px-4",
+											// Run-aware corners: inside a run, the corners that
+											// face the neighbouring bubble flatten, so a burst
+											// reads as one utterance in parts — the messenger
+											// grammar — instead of a stack of identical pills.
 											isMe
-												? "bg-brand text-brand-on"
-												: "bg-raised text-primary",
+												? [
+														"bg-brand text-brand-on",
+														sameRunAsPrev && "rounded-tr-[4px]",
+														!endsRun && "rounded-br-[4px]",
+													]
+												: [
+														"bg-raised text-primary",
+														sameRunAsPrev && "rounded-tl-[4px]",
+														!endsRun && "rounded-bl-[4px]",
+													],
 										)}
 									>
 										{m.type === "image" && m.mediaUrl && (
@@ -1268,22 +1304,6 @@ export const MessageBox = ({
 								)}
 							</AnimatePresence>
 
-							{/* Plus Button */}
-							<button
-								type="button"
-								onClick={() => setShowAttachMenu(!showAttachMenu)}
-								aria-label="Attach a file"
-								className={clsx(
-									// Colors + the 45° rotate only (transform is in-budget).
-									"flex h-11 w-11 shrink-0 items-center justify-center rounded-pill transition-[transform,background-color,color]",
-									showAttachMenu
-										? "rotate-45 bg-primary text-page"
-										: "bg-chip text-muted hover:text-primary",
-								)}
-							>
-								<Plus className="w-6 h-6" />
-							</button>
-
 							{/* Hidden File Input */}
 							<input
 								type="file"
@@ -1322,7 +1342,23 @@ export const MessageBox = ({
 							) : (
 								/* A fill that lifts on focus. The bordered card read as
 								   a form field in an app that has none anywhere else. */
-								<div className="flex min-w-0 flex-1 items-center gap-1 rounded-2xl bg-sunken px-3 py-1.5 transition-colors focus-within:bg-raised sm:gap-2 sm:px-4">
+								<div className="flex min-w-0 flex-1 items-end gap-1 rounded-2xl bg-sunken py-1.5 pl-1.5 pr-2 transition-colors focus-within:bg-raised sm:gap-2">
+									{/* Attach lives INSIDE the pill. A row of loose parts —
+									    plus, field, icons — read as a toolbar; a messenger
+									    composer is one object with everything in reach. */}
+									<button
+										type="button"
+										onClick={() => setShowAttachMenu(!showAttachMenu)}
+										aria-label="Attach a file"
+										className={clsx(
+											"mb-0.5 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill transition-[transform,background-color,color]",
+											showAttachMenu
+												? "rotate-45 bg-primary text-page"
+												: "text-muted hover:bg-chip hover:text-primary",
+										)}
+									>
+										<Plus className="w-5 h-5" />
+									</button>
 									<textarea
 										value={messageInput}
 										onChange={(e) => {

@@ -217,8 +217,58 @@ function ControlButton({
 	);
 }
 
+/**
+ * Dev-only harness: `?callpreview=voice|video|ring|dock` forces the surface
+ * into a state so the UI can be seen and styled without ringing a real
+ * person. Compiled out of production builds by the NODE_ENV guard.
+ */
+function usePreviewState() {
+	const [preview, setPreview] = useState<string | null>(null);
+	useEffect(() => {
+		if (process.env.NODE_ENV === "production") return;
+		const read = () =>
+			setPreview(
+				new URLSearchParams(window.location.search).get("callpreview"),
+			);
+		read();
+		window.addEventListener("popstate", read);
+		return () => window.removeEventListener("popstate", read);
+	}, []);
+	if (!preview) return null;
+	const base = {
+		peer: {
+			id: "preview",
+			name: "Greg Osimiri",
+			username: "GreggWS",
+			avatar: "",
+		},
+		conversationId: "preview",
+		error: null,
+		remoteMuted: false,
+		poorConnection: preview === "weak",
+		minimized: preview === "dock",
+		micOn: true,
+		camOn: preview === "video",
+		remoteVideoOn: false,
+		isIncoming: preview === "ring",
+		isVideo: preview === "video" || preview === "dock",
+		endReason: null,
+	};
+	if (preview === "ring")
+		// Incoming is spelled "ringing" + isIncoming in the real state union.
+		return { ...base, status: "ringing" as const, startedAt: null };
+	if (preview === "connecting")
+		return { ...base, status: "connecting" as const, startedAt: null };
+	return {
+		...base,
+		status: "connected" as const,
+		startedAt: Date.now() - 154_000,
+	};
+}
+
 export function CallSurface() {
 	const call = useCall();
+	const previewState = usePreviewState();
 	const {
 		status,
 		isIncoming,
@@ -233,7 +283,7 @@ export function CallSurface() {
 		remoteVideoOn,
 		poorConnection,
 		error,
-	} = call;
+	} = (previewState as unknown as typeof call) ?? call;
 
 	const elapsed = useElapsed(startedAt);
 	const open = status !== "idle";
