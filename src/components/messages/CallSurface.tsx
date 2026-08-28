@@ -8,6 +8,7 @@ import {
 	PhoneDisconnect,
 	VideoCamera,
 	VideoCameraSlash,
+	CameraRotate,
 	CornersIn,
 	CornersOut,
 	WifiSlash,
@@ -288,6 +289,66 @@ function usePreviewState() {
 	};
 }
 
+/**
+ * Does this device have more than one camera?
+ *
+ * Asked once, after mount, and never during render — `enumerateDevices` is
+ * async and returns nothing useful before permission is granted, which is why
+ * this runs while a call is up rather than at import time. Labels stay empty
+ * without permission, but the COUNT is honest, and the count is all this needs.
+ */
+function useHasMultipleCameras(active: boolean) {
+	const [many, setMany] = useState(false);
+	useEffect(() => {
+		if (!active || !navigator.mediaDevices?.enumerateDevices) return;
+		let cancelled = false;
+		navigator.mediaDevices
+			.enumerateDevices()
+			.then((devices) => {
+				if (cancelled) return;
+				setMany(devices.filter((d) => d.kind === "videoinput").length > 1);
+			})
+			.catch(() => {
+				// Refused or unsupported: no flip control, rather than one that
+				// throws when tapped.
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [active]);
+	return many;
+}
+
+/**
+ * How far the docked call may travel from its bottom-right home.
+ *
+ * The dock is `fixed bottom-4 right-4`, so dragging moves it in negative x and
+ * y. Constraints are recomputed on resize and on rotate — without that, a
+ * dock parked top-left in landscape ends up off screen when the phone turns
+ * back, with no way to reach it.
+ */
+function useDockBounds(active: boolean, w: number, h: number) {
+	const [bounds, setBounds] = useState({ left: 0, right: 0, top: 0, bottom: 0 });
+	useEffect(() => {
+		if (!active) return;
+		const measure = () =>
+			setBounds({
+				left: -Math.max(0, window.innerWidth - w - 16),
+				right: 0,
+				top: -Math.max(0, window.innerHeight - h - 16),
+				bottom: 0,
+			});
+		measure();
+		window.addEventListener("resize", measure);
+		window.addEventListener("orientationchange", measure);
+		return () => {
+			window.removeEventListener("resize", measure);
+			window.removeEventListener("orientationchange", measure);
+		};
+	}, [active, w, h]);
+	return bounds;
+}
+
 export function CallSurface() {
 	const call = useCall();
 	const previewState = usePreviewState();
@@ -301,6 +362,8 @@ export function CallSurface() {
 		endReason,
 		micOn,
 		camOn,
+		facing,
+		switchingCam,
 		remoteMuted,
 		remoteVideoOn,
 		poorConnection,
@@ -318,6 +381,13 @@ export function CallSurface() {
 	const remoteAudio = callManager.remoteAudio;
 
 	const showVideoStage = isVideo && (remoteVideoOn || camOn);
+	const hasMultipleCameras = useHasMultipleCameras(camOn);
+	// 228x196 is the dock's own box (tile + control strip).
+	const dockBounds = useDockBounds(minimized, 228, 196);
+	// A drag ends with a click on whatever was under the finger, which would
+	// expand the call every time someone moved it. Set on drag, read and
+	// cleared by the expand handler.
+	const draggedRef = useRef(false);
 	const line = statusLine(status, isIncoming, isVideo, endReason, elapsed);
 	const pending = status === "ringing" || status === "connecting";
 
@@ -394,13 +464,30 @@ export function CallSurface() {
 						animate={{ opacity: 1, y: 0, scale: 1 }}
 						exit={{ opacity: 0, y: 8, scale: 0.98 }}
 						transition={{ duration: 0.26, ease: EASE }}
-						className="group fixed bottom-4 right-4 z-modal w-[228px] overflow-hidden rounded-2xl glass-dock backdrop-blur-2xl backdrop-saturate-150"
+						drag
+						dragConstraints={dockBounds}
+						dragMomentum={false}
+						dragElastic={0.05}
+						onDragStart={() => {
+							draggedRef.current = true;
+						}}
+						onDragEnd={() => {
+							// Cleared a frame later: the synthetic click from this
+							// gesture has to see the flag still set.
+							setTimeout(() => {
+								draggedRef.current = false;
+							}, 0);
+						}}
+						className="group fixed bottom-4 right-4 z-modal w-[228px] cursor-grab touch-none overflow-hidden rounded-2xl glass-dock backdrop-blur-2xl backdrop-saturate-150 active:cursor-grabbing"
 					>
 						{/* The whole dock is the expand target — a PiP tile you tap to
 						    come back. The two controls sit above it. */}
 						<button
 							type="button"
-							onClick={() => call.setMinimized(false)}
+							onClick={() => {
+								if (draggedRef.current) return;
+								call.setMinimized(false);
+							}}
 							aria-label="Expand call"
 							className="absolute inset-0 cursor-pointer"
 						/>
@@ -557,7 +644,29 @@ export function CallSurface() {
 									    control bar so the two never collide. */}
 									{camOn && localVideo && (
 										<div className="absolute bottom-[86px] right-3 z-10 h-[124px] w-[93px] overflow-hidden rounded-xl glass-well">
-											<VideoTile track={localVideo} mirrored />
+											{/* Mirrored only for the front camera. The back
+											    camera shows the world, and mirroring the
+											    world is just wrong — text in shot reads
+											    backwards. */}
+											<VideoTile
+												track={localVideo}
+												mirrored={facing === "user"}
+											/>
+											{/* Flip lives on the self-view, because that is
+											    the thing it changes. Touch only: a laptop
+											    has one camera and the control would be a
+											    button that does nothing. */}
+											{hasMultipleCameras && (
+												<button
+													type="button"
+													onClick={call.flipCamera}
+													disabled={switchingCam}
+													aria-label="Switch camera"
+													className="absolute right-1.5 top-1.5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-pill glass-chip-canvas backdrop-blur-md glass-ink transition-opacity disabled:opacity-50"
+												>
+													<CameraRotate size={13} weight="bold" />
+												</button>
+											)}
 											{!micOn && (
 												<span className="absolute bottom-1.5 left-1.5 flex h-6 w-6 items-center justify-center rounded-pill glass-chip-canvas backdrop-blur-md glass-ink">
 													<MicrophoneSlash size={12} weight="fill" />

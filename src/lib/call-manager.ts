@@ -102,6 +102,10 @@ export interface CallState {
 	endReason: CallEndReason;
 	micOn: boolean;
 	camOn: boolean;
+	/** Which camera is publishing. Only meaningful on a device that has two. */
+	facing: "user" | "environment";
+	/** True while a flip is in flight, so the button cannot be double-fired. */
+	switchingCam: boolean;
 	/** Remote side muted their mic — shown as a badge on their tile. */
 	remoteMuted: boolean;
 	remoteVideoOn: boolean;
@@ -151,6 +155,8 @@ const IDLE_STATE: CallState = {
 	endReason: null,
 	micOn: true,
 	camOn: false,
+	facing: "user",
+	switchingCam: false,
 	remoteMuted: false,
 	remoteVideoOn: false,
 	poorConnection: false,
@@ -397,6 +403,53 @@ class CallManager {
 			this.set({ isVideo: this.state.isVideo || next });
 		} catch {
 			this.set({ camOn: !next });
+		}
+	}
+
+	/**
+	 * Swap between the front and back camera.
+	 *
+	 * LiveKit has no "flip" — a camera is a device constraint, so the switch is
+	 * a republish of the video track with the other facingMode. Which is why
+	 * this is guarded: two taps in flight at once would race two publishes and
+	 * can leave the room with no camera at all.
+	 *
+	 * `switchCamera` does not exist on every version of the SDK's track object,
+	 * so the fallback restarts the track with the new constraint. If both fail
+	 * the previous facing is restored, since the old track is still publishing.
+	 */
+	async flipCamera() {
+		if (this.state.switchingCam || !this.state.camOn) return;
+		const next = this.state.facing === "user" ? "environment" : "user";
+		this.set({ switchingCam: true, facing: next });
+		try {
+			const pub = this.room?.localParticipant.videoTrackPublications
+				.values()
+				.next().value;
+			const track = pub?.track as
+				| (LocalVideoTrack & {
+						restartTrack?: (c: MediaTrackConstraints) => Promise<void>;
+				  })
+				| undefined;
+			if (track?.restartTrack) {
+				await track.restartTrack({ facingMode: next });
+			} else {
+				// Republish: drop the camera and bring it back facing the other way.
+				await this.room?.localParticipant.setCameraEnabled(false);
+				await this.room?.localParticipant.setCameraEnabled(true, {
+					facingMode: next,
+				});
+			}
+			this.localVideoTrack =
+				(this.room?.localParticipant.videoTrackPublications
+					.values()
+					.next().value?.track as LocalVideoTrack) ?? null;
+			// Re-notify: the track handle changed even though no flag did.
+			this.set({});
+		} catch {
+			this.set({ facing: this.state.facing === "user" ? "environment" : "user" });
+		} finally {
+			this.set({ switchingCam: false });
 		}
 	}
 

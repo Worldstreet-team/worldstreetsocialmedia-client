@@ -28,6 +28,7 @@ interface CallContextType extends CallState {
 	endCall: () => void;
 	toggleMic: () => void;
 	toggleCam: () => void;
+	flipCamera: () => void;
 	setMinimized: (minimized: boolean) => void;
 }
 
@@ -142,6 +143,7 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
 	const endCall = useCallback(() => callManager.endCall(), []);
 	const toggleMic = useCallback(() => void callManager.toggleMic(), []);
 	const toggleCam = useCallback(() => void callManager.toggleCam(), []);
+	const flipCamera = useCallback(() => void callManager.flipCamera(), []);
 	const setMinimized = useCallback(
 		(minimized: boolean) => callManager.setMinimized(minimized),
 		[],
@@ -157,6 +159,7 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
 				endCall,
 				toggleMic,
 				toggleCam,
+				flipCamera,
 				setMinimized,
 			}}
 		>
