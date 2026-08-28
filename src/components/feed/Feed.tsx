@@ -178,13 +178,22 @@ export default function Feed({
 	// Deferred past the intro so the fetch never competes with first paint —
 	// the reader is still on post one, and by the time they are scrolling
 	// there are already several screens beneath them.
+	//
+	// Depends on posts.length, and that is the whole point: on the seeded path
+	// `loading` is already false during the first render, when the atom is
+	// still empty. Watching only [loading, mode] meant this ran once, bailed on
+	// the empty check, and never ran again — the runway was never built and the
+	// feed still paged one screen at a time. The ref keeps it to one burst per
+	// tab despite the wider deps.
+	const toppedUpForRef = useRef<string | null>(null);
 	useEffect(() => {
 		if (loading || feedState.posts.length === 0) return;
+		if (toppedUpForRef.current === feedState.mode) return;
 		if (feedState.posts.length >= BUFFER_TARGET || !feedState.hasMore) return;
+		toppedUpForRef.current = feedState.mode;
 		const timer = setTimeout(() => void fillBuffer(false), 600);
 		return () => clearTimeout(timer);
-		// Runs per tab: switching tab resets posts and re-arms this.
-	}, [loading, feedState.mode]);
+	}, [loading, feedState.mode, feedState.posts.length, feedState.hasMore]);
 
 	// Infinite scroll: a sentinel above the "Show more" button auto-loads the
 	// next page as it approaches the viewport; the button stays as fallback.
@@ -382,6 +391,7 @@ export default function Feed({
 		loadedTabRef.current = tab;
 		// The seed was For-You page one; under any other tab it is a lie.
 		initialRef.current = null;
+		toppedUpForRef.current = null;
 		// Posts pinned by the pill belong to the tab they were fetched for —
 		// and so does anything still waiting in the batching window.
 		prependedRef.current = [];

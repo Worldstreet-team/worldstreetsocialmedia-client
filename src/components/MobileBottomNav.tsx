@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useAppPathname } from "@/i18n/useAppPathname";
 import { EcosystemSheet } from "@/components/layout/EcosystemSheet";
 import { BrandMark } from "@/components/layout/BrandRitual";
@@ -71,7 +71,21 @@ export const MobileBottomNav = () => {
 	const pathname = useAppPathname();
 	const [ecosystemOpen, setEcosystemOpen] = useState(false);
 	const unreadMessages = useAtomValue(unreadMessagesCountAtom);
-	const user = useAtomValue(userAtom);
+	const storedUser = useAtomValue(userAtom);
+	/**
+	 * The user atom hydrates on the client, so the server renders this nav with
+	 * no user and the client's first pass renders it WITH one — a different
+	 * href and an avatar instead of the fallback glyph. React counted that as a
+	 * hydration mismatch and threw the whole tree away, re-rendering the app on
+	 * every load. Same reason StudioShell defers its identity card.
+	 *
+	 * Holding the server's answer for one paint costs a frame of the generic
+	 * icon and keeps the server HTML — which is the entire point of rendering
+	 * it on the server.
+	 */
+	const [hydrated, setHydrated] = useState(false);
+	useEffect(() => setHydrated(true), []);
+	const user = hydrated ? storedUser : null;
 	const ProfileIcon = makeProfileIcon(user?.avatar);
 
 	const navItems = [
