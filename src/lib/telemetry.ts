@@ -43,6 +43,8 @@ export interface TelemetryEvent {
 
 const FLUSH_INTERVAL_MS = 5_000;
 const FLUSH_AT = 20;
+/** Ceiling on retained events, so a gateway outage can't grow the queue forever. */
+const MAX_QUEUE = 500;
 const MRC_COVERAGE = 0.5;
 const MRC_CONTINUOUS_MS = 1_000;
 
@@ -65,13 +67,26 @@ async function flush() {
 	if (flushing || queue.length === 0) return;
 	flushing = true;
 	const batch = queue.splice(0, 100);
+	let failed = false;
 	try {
 		await sendEventsAction(batch);
 	} catch {
-		// Telemetry is best-effort; a lost batch is acceptable, a broken UI is not.
+		failed = true;
+		// A dropped batch is not free: impressions are what damp already-seen
+		// posts out of the feed, so losing them is exactly how a post the user
+		// has read comes back tomorrow. Put them at the FRONT — they are older
+		// than whatever arrived while the request was in flight — and let the
+		// next flush carry them. Bounded so a gateway outage cannot grow the
+		// queue without limit.
+		if (queue.length + batch.length <= MAX_QUEUE) queue.unshift(...batch);
 	} finally {
 		flushing = false;
-		if (queue.length >= FLUSH_AT) void flush();
+		// Chain straight into the next batch only on success. After a failure
+		// the requeue has just refilled the queue, so this branch would spin
+		// against an unreachable gateway as fast as the network rejects — the
+		// timer retries instead, one attempt per interval.
+		if (!failed && queue.length >= FLUSH_AT) void flush();
+		else if (failed) scheduleFlush();
 	}
 }
 
@@ -91,6 +106,12 @@ function bindLifecycleFlush() {
 	document.addEventListener("visibilitychange", () => {
 		if (document.visibilityState === "hidden") void flush();
 	});
+	// And again on pagehide. On phones this is the one that actually fires:
+	// switching apps or following a link can put the page straight into the
+	// back/forward cache without ever reporting a visibility change, which
+	// stranded the last screenful of impressions — the most recent posts the
+	// user looked at, and so precisely the ones they would notice returning.
+	window.addEventListener("pagehide", () => void flush());
 }
 
 export function track(event: TelemetryEvent) {
