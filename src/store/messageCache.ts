@@ -17,7 +17,9 @@ export interface Message {
 	sender: UserProfile;
 	content: string;
 	// "call" is a finished call logged into the thread, not something typed.
-	type: "text" | "image" | "video" | "audio" | "file" | "call";
+	type: "text" | "image" | "video" | "audio" | "file" | "call" | "payment";
+	/** USD minor units, payment messages only. */
+	amountMinor?: number;
 	mediaUrl?: string;
 	createdAt: string;
 }

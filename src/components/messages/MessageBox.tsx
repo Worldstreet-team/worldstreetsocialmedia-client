@@ -39,7 +39,7 @@ import { format } from "date-fns";
 import { formatTimeAgo } from "@/lib/utils";
 import { useRealtime } from "../providers/RealtimeProvider";
 import MediaModal from "../ui/MediaModal";
-import { PencilSimple } from "@phosphor-icons/react";
+import { CurrencyDollarSimple, PencilSimple } from "@phosphor-icons/react";
 import MediaEditor from "@/components/editor/MediaEditor";
 import { VoiceMessage } from "./VoiceMessage";
 import { ConversationList } from "./ConversationList";
@@ -51,6 +51,8 @@ import { useChatSignals } from "@/hooks/useChatSignals";
 import { TypingIndicator } from "@/components/messages/TypingIndicator";
 import { MessageTicks, tickStateFor } from "@/components/messages/MessageTicks";
 import { CallLogRow } from "@/components/messages/CallLogRow";
+import { SendMoneySheet } from "@/components/messages/SendMoneySheet";
+import { PaymentBubble } from "@/components/messages/PaymentBubble";
 import { BACKEND_ORIGIN } from "@/const";
 
 const API_URL = BACKEND_ORIGIN;
@@ -105,7 +107,9 @@ interface Message {
 	sender: UserProfile;
 	content: string;
 	// "call" is a finished call logged into the thread, not something typed.
-	type: "text" | "image" | "video" | "audio" | "file" | "call";
+	type: "text" | "image" | "video" | "audio" | "file" | "call" | "payment";
+	/** USD minor units, payment messages only. */
+	amountMinor?: number;
 	mediaUrl?: string;
 	/** Present when this message is a reply to a story. */
 	storyRef?: { story: string; thumbnail: string; authorUsername: string };
@@ -354,6 +358,7 @@ export const MessageBox = ({
 	const [showAttachMenu, setShowAttachMenu] = useState(false);
 	const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 	const [showGifPicker, setShowGifPicker] = useState(false);
+	const [showSendMoney, setShowSendMoney] = useState(false);
 	// Picker follows the app theme instead of hardcoding dark.
 	const { resolvedTheme } = useTheme();
 	const [showNewConversationModal, setShowNewConversationModal] = useState(false);
@@ -1196,6 +1201,30 @@ export const MessageBox = ({
 									new Date(m.createdAt).toDateString();
 							// A call isn't something either side said, so it gets a
 							// centred chip instead of a bubble on one shore.
+							if (m.type === "payment") {
+								// Money is not something either side "said"
+								// either, but unlike a call it very much has a
+								// sender — so it stays on its shore, as a
+								// receipt rather than a speech bubble.
+								return (
+									<PaymentBubble
+										key={m._id}
+										amountMinor={(m as any).amountMinor ?? 0}
+										note={m.content}
+										at={m.createdAt}
+										mine={
+											(typeof m.sender === "string"
+												? m.sender
+												: m.sender?._id) === myProfileId
+										}
+										peerName={
+											activeConversation.otherParticipant?.firstName ||
+											activeConversation.otherParticipant?.username ||
+											""
+										}
+									/>
+								);
+							}
 							if (m.type === "call") {
 								return (
 									<CallLogRow
@@ -1488,6 +1517,15 @@ export const MessageBox = ({
 
 									{/* Right Side Icons */}
 									<div className="flex items-center shrink-0">
+										<button
+											type="button"
+											onClick={() => setShowSendMoney(true)}
+											aria-label="Send money"
+											title="Send money"
+											className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-raised hover:text-primary"
+										>
+											<CurrencyDollarSimple size={20} weight="bold" />
+										</button>
 										{GIPHY_KEY && (
 											<button
 												type="button"
@@ -1596,6 +1634,32 @@ export const MessageBox = ({
 				onClose={() => setShowGifPicker(false)}
 				onPick={(url) => void sendGif(url)}
 			/>
+			{activeConversation && (
+				<SendMoneySheet
+					open={showSendMoney}
+					onClose={() => setShowSendMoney(false)}
+					conversationId={activeConversation._id}
+					peerName={
+						activeConversation.otherParticipant?.firstName ||
+						activeConversation.otherParticipant?.username ||
+						"them"
+					}
+					peerHandle={activeConversation.otherParticipant?.username}
+					// The transfer is appended locally rather than waiting for
+					// the Ably round-trip — the sender should see their own
+					// receipt the instant it clears.
+					onSent={(m) => {
+						if (!m?._id) return;
+						setMessageCache((prev) => ({
+							...prev,
+							[activeConversation._id]: [
+								...(prev[activeConversation._id] || []),
+								m,
+							],
+						}));
+					}}
+				/>
+			)}
 			<NewConversationModal
 				isOpen={showNewConversationModal}
 				onClose={() => setShowNewConversationModal(false)}

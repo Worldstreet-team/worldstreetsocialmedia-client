@@ -7,6 +7,7 @@ import {
 	Camera,
 	MicrophoneStage,
 	PaperclipHorizontal,
+	CurrencyDollarSimple,
 	PhoneCall,
 	VideoCamera,
 } from "@phosphor-icons/react";
@@ -74,6 +75,8 @@ const KIND: Record<string, { glyph: any; key: string }> = {
 	video: { glyph: VideoCamera, key: "messages.kind.video" },
 	file: { glyph: PaperclipHorizontal, key: "messages.kind.file" },
 	call: { glyph: PhoneCall, key: "messages.kind.call" },
+	// A transfer carries no content either when there is no note.
+	payment: { glyph: CurrencyDollarSimple, key: "messages.kind.payment" },
 };
 
 export function ConversationList({

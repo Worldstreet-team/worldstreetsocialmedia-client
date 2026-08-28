@@ -733,5 +733,6 @@
   "messages.notMutual": "Vous ne pouvez écrire qu'à vos Alliés",
   "post.buy.confirmTitle": "Procéder au paiement ?",
   "post.buy.confirmBody": "Vous achetez cette publication de {seller} pour {price}. Le montant sera débité du solde de votre portefeuille.",
-  "post.buy.confirmCta": "Procéder au paiement"
+  "post.buy.confirmCta": "Procéder au paiement",
+  "messages.kind.payment": "Paiement"
 }
