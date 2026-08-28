@@ -10,8 +10,20 @@ export const BACKEND_URL =
  */
 export const BACKEND_ORIGIN = BACKEND_URL.replace(/\/api\/?$/, "");
 
-export const DEFAULT_AVATAR =
-    "https://image2url.com/r2/default/images/1771539178659-93406255-32fe-4dfe-b214-0a284e3499d9.jpeg";
+/**
+ * The fallback face, served from our own /public.
+ *
+ * It used to point at image2url.com — a third-party host, for the one image
+ * whose entire job is to render when something else has failed. It also
+ * answers with `Content-Type: application/octet-stream`; Next sniffs the
+ * bytes and optimizes it anyway, so this was not broken, but a fallback that
+ * depends on an unrelated company staying up (and on a content-type sniff)
+ * is a fallback with its own failure modes.
+ *
+ * public/images/default-avatar.png was already in the repo, unused. Local
+ * means it cannot 404, cannot be rate-limited, and cannot be blocked.
+ */
+export const DEFAULT_AVATAR = "/images/default-avatar.png";
 
 // Xstream (live streaming) — same Clerk instance, separate services.
 //
