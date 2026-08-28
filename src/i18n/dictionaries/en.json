@@ -758,5 +758,11 @@
   "messages.kind.video": "Video",
   "messages.kind.file": "File",
   "messages.kind.call": "Call",
-  "messages.newChat": "New message"
+  "messages.newChat": "New message",
+  "voice.requestSpeak": "Request to speak",
+  "voice.onStage": "You're on stage",
+  "voice.bringToStage": "Bring to stage",
+  "voice.removeFromStage": "Remove from stage",
+  "voice.searchPlaceholder": "Search spaces",
+  "voice.noMatches": "No spaces match that."
 }

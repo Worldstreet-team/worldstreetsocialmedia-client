@@ -719,5 +719,11 @@
   "messages.kind.video": "Video",
   "messages.kind.file": "Datei",
   "messages.kind.call": "Anruf",
-  "messages.newChat": "Neue Nachricht"
+  "messages.newChat": "Neue Nachricht",
+  "voice.requestSpeak": "Ums Wort bitten",
+  "voice.onStage": "Du bist auf der Bühne",
+  "voice.bringToStage": "Auf die Bühne holen",
+  "voice.removeFromStage": "Von der Bühne nehmen",
+  "voice.searchPlaceholder": "Spaces durchsuchen",
+  "voice.noMatches": "Kein Space passt dazu."
 }

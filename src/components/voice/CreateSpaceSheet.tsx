@@ -19,6 +19,7 @@ import {
   useOverlayDismiss,
 } from "@/components/ui/Overlay";
 import GlassSelect from "@/components/ui/GlassSelect";
+import { VERTICALS } from "@/data/categories";
 import { useT } from "@/i18n/client";
 import {
   STORY_BACKGROUNDS,
@@ -58,6 +59,7 @@ interface CreateSpaceSheetProps {
     description?: string,
     cover?: string,
     coverImage?: string,
+    category?: string,
   ) => void;
   onSave?: (patch: SpacePatch) => void;
 }
@@ -106,6 +108,7 @@ export default function CreateSpaceSheet({
   const t = useT();
   const isEdit = Boolean(editing);
   const [title, setTitle] = useState(editing?.title ?? "");
+  const [category, setCategory] = useState("");
   const [description, setDescription] = useState(editing?.description ?? "");
   // A scheduled space stays scheduled while you edit it; only a new space
   // gets to choose between starting now and booking a slot.
@@ -366,6 +369,27 @@ export default function CreateSpaceSheet({
               )}
             </div>
 
+            {!isEdit && (
+              <div>
+                <span className="block font-sans text-[10px] font-bold uppercase tracking-[0.14em] text-subtle">
+                  Topic
+                </span>
+                {/* A vertical, not the 100-item taxonomy: a room is broader
+                    than a post, and the hub's chips are the 14 verticals —
+                    this is the field those chips filter on. */}
+                <GlassSelect
+                  className="mt-2"
+                  label="Topic"
+                  value={category}
+                  options={[
+                    { id: "", label: "General" },
+                    ...VERTICALS.map((v) => ({ id: v.id, label: v.label })),
+                  ]}
+                  onChange={setCategory}
+                />
+              </div>
+            )}
+
             {communities.length > 0 && !isEdit && (
               <div>
                 <span className="block font-sans text-[10px] font-bold uppercase tracking-[0.14em] text-subtle">
@@ -420,6 +444,7 @@ export default function CreateSpaceSheet({
                 description.trim() || undefined,
                 cover,
                 coverImage || undefined,
+                category || undefined,
               );
             }}
             className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-pill bg-brand font-sans text-[14px] font-semibold text-brand-on transition-colors hover:bg-brand-active active:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"

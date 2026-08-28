@@ -2,9 +2,10 @@
 
 import { CaretUp, Waveform, X } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
-import { useAtom, useSetAtom } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { useRealtime } from "@/components/providers/RealtimeProvider";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { EqBars, spaceBackground } from "@/components/voice/SpaceCard";
 import SpaceRoom from "@/components/voice/SpaceRoom";
@@ -13,6 +14,7 @@ import { useSpaceAudio } from "@/hooks/useSpaceAudio";
 import { useSpaceHeartbeat } from "@/hooks/useSpaceHeartbeat";
 import { isDemoId } from "@/lib/demoSeed";
 import { endSpaceAction, leaveSpaceAction } from "@/lib/space.actions";
+import { userAtom } from "@/store/user.atom";
 import { voiceRefreshAtom, voiceSessionAtom } from "@/store/voice.atom";
 
 /**
@@ -40,6 +42,50 @@ export default function VoiceRoomHost() {
     session && !isDemoId(session.row.id) ? session.row.id : null,
     session?.row.status === "live",
   );
+
+  // Speaker grants/revokes arrive on my own `user:` channel — the gateway
+  // flips the live LiveKit permission, but the token itself is minted
+  // per-join, so on either event we reconnect with a fresh token (and, on a
+  // grant, republish rights). This lives HERE so a promotion still lands
+  // while the room is minimized to the dock.
+  const { client } = useRealtime();
+  const me = useAtomValue(userAtom);
+  const liveSpaceId =
+    session && !isDemoId(session.row.id) && session.row.status === "live"
+      ? session.row.id
+      : null;
+  const isHost = Boolean(session?.row.isHost);
+  const reconnect = audio.reconnect;
+  useEffect(() => {
+    if (!client || !me?._id || !liveSpaceId) return;
+    const channel = client.channels.get(`user:${me._id}`);
+    const onNotif = (m: { data?: Record<string, unknown> }) => {
+      const d = m?.data ?? {};
+      if (d.spaceId !== liveSpaceId) return;
+      // Newer copy than the dictionaries: t() echoes the key when missing.
+      const tf = (key: string, fallback: string) => {
+        const v = t(key);
+        return v === key ? fallback : v;
+      };
+      if (d.type === "space:speaker_granted") {
+        toast(tf("voice.onStage", "You're on stage"), { type: "success" });
+        reconnect();
+      } else if (d.type === "space:speaker_revoked") {
+        toast(
+          tf("voice.offStageSelf", "The host moved you back to the audience"),
+          { type: "success" },
+        );
+        reconnect();
+      } else if (d.type === "space:speak_request" && isHost) {
+        // The gateway records the hand and tells the host directly, so a
+        // request lands even while the room is docked.
+        const from = typeof d.from === "string" ? d.from : "Someone";
+        toast(`${from} — ${t("voice.speakRequests")}`, { type: "success" });
+      }
+    };
+    void channel.subscribe("notification", onNotif);
+    return () => channel.unsubscribe("notification", onNotif);
+  }, [client, me?._id, liveSpaceId, isHost, reconnect, toast, t]);
 
   const hostedId =
     session?.row.isHost && !isDemoId(session.row.id) ? session.row.id : null;

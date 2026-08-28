@@ -35,13 +35,14 @@ export async function createSpaceAction(
 	description?: string,
 	cover?: string,
 	coverImage?: string,
+	category?: string,
 ) {
 	const headers = await bearer();
 	if (!headers) return { success: false, message: "Unauthorized" };
 	try {
 		const res = await axios.post(
 			`${BACKEND_URL}/api/spaces`,
-			{ title, scheduledFor, communityId, description, cover, coverImage },
+			{ title, scheduledFor, communityId, description, cover, coverImage, category },
 			{ headers },
 		);
 		return { success: true, spaceId: res.data?.spaceId };

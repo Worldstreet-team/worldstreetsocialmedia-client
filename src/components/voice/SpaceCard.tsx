@@ -23,7 +23,15 @@ export interface SpaceRow {
   status: "scheduled" | "live" | "ended" | "cancelled";
   scheduledFor?: string;
   startedAt?: string;
+  /**
+   * Taxonomy id (a category or vertical from `src/data/categories.ts`).
+   * The gateway doesn't store one yet — the hub filters on it the moment
+   * it does; until then only demo rows carry it.
+   */
+  category?: string;
   host: {
+    /** Profile id — doubles as the LiveKit identity and Ably clientId. */
+    _id?: string;
     username: string;
     avatar?: string;
     firstName?: string;

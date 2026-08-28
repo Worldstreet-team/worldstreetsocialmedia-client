@@ -32,6 +32,14 @@ export function useSpaceAudio(spaceId: string | null, live: boolean) {
   const [ended, setEnded] = useState(false);
   const [muted, setMuted] = useState(true);
   const [speakingIds, setSpeakingIds] = useState<string[]>([]);
+  // The connected Room, exposed so the stage can read per-participant
+  // audio levels (the breathing ring) and live publish permissions
+  // (who is on stage) without re-rendering per frame.
+  const [room, setRoom] = useState<Room | null>(null);
+  // Bumping this tears the connection down and rebuilds it with a freshly
+  // minted token — the gateway mints publish rights per-join, so a speaker
+  // grant/revoke asks the client to reconnect.
+  const [epoch, setEpoch] = useState(0);
   const roomRef = useRef<Room | null>(null);
   const audioElsRef = useRef<HTMLAudioElement[]>([]);
 
@@ -111,6 +119,7 @@ export function useSpaceAudio(spaceId: string | null, live: boolean) {
           rtcConfig: { iceTransportPolicy: "relay" },
         });
         if (cancelled) return;
+        setRoom(room);
         // Nobody is ever unmuted on arrival — speaking is always deliberate.
         setState("listening");
       } catch {
@@ -124,13 +133,22 @@ export function useSpaceAudio(spaceId: string | null, live: boolean) {
       audioElsRef.current = [];
       void roomRef.current?.disconnect();
       roomRef.current = null;
+      setRoom(null);
       setState("idle");
       setCanSpeak(false);
       setMuted(true);
       setSpeakingIds([]);
       setEnded(false);
     };
-  }, [spaceId, live]);
+  }, [spaceId, live, epoch]);
+
+  /**
+   * Drop the connection and rejoin with a freshly minted token. Called when
+   * the gateway says our speaker status changed: the live permission flip
+   * (updateParticipant) covers the current session, but the token is the
+   * authority, and rejoining republishes with the rights we now hold.
+   */
+  const reconnect = useCallback(() => setEpoch((n) => n + 1), []);
 
   const toggleMute = useCallback(async () => {
     const room = roomRef.current;
@@ -145,5 +163,14 @@ export function useSpaceAudio(spaceId: string | null, live: boolean) {
     }
   }, [muted, canSpeak]);
 
-  return { state, canSpeak, muted, speakingIds, toggleMute, ended };
+  return {
+    state,
+    canSpeak,
+    muted,
+    speakingIds,
+    toggleMute,
+    ended,
+    room,
+    reconnect,
+  };
 }

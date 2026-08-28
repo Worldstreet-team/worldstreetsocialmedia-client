@@ -111,7 +111,7 @@
   "voice.goLiveNow": "Empezar ahora",
   "voice.created": "El espacio está en vivo",
   "voice.scheduled": "Espacio programado",
-  "voice.liveNow": "En vivo ahora",
+  "voice.liveNow": "En directo",
   "voice.upcoming": "Próximos",
   "voice.join": "Unirse",
   "voice.joined": "Dentro",
@@ -719,5 +719,11 @@
   "messages.kind.video": "Vídeo",
   "messages.kind.file": "Archivo",
   "messages.kind.call": "Llamada",
-  "messages.newChat": "Nuevo mensaje"
+  "messages.newChat": "Nuevo mensaje",
+  "voice.requestSpeak": "Pedir la palabra",
+  "voice.onStage": "Estás en el escenario",
+  "voice.bringToStage": "Subir al escenario",
+  "voice.removeFromStage": "Bajar del escenario",
+  "voice.searchPlaceholder": "Buscar espacios",
+  "voice.noMatches": "Ningún espacio coincide."
 }

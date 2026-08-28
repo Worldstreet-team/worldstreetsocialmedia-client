@@ -1,10 +1,18 @@
 "use client";
 
-import { Plus } from "@phosphor-icons/react";
+import { MagnifyingGlass, Plus } from "@phosphor-icons/react";
+import clsx from "clsx";
 import { useAtomValue, useSetAtom } from "jotai";
 import { Mic } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useRealtime } from "@/components/providers/RealtimeProvider";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast/ToastContext";
@@ -13,12 +21,15 @@ import CreateSpaceSheet, {
 } from "@/components/voice/CreateSpaceSheet";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import {
+  hostName,
   LiveSpaceCard,
   NextUpCard,
   type SpaceRow,
   UpcomingSpaceRow,
 } from "@/components/voice/SpaceCard";
+import { VERTICALS, type VerticalId } from "@/data/categories";
 import { useT } from "@/i18n/client";
+import { getCategory, VERTICAL_BY_ID } from "@/lib/categories";
 import { getCommunitiesAction } from "@/lib/community.actions";
 import { demoLiveSpaces, demoUpcomingSpaces, isDemoId } from "@/lib/demoSeed";
 import {
@@ -33,6 +44,19 @@ import {
 import { voiceRefreshAtom, voiceSessionAtom } from "@/store/voice.atom";
 
 const POLL_MS = 20_000;
+
+/**
+ * The vertical a space files under. `category` may be a taxonomy category
+ * id or a vertical id directly; anything else (or nothing) files nowhere,
+ * so it only shows under "All".
+ */
+function spaceVertical(row: SpaceRow): VerticalId | undefined {
+  if (!row.category) return undefined;
+  if (VERTICAL_BY_ID.has(row.category as VerticalId)) {
+    return row.category as VerticalId;
+  }
+  return getCategory(row.category)?.vertical;
+}
 
 /**
  * Space Voice — the rooms directory. Live rooms carry their mesh art in a
@@ -64,6 +88,10 @@ function VoiceDirectory() {
   const setSession = useSetAtom(voiceSessionAtom);
   const refreshTick = useAtomValue(voiceRefreshAtom);
   const deepLinkRef = useRef<string | null>(params.get("s"));
+  // The hub is a platform, not a list: client-side search over title + host,
+  // and a topic rail over the taxonomy's 14 verticals.
+  const [query, setQuery] = useState("");
+  const [vertical, setVertical] = useState<"all" | VerticalId>("all");
 
   const load = useCallback(async () => {
     const res = await getSpacesAction();
@@ -136,6 +164,7 @@ function VoiceDirectory() {
     description?: string,
     cover?: string,
     coverImage?: string,
+    category?: string,
   ) => {
     if (busy) return;
     setBusy(true);
@@ -147,6 +176,7 @@ function VoiceDirectory() {
         description,
         cover,
         coverImage,
+        category,
       );
       if (res.success) {
         setCreating(false);
@@ -275,6 +305,35 @@ function VoiceDirectory() {
     await load();
   };
 
+  // Search matches title and host (display name or @username); the chip
+  // narrows to one vertical. Both are pure client-side filters.
+  const filtering = query.trim().length > 0 || vertical !== "all";
+  const matches = useCallback(
+    (row: SpaceRow) => {
+      const q = query.trim().toLowerCase();
+      const okQuery =
+        !q ||
+        row.title.toLowerCase().includes(q) ||
+        hostName(row.host).toLowerCase().includes(q) ||
+        row.host.username.toLowerCase().includes(q);
+      const okVertical = vertical === "all" || spaceVertical(row) === vertical;
+      return okQuery && okVertical;
+    },
+    [query, vertical],
+  );
+  const liveShown = useMemo(() => live.filter(matches), [live, matches]);
+  const upcomingShown = useMemo(
+    () => upcoming.filter(matches),
+    [upcoming, matches],
+  );
+  const hasAny = live.length > 0 || upcoming.length > 0;
+
+  // Newer copy than the dictionaries: t() echoes the key when missing.
+  const tf = (key: string, fallback: string) => {
+    const v = t(key);
+    return v === key ? fallback : v;
+  };
+
   return (
     <div className="w-full min-w-0 px-4 py-6 pb-nav md:pb-10">
       {/* Header */}
@@ -310,33 +369,82 @@ function VoiceDirectory() {
         </div>
       ) : (
         <>
-          {live.length > 0 && (
+          {hasAny && (
+            <div className="mb-6 flex flex-col gap-3">
+              {/* Search — title and host, live + upcoming alike. */}
+              <label className="relative block">
+                <MagnifyingGlass
+                  size={15}
+                  weight="bold"
+                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-subtle"
+                />
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={tf("voice.searchPlaceholder", "Search spaces")}
+                  aria-label={tf("voice.searchPlaceholder", "Search spaces")}
+                  className="h-10 w-full rounded-pill bg-sunken pl-10 pr-4 font-sans text-[13.5px] text-primary placeholder:text-subtle outline-none"
+                />
+              </label>
+              {/* Topic rail — the 14 verticals, "All" first. */}
+              <div
+                aria-label={tf("voice.topics", "Topics")}
+                className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-4 px-4"
+              >
+                {[
+                  { id: "all" as const, label: tf("voice.all", "All") },
+                  ...VERTICALS.map((v) => ({ id: v.id, label: v.label })),
+                ].map((chip) => {
+                  const selected = vertical === chip.id;
+                  return (
+                    <button
+                      key={chip.id}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => setVertical(chip.id)}
+                      className={clsx(
+                        "h-10 shrink-0 rounded-pill px-3.5 font-sans text-[12.5px] font-semibold transition-colors cursor-pointer",
+                        selected
+                          ? "bg-primary text-page"
+                          : "bg-chip text-muted hover:text-primary",
+                      )}
+                    >
+                      {chip.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {liveShown.length > 0 && (
             <section className="mb-8">
               <h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">
                 {t("voice.liveNow")}
               </h2>
               <div className="grid gap-3 sm:grid-cols-2">
-                {live.map((row) => (
+                {liveShown.map((row) => (
                   <LiveSpaceCard key={row.id} row={row} onOpen={openRoom} />
                 ))}
               </div>
             </section>
           )}
 
-          {upcoming.length > 0 && (
+          {upcomingShown.length > 0 && (
             <section>
               <h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">
                 {t("voice.upcoming")}
               </h2>
               <div className="flex flex-col gap-2.5">
                 <NextUpCard
-                  row={upcoming[0]}
+                  row={upcomingShown[0]}
                   onRemind={remind}
                   onStart={start}
                   onEdit={setEditing}
                   onCancel={setCancelTarget}
                 />
-                {upcoming.slice(1).map((row) => (
+                {upcomingShown.slice(1).map((row) => (
                   <UpcomingSpaceRow
                     key={row.id}
                     row={row}
@@ -350,7 +458,20 @@ function VoiceDirectory() {
             </section>
           )}
 
-          {live.length === 0 && upcoming.length === 0 && (
+          {/* Filters found nothing — a quiet line, not a full empty state. */}
+          {hasAny &&
+            filtering &&
+            liveShown.length === 0 &&
+            upcomingShown.length === 0 && (
+              <p className="py-8 text-center font-sans text-[13px] text-muted">
+                {tf(
+                  "voice.noMatches",
+                  "Nothing matches — try another search or topic.",
+                )}
+              </p>
+            )}
+
+          {!hasAny && (
             <EmptyState
               icon={Mic}
               title={t("voice.emptyTitle")}
