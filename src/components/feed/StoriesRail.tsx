@@ -265,7 +265,11 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 						: setCreateOpen(true)
 				}
 				className={clsx(
-						"flex w-[68px] shrink-0 cursor-pointer flex-col items-center gap-1.5",
+						"flex shrink-0 cursor-pointer flex-col items-center",
+						// With no name beneath it, the column is just the circle —
+						// the 68px width and the gap were both reserving room for
+						// a label that is no longer rendered.
+						circlesOnly ? "w-16 gap-0" : "w-[68px] gap-1.5",
 						!circlesOnly && "sm:w-[100px] sm:gap-0",
 					)}
 				aria-label={t("story.add")}
@@ -278,7 +282,7 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 						self?.hasUnseen ? "ring-2 ring-brand" : "ring-1 ring-hairline",
 					)}
 				>
-					<span className="relative block h-full w-full overflow-hidden rounded-pill bg-sunken sm:rounded-xl">
+					<span className={clsx("relative block h-full w-full overflow-hidden rounded-pill bg-sunken", !circlesOnly && "sm:rounded-xl")}>
 						{selfCover?.type === "video" ? (
 							// eslint-disable-next-line jsx-a11y/media-has-caption
 							<video
@@ -312,7 +316,7 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 						</span>
 
 						{/* Card-only: name over the cover. */}
-						<span className="absolute inset-x-2 bottom-2 hidden truncate text-left font-sans text-[12px] font-semibold text-white sm:block">
+						<span className={clsx("absolute inset-x-2 bottom-2 hidden truncate text-left font-sans text-[12px] font-semibold text-white", !circlesOnly && "sm:block")}>
 							{t("story.yours")}
 						</span>
 					</span>
@@ -334,7 +338,7 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 				</span>
 
 				{/* Circle-only: name beneath. */}
-				<span className="block w-full truncate text-center font-sans text-[12px] font-medium text-muted sm:hidden">
+				<span className={clsx("w-full truncate text-center font-sans text-[12px] font-medium text-muted sm:hidden", circlesOnly ? "hidden" : "block")}>
 					{t("story.yours")}
 				</span>
 			</button>
@@ -360,7 +364,11 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 							setOpen(entry);
 						}}
 						className={clsx(
-						"flex w-[68px] shrink-0 cursor-pointer flex-col items-center gap-1.5",
+						"flex shrink-0 cursor-pointer flex-col items-center",
+						// With no name beneath it, the column is just the circle —
+						// the 68px width and the gap were both reserving room for
+						// a label that is no longer rendered.
+						circlesOnly ? "w-16 gap-0" : "w-[68px] gap-1.5",
 						!circlesOnly && "sm:w-[100px] sm:gap-0",
 					)}
 						aria-label={name}
@@ -378,7 +386,7 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 										: "ring-1 ring-hairline",
 							)}
 						>
-							<span className="relative block h-full w-full overflow-hidden rounded-pill bg-sunken sm:rounded-xl">
+							<span className={clsx("relative block h-full w-full overflow-hidden rounded-pill bg-sunken", !circlesOnly && "sm:rounded-xl")}>
 								{cover?.type === "video" ? (
 									// eslint-disable-next-line jsx-a11y/media-has-caption
 									<video
@@ -404,7 +412,7 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 								</span>
 
 								{/* Card-only: name over the cover. */}
-								<span className="absolute inset-x-2 bottom-2 hidden truncate text-left font-sans text-[12px] font-semibold text-white sm:block">
+								<span className={clsx("absolute inset-x-2 bottom-2 hidden truncate text-left font-sans text-[12px] font-semibold text-white", !circlesOnly && "sm:block")}>
 									@{name}
 								</span>
 							</span>
@@ -417,7 +425,7 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 						</span>
 
 						{/* Circle-only: name beneath. */}
-						<span className="block w-full truncate text-center font-sans text-[12px] font-medium text-muted sm:hidden">
+						<span className={clsx("w-full truncate text-center font-sans text-[12px] font-medium text-muted sm:hidden", circlesOnly ? "hidden" : "block")}>
 							@{name}
 						</span>
 					</button>
