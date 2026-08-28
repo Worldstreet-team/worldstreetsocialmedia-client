@@ -9,6 +9,7 @@ import {
   type ProfileBadge,
 } from "@/components/ui/UserBadges";
 import { resolveCategories } from "@/lib/categories";
+import { AdSlot } from "@/components/profile/AdSlot";
 import { useT } from "@/i18n/client";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
@@ -44,6 +45,7 @@ export function ProfileAbout({
   onOpenFollows,
   onEditTopics,
   isMe,
+  profileId,
 }: {
   fullName: string;
   username: string;
@@ -61,6 +63,8 @@ export function ProfileAbout({
   onOpenFollows: (tab: "followers" | "following") => void;
   onEditTopics: () => void;
   isMe: boolean;
+  /** Mongo id of the profile being viewed — the ad slot is keyed on it. */
+  profileId?: string;
 }) {
   const t = useT();
   const topics = resolveCategories(interests, 8);
@@ -168,6 +172,13 @@ export function ProfileAbout({
           <span className="text-muted">{t("profile.following")}</span>
         </button>
       </div>
+
+      {/* The ad slot lives where Topics does: a live campaign takes the
+          space over, the Gold owner sees the sell affordance, and everyone
+          else sees exactly what they always saw. */}
+      {profileId && (
+        <AdSlot profileId={profileId} username={username} isMe={isMe} />
+      )}
 
       {(topics.length > 0 || isMe) && (
         <div className="mt-2">

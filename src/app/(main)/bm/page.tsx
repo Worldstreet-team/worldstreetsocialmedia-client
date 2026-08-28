@@ -62,6 +62,8 @@ interface BmBooking {
 	creatorPaidUsdMinor: number;
 	awaitingActionFrom: "creator" | "advertiser";
 	statusReason?: string;
+	impressions?: number;
+	clicks?: number;
 }
 
 interface BmThread {
@@ -71,6 +73,16 @@ interface BmThread {
 	advertiser: BmParty;
 	lastMessageAt: string;
 	lastMessagePreview: string;
+}
+
+interface BmPeriod {
+	index: number;
+	startAt: string;
+	endAt: string;
+	amountUsdMinor: number;
+	status: "pending" | "held" | "captured" | "released" | "failed";
+	capturedUsdMinor?: number;
+	creatorShareUsdMinor?: number;
 }
 
 interface BmMessage {
@@ -102,6 +114,9 @@ export default function BmPage() {
 	const [loaded, setLoaded] = useState(false);
 	const [activeId, setActiveId] = useState<string | null>(null);
 	const [messages, setMessages] = useState<BmMessage[]>([]);
+	/** Full booking for the open thread — the receipt needs the periods,
+	 *  which the thread list deliberately does not carry. */
+	const [periods, setPeriods] = useState<BmPeriod[]>([]);
 	const [draft, setDraft] = useState("");
 	const [busy, setBusy] = useState(false);
 	const [composerOpen, setComposerOpen] = useState(false);
@@ -153,12 +168,41 @@ export default function BmPage() {
 		return () => clearInterval(t);
 	}, [loadThreads]);
 
+	// /bm?book=<handle> — the profile's "Book" affordance lands here with the
+	// sheet already open on that creator. Read once, then cleaned from the
+	// URL so a refresh does not reopen it.
+	const [prefillUsername, setPrefillUsername] = useState("");
+	useEffect(() => {
+		const book = new URLSearchParams(window.location.search).get("book");
+		if (book) {
+			setPrefillUsername(book);
+			setComposerOpen(true);
+			window.history.replaceState(null, "", "/bm");
+		}
+	}, []);
+
 	useEffect(() => {
 		if (!activeId) return;
 		void loadMessages(activeId);
 		const t = setInterval(() => void loadMessages(activeId), 5_000);
 		return () => clearInterval(t);
 	}, [activeId, loadMessages]);
+
+	// The receipt rides the full booking document.
+	useEffect(() => {
+		setPeriods([]);
+		const bookingId = threads.find((t) => t._id === activeId)?.booking?._id;
+		if (!bookingId) return;
+		let cancelled = false;
+		void authed("get", `/api/ads/bookings/${bookingId}`)
+			.then((d) => {
+				if (!cancelled) setPeriods(d.booking?.periods ?? []);
+			})
+			.catch(() => {});
+		return () => {
+			cancelled = true;
+		};
+	}, [activeId, threads, authed]);
 
 	useEffect(() => {
 		endRef.current?.scrollIntoView({ block: "end" });
@@ -182,6 +226,24 @@ export default function BmPage() {
 			await Promise.all([loadThreads(), activeId && loadMessages(activeId)]);
 		} catch (err: any) {
 			toast(err?.response?.data?.message ?? "That didn't go through", {
+				type: "error",
+			});
+		} finally {
+			setBusy(false);
+		}
+	};
+
+	const counter = async (
+		bookingId: string,
+		terms: { priceUsdMinor: number; days: number },
+	) => {
+		if (busy) return;
+		setBusy(true);
+		try {
+			await authed("post", `/api/ads/bookings/${bookingId}/counter`, terms);
+			await Promise.all([loadThreads(), activeId && loadMessages(activeId)]);
+		} catch (err: any) {
+			toast(err?.response?.data?.message ?? "Counter failed", {
 				type: "error",
 			});
 		} finally {
@@ -320,6 +382,8 @@ export default function BmPage() {
 						thread={active}
 						role={roleIn(active)}
 						messages={messages}
+						periods={periods}
+						onCounter={counter}
 						draft={draft}
 						setDraft={setDraft}
 						onSend={send}
@@ -335,6 +399,7 @@ export default function BmPage() {
 				<NewBookingSheet
 					onClose={() => setComposerOpen(false)}
 					authed={authed}
+					initialUsername={prefillUsername}
 					onCreated={async () => {
 						setComposerOpen(false);
 						await loadThreads();
@@ -351,6 +416,8 @@ function ThreadView({
 	thread,
 	role,
 	messages,
+	periods,
+	onCounter,
 	draft,
 	setDraft,
 	onSend,
@@ -362,6 +429,11 @@ function ThreadView({
 	thread: BmThread;
 	role: "creator" | "advertiser";
 	messages: BmMessage[];
+	periods: BmPeriod[];
+	onCounter: (
+		bookingId: string,
+		terms: { priceUsdMinor: number; days: number },
+	) => void;
 	draft: string;
 	setDraft: (v: string) => void;
 	onSend: () => void;
@@ -374,6 +446,15 @@ function ThreadView({
 	const other = role === "creator" ? thread.advertiser : thread.creator;
 	const myTurn = b.status === "requested" && b.awaitingActionFrom === role;
 	const cancellable = ["accepted", "live", "paused"].includes(b.status);
+	const [counterOpen, setCounterOpen] = useState(false);
+	const [cPrice, setCPrice] = useState(
+		(b.agreedUsdMinor / 100).toString(),
+	);
+	const [cDays, setCDays] = useState(b.durationDays);
+	const settledPeriods = periods.filter((p) =>
+		["captured", "released"].includes(p.status),
+	);
+	const heldPeriod = periods.find((p) => p.status === "held");
 
 	return (
 		<>
@@ -419,6 +500,8 @@ function ThreadView({
 					<p className="mt-2 font-sans text-[12px] text-muted tabular-nums">
 						{b.daysServed}/{b.durationDays} days served · {usd(b.settledUsdMinor)}{" "}
 						settled
+						{(b.impressions ?? 0) > 0 &&
+							` · ${(b.impressions ?? 0).toLocaleString()} views · ${(b.clicks ?? 0).toLocaleString()} clicks`}
 						{role === "creator" &&
 							` · ${usd(b.creatorPaidUsdMinor)} earned`}
 						{b.statusReason ? ` · ${b.statusReason}` : ""}
@@ -447,6 +530,16 @@ function ThreadView({
 								</button>
 							</>
 						)}
+						{b.status === "requested" && (
+							<button
+								type="button"
+								disabled={busy}
+								onClick={() => setCounterOpen((v) => !v)}
+								className="h-9 rounded-pill bg-raised px-4 font-sans text-[13px] font-medium text-primary transition-colors hover:bg-chip disabled:opacity-50 cursor-pointer"
+							>
+								Counter
+							</button>
+						)}
 						{!myTurn && b.status === "requested" && (
 							<span className="font-sans text-[12.5px] text-subtle">
 								Waiting on the {b.awaitingActionFrom} to respond
@@ -463,6 +556,92 @@ function ThreadView({
 							</button>
 						)}
 					</div>
+				)}
+
+				{counterOpen && b.status === "requested" && (
+					<div className="mt-2.5 flex items-end gap-2 rounded-xl bg-sunken p-3">
+						<label className="flex-1">
+							<span className="mb-1 block font-sans text-[10.5px] font-semibold uppercase tracking-wide text-subtle">
+								Total price
+							</span>
+							<span className="flex h-10 items-center rounded-lg bg-page/60 pl-3 font-sans text-[14px] text-subtle">
+								$
+								<input
+									type="number"
+									min={1}
+									value={cPrice}
+									onChange={(e) => setCPrice(e.target.value)}
+									className="h-10 w-full bg-transparent px-2 font-sans text-[14px] text-primary outline-none tabular-nums"
+								/>
+							</span>
+						</label>
+						<label className="w-24">
+							<span className="mb-1 block font-sans text-[10.5px] font-semibold uppercase tracking-wide text-subtle">
+								Days
+							</span>
+							<input
+								type="number"
+								min={1}
+								max={30}
+								value={cDays}
+								onChange={(e) => setCDays(Number(e.target.value))}
+								className="h-10 w-full rounded-lg bg-page/60 px-3 font-sans text-[14px] text-primary outline-none tabular-nums"
+							/>
+						</label>
+						<button
+							type="button"
+							disabled={busy}
+							onClick={() => {
+								setCounterOpen(false);
+								onCounter(b._id, {
+									priceUsdMinor: Math.round(
+										Number(cPrice || 0) * 100,
+									),
+									days: cDays,
+								});
+							}}
+							className="h-10 shrink-0 rounded-pill bg-primary px-4 font-sans text-[13px] font-semibold text-page transition-colors hover:opacity-90 disabled:opacity-50 cursor-pointer"
+						>
+							Send offer
+						</button>
+					</div>
+				)}
+
+				{/* The receipt: what actually happened to the money, tranche by
+				    tranche. Both sides read the same rows — the creator sees
+				    their cut, the advertiser sees what came back. */}
+				{settledPeriods.length > 0 && (
+					<div className="mt-2.5 overflow-hidden rounded-xl border border-hairline">
+						{settledPeriods.map((per) => (
+							<div
+								key={per.index}
+								className="flex items-center justify-between gap-3 border-b border-hairline px-3.5 py-2 font-sans text-[12.5px] last:border-b-0"
+							>
+								<span className="text-muted">
+									{new Date(per.startAt).toISOString().slice(5, 10)} –{" "}
+									{new Date(per.endAt).toISOString().slice(5, 10)}
+								</span>
+								<span className="tabular-nums text-subtle">
+									{usd(per.amountUsdMinor)}
+								</span>
+								{per.status === "captured" ? (
+									<span className="tabular-nums text-success">
+										{role === "creator"
+											? `+${usd(per.creatorShareUsdMinor)} earned`
+											: `${usd(per.capturedUsdMinor)} settled`}
+									</span>
+								) : (
+									<span className="text-subtle">returned</span>
+								)}
+							</div>
+						))}
+					</div>
+				)}
+				{heldPeriod && (
+					<p className="mt-2 font-sans text-[12px] text-subtle tabular-nums">
+						{usd(heldPeriod.amountUsdMinor)} held in escrow for the current
+						period
+					</p>
 				)}
 			</div>
 
@@ -545,25 +724,34 @@ function NewBookingSheet({
 	onClose,
 	authed,
 	onCreated,
+	initialUsername = "",
 }: {
 	onClose: () => void;
 	authed: (m: "get" | "post", p: string, b?: unknown) => Promise<any>;
 	onCreated: () => Promise<void>;
+	initialUsername?: string;
 }) {
 	const { toast } = useToast();
-	const [username, setUsername] = useState("");
+	const [username, setUsername] = useState(initialUsername);
 	const [format, setFormat] = useState<"image" | "video" | "audio">("image");
 	const [days, setDays] = useState(7);
 	const [startAt, setStartAt] = useState(
 		new Date(Date.now() + 24 * 3600_000).toISOString().slice(0, 10),
 	);
 	const [note, setNote] = useState("");
+	const [mediaUrl, setMediaUrl] = useState("");
+	const [linkUrl, setLinkUrl] = useState("");
+	const [coverUrl, setCoverUrl] = useState("");
 	const [rate, setRate] = useState<number | null>(null);
 	const [sending, setSending] = useState(false);
 
+	// People type handles WITH the @ — that is how handles are written
+	// everywhere else in the app. The lookup key is the bare name.
+	const handle = username.trim().replace(/^@+/, "");
+
 	// Quote as they type, so the ask is priced before it is sent.
 	useEffect(() => {
-		if (!username.trim()) {
+		if (!handle) {
 			setRate(null);
 			return;
 		}
@@ -571,7 +759,7 @@ function NewBookingSheet({
 			try {
 				const data = await authed(
 					"get",
-					`/api/ads/rates/${encodeURIComponent(username.trim())}`,
+					`/api/ads/rates/${encodeURIComponent(handle)}`,
 				);
 				const row = (data.rates ?? []).find((r: any) => r.format === format);
 				setRate(row ? row.priceUsdMinor : null);
@@ -580,18 +768,30 @@ function NewBookingSheet({
 			}
 		}, 400);
 		return () => clearTimeout(t);
-	}, [username, format, authed]);
+	}, [handle, format, authed]);
 
 	const submit = async () => {
 		if (sending) return;
 		setSending(true);
 		try {
 			await authed("post", "/api/ads/bookings", {
-				creatorUsername: username.trim(),
+				creatorUsername: handle,
 				format,
 				days,
 				startAt: new Date(`${startAt}T00:00:00Z`).toISOString(),
 				note: note.trim() || undefined,
+				// The exact creative rides the request, so what the creator
+				// approves is what will serve — never a swap after acceptance.
+				creative: mediaUrl.trim()
+					? {
+							url: mediaUrl.trim(),
+							linkUrl: linkUrl.trim() || undefined,
+							coverUrl:
+								format === "audio" && coverUrl.trim()
+									? coverUrl.trim()
+									: undefined,
+						}
+					: undefined,
 			});
 			toast("Booking request sent", { type: "success" });
 			await onCreated();
@@ -684,6 +884,32 @@ function NewBookingSheet({
 							/>
 						</label>
 					</div>
+					<input
+						value={mediaUrl}
+						onChange={(e) => setMediaUrl(e.target.value)}
+						placeholder={
+							format === "audio"
+								? "Audio file URL (mp3)"
+								: format === "video"
+									? "Video file URL (mp4)"
+									: "Banner image URL"
+						}
+						className={field}
+					/>
+					{format === "audio" && (
+						<input
+							value={coverUrl}
+							onChange={(e) => setCoverUrl(e.target.value)}
+							placeholder="Cover image URL (shown behind the play button)"
+							className={field}
+						/>
+					)}
+					<input
+						value={linkUrl}
+						onChange={(e) => setLinkUrl(e.target.value)}
+						placeholder="Click-through link (https://…)"
+						className={field}
+					/>
 					<textarea
 						value={note}
 						onChange={(e) => setNote(e.target.value)}
@@ -693,7 +919,7 @@ function NewBookingSheet({
 					/>
 					<button
 						type="button"
-						disabled={!username.trim() || sending}
+						disabled={!handle || sending}
 						onClick={submit}
 						className="h-11 rounded-pill bg-brand font-sans text-[14px] font-semibold text-brand-on transition-colors hover:opacity-90 disabled:opacity-50 cursor-pointer"
 					>
@@ -701,9 +927,9 @@ function NewBookingSheet({
 							? `Request · ${usd(rate * days)} for ${days} day${days === 1 ? "" : "s"}`
 							: "Send request"}
 					</button>
-					{rate === null && username.trim() && (
+					{rate === null && handle && (
 						<p className="text-center font-sans text-[12px] text-subtle">
-							No {format} rate published for @{username.trim()} — the request
+							No {format} rate published for @{handle} — the request
 							may be refused.
 						</p>
 					)}

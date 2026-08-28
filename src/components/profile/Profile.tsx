@@ -599,6 +599,7 @@ export default function Profile({ username }: { username?: string }) {
 				}}
 				onEditTopics={() => setIsEditProfileOpen(true)}
 				isMe={isMe}
+				profileId={profileUser._id ? String(profileUser._id) : undefined}
 			/>
 
 			<FollowsModal
