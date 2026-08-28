@@ -171,8 +171,12 @@ export default function Feed() {
 			(entries) => {
 				if (entries[0].isIntersecting) loadMore();
 			},
-			// Start loading ~one screen before the reader reaches the end.
-			{ rootMargin: "600px 0px" },
+			// Start loading roughly THREE screens before the end, not one.
+			// 600px was about a screen, which on a fast scroll means the
+			// reader arrives at the bottom at the same moment the request
+			// does — they see the spinner every time. Fetching this far ahead
+			// costs one extra page of posts and hides the seam completely.
+			{ rootMargin: "2400px 0px" },
 		);
 		observer.observe(node);
 		return () => observer.disconnect();
