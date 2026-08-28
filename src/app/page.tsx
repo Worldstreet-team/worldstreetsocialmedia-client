@@ -11,6 +11,9 @@ import { MobileNavigation } from "@/components/layout/MobileNavigation";
 import { getFeedAction } from "@/lib/feed.actions";
 import { mapApiPost } from "@/lib/post-mapper";
 
+/** How long SSR will wait for page one before handing the job to the client. */
+const SEED_TIMEOUT_MS = 2_500;
+
 /**
  * The first For-You page, fetched during SSR and streamed.
  *
@@ -31,11 +34,31 @@ async function StreamedFeed() {
 	const h = await headers();
 	const soft = h.get("rsc") === "1" || h.get("next-router-prefetch") === "1";
 	if (soft) return <Feed />;
+	// The middleware already tried the gateway this request and it did not
+	// answer. Asking again only stacks a second timeout onto a page that is
+	// already late, and adds load to something that is evidently struggling.
+	if (h.get("x-gateway-degraded") === "1") return <Feed />;
 
 	let initialData: FeedSeed | null = null;
 	try {
-		const result = await getFeedAction(null, 10, "foryou");
-		if (result.success && result.data?.posts) {
+		// Bounded, and this bound is the whole safety of doing it here at all.
+		//
+		// Rendering waits on this, so without a cap the page waits exactly as
+		// long as the gateway takes — and the gateway is a free instance that
+		// sleeps when idle and needs 20-30s to wake. That turned one cold start
+		// into every page hanging, where before the shell painted immediately
+		// and only the feed column waited.
+		//
+		// Losing the race is not a failure: `Feed` falls back to its snapshot
+		// and fetches client-side, which is precisely how it behaved before the
+		// seed existed. The seed is an optimisation, so it gets a deadline.
+		const result = await Promise.race([
+			getFeedAction(null, 10, "foryou"),
+			new Promise<null>((resolve) =>
+				setTimeout(() => resolve(null), SEED_TIMEOUT_MS),
+			),
+		]);
+		if (result?.success && result.data?.posts) {
 			initialData = {
 				posts: result.data.posts.map(mapApiPost),
 				cursor: result.data.nextCursor ?? null,

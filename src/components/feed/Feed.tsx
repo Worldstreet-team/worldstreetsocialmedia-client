@@ -65,6 +65,8 @@ const FEED_PAGE_SIZE = 10;
  * from quietly paging through the entire timeline.
  */
 const BUFFER_TARGET = 60;
+/** Pause before the single retry of a failed foreground feed fetch. */
+const RETRY_DELAY_MS = 2_000;
 const MAX_CHAINED_PAGES = 4;
 /** Faces in the stack before the rest collapse into "+n". */
 const MAX_FACES = 3;
@@ -526,7 +528,10 @@ export default function Feed({
 		faces.push({ key, avatar: resolved[i] ?? "" });
 	}
 
-	const fetchFeed = async (reset = false, opts?: { silent?: boolean }) => {
+	const fetchFeed = async (
+		reset = false,
+		opts?: { silent?: boolean; retried?: boolean },
+	) => {
 		// A silent reset revalidates behind an already-painted snapshot —
 		// flipping to the skeleton would throw away exactly what the snapshot
 		// bought.
@@ -570,6 +575,17 @@ export default function Feed({
 					mode: tab,
 				}));
 			} else if (!opts?.silent) {
+				// One quiet retry before saying anything. The gateway sleeps
+				// when idle and takes tens of seconds to wake, so the first
+				// request after a quiet spell fails routinely — and telling
+				// someone the feed is broken when it is merely waking up is
+				// both wrong and the thing they see most often. Only the
+				// foreground path retries; a background refresh already has a
+				// timeline on screen and can wait for the next one.
+				if (!opts?.retried) {
+					await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+					return fetchFeed(reset, { ...opts, retried: true });
+				}
 				if (result.message) toast(result.message, { type: "error" });
 			}
 		} catch (error) {
@@ -578,6 +594,10 @@ export default function Feed({
 			// already has a usable timeline on screen, and a toast about a
 			// request they never asked for reads as the app breaking. The
 			// foreground path still reports, because there it IS the answer.
+			if (!opts?.silent && !opts?.retried) {
+				await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+				return fetchFeed(reset, { ...opts, retried: true });
+			}
 			if (!opts?.silent) toast("Failed to load feed", { type: "error" });
 		} finally {
 			setLoading(false);

@@ -213,6 +213,24 @@ function userDataHeader(profile: unknown): string {
 				profile: userExistsInDb.profile,
 				at: Date.now(),
 			});
+		} else if (cached) {
+			// Tell the page not to bother asking the gateway again this request.
+			// Without this the middleware waits out its timeout and THEN the
+			// server component waits out its own, stacking two failures into one
+			// very long page. The render skips its optimistic fetch and lets the
+			// client try later, when the gateway may be awake.
+			requestHeaders.set("x-gateway-degraded", "1");
+			// The sync did not answer — timeout, 500, network — and `syncUser`
+			// returns null for all three. Serving no `x-user-data` at all was
+			// treating "we could not ask" as "this person has no account": the
+			// app booted signed-out, the profile page said the account does not
+			// exist, and every action that needs a profile failed. One slow
+			// response from the gateway should not do that to someone.
+			//
+			// A stale profile past its TTL is a far better answer than none. It
+			// is only ever used when a fresh read failed, and the next request
+			// that succeeds replaces it.
+			requestHeaders.set("x-user-data", userDataHeader(cached.profile));
 		}
 		const response = respond();
 		response.cookies.set("has_profile", "true", {
