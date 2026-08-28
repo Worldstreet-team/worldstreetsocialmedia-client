@@ -15,7 +15,6 @@ import {
 } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { BadgedIcon } from "@/components/ui/Badge";
-import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { useAtomValue } from "jotai";
 import { unreadMessagesCountAtom } from "@/store/messageCache";
 import { userAtom } from "@/store/user.atom";
@@ -43,28 +42,17 @@ const MessageIcon = navIcon(ChatCircleDots);
 
 
 /**
- * The profile tab shows YOUR FACE, not a generic person glyph. It is the one
- * tab that is about a specific human, and an avatar says whose account this is
- * at a glance — which a UserCircle never can. Falls back to the glyph only
- * while the user atom is still hydrating.
+ * The profile tab carries the glyph, not the account's photo (owner ruling
+ * 2026-08-28). It previously rendered the avatar; the bar reads as one set of
+ * controls, and a photo in a row of line icons breaks that.
+ *
+ * It also means this tab no longer depends on the user atom, which hydrates on
+ * the client — the whole reason this component had to defer its first paint.
  */
-function makeProfileIcon(avatar?: string) {
-	const ProfileIcon = ({ isActive }: { isActive?: boolean }) =>
-		avatar ? (
-			<span
-				className={clsx(
-					"relative block h-[22px] w-[22px] overflow-hidden rounded-pill",
-					isActive ? "ring-2 ring-gold" : "ring-1 ring-hairline",
-				)}
-			>
-				<SafeAvatar src={avatar} className="object-cover" />
-			</span>
-		) : (
-			<UserCircle size={22} weight={isActive ? "fill" : "duotone"} aria-hidden />
-		);
-	ProfileIcon.displayName = "ProfileIcon";
-	return ProfileIcon;
-}
+const ProfileIcon = ({ isActive }: { isActive?: boolean }) => (
+	<UserCircle size={22} weight={isActive ? "fill" : "duotone"} aria-hidden />
+);
+ProfileIcon.displayName = "ProfileIcon";
 
 export const MobileBottomNav = () => {
 	const t = useT();
@@ -73,20 +61,18 @@ export const MobileBottomNav = () => {
 	const unreadMessages = useAtomValue(unreadMessagesCountAtom);
 	const storedUser = useAtomValue(userAtom);
 	/**
-	 * The user atom hydrates on the client, so the server renders this nav with
-	 * no user and the client's first pass renders it WITH one — a different
-	 * href and an avatar instead of the fallback glyph. React counted that as a
-	 * hydration mismatch and threw the whole tree away, re-rendering the app on
-	 * every load. Same reason StudioShell defers its identity card.
+	 * The icon no longer needs the user, but the HREF still does, and the atom
+	 * hydrates on the client: the server renders "/profile" and the client's
+	 * first pass would render "/profile/<handle>". React counts that as a
+	 * hydration mismatch and throws the whole tree away, re-rendering the app
+	 * on every load — the same trap StudioShell defers around.
 	 *
-	 * Holding the server's answer for one paint costs a frame of the generic
-	 * icon and keeps the server HTML — which is the entire point of rendering
-	 * it on the server.
+	 * Holding the server's answer for one paint costs nothing visible: both
+	 * routes land on your own profile.
 	 */
 	const [hydrated, setHydrated] = useState(false);
 	useEffect(() => setHydrated(true), []);
 	const user = hydrated ? storedUser : null;
-	const ProfileIcon = makeProfileIcon(user?.avatar);
 
 	const navItems = [
 		{
