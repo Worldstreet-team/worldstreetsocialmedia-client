@@ -49,6 +49,19 @@ export interface CallPeer {
 	username: string;
 }
 
+/**
+ * A recently connected call that a reload interrupted — enough to put the
+ * room back together without ringing anyone. Surfaced on the state as
+ * `rejoinable`; the UI offers it as a "Rejoin" pill, never auto-joins.
+ */
+export interface RejoinableCall {
+	conversationId: string;
+	isVideo: boolean;
+	peer: CallPeer;
+	/** The original connect time, so a rejoined call's timer is honest. */
+	startedAt: number;
+}
+
 export interface CallState {
 	status: CallStatus;
 	isIncoming: boolean;
@@ -67,6 +80,8 @@ export interface CallState {
 	remoteVideoOn: boolean;
 	poorConnection: boolean;
 	error: string | null;
+	/** A reload-interrupted call the user may pick back up. Never auto-joined. */
+	rejoinable: RejoinableCall | null;
 }
 
 type Listener = (state: CallState) => void;
@@ -75,6 +90,28 @@ type Listener = (state: CallState) => void;
 const RING_TIMEOUT_MS = 45_000;
 /** How long the "Call ended" card lingers before the UI clears. */
 const TEARDOWN_MS = 1_800;
+
+/** Where an in-flight call is remembered across a reload. Session-scoped on
+ *  purpose: a new tab is a new phone, only *this* tab's reload should offer
+ *  the call back. */
+const ACTIVE_CALL_KEY = "ws-active-call";
+/** How stale the stored record may be and still be worth offering back. */
+const REJOIN_WINDOW_MS = 2 * 60_000;
+/** While connected, re-stamp the record this often so its `at` stays fresh —
+ *  the 2-minute window is meant from the *interruption*, not from pickup. */
+const PERSIST_HEARTBEAT_MS = 15_000;
+/** A rejoin joins the room silently — nobody is rung. If the other side never
+ *  shows up (they hung up while we were gone), stop waiting and end quietly. */
+const REJOIN_GRACE_MS = 10_000;
+
+/** What actually sits in sessionStorage under ACTIVE_CALL_KEY. */
+interface StoredActiveCall {
+	conversationId: string;
+	isVideo: boolean;
+	peerJson: string;
+	startedAt: number;
+	at: number;
+}
 
 const IDLE_STATE: CallState = {
 	status: "idle",
@@ -91,6 +128,7 @@ const IDLE_STATE: CallState = {
 	remoteVideoOn: false,
 	poorConnection: false,
 	error: null,
+	rejoinable: null,
 };
 
 class CallManager {
@@ -106,6 +144,14 @@ class CallManager {
 	private room: Room | null = null;
 	private ringTimer: ReturnType<typeof setTimeout> | null = null;
 	private teardownTimer: ReturnType<typeof setTimeout> | null = null;
+	/** Re-stamps the stored active-call record while connected. */
+	private persistTimer: ReturnType<typeof setInterval> | null = null;
+	/** Waits out a silent rejoin before conceding the other side is gone. */
+	private rejoinTimer: ReturnType<typeof setTimeout> | null = null;
+	/** True while the page is being torn down — see the constructor. */
+	private unloading = false;
+	/** The stored record is looked at once per page load, on first initialize. */
+	private rejoinChecked = false;
 
 	/** Injected by CallProvider so this file stays free of Clerk/axios. */
 	private api:
@@ -135,7 +181,28 @@ class CallManager {
 		return null;
 	}
 
-	private constructor() {}
+	private constructor() {
+		// A reload runs the normal hang-up path (CallProvider ends the call on
+		// beforeunload), and finish() clears the stored record — which would
+		// erase exactly the record a reload needs. This listener registers at
+		// module import, *before* CallProvider's, so by the time that hang-up
+		// runs we already know the page is going away and finish() leaves the
+		// record alone. If the navigation is cancelled the page lives on and
+		// the timer un-sets the flag; timers never run in a page that actually
+		// unloaded, so the flag can't stick the wrong way.
+		if (typeof window !== "undefined") {
+			const markUnloading = () => {
+				this.unloading = true;
+				// Freshest possible `at` for the record the reload will read.
+				if (this.state.status === "connected") this.persistActiveCall();
+				setTimeout(() => {
+					this.unloading = false;
+				}, 1_000);
+			};
+			window.addEventListener("beforeunload", markUnloading);
+			window.addEventListener("pagehide", markUnloading);
+		}
+	}
 
 	static getInstance() {
 		if (!CallManager.instance) CallManager.instance = new CallManager();
@@ -154,6 +221,8 @@ class CallManager {
 
 	/** Subscribe to my private call channel. Idempotent per profile id. */
 	initialize(myProfileId: string) {
+		// First boot after a reload: see whether a call was interrupted.
+		this.restoreRejoinable();
 		if (!this.ably || !myProfileId) return;
 		if (this.myProfileId === myProfileId && this.channel) return;
 
@@ -308,6 +377,61 @@ class CallManager {
 		this.set({ minimized });
 	}
 
+	/**
+	 * Pick an interrupted call back up. No ring, no signal — the other side
+	 * never left (or already hung up); we just mint a token and walk back into
+	 * the room. `startedAt` is restored from the record so the timer reads the
+	 * whole call, not the part since the reload. If the room turns out to be
+	 * empty — they hung up while we were gone — this ends quietly through the
+	 * normal "ended" surface rather than erroring.
+	 */
+	async rejoin() {
+		const record = this.state.rejoinable;
+		if (!record || this.state.status !== "idle") return;
+
+		this.clearTimers();
+		// One shot: a rejoin that fails must not re-offer itself forever.
+		this.clearStoredCall();
+		this.set({
+			status: "connecting",
+			// Deliberately `true`: logIfCaller only logs from the caller's side,
+			// and the original placement already logged (or never will). A
+			// rejoined leg logging a second row would double the call in the
+			// thread.
+			isIncoming: true,
+			peer: record.peer,
+			conversationId: record.conversationId,
+			isVideo: record.isVideo,
+			minimized: false,
+			micOn: true,
+			camOn: record.isVideo,
+			endReason: null,
+			error: null,
+			startedAt: record.startedAt,
+			rejoinable: null,
+		});
+
+		const joined = await this.joinRoom(record.conversationId, record.isVideo);
+		if (!joined) return; // joinRoom already surfaced the failure.
+
+		// The other side may already be in the room — the connect event alone
+		// would never fire for them (same reason acceptCall syncs).
+		this.syncRemote();
+
+		// Fresh read: `set()` mutates behind TS's control-flow narrowing.
+		if (this.getState().status === "connecting") {
+			this.rejoinTimer = setTimeout(() => {
+				if (this.state.status === "connecting") this.finish("ended");
+			}, REJOIN_GRACE_MS);
+		}
+	}
+
+	/** Decline the rejoin offer and forget the interrupted call. */
+	dismissRejoin() {
+		this.clearStoredCall();
+		if (this.state.rejoinable) this.set({ rejoinable: null });
+	}
+
 	// ----------------------------------------------------------------- media
 
 	/** Mint a token, connect, publish. Returns false if anything blew up. */
@@ -406,7 +530,19 @@ class CallManager {
 		// First sight of the other participant is the moment a call is real.
 		if (this.state.status !== "connected") {
 			this.clearTimers();
-			this.set({ status: "connected", startedAt: Date.now() });
+			// A rejoin arrives here with the original `startedAt` restored so
+			// the timer stays honest; every other path arrives with null.
+			this.set({
+				status: "connected",
+				startedAt: this.state.startedAt ?? Date.now(),
+			});
+			// From here a reload should be able to find its way back: remember
+			// the call, and keep the record's `at` fresh while it runs.
+			this.persistActiveCall();
+			this.persistTimer = setInterval(
+				() => this.persistActiveCall(),
+				PERSIST_HEARTBEAT_MS,
+			);
 		}
 
 		const mic = remote.getTrackPublication(Track.Source.Microphone);
@@ -415,6 +551,77 @@ class CallManager {
 			remoteMuted: mic ? mic.isMuted : false,
 			remoteVideoOn: Boolean(cam && !cam.isMuted && cam.isSubscribed),
 		});
+	}
+
+	// ---------------------------------------------------- reload persistence
+
+	/** Stamp the connected call into sessionStorage so a reload can offer it back. */
+	private persistActiveCall() {
+		const { conversationId, isVideo, peer, startedAt, status } = this.state;
+		if (status !== "connected" || !conversationId || !peer || !startedAt)
+			return;
+		try {
+			const record: StoredActiveCall = {
+				conversationId,
+				isVideo,
+				peerJson: JSON.stringify(peer),
+				startedAt,
+				at: Date.now(),
+			};
+			sessionStorage.setItem(ACTIVE_CALL_KEY, JSON.stringify(record));
+		} catch {
+			/* storage unavailable — the call just isn't rejoinable */
+		}
+	}
+
+	private clearStoredCall() {
+		try {
+			sessionStorage.removeItem(ACTIVE_CALL_KEY);
+		} catch {
+			/* nothing to clear */
+		}
+	}
+
+	/**
+	 * Once per page load: if a call was connected less than two minutes ago in
+	 * this tab, surface it as `rejoinable`. Never auto-joins — walking back
+	 * into a room unannounced with a live microphone is the user's call to
+	 * make, not ours.
+	 */
+	private restoreRejoinable() {
+		if (this.rejoinChecked) return;
+		this.rejoinChecked = true;
+		try {
+			const raw = sessionStorage.getItem(ACTIVE_CALL_KEY);
+			if (!raw) return;
+			const record = JSON.parse(raw) as Partial<StoredActiveCall>;
+			const fresh =
+				typeof record?.at === "number" &&
+				Date.now() - record.at < REJOIN_WINDOW_MS;
+			const peer = record?.peerJson
+				? (JSON.parse(record.peerJson) as CallPeer)
+				: null;
+			if (!fresh || !peer?.id || !record?.conversationId) {
+				this.clearStoredCall();
+				return;
+			}
+			// A call already in progress (e.g. someone rang the instant the
+			// page came back) outranks a stale offer.
+			if (this.state.status !== "idle") return;
+			this.set({
+				rejoinable: {
+					conversationId: record.conversationId,
+					isVideo: Boolean(record.isVideo),
+					peer,
+					startedAt:
+						typeof record.startedAt === "number"
+							? record.startedAt
+							: Date.now(),
+				},
+			});
+		} catch {
+			this.clearStoredCall();
+		}
 	}
 
 	// ------------------------------------------------------------- lifecycle
@@ -522,6 +729,10 @@ class CallManager {
 	private finish(reason: CallEndReason) {
 		if (this.state.status === "idle") return;
 		this.clearTimers();
+		// A finished call is not rejoinable — except when this finish IS the
+		// page unloading (CallProvider hangs up on beforeunload): that record
+		// is exactly what the reload needs, so it survives.
+		if (!this.unloading) this.clearStoredCall();
 		// Before the state is cleared — duration lives on `startedAt`.
 		this.logIfCaller(reason);
 		this.disconnectRoom();
@@ -543,12 +754,17 @@ class CallManager {
 	private clearTimers() {
 		if (this.ringTimer) clearTimeout(this.ringTimer);
 		if (this.teardownTimer) clearTimeout(this.teardownTimer);
+		if (this.persistTimer) clearInterval(this.persistTimer);
+		if (this.rejoinTimer) clearTimeout(this.rejoinTimer);
 		this.ringTimer = null;
 		this.teardownTimer = null;
+		this.persistTimer = null;
+		this.rejoinTimer = null;
 	}
 
 	private reset() {
 		this.clearTimers();
+		if (!this.unloading) this.clearStoredCall();
 		this.disconnectRoom();
 		// `error` survives one beat longer than the rest so a failure message
 		// isn't wiped before it can be read; the UI clears it on next action.

@@ -11,6 +11,7 @@ import {
 	CornersIn,
 	CornersOut,
 	WifiSlash,
+	X,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
@@ -218,9 +219,12 @@ function ControlButton({
 }
 
 /**
- * Dev-only harness: `?callpreview=voice|video|ring|dock` forces the surface
- * into a state so the UI can be seen and styled without ringing a real
- * person. Compiled out of production builds by the NODE_ENV guard.
+ * Dev-only harness: `?callpreview=voice|video|ring|dock|rejoin` forces the
+ * surface into a state so the UI can be seen and styled without ringing a
+ * real person. `ring` exercises the incoming-call toast (ringing + incoming
+ * renders the compact card, not the full modal); `rejoin` shows the
+ * call-interrupted pill. Compiled out of production builds by the NODE_ENV
+ * guard.
  */
 function usePreviewState() {
 	const [preview, setPreview] = useState<string | null>(null);
@@ -253,10 +257,28 @@ function usePreviewState() {
 		isIncoming: preview === "ring",
 		isVideo: preview === "video" || preview === "dock",
 		endReason: null,
+		rejoinable: null as null | {
+			conversationId: string;
+			isVideo: boolean;
+			peer: { id: string; name: string; avatar: string; username: string };
+			startedAt: number;
+		},
 	};
 	if (preview === "ring")
 		// Incoming is spelled "ringing" + isIncoming in the real state union.
 		return { ...base, status: "ringing" as const, startedAt: null };
+	if (preview === "rejoin")
+		return {
+			...base,
+			status: "idle" as const,
+			startedAt: null,
+			rejoinable: {
+				conversationId: "preview",
+				isVideo: false,
+				peer: base.peer,
+				startedAt: Date.now() - 90_000,
+			},
+		};
 	if (preview === "connecting")
 		return { ...base, status: "connecting" as const, startedAt: null };
 	return {
@@ -283,6 +305,7 @@ export function CallSurface() {
 		remoteVideoOn,
 		poorConnection,
 		error,
+		rejoinable,
 	} = (previewState as unknown as typeof call) ?? call;
 
 	const elapsed = useElapsed(startedAt);
@@ -298,7 +321,19 @@ export function CallSurface() {
 	const line = statusLine(status, isIncoming, isVideo, endReason, elapsed);
 	const pending = status === "ringing" || status === "connecting";
 
-	if (!open || !peer) return null;
+	// An unanswered incoming ring is a toast, not a takeover: the compact
+	// card sits top-right with no scrim so the app stays usable underneath.
+	// Accepting flips the status, and the full surface takes over as always.
+	const incomingToast = status === "ringing" && isIncoming;
+
+	if (!open || !peer) {
+		// Nothing live — but a reload may have left a call to pick back up.
+		return (
+			<AnimatePresence>
+				{!open && rejoinable ? <RejoinPill /> : null}
+			</AnimatePresence>
+		);
+	}
 
 	const avatar = peer.avatar || DEFAULT_AVATAR;
 
@@ -307,7 +342,52 @@ export function CallSurface() {
 			<RemoteAudio track={remoteAudio} />
 
 			<AnimatePresence mode="wait">
-				{minimized ? (
+				{incomingToast ? (
+					<motion.div
+						key="ringcard"
+						initial={{ opacity: 0, y: -12 }}
+						animate={{ opacity: 1, y: 0 }}
+						exit={{ opacity: 0, y: -12 }}
+						transition={{ duration: 0.26, ease: EASE }}
+						className="fixed right-4 top-4 z-modal w-[340px] rounded-2xl glass-dock backdrop-blur-2xl backdrop-saturate-150 p-3"
+					>
+						<div className="flex items-center gap-3">
+							<SafeAvatar
+								src={avatar}
+								width={44}
+								height={44}
+								className="h-11 w-11 shrink-0 rounded-pill object-cover"
+							/>
+							<div className="min-w-0 flex-1">
+								<p className="truncate text-[13.5px] font-semibold glass-ink">
+									{peer.name}
+								</p>
+								<p className="flex items-center gap-1.5 text-[12px] glass-ink-dim">
+									<span className="truncate">{line}</span>
+									<PendingDots />
+								</p>
+							</div>
+							<div className="flex shrink-0 items-center gap-1.5">
+								<ControlButton
+									label="Decline call"
+									onClick={call.declineCall}
+									tone="danger"
+									size="sm"
+								>
+									<PhoneDisconnect size={18} weight="fill" />
+								</ControlButton>
+								<ControlButton
+									label="Accept call"
+									onClick={call.acceptCall}
+									tone="cta"
+									size="sm"
+								>
+									<Phone size={18} weight="fill" />
+								</ControlButton>
+							</div>
+						</div>
+					</motion.div>
+				) : minimized ? (
 					<motion.div
 						key="dock"
 						initial={{ opacity: 0, y: 8, scale: 0.98 }}
@@ -657,5 +737,47 @@ function Controls({
 				<PhoneDisconnect size={24} weight="fill" />
 			</ControlButton>
 		</>
+	);
+}
+
+/**
+ * The reload lifeline. A call was connected, the page reloaded, and the
+ * manager found the interrupted-call record — this pill offers the way back
+ * without ever auto-joining (rejoining unannounced with a live mic is the
+ * user's decision). Sits where the minimized dock lives, since that is where
+ * an ongoing call belongs on screen. Talks to the manager directly: the
+ * provider's context adds nothing here, and this component already reads the
+ * manager for tracks.
+ */
+function RejoinPill() {
+	return (
+		<motion.div
+			key="rejoin"
+			initial={{ opacity: 0, y: 8, scale: 0.98 }}
+			animate={{ opacity: 1, y: 0, scale: 1 }}
+			exit={{ opacity: 0, y: 8, scale: 0.98 }}
+			transition={{ duration: 0.26, ease: EASE }}
+			className="fixed bottom-4 right-4 z-modal flex items-center gap-2 rounded-pill glass-dock backdrop-blur-2xl backdrop-saturate-150 py-1.5 pl-4 pr-1.5"
+		>
+			<span className="text-[12.5px] font-medium glass-ink">
+				Call interrupted
+			</span>
+			<button
+				type="button"
+				onClick={() => void callManager.rejoin()}
+				className="flex h-10 cursor-pointer items-center rounded-pill glass-cta px-3.5 text-[12.5px] font-semibold transition-colors"
+			>
+				Rejoin
+			</button>
+			<button
+				type="button"
+				aria-label="Dismiss"
+				title="Dismiss"
+				onClick={() => callManager.dismissRejoin()}
+				className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill glass-chip transition-colors glass-ink"
+			>
+				<X size={15} weight="bold" />
+			</button>
+		</motion.div>
 	);
 }

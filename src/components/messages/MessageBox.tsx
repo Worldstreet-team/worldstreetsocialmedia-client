@@ -20,7 +20,7 @@ import {
 	ArrowLeft,
 	MessageCircle,
 	MessageSquarePlus,
-} from "lucide-react";
+	Play,} from "lucide-react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Badge } from "@/components/ui/Badge";
@@ -36,12 +36,15 @@ import { StoryViewer, type RailEntry } from "@/components/feed/StoryViewer";
 import { toast } from "sonner";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { format } from "date-fns";
+import { formatTimeAgo } from "@/lib/utils";
 import { useRealtime } from "../providers/RealtimeProvider";
 import MediaModal from "../ui/MediaModal";
 import { PencilSimple } from "@phosphor-icons/react";
 import MediaEditor from "@/components/editor/MediaEditor";
 import { VoiceMessage } from "./VoiceMessage";
 import { ConversationList } from "./ConversationList";
+import { StoriesRail } from "@/components/feed/StoriesRail";
+import { GIPHY_KEY, GifPicker } from "./GifPicker";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCall } from "@/providers/CallProvider";
 import { useChatSignals } from "@/hooks/useChatSignals";
@@ -112,6 +115,32 @@ interface Message {
  * "Today" / "Yesterday" / a date. Read months later, a bare "h:mm a" on every
  * bubble tells you the time of day and nothing about the day.
  */
+/**
+ * Links in messages are links. Full RichText (cashtags, mentions, hashtag
+ * routing) belongs to posts; a DM needs exactly one thing — a pasted URL you
+ * can tap — so this is a five-line split, not a dependency on the feed.
+ */
+const URL_RE = /(https?:\/\/[^\s<]+)/g;
+function linkify(text: string) {
+	return text.split(URL_RE).map((part, i) =>
+		URL_RE.test(part) ? (
+			<a
+				// biome-ignore lint/suspicious/noArrayIndexKey: static split of one string
+				key={i}
+				href={part}
+				target="_blank"
+				rel="noopener noreferrer"
+				className="break-all underline underline-offset-2 opacity-90 hover:opacity-100"
+				onClick={(e) => e.stopPropagation()}
+			>
+				{part}
+			</a>
+		) : (
+			part
+		),
+	);
+}
+
 function dayLabel(iso: string) {
 	const d = new Date(iso);
 	const today = new Date();
@@ -146,6 +175,7 @@ const Attachment = ({
 }) => {
 	const [progress, setProgress] = useState(0);
 	const [loaded, setLoaded] = useState(false);
+	const [retryKey, setRetryKey] = useState(0);
 	const [objectUrl, setObjectUrl] = useState<string | null>(null);
 
 	useEffect(() => {
@@ -207,7 +237,7 @@ const Attachment = ({
 		<div
 			onClick={onClick}
 			className={clsx(
-				"relative w-full max-w-[256px] mb-1 rounded-lg overflow-hidden cursor-zoom-in hover:opacity-95 transition-opacity",
+				"relative w-full max-w-[280px] cursor-zoom-in overflow-hidden rounded-xl transition-opacity hover:opacity-95",
 				isTemp && "opacity-70",
 			)}
 		>
@@ -215,15 +245,43 @@ const Attachment = ({
 				<div className="absolute inset-0 z-10 bg-page/20 animate-pulse" />
 			)}
 			{type === "image" ? (
-				<div className="relative w-full aspect-square">
+				<div className="relative w-full aspect-square bg-sunken">
+					{/* R2 is eventually consistent: the URL the upload returns can
+					    404 for a beat, and the browser's broken-image glyph made a
+					    just-sent picture look failed. Retry quietly instead. */}
 					<img
+						key={retryKey}
 						src={displaySrc}
 						alt="attachment"
-						className="w-full h-full object-cover"
+						className="h-full w-full object-cover"
+						onError={() => {
+							if (retryKey < 4)
+								setTimeout(
+									() => setRetryKey((k) => k + 1),
+									600 * (retryKey + 1),
+								);
+						}}
 					/>
 				</div>
 			) : (
-				<VideoPlayer src={displaySrc} className="w-full max-h-64 aspect-video" />
+				/* A tile, not an inline player. The full control bar crammed into
+				   a 256px bubble was unreadable; the lightbox is one tap away and
+				   has room for real controls. */
+				<div className="relative w-full bg-sunken">
+					{/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+					<video
+						src={`${displaySrc}#t=0.1`}
+						preload="metadata"
+						muted
+						playsInline
+						className="max-h-64 w-full object-cover"
+					/>
+					<span className="absolute inset-0 flex items-center justify-center">
+						<span className="flex h-12 w-12 items-center justify-center rounded-pill bg-scrim text-primary">
+							<Play className="ml-0.5 h-5 w-5" fill="currentColor" />
+						</span>
+					</span>
+				</div>
 			)}
 		</div>
 	);
@@ -294,6 +352,7 @@ export const MessageBox = ({
 	const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 	const [showAttachMenu, setShowAttachMenu] = useState(false);
 	const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+	const [showGifPicker, setShowGifPicker] = useState(false);
 	// Picker follows the app theme instead of hardcoding dark.
 	const { resolvedTheme } = useTheme();
 	const [showNewConversationModal, setShowNewConversationModal] = useState(false);
@@ -402,6 +461,62 @@ export const MessageBox = ({
 			};
 			mediaRecorderRef.current.stop();
 			setIsRecording(false);
+		}
+	};
+
+
+	/** A GIF is just an image message whose URL lives on GIPHY's CDN. */
+	const sendGif = async (url: string) => {
+		if (!activeConversation || !myProfileId) return;
+		const tempId = `temp-${Date.now()}`;
+		setMessageCache((prev) => ({
+			...prev,
+			[activeConversation._id]: [
+				...(prev[activeConversation._id] || []),
+				{
+					_id: tempId,
+					conversationId: activeConversation._id,
+					sender: {
+						_id: myProfileId,
+						firstName: user?.firstName || "",
+						lastName: user?.lastName || "",
+						username: user?.username || "",
+						avatar: user?.imageUrl || "",
+					},
+					content: "",
+					type: "image",
+					mediaUrl: url,
+					createdAt: new Date().toISOString(),
+				},
+			],
+		}));
+		scrollToBottom();
+		try {
+			const token = await getToken();
+			const response = await axios.post(
+				`${API_URL}/api/messages`,
+				{
+					conversationId: activeConversation._id,
+					content: "",
+					type: "image",
+					mediaUrl: url,
+				},
+				{ headers: { Authorization: `Bearer ${token}` } },
+			);
+			setMessageCache((prev) => ({
+				...prev,
+				[activeConversation._id]: (prev[activeConversation._id] || []).map(
+					(m) => (m._id === tempId ? response.data : m),
+				),
+			}));
+		} catch (error: any) {
+			toast.error(error?.response?.data?.message || "Failed to send GIF");
+			setMessageCache((prev) => ({
+				...prev,
+				[activeConversation._id]: (prev[activeConversation._id] || []).filter(
+					(m) => m._id !== tempId,
+				),
+			}));
 		}
 	};
 
@@ -894,6 +1009,11 @@ export const MessageBox = ({
 				{/* pb-nav: the conversation list is the one messages view where the
 				    fixed mobile bottom nav is still on screen. */}
 				<div className="flex-1 overflow-y-auto overscroll-contain pb-nav md:pb-0">
+					{/* Stories of the people you're aligned with — messaging is
+					    where you already are when you want to reply to one. */}
+					<div className="border-b border-hairline px-2 pt-2">
+						<StoriesRail />
+					</div>
 					<ConversationList
 						conversations={conversations as any}
 						loading={isLoadingConversations}
@@ -950,6 +1070,15 @@ export const MessageBox = ({
 										<span className="h-1.5 w-1.5 shrink-0 rounded-pill bg-success" />
 										Online
 									</p>
+								) : (activeConversation.otherParticipant as any)
+										?.lastSeenAt ? (
+									<p className="truncate text-xs text-muted">
+										Last seen{" "}
+										{formatTimeAgo(
+											(activeConversation.otherParticipant as any)
+												.lastSeenAt,
+										)}
+									</p>
 								) : (
 									<p className="text-xs text-muted truncate">
 										@{activeConversation.otherParticipant.username}
@@ -1003,15 +1132,6 @@ export const MessageBox = ({
 								}
 							>
 								<Video className="w-5 h-5" />
-							</button>
-							{/* Inert placeholder hidden on phones, where the header has
-							    no room to spare for a control that does nothing. */}
-							<button
-								type="button"
-								aria-label="Conversation info"
-								className="hidden h-11 w-11 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary sm:flex md:h-10 md:w-10"
-							>
-								<Info className="w-5 h-5" />
 							</button>
 						</div>
 					</div>
@@ -1105,19 +1225,32 @@ export const MessageBox = ({
 											// 70% of a 272px pane is 190px — too narrow to
 											// hold a sentence without shredding it. Phones
 											// get 85%, desktop keeps the original ratio.
-											"max-w-[85%] sm:max-w-[70%] min-w-0 rounded-xl px-3.5 py-2 sm:px-4",
+											"max-w-[85%] sm:max-w-[70%] min-w-0 overflow-hidden rounded-xl",
+											// Media IS the bubble: a picture wrapped in a
+											// coloured card with padding read as a picture
+											// in an envelope. Text keeps the padded fill.
+											(m.type === "image" || m.type === "video") &&
+												!m.content
+												? "p-0"
+												: "px-3.5 py-2 sm:px-4",
 											// Run-aware corners: inside a run, the corners that
 											// face the neighbouring bubble flatten, so a burst
 											// reads as one utterance in parts — the messenger
 											// grammar — instead of a stack of identical pills.
 											isMe
 												? [
-														"bg-brand text-brand-on",
+														(m.type === "image" || m.type === "video") &&
+														!m.content
+															? "text-brand-on"
+															: "bg-brand text-brand-on",
 														sameRunAsPrev && "rounded-tr-[4px]",
 														!endsRun && "rounded-br-[4px]",
 													]
 												: [
-														"bg-raised text-primary",
+														(m.type === "image" || m.type === "video") &&
+														!m.content
+															? "text-primary"
+															: "bg-raised text-primary",
 														sameRunAsPrev && "rounded-tl-[4px]",
 														!endsRun && "rounded-bl-[4px]",
 													],
@@ -1178,7 +1311,7 @@ export const MessageBox = ({
 													m.mediaUrl && "mt-2",
 												)}
 											>
-												{m.content}
+												{linkify(m.content)}
 											</p>
 										)}
 									</div>
@@ -1260,49 +1393,6 @@ export const MessageBox = ({
 						)}
 
 						<div className="flex items-center gap-2 sm:gap-3 relative">
-							{/* Attach Menu */}
-							<AnimatePresence>
-								{showAttachMenu && (
-									<motion.div
-										initial={{ opacity: 0, y: 8, scale: 0.98 }}
-										animate={{ opacity: 1, y: 0, scale: 1 }}
-										exit={{ opacity: 0, y: 8, scale: 0.98 }}
-										transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-										className="absolute bottom-16 left-0 bg-surface border border-hairline rounded-xl p-2 flex gap-4 shadow-nav z-dropdown"
-									>
-										<button
-											onClick={() => {
-												if (fileInputRef.current) {
-													fileInputRef.current.accept = "image/*";
-													fileInputRef.current.click();
-												}
-												setShowAttachMenu(false);
-											}}
-											className="flex flex-col items-center gap-2 p-3 hover:bg-raised rounded-lg transition-colors min-w-[80px] cursor-pointer"
-										>
-											<div className="flex h-10 w-10 items-center justify-center rounded-pill bg-chip">
-												<ImageIcon className="w-5 h-5 text-primary" />
-											</div>
-											<span className="text-xs text-muted">Photo</span>
-										</button>
-										<button
-											onClick={() => {
-												if (fileInputRef.current) {
-													fileInputRef.current.accept = "video/*";
-													fileInputRef.current.click();
-												}
-												setShowAttachMenu(false);
-											}}
-											className="flex flex-col items-center gap-2 p-3 hover:bg-raised rounded-lg transition-colors min-w-[80px] cursor-pointer"
-										>
-											<div className="flex h-10 w-10 items-center justify-center rounded-pill bg-chip">
-												<Video className="w-5 h-5 text-primary" />
-											</div>
-											<span className="text-xs text-muted">Video</span>
-										</button>
-									</motion.div>
-								)}
-							</AnimatePresence>
 
 							{/* Hidden File Input */}
 							<input
@@ -1348,14 +1438,12 @@ export const MessageBox = ({
 									    composer is one object with everything in reach. */}
 									<button
 										type="button"
-										onClick={() => setShowAttachMenu(!showAttachMenu)}
+										// Straight to the picker. The photo/video tile menu
+										// was one extra tap that answered a question the OS
+										// file sheet already asks.
+										onClick={() => fileInputRef.current?.click()}
 										aria-label="Attach a file"
-										className={clsx(
-											"mb-0.5 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill transition-[transform,background-color,color]",
-											showAttachMenu
-												? "rotate-45 bg-primary text-page"
-												: "text-muted hover:bg-chip hover:text-primary",
-										)}
+										className="mb-0.5 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary"
 									>
 										<Plus className="w-5 h-5" />
 									</button>
@@ -1381,6 +1469,16 @@ export const MessageBox = ({
 
 									{/* Right Side Icons */}
 									<div className="flex items-center shrink-0">
+										{GIPHY_KEY && (
+											<button
+												type="button"
+												onClick={() => setShowGifPicker(true)}
+												aria-label="Send a GIF"
+												className="flex h-10 cursor-pointer items-center justify-center rounded-pill px-1.5 font-sans text-[11px] font-bold tracking-wide text-muted transition-colors hover:bg-chip hover:text-primary"
+											>
+												GIF
+											</button>
+										)}
 										<div className="relative">
 											<button
 												type="button"
@@ -1474,6 +1572,11 @@ export const MessageBox = ({
 			)}
 
 			{/* New Conversation Modal */}
+			<GifPicker
+				open={showGifPicker}
+				onClose={() => setShowGifPicker(false)}
+				onPick={(url) => void sendGif(url)}
+			/>
 			<NewConversationModal
 				isOpen={showNewConversationModal}
 				onClose={() => setShowNewConversationModal(false)}
