@@ -105,6 +105,18 @@ function VerticalSurface() {
 	 * the person flicks away from a clip that was about to play.
 	 */
 	const [buffering, setBuffering] = useState<Record<string, boolean>>({});
+	/**
+	 * The mounted `<video>` for each slide, so playback can be DRIVEN rather
+	 * than declared.
+	 *
+	 * `autoPlay` only takes effect when an element loads. A slide one flick
+	 * away is already mounted and already loaded, so scrolling onto it
+	 * flipped `autoPlay` to true on an element that had long since finished
+	 * loading — and nothing happened. The video simply sat on a still frame,
+	 * which is the "it hangs" everyone was hitting: not a stall, a video that
+	 * was never told to play.
+	 */
+	const videoEls = useRef<Map<string, HTMLVideoElement>>(new Map());
 	const markBuffering = useCallback(
 		(key: string, value: boolean) =>
 			setBuffering((prev) =>
@@ -497,6 +509,22 @@ function VerticalSurface() {
 	// this is one small request per broadcast you actually watch.
 	const activeStreamId = slides[active]?.streamId;
 	const activeSlideKey = slides[active]?.key;
+
+	// Drive playback on every change of active slide: play the one on screen,
+	// pause and rewind the rest. Rewinding matters — coming back to a slide
+	// half-watched, with no controls to scrub, feels broken.
+	useEffect(() => {
+		for (const [key, el] of videoEls.current) {
+			if (key === activeSlideKey) {
+				// A rejected play() is normal (autoplay policy, or the element
+				// was torn down mid-promise) and must not surface.
+				el.play().catch(() => {});
+			} else if (!el.paused) {
+				el.pause();
+				el.currentTime = 0;
+			}
+		}
+	}, [activeSlideKey]);
 	const likeSyncedRef = useRef<string | null>(null);
 	useEffect(() => {
 		if (!activeStreamId || !activeSlideKey) return;
@@ -769,7 +797,12 @@ function VerticalSurface() {
 				// when you landed on it, so every flick paid the whole fetch
 				// and the surface looked stalled. Two is the balance: the
 				// flick is covered, without mounting a feed of players.
-				const near = Math.abs(idx - active) <= 2;
+				// One either side. This used to be two, which mounted FIVE
+				// videos; with preload=auto on each that is five full-file
+				// downloads from one host against a ~6-connection cap, and
+				// the one you are actually watching lost the race. Warming
+				// ahead is the detached pool's job, not the DOM's.
+				const near = Math.abs(idx - active) <= 1;
 				const isActive = idx === active;
 				const isSelf =
 					me?._id === slide.authorId || me?.userId === slide.authorId;
@@ -802,6 +835,10 @@ function VerticalSurface() {
 							) : near && slide.videoUrl ? (
 								// eslint-disable-next-line jsx-a11y/media-has-caption
 								<video
+									ref={(el) => {
+										if (el) videoEls.current.set(slide.key, el);
+										else videoEls.current.delete(slide.key);
+									}}
 									src={slide.videoUrl}
 									// The media layer is decoration and must not take
 									// pointer events. It is `inset-0`, so its box covers
@@ -814,9 +851,11 @@ function VerticalSurface() {
 									muted={muted || !isActive}
 									playsInline
 									loop
-									// The neighbours are one flick away; letting them sit
-									// at metadata-only defeats the buffer above.
-									preload="auto"
+									// Only the slide you are watching pulls bytes
+									// eagerly. The neighbours are warmed by
+									// useVideoBuffer's detached pool instead, which is
+									// bounded and does not compete with playback.
+									preload={isActive ? "auto" : "metadata"}
 									onWaiting={() => markBuffering(slide.key, true)}
 									onStalled={() => markBuffering(slide.key, true)}
 									onCanPlay={() => markBuffering(slide.key, false)}
