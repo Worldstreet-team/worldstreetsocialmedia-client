@@ -42,7 +42,7 @@ import {
 } from "react";
 
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { formatTimeAgo } from "@/lib/utils";
+import { TimeAgo } from "@/components/ui/TimeAgo";
 import { motion, AnimatePresence } from "framer-motion";
 import { userAtom } from "@/store/user.atom";
 import { bookmarksAtom } from "@/store/bookmarks.atom";
@@ -785,9 +785,10 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                 •
                             </span>
                             <span className="text-subtle text-[13px] font-sans whitespace-nowrap shrink-0">
-                                {post.createdAt
-                                    ? formatTimeAgo(post.createdAt)
-                                    : post.timestamp}
+                                <TimeAgo
+                                    date={post.createdAt}
+                                    fallback={post.timestamp}
+                                />
                             </span>
                             {post.promoted && (
                                 <span className="shrink-0 rounded-[4px] bg-raised px-1.5 py-px text-[10px] font-semibold tracking-wide text-subtle font-sans">
