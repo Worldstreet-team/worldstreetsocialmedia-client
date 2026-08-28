@@ -727,5 +727,6 @@
   "voice.searchPlaceholder": "Spaces durchsuchen",
   "voice.noMatches": "Kein Space passt dazu.",
   "notif.verb.sale": "hat deinen Beitrag gekauft",
-  "notif.empty.sales.title": "Noch keine Verkäufe"
+  "notif.empty.sales.title": "Noch keine Verkäufe",
+  "search.placeholder.people": "Nach Name oder Handle suchen"
 }

@@ -766,5 +766,6 @@
   "voice.searchPlaceholder": "Search spaces",
   "voice.noMatches": "No spaces match that.",
   "notif.verb.sale": "bought your post",
-  "notif.empty.sales.title": "No sales yet"
+  "notif.empty.sales.title": "No sales yet",
+  "search.placeholder.people": "Search by name or handle"
 }

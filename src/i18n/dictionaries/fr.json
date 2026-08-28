@@ -727,5 +727,6 @@
   "voice.searchPlaceholder": "Rechercher des espaces",
   "voice.noMatches": "Aucun espace ne correspond.",
   "notif.verb.sale": "a acheté votre publication",
-  "notif.empty.sales.title": "Aucune vente"
+  "notif.empty.sales.title": "Aucune vente",
+  "search.placeholder.people": "Rechercher par nom ou identifiant"
 }

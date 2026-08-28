@@ -11,6 +11,12 @@ export interface TabItem<K extends string = string> {
 	Icon?: Icon;
 	/** Unread count, rendered as a neutral badge after the label. */
 	badge?: number;
+	/**
+	 * Above this the badge renders `${badgeMax}+`. A cap is right for unread
+	 * counts, where "lots" is the whole message; it is wrong for a follower
+	 * total, where the number IS the thing you opened the modal to read.
+	 */
+	badgeMax?: number;
 }
 
 /**
@@ -46,7 +52,7 @@ export function Tabs<K extends string>({
 				className,
 			)}
 		>
-			{items.map(({ key, label, Icon, badge }) => {
+			{items.map(({ key, label, Icon, badge, badgeMax }) => {
 				const active = key === value;
 				return (
 					<button
@@ -70,7 +76,7 @@ export function Tabs<K extends string>({
 							/>
 						)}
 						{label}
-						<Badge tone="neutral" count={badge} ring={false} />
+						<Badge tone="neutral" count={badge} max={badgeMax} ring={false} />
 					</button>
 				);
 			})}

@@ -99,6 +99,19 @@ function VerticalSurface() {
 	const [muted, setMuted] = useState(true);
 	const [loading, setLoading] = useState(true);
 	const [viewers, setViewers] = useState(0);
+	/**
+	 * Which slides are still fetching. A vertical feed that shows a black
+	 * rectangle while bytes arrive reads as broken rather than loading, and
+	 * the person flicks away from a clip that was about to play.
+	 */
+	const [buffering, setBuffering] = useState<Record<string, boolean>>({});
+	const markBuffering = useCallback(
+		(key: string, value: boolean) =>
+			setBuffering((prev) =>
+				prev[key] === value ? prev : { ...prev, [key]: value },
+			),
+		[],
+	);
 	const [liveRoom, setLiveRoom] = useState<Room | null>(null);
 	const [chatFor, setChatFor] = useState<Slide | null>(null);
 	const [commentsFor, setCommentsFor] = useState<Slide | null>(null);
@@ -752,7 +765,11 @@ function VerticalSurface() {
 			)}
 
 			{slides.map((slide, idx) => {
-				const near = Math.abs(idx - active) <= 1;
+				// Two ahead, not one. At ±1 the next clip only STARTED loading
+				// when you landed on it, so every flick paid the whole fetch
+				// and the surface looked stalled. Two is the balance: the
+				// flick is covered, without mounting a feed of players.
+				const near = Math.abs(idx - active) <= 2;
 				const isActive = idx === active;
 				const isSelf =
 					me?._id === slide.authorId || me?.userId === slide.authorId;
@@ -800,6 +817,11 @@ function VerticalSurface() {
 									// The neighbours are one flick away; letting them sit
 									// at metadata-only defeats the buffer above.
 									preload="auto"
+									onWaiting={() => markBuffering(slide.key, true)}
+									onStalled={() => markBuffering(slide.key, true)}
+									onCanPlay={() => markBuffering(slide.key, false)}
+									onPlaying={() => markBuffering(slide.key, false)}
+									onLoadStart={() => markBuffering(slide.key, true)}
 									onPlay={() => {
 										if (slide.postId && !startedRef.current.has(slide.postId)) {
 											startedRef.current.add(slide.postId);
@@ -815,6 +837,14 @@ function VerticalSurface() {
 								/>
 							) : (
 								<div className="absolute inset-0 bg-[#0a0a0a]" />
+							)}
+
+							{/* Buffering, on the active slide only. A neighbour
+							    quietly filling its buffer is not news. */}
+							{isActive && slide.videoUrl && buffering[slide.key] && (
+								<span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+									<span className="h-8 w-8 animate-spin rounded-pill border-2 border-[#fafaf9]/25 border-t-[#fafaf9]" />
+								</span>
 							)}
 
 							{/* live status row */}

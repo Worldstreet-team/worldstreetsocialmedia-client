@@ -56,6 +56,21 @@ export default function FollowsModal({
 	const [activeTab, setActiveTab] = useState(initialTab); // Simplified from web's useStateAndSync
 	const [loading, setLoading] = useState(true);
 	const [users, setUsers] = useState<UserItem[]>([]);
+	const [query, setQuery] = useState("");
+
+	/**
+	 * Name and handle. A long allies list is a haystack, and the reason you
+	 * open it is usually to find one person in it.
+	 */
+	const shown = users.filter((u) => {
+		const q = query.trim().toLowerCase();
+		if (!q) return true;
+		const name = `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim();
+		return (
+			name.toLowerCase().includes(q) ||
+			(u.username ?? "").toLowerCase().includes(q)
+		);
+	});
 	const currentUser = useAtomValue(userAtom);
 	const t = useT();
 
@@ -63,7 +78,10 @@ export default function FollowsModal({
 	useOverlayDismiss(isOpen, onClose);
 
 	useEffect(() => {
-		if (isOpen) setActiveTab(initialTab); // Sync on open
+		if (isOpen) {
+			setActiveTab(initialTab); // Sync on open
+			setQuery("");
+		}
 	}, [isOpen, initialTab]);
 
 	useEffect(() => {
@@ -137,16 +155,22 @@ export default function FollowsModal({
 							    header row, so the close chip sits beside them. */}
 							<OverlayHeader onClose={onClose} closeLabel={t("common.close")}>
 								<Tabs
+									// Allies first, then Aligned — the same order the
+									// profile lists them in. They disagreed, so tapping
+									// the left number opened a modal whose left tab was
+									// the other one.
 									items={[
-										{
-											key: "followers" as const,
-											label: t("profile.followers"),
-											badge: followersCount,
-										},
 										{
 											key: "following" as const,
 											label: t("profile.following"),
 											badge: followingCount,
+											badgeMax: Number.MAX_SAFE_INTEGER,
+										},
+										{
+											key: "followers" as const,
+											label: t("profile.followers"),
+											badge: followersCount,
+											badgeMax: Number.MAX_SAFE_INTEGER,
 										},
 									]}
 									value={activeTab}
@@ -155,6 +179,16 @@ export default function FollowsModal({
 									className="min-w-0 flex-1"
 								/>
 							</OverlayHeader>
+
+							<div className="shrink-0 px-4 pb-3">
+								<input
+									value={query}
+									onChange={(e) => setQuery(e.target.value)}
+									placeholder={t("search.placeholder.people")}
+									aria-label={t("search.placeholder.people")}
+									className="w-full rounded-pill bg-sunken px-4 py-2 font-sans text-[13.5px] text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised"
+								/>
+							</div>
 
 							{/* List Content */}
 							{/* min-h capped against the viewport: a hard 300px floor
@@ -176,9 +210,9 @@ export default function FollowsModal({
 											</div>
 										))}
 									</div>
-								) : users.length > 0 ? (
+								) : shown.length > 0 ? (
 									<div className="flex flex-col">
-										{users.map((user) => (
+										{shown.map((user) => (
 											<div
 												key={user._id}
 												className="flex items-center gap-3 p-4 hover:bg-raised transition-colors cursor-pointer border-b border-hairline last:border-0"

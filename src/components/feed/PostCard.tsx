@@ -790,6 +790,23 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                     fallback={post.timestamp}
                                 />
                             </span>
+                            {/* Impressions, phones only: the action row has no
+                                room for them down here, and a metric reads fine
+                                beside the timestamp — both are about when and
+                                how far the post travelled. */}
+                            {(post.stats.views ?? 0) > 0 && (
+                                <span
+                                    className="flex shrink-0 items-center gap-1 text-subtle sm:hidden"
+                                    title={t("post.views")}
+                                    aria-label={t("post.views")}
+                                >
+                                    <span className="text-xs">•</span>
+                                    <ChartLineUp size={13} weight="bold" />
+                                    <span className="font-sans text-[12.5px] tabular-nums">
+                                        {formatCount(post.stats.views ?? 0)}
+                                    </span>
+                                </span>
+                            )}
                             {post.promoted && (
                                 <span className="shrink-0 rounded-[4px] bg-raised px-1.5 py-px text-[10px] font-semibold tracking-wide text-subtle font-sans">
                                     {t("promo.label")}
@@ -1355,7 +1372,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                             className="flex items-center gap-0.5 hover:text-primary transition-colors group cursor-pointer"
                         >
                             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill group-hover:bg-primary/10 transition group-active:scale-[0.98]">
-                                <ChatCircle size={17} />
+                                <ChatCircle size={18} weight="bold" />
                             </span>
                             <span className="text-[13px] font-sans tabular-nums">
                                 {formatCount(shownReplies)}
@@ -1376,8 +1393,8 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                             >
                                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill group-hover:bg-success/10 transition group-active:scale-[0.98]">
                                     <Repeat
-                                        size={17}
-                                        weight={reposted ? "bold" : "regular"}
+                                        size={18}
+                                        weight={reposted ? "fill" : "bold"}
                                     />
                                 </span>
                                 <span className="text-[13px] font-sans tabular-nums">
@@ -1415,7 +1432,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                         }}
                                         className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans cursor-pointer"
                                     >
-                                        <Repeat size={15} />
+                                        <Repeat size={16} weight="bold" />
                                         {t("post.repost")}
                                     </button>
                                     <button
@@ -1426,7 +1443,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                         }}
                                         className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans cursor-pointer"
                                     >
-                                        <ChatCircle size={15} />
+                                        <ChatCircle size={16} weight="bold" />
                                         {t("post.quote")}
                                     </button>
                                 </div>
@@ -1476,7 +1493,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                 >
                                     <Heart
                                         size={17}
-                                        weight={isLiked ? "fill" : "regular"}
+                                        weight={isLiked ? "fill" : "bold"}
                                     />
                                 </motion.span>
                             </span>
@@ -1541,7 +1558,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                 >
                                     <BookmarkSimple
                                         size={17}
-                                        weight={isBookmarked ? "fill" : "regular"}
+                                        weight={isBookmarked ? "fill" : "bold"}
                                     />
                                 </motion.span>
                             </span>
@@ -1610,14 +1627,15 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                         </div>
 
                         <div
-                            // hidden below sm: five 40px targets + counts already
-                            // outgrow a 375px card; the passive views metric is the
-                            // one item that can yield (it stays on the post page).
-                            className="hidden sm:flex items-center gap-1.5 pr-0.5 cursor-default select-none text-subtle"
+                            // Still hidden below sm, and measured rather than
+                            // assumed: at a 343px card this row needs 301px and
+                            // has 253. Views appear in the meta line up top on
+                            // phones instead — visible, and nothing overflows.
+                            className="hidden cursor-default select-none items-center gap-1.5 pr-0.5 text-subtle sm:flex"
                             title={t("post.views")}
                             aria-label={t("post.views")}
                         >
-                            <ChartLineUp size={14} />
+                            <ChartLineUp size={15} weight="bold" />
                             <span className="text-[12.5px] font-medium font-sans tabular-nums">
                                 {formatCount(post.stats.views ?? 0) || "0"}
                             </span>
