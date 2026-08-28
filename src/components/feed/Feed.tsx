@@ -59,15 +59,17 @@ const FEED_PAGE_SIZE = 10;
  * How many posts to keep loaded ahead of the reader, and the ceiling on pages
  * fetched in one burst.
  *
- * 60 is roughly six screens of feed. The sentinel below starts topping up
- * three screens out, so catching the loader now takes a deliberately fast
- * flick rather than ordinary reading speed. The cap stops a short session
- * from quietly paging through the entire timeline.
+ * 30 is roughly three screens. It was 60 with a 4-page burst, which meant one
+ * page load could fire five feed requests before the reader scrolled anything
+ * — and the feed query is the most expensive thing the gateway serves.
+ * Production logs showed the cost: nearly three thousand "Too many requests"
+ * on the feed alone. The sentinel still tops up three screens from the end, so
+ * the runway is rebuilt as it is spent rather than bought all at once.
  */
-const BUFFER_TARGET = 60;
+const BUFFER_TARGET = 30;
+const MAX_CHAINED_PAGES = 2;
 /** Pause before the single retry of a failed foreground feed fetch. */
 const RETRY_DELAY_MS = 2_000;
-const MAX_CHAINED_PAGES = 4;
 /** Faces in the stack before the rest collapse into "+n". */
 const MAX_FACES = 3;
 /** Ceiling on the by-id fetch, for a tab left open all afternoon. */
