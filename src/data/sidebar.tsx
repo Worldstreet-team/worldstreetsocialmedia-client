@@ -5,6 +5,7 @@ import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import {
 	Bell,
 	Binoculars,
+	Briefcase,
 	BookmarkSimple,
 	Faders,
 	GearSix,
@@ -97,6 +98,14 @@ export const youNav: SidebarItem[] = [
 		title: "Profile",
 		link: "/profile",
 		icon: navIcon(UserCircle),
+	},
+	{
+		// Deals, not chat: ad bookings negotiate here, and the label keeps the
+		// team's name for the surface.
+		labelKey: "nav.bm",
+		title: "Business",
+		link: "/bm",
+		icon: navIcon(Briefcase),
 	},
 	{
 		labelKey: "nav.studio",
