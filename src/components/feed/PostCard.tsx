@@ -42,6 +42,7 @@ import {
 } from "react";
 
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { formatTimeAgo } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { userAtom } from "@/store/user.atom";
 import { bookmarksAtom } from "@/store/bookmarks.atom";
@@ -122,7 +123,23 @@ export interface PostProps {
         badges?: ProfileBadge[];
     };
     content: string;
+    /**
+     * Pre-formatted age. Kept for callers that only ever had a label, but
+     * `createdAt` wins when present — see below.
+     */
     timestamp: string;
+    /**
+     * The raw publish time.
+     *
+     * `timestamp` is a STRING formatted once, wherever the post was mapped,
+     * and it never updates. A post held before being shown — the new-posts
+     * pill batches for two minutes — kept saying "1s" long after it stopped
+     * being true, and the post page disagreed with the card because it
+     * formatted at its own moment. Carrying the instant and formatting at
+     * render makes every surface agree, and makes the label correct whenever
+     * the card next paints.
+     */
+    createdAt?: string;
     /** Server-side translation resolved before the page was sent. Present
      *  only when the post is not already in the reader's language. */
     translation?: { text: string; source?: string | null; target?: string };
@@ -157,6 +174,8 @@ export interface PostProps {
         content: string;
         image?: string;
         timestamp: string;
+        /** Same reasoning as the parent's — the instant, not a frozen label. */
+        createdAt?: string;
     };
     live?: {
         streamId: string;
@@ -766,7 +785,9 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                 •
                             </span>
                             <span className="text-subtle text-[13px] font-sans whitespace-nowrap shrink-0">
-                                {post.timestamp}
+                                {post.createdAt
+                                    ? formatTimeAgo(post.createdAt)
+                                    : post.timestamp}
                             </span>
                             {post.promoted && (
                                 <span className="shrink-0 rounded-[4px] bg-raised px-1.5 py-px text-[10px] font-semibold tracking-wide text-subtle font-sans">

@@ -41,6 +41,9 @@ export function mapApiPost(post: any): PostProps {
 		// visible rewrite a beat later.
 		translation: post.translation,
 		timestamp: formatTimeAgo(post.createdAt),
+		// The instant itself, so the card can format at render rather than
+		// wearing a label frozen at whatever moment it was mapped.
+		createdAt: post.createdAt,
 		images: post.images,
 		videos: post.videos,
 		stats: post.stats || { replies: 0, reposts: 0, likes: 0, views: 0 },
@@ -73,6 +76,7 @@ export function mapApiPost(post: any): PostProps {
 						content: post.repostOf.content ?? "",
 						image: post.repostOf.images?.[0],
 						timestamp: formatTimeAgo(post.repostOf.createdAt),
+						createdAt: post.repostOf.createdAt,
 					}
 				: undefined,
 	};

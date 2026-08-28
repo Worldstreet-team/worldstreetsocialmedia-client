@@ -564,6 +564,9 @@ export default function Feed() {
 				},
 				content: newPost.content,
 				timestamp: "Just now",
+				// Real instant, so your own post ages like everyone else's instead
+				// of reading "Just now" for as long as the tab stays open.
+				createdAt: new Date().toISOString(),
 				images: newPost.images,
 				videos: newPost.videos,
 				stats: newPost.stats || { replies: 0, reposts: 0, likes: 0, views: 0 },

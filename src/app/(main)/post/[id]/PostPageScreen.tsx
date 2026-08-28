@@ -101,6 +101,7 @@ export default function PostPageScreen() {
 						},
 						content: raw.content ?? "",
 						timestamp: formatTimeAgo(raw.createdAt),
+						createdAt: raw.createdAt,
 						images: raw.images ?? [],
 						stats: raw.stats || { replies: 0, reposts: 0, likes: 0 },
 						isLiked: Boolean(raw.isLiked),
