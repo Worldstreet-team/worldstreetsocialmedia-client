@@ -142,17 +142,11 @@ export function ProfileAbout({
         </span>
       </div>
 
+      {/* Allies first. It is the count people look for, and the follows modal
+          opens its tabs in this same order — a profile that reads
+          Allies-then-Aligned while the modal reads the reverse makes the
+          reader re-find their place every time. */}
       <div className="mt-1 flex gap-5 font-sans text-[15px]">
-        <button
-          type="button"
-          onClick={() => onOpenFollows("following")}
-          className="flex cursor-pointer items-baseline gap-1 border-none bg-transparent p-0 hover:underline"
-        >
-          <span className="font-semibold tabular-nums text-primary">
-            {followingCount.toLocaleString()}
-          </span>
-          <span className="text-muted">{t("profile.following")}</span>
-        </button>
         <button
           type="button"
           onClick={() => onOpenFollows("followers")}
@@ -162,6 +156,16 @@ export function ProfileAbout({
             {followersCount.toLocaleString()}
           </span>
           <span className="text-muted">{t("profile.followers")}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => onOpenFollows("following")}
+          className="flex cursor-pointer items-baseline gap-1 border-none bg-transparent p-0 hover:underline"
+        >
+          <span className="font-semibold tabular-nums text-primary">
+            {followingCount.toLocaleString()}
+          </span>
+          <span className="text-muted">{t("profile.following")}</span>
         </button>
       </div>
 

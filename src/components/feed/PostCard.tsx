@@ -235,6 +235,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
     const [revealed, setRevealed] = useState<PostProps | null>(null);
     const post = revealed ?? postProp;
     const [unlocking, setUnlocking] = useState(false);
+    const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
     const [canPromote, setCanPromote] = useState(false);
     const [repostMenuOpen, setRepostMenuOpen] = useState(false);
     const [quoteOpen, setQuoteOpen] = useState(false);
@@ -697,6 +698,24 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                 isDestructive={true}
             />
 
+            {/* Money leaves the wallet here, so it asks first. The confirm
+                names the price and the seller — a dialog that only says "are
+                you sure" gives the reader nothing to check, which is exactly
+                how people confirm the wrong purchase. */}
+            <ConfirmModal
+                isOpen={isBuyModalOpen}
+                onClose={() => setIsBuyModalOpen(false)}
+                onConfirm={() => {
+                    setIsBuyModalOpen(false);
+                    void handleUnlock();
+                }}
+                title={t("post.buy.confirmTitle")}
+                message={t("post.buy.confirmBody")
+                    .replace("{price}", salePriceLabel)
+                    .replace("{seller}", `@${post.author.username}`)}
+                confirmText={t("post.buy.confirmCta")}
+            />
+
             <ConfirmModal
                 isOpen={isBlockModalOpen}
                 onClose={() => setIsBlockModalOpen(false)}
@@ -1106,7 +1125,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             if (isSeller) return;
-                                            void handleUnlock();
+                                            setIsBuyModalOpen(true);
                                         }}
                                         className="glass-cta mt-1 h-10 cursor-pointer rounded-pill px-5 font-sans text-[13px] font-semibold transition-colors disabled:opacity-60"
                                     >

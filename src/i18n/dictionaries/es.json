@@ -730,5 +730,8 @@
   "notif.empty.sales.title": "Aún no hay ventas",
   "search.placeholder.people": "Buscar por nombre o usuario",
   "notif.verb.gift": "te envió un regalo",
-  "messages.notMutual": "Solo puedes escribir a tus Aliados"
+  "messages.notMutual": "Solo puedes escribir a tus Aliados",
+  "post.buy.confirmTitle": "¿Continuar con el pago?",
+  "post.buy.confirmBody": "Vas a comprar esta publicación de {seller} por {price}. El importe se descontará del saldo de tu monedero.",
+  "post.buy.confirmCta": "Continuar con el pago"
 }

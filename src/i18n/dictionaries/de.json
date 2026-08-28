@@ -730,5 +730,8 @@
   "notif.empty.sales.title": "Noch keine Verkäufe",
   "search.placeholder.people": "Nach Name oder Handle suchen",
   "notif.verb.gift": "hat dir ein Geschenk gesendet",
-  "messages.notMutual": "Du kannst nur deinen Verbündeten schreiben"
+  "messages.notMutual": "Du kannst nur deinen Verbündeten schreiben",
+  "post.buy.confirmTitle": "Zahlung fortsetzen?",
+  "post.buy.confirmBody": "Du kaufst diesen Beitrag von {seller} für {price}. Der Betrag wird von deinem Wallet-Guthaben abgebucht.",
+  "post.buy.confirmCta": "Zahlung fortsetzen"
 }

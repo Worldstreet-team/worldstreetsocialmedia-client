@@ -983,6 +983,18 @@ export const MessageBox = ({
 			>
 				<div className="border-b border-hairline px-4 pb-3 pt-4">
 					<div className="mb-3 flex items-center gap-2">
+						{/* Phones only. On desktop the inbox sits inside the app
+						    shell with the rail right there; on a phone it fills
+						    the screen, and without this the only way out was the
+						    browser's own back gesture. */}
+						<button
+							type="button"
+							onClick={() => router.push("/")}
+							aria-label={t("common.back")}
+							className="-ml-2 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary md:hidden"
+						>
+							<ArrowLeft className="h-5 w-5" />
+						</button>
 						<h1 className="font-display text-lg font-semibold">
 							{t("nav.messages")}
 						</h1>
@@ -1074,10 +1086,9 @@ export const MessageBox = ({
 								{chat.peerTyping ? (
 									<p className="text-xs text-gold truncate">typing…</p>
 								) : peerOnline ? (
-									<p className="flex items-center gap-1.5 text-xs text-muted truncate">
-										<span className="h-1.5 w-1.5 shrink-0 rounded-pill bg-success" />
-										Online
-									</p>
+									// No dot here — the avatar already carries one, and
+									// two green dots for one fact read as two facts.
+									<p className="truncate text-xs text-muted">Online</p>
 								) : (activeConversation.otherParticipant as any)
 										?.lastSeenAt ? (
 									<p className="truncate text-xs text-muted">

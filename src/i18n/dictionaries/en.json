@@ -769,5 +769,8 @@
   "notif.empty.sales.title": "No sales yet",
   "search.placeholder.people": "Search by name or handle",
   "notif.verb.gift": "sent you a gift",
-  "messages.notMutual": "You can only message your Allies"
+  "messages.notMutual": "You can only message your Allies",
+  "post.buy.confirmTitle": "Proceed with payment?",
+  "post.buy.confirmBody": "You're buying this post from {seller} for {price}. The amount comes out of your wallet balance.",
+  "post.buy.confirmCta": "Proceed with payment"
 }

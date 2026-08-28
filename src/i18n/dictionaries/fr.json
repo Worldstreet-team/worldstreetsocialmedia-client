@@ -730,5 +730,8 @@
   "notif.empty.sales.title": "Aucune vente",
   "search.placeholder.people": "Rechercher par nom ou identifiant",
   "notif.verb.gift": "vous a envoyé un cadeau",
-  "messages.notMutual": "Vous ne pouvez écrire qu'à vos Alliés"
+  "messages.notMutual": "Vous ne pouvez écrire qu'à vos Alliés",
+  "post.buy.confirmTitle": "Procéder au paiement ?",
+  "post.buy.confirmBody": "Vous achetez cette publication de {seller} pour {price}. Le montant sera débité du solde de votre portefeuille.",
+  "post.buy.confirmCta": "Procéder au paiement"
 }

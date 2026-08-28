@@ -730,5 +730,8 @@
   "notif.empty.sales.title": "Ainda não há vendas",
   "search.placeholder.people": "Pesquisar por nome ou utilizador",
   "notif.verb.gift": "enviou-lhe um presente",
-  "messages.notMutual": "Só pode escrever aos seus Aliados"
+  "messages.notMutual": "Só pode escrever aos seus Aliados",
+  "post.buy.confirmTitle": "Prosseguir com o pagamento?",
+  "post.buy.confirmBody": "Você está comprando esta publicação de {seller} por {price}. O valor sai do saldo da sua carteira.",
+  "post.buy.confirmCta": "Prosseguir com o pagamento"
 }

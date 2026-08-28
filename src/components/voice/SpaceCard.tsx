@@ -113,8 +113,18 @@ export function LiveSpaceCard({
       type="button"
       onClick={() => onOpen(row)}
       className="group relative flex min-h-[168px] w-full flex-col justify-between overflow-hidden rounded-xl p-4 text-left transition-opacity cursor-pointer"
-      style={{ background: spaceBackground(row) }}
     >
+      {/* The art is its own layer so it can be blurred without taking the
+          type with it. At this size a cover photo is unreadable AS a photo
+          anyway — all it does is fight the title — so it becomes colour and
+          shape, and the words sit clean on top. Scaled past the edges
+          because a blur samples past its own box and would otherwise show a
+          soft border. */}
+      <span
+        aria-hidden
+        className="absolute -inset-4 scale-110 blur-[6px]"
+        style={{ background: spaceBackground(row) }}
+      />
       {/* Scrim so type never fights the art. */}
       <span className="absolute inset-0 bg-gradient-to-t from-[#0c0a09]/85 via-[#0c0a09]/25 to-[#0c0a09]/30 transition-colors group-hover:via-[#0c0a09]/15" />
 
@@ -205,8 +215,12 @@ export function NextUpCard({
   return (
     <div
       className="relative overflow-hidden rounded-xl p-5"
-      style={{ background: spaceBackground(row) }}
     >
+      <span
+        aria-hidden
+        className="absolute -inset-4 scale-110 blur-[6px]"
+        style={{ background: spaceBackground(row) }}
+      />
       <span className="absolute inset-0 bg-gradient-to-t from-[#0c0a09]/88 via-[#0c0a09]/40 to-[#0c0a09]/30" />
       <div className="relative">
         <span className="font-sans text-[10px] font-bold uppercase tracking-[0.16em] text-gold">
