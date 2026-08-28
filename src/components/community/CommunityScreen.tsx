@@ -271,9 +271,11 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 											<SafeAvatar src={community.owner.avatar} />
 										</span>
 										<span className="truncate">@{community.owner.username}</span>
-										{community.owner.isVerified && (
-											<UserBadges isVerified badges={community.owner?.badges} size={11} />
-										)}
+										<UserBadges
+											isVerified={community.owner.isVerified}
+											badges={community.owner?.badges}
+											size={11}
+										/>
 										<span className="text-subtle">· {t("community.owner")}</span>
 									</Link>
 								)}

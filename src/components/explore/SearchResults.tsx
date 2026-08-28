@@ -39,11 +39,16 @@ function UserRow({ user }: { user: UserResult }) {
           <span className="truncate font-sans text-[15px] font-semibold text-primary hover:underline">
             {`${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.username}
           </span>
-          {user.isVerified && (
-            <span className="shrink-0">
-              <UserBadges isVerified badges={user.badges} size={14} />
-            </span>
-          )}
+          {/* Not gated on isVerified: UserBadges already returns null when
+              a person has neither a tick nor an earned mark, and the gate
+              meant an account with a W and no tick rendered nothing. */}
+          <span className="shrink-0">
+            <UserBadges
+              isVerified={user.isVerified}
+              badges={user.badges}
+              size={14}
+            />
+          </span>
         </span>
         <span className="truncate font-sans text-[13.5px] text-muted">
           @{user.username}

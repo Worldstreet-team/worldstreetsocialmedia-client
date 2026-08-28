@@ -784,16 +784,20 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                             </Link>
                             {/* The one seal everywhere; its metal is the author's
                                 membership tier (bronze / silver / gold). */}
-                            {post.author.isVerified && (
-                                <span className="shrink-0 flex">
-                                    <UserBadges
-                                        isVerified
-                                        verification={post.author.verification}
-                                        badges={post.author.badges}
-                                        size={16}
-                                    />
-                                </span>
-                            )}
+                            {/* Not gated on isVerified: UserBadges already
+                                returns null for someone with neither a tick nor
+                                an earned mark. Gating the block on the tick
+                                meant an account with a W and no tick — every
+                                brand account — showed nothing beside its name
+                                anywhere except its own profile. */}
+                            <span className="shrink-0 flex">
+                                <UserBadges
+                                    isVerified={post.author.isVerified}
+                                    verification={post.author.verification}
+                                    badges={post.author.badges}
+                                    size={16}
+                                />
+                            </span>
                             <Link
                                 href={`/profile/${post.author.username}`}
                                 className="hidden xs:block text-subtle text-[13px] truncate font-sans hover:text-muted"

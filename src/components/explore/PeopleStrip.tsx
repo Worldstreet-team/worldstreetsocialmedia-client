@@ -70,9 +70,11 @@ export function PeopleStrip({
                       <span className="truncate font-sans text-[14px] font-semibold text-primary hover:underline">
                         {name}
                       </span>
-                      {u.isVerified && (
-                        <UserBadges isVerified badges={u.badges} size={13} />
-                      )}
+                      <UserBadges
+                        isVerified={u.isVerified}
+                        badges={u.badges}
+                        size={13}
+                      />
                     </span>
                     <span className="block truncate font-sans text-[12.5px] text-subtle">
                       @{u.username}

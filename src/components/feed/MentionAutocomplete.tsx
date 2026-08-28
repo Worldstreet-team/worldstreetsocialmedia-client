@@ -194,16 +194,14 @@ export function MentionAutocomplete({
 									<span className="font-sans text-[13px] font-semibold glass-ink truncate">
 										{name}
 									</span>
-									{u.isVerified && (
-										<span className="shrink-0 flex">
-											<UserBadges
+									<span className="shrink-0 flex">
+										<UserBadges
 											isVerified={u.isVerified}
 											verification={u.verification}
 											badges={(u as any).badges}
 											size={12}
 										/>
-										</span>
-									)}
+									</span>
 								</span>
 								<span className="block font-sans text-[11.5px] glass-ink-dim truncate">
 									@{u.username}
