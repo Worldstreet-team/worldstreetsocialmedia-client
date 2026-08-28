@@ -1,12 +1,39 @@
 import type { Realtime } from "ably";
-import {
-	ConnectionQuality,
-	type LocalVideoTrack,
-	type RemoteTrack,
+import type {
+	LocalVideoTrack,
+	RemoteTrack,
 	Room,
-	RoomEvent,
-	Track,
 } from "livekit-client";
+
+/**
+ * LiveKit is loaded on the first call, never on page load.
+ *
+ * `CallProvider` is mounted in the root layout, so this module is on every
+ * page. A static import therefore shipped the whole ~500KB SDK to every
+ * visitor whether or not they ever placed a call — it landed in the two
+ * largest chunks in the build. Every other livekit call site in the app was
+ * already using `await import()`; this was the one that was not, and being on
+ * the root path made it the expensive one.
+ *
+ * The type imports above are erased at compile time and cost nothing.
+ */
+type LiveKit = typeof import("livekit-client");
+let lk: LiveKit | null = null;
+async function loadLiveKit(): Promise<LiveKit> {
+	lk ??= await import("livekit-client");
+	return lk;
+}
+/**
+ * The loaded module, for the synchronous paths.
+ *
+ * Every one of them runs downstream of `joinRoom()` — event handlers bound to
+ * a live room, or getters iterating tracks that only exist once connected —
+ * so by the time any of this evaluates the module is in hand.
+ */
+function LK(): LiveKit {
+	if (!lk) throw new Error("LiveKit was used before a call started");
+	return lk;
+}
 
 /**
  * DM calls, for real this time.
@@ -165,7 +192,7 @@ class CallManager {
 	/** The other side's camera, if they have one publishing. */
 	get remoteVideo(): RemoteTrack | null {
 		for (const t of this.remoteTracks.values()) {
-			if (t.kind === Track.Kind.Video) return t;
+			if (t.kind === LK().Track.Kind.Video) return t;
 		}
 		return null;
 	}
@@ -176,7 +203,7 @@ class CallManager {
 	 */
 	get remoteAudio(): RemoteTrack | null {
 		for (const t of this.remoteTracks.values()) {
-			if (t.kind === Track.Kind.Audio) return t;
+			if (t.kind === LK().Track.Kind.Audio) return t;
 		}
 		return null;
 	}
@@ -443,7 +470,8 @@ class CallManager {
 				return false;
 			}
 
-			const room = new Room({
+			const { Room: LiveKitRoom } = await loadLiveKit();
+			const room = new LiveKitRoom({
 				adaptiveStream: true,
 				dynacast: true,
 			});
@@ -490,31 +518,31 @@ class CallManager {
 
 	private bindRoom(room: Room) {
 		room
-			.on(RoomEvent.ParticipantConnected, () => this.syncRemote())
-			.on(RoomEvent.ParticipantDisconnected, () => {
+			.on(LK().RoomEvent.ParticipantConnected, () => this.syncRemote())
+			.on(LK().RoomEvent.ParticipantDisconnected, () => {
 				// In a 1:1 call the other side leaving is the call ending.
 				if (room.remoteParticipants.size === 0) {
 					this.finish("ended");
 				}
 			})
-			.on(RoomEvent.TrackSubscribed, (track: RemoteTrack) => {
+			.on(LK().RoomEvent.TrackSubscribed, (track: RemoteTrack) => {
 				this.remoteTracks.set(track.sid ?? track.kind, track);
 				this.syncRemote();
 			})
-			.on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
+			.on(LK().RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
 				this.remoteTracks.delete(track.sid ?? track.kind);
 				this.syncRemote();
 			})
-			.on(RoomEvent.TrackMuted, () => this.syncRemote())
-			.on(RoomEvent.TrackUnmuted, () => this.syncRemote())
-			.on(RoomEvent.ConnectionQualityChanged, (quality) => {
+			.on(LK().RoomEvent.TrackMuted, () => this.syncRemote())
+			.on(LK().RoomEvent.TrackUnmuted, () => this.syncRemote())
+			.on(LK().RoomEvent.ConnectionQualityChanged, (quality) => {
 				this.set({
 					poorConnection:
-						quality === ConnectionQuality.Poor ||
-						quality === ConnectionQuality.Lost,
+						quality === LK().ConnectionQuality.Poor ||
+						quality === LK().ConnectionQuality.Lost,
 				});
 			})
-			.on(RoomEvent.Disconnected, () => {
+			.on(LK().RoomEvent.Disconnected, () => {
 				if (this.state.status === "connected") this.finish("ended");
 			});
 	}
@@ -545,8 +573,8 @@ class CallManager {
 			);
 		}
 
-		const mic = remote.getTrackPublication(Track.Source.Microphone);
-		const cam = remote.getTrackPublication(Track.Source.Camera);
+		const mic = remote.getTrackPublication(LK().Track.Source.Microphone);
+		const cam = remote.getTrackPublication(LK().Track.Source.Camera);
 		this.set({
 			remoteMuted: mic ? mic.isMuted : false,
 			remoteVideoOn: Boolean(cam && !cam.isMuted && cam.isSubscribed),
