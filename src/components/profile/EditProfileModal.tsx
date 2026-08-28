@@ -1,5 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 import { useState, useRef, useMemo } from "react";
 import Image from "next/image";
 import { updateMyProfileAction } from "@/lib/user.actions";
@@ -12,7 +14,14 @@ import {
 	OverlayScrim,
 	useOverlayDismiss,
 } from "@/components/ui/Overlay";
-import MediaEditor from "@/components/editor/MediaEditor";
+// Loaded on first open, not on page load: the editors are the heaviest
+// client code in the app and they render only when someone opens one. The
+// host renders them conditionally, so next/dynamic defers the chunk until
+// that first render.
+const MediaEditor = dynamic(
+	() => import("@/components/editor/MediaEditor"),
+	{ ssr: false },
+);
 
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import clsx from "clsx";

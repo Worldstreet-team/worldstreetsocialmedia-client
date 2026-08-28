@@ -12,6 +12,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ToastProvider } from "@/components/ui/Toast/ToastContext";
 import NextTopLoader from "nextjs-toploader";
 import JotaiHydrator from "./JotaiHydrator";
+import { DeferredChrome } from "@/components/providers/DeferredChrome";
 import { LocaleProvider } from "@/i18n/client";
 import { LOCALE_HEADER, isLocale } from "@/i18n/config";
 import { headers } from "next/headers";
@@ -20,11 +21,8 @@ import AnalyticsProvider from "@/components/providers/AnalyticsProvider";
 import { CallProvider } from "@/providers/CallProvider";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import GlobalMessageListener from "@/components/providers/GlobalMessageListener";
-import { CommandPalette } from "@/components/ui/CommandPalette";
-import { SearchWindow } from "@/components/search/SearchWindow";
 import { MediaGuard } from "@/components/providers/MediaGuard";
 import { PresenceSync } from "@/components/providers/PresenceSync";
-import { WelcomeTour } from "@/components/ui/WelcomeTour";
 import { PremiumSheet } from "@/components/premium/PremiumSheet";
 import { CreateFab } from "@/components/ui/CreateFab";
 import VoiceRoomHost from "@/components/voice/VoiceRoomHost";
@@ -206,11 +204,12 @@ export default async function RootLayout({
                                         <SpacesLiveSync />
 										<MessageCountSync />
 										<EngagementSync />
-                                        <CommandPalette />
-                                        <SearchWindow />
+                                        {/* palette, search, tour: own chunks,
+                                            loaded after hydration — see
+                                            DeferredChrome for the reasoning */}
+                                        <DeferredChrome />
                                         <MediaGuard />
                                         <PresenceSync />
-                                        <WelcomeTour />
                                         <PremiumSheet />
                                         <CreateFab />
                                         <LiveDock />

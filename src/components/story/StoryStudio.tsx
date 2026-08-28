@@ -1,5 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 import {
   Check,
   Images,
@@ -19,7 +21,14 @@ import Cropper, { type Area } from "react-easy-crop";
 import "react-easy-crop/react-easy-crop.css";
 import GrainOverlay from "@/components/editor/GrainOverlay";
 import PresetCarousel from "@/components/editor/PresetCarousel";
-import VideoEditor from "@/components/editor/VideoEditor";
+// Loaded on first open, not on page load: the editors are the heaviest
+// client code in the app and they render only when someone opens one. The
+// host renders them conditionally, so next/dynamic defers the chunk until
+// that first render.
+const VideoEditor = dynamic(
+	() => import("@/components/editor/VideoEditor"),
+	{ ssr: false },
+);
 import type { MentionUser } from "@/components/feed/MentionAutocomplete";
 import DrawLayer from "@/components/story/overlays/DrawLayer";
 import OverlayLayer from "@/components/story/overlays/OverlayLayer";

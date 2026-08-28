@@ -1,5 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 import { useState, useEffect, useRef, useCallback,
 	Fragment,
 } from "react";
@@ -40,7 +42,14 @@ import { formatTimeAgo } from "@/lib/utils";
 import { useRealtime } from "../providers/RealtimeProvider";
 import MediaModal from "../ui/MediaModal";
 import { CurrencyDollarSimple, PencilSimple } from "@phosphor-icons/react";
-import MediaEditor from "@/components/editor/MediaEditor";
+// Loaded on first open, not on page load: the editors are the heaviest
+// client code in the app and they render only when someone opens one. The
+// host renders them conditionally, so next/dynamic defers the chunk until
+// that first render.
+const MediaEditor = dynamic(
+	() => import("@/components/editor/MediaEditor"),
+	{ ssr: false },
+);
 import { VoiceMessage } from "./VoiceMessage";
 import { ConversationList } from "./ConversationList";
 import { StoriesRail } from "@/components/feed/StoriesRail";

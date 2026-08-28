@@ -1,5 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 import { useState, useRef, useEffect, useMemo } from "react";
 import Image from "next/image";
 import {
@@ -35,8 +37,18 @@ import { useTheme } from "next-themes";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { LockSimple, PencilSimple } from "@phosphor-icons/react";
-import MediaEditor from "@/components/editor/MediaEditor";
-import VideoEditor from "@/components/editor/VideoEditor";
+// Loaded on first open, not on page load: the editors are the heaviest
+// client code in the app and they render only when someone opens one. The
+// host renders them conditionally, so next/dynamic defers the chunk until
+// that first render.
+const MediaEditor = dynamic(
+	() => import("@/components/editor/MediaEditor"),
+	{ ssr: false },
+);
+const VideoEditor = dynamic(
+	() => import("@/components/editor/VideoEditor"),
+	{ ssr: false },
+);
 import type { EditDocument } from "@/lib/editor/document";
 import { suggestCategories } from "@/lib/categories";
 import { POST_CHAR_BUDGET } from "@/const";

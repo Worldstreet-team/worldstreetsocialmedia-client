@@ -1,5 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAtom, useAtomValue } from "jotai";
@@ -16,7 +18,14 @@ import { StoryViewer, type RailEntry } from "@/components/feed/StoryViewer";
 import StoryCreateSheet, {
 	type StoryKind,
 } from "@/components/story/StoryCreateSheet";
-import StoryStudio from "@/components/story/StoryStudio";
+// Loaded on first open, not on page load: the editors are the heaviest
+// client code in the app and they render only when someone opens one. The
+// host renders them conditionally, so next/dynamic defers the chunk until
+// that first render.
+const StoryStudio = dynamic(
+	() => import("@/components/story/StoryStudio"),
+	{ ssr: false },
+);
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { displayName } from "@/components/ui/PersonName";
 

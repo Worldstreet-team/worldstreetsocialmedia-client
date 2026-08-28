@@ -91,9 +91,25 @@ function mergeById(posts: PostProps[]): PostProps[] {
 	return [...byId.values()];
 }
 
-export default function Feed() {
+/** The first For-You page, fetched and mapped on the server so the posts are
+ *  in the streamed HTML instead of costing a client round trip after
+ *  hydration. */
+export interface FeedSeed {
+	posts: PostProps[];
+	cursor: string | null;
+	hasMore: boolean;
+}
+
+export default function Feed({
+	initialData = null,
+}: {
+	initialData?: FeedSeed | null;
+}) {
 	const t = useT();
 	const [feedState, setFeedState] = useAtom(feedAtom);
+	// Held in a ref so it can be retired (tab switch) without a re-render.
+	// Never repopulated: the seed describes one page load, not a subscription.
+	const initialRef = useRef(initialData);
 	const tab = useAtomValue(feedTabAtom);
 	const autoTranslate = useAtomValue(autoTranslateAtom);
 	const [translations, setTranslations] = useAtom(translationsAtom);
@@ -101,7 +117,7 @@ export default function Feed() {
 	// doesn't re-translate what an earlier page already resolved.
 	const translationsRef = useRef(translations);
 	translationsRef.current = translations;
-	const [loading, setLoading] = useState(true);
+	const [loading, setLoading] = useState(!initialData?.posts?.length);
 	// New posts announce themselves, they don't jump in: yanking the timeline
 	// under someone mid-read is worse than letting them choose when to see
 	// them. Held as the actual posts rather than a count so the pill can show
@@ -216,7 +232,14 @@ export default function Feed() {
 	// `followingIdsAtom`, which only fills as you press Follow in the current
 	// session, so Following was empty after every reload however many people
 	// you followed.
-	const visiblePosts = feedState.posts.filter(hasRenderableBody);
+	// Until the mount effect moves the seed into the atom (and on the server,
+	// where effects never run), render straight from it — this line is what
+	// puts real posts in the streamed HTML.
+	const basePosts =
+		feedState.posts.length === 0 && initialRef.current && tab === "foryou"
+			? initialRef.current.posts
+			: feedState.posts;
+	const visiblePosts = basePosts.filter(hasRenderableBody);
 
 	useEffect(() => {
 		// Disable browser's automatic scroll restoration to handle it manually
@@ -233,6 +256,19 @@ export default function Feed() {
 					mainScroller().scrollTo(0, feedState.scrollPosition);
 				}, 10);
 			}
+		} else if (initialRef.current && tab === "foryou") {
+			// The server already fetched page one and it rendered in the
+			// streamed HTML. Move it into the atom so pagination, the pill and
+			// tab switches build on it — and ask the network for nothing.
+			const seed = initialRef.current;
+			setFeedState((prev) => ({
+				...prev,
+				posts: seed.posts,
+				cursor: seed.cursor,
+				hasMore: seed.hasMore,
+				mode: "foryou",
+			}));
+			setLoading(false);
 		} else {
 			// Fresh page load (the atom is memory-only): paint the last-known
 			// snapshot immediately and revalidate silently underneath, instead
@@ -279,6 +315,8 @@ export default function Feed() {
 	useEffect(() => {
 		if (loadedTabRef.current === tab) return;
 		loadedTabRef.current = tab;
+		// The seed was For-You page one; under any other tab it is a lie.
+		initialRef.current = null;
 		// Posts pinned by the pill belong to the tab they were fetched for —
 		// and so does anything still waiting in the batching window.
 		prependedRef.current = [];
