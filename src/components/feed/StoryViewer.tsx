@@ -554,9 +554,9 @@ export function StoryViewer({
 									animate={{ y: 0 }}
 									exit={{ y: 24 }}
 									transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-									className="relative max-h-[62%] overflow-y-auto overscroll-contain rounded-t-xl bg-surface pb-3"
+									className="glass-frost relative max-h-[62%] overflow-y-auto overscroll-contain rounded-t-2xl pb-3 backdrop-blur-2xl backdrop-saturate-150"
 								>
-									<div className="sticky top-0 flex items-center gap-2 bg-surface px-4 pb-2 pt-4">
+									<div className="glass-frost sticky top-0 flex items-center gap-2 px-4 pb-2 pt-4">
 										<Eye className="h-4 w-4 text-muted" />
 										<span className="font-sans text-[14px] font-semibold text-primary">
 											<span className="tabular-nums">{viewsCount}</span>{" "}
@@ -611,7 +611,7 @@ export function StoryViewer({
 									e.stopPropagation();
 								}}
 								placeholder={t("story.replyPlaceholder").replace("{name}", name)}
-								className="h-11 min-w-0 flex-1 rounded-pill border border-hairline bg-page/60 px-4 font-sans text-base text-primary outline-none transition-colors placeholder:text-subtle focus:border-primary/40 sm:text-[14px]"
+								className="h-11 min-w-0 flex-1 rounded-pill bg-[#fafaf9]/12 px-4 font-sans text-base text-[#fafaf9] outline-none backdrop-blur-md transition-colors placeholder:text-[#fafaf9]/45 focus:bg-[#fafaf9]/20 sm:text-[14px]"
 							/>
 							<button
 								type="button"

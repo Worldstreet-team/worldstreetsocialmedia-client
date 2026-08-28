@@ -6,7 +6,7 @@
   "nav.bookmarks": "Lesezeichen",
   "nav.profile": "Profil",
   "feed.tab.foryou": "Für dich",
-  "feed.tab.following": "Ausgerichtet",
+  "feed.tab.following": "Verbündete",
   "feed.tab.newest": "Neueste",
   "feed.empty.title": "Deine Timeline ist leer",
   "feed.empty.caption": "Beiträge von Leuten, denen du folgst, erscheinen hier. Schreib den ersten.",
@@ -292,7 +292,7 @@
   "profile.bioSeeMore": "Mehr anzeigen",
   "profile.bioSeeLess": "Weniger anzeigen",
   "profile.joined": "Dabei seit",
-  "profile.following": "Ausgerichtet auf",
+  "profile.following": "Verbündete",
   "profile.followers": "Ausgerichtet",
   "profile.edit": "Profil bearbeiten",
   "profile.message": "Nachricht",
@@ -328,7 +328,7 @@
   "explore.expandSection": "Abschnitt ausklappen",
   "notif.eyebrow": "Aktivität",
   "notif.markAllRead": "Alle als gelesen markieren",
-  "notif.tab.follows": "Ausrichtungen",
+  "notif.tab.follows": "Verbündete",
   "notif.new": "neue Aktivität",
   "notif.verb.like": "gefällt dein Beitrag",
   "notif.verb.repost": "hat deinen Beitrag geteilt",
@@ -725,5 +725,7 @@
   "voice.bringToStage": "Auf die Bühne holen",
   "voice.removeFromStage": "Von der Bühne nehmen",
   "voice.searchPlaceholder": "Spaces durchsuchen",
-  "voice.noMatches": "Kein Space passt dazu."
+  "voice.noMatches": "Kein Space passt dazu.",
+  "notif.verb.sale": "hat deinen Beitrag gekauft",
+  "notif.empty.sales.title": "Noch keine Verkäufe"
 }

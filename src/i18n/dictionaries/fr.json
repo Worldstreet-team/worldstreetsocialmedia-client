@@ -6,7 +6,7 @@
   "nav.bookmarks": "Signets",
   "nav.profile": "Profil",
   "feed.tab.foryou": "Pour vous",
-  "feed.tab.following": "Alignés",
+  "feed.tab.following": "Alliés",
   "feed.tab.newest": "Plus récents",
   "feed.empty.title": "Votre fil est vide",
   "feed.empty.caption": "Les publications des personnes que vous suivez apparaissent ici. Écrivez la première.",
@@ -292,7 +292,7 @@
   "profile.bioSeeMore": "Voir plus",
   "profile.bioSeeLess": "Voir moins",
   "profile.joined": "Inscrit en",
-  "profile.following": "Aligné avec",
+  "profile.following": "Alliés",
   "profile.followers": "Alignés",
   "profile.edit": "Modifier le profil",
   "profile.message": "Message",
@@ -328,7 +328,7 @@
   "explore.expandSection": "Développer la section",
   "notif.eyebrow": "Activité",
   "notif.markAllRead": "Tout marquer comme lu",
-  "notif.tab.follows": "Alignements",
+  "notif.tab.follows": "Alliés",
   "notif.new": "nouvelle activité",
   "notif.verb.like": "a aimé votre post",
   "notif.verb.repost": "a reposté votre post",
@@ -725,5 +725,7 @@
   "voice.bringToStage": "Inviter sur scène",
   "voice.removeFromStage": "Retirer de la scène",
   "voice.searchPlaceholder": "Rechercher des espaces",
-  "voice.noMatches": "Aucun espace ne correspond."
+  "voice.noMatches": "Aucun espace ne correspond.",
+  "notif.verb.sale": "a acheté votre publication",
+  "notif.empty.sales.title": "Aucune vente"
 }

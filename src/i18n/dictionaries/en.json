@@ -6,7 +6,7 @@
   "nav.bookmarks": "Bookmarks",
   "nav.profile": "Profile",
   "feed.tab.foryou": "For you",
-  "feed.tab.following": "Aligned",
+  "feed.tab.following": "Allies",
   "feed.tab.newest": "Newest",
   "feed.empty.title": "Your timeline is empty",
   "feed.empty.caption": "Posts from people you align with show up here. Write the first one.",
@@ -333,7 +333,7 @@
   "profile.bioSeeMore": "See more",
   "profile.bioSeeLess": "See less",
   "profile.joined": "Joined",
-  "profile.following": "Aligned to",
+  "profile.following": "Allies",
   "profile.followers": "Aligned",
   "profile.edit": "Edit profile",
   "profile.message": "Message",
@@ -369,7 +369,7 @@
   "explore.expandSection": "Expand section",
   "notif.eyebrow": "Activity",
   "notif.markAllRead": "Mark all read",
-  "notif.tab.follows": "Alignments",
+  "notif.tab.follows": "Allies",
   "notif.new": "new activity",
   "notif.verb.like": "liked your post",
   "notif.verb.repost": "reposted your post",
@@ -764,5 +764,7 @@
   "voice.bringToStage": "Bring to stage",
   "voice.removeFromStage": "Remove from stage",
   "voice.searchPlaceholder": "Search spaces",
-  "voice.noMatches": "No spaces match that."
+  "voice.noMatches": "No spaces match that.",
+  "notif.verb.sale": "bought your post",
+  "notif.empty.sales.title": "No sales yet"
 }

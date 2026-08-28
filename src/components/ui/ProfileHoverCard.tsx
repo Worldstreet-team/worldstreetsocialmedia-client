@@ -4,12 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useSetAtom } from "jotai";
 
 import {
 	followUserAction,
 	getProfileByUsernameAction,
 } from "@/lib/user.actions";
 import { UserBadges } from "@/components/ui/UserBadges";
+import { followingIdsAtom } from "@/store/ui.atom";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { overlayPanelClass } from "@/components/ui/Overlay";
 
@@ -56,6 +58,23 @@ interface HoverProfile {
 
 const cache = new Map<string, Promise<HoverProfile | null>>();
 
+/**
+ * Correct the session cache in place after an action changed the truth.
+ *
+ * The cache is what makes the second hover instant; it is also what made an
+ * align look like it had failed, because it kept handing back the profile as
+ * it was BEFORE you aligned.
+ */
+function patchCachedProfile(username: string, patch: Partial<HoverProfile>) {
+	const key = username.toLowerCase();
+	const entry = cache.get(key);
+	if (!entry) return;
+	cache.set(
+		key,
+		entry.then((p) => (p ? { ...p, ...patch } : p)),
+	);
+}
+
 function fetchProfile(username: string): Promise<HoverProfile | null> {
 	const key = username.toLowerCase();
 	const hit = cache.get(key);
@@ -83,6 +102,7 @@ export function ProfileHoverCard({
 	const [profile, setProfile] = useState<HoverProfile | null>(null);
 	const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
 	const [following, setFollowing] = useState(false);
+	const setFollowedIds = useSetAtom(followingIdsAtom);
 	const [busy, setBusy] = useState(false);
 	const anchorRef = useRef<HTMLSpanElement>(null);
 	const timers = useRef<{ open?: number; close?: number }>({});
@@ -134,7 +154,20 @@ export function ProfileHoverCard({
 		setBusy(true);
 		setFollowing(true);
 		const res = await followUserAction(profile._id);
-		if (!res.success) setFollowing(false);
+		if (res.success) {
+			// The profile fetch is module-cached for the whole session, so
+			// without this the NEXT hover re-read a stale `isFollowing:false`
+			// and the button flipped back to "Align" — the align looked like
+			// it had failed when it had not. Patch the cache we just made
+			// wrong, and remember it in the shared atom the rest of the app
+			// reads.
+			patchCachedProfile(profile.username, { isFollowing: true });
+			setFollowedIds((prev: string[]) =>
+				prev.includes(profile._id) ? prev : [...prev, profile._id],
+			);
+		} else {
+			setFollowing(false);
+		}
 		setBusy(false);
 	};
 

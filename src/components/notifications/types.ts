@@ -30,7 +30,8 @@ export type NotificationType =
   | "follow"
   | "reply"
   | "mention"
-  | "live";
+  | "live"
+  | "sale";
 
 export interface AppNotification {
   _id: string;

@@ -8,6 +8,7 @@ import {
   Bell,
   Broadcast,
   ChatCircle,
+  Coins,
   Heart,
   Quotes,
   Repeat,
@@ -40,6 +41,8 @@ const CHIP: Record<NotificationType, { classes: string; glyph: Icon; weight: "fi
   follow: { classes: "bg-primary/12 text-primary", glyph: UserPlus, weight: "fill" },
   mention: { classes: "bg-brand/15 text-gold", glyph: At, weight: "bold" },
   live: { classes: "bg-danger/15 text-danger", glyph: Broadcast, weight: "fill" },
+  // Money reads as money: the one chip in the success tone with a coin.
+  sale: { classes: "bg-success/15 text-success", glyph: Coins, weight: "fill" },
 };
 
 /** Two lines of an excerpt, without relying on a line-clamp plugin. */

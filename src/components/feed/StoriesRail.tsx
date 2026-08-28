@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useAtom, useAtomValue } from "jotai";
 import { storyRailAtom, storyStudioSignalAtom } from "@/store/ui.atom";
 import clsx from "clsx";
+import { usePathname } from "next/navigation";
 import { Plus } from "lucide-react";
 
 import { useT } from "@/i18n/client";
@@ -133,7 +134,17 @@ function useCollapseOnScrollDown() {
  * order the gateway returns). Tapping a live ring goes straight to the
  * stream; everything else opens the viewer.
  */
-export function StoriesRail() {
+export function StoriesRail({ compact }: { compact?: boolean } = {}) {
+	// Spaces and Messages are destinations in their own right; the tall
+	// story tiles pushed their actual content below the fold. The rail
+	// decides for itself so every mount point gets it right — the (main)
+	// layout is a server component and cannot read the route.
+	const railPath = usePathname();
+	// Not the same thing as `collapsed` below — that one is the scroll-away
+	// behaviour on the feed. This is "wear the small shape on this route".
+	const circlesOnly =
+		compact ??
+		(railPath?.startsWith("/voice") || railPath?.startsWith("/messages"));
 	const t = useT();
 	const [rail, setRail] = useAtom(storyRailAtom) as [
 		RailEntry[],
@@ -253,12 +264,17 @@ export function StoriesRail() {
 						? setOpen(self)
 						: setCreateOpen(true)
 				}
-				className="flex w-[68px] shrink-0 cursor-pointer flex-col items-center gap-1.5 sm:w-[100px] sm:gap-0"
+				className={clsx(
+						"flex w-[68px] shrink-0 cursor-pointer flex-col items-center gap-1.5",
+						!circlesOnly && "sm:w-[100px] sm:gap-0",
+					)}
 				aria-label={t("story.add")}
 			>
 				<span
 					className={clsx(
-						"relative block h-16 w-16 rounded-pill p-[3px] sm:h-[152px] sm:w-[100px] sm:rounded-xl sm:p-0",
+						"relative block h-16 w-16 rounded-pill p-[3px]",
+							!circlesOnly &&
+								"sm:h-[152px] sm:w-[100px] sm:rounded-xl sm:p-0",
 						self?.hasUnseen ? "ring-2 ring-brand" : "ring-1 ring-hairline",
 					)}
 				>
@@ -343,12 +359,17 @@ export function StoriesRail() {
 							}
 							setOpen(entry);
 						}}
-						className="flex w-[68px] shrink-0 cursor-pointer flex-col items-center gap-1.5 sm:w-[100px] sm:gap-0"
+						className={clsx(
+						"flex w-[68px] shrink-0 cursor-pointer flex-col items-center gap-1.5",
+						!circlesOnly && "sm:w-[100px] sm:gap-0",
+					)}
 						aria-label={name}
 					>
 						<span
 							className={clsx(
-								"relative block h-16 w-16 rounded-pill p-[3px] sm:h-[152px] sm:w-[100px] sm:rounded-xl sm:p-0",
+								"relative block h-16 w-16 rounded-pill p-[3px]",
+							!circlesOnly &&
+								"sm:h-[152px] sm:w-[100px] sm:rounded-xl sm:p-0",
 								// The ring is the unseen state; live outranks it.
 								entry.isLive
 									? "ring-2 ring-danger"

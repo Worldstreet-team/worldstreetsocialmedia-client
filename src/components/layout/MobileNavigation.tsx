@@ -109,7 +109,7 @@ export function MobileNavigation() {
 						aria-label="WorldSpace home"
 						className="absolute left-1/2 -translate-x-1/2 flex h-11 items-center justify-center px-2 rounded-pill active:bg-raised transition-colors"
 					>
-						<BrandRitual size={32} />
+						<BrandRitual size={38} />
 					</Link>
 
 					<div className="flex items-center gap-1 shrink-0">

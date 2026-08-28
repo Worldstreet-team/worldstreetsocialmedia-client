@@ -158,7 +158,7 @@ export function LeftSidebar() {
 				<BadgedIcon count={badgeCount} label={t(item.labelKey)}>
 					<item.icon isActive={isActive} />
 				</BadgedIcon>
-				<span className="text-[15px] font-sans">{t(item.labelKey)}</span>
+				<span className="font-sans text-[16.5px]">{t(item.labelKey)}</span>
 				{item.labelKey === "nav.voice" && liveSpaces > 0 && (
 					// A broadcast dot, not a count: rooms are happening now, they
 					// aren't a backlog. The title carries the actual number for
@@ -183,7 +183,7 @@ export function LeftSidebar() {
 				{/* Same brand ritual the mobile top bar plays — the rail is where
 				    the hub runs it, so the two apps now behave identically. */}
 				<Link href="/" className="flex items-center gap-2 group">
-					<BrandRitual size={34} wordSize={19} />
+					<BrandRitual size={42} wordSize={23} />
 				</Link>
 			</div>
 
@@ -211,7 +211,7 @@ export function LeftSidebar() {
 					<span className="inline-flex w-[22px] h-[22px] items-center justify-center">
 						<VerifiedIcon size={{ width: "22", height: "22" }} />
 					</span>
-					<span className="text-[15px] font-sans">{t("nav.premium")}</span>
+					<span className="font-sans text-[16.5px]">{t("nav.premium")}</span>
 				</button>
 
 				{/* Products expands inline so the ecosystem is one glance away. */}
@@ -230,7 +230,7 @@ export function LeftSidebar() {
 						<span className="inline-flex w-[22px] h-[22px] items-center justify-center">
 							<moreItem.icon isActive={productsOpen} />
 						</span>
-						<span className="text-[15px] font-sans flex-1">
+						<span className="flex-1 font-sans text-[16.5px]">
 							{t("nav.products")}
 						</span>
 						<CaretDown
