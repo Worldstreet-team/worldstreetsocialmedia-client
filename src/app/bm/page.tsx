@@ -6,11 +6,16 @@ import clsx from "clsx";
 import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+	CaretLeft,
+	ImageSquare,
 	PaperPlaneRight,
 	Plus,
+	SpeakerHigh,
 	UploadSimple,
+	VideoCamera,
 	X,
 } from "@phosphor-icons/react";
+import Link from "next/link";
 import { Briefcase } from "lucide-react";
 import { BACKEND_URL } from "@/const";
 import { userAtom } from "@/store/user.atom";
@@ -104,6 +109,22 @@ interface BmMessage {
 	kind: "text" | "system" | "counter";
 	content: string;
 	createdAt: string;
+}
+
+/** "Today" / "Yesterday" / a date — the Messages day-divider grammar. */
+function dayLabel(iso: string): string {
+	const d = new Date(iso);
+	const today = new Date();
+	const strip = (x: Date) =>
+		new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+	const diff = (strip(today) - strip(d)) / 86_400_000;
+	if (diff === 0) return "Today";
+	if (diff === 1) return "Yesterday";
+	return d.toLocaleDateString(undefined, {
+		month: "short",
+		day: "numeric",
+		...(d.getFullYear() !== today.getFullYear() ? { year: "numeric" } : {}),
+	});
 }
 
 /** Status → chip treatment. Semantic tokens only; gold marks "your move". */
@@ -282,20 +303,22 @@ export default function BmPage() {
 	};
 
 	return (
-		<div className="flex h-full min-h-0">
+		<div className="flex h-dvh min-h-0">
 			{/* ── thread list ─────────────────────────────────────────── */}
 			<aside
 				className={clsx(
-					"flex w-full flex-col border-r border-hairline md:w-[320px] md:shrink-0",
+					"flex w-full flex-col md:w-[380px] md:shrink-0 md:border-r md:border-hairline",
 					activeId && "hidden md:flex",
 				)}
 			>
-				<header className="flex h-14 shrink-0 items-center justify-between border-b border-hairline px-4">
-					<h1 className="font-display text-[16px] font-semibold">Business</h1>
+				<header className="flex h-16 shrink-0 items-center justify-between px-5">
+					<h1 className="font-display text-[20px] font-semibold tracking-[-0.01em]">
+						Business
+					</h1>
 					<button
 						type="button"
 						onClick={() => setComposerOpen(true)}
-						className="flex h-9 items-center gap-1.5 rounded-pill bg-primary px-3.5 font-sans text-[13px] font-semibold text-page transition-colors hover:opacity-90 cursor-pointer"
+						className="flex h-9 items-center gap-1.5 rounded-pill bg-brand px-3.5 font-sans text-[13px] font-semibold text-brand-on transition-colors hover:opacity-90 cursor-pointer"
 					>
 						<Plus size={14} weight="bold" />
 						New booking
@@ -328,46 +351,70 @@ export default function BmPage() {
 							const myMove =
 								b?.status === "requested" &&
 								b.awaitingActionFrom === roleIn(t);
+							const active = activeId === t._id;
 							return (
 								<button
 									key={t._id}
 									type="button"
 									onClick={() => setActiveId(t._id)}
+									aria-current={active ? "true" : undefined}
 									className={clsx(
-										"flex w-full items-center gap-3 px-4 py-3 text-left transition-colors cursor-pointer",
-										activeId === t._id ? "bg-raised" : "hover:bg-raised/60",
+										"group relative flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors",
+										active ? "bg-raised" : "hover:bg-surface",
 									)}
 								>
-									<span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-pill">
+									{/* Active marker is a rail, same as Messages — a
+									    border on every row turns a list into a ledger. */}
+									<span
+										aria-hidden
+										className={clsx(
+											"absolute left-0 top-1/2 h-8 w-[3px] -translate-y-1/2 rounded-r-pill bg-brand transition-opacity",
+											active ? "opacity-100" : "opacity-0",
+										)}
+									/>
+									<span className="relative block h-12 w-12 shrink-0 overflow-hidden rounded-pill bg-raised">
 										<SafeAvatar src={other?.avatar} />
 									</span>
 									<span className="min-w-0 flex-1">
-										<span className="flex items-center justify-between gap-2">
-											<span className="truncate font-sans text-[14px] font-semibold text-primary">
+										<span className="flex items-baseline justify-between gap-2">
+											<span className="truncate font-sans text-[14.5px] font-semibold text-primary">
 												{other?.firstName || other?.username}
 											</span>
-											<span className="shrink-0 font-sans text-[11.5px] text-subtle">
+											<span className="shrink-0 font-sans text-[11.5px] text-subtle tabular-nums">
 												{formatTimeAgo(t.lastMessageAt)}
 											</span>
 										</span>
 										<span className="mt-0.5 flex items-center gap-1.5">
-											{b && (
+											{myMove ? (
 												<span
-													className={clsx(
-														"shrink-0 rounded-[4px] px-1.5 py-px font-sans text-[10px] font-semibold uppercase tracking-wide",
-														myMove
-															? "bg-gold/15 text-gold"
-															: STATUS_CHIP[b.status],
-													)}
-												>
-													{myMove ? "your move" : b.status}
-												</span>
-											)}
-											<span className="truncate font-sans text-[12.5px] text-muted">
-												{t.lastMessagePreview}
+													aria-hidden
+													className="h-1.5 w-1.5 shrink-0 rounded-pill bg-gold"
+												/>
+											) : null}
+											<span
+												className={clsx(
+													"truncate font-sans text-[13px]",
+													myMove
+														? "font-medium text-primary"
+														: "text-muted",
+												)}
+											>
+												{myMove
+													? "Your move — respond to the offer"
+													: t.lastMessagePreview}
 											</span>
 										</span>
 									</span>
+									{b && (
+										<span
+											className={clsx(
+												"shrink-0 rounded-pill px-2 py-0.5 font-sans text-[10.5px] font-semibold uppercase tracking-wide",
+												STATUS_CHIP[b.status],
+											)}
+										>
+											{b.status}
+										</span>
+									)}
 								</button>
 							);
 						})
@@ -472,54 +519,99 @@ function ThreadView({
 
 	return (
 		<>
-			{/* deal card: the contract, always in view above the talk */}
-			<div className="shrink-0 border-b border-hairline bg-surface px-4 py-3">
-				<div className="flex items-center gap-3">
+			{/* header: who you are dealing with — same bar Messages wears */}
+			<div className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-hairline bg-page px-2 md:px-6">
+				<div className="flex min-w-0 items-center gap-2 md:gap-3">
 					<button
 						type="button"
 						onClick={onBack}
-						className="md:hidden -ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-pill text-muted hover:bg-raised cursor-pointer"
+						className="md:hidden flex h-11 w-11 shrink-0 items-center justify-center rounded-pill text-muted transition-colors hover:bg-raised hover:text-primary cursor-pointer"
 						aria-label="Back to deals"
 					>
-						<X size={16} weight="bold" />
+						<CaretLeft size={20} />
 					</button>
-					<span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-pill">
-						<SafeAvatar src={other?.avatar} />
-					</span>
-					<div className="min-w-0 flex-1">
-						<p className="truncate font-sans text-[14.5px] font-semibold text-primary">
-							{other?.firstName || other?.username}
-							<span className="ml-1.5 font-normal text-subtle">
+					<Link
+						href={`/profile/${other?.username}`}
+						className="flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 transition-colors hover:bg-raised md:gap-3"
+					>
+						<span className="relative block h-10 w-10 shrink-0 overflow-hidden rounded-pill bg-raised">
+							<SafeAvatar src={other?.avatar} />
+						</span>
+						<span className="min-w-0">
+							<span className="block truncate font-sans text-sm font-semibold text-primary">
+								{other?.firstName || other?.username}
+							</span>
+							<span className="block truncate font-sans text-xs text-muted">
 								@{other?.username}
 							</span>
+						</span>
+					</Link>
+				</div>
+				<span
+					className={clsx(
+						"mr-1 shrink-0 rounded-pill px-2.5 py-1 font-sans text-[11px] font-semibold uppercase tracking-wide",
+						STATUS_CHIP[b.status],
+					)}
+				>
+					{b.status}
+				</span>
+			</div>
+
+			{/* the deal card: the contract floats above the talk as its own
+			    object, instead of a wall of grey rows welded to the header */}
+			<div className="shrink-0 px-3 pt-3 md:px-6 md:pt-4">
+				<div className="rounded-xl border border-hairline bg-surface px-4 py-3.5">
+				<div className="flex items-center gap-3">
+					<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gold/10 text-gold">
+						{b.format === "video" ? (
+							<VideoCamera size={18} weight="fill" />
+						) : b.format === "audio" ? (
+							<SpeakerHigh size={18} weight="fill" />
+						) : (
+							<ImageSquare size={18} weight="fill" />
+						)}
+					</span>
+					<div className="min-w-0 flex-1">
+						<p className="font-sans text-[14px] font-semibold capitalize text-primary">
+							{b.format} campaign
 						</p>
-						<p className="font-sans text-[12.5px] text-muted">
-							{b.format} · {b.durationDays}d ·{" "}
-							<span className="tabular-nums">{usd(b.agreedUsdMinor)}</span> ·
-							starts {new Date(b.startAt).toISOString().slice(0, 10)}
+						<p className="font-sans text-[12.5px] text-muted tabular-nums">
+							{b.durationDays} day{b.durationDays === 1 ? "" : "s"} · starts{" "}
+							{new Date(b.startAt).toLocaleDateString(undefined, {
+								month: "short",
+								day: "numeric",
+							})}
 						</p>
 					</div>
-					<span
-						className={clsx(
-							"shrink-0 rounded-pill px-2.5 py-1 font-sans text-[11px] font-semibold uppercase tracking-wide",
-							STATUS_CHIP[b.status],
-						)}
-					>
-						{b.status}
+					<span className="shrink-0 font-display text-[20px] font-semibold text-primary tabular-nums">
+						{usd(b.agreedUsdMinor)}
 					</span>
 				</div>
 
-				{/* money state: where the dollars are, at a glance */}
+				{/* money state: where the dollars are, as quiet chips */}
 				{(b.settledUsdMinor > 0 || cancellable) && (
-					<p className="mt-2 font-sans text-[12px] text-muted tabular-nums">
-						{b.daysServed}/{b.durationDays} days served · {usd(b.settledUsdMinor)}{" "}
-						settled
-						{(b.impressions ?? 0) > 0 &&
-							` · ${(b.impressions ?? 0).toLocaleString()} views · ${(b.clicks ?? 0).toLocaleString()} clicks`}
-						{role === "creator" &&
-							` · ${usd(b.creatorPaidUsdMinor)} earned`}
-						{b.statusReason ? ` · ${b.statusReason}` : ""}
-					</p>
+					<div className="mt-2.5 flex flex-wrap items-center gap-1.5 font-sans text-[11.5px] tabular-nums">
+						<span className="rounded-pill bg-raised px-2 py-0.5 text-muted">
+							{b.daysServed}/{b.durationDays} days
+						</span>
+						<span className="rounded-pill bg-raised px-2 py-0.5 text-muted">
+							{usd(b.settledUsdMinor)} settled
+						</span>
+						{role === "creator" && (
+							<span className="rounded-pill bg-success/10 px-2 py-0.5 text-success">
+								{usd(b.creatorPaidUsdMinor)} earned
+							</span>
+						)}
+						{(b.impressions ?? 0) > 0 && (
+							<span className="rounded-pill bg-raised px-2 py-0.5 text-muted">
+								{(b.impressions ?? 0).toLocaleString()} views ·{" "}
+								{(b.clicks ?? 0).toLocaleString()} clicks
+							</span>
+						)}
+						{b.statusReason && (
+							<span className="text-subtle">{b.statusReason}</span>
+						)}
+					</div>
 				)}
 
 				{(myTurn || cancellable || b.status === "requested") && (
@@ -662,18 +754,34 @@ function ThreadView({
 						period
 					</p>
 				)}
+				</div>
 			</div>
 
 			{/* messages */}
-			<div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-				{messages.map((m) => {
+			<div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 md:px-6">
+				{messages.map((m, i) => {
+					const prev = messages[i - 1];
+					const newDay =
+						!prev ||
+						new Date(prev.createdAt).toDateString() !==
+							new Date(m.createdAt).toDateString();
+					const divider = newDay ? (
+						<div className="flex justify-center py-2">
+							<span className="rounded-pill bg-raised px-3 py-1 font-sans text-[11px] font-semibold text-muted">
+								{dayLabel(m.createdAt)}
+							</span>
+						</div>
+					) : null;
 					if (m.kind !== "text") {
 						// The machine's voice: centred, quiet, part of the record.
 						return (
-							<div key={m._id} className="my-2 flex justify-center">
-								<span className="max-w-[85%] rounded-lg bg-raised px-3 py-1.5 text-center font-sans text-[12px] text-muted">
-									{m.content}
-								</span>
+							<div key={m._id}>
+								{divider}
+								<div className="my-2 flex justify-center">
+									<span className="max-w-[85%] rounded-lg border border-hairline bg-surface px-3.5 py-2 text-center font-sans text-[12px] leading-relaxed text-muted">
+										{m.content}
+									</span>
+								</div>
 							</div>
 						);
 					}
@@ -684,23 +792,25 @@ function ThreadView({
 							(role === "advertiser" &&
 								m.sender._id === thread.advertiser?._id));
 					return (
-						<div
-							key={m._id}
-							className={clsx(
-								"my-1 flex",
-								mine ? "justify-end" : "justify-start",
-							)}
-						>
-							<span
+						<div key={m._id}>
+							{divider}
+							<div
 								className={clsx(
-									"max-w-[78%] rounded-xl px-3.5 py-2 font-sans text-[14px]",
-									mine
-										? "bg-brand text-brand-on"
-										: "bg-raised text-primary",
+									"my-1 flex",
+									mine ? "justify-end" : "justify-start",
 								)}
 							>
-								{m.content}
-							</span>
+								<span
+									className={clsx(
+										"max-w-[78%] rounded-xl px-3.5 py-2 font-sans text-[14px] leading-relaxed",
+										mine
+											? "bg-brand text-brand-on"
+											: "bg-raised text-primary",
+									)}
+								>
+									{m.content}
+								</span>
+							</div>
 						</div>
 					);
 				})}
@@ -708,7 +818,7 @@ function ThreadView({
 			</div>
 
 			{/* composer */}
-			<div className="shrink-0 border-t border-hairline p-3">
+			<div className="shrink-0 border-t border-hairline p-3 md:px-6">
 				<div className="flex items-center gap-2">
 					<input
 						value={draft}
