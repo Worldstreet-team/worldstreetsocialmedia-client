@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MagnifyingGlass, X } from "@phosphor-icons/react";
 import { Compass } from "lucide-react";
-import { searchUsersAction, followUserAction } from "@/lib/user.actions";
+import { followUserAction } from "@/lib/user.actions";
+import { useGatewayRead } from "@/hooks/useGateway";
 import { searchPostsAction } from "@/lib/post.actions";
 import { joinSpaceAction } from "@/lib/space.actions";
 import { toggleCommunityAction } from "@/lib/community.actions";
@@ -52,6 +53,7 @@ export default function ExploreClient({
   initialResults: UserResult[];
   initialQuery: string;
 }) {
+  const read = useGatewayRead();
   const t = useT();
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -101,7 +103,10 @@ export default function ExploreClient({
   const searchUsers = useCallback(async (q: string) => {
     setUsersLoading(true);
     try {
-      const res = await searchUsersAction(q);
+      const res = await read(
+        `/api/users/search?q=${encodeURIComponent(q)}`,
+        (b) => b.data,
+      );
       setUserResults(res.success ? res.data : []);
     } catch {
       setUserResults([]);

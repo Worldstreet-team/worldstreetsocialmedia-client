@@ -284,13 +284,23 @@ export default function BmPage() {
 	// URL so a refresh does not reopen it.
 	const [prefillUsername, setPrefillUsername] = useState("");
 	useEffect(() => {
+		// The param STAYS in the URL while the sheet is up. The old version
+		// stripped it immediately — so any remount (dev double-mount, template
+		// churn) landed after the strip with fresh closed state and nothing
+		// left to reopen from, and the Book affordance silently did nothing.
+		// Cleaning happens when the sheet closes, where it belongs.
 		const book = new URLSearchParams(window.location.search).get("book");
 		if (book) {
 			setPrefillUsername(book);
 			setComposerOpen(true);
-			window.history.replaceState(null, "", "/bm");
 		}
 	}, []);
+	const closeComposer = () => {
+		setComposerOpen(false);
+		if (window.location.search.includes("book=")) {
+			window.history.replaceState(null, "", "/bm");
+		}
+	};
 
 	useEffect(() => {
 		if (!activeId) return;
@@ -601,11 +611,11 @@ export default function BmPage() {
 
 			{composerOpen && (
 				<NewBookingSheet
-					onClose={() => setComposerOpen(false)}
+					onClose={closeComposer}
 					authed={authed}
 					initialUsername={prefillUsername}
 					onCreated={async () => {
-						setComposerOpen(false);
+						closeComposer();
 						await loadThreads();
 					}}
 				/>
@@ -648,9 +658,9 @@ function RequestQueue({
 		(a, r) => a + (r.agreedUsdMinor ?? 0),
 		0,
 	);
-	// Requests compete for ONE calendar: accepting an offer kills every one
-	// that overlaps it, so the overlap count turns the queue into an honest
-	// auction. O(n²) over ≤200 rows is nothing.
+	// Overlapping campaigns rotate in the slot's carousel (admin ruling), so
+	// the overlap count is now capacity information — how crowded these dates
+	// already are — rather than an auction. O(n²) over ≤200 rows is nothing.
 	const overlaps = new Map<string, number>();
 	for (const a of requests) {
 		let n = 0;
@@ -723,8 +733,8 @@ function RequestQueue({
 									{(overlaps.get(r._id) ?? 0) > 0 && (
 										<span className="text-gold">
 											{" "}
-											· beats {overlaps.get(r._id)} other
-											{overlaps.get(r._id) === 1 ? "" : "s"} for these
+											· rotates with {overlaps.get(r._id)} other
+											{overlaps.get(r._id) === 1 ? "" : "s"} on these
 											dates
 										</span>
 									)}

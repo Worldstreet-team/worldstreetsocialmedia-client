@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { PostCard, type PostProps } from "@/components/feed/PostCard";
 import { PostSkeleton } from "@/components/feed/PostSkeleton";
-import { getBookmarksAction } from "@/lib/post.actions";
+import { useGatewayRead } from "@/hooks/useGateway";
 import { useAtom, useAtomValue } from "jotai";
 import { userAtom } from "@/store/user.atom";
 import { bookmarksAtom, bookmarksLoadedAtom } from "@/store/bookmarks.atom";
@@ -16,13 +16,14 @@ export default function BookmarksPage() {
 	const [bookmarks, setBookmarks] = useAtom(bookmarksAtom);
 	const [isLoaded, setIsLoaded] = useAtom(bookmarksLoadedAtom);
 	const user = useAtomValue(userAtom);
+	const read = useGatewayRead();
 
 	useEffect(() => {
 		if (isLoaded) return;
 
 		const fetchBookmarks = async () => {
 			try {
-				const res = await getBookmarksAction();
+				const res = await read("/api/posts/bookmarks");
 				if (res.success) {
 					setBookmarks(res.data);
 					setIsLoaded(true);

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 
-import { searchUsersAction } from "@/lib/user.actions";
+import { useGatewayRead } from "@/hooks/useGateway";
 import { getSubscriptionAction } from "@/lib/subscription.actions";
 import { premiumOpenAtom } from "@/store/ui.atom";
 import { useSetAtom } from "jotai";
@@ -68,6 +68,7 @@ export function MentionAutocomplete({
 	onPick: (user: MentionUser) => void;
 	onDismiss: () => void;
 }) {
+	const read = useGatewayRead();
 	const [users, setUsers] = useState<MentionUser[]>([]);
 	const [active, setActive] = useState(0);
 	const [loading, setLoading] = useState(false);
@@ -110,7 +111,10 @@ export function MentionAutocomplete({
 		let cancelled = false;
 		setLoading(true);
 		const timer = setTimeout(async () => {
-			const res = await searchUsersAction(query);
+			const res = await read(
+				`/api/users/search?q=${encodeURIComponent(query)}`,
+				(b) => b.data,
+			);
 			if (cancelled) return;
 			const list = Array.isArray(res?.data) ? res.data : [];
 			setUsers(list.slice(0, 6));

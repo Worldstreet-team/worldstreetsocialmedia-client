@@ -77,7 +77,11 @@ export function AdSlot({
 }) {
 	const { getToken } = useAuth();
 	const { toast } = useToast();
-	const [slot, setSlot] = useState<SlotCampaign | null>(null);
+	const [slots, setSlots] = useState<SlotCampaign[]>([]);
+	/** Which campaign the carousel is showing. Advances on a timer — the
+	 *  rotation is deliberately not user-controllable (admin ruling): every
+	 *  paying advertiser gets their turn, and nobody can park it. */
+	const [slotIndex, setSlotIndex] = useState(0);
 	const [canSell, setCanSell] = useState(false);
 	const [ratesOpen, setRatesOpen] = useState(false);
 	const [confirmEnd, setConfirmEnd] = useState(false);
@@ -101,7 +105,9 @@ export function AdSlot({
 		let cancelled = false;
 		void authed("get", `/api/ads/slot/${profileId}`)
 			.then((d) => {
-				if (!cancelled) setSlot(d.slot ?? null);
+				if (cancelled) return;
+				setSlots(d.slots ?? (d.slot ? [d.slot] : []));
+				setSlotIndex(0);
 			})
 			.catch(() => {
 				/* no slot is the quiet default */
@@ -144,11 +150,24 @@ export function AdSlot({
 		};
 	}, [isMe]);
 
+	// The rotation clock. 7s per creative: long enough to read a banner,
+	// short enough that three campaigns all serve within one profile visit.
+	useEffect(() => {
+		if (slots.length < 2) return;
+		const t = setInterval(
+			() => setSlotIndex((i) => (i + 1) % slots.length),
+			7000,
+		);
+		return () => clearInterval(t);
+	}, [slots.length]);
+
 	const endCampaign = async () => {
+		const slot = slots[slotIndex];
 		if (!slot) return;
 		try {
 			await authed("post", `/api/ads/bookings/${slot._id}/cancel`);
-			setSlot(null);
+			setSlots((prev) => prev.filter((s) => s._id !== slot._id));
+			setSlotIndex(0);
 			toast("Campaign ended — served days settle, the rest is returned", {
 				type: "success",
 			});
@@ -159,20 +178,43 @@ export function AdSlot({
 		}
 	};
 
-	if (slot) {
+	const current = slots[slotIndex % Math.max(1, slots.length)];
+	if (current) {
 		return (
 			<>
-				<SponsoredCard
-					slot={slot}
-					isOwner={isMe}
-					onEnd={() => setConfirmEnd(true)}
-					onVisit={() =>
-						// Best-effort beacon; a lost click must never block the tap.
-						void authed("post", `/api/ads/slot/${slot._id}/click`).catch(
-							() => {},
-						)
-					}
-				/>
+				{/* Keyed by campaign: each rotation remounts the card through the
+				    house rise — a clean hand-off, not a slideshow of controls. */}
+				<div key={current._id} className="animate-rise">
+					<SponsoredCard
+						slot={current}
+						isOwner={isMe}
+						onEnd={() => setConfirmEnd(true)}
+						onVisit={() =>
+							void authed(
+								"post",
+								`/api/ads/slot/${current._id}/click`,
+							).catch(() => {})
+						}
+					/>
+					{slots.length > 1 && (
+						<div
+							aria-hidden
+							className="mt-1.5 flex justify-center gap-1.5"
+						>
+							{slots.map((s, i) => (
+								<span
+									key={s._id}
+									className={clsx(
+										"h-1 w-1 rounded-pill transition-colors",
+										i === slotIndex % slots.length
+											? "bg-gold"
+											: "bg-raised",
+									)}
+								/>
+							))}
+						</div>
+					)}
+				</div>
 				<ConfirmModal
 					isOpen={confirmEnd}
 					onClose={() => setConfirmEnd(false)}

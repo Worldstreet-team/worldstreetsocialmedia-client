@@ -1,5 +1,7 @@
 "use client";
 
+import { useGatewayRead } from "@/hooks/useGateway";
+
 import { useState, useEffect, useMemo } from "react";
 import { X, Search, Loader2 } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
@@ -12,7 +14,6 @@ import {
 import {
 	getFollowersAction,
 	getFollowingAction,
-	searchUsersAction,
 } from "@/lib/user.actions";
 import { startConversationAction } from "@/lib/conversation.actions";
 import { UserBadges } from "@/components/ui/UserBadges";
@@ -44,6 +45,7 @@ export default function NewConversationModal({
 	currentUserId,
 	onConversationStarted,
 }: NewConversationModalProps) {
+	const read = useGatewayRead();
 	const [users, setUsers] = useState<UserItem[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [searchQuery, setSearchQuery] = useState("");
@@ -61,7 +63,10 @@ export default function NewConversationModal({
 			return;
 		}
 		const id = window.setTimeout(async () => {
-			const res = await searchUsersAction(q);
+			const res = await read(
+				`/api/users/search?q=${encodeURIComponent(q)}`,
+				(b) => b.data,
+			);
 			if (res.success && Array.isArray(res.data)) setRemote(res.data);
 		}, 300);
 		return () => window.clearTimeout(id);
