@@ -18,6 +18,7 @@ import { Tabs, type TabItem } from "@/components/ui/Tabs";
 import { InterestPicker } from "@/components/onboarding/InterestPicker";
 import { BlockedAccounts } from "@/components/settings/BlockedAccounts";
 import { AccountLifecycle } from "@/components/settings/AccountLifecycle";
+import { UsernameSetting } from "@/components/settings/UsernameSetting";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { NotificationPrefs } from "@/components/settings/NotificationPrefs";
@@ -198,10 +199,7 @@ export default function SettingsPage() {
 						title={t("settings.account.title")}
 						caption={t("settings.account.managedNote")}
 					>
-						<Row
-							label={t("settings.account.username")}
-							value={`@${user?.username ?? ""}`}
-						/>
+						<UsernameSetting />
 						<Row
 							label={t("settings.account.email")}
 							value={user?.email ?? "—"}

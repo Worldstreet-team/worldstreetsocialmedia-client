@@ -318,3 +318,38 @@ export async function checkUsernameAction(username: string) {
 		return { available: true as const, reason: "error" as const, message: "" };
 	}
 }
+
+/**
+ * Change my handle.
+ *
+ * The gateway is the authority: it re-checks format, the 30 day cooldown and
+ * case-insensitive uniqueness, so the field's live hint is only a hint. Its
+ * message is forwarded verbatim rather than flattened to "failed", because
+ * every rejection here is one the person can act on: taken, too soon, or the
+ * wrong shape.
+ */
+export async function changeUsernameAction(username: string) {
+	const { getToken } = await auth();
+	const accessToken = await getToken();
+	if (!accessToken) {
+		return { success: false, message: "You are signed out" };
+	}
+	try {
+		const res = await axios.patch(
+			`${API_URL}/api/users/me/username`,
+			{ username },
+			{ headers: { Authorization: `Bearer ${accessToken}` }, timeout: 10000 },
+		);
+		return {
+			success: true,
+			username: String(res.data?.username ?? username),
+			previous: res.data?.previous ? String(res.data.previous) : undefined,
+		};
+	} catch (error: any) {
+		return {
+			success: false,
+			message:
+				error?.response?.data?.message ?? "Could not change your username",
+		};
+	}
+}
