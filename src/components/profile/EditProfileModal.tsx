@@ -31,7 +31,7 @@ import { CaretDown } from "@phosphor-icons/react";
 import { InterestPicker } from "@/components/onboarding/InterestPicker";
 import { CATEGORIES, MAX_INTERESTS } from "@/data/categories";
 import { normalizeCategoryIds } from "@/lib/categories";
-import { cacheKeys, writeCache } from "@/lib/cache";
+import { cacheKeys, invalidatePrefix, writeCache } from "@/lib/cache";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 interface EditProfileModalProps {
@@ -236,6 +236,10 @@ export default function EditProfileModal({
 			if (result.data?.username) {
 				writeCache(cacheKeys.profile(result.data.username), result.data);
 			}
+			// Any surface not reading the atom or that one cache key (older
+			// cached copies under other keys, prefixed lists) re-reads fresh.
+			invalidatePrefix(cacheKeys.profileAll);
+			writeCache(cacheKeys.profile(result.data?.username ?? ""), result.data);
 			toast("Profile updated successfully", { type: "success" });
 			onClose();
 		} else {

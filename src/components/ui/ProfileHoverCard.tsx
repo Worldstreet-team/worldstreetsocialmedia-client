@@ -12,6 +12,7 @@ import {
 } from "@/lib/user.actions";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { followingIdsAtom } from "@/store/ui.atom";
+import { useT } from "@/i18n/client";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { overlayPanelClass } from "@/components/ui/Overlay";
 
@@ -101,6 +102,7 @@ export function ProfileHoverCard({
 	const [open, setOpen] = useState(false);
 	const [profile, setProfile] = useState<HoverProfile | null>(null);
 	const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+	const t = useT();
 	const [following, setFollowing] = useState(false);
 	const setFollowedIds = useSetAtom(followingIdsAtom);
 	const [busy, setBusy] = useState(false);
@@ -196,7 +198,7 @@ export function ProfileHoverCard({
 						style={{ top: pos.top, left: pos.left, width: CARD_W }}
 						/* z-dropdown, not z-modal: nothing dismisses this, so it must
 						   never outrank a real overlay that does. */
-						className={`${overlayPanelClass} fixed z-dropdown rounded-2xl animate-rise`}
+						className={`${overlayPanelClass} fixed z-dropdown rounded-xl animate-rise`}
 					>
 						{/* Banner well. Without a banner this is a gold wash rather
 						    than dead space — a brand moment, never a gold fill. */}
@@ -235,11 +237,11 @@ export function ProfileHoverCard({
 										   primary CTA on a surface. */
 										className="h-9 shrink-0 cursor-pointer rounded-pill bg-primary px-4 font-sans text-[13px] font-semibold text-page transition-colors hover:bg-muted disabled:opacity-60"
 									>
-										Follow
+										{t("profile.follow")}
 									</button>
 								) : (
 									<span className="h-9 shrink-0 rounded-pill bg-chip px-4 font-sans text-[13px] font-semibold leading-9 text-primary">
-										Following
+										{t("profile.followingState")}
 									</span>
 								)}
 							</div>
@@ -273,15 +275,15 @@ export function ProfileHoverCard({
 							<div className="mt-3 flex gap-4 border-t border-hairline pt-2.5 font-sans text-[13px]">
 								<span className="tabular-nums text-muted">
 									<strong className="font-semibold text-primary">
-										{profile.followingCount ?? 0}
+										{profile.followersCount ?? 0}
 									</strong>{" "}
-									Following
+									{t("profile.followers")}
 								</span>
 								<span className="tabular-nums text-muted">
 									<strong className="font-semibold text-primary">
-										{profile.followersCount ?? 0}
+										{profile.followingCount ?? 0}
 									</strong>{" "}
-									Followers
+									{t("profile.following")}
 								</span>
 							</div>
 						</div>

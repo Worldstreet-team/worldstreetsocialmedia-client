@@ -78,11 +78,11 @@ export function ProfileAbout({
     <div className="mt-6 flex flex-col gap-3 px-4">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="flex min-w-0 items-center gap-1.5 font-display text-xl font-semibold leading-6 text-primary">
+          <h2 className="flex min-w-0 items-center gap-1.5 font-display text-[26px] font-semibold leading-8 text-primary">
             <span className="truncate">{fullName}</span>
             {/* This was declared as a prop and never rendered, so the one
                 place a person's marks matter most showed none of them. */}
-            <UserBadges isVerified={isVerified} badges={badges} size={16} />
+            <UserBadges isVerified={isVerified} badges={badges} size={20} />
           </h2>
           {followsYou && (
             <span className="shrink-0 rounded-[4px] bg-raised px-1.5 py-px font-sans text-[10px] font-semibold uppercase tracking-wide text-muted">
@@ -90,12 +90,12 @@ export function ProfileAbout({
             </span>
           )}
         </div>
-        <div className="truncate font-sans text-sm text-muted">@{username}</div>
+        <div className="truncate font-sans text-[17px] text-muted">@{username}</div>
       </div>
 
       {/* break-words: one long unbroken token (a URL, a wallet address) used to
           push the whole column past the viewport. */}
-      <div className="break-words font-sans text-[15px] leading-relaxed text-primary">
+      <div className="break-words font-sans text-[19px] leading-relaxed text-primary">
         {bio ? (
           <>
             {renderRichText(
@@ -118,16 +118,16 @@ export function ProfileAbout({
         )}
       </div>
 
-      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-2 font-sans text-[14px] text-muted">
+      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-2 font-sans text-[17px] text-muted">
         {location && (
           <span className="flex items-center gap-1">
-            <MapPin className="h-4 w-4" />
+            <MapPin className="h-[18px] w-[18px]" />
             {location}
           </span>
         )}
         {website && (
           <span className="flex items-center gap-1">
-            <LinkIcon className="h-4 w-4" />
+            <LinkIcon className="h-[18px] w-[18px]" />
             <a
               href={website.startsWith("http") ? website : `https://${website}`}
               target="_blank"
@@ -139,7 +139,7 @@ export function ProfileAbout({
           </span>
         )}
         <span className="flex items-center gap-1">
-          <Calendar className="h-4 w-4" />
+          <Calendar className="h-[18px] w-[18px]" />
           {t("profile.joined")} {joined}
         </span>
       </div>
@@ -148,13 +148,13 @@ export function ProfileAbout({
           opens its tabs in this same order — a profile that reads
           Allies-then-Aligned while the modal reads the reverse makes the
           reader re-find their place every time. */}
-      <div className="mt-1 flex gap-5 font-sans text-[15px]">
+      <div className="mt-1 flex gap-6 font-sans text-[19px]">
         <button
           type="button"
           onClick={() => onOpenFollows("followers")}
           className="flex cursor-pointer items-baseline gap-1 border-none bg-transparent p-0 hover:underline"
         >
-          <span className="font-semibold tabular-nums text-primary">
+          <span className="text-[22px] font-bold tabular-nums text-primary">
             {followersCount.toLocaleString()}
           </span>
           <span className="text-muted">{t("profile.followers")}</span>
@@ -164,7 +164,7 @@ export function ProfileAbout({
           onClick={() => onOpenFollows("following")}
           className="flex cursor-pointer items-baseline gap-1 border-none bg-transparent p-0 hover:underline"
         >
-          <span className="font-semibold tabular-nums text-primary">
+          <span className="text-[22px] font-bold tabular-nums text-primary">
             {followingCount.toLocaleString()}
           </span>
           <span className="text-muted">{t("profile.following")}</span>
