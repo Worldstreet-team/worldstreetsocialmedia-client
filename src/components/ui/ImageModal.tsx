@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { OverlayHeader, useOverlayDismiss } from "@/components/ui/Overlay";
 
 interface ImageModalProps {
@@ -65,7 +66,12 @@ export default function ImageModal({
 
 	if (!isOpen) return null;
 
-	return (
+	// Portalled to <body>, and this stopped being optional the day the feed
+	// gained content-visibility windowing: a card's paint containment CLIPS
+	// any fixed-position descendant to the card's own box, so the lightbox
+	// opened at post-thumbnail size instead of filling the screen. Every
+	// other overlay the card renders already portals; this was the straggler.
+	return createPortal(
 		<AnimatePresence>
 			{isOpen && (
 				<motion.div
@@ -143,6 +149,7 @@ export default function ImageModal({
 					</OverlayHeader>
 				</div>
 			)}
-		</AnimatePresence>
+		</AnimatePresence>,
+		document.body,
 	);
 }
