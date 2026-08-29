@@ -134,8 +134,11 @@ export function ProfileHeader({
       <Megaphone size={17} weight="fill" className="relative text-gold" />
     </>
   );
+  // Bordered like its neighbours: the message and overflow chips and the
+  // Edit profile pill all carry border-hairline, so an unbordered chip in
+  // the same row read as a floating blob rather than a control.
   const adIconClass =
-    "group/adicon relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-pill";
+    "group/adicon relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-pill border border-hairline";
 
   return (
     <>
