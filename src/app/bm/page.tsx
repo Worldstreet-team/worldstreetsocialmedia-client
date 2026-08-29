@@ -23,6 +23,7 @@ import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { formatTimeAgo } from "@/lib/utils";
+import { Tabs } from "@/components/ui/Tabs";
 import {
 	OverlayHeader,
 	OverlayPanel,
@@ -203,6 +204,44 @@ export default function BmPage() {
 		return () => clearInterval(t);
 	}, [loadThreads]);
 
+	/**
+	 * The requests QUEUE — a different animal from the thread list. A creator
+	 * with real reach fields hundreds of pending offers; those are rows to
+	 * triage by money, not conversations to scroll. Server-sorted by offer,
+	 * fetched only when the tab is open.
+	 */
+	const [pane, setPane] = useState<"deals" | "requests">("deals");
+	const [requests, setRequests] = useState<any[]>([]);
+	const loadRequests = useCallback(async () => {
+		try {
+			const data = await authed(
+				"get",
+				"/api/ads/bookings?role=creator&status=requested&sort=offer&limit=200",
+			);
+			setRequests(data.bookings ?? []);
+		} catch {
+			/* poll retries */
+		}
+	}, [authed]);
+	useEffect(() => {
+		if (pane !== "requests") return;
+		void loadRequests();
+		const t = setInterval(() => void loadRequests(), 30_000);
+		return () => clearInterval(t);
+	}, [pane, loadRequests]);
+	// The tab badge must be honest before the tab is ever opened.
+	useEffect(() => {
+		void loadRequests();
+	}, [loadRequests]);
+
+	const openBooking = (bookingId: string) => {
+		const t = threads.find((th) => th.booking?._id === bookingId);
+		if (t) {
+			setPane("deals");
+			setActiveId(t._id);
+		}
+	};
+
 	// /bm?book=<handle> — the profile's "Book" affordance lands here with the
 	// sheet already open on that creator. Read once, then cleaned from the
 	// URL so a refresh does not reopen it.
@@ -258,7 +297,11 @@ export default function BmPage() {
 		setBusy(true);
 		try {
 			await authed("post", `/api/ads/bookings/${bookingId}/${verb}`);
-			await Promise.all([loadThreads(), activeId && loadMessages(activeId)]);
+			await Promise.all([
+				loadThreads(),
+				loadRequests(),
+				activeId && loadMessages(activeId),
+			]);
 		} catch (err: any) {
 			toast(err?.response?.data?.message ?? "That didn't go through", {
 				type: "error",
@@ -326,8 +369,31 @@ export default function BmPage() {
 					</button>
 				</header>
 
+				<div className="px-4 pb-2">
+					<Tabs
+						ariaLabel="Business sections"
+						value={pane}
+						onChange={setPane}
+						items={[
+							{ key: "deals", label: "Deals" },
+							{
+								key: "requests",
+								label: "Requests",
+								badge: requests.length || undefined,
+							},
+						]}
+					/>
+				</div>
+
 				<div className="min-h-0 flex-1 overflow-y-auto">
-					{!loaded ? (
+					{pane === "requests" ? (
+						<RequestQueue
+							requests={requests}
+							busy={busy}
+							onAct={act}
+							onOpen={openBooking}
+						/>
+					) : !loaded ? (
 						<div className="flex flex-col gap-3 p-4">
 							{[0, 1, 2].map((i) => (
 								<div key={i} className="flex items-center gap-3">
@@ -467,6 +533,111 @@ export default function BmPage() {
 					}}
 				/>
 			)}
+		</div>
+	);
+}
+
+/* ── the requests queue ─────────────────────────────────────────── */
+
+/**
+ * Triage, not chat. At celebrity volume the inbox is hundreds of offers
+ * competing for one calendar, so the presentation answers the only three
+ * questions that decide a triage pass: how much, for what, when — sorted by
+ * money server-side, with accept/decline ON the row. Opening the thread is
+ * for the ones worth talking to.
+ */
+function RequestQueue({
+	requests,
+	busy,
+	onAct,
+	onOpen,
+}: {
+	requests: any[];
+	busy: boolean;
+	onAct: (bookingId: string, verb: "accept" | "decline" | "cancel") => void;
+	onOpen: (bookingId: string) => void;
+}) {
+	if (requests.length === 0) {
+		return (
+			<div className="px-6 py-10 text-center font-sans text-[13px] text-subtle">
+				No pending requests — offers land here, biggest first.
+			</div>
+		);
+	}
+	const totalOffered = requests.reduce(
+		(a, r) => a + (r.agreedUsdMinor ?? 0),
+		0,
+	);
+	return (
+		<div>
+			{/* The aggregate is the celebrity's signal: what is this queue
+			    WORTH, before reading a single row. */}
+			<div className="flex items-baseline justify-between px-4 pb-2 pt-1">
+				<span className="font-sans text-[12px] text-subtle tabular-nums">
+					{requests.length} request{requests.length === 1 ? "" : "s"}
+				</span>
+				<span className="font-sans text-[12px] font-semibold text-gold tabular-nums">
+					{usd(totalOffered)} offered
+				</span>
+			</div>
+			{requests.map((r) => {
+				const adv = r.advertiser ?? {};
+				return (
+					<div
+						key={r._id}
+						className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface"
+					>
+						<button
+							type="button"
+							onClick={() => onOpen(r._id)}
+							className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
+						>
+							<span className="relative block h-11 w-11 shrink-0 overflow-hidden rounded-pill bg-raised">
+								<SafeAvatar src={adv.avatar} />
+							</span>
+							<span className="min-w-0 flex-1">
+								<span className="flex items-baseline justify-between gap-2">
+									<span className="truncate font-sans text-[14px] font-semibold text-primary">
+										{adv.firstName || adv.username}
+									</span>
+									<span className="shrink-0 font-display text-[15px] font-semibold text-primary tabular-nums">
+										{usd(r.agreedUsdMinor)}
+									</span>
+								</span>
+								<span className="mt-0.5 block truncate font-sans text-[12.5px] text-muted tabular-nums">
+									{r.format} · {r.durationDays}d ·{" "}
+									{new Date(r.startAt).toLocaleDateString(undefined, {
+										month: "short",
+										day: "numeric",
+									})}
+									{r.creative?.url ? " · creative attached" : ""}
+								</span>
+							</span>
+						</button>
+						{/* Accept / decline live ON the row: triage must not cost a
+						    navigation per decision. */}
+						<div className="flex shrink-0 items-center gap-1.5">
+							<button
+								type="button"
+								disabled={busy}
+								onClick={() => onAct(r._id, "accept")}
+								className="h-8 cursor-pointer rounded-pill bg-brand px-3 font-sans text-[12px] font-semibold text-brand-on transition-colors hover:bg-brand-active disabled:opacity-50"
+							>
+								Accept
+							</button>
+							<button
+								type="button"
+								disabled={busy}
+								onClick={() => onAct(r._id, "decline")}
+								aria-label="Decline"
+								className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-pill bg-raised text-muted transition-colors hover:bg-chip hover:text-danger disabled:opacity-50"
+							>
+								<X size={13} weight="bold" />
+							</button>
+						</div>
+					</div>
+				);
+			})}
 		</div>
 	);
 }
