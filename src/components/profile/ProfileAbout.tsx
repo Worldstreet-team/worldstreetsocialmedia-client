@@ -148,13 +148,13 @@ export function ProfileAbout({
           opens its tabs in this same order — a profile that reads
           Allies-then-Aligned while the modal reads the reverse makes the
           reader re-find their place every time. */}
-      <div className="mt-1 flex gap-6 font-sans text-[19px]">
+      <div className="mt-1 flex gap-6 font-sans text-[16px]">
         <button
           type="button"
           onClick={() => onOpenFollows("followers")}
           className="flex cursor-pointer items-baseline gap-1 border-none bg-transparent p-0 hover:underline"
         >
-          <span className="text-[22px] font-bold tabular-nums text-primary">
+          <span className="text-[18px] font-bold tabular-nums text-primary">
             {followersCount.toLocaleString()}
           </span>
           <span className="text-muted">{t("profile.followers")}</span>
@@ -164,7 +164,7 @@ export function ProfileAbout({
           onClick={() => onOpenFollows("following")}
           className="flex cursor-pointer items-baseline gap-1 border-none bg-transparent p-0 hover:underline"
         >
-          <span className="text-[22px] font-bold tabular-nums text-primary">
+          <span className="text-[18px] font-bold tabular-nums text-primary">
             {followingCount.toLocaleString()}
           </span>
           <span className="text-muted">{t("profile.following")}</span>

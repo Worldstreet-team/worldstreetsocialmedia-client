@@ -779,7 +779,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                         <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 overflow-hidden pointer-events-auto">
                             <Link
                                 href={`/profile/${post.author.username}`}
-                                className="text-[15px] font-semibold leading-5 text-primary truncate font-sans hover:underline decoration-gold underline-offset-4"
+                                className="text-[16px] font-semibold leading-5 text-primary truncate font-sans hover:underline decoration-gold underline-offset-4"
                             >
                                 {post.author.name}
                             </Link>
@@ -801,14 +801,14 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                             </span>
                             <Link
                                 href={`/profile/${post.author.username}`}
-                                className="hidden xs:block text-subtle text-[13px] truncate font-sans hover:text-muted"
+                                className="hidden xs:block text-subtle text-[13.5px] truncate font-sans hover:text-muted"
                             >
                                 @{post.author.username}
                             </Link>
                             <span className="hidden xs:inline text-subtle text-xs shrink-0">
                                 •
                             </span>
-                            <span className="text-subtle text-[13px] font-sans whitespace-nowrap shrink-0">
+                            <span className="text-subtle text-[13.5px] font-sans whitespace-nowrap shrink-0">
                                 <TimeAgo
                                     date={post.createdAt}
                                     fallback={post.timestamp}
@@ -1163,7 +1163,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                         is ONE unbreakable run, and break-word only breaks a word
                         that alone cannot fit. Without this the run pinned the line
                         and made the whole column scroll sideways. */}
-                    <p className="text-primary whitespace-pre-wrap [overflow-wrap:anywhere] mb-1.5 font-normal leading-[1.55] text-[15px] font-sans tracking-tight pointer-events-none">
+                    <p className="text-primary whitespace-pre-wrap [overflow-wrap:anywhere] mb-1.5 font-normal leading-[1.55] text-[16.5px] font-sans tracking-tight pointer-events-none">
                         {showingTranslation
                             ? formattedTranslation
                             : formattedContent}
@@ -1394,7 +1394,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                             <span className="flex h-10 w-[34px] shrink-0 items-center justify-center rounded-pill sm:w-10 group-hover:bg-primary/10 transition group-active:scale-[0.98]">
                                 <ChatCircle size={18} weight="regular" />
                             </span>
-                            <span className="text-[12px] font-sans tabular-nums sm:text-[13px]">
+                            <span className="text-[13px] font-sans tabular-nums sm:text-[13.5px]">
                                 {formatCount(shownReplies)}
                             </span>
                         </Link>
