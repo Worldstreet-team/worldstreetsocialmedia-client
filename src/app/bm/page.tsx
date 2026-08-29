@@ -1407,6 +1407,13 @@ function NewBookingSheet({
 	const [mediaUrl, setMediaUrl] = useState("");
 	const [coverUrl, setCoverUrl] = useState("");
 	const [linkUrl, setLinkUrl] = useState("");
+	// "yourbrand.com" is what people actually type; https is the default the
+	// web assumes. Applied where the value is consumed, never per keystroke.
+	const normalizedLink = (() => {
+		const v = linkUrl.trim();
+		if (!v) return undefined;
+		return /^https?:\/\//i.test(v) ? v : `https://${v}`;
+	})();
 	const [uploading, setUploading] = useState<"media" | "cover" | null>(null);
 	/** 0-100 while a file is in flight — a 40MB video on hotel wifi deserves
 	 *  a number, not a vibe. */
@@ -1491,7 +1498,7 @@ function NewBookingSheet({
 				creative: mediaUrl
 					? {
 							url: mediaUrl,
-							linkUrl: linkUrl.trim() || undefined,
+							linkUrl: normalizedLink,
 							coverUrl:
 								format === "audio" && coverUrl ? coverUrl : undefined,
 						}
@@ -1531,7 +1538,7 @@ function NewBookingSheet({
 							format={format}
 							creative={{
 								url: mediaUrl || undefined,
-								linkUrl: linkUrl.trim() || undefined,
+								linkUrl: normalizedLink,
 								coverUrl:
 									format === "audio" && coverUrl ? coverUrl : undefined,
 							}}
@@ -1739,13 +1746,20 @@ function NewBookingSheet({
 
 					<div>
 						{label("Click-through link")}
-						<input
-							value={linkUrl}
-							onChange={(e) => setLinkUrl(e.target.value)}
-							placeholder="https://your-site.com"
-							inputMode="url"
-							className={FIELD}
-						/>
+						<div className="flex items-center overflow-hidden rounded-lg bg-sunken transition-colors focus-within:bg-raised">
+							<span className="shrink-0 select-none pl-3.5 font-sans text-[14px] text-subtle">
+								https://
+							</span>
+							<input
+								value={linkUrl.replace(/^https?:\/\//i, "")}
+								onChange={(e) =>
+									setLinkUrl(e.target.value.replace(/^https?:\/\//i, ""))
+								}
+								placeholder="your-site.com"
+								inputMode="url"
+								className="h-11 w-full bg-transparent pr-3.5 pl-0.5 font-sans text-[14px] text-primary outline-none placeholder:text-subtle"
+							/>
+						</div>
 					</div>
 
 					<div>

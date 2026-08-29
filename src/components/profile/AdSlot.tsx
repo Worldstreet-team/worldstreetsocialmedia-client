@@ -31,7 +31,6 @@ import {
 	useOverlayDismiss,
 } from "@/components/ui/Overlay";
 import { useToast } from "@/components/ui/Toast/ToastContext";
-import { getSubscriptionAction } from "@/lib/subscription.actions";
 
 /**
  * The profile ad slot — the space where Topics sits, sold by Gold creators.
@@ -155,20 +154,23 @@ export function AdSlot({
 	}, [isMe, username, authed]);
 
 	// Selling rights are only worth asking about on your own profile.
+	// Direct gateway read, not the server action: the action serialises
+	// behind every other action on the page and was landing seconds late
+	// (or silently failing), which held the header megaphone hostage.
 	useEffect(() => {
 		if (!isMe) return;
 		let cancelled = false;
-		void getSubscriptionAction()
-			.then((res: any) => {
-				if (!cancelled && res?.success) {
-					setCanSell(Boolean(res.data?.entitlements?.canSellAdSpace));
+		void authed("get", "/api/subscription")
+			.then((d) => {
+				if (!cancelled) {
+					setCanSell(Boolean(d?.entitlements?.canSellAdSpace));
 				}
 			})
 			.catch(() => {});
 		return () => {
 			cancelled = true;
 		};
-	}, [isMe]);
+	}, [isMe, authed]);
 
 	// The rotation clock. 7s per creative: long enough to read a banner,
 	// short enough that three campaigns all serve within one profile visit.
