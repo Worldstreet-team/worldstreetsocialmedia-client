@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { compressImage } from "@/lib/image-compress";
 
 import { useState, useRef, useMemo } from "react";
 import Image from "next/image";
@@ -171,7 +172,10 @@ export default function EditProfileModal({
 	// Direct-set path: GIF picks and decode-failure fallbacks (e.g. HEIC on
 	// Chrome) keep the old upload-the-original behavior instead of
 	// dead-ending the pick.
-	const applyPickedFile = (kind: "avatar" | "banner", file: File) => {
+	const applyPickedFile = async (kind: "avatar" | "banner", rawFile: File) => {
+		// Same rule as every other intake: compress at the door, so the
+		// crop preview, the upload and every future render ride light bytes.
+		const file = await compressImage(rawFile);
 		const previewUrl = URL.createObjectURL(file);
 		if (kind === "avatar") {
 			if (avatarPreview.startsWith("blob:")) {

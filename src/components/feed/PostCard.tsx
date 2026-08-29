@@ -57,6 +57,7 @@ import {
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import ImageModal from "@/components/ui/ImageModal";
+import { FeedImage } from "@/components/ui/FeedImage";
 import { renderRichText } from "@/components/ui/RichText";
 import {
     applyStats,
@@ -1327,13 +1328,14 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                         // already did; this one didn't, so single-image posts
                         // silently could not be tapped to zoom.
                         <div className="mb-3 w-full pointer-events-auto">
-                            <img
+                            <FeedImage
                                 src={post.images[0]}
                                 alt="Post attachment"
+                                className="relative z-10 w-fit max-w-full rounded-xl border border-hairline"
                                 // object-contain, not cover: the box is already
                                 // sized by the image itself, so cover only ever
                                 // risked shaving an edge off a tall photo.
-                                className="block h-auto w-auto max-w-full max-h-[600px] object-contain rounded-xl border border-hairline cursor-zoom-in hover:opacity-95 transition-opacity relative z-10"
+                                imgClassName="block h-auto w-auto max-w-full max-h-[600px] object-contain cursor-zoom-in hover:opacity-95"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     e.preventDefault();
@@ -1352,18 +1354,17 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                             {post.images
                                 .slice(0, 4)
                                 .map((src: string, i: number) => (
-                                    <div
+                                    <FeedImage
                                         key={i}
+                                        src={src}
                                         className={clsx(
-                                            "relative z-10 w-full h-full bg-cover bg-center cursor-zoom-in hover:opacity-95 transition-opacity",
+                                            "relative z-10 w-full h-full",
                                             getImageStyle(
                                                 i,
                                                 post.images!.length,
                                             ),
                                         )}
-                                        style={{
-                                            backgroundImage: `url('${src}')`,
-                                        }}
+                                        imgClassName="absolute inset-0 h-full w-full object-cover cursor-zoom-in hover:opacity-95"
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             e.preventDefault();

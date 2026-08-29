@@ -3,6 +3,7 @@
 import { useAuth } from "@clerk/nextjs";
 import axios from "axios";
 import clsx from "clsx";
+import { compressImage } from "@/lib/image-compress";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -1456,7 +1457,10 @@ function NewBookingSheet({
 	const { getToken } = useAuth();
 	/** Straight to R2, with real progress — axios is called directly here
 	 *  because the shared helper cannot carry onUploadProgress. */
-	const upload = async (file: File, kind: "media" | "cover") => {
+	const upload = async (rawFile: File, kind: "media" | "cover") => {
+		// Advertisers hand over full-size brand art; the slot renders ~600px
+		// wide. Compress before the bytes travel (no-op for video/audio).
+		const file = await compressImage(rawFile);
 		setUploading(kind);
 		setUploadPct(0);
 		try {

@@ -26,6 +26,7 @@ import {
 	type AudienceCommunity,
 } from "@/components/community/AudiencePicker";
 import { useToast } from "@/components/ui/Toast/ToastContext";
+import { compressImage } from "@/lib/image-compress";
 import { useAtom, useSetAtom } from "jotai";
 import {
 	draftsAtom,
@@ -500,7 +501,7 @@ export const PostComposer = ({
 	const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 	const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 
-	const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+	const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		// Disable if link preview exists
 		if (linkPreview) return;
 
@@ -554,7 +555,16 @@ export const PostComposer = ({
 				.filter((f) => f.size <= MAX_IMAGE_BYTES)
 				.slice(0, remainingSlots);
 
-			const newItems: MediaItem[] = filesToProcess.map((file) => ({
+			// Compress before anything else sees the file: the preview, the
+			// draft and the eventual upload all ride the light version.
+			const prepared = await Promise.all(
+				filesToProcess.map(async (file) =>
+					file.type.startsWith("video/")
+						? file
+						: await compressImage(file),
+				),
+			);
+			const newItems: MediaItem[] = prepared.map((file) => ({
 				url: URL.createObjectURL(file),
 				file: file,
 				type: file.type.startsWith("video/") ? "video" : "image",
@@ -566,7 +576,7 @@ export const PostComposer = ({
 	};
 
 	// Paste an image (screenshot, copied file) straight into the composer.
-	const handlePaste = (e: React.ClipboardEvent) => {
+	const handlePaste = async (e: React.ClipboardEvent) => {
 		const pasted = Array.from(e.clipboardData.files).filter((f) =>
 			f.type.startsWith("image/"),
 		);
@@ -578,13 +588,14 @@ export const PostComposer = ({
 			if (files.length === 0) return;
 		}
 		const remainingSlots = 4 - mediaItems.length;
-		const newItems: MediaItem[] = files
-			.slice(0, remainingSlots)
-			.map((file) => ({
-				url: URL.createObjectURL(file),
-				file,
-				type: "image",
-			}));
+		const compressed = await Promise.all(
+			files.slice(0, remainingSlots).map(compressImage),
+		);
+		const newItems: MediaItem[] = compressed.map((file) => ({
+			url: URL.createObjectURL(file),
+			file,
+			type: "image",
+		}));
 		if (newItems.length > 0) {
 			setMediaItems((prev) => [...prev, ...newItems]);
 			toast(newItems.length > 1 ? "Images attached" : "Image attached", {
