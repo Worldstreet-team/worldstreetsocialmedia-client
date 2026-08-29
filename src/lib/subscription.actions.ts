@@ -31,6 +31,8 @@ export interface SubscriptionState {
 		creatorAnalytics: boolean;
 		/** Seconds of video this tier may post. */
 		videoMaxSeconds?: number;
+		/** Voice-post cap — a tier perk like video length. */
+		audioPostMaxSeconds?: number;
 		tier?: MembershipTier | null;
 		vividCreditGrant?: number;
 		/** Gold only: may list posts for sale. */

@@ -27,6 +27,7 @@ import {
 } from "@/components/community/AudiencePicker";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { compressImage } from "@/lib/image-compress";
+import { analyzeAudioFile } from "@/lib/audio-analyze";
 import { useAtom, useSetAtom } from "jotai";
 import {
 	draftsAtom,
@@ -37,7 +38,7 @@ import EmojiPicker, { type EmojiClickData, Theme } from "emoji-picker-react";
 import { useTheme } from "next-themes";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
-import { LockSimple, PencilSimple } from "@phosphor-icons/react";
+import { MusicNote, LockSimple, PencilSimple } from "@phosphor-icons/react";
 // Loaded on first open, not on page load: the editors are the heaviest
 // client code in the app and they render only when someone opens one. The
 // host renders them conditionally, so next/dynamic defers the chunk until
@@ -75,7 +76,7 @@ interface PostComposerProps {
 interface MediaItem {
 	url: string;
 	file: File;
-	type: "image" | "video";
+	type: "image" | "video" | "audio";
 	// Editor state: `file` is what gets posted; the untouched original plus
 	// the edit document stay behind so re-opening the editor is non-destructive.
 	originalFile?: File;
@@ -189,6 +190,7 @@ function readVideoDuration(file: File): Promise<number | null> {
 let limitsPromise: Promise<{
 	canSell: boolean;
 	videoMaxSeconds: number | null;
+	audioMaxSeconds: number | null;
 }> | null = null;
 function fetchComposerLimits() {
 	limitsPromise ??= getSubscriptionAction()
@@ -198,10 +200,16 @@ function fetchComposerLimits() {
 						canSell: Boolean(res.data.entitlements?.canSellPosts),
 						videoMaxSeconds:
 							res.data.entitlements?.videoMaxSeconds ?? null,
+						audioMaxSeconds:
+							res.data.entitlements?.audioPostMaxSeconds ?? 60,
 					}
-				: { canSell: false, videoMaxSeconds: null },
+				: { canSell: false, videoMaxSeconds: null, audioMaxSeconds: 60 },
 		)
-		.catch(() => ({ canSell: false, videoMaxSeconds: null }));
+		.catch(() => ({
+			canSell: false,
+			videoMaxSeconds: null,
+			audioMaxSeconds: 60,
+		}));
 	return limitsPromise;
 }
 
@@ -234,12 +242,21 @@ export const PostComposer = ({
 	const [canSell, setCanSell] = useState(false);
 	const [videoSeconds, setVideoSeconds] = useState<number | null>(null);
 	const [videoLimit, setVideoLimit] = useState<number | null>(null);
+	// Voice-note attachment: measured once at attach; blur is the poster's
+	// call and defaults on (plan artifact spec).
+	const [audioMeta, setAudioMeta] = useState<{
+		durationSec: number;
+		peaks: number[];
+	} | null>(null);
+	const [audioBlurBg, setAudioBlurBg] = useState(true);
+	const [audioLimit, setAudioLimit] = useState<number>(60);
 	useEffect(() => {
 		let cancelled = false;
 		fetchComposerLimits().then((limits) => {
 			if (cancelled) return;
 			setCanSell(limits.canSell);
 			setVideoLimit(limits.videoMaxSeconds);
+			setAudioLimit(limits.audioMaxSeconds ?? 60);
 		});
 		return () => {
 			cancelled = true;
@@ -507,6 +524,40 @@ export const PostComposer = ({
 
 		if (e.target.files) {
 			const files = Array.from(e.target.files);
+			// One voice note max, exclusive like video: a post is one thing.
+			const audioFile = files.find((f) => f.type.startsWith("audio/"));
+			if (audioFile) {
+				if (audioFile.size > 15 * 1024 * 1024) {
+					toast("Voice notes are capped at 15MB", { type: "error" });
+					if (fileInputRef.current) fileInputRef.current.value = "";
+					return;
+				}
+				const meta = await analyzeAudioFile(audioFile);
+				if (!meta) {
+					toast("Couldn't read that audio file", { type: "error" });
+					if (fileInputRef.current) fileInputRef.current.value = "";
+					return;
+				}
+				if (meta.durationSec > audioLimit + 1) {
+					toast(
+						`Your plan allows voice posts up to ${audioLimit}s — this one is ${meta.durationSec}s`,
+						{ type: "error" },
+					);
+					if (fileInputRef.current) fileInputRef.current.value = "";
+					return;
+				}
+				mediaItems.forEach((m) => URL.revokeObjectURL(m.url));
+				setAudioMeta(meta);
+				setMediaItems([
+					{
+						url: URL.createObjectURL(audioFile),
+						file: audioFile,
+						type: "audio",
+					},
+				]);
+				if (fileInputRef.current) fileInputRef.current.value = "";
+				return;
+			}
 			// One video max, never mixed with images: a picked video replaces
 			// everything; once a video is attached, further picks are ignored.
 			const video = files.find((f) => f.type.startsWith("video/"));
@@ -641,7 +692,17 @@ export const PostComposer = ({
 			}
 
 			mediaItems.forEach((item) => {
-				if (item.type === "video") {
+				if (item.type === "audio") {
+					formData.append("audio", item.file);
+					if (audioMeta) {
+						formData.append(
+							"audioDurationSeconds",
+							String(audioMeta.durationSec),
+						);
+						formData.append("audioPeaks", JSON.stringify(audioMeta.peaks));
+					}
+					formData.append("audioBlurBg", audioBlurBg ? "true" : "false");
+				} else if (item.type === "video") {
 					formData.append("video", item.file);
 					if (videoSeconds) {
 						formData.append("videoDurationSeconds", String(Math.round(videoSeconds)));
@@ -797,7 +858,39 @@ export const PostComposer = ({
 											: "aspect-square",
 									)}
 								>
-									{item.type === "video" ? (
+									{item.type === "audio" ? (
+										<div className="absolute inset-0 flex items-center gap-2 bg-sunken px-3">
+											<span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-primary text-page">
+												<MusicNote size={14} weight="fill" />
+											</span>
+											<span className="flex h-8 flex-1 items-center gap-[2px]">
+												{(audioMeta?.peaks ?? []).slice(0, 32).map((v, i) => (
+													<span
+														key={i}
+														className="w-full flex-1 rounded-pill bg-primary/40"
+														style={{ height: `${Math.max(12, (v / 127) * 100)}%` }}
+													/>
+												))}
+											</span>
+											<span className="shrink-0 font-sans text-[11px] tabular-nums text-muted">
+												{audioMeta
+													? `${Math.floor(audioMeta.durationSec / 60)}:${String(audioMeta.durationSec % 60).padStart(2, "0")}`
+													: ""}
+											</span>
+											<button
+												type="button"
+												onClick={() => setAudioBlurBg((v) => !v)}
+												className={clsx(
+													"shrink-0 cursor-pointer rounded-pill px-2 py-0.5 font-sans text-[10.5px] font-semibold transition-colors",
+													audioBlurBg
+														? "bg-brand/15 text-gold"
+														: "bg-raised text-muted",
+												)}
+											>
+												Blur bg
+											</button>
+										</div>
+									) : item.type === "video" ? (
 										// eslint-disable-next-line jsx-a11y/media-has-caption
 										<video
 											src={item.url}
@@ -1031,7 +1124,7 @@ export const PostComposer = ({
 								type="file"
 								ref={fileInputRef}
 								className="hidden"
-								accept="image/*,video/*"
+								accept="image/*,video/*,audio/*"
 								multiple
 								onChange={handleImageSelect}
 								disabled={isPosting || mediaItems.length >= 4 || !!linkPreview}

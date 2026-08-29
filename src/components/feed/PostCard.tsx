@@ -58,6 +58,7 @@ import ConfirmModal from "@/components/ui/ConfirmModal";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import ImageModal from "@/components/ui/ImageModal";
 import { FeedImage } from "@/components/ui/FeedImage";
+import { AudioCard } from "@/components/feed/AudioCard";
 import { renderRichText } from "@/components/ui/RichText";
 import {
     applyStats,
@@ -157,6 +158,13 @@ export interface PostProps {
     };
     images?: string[];
     videos?: string[];
+    /** Voice-note post: peaks are 64 ints (0-127) stored with the post. */
+    audio?: {
+        url: string;
+        durationSec: number;
+        peaks: number[];
+        blurBg: boolean;
+    };
     stats: {
         replies: number;
         reposts: number;
@@ -779,7 +787,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                         <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 overflow-hidden pointer-events-auto">
                             <Link
                                 href={`/profile/${post.author.username}`}
-                                className="text-[16px] font-semibold leading-5 text-primary truncate font-sans hover:underline decoration-gold underline-offset-4"
+                                className="text-[17px] sm:text-[16px] font-semibold leading-5 text-primary truncate font-sans hover:underline decoration-gold underline-offset-4"
                             >
                                 {post.author.name}
                             </Link>
@@ -1163,7 +1171,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                         is ONE unbreakable run, and break-word only breaks a word
                         that alone cannot fit. Without this the run pinned the line
                         and made the whole column scroll sideways. */}
-                    <p className="text-primary whitespace-pre-wrap [overflow-wrap:anywhere] mb-1.5 font-normal leading-[1.55] text-[16.5px] font-sans tracking-tight pointer-events-none">
+                    <p className="text-primary whitespace-pre-wrap [overflow-wrap:anywhere] mb-1.5 font-normal leading-[1.55] text-[18px] sm:text-[16.5px] font-sans tracking-tight pointer-events-none">
                         {showingTranslation
                             ? formattedTranslation
                             : formattedContent}
@@ -1319,6 +1327,12 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                 className="w-full max-h-[600px] aspect-video"
                             />
                         </div>
+                    )}
+                    {post.audio && (
+                        <AudioCard
+                            audio={post.audio}
+                            avatar={post.author.avatar}
+                        />
                     )}
                     {post.images && post.images.length === 1 && (
                         // pointer-events-auto: the card body is
