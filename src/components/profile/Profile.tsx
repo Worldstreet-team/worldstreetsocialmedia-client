@@ -471,7 +471,11 @@ export default function Profile({ username }: { username?: string }) {
 	// people who do not follow each other, so the icon that would open one
 	// does not appear either. Showing a button that always errors is worse
 	// than showing nothing.
-	const canMessage = !isMe && isFollowing && followsYou;
+	// The button SHOWS for everyone (except blocked, handled in the header):
+	// hiding it entirely read as "there's no place to chat" — and with the
+	// premium both-ways rule the client cannot even know who may talk to
+	// whom. The gateway is the gate; a refusal comes back as a clear toast.
+	const canMessage = !isMe;
 
 	const emptyIcon =
 		activeTab === "likes"

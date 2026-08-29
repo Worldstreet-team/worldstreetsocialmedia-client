@@ -767,9 +767,10 @@ function RatesSheet({
 	useOverlayDismiss(true, onClose);
 
 	const [rows, setRows] = useState<RateRow[]>([
+		// Image, audio, video — the arrangement from owner review.
 		{ format: "image", priceUsdMinor: 2000, enabled: true, minDays: 1 },
-		{ format: "video", priceUsdMinor: 3500, enabled: false, minDays: 1 },
 		{ format: "audio", priceUsdMinor: 2500, enabled: false, minDays: 1 },
+		{ format: "video", priceUsdMinor: 3500, enabled: false, minDays: 1 },
 	]);
 	const [saving, setSaving] = useState(false);
 	/**

@@ -58,6 +58,8 @@ import ConfirmModal from "@/components/ui/ConfirmModal";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import ImageModal from "@/components/ui/ImageModal";
 import { FeedImage } from "@/components/ui/FeedImage";
+import VerifiedIcon from "@/assets/icons/VerifiedIcon";
+import { recordVideoPlayAction } from "@/lib/beacons";
 import { AudioCard } from "@/components/feed/AudioCard";
 import { Image as ImageGlyph, VideoCamera, MicrophoneStage } from "@phosphor-icons/react";
 import { renderRichText } from "@/components/ui/RichText";
@@ -172,6 +174,7 @@ export interface PostProps {
     };
     images?: string[];
     videos?: string[];
+    videoPlays?: number;
     /** Voice-note post: peaks are 64 ints (0-127) stored with the post. */
     audio?: {
         url: string;
@@ -194,6 +197,7 @@ export interface PostProps {
         username: string;
         avatar: string;
         isVerified?: boolean;
+        tier?: "bronze" | "silver" | "gold";
         content: string;
         image?: string;
         timestamp: string;
@@ -1241,6 +1245,15 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                 <span className="text-[13px] font-semibold text-primary font-sans truncate">
                                     {post.repostOf.authorName}
                                 </span>
+                                {/* The tick travels with the repost — a
+                                    verified author quoted wholesale must not
+                                    arrive stripped of their mark. */}
+                                {post.repostOf.isVerified && (
+                                    <VerifiedIcon
+                                        size={{ width: "13", height: "13" }}
+                                        tier={post.repostOf.tier}
+                                    />
+                                )}
                                 <span className="text-[12px] text-subtle font-sans truncate shrink-0">
                                     @{post.repostOf.username} · {post.repostOf.timestamp}
                                 </span>
@@ -1312,6 +1325,12 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                             <VideoPlayer
                                 src={post.videos[0]}
                                 fitToMedia
+                                plays={post.videoPlays}
+                                onFirstPlay={() => {
+                                    void recordVideoPlayAction(post.id).catch(
+                                        () => {},
+                                    );
+                                }}
                                 className="w-full max-h-[600px] aspect-video"
                             />
                         </div>

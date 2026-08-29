@@ -1614,7 +1614,7 @@ function NewBookingSheet({
 					<div>
 						{label("Format")}
 						<div className="flex gap-2">
-							{(["image", "video", "audio"] as const).map((f) => (
+							{(["image", "audio", "video"] as const).map((f) => (
 								<button
 									key={f}
 									type="button"

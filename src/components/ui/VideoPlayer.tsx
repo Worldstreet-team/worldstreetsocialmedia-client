@@ -48,6 +48,8 @@ export function VideoPlayer({
 	className,
 	rounded = true,
 	fitToMedia = false,
+	plays,
+	onFirstPlay,
 }: {
 	src: string;
 	poster?: string;
@@ -55,10 +57,15 @@ export function VideoPlayer({
 	rounded?: boolean;
 	/** Size the frame to the clip's own aspect ratio (feed/timeline usage). */
 	fitToMedia?: boolean;
+	/** Play count worn as a quiet chip on the frame. */
+	plays?: number;
+	/** Fired once per mount, the first time playback actually starts. */
+	onFirstPlay?: () => void;
 }) {
 	const wrapRef = useRef<HTMLDivElement | null>(null);
 	const videoRef = useRef<HTMLVideoElement | null>(null);
 	const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const firedPlayRef = useRef(false);
 
 	const [playing, setPlaying] = useState(false);
 	// Feed videos start MUTED and autoplay on view (owner ruling): sound is
@@ -378,7 +385,13 @@ export function VideoPlayer({
 					toggle();
 				}}
 				onDoubleClick={toggleFull}
-				onPlay={() => setPlaying(true)}
+				onPlay={() => {
+					setPlaying(true);
+					if (!firedPlayRef.current) {
+						firedPlayRef.current = true;
+						onFirstPlay?.();
+					}
+				}}
 				onPause={() => setPlaying(false)}
 				onWaiting={() => setWaiting(true)}
 				onPlaying={() => setWaiting(false)}
@@ -419,6 +432,16 @@ export function VideoPlayer({
 					{zoom.toFixed(1)}x
 					<span className="glass-ink-faint font-normal">Reset</span>
 				</button>
+			)}
+
+			{plays !== undefined && plays > 0 && (
+				<span className="pointer-events-none absolute left-2 top-2 flex items-center gap-1 rounded-pill bg-black/55 px-2 py-0.5 font-sans text-[11px] font-medium text-white tabular-nums">
+					<Play size={10} weight="fill" />
+					{plays >= 1000
+						? `${(plays / 1000).toFixed(1).replace(/\.0$/, "")}k`
+						: plays.toLocaleString()}{" "}
+					plays
+				</span>
 			)}
 
 			{/* centre affordance: only while paused, and never over the bar */}
