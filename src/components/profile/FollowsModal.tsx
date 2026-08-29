@@ -286,7 +286,13 @@ export default function FollowsModal({
 								) : (
 									<div className="flex flex-col items-center justify-center h-full p-8 text-center text-muted font-sans">
 										<UserX className="w-12 h-12 mb-2 opacity-50" />
-										<p>No {activeTab} yet.</p>
+										{/* Real words, not the wire key — this printed
+										    "No followers yet." in an app that says Allies. */}
+										<p>
+											{activeTab === "followers"
+												? "No Allies yet."
+												: "Not aligned to anyone yet."}
+										</p>
 									</div>
 								)}
 							</div>
