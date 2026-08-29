@@ -59,6 +59,7 @@ import { useToast } from "@/components/ui/Toast/ToastContext";
 import ImageModal from "@/components/ui/ImageModal";
 import { FeedImage } from "@/components/ui/FeedImage";
 import { AudioCard } from "@/components/feed/AudioCard";
+import { Image as ImageGlyph, VideoCamera, MicrophoneStage } from "@phosphor-icons/react";
 import { renderRichText } from "@/components/ui/RichText";
 import {
     applyStats,
@@ -155,6 +156,18 @@ export interface PostProps {
         locked: boolean;
         isSeller?: boolean;
         salesCount?: number;
+        /** Storefront fields the gateway serves to non-buyers. */
+        title?: string;
+        teaser?: string;
+        teaserTruncated?: boolean;
+        media?: {
+            imageCount?: number;
+            hasVideo?: boolean;
+            videoDurationSec?: number;
+            previewThumb?: string;
+            audio?: { durationSec: number; peaks: number[] };
+            previewAudioUrl?: string;
+        };
     };
     images?: string[];
     videos?: string[];
@@ -1097,44 +1110,18 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                         split is seller-facing copy in the composer, never shown
                         to the buyer here. */}
                     {saleLocked && (
-                        <div className="relative z-10 mb-2 overflow-hidden rounded-xl border border-hairline pointer-events-auto">
-                            <div aria-hidden className="space-y-2.5 p-4">
-                                <div className="h-3 w-[88%] rounded-sm bg-raised" />
-                                <div className="h-3 w-[70%] rounded-sm bg-raised" />
-                                <div className="h-32 w-full rounded-lg bg-gradient-to-br from-brand/15 via-raised to-sunken" />
-                                <div className="h-3 w-[52%] rounded-sm bg-raised" />
-                            </div>
-                            <div className="absolute inset-0 flex items-center justify-center backdrop-blur-3xl backdrop-saturate-150 glass-veil">
-                                <div className="flex flex-col items-center gap-2.5 px-6 text-center">
-                                    <span className="flex h-11 w-11 items-center justify-center rounded-pill glass-chip">
-                                        <LockSimple size={19} weight="fill" />
-                                    </span>
-                                    <span className="glass-ink font-sans text-[14px] font-semibold">
-                                        {t("post.locked.title")}
-                                    </span>
-                                    <span className="glass-ink-dim font-sans text-[12.5px]">
-                                        {t("post.locked.sub")}
-                                    </span>
-                                    <button
-                                        type="button"
-                                        disabled={unlocking || isSeller}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (isSeller) return;
-                                            setIsBuyModalOpen(true);
-                                        }}
-                                        className="glass-cta mt-1 h-10 cursor-pointer rounded-pill px-5 font-sans text-[13px] font-semibold transition-colors disabled:opacity-60"
-                                    >
-                                        {unlocking
-                                            ? t("post.locked.unlocking")
-                                            : t("post.locked.cta").replace(
-                                                  "{price}",
-                                                  salePriceLabel,
-                                              )}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                        /* The storefront (owner ruling): a paid post sells on
+                           its title and a real taste, never an anonymous
+                           "Paid post". Everything shown here was decided
+                           server-side — teaser slice, 24px thumb, audio
+                           peaks + 15s preview. No real asset is in the page. */
+                        <SaleStorefront
+                            sale={post.sale!}
+                            priceLabel={salePriceLabel}
+                            unlocking={unlocking}
+                            isSeller={isSeller}
+                            onUnlock={() => setIsBuyModalOpen(true)}
+                        />
                     )}
 
                     {/* Seller's own view: the listing state, quietly. */}
@@ -1712,3 +1699,165 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
 });
 
 PostCard.displayName = "PostCard";
+
+/**
+ * The locked paid post as a STOREFRONT — Option B from owner review.
+ * Title first, then the truest tease the medium allows: the text's own
+ * opening lines fading into the wall, a 24px-thumb peek for visuals, the
+ * waveform plus a 15-second listen for voice, chips when a post mixes.
+ * Everything rendered here arrived from the gateway's gate — the real
+ * content is not in the page.
+ */
+function SaleStorefront({
+    sale,
+    priceLabel,
+    unlocking,
+    isSeller,
+    onUnlock,
+}: {
+    sale: NonNullable<PostProps["sale"]>;
+    priceLabel: string;
+    unlocking: boolean;
+    isSeller: boolean;
+    onUnlock: () => void;
+}) {
+    const media = sale.media ?? {};
+    const hasText = Boolean(sale.teaser?.trim());
+    const imageCount = media.imageCount ?? 0;
+    const hasVisual = imageCount > 0 || media.hasVideo;
+    const hasAudio = Boolean(media.audio);
+    // Mixed post: text leads, media collapses to chips. Media-only post:
+    // the visual/audio tease IS the body.
+    const mixed = hasText && (hasVisual || hasAudio);
+    const vidClock = media.videoDurationSec
+        ? `${Math.floor(media.videoDurationSec / 60)}:${String(media.videoDurationSec % 60).padStart(2, "0")}`
+        : null;
+
+    return (
+        <div className="relative z-10 mb-2 overflow-hidden rounded-xl border border-hairline pointer-events-auto">
+            <div className="px-4 pt-3.5">
+                {sale.title && (
+                    <p className="font-sans text-[15.5px] font-semibold leading-snug text-primary">
+                        {sale.title}
+                    </p>
+                )}
+                {hasText && (
+                    <div className="relative mt-1.5">
+                        <p className="font-sans text-[13.5px] leading-relaxed text-muted">
+                            {sale.teaser}
+                            {sale.teaserTruncated ? "…" : ""}
+                        </p>
+                        {/* the fade into the wall */}
+                        <span
+                            aria-hidden
+                            className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-surface to-transparent"
+                        />
+                    </div>
+                )}
+            </div>
+
+            {mixed ? (
+                <div className="flex gap-1.5 px-4 pt-2.5">
+                    {imageCount > 0 && (
+                        <span className="flex items-center gap-1 rounded-pill bg-raised px-2.5 py-1 font-sans text-[11px] text-muted">
+                            <ImageGlyph size={12} /> {imageCount}{" "}
+                            {imageCount === 1 ? "image" : "images"}
+                        </span>
+                    )}
+                    {media.hasVideo && (
+                        <span className="flex items-center gap-1 rounded-pill bg-raised px-2.5 py-1 font-sans text-[11px] text-muted">
+                            <VideoCamera size={12} /> {vidClock ?? "video"}
+                        </span>
+                    )}
+                    {hasAudio && (
+                        <span className="flex items-center gap-1 rounded-pill bg-raised px-2.5 py-1 font-sans text-[11px] text-muted">
+                            <MicrophoneStage size={12} />{" "}
+                            {Math.floor((media.audio?.durationSec ?? 0) / 60)}:
+                            {String((media.audio?.durationSec ?? 0) % 60).padStart(2, "0")}{" "}
+                            voice
+                        </span>
+                    )}
+                </div>
+            ) : hasVisual ? (
+                <div className="relative mt-2.5 h-44 w-full overflow-hidden">
+                    {media.previewThumb ? (
+                        // The 24px thumb stretched: real colours, detail that
+                        // never existed at this size. NOT a blurred original.
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                            src={media.previewThumb}
+                            alt=""
+                            aria-hidden
+                            draggable={false}
+                            className="h-full w-full object-cover"
+                        />
+                    ) : (
+                        <div className="h-full w-full bg-gradient-to-br from-brand/15 via-raised to-sunken" />
+                    )}
+                    <span aria-hidden className="absolute inset-0 bg-page/25" />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
+                        <span className="flex h-11 w-11 items-center justify-center rounded-pill bg-primary text-page">
+                            <LockSimple size={17} weight="fill" />
+                        </span>
+                        <span className="font-sans text-[11.5px] font-medium text-white [text-shadow:0_1px_2px_rgba(0,0,0,.6)]">
+                            {media.hasVideo
+                                ? vidClock
+                                    ? `Video · ${vidClock}`
+                                    : "Video inside"
+                                : `${imageCount} ${imageCount === 1 ? "image" : "images"} inside`}
+                        </span>
+                    </div>
+                </div>
+            ) : hasAudio ? (
+                <div className="px-4 pt-2.5">
+                    {media.previewAudioUrl ? (
+                        <>
+                            <AudioCard
+                                audio={{
+                                    url: media.previewAudioUrl,
+                                    durationSec: media.audio?.durationSec ?? 0,
+                                    peaks: media.audio?.peaks ?? [],
+                                    blurBg: false,
+                                }}
+                            />
+                            <p className="-mt-1.5 mb-1 font-sans text-[11px] text-subtle">
+                                First 15 seconds — unlock for the rest
+                            </p>
+                        </>
+                    ) : (
+                        <div className="flex h-12 items-center gap-[2px] rounded-lg bg-sunken px-3">
+                            {(media.audio?.peaks ?? []).map((v, i) => (
+                                <span
+                                    key={i}
+                                    className="w-full flex-1 rounded-pill bg-primary/30"
+                                    style={{ height: `${Math.max(8, (v / 127) * 100)}%` }}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </div>
+            ) : null}
+
+            <div className="mt-3 flex items-center justify-between gap-3 border-t border-hairline px-4 py-2.5">
+                <span className="flex items-center gap-1.5 font-sans text-[11.5px] text-subtle tabular-nums">
+                    <LockSimple size={13} weight="fill" className="text-gold" />
+                    {(sale.salesCount ?? 0) > 0
+                        ? `${(sale.salesCount ?? 0).toLocaleString()} unlocked`
+                        : "Locked"}
+                </span>
+                <button
+                    type="button"
+                    disabled={unlocking || isSeller}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (isSeller) return;
+                        onUnlock();
+                    }}
+                    className="h-9 cursor-pointer rounded-pill bg-primary px-4 font-sans text-[12.5px] font-semibold text-page transition-colors hover:opacity-90 disabled:opacity-60"
+                >
+                    {unlocking ? "Unlocking…" : `Unlock for ${priceLabel}`}
+                </button>
+            </div>
+        </div>
+    );
+}

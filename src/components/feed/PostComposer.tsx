@@ -28,6 +28,7 @@ import {
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { compressImage } from "@/lib/image-compress";
 import { analyzeAudioFile } from "@/lib/audio-analyze";
+import { cutAudioPreview, makeTinyThumb } from "@/lib/sale-teasers";
 import { useAtomValue } from "jotai";
 import { userAtom } from "@/store/user.atom";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
@@ -278,11 +279,15 @@ export const PostComposer = ({
 		};
 	}, []);
 	const [salePrice, setSalePrice] = useState("");
+	// The storefront title — what non-buyers see instead of "Paid post".
+	// Required when selling; the gateway refuses a titleless listing too.
+	const [saleTitle, setSaleTitle] = useState("");
 	const salePriceMinor = selling
 		? Math.round(Number.parseFloat(salePrice || "0") * 100)
 		: 0;
 	const saleInvalid =
 		selling && (salePriceMinor < 50 || salePriceMinor > 100_000);
+	const saleTitleMissing = selling && !saleTitle.trim();
 
 	useEffect(() => {
 		setAudience(community ?? null);
@@ -714,6 +719,23 @@ export const PostComposer = ({
 			if (audience) formData.append("community", audience.id);
 			if (selling && !saleInvalid) {
 				formData.append("salePriceUsdMinor", String(salePriceMinor));
+				formData.append("saleTitle", saleTitle.trim().slice(0, 80));
+				// Teaser assets, cut HERE in the seller's browser: a 24px thumb
+				// of the first visual (real colours, unrecoverable detail) and
+				// the first 15s of a voice post. The paywall then never has to
+				// ship a real asset to tease with.
+				const firstVisual = mediaItems.find(
+					(m) => m.type === "image" || m.type === "video",
+				);
+				if (firstVisual) {
+					const thumb = await makeTinyThumb(firstVisual.file);
+					if (thumb) formData.append("salePreviewThumb", thumb);
+				}
+				const voiceItem = mediaItems.find((m) => m.type === "audio");
+				if (voiceItem) {
+					const preview = await cutAudioPreview(voiceItem.file, 15);
+					if (preview) formData.append("salePreviewAudio", preview);
+				}
 			}
 
 			mediaItems.forEach((item) => {
@@ -1106,6 +1128,19 @@ export const PostComposer = ({
 						</button>
 						{selling && (
 							<>
+								<input
+									type="text"
+									value={saleTitle}
+									onChange={(e) => setSaleTitle(e.target.value.slice(0, 80))}
+									placeholder="Title buyers will see"
+									aria-label="Paid post title"
+									className={clsx(
+										"h-9 w-full min-w-0 flex-1 basis-full rounded-pill border bg-sunken px-3.5 font-sans text-[13px] text-primary outline-none transition-colors placeholder:text-subtle sm:basis-auto",
+										saleTitleMissing && salePrice
+											? "border-danger/50"
+											: "border-hairline focus:border-brand/60",
+									)}
+								/>
 								<label className="flex h-9 items-center gap-1 rounded-pill bg-sunken border border-hairline px-3 font-sans text-[13px] text-primary focus-within:border-brand/60 transition-colors">
 									<span className="text-muted">$</span>
 									<input
@@ -1258,7 +1293,8 @@ export const PostComposer = ({
 								(!content.trim() && mediaItems.length === 0) ||
 								isPosting ||
 								isOverLimit ||
-								saleInvalid
+								saleInvalid ||
+								saleTitleMissing
 							}
 							type="button"
 							className={clsx(
@@ -1267,7 +1303,8 @@ export const PostComposer = ({
 								(!content.trim() && mediaItems.length === 0) ||
 									isPosting ||
 									isOverLimit ||
-									saleInvalid
+									saleInvalid ||
+									saleTitleMissing
 									? "bg-raised text-subtle cursor-not-allowed opacity-50"
 									: "bg-brand text-brand-on hover:bg-brand-active",
 							)}
