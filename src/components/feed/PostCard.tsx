@@ -1413,7 +1413,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                             className="flex items-center gap-0.5 hover:text-primary transition-colors group cursor-pointer"
                         >
                             <span className="flex h-10 w-[34px] shrink-0 items-center justify-center rounded-pill sm:w-10 group-hover:bg-primary/10 transition group-active:scale-[0.98]">
-                                <ChatCircle size={18} weight="regular" />
+                                <ChatCircle size={21} weight="bold" />
                             </span>
                             <span className="text-[13px] font-sans tabular-nums sm:text-[13.5px]">
                                 {formatCount(shownReplies)}
@@ -1434,11 +1434,11 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                             >
                                 <span className="flex h-10 w-[34px] shrink-0 items-center justify-center rounded-pill sm:w-10 group-hover:bg-success/10 transition group-active:scale-[0.98]">
                                     <Repeat
-                                        size={18}
-                                        weight={reposted ? "fill" : "regular"}
+                                        size={21}
+                                        weight={reposted ? "fill" : "bold"}
                                     />
                                 </span>
-                                <span className="text-[12px] font-sans tabular-nums sm:text-[13px]">
+                                <span className="text-[13px] font-medium font-sans tabular-nums sm:text-[14px]">
                                     {formatCount(
                                         (shownReposts ?? 0) + repostDelta,
                                     )}
@@ -1533,12 +1533,12 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                     className="flex"
                                 >
                                     <Heart
-                                        size={18}
-                                        weight={isLiked ? "fill" : "regular"}
+                                        size={21}
+                                        weight={isLiked ? "fill" : "bold"}
                                     />
                                 </motion.span>
                             </span>
-                            <span className="relative overflow-hidden text-[12px] font-sans tabular-nums sm:text-[13px]">
+                            <span className="relative overflow-hidden text-[13px] font-medium font-sans tabular-nums sm:text-[14px]">
                                 <AnimatePresence mode="wait" initial={false}>
                                     {/* Count rolls 8px in the direction of change. */}
                                     <motion.span
@@ -1598,8 +1598,8 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                     className="flex"
                                 >
                                     <BookmarkSimple
-                                        size={18}
-                                        weight={isBookmarked ? "fill" : "regular"}
+                                        size={21}
+                                        weight={isBookmarked ? "fill" : "bold"}
                                     />
                                 </motion.span>
                             </span>
@@ -1660,8 +1660,8 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                             className="flex"
                                         >
                                             <PaperPlaneTilt
-                                                size={18}
-                                                weight="regular"
+                                                size={21}
+                                                weight="bold"
                                             />
                                         </motion.span>
                                     )}
@@ -1686,9 +1686,9 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                             title={t("post.views")}
                             aria-label={t("post.views")}
                         >
-                            <Pulse size={15} weight="bold" className="sm:hidden" />
-                            <Pulse size={16} weight="bold" className="hidden sm:block" />
-                            <span className="text-[12px] font-medium font-sans tabular-nums sm:text-[12.5px]">
+                            <Pulse size={17} weight="bold" className="sm:hidden" />
+                            <Pulse size={18} weight="bold" className="hidden sm:block" />
+                            <span className="text-[13px] font-medium font-sans tabular-nums sm:text-[13.5px]">
                                 {formatCount(post.stats.views ?? 0) || "0"}
                             </span>
                         </div>
