@@ -192,7 +192,7 @@ export function AdSlot({
 				<button
 					type="button"
 					onClick={() => setRatesOpen(true)}
-					className="group/slot relative mt-2 flex w-full cursor-pointer items-center gap-3 overflow-hidden rounded-xl border border-hairline px-4 py-3.5 text-left transition-colors hover:border-gold/40"
+					className="group/slot relative mt-2 flex w-full cursor-pointer items-center gap-3 overflow-hidden rounded-xl px-4 py-3.5 text-left"
 				>
 					{/* The onboarding backdrop, blurred into a ground — the same
 					    image that welcomed them, now underneath the thing their
@@ -245,7 +245,7 @@ export function AdSlot({
 		return (
 			<Link
 				href={`/bm?book=${encodeURIComponent(username)}`}
-				className="group/slot relative mt-2 flex w-full items-center gap-3 overflow-hidden rounded-xl border border-hairline px-4 py-3.5 transition-colors hover:border-gold/40"
+				className="group/slot relative mt-2 flex w-full items-center gap-3 overflow-hidden rounded-xl px-4 py-3.5"
 			>
 				{/* Same ground as the owner's card — the space should look like
 				    the same product from both sides of the counter. */}
@@ -332,7 +332,7 @@ function SponsoredCard({
 				)}
 			</div>
 
-			<div className="overflow-hidden rounded-xl border border-hairline bg-sunken">
+			<div className="overflow-hidden rounded-xl bg-sunken">
 				<CreativeMedia slot={slot} />
 				{slot.creative.linkUrl && (
 					<div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
@@ -389,7 +389,7 @@ export function AdSlotPreview({
 					)}
 				</h3>
 			</div>
-			<div className="overflow-hidden rounded-xl border border-hairline bg-sunken">
+			<div className="overflow-hidden rounded-xl bg-sunken">
 				<CreativeMedia
 					slot={{ _id: "preview", format, creative, startAt: "", endAt: "" }}
 				/>
@@ -678,10 +678,8 @@ function RatesSheet({
 							<div
 								key={row.format}
 								className={clsx(
-									"overflow-hidden rounded-xl border transition-colors",
-									row.enabled
-										? "border-gold/25 bg-surface"
-										: "border-hairline bg-surface/50",
+									"overflow-hidden rounded-xl transition-colors",
+									row.enabled ? "bg-raised" : "bg-surface/60 opacity-75",
 								)}
 							>
 								<div className="flex items-center gap-3 px-4 py-3">
@@ -712,7 +710,7 @@ function RatesSheet({
 									/>
 								</div>
 								{row.enabled && (
-									<div className="flex items-center justify-between gap-3 border-t border-hairline bg-sunken/60 px-4 py-2.5">
+									<div className="flex items-center justify-between gap-3 border-t border-hairline/60 bg-sunken/60 px-4 py-2.5">
 										<label className="flex items-baseline gap-1.5">
 											<span className="font-display text-[20px] font-semibold text-primary tabular-nums">
 												$

@@ -62,6 +62,7 @@ interface BmParty {
 interface BmBooking {
 	_id: string;
 	format: "image" | "video" | "audio";
+	creative?: { url?: string; linkUrl?: string; coverUrl?: string };
 	status:
 		| "requested"
 		| "declined"
@@ -560,7 +561,7 @@ function ThreadView({
 			{/* the deal card: the contract floats above the talk as its own
 			    object, instead of a wall of grey rows welded to the header */}
 			<div className="shrink-0 px-3 pt-3 md:px-6 md:pt-4">
-				<div className="rounded-xl border border-hairline bg-surface px-4 py-3.5">
+				<div className="rounded-xl bg-surface px-4 py-3.5">
 				<div className="flex items-center gap-3">
 					<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gold/10 text-gold">
 						{b.format === "video" ? (
@@ -587,6 +588,19 @@ function ThreadView({
 						{usd(b.agreedUsdMinor)}
 					</span>
 				</div>
+
+				{/* THE AD ITSELF. The creator is approving a creative — showing
+				    them terms without the thing those terms buy was the missing
+				    half of the story. Same renderer the profile serves. */}
+				{b.creative?.url && (
+					<div className="mt-3">
+						<AdSlotPreview
+							format={b.format}
+							creative={b.creative}
+							advertiserUsername={thread.advertiser?.username}
+						/>
+					</div>
+				)}
 
 				{/* money state: where the dollars are, as quiet chips */}
 				{(b.settledUsdMinor > 0 || cancellable) && (
@@ -670,7 +684,7 @@ function ThreadView({
 							<span className="mb-1 block font-sans text-[10.5px] font-semibold uppercase tracking-wide text-subtle">
 								Total price
 							</span>
-							<span className="flex h-10 items-center rounded-lg bg-page/60 border border-hairline pl-3 font-sans text-[14px] text-subtle transition-colors focus-within:border-brand/60">
+							<span className="flex h-10 items-center rounded-lg bg-page/60 pl-3 font-sans text-[14px] text-subtle transition-colors focus-within:bg-page">
 								$
 								<input
 									type="text"
@@ -698,7 +712,7 @@ function ThreadView({
 								onChange={(e) =>
 									setCDays(e.target.value.replace(/[^0-9]/g, ""))
 								}
-								className="h-10 w-full rounded-lg bg-page/60 border border-hairline px-3 font-sans text-[14px] text-primary outline-none tabular-nums transition-colors focus:border-brand/60"
+								className="h-10 w-full rounded-lg bg-page/60 px-3 font-sans text-[14px] text-primary outline-none tabular-nums transition-colors focus:bg-page"
 							/>
 						</label>
 						<button
@@ -722,11 +736,11 @@ function ThreadView({
 				    tranche. Both sides read the same rows — the creator sees
 				    their cut, the advertiser sees what came back. */}
 				{settledPeriods.length > 0 && (
-					<div className="mt-2.5 overflow-hidden rounded-xl border border-hairline">
+					<div className="mt-2.5 overflow-hidden rounded-lg bg-sunken/60">
 						{settledPeriods.map((per) => (
 							<div
 								key={per.index}
-								className="flex items-center justify-between gap-3 border-b border-hairline px-3.5 py-2 font-sans text-[12.5px] last:border-b-0"
+								className="flex items-center justify-between gap-3 border-b border-hairline/60 px-3.5 py-2 font-sans text-[12.5px] last:border-b-0"
 							>
 								<span className="text-muted">
 									{new Date(per.startAt).toISOString().slice(5, 10)} –{" "}
@@ -778,7 +792,7 @@ function ThreadView({
 							<div key={m._id}>
 								{divider}
 								<div className="my-2 flex justify-center">
-									<span className="max-w-[85%] rounded-lg border border-hairline bg-surface px-3.5 py-2 text-center font-sans text-[12px] leading-relaxed text-muted">
+									<span className="max-w-[85%] rounded-lg bg-raised px-3.5 py-2 text-center font-sans text-[12px] leading-relaxed text-muted">
 										{m.content}
 									</span>
 								</div>
@@ -817,10 +831,11 @@ function ThreadView({
 				<div ref={endRef} />
 			</div>
 
-			{/* composer */}
-			<div className="shrink-0 border-t border-hairline p-3 md:px-6">
-				<div className="flex items-center gap-2">
-					<input
+			{/* composer: ONE pill with the send inside — a row of loose parts
+			    reads as a toolbar; a composer is one object (Messages rule). */}
+			<div className="shrink-0 p-3 md:px-6">
+				<div className="flex min-w-0 items-end gap-1 rounded-2xl bg-sunken py-1.5 pl-4 pr-1.5 transition-colors focus-within:bg-raised">
+					<textarea
 						value={draft}
 						onChange={(e) => setDraft(e.target.value)}
 						onKeyDown={(e) => {
@@ -830,16 +845,19 @@ function ThreadView({
 							}
 						}}
 						placeholder="Write to the other party…"
-						className="h-11 min-w-0 flex-1 rounded-pill bg-sunken border border-hairline px-4 font-sans text-[14px] text-primary outline-none transition-colors placeholder:text-subtle focus:border-brand/60"
+						rows={1}
+						// text-base: sub-16px is the iOS zoom-on-focus trigger.
+						className="max-h-[100px] min-w-0 flex-1 resize-none border-none bg-transparent py-2 text-base text-primary outline-none placeholder:text-subtle"
+						style={{ minHeight: "24px" }}
 					/>
 					<button
 						type="button"
 						onClick={onSend}
 						disabled={!draft.trim()}
 						aria-label="Send"
-						className="flex h-11 w-11 shrink-0 items-center justify-center rounded-pill bg-brand text-brand-on transition-colors hover:opacity-90 disabled:opacity-40 cursor-pointer"
+						className="mb-0.5 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-brand text-brand-on transition-colors hover:bg-brand-active disabled:opacity-40"
 					>
-						<PaperPlaneRight size={17} weight="fill" />
+						<PaperPlaneRight size={16} weight="fill" />
 					</button>
 				</div>
 			</div>
@@ -852,8 +870,11 @@ function ThreadView({
 /** The house text input, verbatim from the design system's other modals —
  *  sunken fill, hairline border, brand-washed focus. An input with no border
  *  and no focus state reads as disabled, which is exactly what got reported. */
+/** The composer rule, applied to fields: a fill that lifts on focus. The
+ *  bordered version read as a form in an app whose own composer says it has
+ *  no bordered cards anywhere. */
 const FIELD =
-	"h-11 w-full rounded-lg bg-sunken border border-hairline px-3.5 font-sans text-[14px] text-primary placeholder:text-subtle outline-none transition-colors focus:border-brand/60";
+	"h-11 w-full rounded-lg bg-sunken px-3.5 font-sans text-[14px] text-primary placeholder:text-subtle outline-none transition-colors focus:bg-raised";
 
 const ACCEPT: Record<"image" | "video" | "audio", string> = {
 	image: "image/*",
@@ -1012,7 +1033,7 @@ function NewBookingSheet({
 								pending" until one is agreed in the thread.
 							</p>
 						)}
-						<div className="overflow-hidden rounded-xl border border-hairline">
+						<div className="overflow-hidden rounded-xl bg-sunken/60">
 							{[
 								["Creator", `@${handle}`],
 								["Format", format],
@@ -1026,7 +1047,7 @@ function NewBookingSheet({
 							].map(([k, v]) => (
 								<div
 									key={k}
-									className="flex items-center justify-between border-b border-hairline px-3.5 py-2.5 font-sans text-[13px] last:border-b-0"
+									className="flex items-center justify-between border-b border-hairline/60 px-3.5 py-2.5 font-sans text-[13px] last:border-b-0"
 								>
 									<span className="text-subtle">{k}</span>
 									<span className="font-medium capitalize text-primary tabular-nums">
@@ -1081,7 +1102,7 @@ function NewBookingSheet({
 										"h-10 flex-1 rounded-pill font-sans text-[13px] font-medium capitalize transition-colors cursor-pointer",
 										format === f
 											? "bg-primary text-page"
-											: "bg-sunken border border-hairline text-muted hover:text-primary",
+											: "bg-sunken text-muted hover:bg-raised hover:text-primary",
 									)}
 								>
 									{f}
@@ -1096,7 +1117,7 @@ function NewBookingSheet({
 						    becomes its own preview. The picked file goes to R2
 						    immediately, so send needs nothing else in flight. */}
 						{mediaUrl ? (
-							<div className="relative overflow-hidden rounded-xl border border-hairline bg-sunken">
+							<div className="relative overflow-hidden rounded-xl bg-sunken">
 								{format === "image" && (
 									// eslint-disable-next-line @next/next/no-img-element
 									<img
@@ -1133,7 +1154,7 @@ function NewBookingSheet({
 								type="button"
 								onClick={() => mediaInputRef.current?.click()}
 								disabled={uploading === "media"}
-								className="flex h-28 w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-hairline bg-sunken/50 transition-colors hover:border-brand/50 hover:bg-sunken disabled:opacity-60"
+								className="flex h-28 w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl bg-sunken transition-colors hover:bg-raised disabled:opacity-60"
 							>
 								<UploadSimple size={20} className="text-muted" />
 								<span className="font-sans text-[13px] font-medium text-muted">
@@ -1163,7 +1184,7 @@ function NewBookingSheet({
 						<div>
 							{label("Cover image")}
 							{coverUrl ? (
-								<div className="relative h-24 w-40 overflow-hidden rounded-xl border border-hairline">
+								<div className="relative h-24 w-40 overflow-hidden rounded-xl bg-sunken">
 									{/* eslint-disable-next-line @next/next/no-img-element */}
 									<img
 										src={coverUrl}
@@ -1184,7 +1205,7 @@ function NewBookingSheet({
 									type="button"
 									onClick={() => coverInputRef.current?.click()}
 									disabled={uploading === "cover"}
-									className="flex h-16 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-hairline bg-sunken/50 font-sans text-[13px] font-medium text-muted transition-colors hover:border-brand/50 disabled:opacity-60"
+									className="flex h-16 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-sunken font-sans text-[13px] font-medium text-muted transition-colors hover:bg-raised disabled:opacity-60"
 								>
 									<UploadSimple size={16} />
 									{uploading === "cover"
