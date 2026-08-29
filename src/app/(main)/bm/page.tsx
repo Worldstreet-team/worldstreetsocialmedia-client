@@ -5,7 +5,12 @@ import axios from "axios";
 import clsx from "clsx";
 import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { PaperPlaneRight, Plus, X } from "@phosphor-icons/react";
+import {
+	PaperPlaneRight,
+	Plus,
+	UploadSimple,
+	X,
+} from "@phosphor-icons/react";
 import { Briefcase } from "lucide-react";
 import { BACKEND_URL } from "@/const";
 import { userAtom } from "@/store/user.atom";
@@ -13,6 +18,12 @@ import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { formatTimeAgo } from "@/lib/utils";
+import {
+	OverlayHeader,
+	OverlayPanel,
+	OverlayScrim,
+	useOverlayDismiss,
+} from "@/components/ui/Overlay";
 
 /**
  * Business Messages — the deal room for ad bookings.
@@ -565,7 +576,7 @@ function ThreadView({
 							<span className="mb-1 block font-sans text-[10.5px] font-semibold uppercase tracking-wide text-subtle">
 								Total price
 							</span>
-							<span className="flex h-10 items-center rounded-lg bg-page/60 pl-3 font-sans text-[14px] text-subtle">
+							<span className="flex h-10 items-center rounded-lg bg-page/60 border border-hairline pl-3 font-sans text-[14px] text-subtle transition-colors focus-within:border-brand/60">
 								$
 								<input
 									type="text"
@@ -593,7 +604,7 @@ function ThreadView({
 								onChange={(e) =>
 									setCDays(e.target.value.replace(/[^0-9]/g, ""))
 								}
-								className="h-10 w-full rounded-lg bg-page/60 px-3 font-sans text-[14px] text-primary outline-none tabular-nums"
+								className="h-10 w-full rounded-lg bg-page/60 border border-hairline px-3 font-sans text-[14px] text-primary outline-none tabular-nums transition-colors focus:border-brand/60"
 							/>
 						</label>
 						<button
@@ -707,7 +718,7 @@ function ThreadView({
 							}
 						}}
 						placeholder="Write to the other party…"
-						className="h-11 min-w-0 flex-1 rounded-pill bg-sunken px-4 font-sans text-[14px] text-primary outline-none placeholder:text-subtle"
+						className="h-11 min-w-0 flex-1 rounded-pill bg-sunken border border-hairline px-4 font-sans text-[14px] text-primary outline-none transition-colors placeholder:text-subtle focus:border-brand/60"
 					/>
 					<button
 						type="button"
@@ -724,7 +735,19 @@ function ThreadView({
 	);
 }
 
-/* ── new booking (v1 entry point; phase 4 moves this onto profiles) ── */
+/* ── new booking ─────────────────────────────────────────────────── */
+
+/** The house text input, verbatim from the design system's other modals —
+ *  sunken fill, hairline border, brand-washed focus. An input with no border
+ *  and no focus state reads as disabled, which is exactly what got reported. */
+const FIELD =
+	"h-11 w-full rounded-lg bg-sunken border border-hairline px-3.5 font-sans text-[14px] text-primary placeholder:text-subtle outline-none transition-colors focus:border-brand/60";
+
+const ACCEPT: Record<"image" | "video" | "audio", string> = {
+	image: "image/*",
+	video: "video/*",
+	audio: "audio/*",
+};
 
 function NewBookingSheet({
 	onClose,
@@ -738,6 +761,8 @@ function NewBookingSheet({
 	initialUsername?: string;
 }) {
 	const { toast } = useToast();
+	useOverlayDismiss(true, onClose);
+
 	const [username, setUsername] = useState(initialUsername);
 	const [format, setFormat] = useState<"image" | "video" | "audio">("image");
 	const [days, setDays] = useState("7");
@@ -746,13 +771,14 @@ function NewBookingSheet({
 	);
 	const [note, setNote] = useState("");
 	const [mediaUrl, setMediaUrl] = useState("");
-	const [linkUrl, setLinkUrl] = useState("");
 	const [coverUrl, setCoverUrl] = useState("");
+	const [linkUrl, setLinkUrl] = useState("");
+	const [uploading, setUploading] = useState<"media" | "cover" | null>(null);
 	const [rate, setRate] = useState<number | null>(null);
 	const [sending, setSending] = useState(false);
+	const mediaInputRef = useRef<HTMLInputElement>(null);
+	const coverInputRef = useRef<HTMLInputElement>(null);
 
-	// People type handles WITH the @ — that is how handles are written
-	// everywhere else in the app. The lookup key is the bare name.
 	const handle = username.trim().replace(/^@+/, "");
 
 	// Quote as they type, so the ask is priced before it is sent.
@@ -776,6 +802,32 @@ function NewBookingSheet({
 		return () => clearTimeout(t);
 	}, [handle, format, authed]);
 
+	// Switching format retires a creative of the wrong kind — an image booked
+	// as a video slot serves nothing.
+	useEffect(() => {
+		setMediaUrl("");
+		setCoverUrl("");
+	}, [format]);
+
+	/** Straight to R2 through the existing upload route; the returned URL is
+	 *  what rides the booking. */
+	const upload = async (file: File, kind: "media" | "cover") => {
+		setUploading(kind);
+		try {
+			const form = new FormData();
+			form.append("file", file);
+			const data = await authed("post", "/api/messages/upload", form);
+			if (kind === "media") setMediaUrl(data.url);
+			else setCoverUrl(data.url);
+		} catch (err: any) {
+			toast(err?.response?.data?.message ?? "Upload failed", {
+				type: "error",
+			});
+		} finally {
+			setUploading(null);
+		}
+	};
+
 	const submit = async () => {
 		if (sending) return;
 		setSending(true);
@@ -789,14 +841,12 @@ function NewBookingSheet({
 				note: note.trim() || undefined,
 				// The exact creative rides the request, so what the creator
 				// approves is what will serve — never a swap after acceptance.
-				creative: mediaUrl.trim()
+				creative: mediaUrl
 					? {
-							url: mediaUrl.trim(),
+							url: mediaUrl,
 							linkUrl: linkUrl.trim() || undefined,
 							coverUrl:
-								format === "audio" && coverUrl.trim()
-									? coverUrl.trim()
-									: undefined,
+								format === "audio" && coverUrl ? coverUrl : undefined,
 						}
 					: undefined,
 			});
@@ -811,65 +861,179 @@ function NewBookingSheet({
 		}
 	};
 
-	const field =
-		"h-11 w-full rounded-lg bg-sunken px-3.5 font-sans text-[14px] text-primary outline-none placeholder:text-subtle";
+	const label = (text: string) => (
+		<span className="mb-1.5 block font-sans text-[11px] font-semibold uppercase tracking-[0.1em] text-subtle">
+			{text}
+		</span>
+	);
 
 	return (
-		<div
-			className="fixed inset-0 z-modal flex items-end justify-center bg-scrim sm:items-center"
-			onClick={onClose}
-			onKeyDown={(e) => e.key === "Escape" && onClose()}
-			role="presentation"
-		>
-			<div
-				className="w-full max-w-md rounded-t-xl border border-hairline bg-surface p-5 shadow-nav sm:rounded-xl"
-				onClick={(e) => e.stopPropagation()}
-				role="dialog"
-				aria-label="New booking request"
-			>
-				<div className="mb-4 flex items-center justify-between">
-					<h2 className="font-display text-[16px] font-semibold">
-						Book ad space
-					</h2>
-					<button
-						type="button"
-						onClick={onClose}
-						aria-label="Close"
-						className="flex h-9 w-9 items-center justify-center rounded-pill text-muted hover:bg-raised cursor-pointer"
-					>
-						<X size={16} weight="bold" />
-					</button>
-				</div>
-
-				<div className="flex flex-col gap-3">
-					<input
-						value={username}
-						onChange={(e) => setUsername(e.target.value)}
-						placeholder="Creator's @username"
-						className={field}
-					/>
-					<div className="flex gap-2">
-						{(["image", "video", "audio"] as const).map((f) => (
-							<button
-								key={f}
-								type="button"
-								onClick={() => setFormat(f)}
-								className={clsx(
-									"h-9 flex-1 rounded-pill font-sans text-[13px] font-medium transition-colors cursor-pointer",
-									format === f
-										? "bg-primary text-page"
-										: "bg-raised text-muted hover:text-primary",
-								)}
-							>
-								{f}
-							</button>
-						))}
+		<>
+			<OverlayScrim onClose={onClose} />
+			<OverlayPanel variant="sheet" label="Book ad space">
+				<OverlayHeader title="Book ad space" onClose={onClose} />
+				<div className="flex flex-col gap-4 overflow-y-auto px-5 pb-5">
+					<div>
+						{label("Creator")}
+						<input
+							value={username}
+							onChange={(e) => setUsername(e.target.value)}
+							placeholder="@username"
+							className={FIELD}
+						/>
 					</div>
-					<div className="flex gap-2">
-						<label className="flex-1">
-							<span className="mb-1 block font-sans text-[11.5px] font-semibold uppercase tracking-wide text-subtle">
-								Days
-							</span>
+
+					<div>
+						{label("Format")}
+						<div className="flex gap-2">
+							{(["image", "video", "audio"] as const).map((f) => (
+								<button
+									key={f}
+									type="button"
+									onClick={() => setFormat(f)}
+									className={clsx(
+										"h-10 flex-1 rounded-pill font-sans text-[13px] font-medium capitalize transition-colors cursor-pointer",
+										format === f
+											? "bg-primary text-page"
+											: "bg-sunken border border-hairline text-muted hover:text-primary",
+									)}
+								>
+									{f}
+								</button>
+							))}
+						</div>
+					</div>
+
+					<div>
+						{label(format === "audio" ? "Audio file" : `${format} creative`)}
+						{/* The creative is UPLOADED, not linked: a dropzone that
+						    becomes its own preview. The picked file goes to R2
+						    immediately, so send needs nothing else in flight. */}
+						{mediaUrl ? (
+							<div className="relative overflow-hidden rounded-xl border border-hairline bg-sunken">
+								{format === "image" && (
+									// eslint-disable-next-line @next/next/no-img-element
+									<img
+										src={mediaUrl}
+										alt="Creative preview"
+										className="max-h-[200px] w-full object-cover"
+									/>
+								)}
+								{format === "video" && (
+									// biome-ignore lint/a11y/useMediaCaption: preview of own upload
+									<video
+										src={mediaUrl}
+										controls
+										muted
+										playsInline
+										className="max-h-[200px] w-full bg-black object-contain"
+									/>
+								)}
+								{format === "audio" && (
+									// biome-ignore lint/a11y/useMediaCaption: preview of own upload
+									<audio src={mediaUrl} controls className="w-full p-3" />
+								)}
+								<button
+									type="button"
+									onClick={() => setMediaUrl("")}
+									aria-label="Remove creative"
+									className="absolute right-2 top-2 flex h-8 w-8 cursor-pointer items-center justify-center rounded-pill bg-page/85 text-primary transition-colors hover:bg-page"
+								>
+									<X size={14} weight="bold" />
+								</button>
+							</div>
+						) : (
+							<button
+								type="button"
+								onClick={() => mediaInputRef.current?.click()}
+								disabled={uploading === "media"}
+								className="flex h-28 w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-hairline bg-sunken/50 transition-colors hover:border-brand/50 hover:bg-sunken disabled:opacity-60"
+							>
+								<UploadSimple size={20} className="text-muted" />
+								<span className="font-sans text-[13px] font-medium text-muted">
+									{uploading === "media"
+										? "Uploading…"
+										: `Upload ${format === "audio" ? "audio" : format}`}
+								</span>
+								<span className="font-sans text-[11px] text-subtle">
+									up to 50MB
+								</span>
+							</button>
+						)}
+						<input
+							ref={mediaInputRef}
+							type="file"
+							accept={ACCEPT[format]}
+							className="hidden"
+							onChange={(e) => {
+								const f = e.target.files?.[0];
+								if (f) void upload(f, "media");
+								e.target.value = "";
+							}}
+						/>
+					</div>
+
+					{format === "audio" && (
+						<div>
+							{label("Cover image")}
+							{coverUrl ? (
+								<div className="relative h-24 w-40 overflow-hidden rounded-xl border border-hairline">
+									{/* eslint-disable-next-line @next/next/no-img-element */}
+									<img
+										src={coverUrl}
+										alt="Cover preview"
+										className="h-full w-full object-cover"
+									/>
+									<button
+										type="button"
+										onClick={() => setCoverUrl("")}
+										aria-label="Remove cover"
+										className="absolute right-1.5 top-1.5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-pill bg-page/85 text-primary"
+									>
+										<X size={12} weight="bold" />
+									</button>
+								</div>
+							) : (
+								<button
+									type="button"
+									onClick={() => coverInputRef.current?.click()}
+									disabled={uploading === "cover"}
+									className="flex h-16 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-hairline bg-sunken/50 font-sans text-[13px] font-medium text-muted transition-colors hover:border-brand/50 disabled:opacity-60"
+								>
+									<UploadSimple size={16} />
+									{uploading === "cover"
+										? "Uploading…"
+										: "Upload the banner behind the play button"}
+								</button>
+							)}
+							<input
+								ref={coverInputRef}
+								type="file"
+								accept="image/*"
+								className="hidden"
+								onChange={(e) => {
+									const f = e.target.files?.[0];
+									if (f) void upload(f, "cover");
+									e.target.value = "";
+								}}
+							/>
+						</div>
+					)}
+
+					<div>
+						{label("Click-through link")}
+						<input
+							value={linkUrl}
+							onChange={(e) => setLinkUrl(e.target.value)}
+							placeholder="https://your-site.com"
+							inputMode="url"
+							className={FIELD}
+						/>
+					</div>
+
+					<div className="flex gap-3">
+						<div className="flex-1">
+							{label("Days")}
 							<input
 								type="text"
 								inputMode="numeric"
@@ -877,72 +1041,56 @@ function NewBookingSheet({
 								onChange={(e) =>
 									setDays(e.target.value.replace(/[^0-9]/g, ""))
 								}
-								className={field}
+								className={clsx(FIELD, "tabular-nums")}
 							/>
-						</label>
-						<label className="flex-1">
-							<span className="mb-1 block font-sans text-[11.5px] font-semibold uppercase tracking-wide text-subtle">
-								Starts
-							</span>
+						</div>
+						<div className="flex-1">
+							{label("Starts")}
 							<input
 								type="date"
 								value={startAt}
 								onChange={(e) => setStartAt(e.target.value)}
-								className={field}
+								className={clsx(FIELD, "tabular-nums")}
 							/>
-						</label>
+						</div>
 					</div>
-					<input
-						value={mediaUrl}
-						onChange={(e) => setMediaUrl(e.target.value)}
-						placeholder={
-							format === "audio"
-								? "Audio file URL (mp3)"
-								: format === "video"
-									? "Video file URL (mp4)"
-									: "Banner image URL"
-						}
-						className={field}
-					/>
-					{format === "audio" && (
-						<input
-							value={coverUrl}
-							onChange={(e) => setCoverUrl(e.target.value)}
-							placeholder="Cover image URL (shown behind the play button)"
-							className={field}
+
+					<div>
+						{label("Note to the creator")}
+						<textarea
+							value={note}
+							onChange={(e) => setNote(e.target.value)}
+							placeholder="Anything they should know (optional)"
+							rows={2}
+							className={clsx(
+								FIELD,
+								"h-auto resize-none py-2.5 leading-relaxed",
+							)}
 						/>
-					)}
-					<input
-						value={linkUrl}
-						onChange={(e) => setLinkUrl(e.target.value)}
-						placeholder="Click-through link (https://…)"
-						className={field}
-					/>
-					<textarea
-						value={note}
-						onChange={(e) => setNote(e.target.value)}
-						placeholder="Anything the creator should know (optional)"
-						rows={2}
-						className="w-full resize-none rounded-lg bg-sunken px-3.5 py-2.5 font-sans text-[14px] text-primary outline-none placeholder:text-subtle"
-					/>
+					</div>
+
 					<button
 						type="button"
-						disabled={!handle || sending || !(Number(days) >= 1)}
+						disabled={
+							!handle || sending || uploading !== null || !(Number(days) >= 1)
+						}
 						onClick={submit}
-						className="h-11 rounded-pill bg-brand font-sans text-[14px] font-semibold text-brand-on transition-colors hover:opacity-90 disabled:opacity-50 cursor-pointer"
+						className="h-12 shrink-0 cursor-pointer rounded-pill bg-brand font-sans text-[14.5px] font-semibold text-brand-on transition-colors hover:opacity-90 disabled:opacity-50"
 					>
-						{rate !== null && Number(days) > 0
-							? `Request · ${usd(rate * Number(days))} for ${days} day${days === "1" ? "" : "s"}`
-							: "Send request"}
+						{sending
+							? "Sending…"
+							: rate !== null && Number(days) > 0
+								? `Request · ${usd(rate * Number(days))} for ${days} day${days === "1" ? "" : "s"}`
+								: "Send request"}
 					</button>
 					{rate === null && handle && (
 						<p className="text-center font-sans text-[12px] text-subtle">
-							No {format} rate published for @{handle} — the request
-							may be refused.
+							No {format} rate published for @{handle} — the request may be
+							refused.
 						</p>
 					)}
 				</div>
-			</div>
-		</div>
+			</OverlayPanel>
+		</>
 	);
 }
