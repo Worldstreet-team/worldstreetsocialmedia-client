@@ -30,6 +30,7 @@ import { LiveDock } from "@/components/live/LiveDock";
 import { NotificationCountSync } from "@/components/providers/NotificationCountSync";
 import { SpacesLiveSync } from "@/components/providers/SpacesLiveSync";
 import { MessageCountSync } from "@/components/providers/MessageCountSync";
+import { BmCountSync } from "@/components/providers/BmCountSync";
 import { EngagementSync } from "@/components/providers/EngagementSync";
 
 import {
@@ -203,6 +204,7 @@ export default async function RootLayout({
                                         <NotificationCountSync />
                                         <SpacesLiveSync />
 										<MessageCountSync />
+										<BmCountSync />
 										<EngagementSync />
                                         {/* palette, search, tour: own chunks,
                                             loaded after hydration — see

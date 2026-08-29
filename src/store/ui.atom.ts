@@ -54,16 +54,23 @@ export const notificationFilterAtom = atom<"all" | "mentions" | "follows" | "ver
 	"all",
 );
 
+/** Threads in Business holding news for this account. Seeded by BmCountSync,
+ *  zeroed thread-by-thread as deal rooms are opened. */
+export const unreadBmCountAtom = atom(0);
+
 export const badgeForNavKey = (
 	labelKey: string,
 	notifications: number,
 	messages: number,
+	bm = 0,
 ) =>
 	labelKey === "nav.notifications"
 		? notifications
 		: labelKey === "nav.messages"
 			? messages
-			: 0;
+			: labelKey === "nav.bm"
+				? bm
+				: 0;
 
 /**
  * The search window. Separate from `commandPaletteOpenAtom` on purpose: the

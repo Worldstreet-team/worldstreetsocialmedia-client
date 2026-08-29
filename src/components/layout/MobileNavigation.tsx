@@ -37,6 +37,7 @@ import { FeedHeaderActions } from "@/components/feed/FeedHeaderActions";
 import { unreadMessagesCountAtom } from "@/store/messageCache";
 import {
 	badgeForNavKey,
+	unreadBmCountAtom,
 	searchOpenAtom,
 	unreadNotificationsCountAtom,
 } from "@/store/ui.atom";
@@ -47,6 +48,7 @@ export function MobileNavigation() {
 	const user = useAtomValue(userAtom);
 	const unreadCount = useAtomValue(unreadMessagesCountAtom);
 	const unreadNotifications = useAtomValue(unreadNotificationsCountAtom);
+	const unreadBm = useAtomValue(unreadBmCountAtom);
 	const { signOut } = useClerk();
 	const { resolvedTheme, setTheme } = useTheme();
 	const [mounted, setMounted] = useState(false);
@@ -273,6 +275,7 @@ export function MobileNavigation() {
 									item.labelKey,
 									unreadNotifications,
 									unreadCount,
+									unreadBm,
 								);
 
 								return (

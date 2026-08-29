@@ -33,7 +33,11 @@ import { ECOSYSTEM } from "@/data/ecosystem";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { unreadMessagesCountAtom } from "@/store/messageCache";
 import { liveSpacesCountAtom } from "@/store/voice.atom";
-import { badgeForNavKey, unreadNotificationsCountAtom } from "@/store/ui.atom";
+import {
+	badgeForNavKey,
+	unreadBmCountAtom,
+	unreadNotificationsCountAtom,
+} from "@/store/ui.atom";
 import { handleSignOut } from "@/lib/utils";
 import { withThemeTransition } from "@/lib/theme-transition";
 import { mainScroller } from "@/lib/utils";
@@ -73,6 +77,7 @@ export function LeftSidebar() {
 	const user = useAtomValue(userAtom);
 	const unreadCount = useAtomValue(unreadMessagesCountAtom);
 	const unreadNotifications = useAtomValue(unreadNotificationsCountAtom);
+	const unreadBm = useAtomValue(unreadBmCountAtom);
 	// Live rooms are not unread items, so they get a pulse rather than a
 	// number — see the render below.
 	const liveSpaces = useAtomValue(liveSpacesCountAtom);
@@ -129,7 +134,7 @@ export function LeftSidebar() {
 	// Keyed on labelKey, not the display title: labelKey is the stable i18n
 	// identifier, so renaming the visible label can't silently drop a badge.
 	const badgeFor = (item: SidebarItem) =>
-		badgeForNavKey(item.labelKey, unreadNotifications, unreadCount);
+		badgeForNavKey(item.labelKey, unreadNotifications, unreadCount, unreadBm);
 
 	const setPremiumOpen = useSetAtom(premiumOpenAtom);
 

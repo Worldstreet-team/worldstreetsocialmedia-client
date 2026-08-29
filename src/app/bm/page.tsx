@@ -3,7 +3,7 @@
 import { useAuth } from "@clerk/nextjs";
 import axios from "axios";
 import clsx from "clsx";
-import { useAtomValue } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	CaretLeft,
@@ -19,6 +19,7 @@ import Link from "next/link";
 import { Briefcase } from "lucide-react";
 import { BACKEND_URL } from "@/const";
 import { userAtom } from "@/store/user.atom";
+import { unreadBmCountAtom } from "@/store/ui.atom";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast/ToastContext";
@@ -88,6 +89,7 @@ interface BmBooking {
 
 interface BmThread {
 	_id: string;
+	unread?: boolean;
 	booking: BmBooking;
 	creator: BmParty;
 	advertiser: BmParty;
@@ -144,6 +146,7 @@ const STATUS_CHIP: Record<BmBooking["status"], string> = {
 export default function BmPage() {
 	const { getToken } = useAuth();
 	const me = useAtomValue(userAtom);
+	const setUnreadBm = useSetAtom(unreadBmCountAtom);
 	const { toast } = useToast();
 
 	const [threads, setThreads] = useState<BmThread[]>([]);
@@ -261,6 +264,22 @@ export default function BmPage() {
 		const t = setInterval(() => void loadMessages(activeId), 5_000);
 		return () => clearInterval(t);
 	}, [activeId, loadMessages]);
+
+	// Opening a room IS reading it — the same instant Messages zeroes a
+	// conversation. Server watermark first, then the row and the nav badge,
+	// so every surface tells the same story.
+	useEffect(() => {
+		if (!activeId) return;
+		const t = threads.find((th) => th._id === activeId);
+		if (!t?.unread) return;
+		void authed("post", `/api/bm/threads/${activeId}/read`).catch(() => {});
+		setThreads((prev) =>
+			prev.map((th) =>
+				th._id === activeId ? { ...th, unread: false } : th,
+			),
+		);
+		setUnreadBm((c) => Math.max(0, c - 1));
+	}, [activeId, threads, authed, setUnreadBm]);
 
 	// The receipt rides the full booking document.
 	useEffect(() => {
@@ -444,7 +463,12 @@ export default function BmPage() {
 									</span>
 									<span className="min-w-0 flex-1">
 										<span className="flex items-baseline justify-between gap-2">
-											<span className="truncate font-sans text-[14.5px] font-semibold text-primary">
+											<span
+												className={clsx(
+													"truncate font-sans text-[14.5px] text-primary",
+													t.unread ? "font-bold" : "font-semibold",
+												)}
+											>
 												{other?.firstName || other?.username}
 											</span>
 											<span className="shrink-0 font-sans text-[11.5px] text-subtle tabular-nums">
@@ -452,16 +476,19 @@ export default function BmPage() {
 											</span>
 										</span>
 										<span className="mt-0.5 flex items-center gap-1.5">
-											{myMove ? (
+											{myMove || t.unread ? (
 												<span
 													aria-hidden
-													className="h-1.5 w-1.5 shrink-0 rounded-pill bg-gold"
+													className={clsx(
+														"h-1.5 w-1.5 shrink-0 rounded-pill",
+														myMove ? "bg-gold" : "bg-brand",
+													)}
 												/>
 											) : null}
 											<span
 												className={clsx(
 													"truncate font-sans text-[13px]",
-													myMove
+													myMove || t.unread
 														? "font-medium text-primary"
 														: "text-muted",
 												)}
