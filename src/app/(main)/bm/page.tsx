@@ -24,6 +24,8 @@ import {
 	OverlayScrim,
 	useOverlayDismiss,
 } from "@/components/ui/Overlay";
+import CalendarField from "@/components/ui/CalendarField";
+import { AdSlotPreview } from "@/components/profile/AdSlot";
 
 /**
  * Business Messages — the deal room for ad bookings.
@@ -766,9 +768,13 @@ function NewBookingSheet({
 	const [username, setUsername] = useState(initialUsername);
 	const [format, setFormat] = useState<"image" | "video" | "audio">("image");
 	const [days, setDays] = useState("7");
-	const [startAt, setStartAt] = useState(
-		new Date(Date.now() + 24 * 3600_000).toISOString().slice(0, 10),
-	);
+	// CalendarField speaks local "YYYY-MM-DDTHH:mm"; default tomorrow 9am.
+	const [when, setWhen] = useState(() => {
+		const d = new Date(Date.now() + 24 * 3600_000);
+		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}T09:00`;
+	});
+	/** Two-step: fill the form, then SEE the ad before sending it. */
+	const [step, setStep] = useState<"form" | "preview">("form");
 	const [note, setNote] = useState("");
 	const [mediaUrl, setMediaUrl] = useState("");
 	const [coverUrl, setCoverUrl] = useState("");
@@ -837,7 +843,7 @@ function NewBookingSheet({
 				creatorUsername: handle,
 				format,
 				days: runDays,
-				startAt: new Date(`${startAt}T00:00:00Z`).toISOString(),
+				startAt: new Date(when).toISOString(),
 				note: note.trim() || undefined,
 				// The exact creative rides the request, so what the creator
 				// approves is what will serve — never a swap after acceptance.
@@ -871,7 +877,77 @@ function NewBookingSheet({
 		<>
 			<OverlayScrim onClose={onClose} />
 			<OverlayPanel variant="sheet" label="Book ad space">
-				<OverlayHeader title="Book ad space" onClose={onClose} />
+				<OverlayHeader
+					title={step === "preview" ? "Preview" : "Book ad space"}
+					onClose={onClose}
+				/>
+				{step === "preview" ? (
+					<div className="flex flex-col gap-4 overflow-y-auto px-5 pb-5">
+						{/* Exactly what @handle's profile will render — same
+						    component, same chrome. What you preview is what the
+						    creator approves and the slot serves. */}
+						<AdSlotPreview
+							format={format}
+							creative={{
+								url: mediaUrl || undefined,
+								linkUrl: linkUrl.trim() || undefined,
+								coverUrl:
+									format === "audio" && coverUrl ? coverUrl : undefined,
+							}}
+						/>
+						{!mediaUrl && (
+							<p className="rounded-lg bg-sunken px-3.5 py-2.5 font-sans text-[12.5px] text-muted">
+								No creative attached — the creator will see the request
+								without a preview and the slot will say "creative
+								pending" until one is agreed in the thread.
+							</p>
+						)}
+						<div className="overflow-hidden rounded-xl border border-hairline">
+							{[
+								["Creator", `@${handle}`],
+								["Format", format],
+								[
+									"Run",
+									`${days} day${days === "1" ? "" : "s"} from ${new Date(when).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`,
+								],
+								...(rate !== null
+									? [["Total", usd(rate * Number(days || 0))]]
+									: []),
+							].map(([k, v]) => (
+								<div
+									key={k}
+									className="flex items-center justify-between border-b border-hairline px-3.5 py-2.5 font-sans text-[13px] last:border-b-0"
+								>
+									<span className="text-subtle">{k}</span>
+									<span className="font-medium capitalize text-primary tabular-nums">
+										{v}
+									</span>
+								</div>
+							))}
+						</div>
+						<div className="flex gap-2">
+							<button
+								type="button"
+								onClick={() => setStep("form")}
+								className="h-12 flex-1 cursor-pointer rounded-pill bg-raised font-sans text-[14px] font-medium text-primary transition-colors hover:bg-chip"
+							>
+								Back
+							</button>
+							<button
+								type="button"
+								disabled={sending}
+								onClick={submit}
+								className="h-12 flex-[2] cursor-pointer rounded-pill bg-brand font-sans text-[14.5px] font-semibold text-brand-on transition-colors hover:opacity-90 disabled:opacity-50"
+							>
+								{sending
+									? "Sending…"
+									: rate !== null && Number(days) > 0
+										? `Send request · ${usd(rate * Number(days))}`
+										: "Send request"}
+							</button>
+						</div>
+					</div>
+				) : (
 				<div className="flex flex-col gap-4 overflow-y-auto px-5 pb-5">
 					<div>
 						{label("Creator")}
@@ -1031,28 +1107,23 @@ function NewBookingSheet({
 						/>
 					</div>
 
-					<div className="flex gap-3">
-						<div className="flex-1">
-							{label("Days")}
-							<input
-								type="text"
-								inputMode="numeric"
-								value={days}
-								onChange={(e) =>
-									setDays(e.target.value.replace(/[^0-9]/g, ""))
-								}
-								className={clsx(FIELD, "tabular-nums")}
-							/>
-						</div>
-						<div className="flex-1">
-							{label("Starts")}
-							<input
-								type="date"
-								value={startAt}
-								onChange={(e) => setStartAt(e.target.value)}
-								className={clsx(FIELD, "tabular-nums")}
-							/>
-						</div>
+					<div>
+						{label("Days")}
+						<input
+							type="text"
+							inputMode="numeric"
+							value={days}
+							onChange={(e) =>
+								setDays(e.target.value.replace(/[^0-9]/g, ""))
+							}
+							className={clsx(FIELD, "tabular-nums")}
+						/>
+					</div>
+					<div>
+						{label("Starts")}
+						{/* The house calendar, not the OS widget — same control
+						    Spaces schedule with. */}
+						<CalendarField value={when} onChange={setWhen} />
 					</div>
 
 					<div>
@@ -1072,16 +1143,12 @@ function NewBookingSheet({
 					<button
 						type="button"
 						disabled={
-							!handle || sending || uploading !== null || !(Number(days) >= 1)
+							!handle || uploading !== null || !(Number(days) >= 1)
 						}
-						onClick={submit}
+						onClick={() => setStep("preview")}
 						className="h-12 shrink-0 cursor-pointer rounded-pill bg-brand font-sans text-[14.5px] font-semibold text-brand-on transition-colors hover:opacity-90 disabled:opacity-50"
 					>
-						{sending
-							? "Sending…"
-							: rate !== null && Number(days) > 0
-								? `Request · ${usd(rate * Number(days))} for ${days} day${days === "1" ? "" : "s"}`
-								: "Send request"}
+						Preview request
 					</button>
 					{rate === null && handle && (
 						<p className="text-center font-sans text-[12px] text-subtle">
@@ -1090,6 +1157,7 @@ function NewBookingSheet({
 						</p>
 					)}
 				</div>
+				)}
 			</OverlayPanel>
 		</>
 	);

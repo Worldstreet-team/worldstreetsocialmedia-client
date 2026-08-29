@@ -361,6 +361,54 @@ function SponsoredCard({
 	);
 }
 
+/**
+ * The creative exactly as the profile will serve it — Sponsored label, media
+ * chrome, Visit row — with nothing interactive behind it. The booking sheet
+ * shows this before the request is sent, so what the advertiser previews,
+ * the creator approves, and the profile renders are one and the same thing.
+ */
+export function AdSlotPreview({
+	format,
+	creative,
+	advertiserUsername,
+}: {
+	format: "image" | "video" | "audio";
+	creative: { url?: string; linkUrl?: string; coverUrl?: string };
+	advertiserUsername?: string;
+}) {
+	return (
+		<div>
+			<div className="mb-2 flex items-center gap-2">
+				<h3 className="flex-1 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">
+					Sponsored
+					{advertiserUsername && (
+						<span className="normal-case tracking-normal text-muted">
+							{" · @"}
+							{advertiserUsername}
+						</span>
+					)}
+				</h3>
+			</div>
+			<div className="overflow-hidden rounded-xl border border-hairline bg-sunken">
+				<CreativeMedia
+					slot={{ _id: "preview", format, creative, startAt: "", endAt: "" }}
+				/>
+				{creative.linkUrl && (
+					<div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+						<span className="min-w-0 truncate font-sans text-[12.5px] text-subtle">
+							{safeHost(creative.linkUrl)}
+						</span>
+						<span className="flex h-8 shrink-0 items-center gap-1 rounded-pill bg-primary px-3.5 font-sans text-[12.5px] font-semibold text-page">
+							Visit
+							<ArrowUpRight size={13} weight="bold" />
+						</span>
+					</div>
+				)}
+			</div>
+		</div>
+	);
+}
+
 function safeHost(url: string): string {
 	try {
 		return new URL(url).host;
