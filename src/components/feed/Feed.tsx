@@ -20,7 +20,10 @@ import {
 	PostProps,
 } from "@/components/feed/PostCard";
 import { PostComposer } from "@/components/feed/PostComposer";
-import { getFeedAction } from "@/lib/feed.actions";
+import axios from "axios";
+import { useAuth } from "@clerk/nextjs";
+import { BACKEND_URL } from "@/const";
+import { LOCALE_COOKIE } from "@/i18n/config";
 import { getPostByIdAction } from "@/lib/post.actions";
 // 03-icons: `plus`, `user-plus` and `arrow-up` are all in the standardized set.
 import { ArrowUp, Plus, UserPlus } from "lucide-react";
@@ -115,6 +118,17 @@ export interface FeedSeed {
 	hasMore: boolean;
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || BACKEND_URL;
+
+/** The reader's locale, straight from the cookie the middleware maintains —
+ *  the gateway pre-translates the page when it knows the language. */
+function localeParam(): string {
+	const m = document.cookie.match(
+		new RegExp(`(?:^|; )${LOCALE_COOKIE}=([^;]+)`),
+	);
+	return m ? decodeURIComponent(m[1]) : "";
+}
+
 export default function Feed({
 	initialData = null,
 }: {
@@ -163,6 +177,7 @@ export default function Feed({
 	 */
 	const prependedRef = useRef<PostProps[]>([]);
 	const me = useAtomValue(userAtom);
+	const { getToken } = useAuth();
 	const [isPosting, setIsPosting] = useState(false);
 	const { toast } = useToast();
 
@@ -291,12 +306,51 @@ export default function Feed({
 	}, [autoTranslate, feedState.posts, setTranslations]);
 
 	// Persist the top of the For-You timeline as the next session's first
-	// paint. Keyed per user; posts-change only (live counts ride the separate
-	// engagement store, so this doesn't rewrite on every like).
+	// paint — but OFF the interaction path. localStorage.setItem is
+	// synchronous main-thread I/O, and this used to run on every posts
+	// change: each pagination, each prepend, each silent revalidate — the
+	// runway prefetch fired it several times in the first seconds, exactly
+	// when the phone is busiest. Now: skipped when the top of the timeline
+	// has not actually changed, debounced, and written in idle time. One
+	// flush on pagehide catches whatever the debounce was still holding.
+	const snapshotSigRef = useRef("");
+	const snapshotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	useEffect(() => {
-		if (me?._id && feedState.mode === "foryou" && feedState.posts.length > 0) {
-			saveFeedSnapshot(String(me._id), feedState.posts);
-		}
+		if (!me?._id || feedState.mode !== "foryou" || feedState.posts.length === 0)
+			return;
+		const sig = feedState.posts
+			.slice(0, 15)
+			.map((p) => p.id)
+			.join(",");
+		if (sig === snapshotSigRef.current) return;
+		if (snapshotTimerRef.current) clearTimeout(snapshotTimerRef.current);
+		const posts = feedState.posts;
+		const uid = String(me._id);
+		snapshotTimerRef.current = setTimeout(() => {
+			const write = () => {
+				snapshotSigRef.current = sig;
+				saveFeedSnapshot(uid, posts);
+			};
+			if ("requestIdleCallback" in window) {
+				(window as any).requestIdleCallback(write, { timeout: 2000 });
+			} else {
+				write();
+			}
+		}, 3000);
+		return () => {
+			if (snapshotTimerRef.current) clearTimeout(snapshotTimerRef.current);
+		};
+	}, [feedState.posts, feedState.mode, me?._id]);
+
+	// The debounce must not eat the final state of a closing tab.
+	useEffect(() => {
+		const flush = () => {
+			if (me?._id && feedState.mode === "foryou" && feedState.posts.length > 0) {
+				saveFeedSnapshot(String(me._id), feedState.posts);
+			}
+		};
+		window.addEventListener("pagehide", flush);
+		return () => window.removeEventListener("pagehide", flush);
 	}, [feedState.posts, feedState.mode, me?._id]);
 
 	// Both tabs are now server queries, so what came back IS what to show —
@@ -549,7 +603,38 @@ export default function Feed({
 			// asked for it — it filtered the ranked For-You page client-side
 			// instead, against an atom that only fills as you click Follow and
 			// is empty after every reload.
-			const result = await getFeedAction(currentCursor, FEED_PAGE_SIZE, tab);
+			// Direct browser → gateway. This used to be a server action, which
+			// meant browser → Next → gateway → Atlas, AND Next runs a client's
+			// actions one at a time — so every pagination queued behind
+			// whatever else the page was doing. This is the single change the
+			// fetch audit called for on the hottest path; the SSR seed still
+			// fetches server-side, where the extra hop does not exist.
+			const token = await getToken();
+			const locale = localeParam();
+			const result = await axios
+				.get(`${API_URL}/api/feed`, {
+					params: {
+						limit: FEED_PAGE_SIZE,
+						mode: tab,
+						...(currentCursor ? { cursor: currentCursor } : {}),
+						...(locale ? { locale } : {}),
+					},
+					headers: { Authorization: `Bearer ${token}` },
+				})
+				.then((r) => ({
+					success: true as const,
+					data: r.data,
+					message: undefined as string | undefined,
+				}))
+				.catch((err) => ({
+					success: false as const,
+					data: undefined as any,
+					message:
+						err?.response?.data?.message ??
+						(err?.response?.status === 429
+							? "Too many requests — give it a moment"
+							: undefined),
+				}));
 
 			if (result.success && result.data) {
 				const apiPosts = result.data.posts;
@@ -850,7 +935,7 @@ export default function Feed({
 							cursorDepth: Math.floor(index / 10),
 							promoted: post.promoted,
 						}}
-						className="animate-rise"
+						className="animate-rise feed-cv"
 						style={{
 							animationDelay: introPlayedRef.current
 								? "0ms"

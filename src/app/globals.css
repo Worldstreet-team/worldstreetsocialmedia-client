@@ -1120,3 +1120,13 @@ video,
 /* The ::before veil that used to sit here is gone: the gradient layer above
    already dissolves the art into the page, and running both crushed the
    picture to near-black. */
+
+/* CSS-native windowing for long feeds: an off-screen card skips layout and
+   paint entirely, which is most of what scrolling costs a phone. The `auto`
+   keyword in contain-intrinsic-size remembers each card's real height once
+   rendered, so scrollbar and restore positions stay honest; 420px is only
+   the first-guess placeholder. */
+.feed-cv {
+	content-visibility: auto;
+	contain-intrinsic-size: auto 420px;
+}
