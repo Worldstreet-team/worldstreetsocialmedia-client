@@ -17,6 +17,9 @@ export interface LiveEntry {
 	firstName?: string;
 	lastName?: string;
 	isVerified?: boolean;
+	/** Co-hosts currently ON the stage (merged co-live / approved guests).
+	 *  Empty for a solo broadcast. */
+	stage?: { username: string; avatar: string }[];
 }
 
 /**

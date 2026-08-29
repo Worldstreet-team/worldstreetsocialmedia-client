@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useLiveNow } from "@/hooks/useLiveNow";
 import { useT } from "@/i18n/client";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import { StageAvatar } from "@/components/live/StageAvatar";
 import { ExploreSection, Rail } from "./ExploreSection";
 
 /**
@@ -41,7 +42,7 @@ export function LiveStrip({ delay }: { delay: number }) {
               >
                 <span className="relative block h-16 w-16 rounded-pill p-[3px] ring-2 ring-danger">
                   <span className="relative block h-full w-full overflow-hidden rounded-pill bg-sunken">
-                    <SafeAvatar src={row.avatar} />
+                    <StageAvatar avatar={row.avatar} stage={(row as any).stage} />
                   </span>
                   {/* The badge doubles as the live dot — a red ring alone
                       reads as "unseen" on a surface that also has story

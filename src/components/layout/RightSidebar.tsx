@@ -23,6 +23,7 @@ import { followingIdsAtom, searchOpenAtom } from "@/store/ui.atom";
 import { XSTREAM_WEB_URL } from "@/const";
 import { useT } from "@/i18n/client";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import { StageAvatar } from "@/components/live/StageAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { PersonName } from "@/components/ui/PersonName";
 import { resolveCategoryLabel } from "@/lib/categories";
@@ -244,7 +245,10 @@ export function RightSidebar() {
 							>
 								<span className="relative w-14 h-14 rounded-pill p-[2px] bg-danger">
 									<span className="relative block w-full h-full rounded-pill overflow-hidden border-2 border-page bg-raised">
-										<SafeAvatar src={entry.avatar} />
+										<StageAvatar
+											avatar={entry.avatar}
+											stage={entry.stage}
+										/>
 									</span>
 									<span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-[4px] bg-danger px-1 py-px text-[8px] font-bold tracking-wide text-white font-sans">
 										{t("live.badge")}

@@ -255,6 +255,15 @@ export async function listLiveStreamsAction() {
 				firstName: st.streamerId?.firstName ?? undefined,
 				lastName: st.streamerId?.lastName ?? undefined,
 				isVerified: Boolean(st.streamerId?.isVerified),
+				// Co-live: approved guests publish into the host's room and the
+				// listing carries them. Only status "live" counts — a pending
+				// request is not on the stage and must not show in the ring.
+				stage: (st.guests ?? [])
+					.filter((g: any) => g.status === "live")
+					.map((g: any) => ({
+						username: String(g.username ?? ""),
+						avatar: String(g.avatar ?? ""),
+					})),
 			}));
 		return { success: true as const, streams };
 	} catch (error: any) {
