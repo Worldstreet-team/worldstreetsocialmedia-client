@@ -53,6 +53,14 @@ export function SafeAvatar({
 	const [failed, setFailed] = useState(false);
 	const resolved = failed || !src ? DEFAULT_AVATAR : src;
 
+	// 4. **The optimizer itself fails.** Avatars do NOT go through
+	//    /_next/image. Clerk's img host answers Next's content-negotiated
+	//    fetch with 415 for some accounts — those users' faces failed on
+	//    EVERY render ("my picture doesn't show") — and each transform rides
+	//    the one Next container the app is busy getting traffic off of.
+	//    An avatar is a ≤128px circle the browser caches once; serving the
+	//    stored URL directly is both the reliable and the cheap path.
+
 	if (width !== undefined && height !== undefined) {
 		return (
 			<Image
@@ -60,6 +68,7 @@ export function SafeAvatar({
 				alt={alt}
 				width={width}
 				height={height}
+				unoptimized
 				className={className}
 				loading={eager ? "eager" : undefined}
 				onError={() => setFailed(true)}
@@ -72,7 +81,8 @@ export function SafeAvatar({
 			src={resolved}
 			alt={alt}
 			fill
-			sizes={sizes}
+			sizes={sizes ?? "128px"}
+			unoptimized
 			className={className}
 			loading={eager ? "eager" : undefined}
 			onError={() => setFailed(true)}

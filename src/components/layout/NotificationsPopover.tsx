@@ -123,9 +123,9 @@ export function NotificationsPopover() {
 				aria-haspopup="dialog"
 				aria-expanded={open}
 				aria-label={t("nav.notifications")}
-				className="relative flex h-11 w-11 items-center justify-center rounded-pill text-muted transition-colors active:bg-raised"
+				className="relative flex h-12 w-12 items-center justify-center rounded-pill text-muted transition-colors active:bg-raised"
 			>
-				<Bell size={20} weight={open ? "fill" : "duotone"} />
+				<Bell size={23} weight={open ? "fill" : "duotone"} />
 				{unread > 0 && (
 					<span className="absolute right-1.5 top-1.5">
 						<Badge count={unread} />

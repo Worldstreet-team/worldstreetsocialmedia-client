@@ -103,11 +103,11 @@ export function MobileNavigation() {
 						type="button"
 						onClick={() => setIsOpen(true)}
 						aria-label="Open navigation menu"
-						className="flex h-11 w-11 shrink-0 items-center justify-center rounded-pill text-primary active:bg-raised transition-colors"
+						className="flex h-12 w-12 shrink-0 items-center justify-center rounded-pill text-primary active:bg-raised transition-colors"
 					>
 						<svg
-							width="20"
-							height="20"
+							width="24"
+							height="24"
 							viewBox="0 0 20 20"
 							fill="none"
 							aria-hidden="true"
@@ -126,9 +126,9 @@ export function MobileNavigation() {
 					<Link
 						href="/"
 						aria-label="WorldSpace home"
-						className="absolute left-1/2 -translate-x-1/2 flex h-11 items-center justify-center px-2 rounded-pill active:bg-raised transition-colors"
+						className="absolute left-1/2 -translate-x-1/2 flex h-12 items-center justify-center px-2 rounded-pill active:bg-raised transition-colors"
 					>
-						<BrandRitual size={38} />
+						<BrandRitual size={44} />
 					</Link>
 
 					<div className="flex items-center gap-1 shrink-0">
@@ -136,9 +136,9 @@ export function MobileNavigation() {
 							type="button"
 							onClick={() => setSearchOpen(true)}
 							aria-label={t("rail.search")}
-							className="flex h-11 w-11 items-center justify-center rounded-pill text-muted active:bg-raised transition-colors"
+							className="flex h-12 w-12 items-center justify-center rounded-pill text-muted active:bg-raised transition-colors"
 						>
-							<MagnifyingGlass size={20} />
+							<MagnifyingGlass size={23} />
 						</button>
 						{/* Notifications moved UP out of the bottom bar: it is
 						    something you check, not somewhere you navigate, and it
