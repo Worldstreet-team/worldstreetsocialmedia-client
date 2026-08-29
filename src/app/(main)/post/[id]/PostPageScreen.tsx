@@ -1,12 +1,13 @@
 "use client";
 
+import { useGatewayRead } from "@/hooks/useGateway";
+
 import { useState, useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { PostCard, type PostProps } from "@/components/feed/PostCard";
 import { usePostEvents } from "@/hooks/useUserEvents";
 import { CommentComposer } from "@/components/feed/CommentComposer";
 import { PostSkeleton } from "@/components/feed/PostSkeleton";
-import { getPostByIdAction, getPostCommentsAction } from "@/lib/post.actions";
 import { ArrowLeft, Search } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { mapApiPost } from "@/lib/post-mapper";
@@ -20,6 +21,7 @@ import {
 } from "@/store/postCache";
 
 export default function PostPageScreen() {
+  const read = useGatewayRead();
 	const params = useParams();
 	const router = useRouter();
 	const t = useT();
@@ -130,8 +132,8 @@ export default function PostPageScreen() {
 	const fetchPostData = useCallback(async () => {
 		try {
 			const [postRes, commentsRes] = await Promise.all([
-				getPostByIdAction(postId),
-				getPostCommentsAction(postId),
+				read(`/api/posts/${postId}`),
+				read(`/api/posts/${postId}/comments`),
 			]);
 
 			if (postRes.success) {
@@ -144,7 +146,7 @@ export default function PostPageScreen() {
 						? p.parentPost._id
 						: p.parentPost;
 				if (parentId) {
-					void getPostByIdAction(String(parentId)).then((res) => {
+					void read(`/api/posts/${String(parentId)}`).then((res) => {
 						if (res.success && res.data) setParent(toPostProps(res.data));
 					});
 				} else {

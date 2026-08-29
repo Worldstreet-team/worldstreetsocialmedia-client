@@ -1,5 +1,7 @@
 "use client";
 
+import { useGatewayRead } from "@/hooks/useGateway";
+
 import { mainScrollTop, mainScroller } from "@/lib/utils";
 
 import {
@@ -24,7 +26,6 @@ import axios from "axios";
 import { useAuth } from "@clerk/nextjs";
 import { BACKEND_URL } from "@/const";
 import { LOCALE_COOKIE } from "@/i18n/config";
-import { getPostByIdAction } from "@/lib/post.actions";
 // 03-icons: `plus`, `user-plus` and `arrow-up` are all in the standardized set.
 import { ArrowUp, Plus, UserPlus } from "lucide-react";
 import { useToast } from "@/components/ui/Toast/ToastContext";
@@ -178,6 +179,7 @@ export default function Feed({
 	const prependedRef = useRef<PostProps[]>([]);
 	const me = useAtomValue(userAtom);
 	const { getToken } = useAuth();
+	const read = useGatewayRead();
 	const [isPosting, setIsPosting] = useState(false);
 	const { toast } = useToast();
 
@@ -497,7 +499,7 @@ export default function Feed({
 			inFlightRef.current.size + preloadedRef.current.size < MAX_PENDING_FETCH
 		) {
 			inFlightRef.current.add(postId);
-			void getPostByIdAction(postId)
+			void read(`/api/posts/${postId}`)
 				.then((result) => {
 					if (!result.success || !result.data) return;
 					preloadedRef.current.set(postId, mapApiPost(result.data));
@@ -757,7 +759,7 @@ export default function Feed({
 				// thing the tap just delivered.
 				const [, announced] = await Promise.all([
 					fetchFeed(true, { silent: true }),
-					Promise.all(missing.map((p) => getPostByIdAction(p.postId))),
+					Promise.all(missing.map((p) => read(`/api/posts/${p.postId}`))),
 				]);
 
 				const late: PostProps[] = [];

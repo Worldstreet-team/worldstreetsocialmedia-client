@@ -8,10 +8,8 @@ import { useAtom, useSetAtom } from "jotai";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Tabs } from "@/components/ui/Tabs";
 import { useToast } from "@/components/ui/Toast/ToastContext";
-import {
-  getNotificationsAction,
-  markNotificationsReadAction,
-} from "@/lib/notification.actions";
+import { markNotificationsReadAction } from "@/lib/notification.actions";
+import { useGatewayRead } from "@/hooks/useGateway";
 import { followUserAction } from "@/lib/user.actions";
 import { cacheKeys, fetchCached, invalidate } from "@/lib/cache";
 
@@ -72,6 +70,7 @@ function matches(n: AppNotification, filter: Filter) {
 }
 
 export default function NotificationsPage() {
+  const read = useGatewayRead();
   const t = useT();
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -101,7 +100,7 @@ export default function NotificationsPage() {
       // not staleness.
       const res = await fetchCached(
         cacheKeys.notifications(),
-        getNotificationsAction,
+        (() => read("/api/notifications")),
         NOTIFICATIONS_TTL,
       );
       if (res.success && Array.isArray(res.data)) {

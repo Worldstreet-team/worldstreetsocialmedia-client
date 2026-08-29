@@ -1,8 +1,9 @@
 "use client";
 
+import { useGatewayRead } from "@/hooks/useGateway";
+
 import { useEffect, useState } from "react";
 import { AnimatePresence } from "framer-motion";
-import { getFollowersAction, getFollowingAction } from "@/lib/user.actions";
 import { Tabs } from "@/components/ui/Tabs";
 import {
 	OverlayHeader,
@@ -53,6 +54,7 @@ export default function FollowsModal({
 	followersCount,
 	followingCount,
 }: FollowsModalProps) {
+	const read = useGatewayRead();
 	const [activeTab, setActiveTab] = useState(initialTab); // Simplified from web's useStateAndSync
 	const [loading, setLoading] = useState(true);
 	const [users, setUsers] = useState<UserItem[]>([]);
@@ -92,9 +94,9 @@ export default function FollowsModal({
 			setUsers([]);
 			let res;
 			if (activeTab === "followers") {
-				res = await getFollowersAction(userId);
+				res = await read(`/api/users/${userId}/followers`, (b) => b.data);
 			} else {
-				res = await getFollowingAction(userId);
+				res = await read(`/api/users/${userId}/following`, (b) => b.data);
 			}
 
 			if (res.success) {

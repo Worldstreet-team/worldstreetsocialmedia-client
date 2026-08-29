@@ -1,5 +1,7 @@
 "use client";
 
+import { useGatewayRead } from "@/hooks/useGateway";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAtom, useAtomValue } from "jotai";
@@ -26,15 +28,10 @@ import ReportSheet from "@/components/safety/ReportSheet";
 import {
 	blockUserAction,
 	followUserAction,
-	getProfileByUsernameAction,
 	unblockUserAction,
 	unfollowUserAction,
 } from "@/lib/user.actions";
-import { getUserFeedAction } from "@/lib/feed.actions";
-import { getPostByIdAction } from "@/lib/post.actions";
 import { useFeedEvents } from "@/hooks/useUserEvents";
-import { getCommunitiesAction } from "@/lib/community.actions";
-import { getUserStoriesAction } from "@/lib/stories.actions";
 import { StoryViewer, type RailEntry } from "@/components/feed/StoryViewer";
 import { startConversationAction } from "@/lib/conversation.actions";
 import { useLiveNow } from "@/hooks/useLiveNow";
@@ -97,6 +94,7 @@ function readIsFollowing(profile: any, currentUser: any): boolean {
 }
 
 export default function Profile({ username }: { username?: string }) {
+	const read = useGatewayRead();
 	const router = useRouter();
 	const t = useT();
 	const { toast } = useToast();
@@ -156,7 +154,9 @@ export default function Profile({ username }: { username?: string }) {
 	} = useCachedResource(
 		handle ? cacheKeys.profile(handle) : null,
 		async () => {
-			const result = await getProfileByUsernameAction(handle as string);
+			const result = await read(
+				`/api/users/${encodeURIComponent(handle as string)}`,
+			);
 			if (!result.success) throw new Error(result.message || "not found");
 			return result.data;
 		},
@@ -188,10 +188,10 @@ export default function Profile({ username }: { username?: string }) {
 			return;
 		}
 		let cancelled = false;
-		void getCommunitiesAction().then((res) => {
+		void read("/api/communities").then((res) => {
 			if (cancelled || !res.success) return;
 			setCommunities(
-				(res.communities ?? [])
+				(res.data?.communities ?? [])
 					.filter((c: any) => c.joined)
 					.map((c: any) => ({
 						id: String(c.id),
@@ -210,9 +210,12 @@ export default function Profile({ username }: { username?: string }) {
 		const handle = profileUser?.username;
 		if (!handle) return;
 		let cancelled = false;
-		void getUserStoriesAction(handle).then((res) => {
-			if (!cancelled) setStoryEntry(res.entry);
-		});
+		void read(`/api/stories/user/${encodeURIComponent(handle)}`).then(
+			(res) => {
+				if (!cancelled)
+					setStoryEntry(res.success ? (res.data?.entry ?? null) : null);
+			},
+		);
 		return () => {
 			cancelled = true;
 		};
@@ -238,7 +241,17 @@ export default function Profile({ username }: { username?: string }) {
 		void fetchCached<PostProps[]>(
 			key,
 			async () => {
-				const result = await getUserFeedAction(profileUser.userId, kind);
+				const suffix =
+					kind === "replies"
+						? "/replies"
+						: kind === "media"
+							? "/media"
+							: kind === "likes"
+								? "/likes"
+								: "";
+				const result = await read(
+					`/api/posts/user/${profileUser.userId}${suffix}?page=1&limit=10`,
+				);
 				if (!(result.success && Array.isArray(result.data))) return [];
 				return result.data.map(mapPost);
 			},
@@ -287,7 +300,7 @@ export default function Profile({ username }: { username?: string }) {
 		const tabForEvent = event === "post" ? "posts" : "replies";
 		if (!postId || activeTab !== tabForEvent) return;
 
-		void getPostByIdAction(postId)
+		void read(`/api/posts/${postId}`)
 			.then((result: any) => {
 				if (!(result?.success && result.data)) return;
 				const mapped = mapPost(result.data);
@@ -497,8 +510,12 @@ export default function Profile({ username }: { username?: string }) {
 						setStoryOpen(false);
 						// Re-read so the ring settles to "seen" without a reload.
 						if (profileUser?.username) {
-							void getUserStoriesAction(profileUser.username).then((res) =>
-								setStoryEntry(res.entry),
+							void read(
+								`/api/stories/user/${encodeURIComponent(profileUser.username)}`,
+							).then((res) =>
+								setStoryEntry(
+									res.success ? (res.data?.entry ?? null) : null,
+								),
 							);
 						}
 					}}
