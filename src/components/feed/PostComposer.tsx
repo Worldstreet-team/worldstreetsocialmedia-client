@@ -88,7 +88,10 @@ interface MediaItem {
 	editDoc?: EditDocument;
 }
 
-// Same limit PostCard truncates at.
+// The FREE tier's limit — the floor, not the law. Paid tiers buy longer
+// posts (postCharBudget: 280 / 1000 / 2000 / 2500), and the gateway
+// enforces the real number; the ring below reads it from the same shared
+// entitlements fetch the video and audio caps ride.
 const MAX_LENGTH = POST_CHAR_BUDGET;
 
 /**
@@ -96,9 +99,15 @@ const MAX_LENGTH = POST_CHAR_BUDGET;
  * last 10%, status/danger at/over the limit. Count (tabular) appears only
  * once the warning tier starts — quiet until it matters.
  */
-const CharacterRing = ({ length }: { length: number }) => {
-	const remaining = MAX_LENGTH - length;
-	const pct = Math.min(length / MAX_LENGTH, 1);
+const CharacterRing = ({
+	length,
+	budget,
+}: {
+	length: number;
+	budget: number;
+}) => {
+	const remaining = budget - length;
+	const pct = Math.min(length / budget, 1);
 	const radius = 8;
 	const circumference = 2 * Math.PI * radius;
 	const tone =
@@ -196,6 +205,7 @@ let limitsPromise: Promise<{
 	canSell: boolean;
 	videoMaxSeconds: number | null;
 	audioMaxSeconds: number | null;
+	charBudget: number;
 }> | null = null;
 function fetchComposerLimits() {
 	limitsPromise ??= getSubscriptionAction()
@@ -207,13 +217,21 @@ function fetchComposerLimits() {
 							res.data.entitlements?.videoMaxSeconds ?? null,
 						audioMaxSeconds:
 							res.data.entitlements?.audioPostMaxSeconds ?? 60,
+						charBudget:
+							res.data.entitlements?.postCharBudget ?? MAX_LENGTH,
 					}
-				: { canSell: false, videoMaxSeconds: null, audioMaxSeconds: 60 },
+				: {
+						canSell: false,
+						videoMaxSeconds: null,
+						audioMaxSeconds: 60,
+						charBudget: MAX_LENGTH,
+					},
 		)
 		.catch(() => ({
 			canSell: false,
 			videoMaxSeconds: null,
 			audioMaxSeconds: 60,
+			charBudget: MAX_LENGTH,
 		}));
 	return limitsPromise;
 }
@@ -260,6 +278,7 @@ export const PostComposer = ({
 	} | null>(null);
 	const [audioBlurBg, setAudioBlurBg] = useState(true);
 	const [audioLimit, setAudioLimit] = useState<number>(60);
+	const [charBudget, setCharBudget] = useState<number>(MAX_LENGTH);
 	const [recordOpen, setRecordOpen] = useState(false);
 	// A file picked from disk enters the same finishing sheet the recorder
 	// ends in — background choice and listen-back happen THERE, in view,
@@ -273,6 +292,7 @@ export const PostComposer = ({
 			setCanSell(limits.canSell);
 			setVideoLimit(limits.videoMaxSeconds);
 			setAudioLimit(limits.audioMaxSeconds ?? 60);
+			setCharBudget(limits.charBudget ?? MAX_LENGTH);
 		});
 		return () => {
 			cancelled = true;
@@ -704,7 +724,7 @@ export const PostComposer = ({
 		editorRef.current?.insertText(emojiData.emoji);
 	};
 
-	const isOverLimit = content.length > MAX_LENGTH;
+	const isOverLimit = content.length > charBudget;
 
 	const handleSubmit = async () => {
 		if ((!content.trim() && mediaItems.length === 0) || isPosting) return;
@@ -1308,7 +1328,7 @@ export const PostComposer = ({
 						</div>
 
 						<div className="flex items-center gap-3">
-							<CharacterRing length={content.length} />
+							<CharacterRing length={content.length} budget={charBudget} />
 							<button
 							onClick={handleSubmit}
 							disabled={
