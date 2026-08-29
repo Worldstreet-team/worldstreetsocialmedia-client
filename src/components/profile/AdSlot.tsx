@@ -505,7 +505,7 @@ function SponsoredCard({
 							</span>
 						</span>
 						<a
-							href={slot.creative.linkUrl}
+							href={externalHref(slot.creative.linkUrl)}
 							onClick={onVisit}
 							target="_blank"
 							// `sponsored` is the honest rel for paid placement; noopener
@@ -571,9 +571,30 @@ export function AdSlotPreview({
 	);
 }
 
+/**
+ * An advertiser's link, made safe to put in an href.
+ *
+ * A scheme-less "yourbrand.com" in an href is a RELATIVE PATH: the profile's
+ * Visit button resolved it against the current page and sent paid traffic to
+ * /profile/yourbrand.com — our own app — instead of the advertiser's site.
+ * The booking sheet and the gateway both normalise on write now; this is the
+ * render-side guard for rows stored before that, and the reason it returns
+ * undefined for exotic schemes (javascript:, data:) rather than prefixing
+ * them into something broken.
+ */
+function externalHref(url?: string): string | undefined {
+	const v = String(url ?? "").trim();
+	if (!v) return undefined;
+	if (/^https?:\/\//i.test(v)) return v;
+	if (/^[a-z][a-z0-9+.-]*:/i.test(v)) return undefined;
+	return `https://${v}`;
+}
+
 function safeHost(url: string): string {
 	try {
-		return new URL(url).host;
+		// Same normalisation: `new URL("yourbrand.com")` throws, so the domain
+		// label under the creative was rendering empty for these rows too.
+		return new URL(externalHref(url) ?? url).host;
 	} catch {
 		return "";
 	}
