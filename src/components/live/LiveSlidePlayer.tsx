@@ -30,7 +30,14 @@ export function LiveSlidePlayer({
 	const [state, setState] = useState<
 		"idle" | "connecting" | "playing" | "waiting" | "ended"
 	>("idle");
-	const videoRef = useRef<HTMLVideoElement>(null);
+	/** One entry per remote VIDEO track, keyed by track sid. Co-live parity:
+	 *  a merged stage publishes 2+ camera feeds into the room, and the old
+	 *  single-<video> slot attached them all to one element — last publisher
+	 *  won and viewers saw one arbitrary face. Each track now owns a tile
+	 *  and the grid splits the stage the way Xtreme's own viewer does. */
+	const [videoTracks, setVideoTracks] = useState<{ sid: string; track: any }[]>(
+		[],
+	);
 	const audioElsRef = useRef<HTMLElement[]>([]);
 	const roomRef = useRef<Room | null>(null);
 
@@ -54,8 +61,13 @@ export function LiveSlidePlayer({
 			roomRef.current = room;
 
 			const attach = (track: any) => {
-				if (track.kind === Track.Kind.Video && videoRef.current) {
-					track.attach(videoRef.current);
+				if (track.kind === Track.Kind.Video) {
+					const sid = String(track.sid ?? Math.random());
+					setVideoTracks((prev) =>
+						prev.some((v) => v.sid === sid)
+							? prev
+							: [...prev, { sid, track }],
+					);
 					setState("playing");
 				}
 				if (track.kind === Track.Kind.Audio) {
@@ -67,7 +79,15 @@ export function LiveSlidePlayer({
 			room.on(RoomEvent.TrackSubscribed, attach);
 			room.on(RoomEvent.TrackUnsubscribed, (track) => {
 				track.detach().forEach((el: HTMLElement) => el.remove());
-				if (track.kind === Track.Kind.Video) setState("waiting");
+				if (track.kind === Track.Kind.Video) {
+					const sid = String(track.sid ?? "");
+					setVideoTracks((prev) => {
+						const next = prev.filter((v) => v.sid !== sid);
+						// A guest leaving mid-stage must not blank the host.
+						if (next.length === 0) setState("waiting");
+						return next;
+					});
+				}
 			});
 			const syncViewers = () =>
 				onViewers?.(room ? room.remoteParticipants.size : 0);
@@ -109,6 +129,7 @@ export function LiveSlidePlayer({
 			room?.disconnect();
 			roomRef.current = null;
 			onRoom?.(null);
+			setVideoTracks([]);
 			setState("idle");
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -121,21 +142,29 @@ export function LiveSlidePlayer({
 		}
 	}, [muted, state]);
 
+	// The stage grid: 1 feed full-bleed; 2 stack; 3-4 quarter. Matches the
+	// split Xtreme's studio composes, so a merged co-live reads the same in
+	// both viewers.
+	const n = videoTracks.length;
 	return (
 		<div className="absolute inset-0 bg-black">
-			{/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-			<video
-				ref={videoRef}
-				autoPlay
-				playsInline
-				muted
+			<div
 				className={clsx(
-					// Same rule as the video-post layer in the slide: the
-					// picture is decoration, the controls above it own the taps.
-					"pointer-events-none absolute inset-0 h-full w-full object-contain transition-opacity",
+					"pointer-events-none absolute inset-0 grid gap-px transition-opacity",
 					state === "playing" ? "opacity-100" : "opacity-0",
+					n <= 1 && "grid-cols-1 grid-rows-1",
+					n === 2 && "grid-cols-1 grid-rows-2",
+					n >= 3 && "grid-cols-2 grid-rows-2",
 				)}
-			/>
+			>
+				{videoTracks.map((v) => (
+					<StageTile
+						key={v.sid}
+						track={v.track}
+						solo={n === 1}
+					/>
+				))}
+			</div>
 			{(state === "connecting" || state === "waiting") && (
 				<div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
 					<span className="h-7 w-7 rounded-pill border-2 border-white/20 border-t-white/75 animate-spin" />
@@ -155,5 +184,33 @@ export function LiveSlidePlayer({
 				</div>
 			)}
 		</div>
+	);
+}
+
+/** One publisher's feed. Solo keeps the classic contain letterbox; a split
+ *  stage covers each cell so the grid reads as one composed stage rather
+ *  than floating letterboxed rectangles. */
+function StageTile({ track, solo }: { track: any; solo: boolean }) {
+	const ref = useRef<HTMLVideoElement>(null);
+	useEffect(() => {
+		const el = ref.current;
+		if (!el) return;
+		track.attach(el);
+		return () => {
+			track.detach(el);
+		};
+	}, [track]);
+	return (
+		// eslint-disable-next-line jsx-a11y/media-has-caption
+		<video
+			ref={ref}
+			autoPlay
+			playsInline
+			muted
+			className={clsx(
+				"h-full w-full",
+				solo ? "object-contain" : "object-cover",
+			)}
+		/>
 	);
 }
