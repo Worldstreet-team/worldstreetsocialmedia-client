@@ -24,6 +24,7 @@ import { XSTREAM_WEB_URL } from "@/const";
 import { useT } from "@/i18n/client";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { StageAvatar } from "@/components/live/StageAvatar";
+import { compactTrendPosts } from "@/lib/utils";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { PersonName } from "@/components/ui/PersonName";
 import { resolveCategoryLabel } from "@/lib/categories";
@@ -244,12 +245,11 @@ export function RightSidebar() {
 								className="flex flex-col items-center gap-1 shrink-0"
 							>
 								<span className="relative w-14 h-14 rounded-pill p-[2px] bg-danger">
-									<span className="relative block w-full h-full rounded-pill overflow-hidden border-2 border-page bg-raised">
-										<StageAvatar
-											avatar={entry.avatar}
-											stage={entry.stage}
-										/>
-									</span>
+									<StageAvatar
+										avatar={entry.avatar}
+										stage={entry.stage}
+										innerClassName="border-2 border-page bg-raised"
+									/>
 									<span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-[4px] bg-danger px-1 py-px text-[8px] font-bold tracking-wide text-white font-sans">
 										{t("live.badge")}
 									</span>
@@ -330,7 +330,7 @@ export function RightSidebar() {
 										</span>
 										<span className="text-[12px] text-subtle font-sans tabular-nums">
 											{trend.category ? `${resolveCategoryLabel(trend.category)} · ` : ""}
-											{trend.posts}
+											{compactTrendPosts(trend)}
 										</span>
 									</span>
 

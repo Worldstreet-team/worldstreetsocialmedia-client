@@ -41,9 +41,11 @@ export function LiveStrip({ delay }: { delay: number }) {
                 title={row.title}
               >
                 <span className="relative block h-16 w-16 rounded-pill p-[3px] ring-2 ring-danger">
-                  <span className="relative block h-full w-full overflow-hidden rounded-pill bg-sunken">
-                    <StageAvatar avatar={row.avatar} stage={(row as any).stage} />
-                  </span>
+                  <StageAvatar
+                    avatar={row.avatar}
+                    stage={(row as any).stage}
+                    innerClassName="bg-sunken"
+                  />
                   {/* The badge doubles as the live dot — a red ring alone
                       reads as "unseen" on a surface that also has story
                       rings, so the word stays. */}

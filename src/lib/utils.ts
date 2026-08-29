@@ -112,3 +112,28 @@ export function mainScrollTop(): number {
 	const s = mainScroller();
 	return s instanceof Window ? s.scrollY : s.scrollTop;
 }
+
+/** Compact count for dense chrome (trend rows, rails): 843 -> "843",
+ *  1234 -> "1.2k", 2_400_000 -> "2.4M". Owner ruling: compaction starts at
+ *  one thousand here, unlike post-action counts which hold full figures to
+ *  10k per the typography spec — a trend row has no room for "1,066". */
+export const formatCompact = (n: number): string => {
+	if (!Number.isFinite(n)) return "0";
+	if (n < 1000) return String(n);
+	if (n < 1_000_000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k`;
+	return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+};
+
+/** The gateway sends trend volume as a finished string ("1066 posts");
+ *  compact the figure, keep whatever suffix it chose. */
+export const compactTrendPosts = (t: {
+	posts?: string;
+	postsCount?: number;
+}): string => {
+	const n =
+		t.postsCount ??
+		Number.parseInt(String(t.posts ?? "").replace(/[^0-9]/g, ""), 10);
+	if (!Number.isFinite(n) || n <= 0) return t.posts ?? "";
+	const suffix = String(t.posts ?? "").replace(/^[0-9.,\s]+/, "") || "posts";
+	return `${formatCompact(n)} ${suffix}`;
+};

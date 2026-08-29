@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { compactTrendPosts } from "@/lib/utils";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { useT } from "@/i18n/client";
 import { resolveCategoryLabel } from "@/lib/categories";
@@ -92,7 +93,7 @@ export function TrendingList({
                   </span>
                   <span className="font-sans text-[12px] tabular-nums text-subtle">
                     {trend.category ? `${resolveCategoryLabel(trend.category)} · ` : ""}
-                    {trend.posts}
+                    {compactTrendPosts(trend)}
                   </span>
                 </span>
 

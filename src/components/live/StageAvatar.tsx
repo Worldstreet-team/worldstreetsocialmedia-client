@@ -1,45 +1,53 @@
 "use client";
 
+import clsx from "clsx";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 /**
  * The face inside a live ring. Solo broadcast: the host, exactly as before.
- * A merged stage: the circle SPLITS — host on the left half, first co-host
- * on the right, a hairline of the page ground between them — so the rail
- * says "two people are live here" before anyone taps in. Three or more on
- * stage adds a +N pip over the seam.
+ * A merged stage overlaps a co-host SATELLITE onto the ring — the collab
+ * grammar every platform trained people on — rather than splitting the
+ * circle: overlap keeps both faces whole, where vertical halves cropped
+ * every avatar that wasn't a centred portrait to an unrecognisable sliver.
  *
- * The split is vertical halves, not a diagonal or quadrants: at 56px a face
- * survives losing its sides far better than losing its top or bottom, and
- * two half-faces side by side is the established duo grammar everywhere.
+ * The satellite sits top-right, because bottom-centre belongs to the LIVE
+ * chip. Three or more on stage adds a +N pip under the satellite.
+ *
+ * Owns the inner circle (the clipping boundary the satellite must escape);
+ * the consumer keeps the outer ring, its colour and the LIVE chip.
  */
 export function StageAvatar({
 	avatar,
 	stage,
+	innerClassName,
 }: {
 	avatar?: string;
 	stage?: { username: string; avatar: string }[];
+	/** The inner circle's ground/border, per surface. */
+	innerClassName?: string;
 }) {
 	const live = stage ?? [];
-	if (live.length === 0) return <SafeAvatar src={avatar} />;
-
 	const extra = live.length - 1;
 	return (
-		<span className="absolute inset-0 flex">
-			<span className="relative h-full w-1/2 overflow-hidden">
+		<>
+			<span
+				className={clsx(
+					"relative block h-full w-full overflow-hidden rounded-pill",
+					innerClassName,
+				)}
+			>
 				<SafeAvatar src={avatar} />
 			</span>
-			<span aria-hidden className="h-full w-px shrink-0 bg-page" />
-			<span className="relative h-full w-1/2 overflow-hidden">
-				<SafeAvatar src={live[0].avatar} />
-			</span>
+			{live.length > 0 && (
+				<span className="absolute -right-1 -top-1 h-[45%] w-[45%] overflow-hidden rounded-pill border-2 border-page bg-raised">
+					<SafeAvatar src={live[0].avatar} />
+				</span>
+			)}
 			{extra > 0 && (
-				// Top of the seam, not the bottom: the ring's LIVE chip already
-				// owns bottom-centre and the two would collide.
-				<span className="absolute top-0 left-1/2 -translate-x-1/2 rounded-pill bg-page px-1 font-sans text-[8px] font-bold leading-[12px] text-primary tabular-nums">
+				<span className="absolute -left-1 -top-1 rounded-pill border border-page bg-raised px-1 font-sans text-[8px] font-bold leading-[13px] text-primary tabular-nums">
 					+{extra}
 				</span>
 			)}
-		</span>
+		</>
 	);
 }

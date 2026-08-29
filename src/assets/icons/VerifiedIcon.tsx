@@ -8,8 +8,8 @@ export type VerifiedTier = "bronze" | "silver" | "gold";
 
 /**
  * Metal per tier, as gradient stops rather than one flat colour. A single
- * hex read as yellow paint, not gold — metal is banding: a bright face, a
- * deep shadow stripe, and a rebound. All literal values, not tokens: this
+ * hex read as yellow paint, not gold — metal is banding: a bright face at
+ * the top falling to a deep shadow at the bottom edge. All literal values, not tokens: this
  * is the *material* of a membership mark and must read the same in light
  * and dark, however the brand colour moves (gold once rode the brand token
  * and turned blue in the rebrand — never again).
@@ -17,27 +17,24 @@ export type VerifiedTier = "bronze" | "silver" | "gold";
 const TIER_STOPS: Record<VerifiedTier, [string, string][]> = {
 	gold: [
 		["0%", "#FFF6C9"],
-		["28%", "#FDE047"],
-		["50%", "#EAB308"],
-		["66%", "#A16207"],
-		["84%", "#FACC15"],
-		["100%", "#FDE68A"],
+		["30%", "#FDE047"],
+		["58%", "#EAB308"],
+		["82%", "#C88A06"],
+		["100%", "#A16207"],
 	],
 	silver: [
 		["0%", "#FFFFFF"],
-		["28%", "#E5E7EB"],
-		["50%", "#B8BCC4"],
-		["66%", "#6B7280"],
-		["84%", "#D1D5DB"],
-		["100%", "#F3F4F6"],
+		["30%", "#E5E7EB"],
+		["58%", "#B8BCC4"],
+		["82%", "#8B919C"],
+		["100%", "#6B7280"],
 	],
 	bronze: [
 		["0%", "#F5CFA0"],
-		["28%", "#D9975C"],
-		["50%", "#B87333"],
-		["66%", "#7C4A1E"],
-		["84%", "#CD8C4B"],
-		["100%", "#E8B57E"],
+		["30%", "#D9975C"],
+		["58%", "#B87333"],
+		["82%", "#96581F"],
+		["100%", "#7C4A1E"],
 	],
 };
 
@@ -77,7 +74,7 @@ const VerifiedIcon = ({
 			aria-label={tier === "gold" ? "Verified" : `Verified, ${tier}`}
 		>
 			<defs>
-				<linearGradient id={metal} x1="0" y1="0" x2="1" y2="1">
+				<linearGradient id={metal} x1="0.15" y1="0" x2="0.6" y2="1">
 					{stops.map(([offset, color]) => (
 						<stop key={offset} offset={offset} stopColor={color} />
 					))}
