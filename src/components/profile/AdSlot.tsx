@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
+import { useAtomValue } from "jotai";
 import axios from "axios";
 import clsx from "clsx";
 import Link from "next/link";
@@ -8,6 +9,7 @@ import { AnimatePresence } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	ArrowUpRight,
+	CalendarBlank,
 	ImageSquare,
 	Megaphone,
 	Pause,
@@ -16,6 +18,7 @@ import {
 	VideoCamera,
 } from "@phosphor-icons/react";
 import { BACKEND_URL } from "@/const";
+import { userAtom } from "@/store/user.atom";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import {
 	OverlayHeader,
@@ -57,6 +60,16 @@ interface SlotCampaign {
 	advertiser?: { username?: string; firstName?: string; lastName?: string };
 }
 
+/** An accepted deal whose run has not started — money is in escrow, the
+ *  creative is approved, and until now the profile showed no trace of it. */
+interface UpcomingCampaign {
+	_id: string;
+	format: "image" | "video" | "audio";
+	startAt: string;
+	endAt: string;
+	advertiser?: { username?: string; firstName?: string; lastName?: string };
+}
+
 interface RateRow {
 	format: "image" | "video" | "audio";
 	priceUsdMinor: number;
@@ -78,6 +91,8 @@ export function AdSlot({
 	const { getToken } = useAuth();
 	const { toast } = useToast();
 	const [slots, setSlots] = useState<SlotCampaign[]>([]);
+	const [upcoming, setUpcoming] = useState<UpcomingCampaign[]>([]);
+	const viewer = useAtomValue(userAtom);
 	/** Which campaign the carousel is showing. Advances on a timer — the
 	 *  rotation is deliberately not user-controllable (admin ruling): every
 	 *  paying advertiser gets their turn, and nobody can park it. */
@@ -107,6 +122,7 @@ export function AdSlot({
 			.then((d) => {
 				if (cancelled) return;
 				setSlots(d.slots ?? (d.slot ? [d.slot] : []));
+				setUpcoming(d.upcoming ?? []);
 				setSlotIndex(0);
 			})
 			.catch(() => {
@@ -178,6 +194,38 @@ export function AdSlot({
 		}
 	};
 
+	// Scheduled deals are only news to the two parties. The public keeps
+	// seeing the plain book card — an escrowed-but-unstarted campaign is a
+	// private fact of the deal, not an advertisement.
+	const upcomingMine = upcoming.filter(
+		(u) =>
+			isMe ||
+			(viewer?.username && u.advertiser?.username === viewer.username),
+	);
+	const scheduledNote =
+		upcomingMine.length > 0 ? (
+			<div className="mt-1.5 flex flex-col gap-1">
+				{upcomingMine.map((u) => (
+					<div
+						key={u._id}
+						className="flex items-center gap-2 rounded-[10px] bg-sunken px-3 py-2"
+					>
+						<CalendarBlank
+							size={13}
+							weight="fill"
+							className="shrink-0 text-gold"
+						/>
+						<span className="min-w-0 truncate font-sans text-[11.5px] text-muted">
+							{isMe
+								? `@${u.advertiser?.username ?? "advertiser"}'s ${u.format} campaign`
+								: "Your campaign here"}{" "}
+							starts {fmtStart(u.startAt)}
+						</span>
+					</div>
+				))}
+			</div>
+		) : null;
+
 	const current = slots[slotIndex % Math.max(1, slots.length)];
 	if (current) {
 		return (
@@ -215,6 +263,50 @@ export function AdSlot({
 						</div>
 					)}
 				</div>
+				{/* The slot stays for sale while campaigns run (overlaps rotate
+				    by admin ruling) — so booking survives here, one size down:
+				    the campaign is the tenant, the book chip is the sign. */}
+				{!isMe && publicRates.length > 0 && (
+					<Link
+						href={`/bm?book=${encodeURIComponent(username)}`}
+						className="mt-1.5 flex items-center justify-between gap-3 rounded-[10px] bg-sunken px-3 py-1.5 transition-colors hover:bg-raised"
+					>
+						<span className="min-w-0 truncate font-sans text-[11.5px] text-muted tabular-nums">
+							Ad space · from $
+							{(
+								Math.min(...publicRates.map((r) => r.priceUsdMinor)) / 100
+							).toFixed(0)}
+							/day
+						</span>
+						<span className="shrink-0 rounded-pill bg-primary px-2.5 py-1 font-sans text-[11px] font-semibold text-page">
+							Book
+						</span>
+					</Link>
+				)}
+				{isMe && canSell && (
+					<button
+						type="button"
+						onClick={() => setRatesOpen(true)}
+						className="mt-1.5 flex w-full cursor-pointer items-center justify-between gap-3 rounded-[10px] bg-sunken px-3 py-1.5 transition-colors hover:bg-raised"
+					>
+						<span className="min-w-0 truncate font-sans text-[11.5px] text-muted tabular-nums">
+							Your ad space · {slots.length} running
+						</span>
+						<span className="shrink-0 rounded-pill bg-gold/15 px-2.5 py-1 font-sans text-[11px] font-semibold text-gold">
+							Rates
+						</span>
+					</button>
+				)}
+				{scheduledNote}
+				<AnimatePresence>
+					{ratesOpen && (
+						<RatesSheet
+							username={username}
+							authed={authed}
+							onClose={() => setRatesOpen(false)}
+						/>
+					)}
+				</AnimatePresence>
 				<ConfirmModal
 					isOpen={confirmEnd}
 					onClose={() => setConfirmEnd(false)}
@@ -272,6 +364,7 @@ export function AdSlot({
 						Set rates
 					</span>
 				</button>
+				{scheduledNote}
 				<AnimatePresence>
 					{ratesOpen && (
 						<RatesSheet
@@ -288,6 +381,7 @@ export function AdSlot({
 	if (!isMe && publicRates.length > 0) {
 		const from = Math.min(...publicRates.map((r) => r.priceUsdMinor));
 		return (
+			<>
 			<Link
 				href={`/bm?book=${encodeURIComponent(username)}`}
 				className="group/slot relative mt-2 flex w-full items-center gap-3 overflow-hidden rounded-xl px-4 py-3.5"
@@ -319,10 +413,22 @@ export function AdSlot({
 					Book
 				</span>
 			</Link>
+			{scheduledNote}
+			</>
 		);
 	}
 
-	return null;
+	// A party to a scheduled deal on a profile with no other slot UI (e.g.
+	// the advertiser before the run starts, rates since disabled) still
+	// deserves the fact of it.
+	return scheduledNote;
+}
+
+/** "Aug 30 · 9:00 AM" — a start time, not an age, so formatTimeAgo is the
+ *  wrong tool here. */
+function fmtStart(iso: string) {
+	const d = new Date(iso);
+	return `${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })} · ${d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`;
 }
 
 /* ── the served creative ────────────────────────────────────────── */
