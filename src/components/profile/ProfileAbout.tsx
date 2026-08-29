@@ -8,7 +8,6 @@ import {
   UserBadges,
   type ProfileBadge,
 } from "@/components/ui/UserBadges";
-import { resolveCategories } from "@/lib/categories";
 import { AdSlot } from "@/components/profile/AdSlot";
 import { useT } from "@/i18n/client";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
@@ -67,7 +66,6 @@ export function ProfileAbout({
   profileId?: string;
 }) {
   const t = useT();
-  const topics = resolveCategories(interests, 8);
   const [isBioExpanded, setIsBioExpanded] = useState(false);
   const bioTruncated = (bio?.length ?? 0) > BIO_TRUNCATE_LENGTH;
 
@@ -180,36 +178,9 @@ export function ProfileAbout({
         <AdSlot profileId={profileId} username={username} isMe={isMe} />
       )}
 
-      {(topics.length > 0 || isMe) && (
-        <div className="mt-2">
-          <div className="mb-2 flex items-center gap-2">
-            <h3 className="flex-1 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">
-              {t("profile.topics")}
-            </h3>
-            {isMe && (
-              <button
-                type="button"
-                onClick={onEditTopics}
-                className="shrink-0 cursor-pointer font-sans text-[11px] font-semibold text-gold hover:underline"
-              >
-                {t("profile.editTopics")}
-              </button>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {topics.map((c) => (
-              <Link
-                key={c.id}
-                href={`/explore?q=${encodeURIComponent(c.label)}`}
-                className="flex h-8 items-center rounded-pill bg-raised px-3 font-sans text-[12.5px] font-medium text-muted transition-colors hover:bg-chip hover:text-primary"
-              >
-                {c.label}
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
+      {/* Topics no longer render here (owner ruling 2026-08-29): the ad
+          slot owns this position. Interests still feed the algorithm and stay
+          editable in Edit profile → Topics — only the public chip list went. */}
       {communities.length > 0 && (
         <div className="mt-2">
           <h3 className="mb-2 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">

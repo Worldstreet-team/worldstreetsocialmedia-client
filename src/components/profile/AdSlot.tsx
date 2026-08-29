@@ -245,12 +245,23 @@ export function AdSlot({
 		return (
 			<Link
 				href={`/bm?book=${encodeURIComponent(username)}`}
-				className="mt-2 flex w-full items-center gap-3 rounded-xl border border-hairline bg-surface px-4 py-3 transition-colors hover:bg-raised"
+				className="group/slot relative mt-2 flex w-full items-center gap-3 overflow-hidden rounded-xl border border-hairline px-4 py-3.5 transition-colors hover:border-gold/40"
 			>
-				<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-pill bg-raised text-muted">
+				{/* Same ground as the owner's card — the space should look like
+				    the same product from both sides of the counter. */}
+				<span
+					aria-hidden
+					className="absolute inset-0 scale-110 bg-[url('/images/onboarding/backdrop-dark.webp')] bg-cover bg-center blur-[5px] [[data-ws-theme='platform-light']_&]:bg-[url('/images/onboarding/backdrop-light.webp')]"
+				/>
+				<span aria-hidden className="absolute inset-0 bg-page/70" />
+				<span
+					aria-hidden
+					className="absolute inset-y-0 left-0 w-1/2 -translate-x-full bg-gradient-to-r from-transparent via-gold/15 to-transparent transition-transform duration-[320ms] group-hover/slot:translate-x-[220%]"
+				/>
+				<span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-pill bg-gold/15 text-gold">
 					<Megaphone size={16} weight="fill" />
 				</span>
-				<span className="min-w-0 flex-1">
+				<span className="relative min-w-0 flex-1">
 					<span className="block font-sans text-[13.5px] font-semibold text-primary">
 						Ad space available
 					</span>
@@ -259,7 +270,7 @@ export function AdSlot({
 						{publicRates.map((r) => r.format).join(" · ")}
 					</span>
 				</span>
-				<span className="shrink-0 rounded-pill bg-primary px-3.5 py-1.5 font-sans text-[12.5px] font-semibold text-page">
+				<span className="relative shrink-0 rounded-pill bg-primary px-3.5 py-1.5 font-sans text-[12.5px] font-semibold text-page">
 					Book
 				</span>
 			</Link>
