@@ -179,6 +179,10 @@ export default function StoryStudio({
   const [caption, setCaption] = useState("");
   // The uploader's call: whether viewers can pay to download this story.
   const [allowSave, setAllowSave] = useState(false);
+  // Attribution watermark: ON by default (the norm), the author may switch
+  // it off or reword it — brand handles, campaign tags. Empty = their @handle.
+  const [watermarkOn, setWatermarkOn] = useState(true);
+  const [watermarkText, setWatermarkText] = useState("");
   const [posting, setPosting] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [trimOpen, setTrimOpen] = useState(false);
@@ -531,6 +535,9 @@ export default function StoryStudio({
     formData.append("media", media);
     if (slideCaption.trim()) formData.append("caption", slideCaption.trim());
     if (allowSave) formData.append("allowSave", "true");
+    formData.append("watermark", watermarkOn ? "true" : "false");
+    if (watermarkOn && watermarkText.trim())
+      formData.append("watermarkText", watermarkText.trim().slice(0, 40));
     // Tags are burned into the image, so they are always VISIBLE on the story.
     // This field carries them as data too, for whenever the gateway grows a
     // mentions column — POST /api/stories reads only media/caption/mediaUrl
@@ -1204,6 +1211,45 @@ export default function StoryStudio({
               </span>
             </span>
           </button>
+
+          {/* The screenshot-attribution mark. On by default; the text field
+              only appears while it is on — an off mark needs no wording. */}
+          <button
+            type="button"
+            onClick={() => setWatermarkOn((v) => !v)}
+            aria-pressed={watermarkOn}
+            className="mt-2 flex w-full cursor-pointer items-center gap-2.5 rounded-xl glass-input px-3 py-2.5 text-left transition-colors"
+          >
+            <span
+              className={clsx(
+                "relative h-5 w-9 shrink-0 rounded-pill transition-colors",
+                watermarkOn ? "bg-brand" : "bg-[#fafaf9]/20",
+              )}
+            >
+              <span
+                className={clsx(
+                  "absolute top-0.5 h-4 w-4 rounded-pill bg-[#fafaf9] transition-all",
+                  watermarkOn ? "left-[18px]" : "left-0.5",
+                )}
+              />
+            </span>
+            <span className="min-w-0">
+              <span className="block font-sans text-[12.5px] font-semibold">
+                Watermark
+              </span>
+              <span className="block font-sans text-[11px] glass-ink-faint">
+                Your handle tiles the frame so screenshots stay credited.
+              </span>
+            </span>
+          </button>
+          {watermarkOn && (
+            <input
+              value={watermarkText}
+              onChange={(e) => setWatermarkText(e.target.value.slice(0, 40))}
+              placeholder="Watermark text (default: your @handle)"
+              className="mt-2 h-10 w-full rounded-xl glass-input px-3 font-sans text-[12.5px] outline-none placeholder:glass-ink-faint"
+            />
+          )}
         </DockSection>
       )}
 

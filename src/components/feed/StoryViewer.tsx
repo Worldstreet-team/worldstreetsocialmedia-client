@@ -425,7 +425,10 @@ export function StoryViewer({
 					    near-black ink for anyone on light mode and it disappeared
 					    entirely. It also has to survive a bright frame, hence the
 					    shadow — a mark nobody can see credits nobody. */}
-					{entry.author.username && (
+					{entry.author.username &&
+						// Author's choice travels with the story; absent (old
+						// stories) means enabled — what they were getting.
+						(story as any).watermark?.enabled !== false && (
 						<div
 							aria-hidden
 							className="pointer-events-none absolute inset-0 z-[15] overflow-hidden opacity-[0.17]"
@@ -442,7 +445,10 @@ export function StoryViewer({
 										}}
 									>
 										{[0, 1, 2, 3].map((col) => (
-											<span key={col}>@{entry.author.username}</span>
+											<span key={col}>
+												{(story as any).watermark?.text ||
+													`@${entry.author.username}`}
+											</span>
 										))}
 									</div>
 								))}
