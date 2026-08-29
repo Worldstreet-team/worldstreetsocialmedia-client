@@ -103,3 +103,21 @@ export const onlineIdsAtom = atom<Set<string>>(new Set<string>());
 
 /** The docked messenger panel on the right rail. */
 export const messageDockOpenAtom = atom(false);
+
+/**
+ * Set by AdSlot while campaigns are LIVE on the profile being viewed: the
+ * book affordance leaves the About column and becomes a small glimmer icon
+ * in the header action row (owner ruling — the campaign is the tenant of
+ * the slot; booking moves up with the message icons). Null when no live
+ * campaign, or on profiles that don't sell.
+ */
+export const profileAdHeaderAtom = atom<{
+	username: string;
+	isMe: boolean;
+	fromUsdMinor: number | null;
+} | null>(null);
+
+/** The owner pressed the header megaphone — AdSlot answers by opening its
+ *  rates sheet. A request flag, not shared open-state: the sheet stays
+ *  owned by AdSlot. */
+export const profileRatesRequestAtom = atom(false);

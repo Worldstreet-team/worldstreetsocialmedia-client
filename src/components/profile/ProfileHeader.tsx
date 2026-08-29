@@ -3,7 +3,14 @@
 import type { ProfileBadge } from "@/components/ui/UserBadges";
 
 import Image from "next/image";
+import Link from "next/link";
 import clsx from "clsx";
+import { useAtomValue, useSetAtom } from "jotai";
+import { Megaphone } from "@phosphor-icons/react";
+import {
+  profileAdHeaderAtom,
+  profileRatesRequestAtom,
+} from "@/store/ui.atom";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Mail, MoreHorizontal } from "lucide-react";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
@@ -105,6 +112,31 @@ export function ProfileHeader({
   const pill =
     "rounded-pill px-5 h-10 shrink-0 font-semibold transition-colors text-sm font-sans min-w-[104px]";
 
+  // The ad-space affordance while a campaign occupies the slot: AdSlot
+  // publishes here, and the header wears it as a glimmer icon among the
+  // action buttons — same backdrop-and-gloss treatment as the book card it
+  // replaces, shrunk to icon size.
+  const adHeader = useAtomValue(profileAdHeaderAtom);
+  const requestRates = useSetAtom(profileRatesRequestAtom);
+  const showAdIcon =
+    adHeader?.username === username && !blockedByYou && !blockedByThem;
+  const adIconChrome = (
+    <>
+      <span
+        aria-hidden
+        className="absolute inset-0 scale-125 bg-[url('/images/onboarding/backdrop-dark.webp')] bg-cover bg-center blur-[3px] [[data-ws-theme='platform-light']_&]:bg-[url('/images/onboarding/backdrop-light.webp')]"
+      />
+      <span aria-hidden className="absolute inset-0 bg-page/60" />
+      <span
+        aria-hidden
+        className="absolute inset-y-0 left-0 w-1/2 -translate-x-full bg-gradient-to-r from-transparent via-gold/25 to-transparent transition-transform duration-[320ms] group-hover/adicon:translate-x-[300%]"
+      />
+      <Megaphone size={17} weight="fill" className="relative text-gold" />
+    </>
+  );
+  const adIconClass =
+    "group/adicon relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-pill";
+
   return (
     <>
       <header className="sticky top-0 z-sticky flex items-center gap-3 border-b border-hairline bg-page px-2 py-2 sm:px-4 md:top-0">
@@ -170,6 +202,31 @@ export function ProfileHeader({
       </div>
 
       <div className="mt-2 flex min-h-[52px] justify-end gap-2 px-4 py-3">
+        {showAdIcon &&
+          (isMe ? (
+            <button
+              type="button"
+              aria-label="Your ad space — rates"
+              title="Your ad space"
+              onClick={() => requestRates(true)}
+              className={adIconClass}
+            >
+              {adIconChrome}
+            </button>
+          ) : (
+            <Link
+              href={`/bm?book=${encodeURIComponent(username)}`}
+              aria-label="Book this profile's ad space"
+              title={
+                adHeader?.fromUsdMinor
+                  ? `Book ad space · from $${(adHeader.fromUsdMinor / 100).toFixed(0)}/day`
+                  : "Book ad space"
+              }
+              className={adIconClass}
+            >
+              {adIconChrome}
+            </Link>
+          ))}
         {!isMe && !blockedByThem && !blockedByYou && (
           <>
             {canMessage && (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import { useAtomValue } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import axios from "axios";
 import clsx from "clsx";
 import Link from "next/link";
@@ -19,6 +19,10 @@ import {
 } from "@phosphor-icons/react";
 import { BACKEND_URL } from "@/const";
 import { userAtom } from "@/store/user.atom";
+import {
+	profileAdHeaderAtom,
+	profileRatesRequestAtom,
+} from "@/store/ui.atom";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import {
 	OverlayHeader,
@@ -177,6 +181,35 @@ export function AdSlot({
 		return () => clearInterval(t);
 	}, [slots.length]);
 
+	// While campaigns are live, the book affordance moves up into the
+	// header action row — this is the hand-off. Cleared on unmount so the
+	// next profile never inherits it.
+	const setAdHeader = useSetAtom(profileAdHeaderAtom);
+	useEffect(() => {
+		const active =
+			slots.length > 0 && (isMe ? canSell : publicRates.length > 0);
+		setAdHeader(
+			active
+				? {
+						username,
+						isMe,
+						fromUsdMinor: publicRates.length
+							? Math.min(...publicRates.map((r) => r.priceUsdMinor))
+							: null,
+					}
+				: null,
+		);
+		return () => setAdHeader(null);
+	}, [slots.length, isMe, canSell, publicRates, username, setAdHeader]);
+
+	const [ratesRequested, setRatesRequested] = useAtom(profileRatesRequestAtom);
+	useEffect(() => {
+		if (ratesRequested && isMe) {
+			setRatesOpen(true);
+			setRatesRequested(false);
+		}
+	}, [ratesRequested, isMe, setRatesRequested]);
+
 	const endCampaign = async () => {
 		const slot = slots[slotIndex];
 		if (!slot) return;
@@ -263,40 +296,10 @@ export function AdSlot({
 						</div>
 					)}
 				</div>
-				{/* The slot stays for sale while campaigns run (overlaps rotate
-				    by admin ruling) — so booking survives here, one size down:
-				    the campaign is the tenant, the book chip is the sign. */}
-				{!isMe && publicRates.length > 0 && (
-					<Link
-						href={`/bm?book=${encodeURIComponent(username)}`}
-						className="mt-1.5 flex items-center justify-between gap-3 rounded-[10px] bg-sunken px-3 py-1.5 transition-colors hover:bg-raised"
-					>
-						<span className="min-w-0 truncate font-sans text-[11.5px] text-muted tabular-nums">
-							Ad space · from $
-							{(
-								Math.min(...publicRates.map((r) => r.priceUsdMinor)) / 100
-							).toFixed(0)}
-							/day
-						</span>
-						<span className="shrink-0 rounded-pill bg-primary px-2.5 py-1 font-sans text-[11px] font-semibold text-page">
-							Book
-						</span>
-					</Link>
-				)}
-				{isMe && canSell && (
-					<button
-						type="button"
-						onClick={() => setRatesOpen(true)}
-						className="mt-1.5 flex w-full cursor-pointer items-center justify-between gap-3 rounded-[10px] bg-sunken px-3 py-1.5 transition-colors hover:bg-raised"
-					>
-						<span className="min-w-0 truncate font-sans text-[11.5px] text-muted tabular-nums">
-							Your ad space · {slots.length} running
-						</span>
-						<span className="shrink-0 rounded-pill bg-gold/15 px-2.5 py-1 font-sans text-[11px] font-semibold text-gold">
-							Rates
-						</span>
-					</button>
-				)}
+				{/* Booking survives a live slot, but not here — while campaigns
+				    run, the affordance is the glimmer megaphone in the header
+				    action row (see profileAdHeaderAtom). The slot itself stays
+				    all campaign. */}
 				{scheduledNote}
 				<AnimatePresence>
 					{ratesOpen && (
@@ -468,10 +471,16 @@ function SponsoredCard({
 				</h3>
 				{isOwner && (
 					<>
-						<span className="shrink-0 font-sans text-[11px] text-subtle tabular-nums">
+						{/* One click from the page the ad lives on to the full
+						    analytics: deep-links into the deal room with the
+						    stats sheet already open (/bm?deal=). */}
+						<Link
+							href={`/bm?deal=${slot._id}`}
+							className="shrink-0 font-sans text-[11px] text-subtle tabular-nums transition-colors hover:text-primary hover:underline"
+						>
 							{(slot.impressions ?? 0).toLocaleString()} views ·{" "}
 							{(slot.clicks ?? 0).toLocaleString()} clicks
-						</span>
+						</Link>
 						<button
 							type="button"
 							onClick={onEnd}

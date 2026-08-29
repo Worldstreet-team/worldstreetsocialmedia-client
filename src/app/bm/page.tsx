@@ -7,6 +7,7 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	CaretLeft,
+	ChartBar,
 	ImageSquare,
 	PaperPlaneRight,
 	Plus,
@@ -295,6 +296,26 @@ export default function BmPage() {
 			setComposerOpen(true);
 		}
 	}, []);
+	// /bm?deal=<bookingId> — one click from the profile's metrics chip to
+	// the deal room with analytics already open. Held until threads arrive
+	// (the list loads async), consumed once, then cleaned from the URL.
+	const [dealParam, setDealParam] = useState<string | null>(null);
+	const [autoStatsFor, setAutoStatsFor] = useState<string | null>(null);
+	useEffect(() => {
+		const deal = new URLSearchParams(window.location.search).get("deal");
+		if (deal) setDealParam(deal);
+	}, []);
+	useEffect(() => {
+		if (!dealParam || threads.length === 0) return;
+		const t = threads.find((th) => th.booking?._id === dealParam);
+		if (t) {
+			setActiveId(t._id);
+			setAutoStatsFor(t._id);
+			setDealParam(null);
+			window.history.replaceState(null, "", "/bm");
+		}
+	}, [dealParam, threads]);
+
 	const closeComposer = () => {
 		setComposerOpen(false);
 		if (window.location.search.includes("book=")) {
@@ -605,6 +626,8 @@ export default function BmPage() {
 						onAct={act}
 						busy={busy}
 						endRef={endRef}
+						autoStats={autoStatsFor === active._id}
+						onAutoStatsDone={() => setAutoStatsFor(null)}
 					/>
 				)}
 			</section>
@@ -781,6 +804,137 @@ function RequestQueue({
 
 /* ── the deal room ──────────────────────────────────────────────── */
 
+/**
+ * The numbers behind one campaign, for whichever side is asking. Everything
+ * here already rides the thread payload — the sheet is presentation, not a
+ * new fetch: serving (views/clicks/CTR), delivery (days, progress), and
+ * where the dollars stand, framed per role.
+ */
+function CampaignStatsSheet({
+	booking: b,
+	periods,
+	role,
+	onClose,
+}: {
+	booking: BmBooking;
+	periods: BmPeriod[];
+	role: "creator" | "advertiser";
+	onClose: () => void;
+}) {
+	useOverlayDismiss(true, onClose);
+	const views = b.impressions ?? 0;
+	const clicks = b.clicks ?? 0;
+	const ctr = views > 0 ? ((clicks / views) * 100).toFixed(1) : null;
+	const pct = Math.min(
+		100,
+		Math.round((b.daysServed / Math.max(1, b.durationDays)) * 100),
+	);
+	const held = periods
+		.filter((p) => p.status === "held")
+		.reduce((n, p) => n + p.amountUsdMinor, 0);
+	const returned = periods
+		.filter((p) => p.status === "released")
+		.reduce((n, p) => n + p.amountUsdMinor, 0);
+	const fmtDay = (iso: string) =>
+		new Date(iso).toLocaleDateString(undefined, {
+			month: "short",
+			day: "numeric",
+		});
+	return (
+		<>
+			<OverlayScrim onClose={onClose} />
+			<OverlayPanel variant="anchored" label="Campaign analytics">
+				<OverlayHeader title="Campaign analytics" onClose={onClose} />
+				<div className="px-4 pb-4 md:px-5 md:pb-5">
+					<div className="grid grid-cols-3 gap-1.5">
+						{[
+							["Views", views.toLocaleString()],
+							["Clicks", clicks.toLocaleString()],
+							["CTR", ctr ? `${ctr}%` : "—"],
+						].map(([label, value]) => (
+							<div
+								key={label}
+								className="rounded-[10px] bg-sunken px-3 py-2.5"
+							>
+								<p className="font-display text-[18px] font-semibold text-primary tabular-nums">
+									{value}
+								</p>
+								<p className="font-sans text-[11px] text-subtle">{label}</p>
+							</div>
+						))}
+					</div>
+
+					<div className="mt-3 rounded-[10px] bg-sunken px-3 py-2.5">
+						<div className="flex items-baseline justify-between font-sans text-[12px]">
+							<span className="text-muted tabular-nums">
+								{b.daysServed}/{b.durationDays} days served
+							</span>
+							<span className="text-subtle tabular-nums">
+								{fmtDay(b.startAt)} – {fmtDay(b.endAt)}
+							</span>
+						</div>
+						<div className="mt-2 h-1 overflow-hidden rounded-pill bg-raised">
+							<div
+								className="h-full rounded-pill bg-gold transition-[width]"
+								style={{ width: `${pct}%` }}
+							/>
+						</div>
+					</div>
+
+					<div className="mt-3 overflow-hidden rounded-[10px] bg-sunken">
+						<StatRow label="Deal value" value={usd(b.agreedUsdMinor)} />
+						<StatRow label="Settled" value={usd(b.settledUsdMinor)} />
+						{role === "creator" ? (
+							<StatRow
+								label="You earned"
+								value={usd(b.creatorPaidUsdMinor)}
+								tone="success"
+							/>
+						) : (
+							<>
+								{held > 0 && (
+									<StatRow label="Held in escrow" value={usd(held)} />
+								)}
+								{returned > 0 && (
+									<StatRow
+										label="Returned to you"
+										value={usd(returned)}
+										tone="success"
+									/>
+								)}
+							</>
+						)}
+					</div>
+				</div>
+			</OverlayPanel>
+		</>
+	);
+}
+
+function StatRow({
+	label,
+	value,
+	tone,
+}: {
+	label: string;
+	value: string;
+	tone?: "success";
+}) {
+	return (
+		<div className="flex items-center justify-between border-b border-hairline/60 px-3.5 py-2 font-sans text-[12.5px] last:border-b-0">
+			<span className="text-muted">{label}</span>
+			<span
+				className={clsx(
+					"tabular-nums font-medium",
+					tone === "success" ? "text-success" : "text-primary",
+				)}
+			>
+				{value}
+			</span>
+		</div>
+	);
+}
+
 function ThreadView({
 	thread,
 	role,
@@ -794,6 +948,8 @@ function ThreadView({
 	onAct,
 	busy,
 	endRef,
+	autoStats,
+	onAutoStatsDone,
 }: {
 	thread: BmThread;
 	role: "creator" | "advertiser";
@@ -810,12 +966,26 @@ function ThreadView({
 	onAct: (bookingId: string, verb: "accept" | "decline" | "cancel") => void;
 	busy: boolean;
 	endRef: React.RefObject<HTMLDivElement | null>;
+	/** Arrived via /bm?deal= — open the analytics sheet on mount. */
+	autoStats?: boolean;
+	onAutoStatsDone?: () => void;
 }) {
 	const b = thread.booking;
 	const other = role === "creator" ? thread.advertiser : thread.creator;
 	const myTurn = b.status === "requested" && b.awaitingActionFrom === role;
 	const cancellable = ["accepted", "live", "paused"].includes(b.status);
 	const [counterOpen, setCounterOpen] = useState(false);
+	// Analytics live behind an info button for BOTH parties — the deal card
+	// stays a contract, the numbers get their own room.
+	const [statsOpen, setStatsOpen] = useState(false);
+	useEffect(() => {
+		if (autoStats) {
+			setStatsOpen(true);
+			onAutoStatsDone?.();
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [autoStats]);
+	const hasStats = !["requested", "declined", "expired"].includes(b.status);
 	// Text while editing — clamping keystrokes is how fields get stuck.
 	const [cPrice, setCPrice] = useState(
 		(b.agreedUsdMinor / 100).toString(),
@@ -895,6 +1065,17 @@ function ThreadView({
 					<span className="shrink-0 font-display text-[20px] font-semibold text-primary tabular-nums">
 						{usd(b.agreedUsdMinor)}
 					</span>
+					{hasStats && (
+						<button
+							type="button"
+							aria-label="Campaign analytics"
+							title="Campaign analytics"
+							onClick={() => setStatsOpen(true)}
+							className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-raised text-muted transition-colors hover:bg-chip hover:text-primary"
+						>
+							<ChartBar size={15} weight="fill" />
+						</button>
+					)}
 				</div>
 
 				{/* THE AD ITSELF. The creator is approving a creative — showing
@@ -986,6 +1167,14 @@ function ThreadView({
 					</div>
 				)}
 
+				{statsOpen && (
+					<CampaignStatsSheet
+						booking={b}
+						periods={periods}
+						role={role}
+						onClose={() => setStatsOpen(false)}
+					/>
+				)}
 				{counterOpen && b.status === "requested" && (
 					<div className="mt-2.5 flex items-end gap-2 rounded-xl bg-sunken p-3">
 						<label className="flex-1">
