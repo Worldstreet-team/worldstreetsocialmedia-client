@@ -59,20 +59,18 @@ export default function FollowsModal({
 	const [loading, setLoading] = useState(true);
 	const [users, setUsers] = useState<UserItem[]>([]);
 	const [query, setQuery] = useState("");
+	const [hasMore, setHasMore] = useState(false);
+	const [loadingMore, setLoadingMore] = useState(false);
 
 	/**
-	 * Name and handle. A long allies list is a haystack, and the reason you
-	 * open it is usually to find one person in it.
+	 * A page at a time — 50 — because @worldstreet's allies list is every
+	 * account on the platform. Search is SERVER-side for the same reason:
+	 * filtering the loaded page would make anyone past the first 50
+	 * unfindable, and the point of the search box is that you can find
+	 * anyone in the list.
 	 */
-	const shown = users.filter((u) => {
-		const q = query.trim().toLowerCase();
-		if (!q) return true;
-		const name = `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim();
-		return (
-			name.toLowerCase().includes(q) ||
-			(u.username ?? "").toLowerCase().includes(q)
-		);
-	});
+	const PAGE = 50;
+	const shown = users;
 	const currentUser = useAtomValue(userAtom);
 	const t = useT();
 
@@ -86,27 +84,55 @@ export default function FollowsModal({
 		}
 	}, [isOpen, initialTab]);
 
+	const path = activeTab === "followers" ? "followers" : "following";
+
 	useEffect(() => {
 		if (!isOpen) return;
-
-		const fetchData = async () => {
-			setLoading(true);
-			setUsers([]);
-			let res;
-			if (activeTab === "followers") {
-				res = await read(`/api/users/${userId}/followers`, (b) => b.data);
-			} else {
-				res = await read(`/api/users/${userId}/following`, (b) => b.data);
-			}
-
-			if (res.success) {
-				setUsers(res.data);
-			}
-			setLoading(false);
+		let cancelled = false;
+		// Debounced: a search box that fires per keystroke against a 3k list
+		// is a request storm.
+		const timer = setTimeout(
+			async () => {
+				setLoading(true);
+				const res = await read(
+					`/api/users/${userId}/${path}?limit=${PAGE}&skip=0${
+						query.trim()
+							? `&q=${encodeURIComponent(query.trim())}`
+							: ""
+					}`,
+					(b) => b,
+				);
+				if (cancelled) return;
+				if (res.success) {
+					setUsers((res.data as any)?.data ?? []);
+					setHasMore(Boolean((res.data as any)?.hasMore));
+				}
+				setLoading(false);
+			},
+			query.trim() ? 300 : 0,
+		);
+		return () => {
+			cancelled = true;
+			clearTimeout(timer);
 		};
+	}, [isOpen, path, userId, query, read]);
 
-		fetchData();
-	}, [isOpen, activeTab, userId]);
+	const loadMore = async () => {
+		if (loadingMore) return;
+		setLoadingMore(true);
+		const res = await read(
+			`/api/users/${userId}/${path}?limit=${PAGE}&skip=${users.length}${
+				query.trim() ? `&q=${encodeURIComponent(query.trim())}` : ""
+			}`,
+			(b) => b,
+		);
+		if (res.success) {
+			const page = (res.data as any)?.data ?? [];
+			setUsers((prev) => [...prev, ...page]);
+			setHasMore(Boolean((res.data as any)?.hasMore));
+		}
+		setLoadingMore(false);
+	};
 
 	const handleFollowToggle = async (targetUser: UserItem) => {
 		// Optimistic update
@@ -282,6 +308,16 @@ export default function FollowsModal({
 												)}
 											</div>
 										))}
+										{hasMore && (
+											<button
+												type="button"
+												onClick={loadMore}
+												disabled={loadingMore}
+												className="mx-auto my-3 flex h-9 cursor-pointer items-center rounded-pill bg-raised px-4 font-sans text-[13px] font-medium text-primary transition-colors hover:bg-chip disabled:opacity-60"
+											>
+												{loadingMore ? "Loading…" : "Show more"}
+											</button>
+										)}
 									</div>
 								) : (
 									<div className="flex flex-col items-center justify-center h-full p-8 text-center text-muted font-sans">
@@ -289,9 +325,11 @@ export default function FollowsModal({
 										{/* Real words, not the wire key — this printed
 										    "No followers yet." in an app that says Allies. */}
 										<p>
-											{activeTab === "followers"
-												? "No Allies yet."
-												: "Not aligned to anyone yet."}
+											{query.trim()
+												? `Nobody here matches "${query.trim()}".`
+												: activeTab === "followers"
+													? "No Allies yet."
+													: "Not aligned to anyone yet."}
 										</p>
 									</div>
 								)}
