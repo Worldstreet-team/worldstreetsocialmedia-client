@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence } from "framer-motion";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { OverlayPanel, OverlayScrim } from "@/components/ui/Overlay";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import type { LucideIcon } from "lucide-react";
@@ -335,14 +336,15 @@ export function CommandPalette() {
                         >
                           {item.icon ? (
                             <item.icon className="w-4 h-4 shrink-0" />
-                          ) : item.image ? (
-                            <Image
-                              src={item.image}
-                              alt=""
-                              width={16}
-                              height={16}
-                              className="w-4 h-4 shrink-0 rounded-pill object-cover"
-                            />
+                          ) : item.image !== undefined ? (
+                            // SafeAvatar, not a hand-rolled Image: it carries
+                            // the default-picture fallback and skips the
+                            // optimizer (which 415s on some Clerk avatars).
+                            // `!== undefined` so an account with no picture
+                            // still gets a circle instead of a blank gap.
+                            <span className="relative h-4 w-4 shrink-0 overflow-hidden rounded-pill bg-raised">
+                              <SafeAvatar src={item.image} eager />
+                            </span>
                           ) : (
                             <span className="w-4 shrink-0" />
                           )}

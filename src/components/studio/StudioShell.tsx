@@ -142,11 +142,11 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 					{mounted && user && (
 					<div className="rounded-xl bg-[#171614] p-3">
 						<div className="flex items-center gap-2.5">
-							{user?.avatar && (
-								<span className="relative h-9 w-9 shrink-0 overflow-hidden rounded-pill">
-									<SafeAvatar src={user.avatar} className="object-cover" />
-								</span>
-							)}
+							{/* No guard: SafeAvatar owns the missing-picture case, and
+							    hiding the circle left the name floating alone. */}
+							<span className="relative h-9 w-9 shrink-0 overflow-hidden rounded-pill bg-raised">
+								<SafeAvatar src={user.avatar} className="object-cover" eager />
+							</span>
 							<span className="min-w-0 flex-1">
 								<span className="block truncate font-sans text-[13px] font-semibold glass-ink">
 									{[user?.firstName, user?.lastName]
