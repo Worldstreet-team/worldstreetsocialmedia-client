@@ -25,6 +25,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { formatTimeAgo } from "@/lib/utils";
 import { Tabs } from "@/components/ui/Tabs";
+import ConfirmModal from "@/components/ui/ConfirmModal";
 import {
 	OverlayHeader,
 	OverlayPanel,
@@ -237,6 +238,25 @@ export default function BmPage() {
 		void loadRequests();
 	}, [loadRequests]);
 
+	const [confirmDeclineAll, setConfirmDeclineAll] = useState(false);
+	const declineAll = async () => {
+		if (busy) return;
+		setBusy(true);
+		try {
+			const d = await authed("post", "/api/ads/bookings/decline-all");
+			toast(`Declined ${d.declined} request${d.declined === 1 ? "" : "s"}`, {
+				type: "success",
+			});
+			await Promise.all([loadThreads(), loadRequests()]);
+		} catch (err: any) {
+			toast(err?.response?.data?.message ?? "Could not clear the queue", {
+				type: "error",
+			});
+		} finally {
+			setBusy(false);
+		}
+	};
+
 	const openBooking = (bookingId: string) => {
 		const t = threads.find((th) => th.booking?._id === bookingId);
 		if (t) {
@@ -406,12 +426,27 @@ export default function BmPage() {
 
 				<div className="min-h-0 flex-1 overflow-y-auto">
 					{pane === "requests" ? (
-						<RequestQueue
-							requests={requests}
-							busy={busy}
-							onAct={act}
-							onOpen={openBooking}
-						/>
+						<>
+							<RequestQueue
+								requests={requests}
+								busy={busy}
+								onAct={act}
+								onOpen={openBooking}
+								onDeclineAll={() => setConfirmDeclineAll(true)}
+							/>
+							<ConfirmModal
+								isOpen={confirmDeclineAll}
+								onClose={() => setConfirmDeclineAll(false)}
+								onConfirm={() => {
+									setConfirmDeclineAll(false);
+									void declineAll();
+								}}
+								title={`Decline all ${requests.length} requests?`}
+								message="Every pending request is declined and each advertiser sees it in their thread. Deals already accepted are untouched."
+								confirmText="Decline all"
+								isDestructive
+							/>
+						</>
 					) : !loaded ? (
 						<div className="flex flex-col gap-3 p-4">
 							{[0, 1, 2].map((i) => (
@@ -578,11 +613,13 @@ function RequestQueue({
 	busy,
 	onAct,
 	onOpen,
+	onDeclineAll,
 }: {
 	requests: any[];
 	busy: boolean;
 	onAct: (bookingId: string, verb: "accept" | "decline" | "cancel") => void;
 	onOpen: (bookingId: string) => void;
+	onDeclineAll: () => void;
 }) {
 	if (requests.length === 0) {
 		return (
@@ -595,17 +632,46 @@ function RequestQueue({
 		(a, r) => a + (r.agreedUsdMinor ?? 0),
 		0,
 	);
+	// Requests compete for ONE calendar: accepting an offer kills every one
+	// that overlaps it, so the overlap count turns the queue into an honest
+	// auction. O(n²) over ≤200 rows is nothing.
+	const overlaps = new Map<string, number>();
+	for (const a of requests) {
+		let n = 0;
+		const aS = new Date(a.startAt).getTime();
+		const aE = new Date(a.endAt).getTime();
+		for (const b of requests) {
+			if (a._id === b._id) continue;
+			if (
+				new Date(b.startAt).getTime() < aE &&
+				new Date(b.endAt).getTime() > aS
+			) {
+				n++;
+			}
+		}
+		overlaps.set(a._id, n);
+	}
 	return (
 		<div>
 			{/* The aggregate is the celebrity's signal: what is this queue
 			    WORTH, before reading a single row. */}
-			<div className="flex items-baseline justify-between px-4 pb-2 pt-1">
+			<div className="flex items-center justify-between px-4 pb-2 pt-1">
 				<span className="font-sans text-[12px] text-subtle tabular-nums">
-					{requests.length} request{requests.length === 1 ? "" : "s"}
+					{requests.length} request{requests.length === 1 ? "" : "s"} ·{" "}
+					<span className="font-semibold text-gold">
+						{usd(totalOffered)} offered
+					</span>
 				</span>
-				<span className="font-sans text-[12px] font-semibold text-gold tabular-nums">
-					{usd(totalOffered)} offered
-				</span>
+				{requests.length > 1 && (
+					<button
+						type="button"
+						disabled={busy}
+						onClick={onDeclineAll}
+						className="cursor-pointer font-sans text-[12px] font-medium text-muted transition-colors hover:text-danger disabled:opacity-50"
+					>
+						Decline all
+					</button>
+				)}
 			</div>
 			{requests.map((r) => {
 				const adv = r.advertiser ?? {};
@@ -638,6 +704,14 @@ function RequestQueue({
 										day: "numeric",
 									})}
 									{r.creative?.url ? " · creative attached" : ""}
+									{(overlaps.get(r._id) ?? 0) > 0 && (
+										<span className="text-gold">
+											{" "}
+											· beats {overlaps.get(r._id)} other
+											{overlaps.get(r._id) === 1 ? "" : "s"} for these
+											dates
+										</span>
+									)}
 								</span>
 							</span>
 						</button>
@@ -1109,6 +1183,9 @@ function NewBookingSheet({
 	const [coverUrl, setCoverUrl] = useState("");
 	const [linkUrl, setLinkUrl] = useState("");
 	const [uploading, setUploading] = useState<"media" | "cover" | null>(null);
+	/** 0-100 while a file is in flight — a 40MB video on hotel wifi deserves
+	 *  a number, not a vibe. */
+	const [uploadPct, setUploadPct] = useState(0);
 	const [rate, setRate] = useState<number | null>(null);
 	const [sending, setSending] = useState(false);
 	const mediaInputRef = useRef<HTMLInputElement>(null);
@@ -1144,16 +1221,26 @@ function NewBookingSheet({
 		setCoverUrl("");
 	}, [format]);
 
-	/** Straight to R2 through the existing upload route; the returned URL is
-	 *  what rides the booking. */
+	const { getToken } = useAuth();
+	/** Straight to R2, with real progress — axios is called directly here
+	 *  because the shared helper cannot carry onUploadProgress. */
 	const upload = async (file: File, kind: "media" | "cover") => {
 		setUploading(kind);
+		setUploadPct(0);
 		try {
 			const form = new FormData();
 			form.append("file", file);
-			const data = await authed("post", "/api/messages/upload", form);
-			if (kind === "media") setMediaUrl(data.url);
-			else setCoverUrl(data.url);
+			const token = await getToken();
+			const res = await axios.post(`${API_URL}/api/uploads`, form, {
+				headers: { Authorization: `Bearer ${token}` },
+				onUploadProgress: (e) => {
+					if (e.total) {
+						setUploadPct(Math.round((e.loaded / e.total) * 100));
+					}
+				},
+			});
+			if (kind === "media") setMediaUrl(res.data.url);
+			else setCoverUrl(res.data.url);
 		} catch (err: any) {
 			toast(err?.response?.data?.message ?? "Upload failed", {
 				type: "error",
@@ -1355,9 +1442,9 @@ function NewBookingSheet({
 								className="flex h-28 w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl bg-sunken transition-colors hover:bg-raised disabled:opacity-60"
 							>
 								<UploadSimple size={20} className="text-muted" />
-								<span className="font-sans text-[13px] font-medium text-muted">
+								<span className="font-sans text-[13px] font-medium text-muted tabular-nums">
 									{uploading === "media"
-										? "Uploading…"
+										? `Uploading… ${uploadPct}%`
 										: `Upload ${format === "audio" ? "audio" : format}`}
 								</span>
 								<span className="font-sans text-[11px] text-subtle">
@@ -1407,7 +1494,7 @@ function NewBookingSheet({
 								>
 									<UploadSimple size={16} />
 									{uploading === "cover"
-										? "Uploading…"
+										? `Uploading… ${uploadPct}%`
 										: "Upload the banner behind the play button"}
 								</button>
 							)}

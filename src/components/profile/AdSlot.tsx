@@ -61,6 +61,9 @@ interface RateRow {
 	format: "image" | "video" | "audio";
 	priceUsdMinor: number;
 	enabled: boolean;
+	/** Shortest run this creator will take — the volume valve: price/day ×
+	 *  minDays is the real floor on how small an offer can be. */
+	minDays: number;
 }
 
 export function AdSlot({
@@ -584,9 +587,9 @@ function RatesSheet({
 	useOverlayDismiss(true, onClose);
 
 	const [rows, setRows] = useState<RateRow[]>([
-		{ format: "image", priceUsdMinor: 2000, enabled: true },
-		{ format: "video", priceUsdMinor: 3500, enabled: false },
-		{ format: "audio", priceUsdMinor: 2500, enabled: false },
+		{ format: "image", priceUsdMinor: 2000, enabled: true, minDays: 1 },
+		{ format: "video", priceUsdMinor: 3500, enabled: false, minDays: 1 },
+		{ format: "audio", priceUsdMinor: 2500, enabled: false, minDays: 1 },
 	]);
 	const [saving, setSaving] = useState(false);
 	/**
@@ -602,13 +605,21 @@ function RatesSheet({
 	useEffect(() => {
 		void authed("get", `/api/ads/rates/${encodeURIComponent(username)}`)
 			.then((d) => {
-				const current: RateRow[] = d.rates ?? [];
+				const current: any[] = d.rates ?? [];
 				if (current.length === 0) return;
 				setRows((prev) =>
 					prev.map((row) => {
 						const hit = current.find((c) => c.format === row.format);
+						// The owner's read includes switched-off rows now, so a
+						// reopened editor remembers a disabled format's price
+						// instead of forgetting it ever had one.
 						return hit
-							? { ...row, priceUsdMinor: hit.priceUsdMinor, enabled: true }
+							? {
+									...row,
+									priceUsdMinor: hit.priceUsdMinor,
+									enabled: hit.enabled !== false,
+									minDays: hit.minDays ?? 1,
+								}
 							: { ...row, enabled: false };
 					}),
 				);
@@ -641,6 +652,7 @@ function RatesSheet({
 					format: r.format,
 					priceUsdMinor: r.priceUsdMinor,
 					enabled: r.enabled,
+					minDays: r.minDays,
 				})),
 			);
 			toast("Rates published", { type: "success" });
@@ -746,13 +758,35 @@ function RatesSheet({
 												/ day
 											</span>
 										</label>
-										{/* the number that answers "so what would I make?" */}
+										{/* the volume valve: nobody can book below this */}
+										<label className="flex items-center gap-1.5 font-sans text-[11.5px] text-subtle">
+											min run
+											<input
+												type="text"
+												inputMode="numeric"
+												value={String(row.minDays)}
+												onChange={(e) => {
+													const n = Number(
+														e.target.value.replace(/[^0-9]/g, "") || 0,
+													);
+													update(row.format, {
+														minDays: Math.min(30, Math.max(1, n || 1)),
+													});
+												}}
+												className="h-8 w-10 rounded-lg bg-page/60 text-center font-sans text-[13px] text-primary outline-none tabular-nums transition-colors focus:bg-page"
+											/>
+											d
+										</label>
 										<span className="text-right font-sans text-[11.5px] leading-tight text-subtle tabular-nums">
-											7-day run ≈ ${((row.priceUsdMinor * 7) / 100).toFixed(0)}
+											floor $
+											{((row.priceUsdMinor * row.minDays) / 100).toFixed(0)}
 											<br />
 											<span className="text-gold">
 												you keep $
-												{((row.priceUsdMinor * 7 * 0.6) / 100).toFixed(0)}
+												{(
+													(row.priceUsdMinor * row.minDays * 0.6) /
+													100
+												).toFixed(0)}
 											</span>
 										</span>
 									</div>
