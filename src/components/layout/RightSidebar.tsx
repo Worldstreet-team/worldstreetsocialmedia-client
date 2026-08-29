@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getWhoToFollowAction, followUserAction } from "@/lib/user.actions";
+import { followUserAction } from "@/lib/user.actions";
+import { useGatewayRead } from "@/hooks/useGateway";
 import { useLiveNow } from "@/hooks/useLiveNow";
 import Link from "next/link";
 import { Aperture, Broadcast, Fire, MagnifyingGlass, UserPlus } from "@phosphor-icons/react";
@@ -19,7 +20,6 @@ import {
 } from "@/store/suggestions.atom";
 import { trendsAtom, trendsLoadedAtom } from "@/store/trends.atom";
 import { followingIdsAtom, searchOpenAtom } from "@/store/ui.atom";
-import { getExploreDataAction } from "@/lib/post.actions";
 import { XSTREAM_WEB_URL } from "@/const";
 import { useT } from "@/i18n/client";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
@@ -52,6 +52,7 @@ export function RightSidebar() {
 	const { entries: liveNow } = useLiveNow();
 	const [category, setCategory] = useState<string>("all");
 	const [failed, setFailed] = useState(false);
+	const read = useGatewayRead();
 	const { toast } = useToast();
 	// Shared with the feed's "Following" tab, so a follow here shows up there.
 	const [followedIds, setFollowedIds] = useAtom(followingIdsAtom);
@@ -100,10 +101,18 @@ export function RightSidebar() {
 			try {
 				const [who, explore] = await Promise.allSettled([
 					needWho
-					? fetchCached(cacheKeys.whoToFollow(), getWhoToFollowAction, RAIL_TTL_MS)
+					? fetchCached(
+							cacheKeys.whoToFollow(),
+							() => read("/api/users/who-to-follow", (b) => b.data),
+							RAIL_TTL_MS,
+						)
 					: null,
 					needTrends
-					? fetchCached(cacheKeys.exploreData(), getExploreDataAction, RAIL_TTL_MS)
+					? fetchCached(
+							cacheKeys.exploreData(),
+							() => read("/api/posts/explore"),
+							RAIL_TTL_MS,
+						)
 					: null,
 				]);
 				// Keyed on whether a request actually went out, NOT on whether it
@@ -129,8 +138,10 @@ export function RightSidebar() {
 				inFlight.current = false;
 			}
 		},
-		// Setters only — every one of these is stable, so the callback is too.
+		// Setters only — every one of these is stable, so the callback is too
+		// (and the gateway read hook is a stable useCallback).
 		[
+			read,
 			setRailFetchedAt,
 			setSuggestions,
 			setIsSuggestionsLoaded,

@@ -8,7 +8,7 @@ import {
   notificationsAtom,
   notificationsLoadedAtom,
 } from "@/store/notifications.atom";
-import { getNotificationsAction } from "@/lib/notification.actions";
+import { useGatewayRead } from "@/hooks/useGateway";
 import { cacheKeys, fetchCached, invalidate } from "@/lib/cache";
 
 /** Notifications arrive as realtime events, so a minute of reuse costs nothing
@@ -30,10 +30,17 @@ export function NotificationCountSync() {
   const setNotifications = useSetAtom(notificationsAtom);
   const setLoaded = useSetAtom(notificationsLoadedAtom);
   const pathname = usePathname();
+  const read = useGatewayRead();
 
   useEffect(() => {
     let cancelled = false;
-    fetchCached(cacheKeys.notifications(), getNotificationsAction, NOTIFICATIONS_TTL).then((res) => {
+    // Direct gateway read — same wrapper shape the action returned, minus
+    // the Next hop and the per-client action serialization.
+    fetchCached(
+      cacheKeys.notifications(),
+      () => read("/api/notifications"),
+      NOTIFICATIONS_TTL,
+    ).then((res: any) => {
       if (cancelled) return;
       if (res.success && Array.isArray(res.data)) {
         setNotifications(res.data);
@@ -44,13 +51,17 @@ export function NotificationCountSync() {
     return () => {
       cancelled = true;
     };
-  }, [setCount, setNotifications, setLoaded]);
+  }, [setCount, setNotifications, setLoaded, read]);
 
   const refresh = () => {
     // Something arrived: the cached copy is stale by definition, so drop it
     // before refetching or fetchCached would hand back the old list.
     invalidate(cacheKeys.notifications());
-    void fetchCached(cacheKeys.notifications(), getNotificationsAction, NOTIFICATIONS_TTL).then((res) => {
+    void fetchCached(
+      cacheKeys.notifications(),
+      () => read("/api/notifications"),
+      NOTIFICATIONS_TTL,
+    ).then((res: any) => {
       if (res.success && Array.isArray(res.data)) setNotifications(res.data);
     });
   };

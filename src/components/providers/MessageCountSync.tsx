@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useSetAtom } from "jotai";
 import { unreadMessagesCountAtom } from "@/store/messageCache";
-import { getConversationsAction } from "@/lib/conversation.actions";
+import { useGatewayRead } from "@/hooks/useGateway";
 
 /**
  * Seeds the DM badge from the server on app load.
@@ -14,10 +14,11 @@ import { getConversationsAction } from "@/lib/conversation.actions";
  */
 export function MessageCountSync() {
   const setCount = useSetAtom(unreadMessagesCountAtom);
+  const read = useGatewayRead();
 
   useEffect(() => {
     let cancelled = false;
-    getConversationsAction().then((res) => {
+    read("/api/messages/conversations").then((res) => {
       if (cancelled || !res.success || !Array.isArray(res.data)) return;
       setCount(
         res.data.reduce(
@@ -29,7 +30,7 @@ export function MessageCountSync() {
     return () => {
       cancelled = true;
     };
-  }, [setCount]);
+  }, [setCount, read]);
 
   return null;
 }
