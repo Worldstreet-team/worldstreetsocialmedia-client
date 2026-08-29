@@ -652,7 +652,7 @@ function RatesSheet({
 					format: r.format,
 					priceUsdMinor: r.priceUsdMinor,
 					enabled: r.enabled,
-					minDays: r.minDays,
+					minDays: Math.max(1, r.minDays),
 				})),
 			);
 			toast("Rates published", { type: "success" });
@@ -764,13 +764,17 @@ function RatesSheet({
 											<input
 												type="text"
 												inputMode="numeric"
-												value={String(row.minDays)}
+												// 0 is the "field is empty" sentinel, so the
+												// value can actually be cleared while typing —
+												// clamping keystrokes is the stuck-at-$1 bug
+												// all over again. Save treats 0 as 1.
+												value={row.minDays === 0 ? "" : String(row.minDays)}
 												onChange={(e) => {
 													const n = Number(
 														e.target.value.replace(/[^0-9]/g, "") || 0,
 													);
 													update(row.format, {
-														minDays: Math.min(30, Math.max(1, n || 1)),
+														minDays: Math.min(30, n),
 													});
 												}}
 												className="h-8 w-10 rounded-lg bg-page/60 text-center font-sans text-[13px] text-primary outline-none tabular-nums transition-colors focus:bg-page"
@@ -779,12 +783,17 @@ function RatesSheet({
 										</label>
 										<span className="text-right font-sans text-[11.5px] leading-tight text-subtle tabular-nums">
 											floor $
-											{((row.priceUsdMinor * row.minDays) / 100).toFixed(0)}
+											{(
+												(row.priceUsdMinor * Math.max(1, row.minDays)) /
+												100
+											).toFixed(0)}
 											<br />
 											<span className="text-gold">
 												you keep $
 												{(
-													(row.priceUsdMinor * row.minDays * 0.6) /
+													(row.priceUsdMinor *
+														Math.max(1, row.minDays) *
+														0.6) /
 													100
 												).toFixed(0)}
 											</span>
