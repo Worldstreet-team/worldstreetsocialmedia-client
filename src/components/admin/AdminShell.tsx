@@ -26,8 +26,13 @@ import { useAppPathname } from "@/i18n/useAppPathname";
 
 const TABS = [
 	{ href: "/admin", label: "Overview" },
+	{ href: "/admin/reports", label: "Reports" },
+	{ href: "/admin/people", label: "People" },
+	{ href: "/admin/money", label: "Money" },
+	{ href: "/admin/ranking", label: "Ranking" },
 	{ href: "/admin/revenue", label: "Revenue" },
 	{ href: "/admin/health", label: "Health" },
+	{ href: "/admin/ops", label: "Ops" },
 	{ href: "/admin/audit", label: "Audit" },
 ];
 
