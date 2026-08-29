@@ -164,6 +164,7 @@ export interface PostProps {
             imageCount?: number;
             hasVideo?: boolean;
             videoDurationSec?: number;
+            audioDurationSec?: number;
             previewThumb?: string;
             audio?: { durationSec: number; peaks: number[] };
             previewAudioUrl?: string;
@@ -715,7 +716,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={handleDelete}
                 title="Delete Post?"
-                message="This can't be undone and it will be removed from your profile, the timeline of any accounts that follow you, and from search results."
+                message="This can't be undone and it will be removed from your profile, your Allies' timelines, and search results."
                 confirmText={isDeleting ? "Deleting..." : "Delete"}
                 isDestructive={true}
             />
@@ -1725,7 +1726,8 @@ function SaleStorefront({
     const hasText = Boolean(sale.teaser?.trim());
     const imageCount = media.imageCount ?? 0;
     const hasVisual = imageCount > 0 || media.hasVideo;
-    const hasAudio = Boolean(media.audio);
+    const hasAudio =
+        Boolean(media.audio) || Boolean(media.audioDurationSec);
     // Mixed post: text leads, media collapses to chips. Media-only post:
     // the visual/audio tease IS the body.
     const mixed = hasText && (hasVisual || hasAudio);
@@ -1772,8 +1774,8 @@ function SaleStorefront({
                     {hasAudio && (
                         <span className="flex items-center gap-1 rounded-pill bg-raised px-2.5 py-1 font-sans text-[11px] text-muted">
                             <MicrophoneStage size={12} />{" "}
-                            {Math.floor((media.audio?.durationSec ?? 0) / 60)}:
-                            {String((media.audio?.durationSec ?? 0) % 60).padStart(2, "0")}{" "}
+                            {Math.floor(((media.audio?.durationSec ?? media.audioDurationSec) ?? 0) / 60)}:
+                            {String(((media.audio?.durationSec ?? media.audioDurationSec) ?? 0) % 60).padStart(2, "0")}{" "}
                             voice
                         </span>
                     )}
@@ -1808,7 +1810,7 @@ function SaleStorefront({
                         </span>
                     </div>
                 </div>
-            ) : hasAudio ? (
+            ) : media.audio || media.previewAudioUrl ? (
                 <div className="px-4 pt-2.5">
                     {media.previewAudioUrl ? (
                         <>
@@ -1835,6 +1837,15 @@ function SaleStorefront({
                             ))}
                         </div>
                     )}
+                </div>
+            ) : hasAudio ? (
+                <div className="px-4 pt-2.5">
+                    <span className="flex w-fit items-center gap-1 rounded-pill bg-raised px-2.5 py-1 font-sans text-[11px] text-muted">
+                        <MicrophoneStage size={12} />{" "}
+                        {Math.floor((media.audioDurationSec ?? 0) / 60)}:
+                        {String((media.audioDurationSec ?? 0) % 60).padStart(2, "0")}{" "}
+                        voice inside
+                    </span>
                 </div>
             ) : null}
 

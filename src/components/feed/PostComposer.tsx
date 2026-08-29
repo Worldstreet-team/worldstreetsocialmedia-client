@@ -282,6 +282,7 @@ export const PostComposer = ({
 	// The storefront title — what non-buyers see instead of "Paid post".
 	// Required when selling; the gateway refuses a titleless listing too.
 	const [saleTitle, setSaleTitle] = useState("");
+	const [saleHidePreview, setSaleHidePreview] = useState(false);
 	const salePriceMinor = selling
 		? Math.round(Number.parseFloat(salePrice || "0") * 100)
 		: 0;
@@ -720,18 +721,23 @@ export const PostComposer = ({
 			if (selling && !saleInvalid) {
 				formData.append("salePriceUsdMinor", String(salePriceMinor));
 				formData.append("saleTitle", saleTitle.trim().slice(0, 80));
+				if (saleHidePreview) formData.append("saleHideTeaser", "true");
 				// Teaser assets, cut HERE in the seller's browser: a 24px thumb
 				// of the first visual (real colours, unrecoverable detail) and
 				// the first 15s of a voice post. The paywall then never has to
 				// ship a real asset to tease with.
-				const firstVisual = mediaItems.find(
-					(m) => m.type === "image" || m.type === "video",
-				);
+				const firstVisual = saleHidePreview
+					? undefined
+					: mediaItems.find(
+							(m) => m.type === "image" || m.type === "video",
+						);
 				if (firstVisual) {
 					const thumb = await makeTinyThumb(firstVisual.file);
 					if (thumb) formData.append("salePreviewThumb", thumb);
 				}
-				const voiceItem = mediaItems.find((m) => m.type === "audio");
+				const voiceItem = saleHidePreview
+					? undefined
+					: mediaItems.find((m) => m.type === "audio");
 				if (voiceItem) {
 					const preview = await cutAudioPreview(voiceItem.file, 15);
 					if (preview) formData.append("salePreviewAudio", preview);
@@ -1167,6 +1173,22 @@ export const PostComposer = ({
 										? t("composer.sellBounds")
 										: t("composer.sellSplit")}
 								</span>
+								{/* Some sellers don't want a taste out there at all
+								    (owner ask): title + honest counts only. */}
+								<button
+									type="button"
+									onClick={() => setSaleHidePreview((v) => !v)}
+									aria-pressed={saleHidePreview}
+									className={clsx(
+										"flex h-9 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[12px] font-medium transition-colors",
+										saleHidePreview
+											? "bg-brand/15 text-gold"
+											: "bg-sunken text-muted hover:bg-raised",
+									)}
+								>
+									<LockSimple size={12} weight={saleHidePreview ? "fill" : "regular"} />
+									{saleHidePreview ? "Preview hidden" : "Hide preview"}
+								</button>
 							</>
 						)}
 					</div>

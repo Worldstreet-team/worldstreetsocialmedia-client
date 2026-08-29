@@ -1014,7 +1014,7 @@ export const MessageBox = ({
 			if (error?.response?.status === 403) {
 				toast.error(
 					error?.response?.data?.message ||
-						"You can't message this account — you both need to follow each other",
+						"You can't message this account — you need to be Allies first",
 				);
 			} else {
 				console.error("Failed to send", error);

@@ -112,7 +112,7 @@ export default function ImageModal({
 					<div
 						// px-16 below sm keeps the image clear of the prev/next buttons
 						// instead of letting them sit on top of the photo.
-						className="relative w-full h-full flex items-center justify-center px-16 py-16 sm:p-4 md:p-10"
+						className="relative w-full h-full flex items-center justify-center px-2 py-14 sm:p-4 md:p-10"
 						onClick={(e) => e.stopPropagation()} // Prevent closing when clicking on image area
 					>
 						<motion.img
@@ -123,7 +123,11 @@ export default function ImageModal({
 							animate={{ opacity: 1, scale: 1 }}
 							exit={{ opacity: 0, scale: 0.98 }}
 							transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-							className="max-h-full max-w-full object-contain rounded-lg select-none"
+							// h/w-full + contain, not max-*: max only shrinks, so a
+							// phone-sized upload sat tiny in the middle of the
+							// lightbox while large photos filled it — "some zoom
+							// well and some don't". Fill the frame both ways.
+							className="h-full w-full object-contain select-none"
 							draggable={false}
 						/>
 
