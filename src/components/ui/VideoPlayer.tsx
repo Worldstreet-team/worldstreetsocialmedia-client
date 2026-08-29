@@ -61,7 +61,10 @@ export function VideoPlayer({
 	const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	const [playing, setPlaying] = useState(false);
-	const [muted, setMuted] = useState(false);
+	// Feed videos start MUTED and autoplay on view (owner ruling): sound is
+	// a choice, motion is free. Muted-by-default is also what lets the
+	// browser allow the autoplay at all.
+	const [muted, setMuted] = useState(true);
 	const [duration, setDuration] = useState(0);
 	/**
 	 * The clip's own aspect ratio, once the metadata says what it is.
@@ -221,6 +224,32 @@ export function VideoPlayer({
 		else v.pause();
 	}, []);
 
+	// Autoplay on view, muted; leaving the viewport pauses. The observer only
+	// ever starts a MUTED clip — if the person unmuted and scrolled away, the
+	// pause keeps their place but the return replay stays silent until they
+	// choose sound again. 60% visible so half-cards don't all talk at once.
+	useEffect(() => {
+		const el = wrapRef.current;
+		const v = videoRef.current;
+		if (!el || !v) return;
+		const io = new IntersectionObserver(
+			([e]) => {
+				if (e.isIntersecting) {
+					if (v.paused) {
+						v.muted = true;
+						setMuted(true);
+						void v.play().catch(() => {});
+					}
+				} else if (!v.paused) {
+					v.pause();
+				}
+			},
+			{ threshold: 0.6 },
+		);
+		io.observe(el);
+		return () => io.disconnect();
+	}, []);
+
 	const seekBy = useCallback((delta: number) => {
 		const v = videoRef.current;
 		if (!v) return;
@@ -331,6 +360,19 @@ export function VideoPlayer({
 					// must not also read as a tap to play.
 					if (movedRef.current) {
 						movedRef.current = false;
+						return;
+					}
+					// In the feed (fitToMedia) a tap answers the autoplay
+					// question — sound on/off — the way every muted-autoplay
+					// feed works. Pause lives on the control bar. Elsewhere
+					// (detail pages, modals) a tap still means play/pause.
+					if (fitToMedia && playing) {
+						setMuted((m) => {
+							const v = videoRef.current;
+							if (v) v.muted = !m;
+							return !m;
+						});
+						bump();
 						return;
 					}
 					toggle();

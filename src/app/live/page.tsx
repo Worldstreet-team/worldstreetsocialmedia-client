@@ -34,6 +34,7 @@ import {
 } from "@/lib/mentionCache";
 import { LiveChatPanel } from "@/components/live/LiveChatPanel";
 import { LiveSlidePlayer } from "@/components/live/LiveSlidePlayer";
+import { LiveAdBanner } from "@/components/live/LiveAdBanner";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { DEFAULT_AVATAR, XSTREAM_API_URL } from "@/const";
 import { useLiveEvents } from "@/hooks/useLiveNow";
@@ -965,6 +966,16 @@ function VerticalSurface() {
 										</span>
 									)}
 								</div>
+							)}
+
+							{/* The broadcaster's running campaign rides their live
+							    stream, YouTube-style — only on live slides, only
+							    while this slide is the active one. */}
+							{slide.streamId && (
+								<LiveAdBanner
+									creatorProfileId={slide.authorId}
+									active={isActive}
+								/>
 							)}
 
 							{/* bottom info */}

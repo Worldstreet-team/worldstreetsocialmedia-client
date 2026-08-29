@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import Image from "next/image";
 import {
 	Image as ImageIcon,
@@ -28,6 +28,10 @@ import {
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { compressImage } from "@/lib/image-compress";
 import { analyzeAudioFile } from "@/lib/audio-analyze";
+import { useAtomValue } from "jotai";
+import { userAtom } from "@/store/user.atom";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import { RecordVoiceSheet } from "@/components/feed/RecordVoiceSheet";
 import { useAtom, useSetAtom } from "jotai";
 import {
 	draftsAtom,
@@ -38,7 +42,7 @@ import EmojiPicker, { type EmojiClickData, Theme } from "emoji-picker-react";
 import { useTheme } from "next-themes";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
-import { MusicNote, LockSimple, PencilSimple } from "@phosphor-icons/react";
+import { MusicNote, LockSimple, Microphone as MicrophoneIcon, PencilSimple } from "@phosphor-icons/react";
 // Loaded on first open, not on page load: the editors are the heaviest
 // client code in the app and they render only when someone opens one. The
 // host renders them conditionally, so next/dynamic defers the chunk until
@@ -228,6 +232,11 @@ export const PostComposer = ({
 		"composer.prompt4",
 	];
 	const { user } = useUser();
+	// The composer wears the APP profile's picture — the same shared userAtom
+	// every other surface reads — with Clerk's image only as the pre-hydration
+	// fallback. It used to read Clerk's imageUrl directly, so an avatar set in
+	// Edit profile never showed here.
+	const profileUser = useAtomValue(userAtom);
 	const [content, setContent] = useState("");
 	// Where this post goes. null = the public timeline.
 	const [audience, setAudience] = useState<AudienceCommunity | null>(
@@ -250,6 +259,8 @@ export const PostComposer = ({
 	} | null>(null);
 	const [audioBlurBg, setAudioBlurBg] = useState(true);
 	const [audioLimit, setAudioLimit] = useState<number>(60);
+	const [recordOpen, setRecordOpen] = useState(false);
+
 	useEffect(() => {
 		let cancelled = false;
 		fetchComposerLimits().then((limits) => {
@@ -339,6 +350,42 @@ export const PostComposer = ({
 	const emojiPickerRef = useRef<HTMLDivElement>(null);
 	const editorRef = useRef<MentionInputHandle>(null);
 	const { toast } = useToast();
+	// One door for audio, whether it came from the picker or the recorder:
+	// validate, decode for duration + peaks, become THE attachment.
+	const attachAudioFile = useCallback(
+		async (audioFile: File): Promise<boolean> => {
+			if (audioFile.size > 15 * 1024 * 1024) {
+				toast("Voice notes are capped at 15MB", { type: "error" });
+				return false;
+			}
+			const meta = await analyzeAudioFile(audioFile);
+			if (!meta) {
+				toast("Couldn't read that audio file", { type: "error" });
+				return false;
+			}
+			if (meta.durationSec > audioLimit + 1) {
+				toast(
+					`Your plan allows voice posts up to ${audioLimit}s — this one is ${meta.durationSec}s`,
+					{ type: "error" },
+				);
+				return false;
+			}
+			setMediaItems((prev) => {
+				prev.forEach((m) => URL.revokeObjectURL(m.url));
+				return [
+					{
+						url: URL.createObjectURL(audioFile),
+						file: audioFile,
+						type: "audio",
+					},
+				];
+			});
+			setAudioMeta(meta);
+			return true;
+		},
+		[audioLimit, toast],
+	);
+
 	// Picker follows the app theme instead of hardcoding dark.
 	const { resolvedTheme } = useTheme();
 
@@ -527,34 +574,7 @@ export const PostComposer = ({
 			// One voice note max, exclusive like video: a post is one thing.
 			const audioFile = files.find((f) => f.type.startsWith("audio/"));
 			if (audioFile) {
-				if (audioFile.size > 15 * 1024 * 1024) {
-					toast("Voice notes are capped at 15MB", { type: "error" });
-					if (fileInputRef.current) fileInputRef.current.value = "";
-					return;
-				}
-				const meta = await analyzeAudioFile(audioFile);
-				if (!meta) {
-					toast("Couldn't read that audio file", { type: "error" });
-					if (fileInputRef.current) fileInputRef.current.value = "";
-					return;
-				}
-				if (meta.durationSec > audioLimit + 1) {
-					toast(
-						`Your plan allows voice posts up to ${audioLimit}s — this one is ${meta.durationSec}s`,
-						{ type: "error" },
-					);
-					if (fileInputRef.current) fileInputRef.current.value = "";
-					return;
-				}
-				mediaItems.forEach((m) => URL.revokeObjectURL(m.url));
-				setAudioMeta(meta);
-				setMediaItems([
-					{
-						url: URL.createObjectURL(audioFile),
-						file: audioFile,
-						type: "audio",
-					},
-				]);
+				await attachAudioFile(audioFile);
 				if (fileInputRef.current) fileInputRef.current.value = "";
 				return;
 			}
@@ -790,22 +810,21 @@ export const PostComposer = ({
 	// of the feed rather than a separate panel.
 	return (
 		<div className="px-4 py-3 sm:px-6 sm:py-4 relative">
+			<RecordVoiceSheet
+				open={recordOpen}
+				maxSeconds={audioLimit}
+				onClose={() => setRecordOpen(false)}
+				onDone={(f) => void attachAudioFile(f)}
+			/>
 			<div className="flex gap-2.5 sm:gap-4">
 				<div className="shrink-0">
-					{user ? (
-						<div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border border-hairline">
-							<Image
-								src={user.imageUrl}
-								alt={user.username || "User"}
-								fill
-								className="object-cover"
-							/>
-						</div>
-					) : (
-						<div className="w-9 h-9 sm:w-10 sm:h-10 rounded-pill bg-raised border items-center justify-center flex border-hairline overflow-hidden">
-							<User className="w-5 h-5 text-subtle" />
-						</div>
-					)}
+					<div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-pill overflow-hidden border border-hairline bg-raised">
+						<SafeAvatar
+							src={(profileUser as any)?.avatar || user?.imageUrl}
+							alt={(profileUser as any)?.username || "You"}
+							eager
+						/>
+					</div>
 				</div>
 				<div className="flex-1 w-full min-w-0">
 					<div className="relative">
@@ -1119,6 +1138,21 @@ export const PostComposer = ({
 							>
 								<ImageIcon className="w-4 h-4 shrink-0" />
 								<span className="hidden sm:inline">{t("composer.media")}</span>
+							</button>
+							<button
+								type="button"
+								onClick={() => !linkPreview && setRecordOpen(true)}
+								disabled={!!linkPreview}
+								aria-label="Record a voice note"
+								className={clsx(
+									"flex h-10 w-10 justify-center sm:h-9 sm:w-auto sm:justify-start sm:px-3.5 items-center gap-2 rounded-pill font-sans text-[13px] font-medium transition-colors",
+									linkPreview
+										? "bg-raised/40 text-subtle cursor-not-allowed"
+										: "bg-raised/50 text-muted hover:bg-raised hover:text-primary cursor-pointer",
+								)}
+							>
+								<MicrophoneIcon className="h-4 w-4 shrink-0" size={16} />
+								<span className="hidden sm:inline">Voice</span>
 							</button>
 							<input
 								type="file"
