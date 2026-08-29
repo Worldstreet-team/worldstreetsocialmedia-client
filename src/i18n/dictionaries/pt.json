@@ -735,5 +735,6 @@
   "post.buy.confirmTitle": "Prosseguir com o pagamento?",
   "post.buy.confirmBody": "Você está comprando esta publicação de {seller} por {price}. O valor sai do saldo da sua carteira.",
   "post.buy.confirmCta": "Prosseguir com o pagamento",
-  "messages.kind.payment": "Pagamento"
+  "messages.kind.payment": "Pagamento",
+  "profile.alignedTo": "Alinhado com"
 }

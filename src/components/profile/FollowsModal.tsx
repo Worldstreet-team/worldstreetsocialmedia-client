@@ -157,21 +157,21 @@ export default function FollowsModal({
 							    header row, so the close chip sits beside them. */}
 							<OverlayHeader onClose={onClose} closeLabel={t("common.close")}>
 								<Tabs
-									// Allies first, then Aligned — the same order the
-									// profile lists them in. They disagreed, so tapping
-									// the left number opened a modal whose left tab was
-									// the other one.
+									// Allies first, then Aligned to — the order the
+									// profile lists them in. The old array said this in
+									// a comment while shipping the opposite; owner
+									// review caught the wrong arrangement.
 									items={[
-										{
-											key: "following" as const,
-											label: t("profile.following"),
-											badge: followingCount,
-											badgeMax: Number.MAX_SAFE_INTEGER,
-										},
 										{
 											key: "followers" as const,
 											label: t("profile.followers"),
 											badge: followersCount,
+											badgeMax: Number.MAX_SAFE_INTEGER,
+										},
+										{
+											key: "following" as const,
+											label: t("profile.alignedTo"),
+											badge: followingCount,
 											badgeMax: Number.MAX_SAFE_INTEGER,
 										},
 									]}

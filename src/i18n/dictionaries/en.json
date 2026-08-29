@@ -774,5 +774,6 @@
   "post.buy.confirmTitle": "Proceed with payment?",
   "post.buy.confirmBody": "You're buying this post from {seller} for {price}. The amount comes out of your wallet balance.",
   "post.buy.confirmCta": "Proceed with payment",
-  "messages.kind.payment": "Payment"
+  "messages.kind.payment": "Payment",
+  "profile.alignedTo": "Aligned to"
 }
