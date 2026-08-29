@@ -84,7 +84,11 @@ export function Badge({
       aria-label={label ?? `${n} unread`}
       className={clsx(BASE_COUNT, TONE[tone], ring && "ring-1 ring-page", className)}
     >
-      {n > max ? `${max}+` : n}
+      {n > max
+        ? `${max}+`
+        : n >= 1000
+          ? `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k`
+          : n}
     </span>
   );
 }

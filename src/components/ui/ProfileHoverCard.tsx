@@ -13,6 +13,7 @@ import {
 import { UserBadges } from "@/components/ui/UserBadges";
 import { followingIdsAtom } from "@/store/ui.atom";
 import { useT } from "@/i18n/client";
+import { formatCompact } from "@/lib/utils";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { overlayPanelClass } from "@/components/ui/Overlay";
 
@@ -275,13 +276,13 @@ export function ProfileHoverCard({
 							<div className="mt-3 flex gap-4 border-t border-hairline pt-2.5 font-sans text-[13px]">
 								<span className="tabular-nums text-muted">
 									<strong className="font-semibold text-primary">
-										{profile.followersCount ?? 0}
+										{formatCompact(profile.followersCount ?? 0)}
 									</strong>{" "}
 									{t("profile.followers")}
 								</span>
 								<span className="tabular-nums text-muted">
 									<strong className="font-semibold text-primary">
-										{profile.followingCount ?? 0}
+										{formatCompact(profile.followingCount ?? 0)}
 									</strong>{" "}
 									{t("profile.following")}
 								</span>

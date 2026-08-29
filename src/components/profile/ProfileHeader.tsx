@@ -1,6 +1,7 @@
 "use client";
 
 import type { ProfileBadge } from "@/components/ui/UserBadges";
+import { formatCompact } from "@/lib/utils";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -162,7 +163,7 @@ export function ProfileHeader({
             {fullName}
           </h1>
           <span className="font-sans text-xs tabular-nums text-muted">
-            {postsCount.toLocaleString()} {t("profile.posts")}
+            {formatCompact(postsCount)} {t("profile.posts")}
           </span>
         </div>
       </header>

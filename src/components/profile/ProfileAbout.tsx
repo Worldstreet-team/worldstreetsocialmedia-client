@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatCompact } from "@/lib/utils";
 import Link from "next/link";
 import { Calendar, Link as LinkIcon, MapPin } from "lucide-react";
 import { renderRichText } from "@/components/ui/RichText";
@@ -155,7 +156,7 @@ export function ProfileAbout({
           className="flex cursor-pointer items-baseline gap-1 border-none bg-transparent p-0 hover:underline"
         >
           <span className="text-[18px] font-bold tabular-nums text-primary">
-            {followersCount.toLocaleString()}
+            {formatCompact(followersCount)}
           </span>
           <span className="text-muted">{t("profile.followers")}</span>
         </button>
@@ -165,7 +166,7 @@ export function ProfileAbout({
           className="flex cursor-pointer items-baseline gap-1 border-none bg-transparent p-0 hover:underline"
         >
           <span className="text-[18px] font-bold tabular-nums text-primary">
-            {followingCount.toLocaleString()}
+            {formatCompact(followingCount)}
           </span>
           <span className="text-muted">{t("profile.following")}</span>
         </button>
