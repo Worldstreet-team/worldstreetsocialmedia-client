@@ -260,6 +260,10 @@ export const PostComposer = ({
 	const [audioBlurBg, setAudioBlurBg] = useState(true);
 	const [audioLimit, setAudioLimit] = useState<number>(60);
 	const [recordOpen, setRecordOpen] = useState(false);
+	// A file picked from disk enters the same finishing sheet the recorder
+	// ends in — background choice and listen-back happen THERE, in view,
+	// not on a chip after the modal is gone.
+	const [pendingAudioFile, setPendingAudioFile] = useState<File | null>(null);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -574,7 +578,8 @@ export const PostComposer = ({
 			// One voice note max, exclusive like video: a post is one thing.
 			const audioFile = files.find((f) => f.type.startsWith("audio/"));
 			if (audioFile) {
-				await attachAudioFile(audioFile);
+				setPendingAudioFile(audioFile);
+				setRecordOpen(true);
 				if (fileInputRef.current) fileInputRef.current.value = "";
 				return;
 			}
@@ -813,8 +818,16 @@ export const PostComposer = ({
 			<RecordVoiceSheet
 				open={recordOpen}
 				maxSeconds={audioLimit}
-				onClose={() => setRecordOpen(false)}
-				onDone={(f) => void attachAudioFile(f)}
+				avatar={(profileUser as any)?.avatar || user?.imageUrl}
+				initialFile={pendingAudioFile}
+				onClose={() => {
+					setRecordOpen(false);
+					setPendingAudioFile(null);
+				}}
+				onDone={(f, opts) => {
+					setAudioBlurBg(opts.blurBg);
+					void attachAudioFile(f);
+				}}
 			/>
 			<div className="flex gap-2.5 sm:gap-4">
 				<div className="shrink-0">
@@ -878,7 +891,15 @@ export const PostComposer = ({
 									)}
 								>
 									{item.type === "audio" ? (
-										<div className="absolute inset-0 flex items-center gap-2 bg-sunken px-3">
+										// biome-ignore lint/a11y/useKeyWithClickEvents: the X beside it is the keyboard path
+										<div
+											className="absolute inset-0 flex cursor-pointer items-center gap-2 bg-sunken px-3"
+											onClick={() => {
+												setPendingAudioFile(item.file);
+												setRecordOpen(true);
+											}}
+											title="Edit voice note"
+										>
 											<span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-primary text-page">
 												<MusicNote size={14} weight="fill" />
 											</span>
@@ -896,18 +917,16 @@ export const PostComposer = ({
 													? `${Math.floor(audioMeta.durationSec / 60)}:${String(audioMeta.durationSec % 60).padStart(2, "0")}`
 													: ""}
 											</span>
-											<button
-												type="button"
-												onClick={() => setAudioBlurBg((v) => !v)}
+											<span
 												className={clsx(
-													"shrink-0 cursor-pointer rounded-pill px-2 py-0.5 font-sans text-[10.5px] font-semibold transition-colors",
+													"shrink-0 rounded-pill px-2 py-0.5 font-sans text-[10.5px] font-semibold",
 													audioBlurBg
 														? "bg-brand/15 text-gold"
 														: "bg-raised text-muted",
 												)}
 											>
-												Blur bg
-											</button>
+												{audioBlurBg ? "Blurred" : "Flat"}
+											</span>
 										</div>
 									) : item.type === "video" ? (
 										// eslint-disable-next-line jsx-a11y/media-has-caption

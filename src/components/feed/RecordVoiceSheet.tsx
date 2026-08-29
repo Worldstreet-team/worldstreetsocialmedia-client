@@ -6,7 +6,6 @@ import { AnimatePresence } from "framer-motion";
 import {
 	Microphone,
 	Pause,
-	Play,
 	Stop,
 	ArrowCounterClockwise,
 } from "@phosphor-icons/react";
@@ -16,6 +15,8 @@ import {
 	OverlayScrim,
 	useOverlayDismiss,
 } from "@/components/ui/Overlay";
+import { AudioCard } from "@/components/feed/AudioCard";
+import { analyzeAudioFile } from "@/lib/audio-analyze";
 
 /**
  * The in-app voice recorder for feed posts — the suite's first station.
@@ -33,13 +34,20 @@ import {
 export function RecordVoiceSheet({
 	open,
 	maxSeconds,
+	avatar,
+	initialFile,
 	onClose,
 	onDone,
 }: {
 	open: boolean;
 	maxSeconds: number;
+	/** The poster's picture — the preview must show THEIR card. */
+	avatar?: string;
+	/** A file picked outside (upload path): the sheet opens straight on the
+	 *  finishing step, so upload and record share one finishing room. */
+	initialFile?: File | null;
 	onClose: () => void;
-	onDone: (file: File) => void;
+	onDone: (file: File, opts: { blurBg: boolean }) => void;
 }) {
 	useOverlayDismiss(open, onClose);
 	const [phase, setPhase] = useState<
@@ -48,7 +56,12 @@ export function RecordVoiceSheet({
 	const [elapsed, setElapsed] = useState(0);
 	const [bars, setBars] = useState<number[]>([]);
 	const [reviewUrl, setReviewUrl] = useState<string | null>(null);
-	const [reviewPlaying, setReviewPlaying] = useState(false);
+	const [reviewFile, setReviewFile] = useState<File | null>(null);
+	const [reviewMeta, setReviewMeta] = useState<{
+		durationSec: number;
+		peaks: number[];
+	} | null>(null);
+	const [blurBg, setBlurBg] = useState(true);
 
 	const recRef = useRef<MediaRecorder | null>(null);
 	const streamRef = useRef<MediaStream | null>(null);
@@ -58,7 +71,6 @@ export function RecordVoiceSheet({
 	const ctxRef = useRef<AudioContext | null>(null);
 	const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 	const elapsedRef = useRef(0);
-	const reviewAudioRef = useRef<HTMLAudioElement | null>(null);
 
 	const cleanup = useCallback(() => {
 		cancelAnimationFrame(rafRef.current);
@@ -83,10 +95,32 @@ export function RecordVoiceSheet({
 			setBars([]);
 			if (reviewUrl) URL.revokeObjectURL(reviewUrl);
 			setReviewUrl(null);
-			setReviewPlaying(false);
+			setReviewFile(null);
+			setReviewMeta(null);
+			setBlurBg(true);
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [open]);
+
+	// Upload path: the picked file lands on the same finishing step the
+	// recorder ends on — one room for both roads.
+	useEffect(() => {
+		if (!open || !initialFile) return;
+		let cancelled = false;
+		void analyzeAudioFile(initialFile).then((meta) => {
+			if (cancelled || !meta) return;
+			setReviewFile(initialFile);
+			setReviewMeta(meta);
+			setElapsed(meta.durationSec);
+			elapsedRef.current = meta.durationSec;
+			setReviewUrl(URL.createObjectURL(initialFile));
+			setPhase("review");
+		});
+		return () => {
+			cancelled = true;
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [open, initialFile]);
 
 	const meter = useCallback(() => {
 		const an = analyserRef.current;
@@ -139,10 +173,19 @@ export function RecordVoiceSheet({
 				const blob = new Blob(chunksRef.current, {
 					type: rec.mimeType || "audio/webm",
 				});
-				const url = URL.createObjectURL(blob);
-				setReviewUrl(url);
+				const ext = blob.type.includes("mp4") ? "m4a" : "webm";
+				const file = new File([blob], `voice-note.${ext}`, {
+					type: blob.type,
+				});
+				setReviewFile(file);
+				setReviewUrl(URL.createObjectURL(blob));
 				setPhase("review");
 				cleanup();
+				// Real peaks for the preview — the card shown here is the card
+				// the feed will render, waveform and all.
+				void analyzeAudioFile(file).then((meta) => {
+					if (meta) setReviewMeta(meta);
+				});
 			};
 			rec.start(250);
 			setPhase("recording");
@@ -178,13 +221,11 @@ export function RecordVoiceSheet({
 		}
 	}, [meter, maxSeconds]);
 
-	const use = useCallback(async () => {
-		if (!reviewUrl) return;
-		const blob = await fetch(reviewUrl).then((r) => r.blob());
-		const ext = blob.type.includes("mp4") ? "m4a" : "webm";
-		onDone(new File([blob], `voice-note.${ext}`, { type: blob.type }));
+	const use = useCallback(() => {
+		if (!reviewFile) return;
+		onDone(reviewFile, { blurBg });
 		onClose();
-	}, [reviewUrl, onDone, onClose]);
+	}, [reviewFile, blurBg, onDone, onClose]);
 
 	const clock = (s: number) =>
 		`${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
@@ -198,40 +239,37 @@ export function RecordVoiceSheet({
 					<OverlayPanel variant="sheet" label="Record a voice note">
 						<OverlayHeader title="Voice note" onClose={onClose} />
 						<div className="flex flex-col items-center gap-5 px-5 pb-6 pt-1">
-							{/* live meter / review wave */}
-							<div className="flex h-16 w-full items-center justify-center gap-[3px] rounded-xl bg-sunken px-4">
-								{phase === "denied" ? (
-									<p className="font-sans text-[13px] text-muted">
-										Microphone access was refused — allow it in the browser
-										and try again.
-									</p>
-								) : bars.length === 0 ? (
-									<p className="font-sans text-[13px] text-subtle">
-										{phase === "review"
-											? "Listen back before it posts."
-											: "Your voice draws here."}
-									</p>
-								) : (
-									bars.map((v, i) => (
-										<span
-											key={i}
-											className={clsx(
-												"w-[3px] rounded-pill",
-												phase === "review" ? "bg-primary/40" : "bg-gold",
-											)}
-											style={{ height: `${Math.max(8, (v / 127) * 100)}%` }}
-										/>
-									))
-								)}
-							</div>
+							{/* live meter while recording; in review the REAL card
+							    takes this spot */}
+							{phase !== "review" && (
+								<div className="flex h-16 w-full items-center justify-center gap-[3px] rounded-xl bg-sunken px-4">
+									{phase === "denied" ? (
+										<p className="font-sans text-[13px] text-muted">
+											Microphone access was refused — allow it in the
+											browser and try again.
+										</p>
+									) : bars.length === 0 ? (
+										<p className="font-sans text-[13px] text-subtle">
+											Your voice draws here.
+										</p>
+									) : (
+										bars.map((v, i) => (
+											<span
+												key={i}
+												className="w-[3px] rounded-pill bg-gold"
+												style={{ height: `${Math.max(8, (v / 127) * 100)}%` }}
+											/>
+										))
+									)}
+								</div>
+							)}
 
+							{phase !== "review" && (
 							<div className="flex items-baseline gap-2 font-sans tabular-nums">
 								<span
 									className={clsx(
 										"text-[26px] font-semibold",
-										nearCap && phase !== "review"
-											? "text-danger"
-											: "text-primary",
+										nearCap ? "text-danger" : "text-primary",
 									)}
 								>
 									{clock(elapsed)}
@@ -240,34 +278,64 @@ export function RecordVoiceSheet({
 									/ {clock(maxSeconds)}
 								</span>
 							</div>
+							)}
 
 							{phase === "review" && reviewUrl ? (
 								<>
-									{/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-									<audio
-										ref={reviewAudioRef}
-										src={reviewUrl}
-										onEnded={() => setReviewPlaying(false)}
-									/>
-									<div className="flex items-center gap-3">
-										<button
-											type="button"
-											aria-label={reviewPlaying ? "Pause" : "Play"}
-											onClick={() => {
-												const el = reviewAudioRef.current;
-												if (!el) return;
-												if (reviewPlaying) el.pause();
-												else void el.play();
-												setReviewPlaying(!reviewPlaying);
+									{/* WYSIWYG: this IS the feed card — same component,
+									    same waveform, same ground — playable right here.
+									    What gets approved is what gets rendered. */}
+									<div className="w-full">
+										<AudioCard
+											key={`${blurBg}-${reviewMeta ? "m" : "x"}`}
+											audio={{
+												url: reviewUrl,
+												durationSec:
+													reviewMeta?.durationSec ??
+													Math.round(elapsedRef.current),
+												peaks: reviewMeta?.peaks ?? [],
+												blurBg,
 											}}
-											className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-pill bg-raised text-primary transition-colors hover:bg-chip"
-										>
-											{reviewPlaying ? (
-												<Pause size={18} weight="fill" />
-											) : (
-												<Play size={18} weight="fill" className="translate-x-px" />
-											)}
-										</button>
+											avatar={avatar}
+										/>
+									</div>
+
+									{/* The background is chosen HERE, on the preview,
+									    where the choice is visible — not on a chip in
+									    the composer after the sheet is gone. */}
+									<div className="-mt-1 flex w-full items-center justify-between">
+										<span className="font-sans text-[12.5px] text-muted">
+											Background
+										</span>
+										<div className="flex gap-1.5">
+											<button
+												type="button"
+												onClick={() => setBlurBg(true)}
+												className={clsx(
+													"cursor-pointer rounded-pill px-3.5 py-1.5 font-sans text-[12px] font-semibold transition-colors",
+													blurBg
+														? "bg-brand text-brand-on"
+														: "bg-raised text-muted hover:bg-chip",
+												)}
+											>
+												Your photo, blurred
+											</button>
+											<button
+												type="button"
+												onClick={() => setBlurBg(false)}
+												className={clsx(
+													"cursor-pointer rounded-pill px-3.5 py-1.5 font-sans text-[12px] font-semibold transition-colors",
+													!blurBg
+														? "bg-brand text-brand-on"
+														: "bg-raised text-muted hover:bg-chip",
+												)}
+											>
+												Flat
+											</button>
+										</div>
+									</div>
+
+									<div className="flex items-center gap-3">
 										<button
 											type="button"
 											onClick={use}
@@ -281,6 +349,8 @@ export function RecordVoiceSheet({
 											onClick={() => {
 												if (reviewUrl) URL.revokeObjectURL(reviewUrl);
 												setReviewUrl(null);
+												setReviewFile(null);
+												setReviewMeta(null);
 												setBars([]);
 												setElapsed(0);
 												elapsedRef.current = 0;

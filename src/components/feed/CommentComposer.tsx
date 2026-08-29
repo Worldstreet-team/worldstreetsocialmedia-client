@@ -6,6 +6,8 @@ import { AnimatePresence } from "framer-motion";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { Image as ImageIcon, Smile, Send, X, User } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
+import { useAtomValue } from "jotai";
+import { userAtom } from "@/store/user.atom";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import {
 	OverlayHeader,
@@ -37,6 +39,10 @@ export const CommentComposer = ({
 	onCommentStart,
 }: CommentComposerProps) => {
 	const { user } = useUser();
+	// The APP profile's picture, same shared atom as everywhere — Clerk's
+	// image only as pre-hydration fallback. Same enforcement as the post
+	// composer; this one was still reading Clerk directly.
+	const profileUser = useAtomValue(userAtom);
 	const [content, setContent] = useState("");
 	const [isPosting, setIsPosting] = useState(false);
 	const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
@@ -127,15 +133,12 @@ export const CommentComposer = ({
 		<div className="relative border-b border-hairline px-4 py-3.5">
 			<div className="flex gap-3">
 				<div className="shrink-0">
-					{user ? (
-						<div className="relative h-10 w-10 overflow-hidden rounded-pill bg-raised">
-							<SafeAvatar src={user.imageUrl} />
-						</div>
-					) : (
-						<div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-pill bg-raised">
-							<User className="w-5 h-5 text-subtle" />
-						</div>
-					)}
+					<div className="relative h-10 w-10 overflow-hidden rounded-pill bg-raised">
+						<SafeAvatar
+							src={(profileUser as any)?.avatar || user?.imageUrl}
+							eager
+						/>
+					</div>
 				</div>
 				<div className="flex-1 w-full min-w-0">
 					<textarea
