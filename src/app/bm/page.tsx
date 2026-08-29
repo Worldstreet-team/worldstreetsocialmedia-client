@@ -20,6 +20,7 @@ import { Briefcase } from "lucide-react";
 import { BACKEND_URL } from "@/const";
 import { userAtom } from "@/store/user.atom";
 import { unreadBmCountAtom } from "@/store/ui.atom";
+import { useUserEvents } from "@/hooks/useUserEvents";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast/ToastContext";
@@ -204,9 +205,22 @@ export default function BmPage() {
 
 	useEffect(() => {
 		void loadThreads();
-		const t = setInterval(() => void loadThreads(), 20_000);
+		// Fallback cadence only — bm events refresh instantly below.
+		const t = setInterval(() => void loadThreads(), 60_000);
 		return () => clearInterval(t);
 	}, [loadThreads]);
+
+	// Realtime: a bm event means a thread of mine changed. Refresh the list,
+	// and the open room if there is one — the deal room reacts the moment
+	// the other side speaks or the machine settles a tranche.
+	const activeIdRef = useRef<string | null>(null);
+	activeIdRef.current = activeId;
+	useUserEvents((event) => {
+		if (event.type !== "bm") return;
+		void loadThreads();
+		void loadRequests();
+		if (activeIdRef.current) void loadMessages(activeIdRef.current);
+	});
 
 	/**
 	 * The requests QUEUE — a different animal from the thread list. A creator
@@ -281,7 +295,8 @@ export default function BmPage() {
 	useEffect(() => {
 		if (!activeId) return;
 		void loadMessages(activeId);
-		const t = setInterval(() => void loadMessages(activeId), 5_000);
+		// Fallback only; the bm event above is the fast path.
+		const t = setInterval(() => void loadMessages(activeId), 20_000);
 		return () => clearInterval(t);
 	}, [activeId, loadMessages]);
 
@@ -621,6 +636,7 @@ function RequestQueue({
 	onOpen: (bookingId: string) => void;
 	onDeclineAll: () => void;
 }) {
+	const [visible, setVisible] = useState(60);
 	if (requests.length === 0) {
 		return (
 			<div className="px-6 py-10 text-center font-sans text-[13px] text-subtle">
@@ -673,7 +689,7 @@ function RequestQueue({
 					</button>
 				)}
 			</div>
-			{requests.map((r) => {
+			{requests.slice(0, visible).map((r) => {
 				const adv = r.advertiser ?? {};
 				return (
 					<div
@@ -739,6 +755,16 @@ function RequestQueue({
 					</div>
 				);
 			})}
+			{requests.length > visible && (
+				<button
+					type="button"
+					onClick={() => setVisible((v) => v + 60)}
+					className="mx-4 my-3 h-10 w-[calc(100%-2rem)] cursor-pointer rounded-pill bg-raised font-sans text-[13px] font-medium text-muted transition-colors hover:bg-chip hover:text-primary"
+				>
+					Show {Math.min(60, requests.length - visible)} more of{" "}
+					{requests.length - visible}
+				</button>
+			)}
 		</div>
 	);
 }

@@ -6,6 +6,7 @@ import { useSetAtom } from "jotai";
 import { useEffect } from "react";
 import { BACKEND_URL } from "@/const";
 import { unreadBmCountAtom } from "@/store/ui.atom";
+import { useUserEvents } from "@/hooks/useUserEvents";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || BACKEND_URL;
 
@@ -36,7 +37,9 @@ export function BmCountSync() {
 			}
 		};
 		void load();
-		const t = setInterval(() => void load(), 60_000);
+		// The poll is the FALLBACK now — bm events on the user channel land
+		// instantly; this catches whatever a dropped connection missed.
+		const t = setInterval(() => void load(), 120_000);
 		const onFocus = () => void load();
 		window.addEventListener("focus", onFocus);
 		return () => {
@@ -45,6 +48,27 @@ export function BmCountSync() {
 			window.removeEventListener("focus", onFocus);
 		};
 	}, [getToken, setCount]);
+
+	// Instant path: the gateway publishes type:"bm" on the user channel the
+	// moment a thread gains news. Refetching the count (one tiny GET) beats
+	// counting locally — the server is the only honest source.
+	useUserEvents((event) => {
+		if (event.type !== "bm") return;
+		const token = getToken();
+		void token.then((tk) =>
+			tk
+				? axios
+						.get(`${API_URL}/api/bm/unread-count`, {
+							headers: { Authorization: `Bearer ${tk}` },
+						})
+						.then((res) => {
+							if (typeof res.data?.count === "number")
+								setCount(res.data.count);
+						})
+						.catch(() => {})
+				: undefined,
+		);
+	});
 
 	return null;
 }

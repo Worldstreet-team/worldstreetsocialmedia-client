@@ -1007,9 +1007,21 @@ export const MessageBox = ({
 				};
 			});
 		} catch (error: any) {
-			console.error("Failed to send", error);
-			// Same rule as the voice path: a 403 carries the actual reason.
-			toast.error(error?.response?.data?.message || "Failed to send message");
+			// A 403 is the gateway REFUSING, not failing — blocked, or the
+			// mutual-follow gate. Say so plainly, and no console.error for an
+			// expected refusal: in dev that paints the crash overlay over a
+			// message that was handled.
+			if (error?.response?.status === 403) {
+				toast.error(
+					error?.response?.data?.message ||
+						"You can't message this account — you both need to follow each other",
+				);
+			} else {
+				console.error("Failed to send", error);
+				toast.error(
+					error?.response?.data?.message || "Failed to send message",
+				);
+			}
 			setMessageCache((prev) => ({
 				...prev,
 				[activeConversation._id]: (prev[activeConversation._id] || []).filter(
