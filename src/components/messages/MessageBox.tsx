@@ -50,6 +50,7 @@ import {
 	UserCirclePlus,
 	Tray,
 	CopySimple,
+	ArrowCounterClockwise,
 	X as XIcon,
 } from "@phosphor-icons/react";
 // Loaded on first open, not on page load: the editors are the heaviest
@@ -512,6 +513,42 @@ export const MessageBox = ({
 		0,
 	);
 
+	const unsendMessage = useCallback(
+		async (message: Message) => {
+			// Optimistic: the bubble goes now; a failure puts it back.
+			const convoId = activeIdRef.current;
+			if (!convoId) return;
+			setMessageCache((prev) => ({
+				...prev,
+				[convoId]: (prev[convoId] ?? []).filter(
+					(m) => m._id !== message._id,
+				),
+			}));
+			try {
+				const token = await getToken();
+				const r = await fetch(
+					`${API_URL}/api/messages/message/${message._id}`,
+					{
+						method: "DELETE",
+						headers: { Authorization: `Bearer ${token}` },
+					},
+				);
+				if (!r.ok) throw new Error(String(r.status));
+			} catch {
+				setMessageCache((prev) => ({
+					...prev,
+					[convoId]: [...(prev[convoId] ?? []), message].sort(
+						(a, b) =>
+							new Date(a.createdAt).getTime() -
+							new Date(b.createdAt).getTime(),
+					),
+				}));
+				toast.error("Couldn't unsend that message");
+			}
+		},
+		[getToken, setMessageCache],
+	);
+
 	const acceptRequest = useCallback(
 		async (conversationId: string) => {
 			try {
@@ -932,6 +969,21 @@ export const MessageBox = ({
 	};
 
 	const onMessage = useCallback((ablyMessage: any) => {
+		if (
+			ablyMessage.name === "event" &&
+			ablyMessage.data.type === "message:unsent"
+		) {
+			// The other side took a message back — it vanishes in place, no
+			// tombstone, exactly as if it had never landed.
+			const { conversationId, messageId } = ablyMessage.data;
+			setMessageCache((prev) => ({
+				...prev,
+				[conversationId]: (prev[conversationId] ?? []).filter(
+					(m) => m._id !== messageId,
+				),
+			}));
+			return;
+		}
 		if (
 			ablyMessage.name === "event" &&
 			ablyMessage.data.type === "message:new"
@@ -1606,13 +1658,37 @@ export const MessageBox = ({
 									}
 									className={clsx(
 										"group/msg flex flex-col scroll-mt-24 touch-pan-y",
-										sameRunAsPrev ? "mt-0.5" : "mt-4",
+										sameRunAsPrev ? "mt-[2px]" : "mt-4",
 										isMe ? "items-end" : "items-start",
 										// Jump target: a brief wash so the eye lands on the
 										// right bubble instead of hunting the thread.
 										flashedId === m._id && "rounded-xl bg-brand/10",
 									)}
 								>
+									<div
+										className={clsx(
+											"flex max-w-full items-center gap-1",
+											isMe ? "flex-row" : "flex-row-reverse",
+										)}
+									>
+									{/* Reply rides BESIDE the bubble on its inner side
+									    (owner ruling): left of yours, right of theirs —
+									    where the thumb already is, without pushing the
+									    thread taller. Hover-revealed on pointer devices,
+									    always present on touch. */}
+									{!m._id.startsWith("temp-") && (
+										<button
+											type="button"
+											onClick={() => setReplyTarget(m)}
+											aria-label="Reply to this message"
+											className={clsx(
+												"flex h-8 w-8 shrink-0 items-center justify-center rounded-pill text-subtle transition hover:bg-raised hover:text-muted",
+												"opacity-100 md:opacity-0 md:group-hover/msg:opacity-100 md:focus-visible:opacity-100",
+											)}
+										>
+											<ArrowBendUpLeft size={14} weight="bold" />
+										</button>
+									)}
 									<div
 										className={clsx(
 											// 70% of a 272px pane is 190px — too narrow to
@@ -1741,25 +1817,7 @@ export const MessageBox = ({
 											</p>
 										)}
 									</div>
-									{/* Reply. Appears on hover on a pointer device and is
-									    always present on touch, where there is no hover to
-									    reveal it — a control you cannot discover is not a
-									    control. Call logs render on their own branch above
-									    and never reach here, so they need no guard. */}
-									{!m._id.startsWith("temp-") && (
-										<button
-											type="button"
-											onClick={() => setReplyTarget(m)}
-											aria-label="Reply to this message"
-											className={clsx(
-												"mt-0.5 flex h-8 items-center gap-1 rounded-pill px-2 font-sans text-[11.5px] font-medium text-subtle transition hover:bg-raised hover:text-muted",
-												"opacity-100 md:opacity-0 md:group-hover/msg:opacity-100 md:focus-visible:opacity-100",
-											)}
-										>
-											<ArrowBendUpLeft size={13} weight="bold" />
-											Reply
-										</button>
-									)}
+									</div>
 									{/* One stamp per run, on its last line. A time under
 									    every bubble is noise the eye has to step over. */}
 									{endsRun && (
@@ -2160,6 +2218,22 @@ export const MessageBox = ({
 						>
 							<CopySimple size={15} weight="bold" />
 							Copy text
+						</button>
+					)}
+					{(typeof msgMenu.message.sender === "string"
+						? msgMenu.message.sender === myProfileId
+						: (msgMenu.message.sender as any)?._id === myProfileId) && (
+						<button
+							type="button"
+							role="menuitem"
+							onClick={() => {
+								void unsendMessage(msgMenu.message);
+								setMsgMenu(null);
+							}}
+							className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[13px] font-medium text-danger transition-colors hover:bg-raised"
+						>
+							<ArrowCounterClockwise size={15} weight="bold" />
+							Unsend
 						</button>
 					)}
 				</div>

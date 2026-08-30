@@ -271,15 +271,32 @@ noted below is fixed).
   mobile header uses the same mark. "More" opens a rich "More from
   WorldStreet" panel (icon chips + descriptions for
   Dashboard/Academy/Xstream/Shop — DS labels, never "XTreme").
-- **Exception (owner ruling 2026-08-25): the media-editor surfaces are
-  glass.** MediaEditor/VideoEditor/Story Studio + their tools use the
-  `glass-*` utilities in globals.css (heavy backdrop-blur, white CTAs,
-  fixed-dark chrome in both themes, Phosphor icons). This is the ONE
-  sanctioned deviation from the no-backdrop-blur ruling below — don't
-  spread glass beyond the editors, and don't retoken the editors back.
-- **No backdrop-blur anywhere else** (ecosystem glass ruling 2026-08-03): sticky
-  headers/bottom nav are solid `bg-page` + hairline, drawer/modal backdrops
-  are flat `bg-scrim`. Don't reintroduce `backdrop-blur-*`.
+- **TWO glass families, and they are not interchangeable.**
+  1. **Creator glass** (owner ruling 2026-08-25) — MediaEditor/VideoEditor/
+     Story Studio use the `glass-*` utilities (heavy backdrop-blur, white
+     CTAs, Phosphor icons). It is **fixed-dark in BOTH themes on purpose**:
+     it floats over photo and video, where a light pane blows out the media.
+     Don't retoken the editors back.
+  2. **Adaptive glass** (owner ruling 2026-08-26) — app chrome the reader
+     looks at for minutes: `.glass-nav` (floating mobile tab bar),
+     `.glass-card` / `.glass-tile` / `.glass-tile-on` (onboarding). These
+     **follow the theme** — dark pane on stone, light pane on paper, ink from
+     the normal text tokens. Do NOT use the fixed-dark `glass-*` set here; it
+     produces a dark bar on a white page.
+  Both need their own `backdrop-blur-*` at the usage site, and glass only
+  reads as glass over something: `.ambient-field` is the brand-tinted radial
+  ground built for that. Over flat page colour a blurred pane is a grey box.
+- **No backdrop-blur beyond those two families** (ecosystem ruling
+  2026-08-03): sticky headers are solid `bg-page` + hairline, drawer/modal
+  backdrops are flat `bg-scrim`. The mobile bottom nav is now the sanctioned
+  exception — it floats (inset, `rounded-pill`, `--ws-nav-float`) and blurs.
+- **No film grain in Social** (owner ruling 2026-08-26). `ws-tokens.css`
+  ships an app-wide turbulence overlay on `body::before` at 2% opacity
+  ("house atmosphere"); it reads as texture over the page here and is killed
+  in `globals.css` with `[data-ws-theme="platform"] body::before {
+  content: none }`. That override lives in globals.css — NOT edited out of
+  the vendored token file — so it survives the next `cp` re-sync. If texture
+  reappears, check that rule first.
 - **NextTopLoader is gold** (`var(--ws-brand-primary)`, 2px, no spinner) —
   don't revert to the default blue or a raw hex.
 - Bookmarks/notifications/profile pages are on-token (no zinc/raw palette).
@@ -291,8 +308,7 @@ noted below is fixed).
 Every remaining raw-palette surface was converted to semantic classes:
 **Messages** (MessageBox, NewConversationModal, CallModal, VoiceMessage,
 MediaModal, `app/messages/layout.tsx`), **Explore** (ExploreClient),
-**Onboarding** (full rewrite: gold `bg-brand` CTAs, `bg-sunken` fields,
-no more white-button/yellow-offset-shadow style), **post detail**
+**Onboarding** (since rebuilt again — see "Onboarding" below), **post detail**
 (PostPageScreen), **EditProfileModal / FollowsModal**, **Skeleton /
 ProfileSkeleton** (both use the `skeleton` utility now), and
 `(main)/layout.tsx`. A grep for
@@ -514,6 +530,38 @@ someone plainly using the app in another tab.
 
 One global set is right at this size and will not stay right: every client
 holds every online member. Shard on a hash of the profile id when it hurts.
+
+## Onboarding (rebuilt 2026-08-26)
+
+Five steps: identity → **region** → interests → **"The Space has a new look"**
+→ follow. Built on adaptive glass over `.ambient-field` (see the glass rules
+above), so it follows light/dark.
+
+- **Region is its own step and its own axis.** Ten ids from `REGIONS`
+  (`src/data/categories.ts`), posted as `region`. Geography is deliberately
+  orthogonal to interests — a post is `football-soccer` + `africa`, never
+  "African football". That separation is what keeps 100 categories
+  worldwide-viable instead of exploding into region-specific buckets.
+- **Interests use the real taxonomy**, via
+  `components/onboarding/InterestPicker.tsx`: 100 categories grouped under the
+  14 `VERTICALS`, with search matching BOTH label and classifier `keywords`
+  (so "afro" finds Afrobeats). `MIN_INTERESTS` 3 / `MAX_INTERESTS` 20, and
+  **ids cross the wire, never labels** — they are permanent algorithm keys.
+  The old flat `src/data/onboarding.ts` INTERESTS list is deleted; don't
+  resurrect it.
+- The picker's list cap is a **height budget, not taste**: the card also
+  carries lockup, progress, heading, caption, search, count and two buttons.
+  Above ~32dvh the CTA the step exists to reach falls below the fold.
+- **You cannot preview this while signed in.** `proxy.ts` redirects anyone
+  with a profile away from `/onboarding`, decided from the DB sync result and
+  not the cookie. To eyeball it, add a throwaway route under a name that does
+  NOT start with `/onboarding`, and never click "Create profile" there — it
+  POSTs to the real `/api/users/onboard` and overwrites the live profile.
+- `isOnboardingPath` in `proxy.ts` is an **exact match** plus `/onboarding/`.
+  It used to be `startsWith("/onboarding")`, which silently swallowed any
+  sibling route. Same bug class as the `/live` vs `/live-now` nav guard.
+- Copy is only **partly translated** — `useT` is wired but most strings
+  (headings, the WHATS_NEW blurbs) are still English literals.
 
 ## Local dev = real Clerk, real gateway
 
