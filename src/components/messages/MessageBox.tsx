@@ -28,6 +28,7 @@ import {
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Badge } from "@/components/ui/Badge";
+import { Tabs } from "@/components/ui/Tabs";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import axios from "axios";
 import { useUser, useAuth } from "@clerk/nextjs";
@@ -1308,27 +1309,26 @@ export const MessageBox = ({
 					<div className="border-b border-hairline px-2 pt-2">
 						<StoriesRail />
 					</div>
-					{/* The Requests shelf. Quiet on purpose: no badge in the
-					    nav, no ping on arrival — a stranger's opener waits
-					    here until it's looked at. */}
-					{requestConversations.length > 0 && (
-						<button
-							type="button"
-							onClick={() => setShowRequests((v) => !v)}
-							className="flex w-full cursor-pointer items-center justify-between border-b border-hairline px-4 py-2.5 text-left transition-colors hover:bg-raised/50"
-						>
-							<span className="flex items-center gap-2 font-sans text-[13px] font-medium text-primary">
-								<Tray size={16} className="text-muted" />
-								Message requests
-								<span className="rounded-pill bg-raised px-2 py-0.5 font-sans text-[11px] tabular-nums text-muted">
-									{requestConversations.length}
-								</span>
-							</span>
-							<span className="font-sans text-[11.5px] text-subtle">
-								{showRequests ? "Hide" : "View"}
-							</span>
-						</button>
-					)}
+					{/* Primary / Requests as pill tabs (the one tab grammar).
+					    Requests stay quiet — the badge lives HERE, inside
+					    messages, never on the nav. The tab shows even when
+					    empty so the place a stranger's opener waits is
+					    discoverable before one ever arrives. */}
+					<Tabs
+						ariaLabel="Inbox sections"
+						value={showRequests ? "requests" : "primary"}
+						onChange={(k) => setShowRequests(k === "requests")}
+						items={[
+							{ key: "primary", label: "Primary" },
+							{
+								key: "requests",
+								label: "Requests",
+								Icon: Tray,
+								badge: requestConversations.length,
+							},
+						]}
+						className="border-b border-hairline px-4"
+					/>
 					<ConversationList
 						conversations={
 							(showRequests

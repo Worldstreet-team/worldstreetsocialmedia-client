@@ -12,7 +12,6 @@ import {
 	VideoCamera,
 } from "@phosphor-icons/react";
 
-import { Badge } from "@/components/ui/Badge";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { useT } from "@/i18n/client";
@@ -135,7 +134,7 @@ export function ConversationList({
 			<div className="flex flex-col">
 				{[0, 1, 2, 3, 4].map((i) => (
 					<div key={i} className="flex items-center gap-3 px-4 py-3.5">
-						<span className="skeleton h-12 w-12 shrink-0 rounded-pill" />
+						<span className="skeleton h-14 w-14 shrink-0 rounded-pill" />
 						<span className="flex min-w-0 flex-1 flex-col gap-2">
 							<span className="skeleton h-3.5 w-1/3 rounded-[4px]" />
 							<span className="skeleton h-3 w-2/3 rounded-[4px]" />
@@ -195,7 +194,7 @@ export function ConversationList({
 						/>
 
 						<span className="relative shrink-0">
-							<span className="relative block h-12 w-12 overflow-hidden rounded-pill bg-raised">
+							<span className="relative block h-14 w-14 overflow-hidden rounded-pill bg-raised">
 								<SafeAvatar src={u.avatar} />
 							</span>
 							{/* Ringed in the page colour so the dot reads as ON the
@@ -203,21 +202,16 @@ export function ConversationList({
 							{online.has(u._id) && (
 								<span
 									aria-label="Online"
-									className="absolute bottom-0 right-0 h-3 w-3 rounded-pill bg-success ring-2 ring-page"
+									className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-pill bg-success ring-2 ring-page"
 								/>
 							)}
-							<Badge
-								count={conv.unreadCount}
-								ring
-								className="absolute -right-1 -top-1"
-							/>
 						</span>
 
 						<span className="min-w-0 flex-1">
 							<span className="flex items-center gap-1.5">
 								<span
 									className={clsx(
-										"truncate font-sans text-[14.5px]",
+										"truncate font-sans text-[15px]",
 										unread
 											? "font-bold text-primary"
 											: "font-semibold text-primary",
@@ -237,9 +231,6 @@ export function ConversationList({
 											@{u.username}
 										</span>
 									)}
-								<span className="ml-auto shrink-0 font-sans text-[11.5px] tabular-nums text-subtle">
-									{rowTime(conv) ? formatTimeAgo(rowTime(conv) as string) : ""}
-								</span>
 							</span>
 
 							<span
@@ -264,12 +255,23 @@ export function ConversationList({
 											: t(kind.key)
 										: conv.lastMessage?.content || t("messages.noMessages")}
 								</span>
+								{/* The time rides the preview line ("Heyy · 3d"),
+								    which frees the top line for the name alone. */}
+								{rowTime(conv) && (
+									<span className="shrink-0 tabular-nums text-subtle">
+										{"\u00b7 "}
+										{formatTimeAgo(rowTime(conv) as string)}
+									</span>
+								)}
 							</span>
 						</span>
-						{conv.isRequestForMe && (
-							<span className="shrink-0 rounded-pill bg-brand/15 px-2 py-0.5 font-sans text-[10.5px] font-semibold text-gold">
-								Request
-							</span>
+						{/* One quiet dot on the trailing edge is the whole unread
+						    signal — the count would repeat what bold already says. */}
+						{unread && (
+							<span
+								aria-label={`${conv.unreadCount} unread`}
+								className="ml-2 h-2 w-2 shrink-0 rounded-pill bg-brand"
+							/>
 						)}
 					</button>
 					</SwipeRow>
