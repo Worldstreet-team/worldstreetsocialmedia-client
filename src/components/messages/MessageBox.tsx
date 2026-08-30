@@ -296,7 +296,7 @@ const Attachment = ({
 		return (
 			// w-full + max-w so the tile shrinks with the bubble instead of
 			// forcing it wider than the message pane on small screens.
-			<div className="relative w-full max-w-[256px] aspect-square rounded-lg overflow-hidden mb-1 bg-sunken flex items-center justify-center border border-hairline">
+			<div className="relative w-full max-w-[256px] aspect-square rounded-lg overflow-hidden mb-1 bg-sunken flex items-center justify-center">
 				<div className="flex flex-col items-center gap-2">
 					<div className="w-8 h-8 rounded-full border-2 border-raised border-t-brand animate-spin" />
 					<span className="text-xs font-sans tabular-nums text-muted">{progress}%</span>
@@ -1249,7 +1249,7 @@ export const MessageBox = ({
 				className={clsx(
 					// Pane swap is a display toggle — width animation is a layout
 					// property, off the opacity/transform motion budget.
-					"w-full md:w-[400px] shrink-0 min-w-0 border-r border-hairline flex flex-col",
+					"w-full md:w-[400px] shrink-0 min-w-0 md:bg-surface/40 flex flex-col",
 					activeConversation ||
 						(conversations.length === 0 && !isLoadingConversations)
 						? "hidden md:flex"
@@ -1360,7 +1360,7 @@ export const MessageBox = ({
 			{/* Chat Area */}
 			{activeConversation ? (
 				<div className="flex-1 min-w-0 flex flex-col">
-					<div className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-hairline bg-page/80 px-2 backdrop-blur-xl md:px-6">
+					<div className="flex h-16 shrink-0 items-center justify-between gap-2 bg-page px-2 md:px-6">
 						<div className="flex items-center gap-2 md:gap-3 min-w-0">
 							<button
 								type="button"
@@ -1853,7 +1853,10 @@ export const MessageBox = ({
 
 					{/* shrink-0 + pb-safe: the composer is the flex row that must never
 					    be squeezed out, and it sits on the iOS home indicator. */}
-					<div className="shrink-0 p-3 sm:p-4 border-t border-hairline bg-page pb-safe">
+					<div className="shrink-0 p-3 pt-1.5 sm:p-4 sm:pt-1.5 bg-page pb-safe">
+						{/* The thumb demarcator: a grabber pill marks where the
+						    composer region begins, instead of a full-width rule. */}
+						<span aria-hidden className="mx-auto mb-2 block h-1 w-9 rounded-pill bg-raised" />
 						{/* What you are answering, above the input, with a way out.
 						    Sending clears it; so does Escape, because a reply you
 						    cannot cancel is a trap. */}
@@ -2158,7 +2161,7 @@ export const MessageBox = ({
 						onClick={() => setPendingDeleteConv(null)}
 						className="absolute inset-0 cursor-default bg-scrim"
 					/>
-					<div className="relative w-[320px] rounded-xl border border-hairline bg-surface p-5 shadow-nav animate-rise">
+					<div className="relative w-[320px] rounded-xl bg-surface p-5 shadow-nav animate-rise">
 						<p className="font-sans text-[14.5px] font-semibold text-primary">
 							Delete this conversation?
 						</p>

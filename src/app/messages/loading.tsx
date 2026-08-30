@@ -2,7 +2,7 @@
 export default function MessagesLoading() {
 	return (
 		<div className="flex h-dvh items-stretch bg-page" aria-busy="true">
-			<div className="w-full md:w-[360px] shrink-0 border-r border-hairline p-4 flex flex-col gap-3">
+			<div className="w-full md:w-[360px] shrink-0 md:bg-surface/40 p-4 flex flex-col gap-3">
 				<div className="skeleton h-9 w-40 rounded-md" />
 				{Array.from({ length: 7 }, (_, i) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: static placeholder list

@@ -10,7 +10,7 @@ export default function MessagesLayout({
 			<LeftSidebar />
 			<main
 				id="main-content"
-				className="flex-1 min-w-0 min-h-dvh border-r border-hairline"
+				className="flex-1 min-w-0 min-h-dvh"
 			>
 				{children}
 			</main>
