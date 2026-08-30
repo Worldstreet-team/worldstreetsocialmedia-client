@@ -47,6 +47,9 @@ import {
 	ArrowBendUpLeft,
 	CurrencyDollarSimple,
 	PencilSimple,
+	UserCirclePlus,
+	Tray,
+	CopySimple,
 	X as XIcon,
 } from "@phosphor-icons/react";
 // Loaded on first open, not on page load: the editors are the heaviest
@@ -211,6 +214,9 @@ function dayLabel(iso: string) {
 	return format(d, d.getFullYear() === today.getFullYear() ? "MMM d" : "MMM d, yyyy");
 }
 
+const displayNameOf = (u?: { firstName?: string; lastName?: string; username?: string }) =>
+	[u?.firstName, u?.lastName].filter(Boolean).join(" ") || u?.username || "This account";
+
 interface Conversation {
 	_id: string;
 	participants: UserProfile[];
@@ -218,6 +224,10 @@ interface Conversation {
 	lastMessageAt: string;
 	unreadCount: number;
 	otherParticipant: UserProfile;
+	/** Open messaging: a stranger's thread waits on the Requests shelf —
+	 *  quiet, unbadged — until accepted (replying accepts). */
+	isRequestForMe?: boolean;
+	status?: "accepted" | "request";
 }
 
 const Attachment = ({
@@ -407,6 +417,29 @@ export const MessageBox = ({
 	const [messageInput, setMessageInput] = useState("");
 	/** The message the composer is currently answering, if any. */
 	const [replyTarget, setReplyTarget] = useState<Message | null>(null);
+	// The hold/right-click menu on a bubble: Reply, Copy. Position is where
+	// the finger or cursor was; closes on any tap elsewhere or Escape.
+	const [msgMenu, setMsgMenu] = useState<{
+		x: number;
+		y: number;
+		message: Message;
+	} | null>(null);
+	useEffect(() => {
+		if (!msgMenu) return;
+		const close = () => setMsgMenu(null);
+		const key = (e: KeyboardEvent) => {
+			if (e.key === "Escape") close();
+		};
+		window.addEventListener("click", close);
+		window.addEventListener("keydown", key);
+		return () => {
+			window.removeEventListener("click", close);
+			window.removeEventListener("keydown", key);
+		};
+	}, [msgMenu]);
+	const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const bubbleTouch = useRef<{ x: number; y: number; id: string } | null>(null);
+	const [swipeDx, setSwipeDx] = useState<{ id: string; dx: number } | null>(null);
 	/** Briefly highlighted after a jump, so the eye lands on the right bubble. */
 	const [flashedId, setFlashedId] = useState<string | null>(null);
 
@@ -459,9 +492,68 @@ export const MessageBox = ({
 	// surface renders the profile one — an optimistic bubble that wears a
 	// different face than your posts reads as someone else talking.
 	const me = useAtomValue(userAtom);
-	const totalUnread = conversations.reduce(
+	// Requests are OUT of the number on the nav — quiet by design. Their
+	// shelf carries its own count instead.
+	const inboxConversations = conversations.filter((c) => !c.isRequestForMe);
+	const requestConversations = conversations.filter((c) => c.isRequestForMe);
+	const [showRequests, setShowRequests] = useState(false);
+	const totalUnread = inboxConversations.reduce(
 		(n, c) => n + (c.unreadCount || 0),
 		0,
+	);
+
+	const acceptRequest = useCallback(
+		async (conversationId: string) => {
+			try {
+				const token = await getToken();
+				await fetch(
+					`${API_URL}/api/messages/conversations/${conversationId}/accept`,
+					{
+						method: "POST",
+						headers: { Authorization: `Bearer ${token}` },
+					},
+				);
+				setConversations((prev) =>
+					prev.map((c) =>
+						c._id === conversationId
+							? { ...c, isRequestForMe: false, status: "accepted" }
+							: c,
+					),
+				);
+				setActiveConversation((prev) =>
+					prev && prev._id === conversationId
+						? { ...prev, isRequestForMe: false, status: "accepted" }
+						: prev,
+				);
+			} catch {
+				toast.error("Couldn't accept the request");
+			}
+		},
+		[getToken],
+	);
+
+	const declineRequest = useCallback(
+		async (conversationId: string) => {
+			try {
+				const token = await getToken();
+				await fetch(
+					`${API_URL}/api/messages/conversations/${conversationId}`,
+					{
+						method: "DELETE",
+						headers: { Authorization: `Bearer ${token}` },
+					},
+				);
+				setConversations((prev) =>
+					prev.filter((c) => c._id !== conversationId),
+				);
+				setActiveConversation((prev) =>
+					prev?._id === conversationId ? null : prev,
+				);
+			} catch {
+				toast.error("Couldn't remove the conversation");
+			}
+		},
+		[getToken],
 	);
 
 	const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -1129,7 +1221,7 @@ export const MessageBox = ({
 							aria-label={t("messages.newChat")}
 							className="ml-auto flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill bg-chip text-muted transition-colors hover:text-primary"
 						>
-							<PencilSimple size={16} weight="bold" />
+							<UserCirclePlus size={18} weight="bold" />
 						</button>
 					</div>
 					<div className="relative">
@@ -1154,8 +1246,33 @@ export const MessageBox = ({
 					<div className="border-b border-hairline px-2 pt-2">
 						<StoriesRail />
 					</div>
+					{/* The Requests shelf. Quiet on purpose: no badge in the
+					    nav, no ping on arrival — a stranger's opener waits
+					    here until it's looked at. */}
+					{requestConversations.length > 0 && (
+						<button
+							type="button"
+							onClick={() => setShowRequests((v) => !v)}
+							className="flex w-full cursor-pointer items-center justify-between border-b border-hairline px-4 py-2.5 text-left transition-colors hover:bg-raised/50"
+						>
+							<span className="flex items-center gap-2 font-sans text-[13px] font-medium text-primary">
+								<Tray size={16} className="text-muted" />
+								Message requests
+								<span className="rounded-pill bg-raised px-2 py-0.5 font-sans text-[11px] tabular-nums text-muted">
+									{requestConversations.length}
+								</span>
+							</span>
+							<span className="font-sans text-[11.5px] text-subtle">
+								{showRequests ? "Hide" : "View"}
+							</span>
+						</button>
+					)}
 					<ConversationList
-						conversations={conversations as any}
+						conversations={
+							(showRequests
+								? requestConversations
+								: inboxConversations) as any
+						}
 						loading={isLoadingConversations}
 						query={searchQuery}
 						activeId={activeConversation?._id}
@@ -1164,6 +1281,7 @@ export const MessageBox = ({
 							setActiveConversation(conv as any);
 							router.push(`/messages/${conv._id}`);
 						}}
+						onDelete={(conv) => void declineRequest(conv._id)}
 					/>
 				</div>
 			</div>
@@ -1284,6 +1402,38 @@ export const MessageBox = ({
 					</div>
 
 					<div className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-sunken/30 px-4 py-4 sm:p-6">
+						{activeConversation.isRequestForMe && (
+							<div className="mx-auto mb-4 max-w-[420px] rounded-xl bg-surface p-4 text-center">
+								<p className="font-sans text-[13.5px] font-semibold text-primary">
+									{displayNameOf(activeConversation.otherParticipant)}{" "}
+									wants to message you
+								</p>
+								<p className="mt-1 font-sans text-[12px] text-muted">
+									They won't know you've seen this until you accept —
+									replying accepts too.
+								</p>
+								<div className="mt-3 flex justify-center gap-2">
+									<button
+										type="button"
+										onClick={() =>
+											void acceptRequest(activeConversation._id)
+										}
+										className="h-9 cursor-pointer rounded-pill bg-primary px-4 font-sans text-[12.5px] font-semibold text-page transition-colors hover:opacity-90"
+									>
+										Accept
+									</button>
+									<button
+										type="button"
+										onClick={() =>
+											void declineRequest(activeConversation._id)
+										}
+										className="h-9 cursor-pointer rounded-pill bg-raised px-4 font-sans text-[12.5px] font-medium text-danger transition-colors hover:bg-chip"
+									>
+										Delete
+									</button>
+								</div>
+							</div>
+						)}
 						{isLoadingMessages && (
 							<div className="text-center text-muted font-sans text-sm">
 								Loading history...
@@ -1386,8 +1536,57 @@ export const MessageBox = ({
 									)}
 								<div
 									id={`msg-${m._id}`}
+									onContextMenu={(e) => {
+										if (m._id.startsWith("temp-")) return;
+										e.preventDefault();
+										setMsgMenu({ x: e.clientX, y: e.clientY, message: m });
+									}}
+									onTouchStart={(e) => {
+										if (m._id.startsWith("temp-")) return;
+										const t = e.touches[0];
+										bubbleTouch.current = { x: t.clientX, y: t.clientY, id: m._id };
+										holdTimer.current = setTimeout(() => {
+											setMsgMenu({ x: t.clientX, y: t.clientY, message: m });
+											holdTimer.current = null;
+										}, 450);
+									}}
+									onTouchMove={(e) => {
+										const start = bubbleTouch.current;
+										if (!start) return;
+										const t = e.touches[0];
+										const dx = t.clientX - start.x;
+										const dy = Math.abs(t.clientY - start.y);
+										// Movement cancels the hold — it's a drag now.
+										if (holdTimer.current && (Math.abs(dx) > 8 || dy > 8)) {
+											clearTimeout(holdTimer.current);
+											holdTimer.current = null;
+										}
+										// Swipe RIGHT to reply — the messenger gesture.
+										if (dy < 24 && dx > 0) {
+											setSwipeDx({ id: m._id, dx: Math.min(dx, 72) });
+										}
+									}}
+									onTouchEnd={() => {
+										if (holdTimer.current) {
+											clearTimeout(holdTimer.current);
+											holdTimer.current = null;
+										}
+										if (swipeDx?.id === m._id && swipeDx.dx > 48) {
+											setReplyTarget(m);
+										}
+										setSwipeDx(null);
+										bubbleTouch.current = null;
+									}}
+									style={
+										swipeDx?.id === m._id
+											? {
+													transform: `translateX(${swipeDx.dx}px)`,
+													transition: "none",
+												}
+											: { transition: "transform 200ms var(--ws-ease)" }
+									}
 									className={clsx(
-										"group/msg flex flex-col scroll-mt-24",
+										"group/msg flex flex-col scroll-mt-24 touch-pan-y",
 										sameRunAsPrev ? "mt-0.5" : "mt-4",
 										isMe ? "items-end" : "items-start",
 										// Jump target: a brief wash so the eye lands on the
@@ -1866,6 +2065,48 @@ export const MessageBox = ({
 					}}
 				/>
 			)}
+			{msgMenu && (
+				<div
+					role="menu"
+					style={{
+						left: Math.min(msgMenu.x, window.innerWidth - 180),
+						top: Math.min(msgMenu.y, window.innerHeight - 120),
+					}}
+					className="fixed z-dropdown w-[170px] overflow-hidden rounded-xl card-depth py-1 animate-rise"
+					onClick={(e) => e.stopPropagation()}
+				>
+					<button
+						type="button"
+						role="menuitem"
+						onClick={() => {
+							setReplyTarget(msgMenu.message);
+							setMsgMenu(null);
+						}}
+						className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[13px] font-medium text-primary transition-colors hover:bg-raised"
+					>
+						<ArrowBendUpLeft size={15} weight="bold" />
+						Reply
+					</button>
+					{msgMenu.message.content && (
+						<button
+							type="button"
+							role="menuitem"
+							onClick={() => {
+								void navigator.clipboard
+									.writeText(msgMenu.message.content ?? "")
+									.catch(() => {});
+								setMsgMenu(null);
+								toast.success("Copied");
+							}}
+							className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[13px] font-medium text-primary transition-colors hover:bg-raised"
+						>
+							<CopySimple size={15} weight="bold" />
+							Copy text
+						</button>
+					)}
+				</div>
+			)}
+
 			<NewConversationModal
 				isOpen={showNewConversationModal}
 				onClose={() => setShowNewConversationModal(false)}

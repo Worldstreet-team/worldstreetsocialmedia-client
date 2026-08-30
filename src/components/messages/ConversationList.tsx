@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { useMemo } from "react";
+import { useMemo, useState, useRef } from "react";
 import { useAtomValue } from "jotai";
 import {
 	Camera,
@@ -44,6 +44,8 @@ export interface ConversationRow {
 	lastMessageAt?: string;
 	updatedAt?: string;
 	unreadCount: number;
+	/** Waiting on the Requests shelf — quiet until accepted. */
+	isRequestForMe?: boolean;
 }
 
 /**
@@ -86,6 +88,7 @@ export function ConversationList({
 	activeId,
 	myProfileId,
 	onOpen,
+	onDelete,
 }: {
 	conversations: ConversationRow[];
 	loading: boolean;
@@ -93,6 +96,8 @@ export function ConversationList({
 	activeId?: string | null;
 	myProfileId?: string | null;
 	onOpen: (conv: ConversationRow) => void;
+	/** Swipe a row left (touch) to reveal it, or use the requests chips. */
+	onDelete?: (conv: ConversationRow) => void;
 }) {
 	const t = useT();
 	const online = useAtomValue(onlineIdsAtom);
@@ -166,8 +171,11 @@ export function ConversationList({
 				const Glyph = kind?.glyph;
 
 				return (
-					<button
+					<SwipeRow
 						key={conv._id}
+						onDelete={onDelete ? () => onDelete(conv) : undefined}
+					>
+					<button
 						type="button"
 						onClick={() => onOpen(conv)}
 						aria-current={active ? "true" : undefined}
@@ -258,9 +266,82 @@ export function ConversationList({
 								</span>
 							</span>
 						</span>
+						{conv.isRequestForMe && (
+							<span className="shrink-0 rounded-pill bg-brand/15 px-2 py-0.5 font-sans text-[10.5px] font-semibold text-gold">
+								Request
+							</span>
+						)}
 					</button>
+					</SwipeRow>
 				);
 			})}
+		</div>
+	);
+}
+
+/**
+ * Swipe-left (touch) drags the row to reveal Delete; release past the
+ * threshold commits, otherwise it springs back. A tap is untouched, so
+ * pointer devices lose nothing — they get the same action from the
+ * message-request chips and the thread header.
+ */
+function SwipeRow({
+	children,
+	onDelete,
+}: {
+	children: React.ReactNode;
+	onDelete?: () => void;
+}) {
+	const [dx, setDx] = useState(0);
+	const startX = useRef<number | null>(null);
+	const startY = useRef<number | null>(null);
+
+	if (!onDelete) return <>{children}</>;
+
+	return (
+		<div className="relative overflow-hidden">
+			<div
+				aria-hidden
+				className={clsx(
+					"absolute inset-y-0 right-0 flex w-24 items-center justify-center bg-danger transition-opacity",
+					dx < -10 ? "opacity-100" : "opacity-0",
+				)}
+			>
+				<span className="font-sans text-[12.5px] font-semibold text-white">
+					Delete
+				</span>
+			</div>
+			<div
+				style={{
+					transform: `translateX(${dx}px)`,
+					transition: startX.current === null ? "transform 200ms var(--ws-ease)" : "none",
+				}}
+				onTouchStart={(e) => {
+					startX.current = e.touches[0].clientX;
+					startY.current = e.touches[0].clientY;
+				}}
+				onTouchMove={(e) => {
+					if (startX.current === null) return;
+					const ddx = e.touches[0].clientX - startX.current;
+					const ddy = Math.abs(e.touches[0].clientY - (startY.current ?? 0));
+					// Vertical intent scrolls the list; only a clearly
+					// horizontal drag becomes the gesture.
+					if (ddy > 30) {
+						startX.current = null;
+						setDx(0);
+						return;
+					}
+					if (ddx < 0) setDx(Math.max(ddx, -110));
+				}}
+				onTouchEnd={() => {
+					if (dx < -80) onDelete();
+					startX.current = null;
+					startY.current = null;
+					setDx(0);
+				}}
+			>
+				{children}
+			</div>
 		</div>
 	);
 }

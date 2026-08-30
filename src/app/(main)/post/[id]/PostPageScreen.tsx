@@ -1,6 +1,8 @@
 "use client";
 
 import { useGatewayRead } from "@/hooks/useGateway";
+import clsx from "clsx";
+import { ImpressionSensor } from "@/components/feed/ImpressionSensor";
 
 import { useState, useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -276,23 +278,34 @@ export default function PostPageScreen() {
 					</div>
 				)}
 				{comments.length > 0
-					? comments.map((comment) => (
-							<div
-								key={comment.id}
-								className="relative border-b border-hairline"
-							>
-								{/* The conversation cues (owner review: replies read
-								    like posts that happen to sit lower). A thread
-								    rail dropping from the avatar column plus the
-								    named "Replying to @x" line make it an answer. */}
+					? comments.map((comment, i) => (
+							<div key={comment.id} className="relative">
+								{/* No border between replies (owner ruling): hard
+								    rules chopped the conversation into a ledger.
+								    The thread rail runs the avatar column instead —
+								    full height between replies, closing at the
+								    last — so the timeline draws as ONE grouped
+								    conversation. */}
 								<span
 									aria-hidden
-									className="absolute left-[38px] top-0 h-3 w-0.5 bg-hairline"
+									className={clsx(
+										"absolute left-[38px] top-0 w-0.5 bg-hairline",
+										i === comments.length - 1 ? "h-6" : "h-full",
+									)}
 								/>
-								<PostCard
-									post={comment}
-									replyingTo={post?.author?.username}
-								/>
+								<ImpressionSensor
+									meta={{
+										post: comment.id,
+										author: comment.author?.id ?? "",
+										surface: "post_detail",
+										position: i,
+									}}
+								>
+									<PostCard
+										post={comment}
+										replyingTo={post?.author?.username}
+									/>
+								</ImpressionSensor>
 							</div>
 						))
 					: !isAddingComment && (

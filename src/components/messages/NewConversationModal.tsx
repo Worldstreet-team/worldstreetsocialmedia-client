@@ -11,15 +11,12 @@ import {
 	OverlayScrim,
 	useOverlayDismiss,
 } from "@/components/ui/Overlay";
-import {
-	getFollowersAction,
-	getFollowingAction,
-} from "@/lib/user.actions";
 import { startConversationAction } from "@/lib/conversation.actions";
 import { UserBadges } from "@/components/ui/UserBadges";
 
 import { toast } from "sonner";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import { Tabs } from "@/components/ui/Tabs";
 
 interface UserItem {
 	_id: string;
@@ -49,6 +46,10 @@ export default function NewConversationModal({
 	const [users, setUsers] = useState<UserItem[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [searchQuery, setSearchQuery] = useState("");
+	// The composer is a mini directory now (owner spec): who you're aligned
+	// to, your Allies, everyone via search — anyone can be messaged, the
+	// request shelf handles the stranger case quietly.
+	const [tab, setTab] = useState<"following" | "followers">("following");
 	const [startingWith, setStartingWith] = useState<string | null>(null);
 	const [remote, setRemote] = useState<UserItem[]>([]);
 
@@ -81,31 +82,15 @@ export default function NewConversationModal({
 		const fetchUsers = async () => {
 			setLoading(true);
 			try {
-				const [followersRes, followingRes] = await Promise.all([
-					getFollowersAction(currentUserId),
-					getFollowingAction(currentUserId),
-				]);
-
-				const followerIds = new Set<string>(
-					followersRes.success && followersRes.data
-						? followersRes.data.map((u: any) => String(u._id))
-						: [],
+				// The paged relations endpoint (the same one the follows modal
+				// walks); the old mutual-intersection died with the follow
+				// wall — anyone here is messageable now.
+				const res = await read(
+					`/api/users/${currentUserId}/${tab}?limit=100`,
+					(b) => b,
 				);
-
-				const mutuals: UserItem[] = [];
-				const seenIds = new Set<string>();
-
-				if (followingRes.success && followingRes.data) {
-					for (const user of followingRes.data) {
-						const id = String(user._id);
-						// You follow them (this list) AND they follow you.
-						if (!followerIds.has(id) || seenIds.has(id)) continue;
-						seenIds.add(id);
-						mutuals.push(user);
-					}
-				}
-
-				setUsers(mutuals);
+				const rows = (res.data as any)?.data ?? [];
+				setUsers(Array.isArray(rows) ? rows : []);
 			} catch (error) {
 				console.error("Failed to fetch users:", error);
 				toast.error("Failed to load contacts");
@@ -115,7 +100,7 @@ export default function NewConversationModal({
 		};
 
 		fetchUsers();
-	}, [isOpen, currentUserId]);
+	}, [isOpen, currentUserId, tab, read]);
 
 	// Reset search when modal closes
 	useEffect(() => {
@@ -183,6 +168,22 @@ export default function NewConversationModal({
 									className="w-full bg-sunken border border-hairline rounded-pill pl-10 pr-4 py-2.5 text-base sm:text-sm text-primary placeholder:text-subtle focus:border-brand/60 outline-none transition-colors"
 								/>
 							</div>
+							{/* The directory tabs: who you're aligned to first
+							    (the people you chose), then your Allies. Search
+							    above reaches EVERYONE regardless of tab. */}
+							{!searchQuery.trim() && (
+								<div className="mt-3">
+									<Tabs
+										items={[
+											{ key: "following" as const, label: "Aligned to" },
+											{ key: "followers" as const, label: "Allies" },
+										]}
+										value={tab}
+										onChange={setTab}
+										ariaLabel="Contact lists"
+									/>
+								</div>
+							)}
 						</div>
 
 						{/* User List */}

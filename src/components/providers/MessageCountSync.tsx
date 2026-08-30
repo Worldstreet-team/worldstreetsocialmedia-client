@@ -22,7 +22,9 @@ export function MessageCountSync() {
       if (cancelled || !res.success || !Array.isArray(res.data)) return;
       setCount(
         res.data.reduce(
-          (sum: number, c: { unreadCount?: number }) => sum + (c.unreadCount ?? 0),
+          // Requests are quiet: their unread never reaches the nav badge.
+          (sum: number, c: { unreadCount?: number; isRequestForMe?: boolean }) =>
+            c.isRequestForMe ? sum : sum + (c.unreadCount ?? 0),
           0,
         ),
       );

@@ -60,6 +60,7 @@ import ImageModal from "@/components/ui/ImageModal";
 import { FeedImage } from "@/components/ui/FeedImage";
 import VerifiedIcon from "@/assets/icons/VerifiedIcon";
 import { recordVideoPlayAction } from "@/lib/beacons";
+import { LikersModal } from "@/components/feed/LikersModal";
 import { AudioCard } from "@/components/feed/AudioCard";
 import { Image as ImageGlyph, VideoCamera, MicrophoneStage } from "@phosphor-icons/react";
 import { renderRichText } from "@/components/ui/RichText";
@@ -275,6 +276,7 @@ export const PostCard = memo(
     const post = revealed ?? postProp;
     const [unlocking, setUnlocking] = useState(false);
     const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
+    const [likersOpen, setLikersOpen] = useState(false);
     const [canPromote, setCanPromote] = useState(false);
     const [repostMenuOpen, setRepostMenuOpen] = useState(false);
     const [quoteOpen, setQuoteOpen] = useState(false);
@@ -1383,6 +1385,12 @@ export const PostCard = memo(
                             />
                         </div>
                     )}
+                    {likersOpen && (
+                        <LikersModal
+                            postId={post.id}
+                            onClose={() => setLikersOpen(false)}
+                        />
+                    )}
                     {post.audio && (
                         <AudioCard
                             audio={post.audio}
@@ -1591,7 +1599,23 @@ export const PostCard = memo(
                                     />
                                 </motion.span>
                             </span>
-                            <span className="relative overflow-hidden text-[13px] font-medium font-sans tabular-nums sm:text-[14px]">
+                            {/* The number is a door: who liked this is general
+                                info (owner ruling) — tap the count, not the
+                                heart, to see them. */}
+                            <span
+                                role="button"
+                                tabIndex={0}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                    if ((shownLikes ?? 0) > 0) setLikersOpen(true);
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" && (shownLikes ?? 0) > 0)
+                                        setLikersOpen(true);
+                                }}
+                                className="relative cursor-pointer overflow-hidden text-[13px] font-medium font-sans tabular-nums hover:underline sm:text-[14px]"
+                            >
                                 <AnimatePresence mode="wait" initial={false}>
                                     {/* Count rolls 8px in the direction of change. */}
                                     <motion.span
