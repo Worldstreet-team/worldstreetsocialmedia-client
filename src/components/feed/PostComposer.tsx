@@ -1225,30 +1225,30 @@ export const PostComposer = ({
 								onClick={() => !linkPreview && fileInputRef.current?.click()}
 								disabled={!!linkPreview}
 								aria-label={t("composer.media")}
+								title={t("composer.media")}
 								className={clsx(
-									"flex h-10 w-10 justify-center sm:h-9 sm:w-auto sm:justify-start sm:px-3.5 items-center gap-2 rounded-pill font-sans text-[13px] font-medium transition-colors",
+									"flex h-10 w-10 items-center justify-center rounded-pill transition-colors",
 									linkPreview
 										? "bg-raised/40 text-subtle cursor-not-allowed"
 										: "bg-raised/50 text-muted hover:bg-raised hover:text-primary cursor-pointer",
 								)}
 							>
-								<ImageIcon className="w-4 h-4 shrink-0" />
-								<span className="hidden sm:inline">{t("composer.media")}</span>
+								<ImageIcon className="h-[18px] w-[18px] shrink-0" />
 							</button>
 							<button
 								type="button"
 								onClick={() => !linkPreview && setRecordOpen(true)}
 								disabled={!!linkPreview}
 								aria-label="Record a voice note"
+								title="Voice note"
 								className={clsx(
-									"flex h-10 w-10 justify-center sm:h-9 sm:w-auto sm:justify-start sm:px-3.5 items-center gap-2 rounded-pill font-sans text-[13px] font-medium transition-colors",
+									"flex h-10 w-10 items-center justify-center rounded-pill transition-colors",
 									linkPreview
 										? "bg-raised/40 text-subtle cursor-not-allowed"
 										: "bg-raised/50 text-muted hover:bg-raised hover:text-primary cursor-pointer",
 								)}
 							>
-								<MicrophoneIcon className="h-4 w-4 shrink-0" size={16} />
-								<span className="hidden sm:inline">Voice</span>
+								<MicrophoneIcon className="h-[18px] w-[18px] shrink-0" size={18} />
 							</button>
 							<input
 								type="file"
@@ -1264,6 +1264,7 @@ export const PostComposer = ({
 								type="button"
 								onClick={() => setShowEmojiPicker(!showEmojiPicker)}
 								aria-label={t("composer.emoji")}
+								title={t("composer.emoji")}
 								className={clsx(
 									"flex h-10 w-10 justify-center sm:h-9 sm:w-auto sm:justify-start sm:px-3.5 items-center gap-2 rounded-pill font-sans text-[13px] font-medium transition-colors cursor-pointer",
 									showEmojiPicker
@@ -1271,8 +1272,7 @@ export const PostComposer = ({
 										: "bg-raised/50 text-muted hover:bg-raised hover:text-primary",
 								)}
 							>
-								<Smile className="w-4 h-4 shrink-0" />
-								<span className="hidden sm:inline">{t("composer.emoji")}</span>
+								<Smile className="h-[18px] w-[18px] shrink-0" />
 							</button>
 
 							{content.trim() && (
@@ -1280,12 +1280,10 @@ export const PostComposer = ({
 									type="button"
 									onClick={saveDraft}
 									aria-label={t("composer.saveDraft")}
-									className="flex h-10 w-10 justify-center sm:h-9 sm:w-auto sm:justify-start sm:px-3.5 items-center gap-2 rounded-pill bg-raised/50 text-muted hover:bg-raised hover:text-primary font-sans text-[13px] font-medium transition-colors cursor-pointer"
+									title={t("composer.saveDraft")}
+									className="flex h-10 w-10 items-center justify-center rounded-pill bg-raised/50 text-muted hover:bg-raised hover:text-primary transition-colors cursor-pointer"
 								>
-									<FileText className="w-4 h-4 shrink-0" />
-									<span className="hidden sm:inline">
-										{t("composer.saveDraft")}
-									</span>
+									<FileText className="h-[18px] w-[18px] shrink-0" />
 								</button>
 							)}
 
@@ -1296,10 +1294,9 @@ export const PostComposer = ({
 									type="button"
 									onClick={() => setDraftsOpen(true)}
 									aria-label={t("drafts.title")}
-									className="flex h-10 sm:h-9 items-center gap-2 rounded-pill px-3 sm:px-3.5 bg-raised/50 text-muted hover:bg-raised hover:text-primary font-sans text-[13px] font-medium transition-colors cursor-pointer"
+									className="flex h-10 items-center gap-1.5 rounded-pill px-3 bg-raised/50 text-muted hover:bg-raised hover:text-primary font-sans text-[12.5px] font-medium transition-colors cursor-pointer"
 								>
-									<FileText className="w-4 h-4 shrink-0" />
-									<span className="hidden sm:inline">{t("drafts.title")}</span>
+									<FileText className="h-[18px] w-[18px] shrink-0" />
 									<span className="tabular-nums">{drafts.length}</span>
 								</button>
 							)}

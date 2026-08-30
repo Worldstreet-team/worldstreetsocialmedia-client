@@ -22,6 +22,7 @@ export function ProfileTabs({
         value={active}
         onChange={onChange}
         ariaLabel={t("profile.tabsLabel")}
+        size="lg"
       />
     </div>
   );

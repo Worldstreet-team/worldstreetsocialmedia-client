@@ -36,11 +36,14 @@ export function Tabs<K extends string>({
 	onChange,
 	ariaLabel,
 	className,
+	size = "md",
 }: {
 	items: TabItem<K>[];
 	value: K;
 	onChange: (key: K) => void;
 	ariaLabel: string;
+	/** md = the app default; lg for surfaces owner review wants louder (profile). */
+	size?: "md" | "lg";
 	className?: string;
 }) {
 	return (
@@ -62,7 +65,9 @@ export function Tabs<K extends string>({
 						aria-selected={active}
 						onClick={() => onChange(key)}
 						className={clsx(
-							"relative flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-pill px-3.5 font-sans text-[13.5px] transition-colors",
+							size === "lg"
+								? "relative flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-pill px-4 font-sans text-[15px] transition-colors"
+								: "relative flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-pill px-3.5 font-sans text-[13.5px] transition-colors",
 							active
 								? "bg-raised font-semibold text-primary"
 								: "cursor-pointer font-medium text-muted hover:bg-raised/50 hover:text-primary",
