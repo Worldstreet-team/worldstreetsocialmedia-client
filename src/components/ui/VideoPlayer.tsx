@@ -66,6 +66,7 @@ export function VideoPlayer({
 	const videoRef = useRef<HTMLVideoElement | null>(null);
 	const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const firedPlayRef = useRef(false);
+	const playTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	const [playing, setPlaying] = useState(false);
 	// Feed videos start MUTED and autoplay on view (owner ruling): sound is
@@ -387,12 +388,27 @@ export function VideoPlayer({
 				onDoubleClick={toggleFull}
 				onPlay={() => {
 					setPlaying(true);
-					if (!firedPlayRef.current) {
-						firedPlayRef.current = true;
-						onFirstPlay?.();
+					// A play QUALIFIES after ~3s of continuous playback — a
+					// muted autoplay glance while scrolling past is not a
+					// play, and counting it was half of how plays outran
+					// impressions on the same card.
+					if (!firedPlayRef.current && !playTimerRef.current) {
+						playTimerRef.current = setTimeout(() => {
+							playTimerRef.current = null;
+							if (!videoRef.current?.paused && !firedPlayRef.current) {
+								firedPlayRef.current = true;
+								onFirstPlay?.();
+							}
+						}, 3000);
 					}
 				}}
-				onPause={() => setPlaying(false)}
+				onPause={() => {
+					setPlaying(false);
+					if (playTimerRef.current) {
+						clearTimeout(playTimerRef.current);
+						playTimerRef.current = null;
+					}
+				}}
 				onWaiting={() => setWaiting(true)}
 				onPlaying={() => setWaiting(false)}
 				onLoadedMetadata={(e) => {
