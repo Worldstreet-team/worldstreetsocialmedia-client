@@ -257,7 +257,16 @@ function fetchCanPromote(): Promise<boolean> {
 	return canPromotePromise;
 }
 
-export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
+export const PostCard = memo(
+    ({
+        post: postProp,
+        replyingTo,
+    }: {
+        post: PostProps;
+        /** Handle this card answers — renders the "Replying to @x" cue that
+         *  turns a card sitting under a post into a visible reply to it. */
+        replyingTo?: string;
+    }) => {
     const t = useT();
     // A paid unlock swaps the stripped post for the revealed one in place —
     // no refetch of the page, no scroll jump. Shadowing the prop means every
@@ -1190,6 +1199,18 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                         is ONE unbreakable run, and break-word only breaks a word
                         that alone cannot fit. Without this the run pinned the line
                         and made the whole column scroll sideways. */}
+                    {replyingTo && (
+                        <p className="mb-1 font-sans text-[13px] text-muted pointer-events-auto">
+                            Replying to{" "}
+                            <Link
+                                href={`/profile/${replyingTo}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="relative z-10 font-medium text-gold hover:underline"
+                            >
+                                @{replyingTo}
+                            </Link>
+                        </p>
+                    )}
                     <p className="text-primary whitespace-pre-wrap [overflow-wrap:anywhere] mb-1.5 font-normal leading-[1.55] text-[18px] sm:text-[16.5px] font-sans tracking-tight pointer-events-none">
                         {showingTranslation
                             ? formattedTranslation

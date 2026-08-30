@@ -277,8 +277,22 @@ export default function PostPageScreen() {
 				)}
 				{comments.length > 0
 					? comments.map((comment) => (
-							<div key={comment.id} className="border-b border-hairline">
-								<PostCard post={comment} />
+							<div
+								key={comment.id}
+								className="relative border-b border-hairline"
+							>
+								{/* The conversation cues (owner review: replies read
+								    like posts that happen to sit lower). A thread
+								    rail dropping from the avatar column plus the
+								    named "Replying to @x" line make it an answer. */}
+								<span
+									aria-hidden
+									className="absolute left-[38px] top-0 h-3 w-0.5 bg-hairline"
+								/>
+								<PostCard
+									post={comment}
+									replyingTo={post?.author?.username}
+								/>
 							</div>
 						))
 					: !isAddingComment && (

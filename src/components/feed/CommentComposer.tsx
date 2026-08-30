@@ -23,6 +23,8 @@ import clsx from "clsx";
 
 interface CommentComposerProps {
 	postId: string;
+	/** Who this box answers — named above the input so it feels like a reply. */
+	replyingTo?: string;
 	onCommentSuccess?: () => void;
 	onCommentStart?: () => void;
 }
@@ -34,6 +36,7 @@ interface MediaItem {
 }
 
 export const CommentComposer = ({
+	replyingTo,
 	postId,
 	onCommentSuccess,
 	onCommentStart,
@@ -131,6 +134,11 @@ export const CommentComposer = ({
 
 	return (
 		<div className="relative border-b border-hairline px-4 py-3.5">
+			{replyingTo && (
+				<p className="mb-2 pl-[52px] font-sans text-[12.5px] text-muted">
+					Replying to <span className="font-medium text-gold">@{replyingTo}</span>
+				</p>
+			)}
 			<div className="flex gap-3">
 				<div className="shrink-0">
 					<div className="relative h-10 w-10 overflow-hidden rounded-pill bg-raised">
