@@ -65,6 +65,9 @@ import { Image as ImageGlyph, VideoCamera, MicrophoneStage } from "@phosphor-ico
 import { renderRichText } from "@/components/ui/RichText";
 import {
     applyStats,
+	applyMyEngagement,
+	getMyEngagement,
+	subscribeMyEngagement,
     getStats,
     seedStats,
     subscribeStats,
@@ -271,12 +274,32 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
     const [isLiked, setIsLiked] = useState(post.isLiked);
     const [likeCount, setLikeCount] = useState(post.stats.likes);
 
+    // The viewer's own toggles, shared session-wide. A recorded action beats
+    // any payload: a cached profile-tab copy from before the tap used to
+    // reset the heart to empty here — and one honest tap on that lying heart
+    // UNLIKED the post, feeding the ranker a corrupted signal.
+    const myEng = useSyncExternalStore(
+        useCallback(
+            (fn: () => void) => subscribeMyEngagement(post.id, fn),
+            [post.id],
+        ),
+        useCallback(() => getMyEngagement(post.id), [post.id]),
+        () => undefined,
+    );
+
     // useState(prop) only reads its argument on the FIRST render, so a refetch
     // that returned a newer count left the card showing the old one forever.
-    // Re-sync whenever the server's numbers actually change.
+    // Re-sync whenever the server's numbers actually change — but the
+    // viewer's own recorded action always wins over the payload.
     useEffect(() => {
-        setIsLiked(post.isLiked);
-    }, [post.isLiked, post.id]);
+        setIsLiked(myEng?.liked ?? post.isLiked);
+    }, [myEng?.liked, post.isLiked, post.id]);
+    useEffect(() => {
+        setIsBookmarked(myEng?.bookmarked ?? post.isBookmarked);
+    }, [myEng?.bookmarked, post.isBookmarked, post.id]);
+    useEffect(() => {
+        if (myEng?.reposted !== undefined) setReposted(myEng.reposted);
+    }, [myEng?.reposted, post.id]);
     useEffect(() => {
         setLikeCount(post.stats.likes);
         seedStats(post.id, {
@@ -409,6 +432,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
         setIsLiked(newIsLiked);
         setLikeCount(optimistic);
         applyStats(post.id, { likes: optimistic });
+        applyMyEngagement(post.id, { liked: newIsLiked });
 
         try {
             const res = newIsLiked
@@ -426,6 +450,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
             setIsLiked(!newIsLiked);
             setLikeCount(shownLikes);
             applyStats(post.id, { likes: shownLikes });
+            applyMyEngagement(post.id, { liked: !newIsLiked });
             toast("Failed to update like", { type: "error" });
         }
     }, [currentUser, isLiked, post.id, shownLikes, toast]);
@@ -438,6 +463,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
 
         const newIsBookmarked = !isBookmarked;
         setIsBookmarked(newIsBookmarked);
+        applyMyEngagement(post.id, { bookmarked: newIsBookmarked });
 
         try {
             if (newIsBookmarked) {
@@ -477,6 +503,7 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
         } catch (error) {
             console.error("Bookmark error:", error);
             setIsBookmarked(!newIsBookmarked);
+            applyMyEngagement(post.id, { bookmarked: !newIsBookmarked });
             toast("Failed to update bookmark", { type: "error" });
         }
     }, [currentUser, isBookmarked, post, setUser, setBookmarks, toast]);
@@ -1460,6 +1487,11 @@ export const PostCard = memo(({ post: postProp }: { post: PostProps }) => {
                                                 setReposted(
                                                     Boolean(res.reposted),
                                                 );
+                                                applyMyEngagement(post.id, {
+                                                    reposted: Boolean(
+                                                        res.reposted,
+                                                    ),
+                                                });
                                                 setRepostDelta(
                                                     res.reposted ? 1 : 0,
                                                 );

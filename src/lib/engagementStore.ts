@@ -68,3 +68,61 @@ export function applyStats(postId: string, next: LiveStats) {
 export function seedStats(postId: string, next: LiveStats) {
 	applyStats(postId, next);
 }
+
+/**
+ * The VIEWER's own relationship to a post — liked / bookmarked / reposted —
+ * remembered for the whole session.
+ *
+ * The counts above were shared but these booleans lived in each card's
+ * useState, re-seeded from whatever payload that surface happened to hold.
+ * So: like a post on the feed, open the profile (whose tab list is a cached
+ * copy from before the tap), and the heart renders empty — and one honest
+ * tap on that lying heart UNLIKES the post, corrupting the very signal the
+ * For You ranker feeds on. Owner report 2026-08-30.
+ *
+ * A recorded action beats any payload: once the viewer toggles something,
+ * every card for that post renders the toggle until the session ends. A
+ * fresh server copy that agrees is a no-op; a stale cached copy that
+ * disagrees loses, which is the entire point.
+ */
+export interface MyEngagement {
+	liked?: boolean;
+	bookmarked?: boolean;
+	reposted?: boolean;
+}
+
+const mine = new Map<string, MyEngagement>();
+const mineListeners = new Map<string, Set<() => void>>();
+
+export function getMyEngagement(postId: string): MyEngagement | undefined {
+	return mine.get(postId);
+}
+
+export function subscribeMyEngagement(postId: string, fn: () => void) {
+	let set = mineListeners.get(postId);
+	if (!set) {
+		set = new Set();
+		mineListeners.set(postId, set);
+	}
+	set.add(fn);
+	return () => {
+		set?.delete(fn);
+		if (set && set.size === 0) mineListeners.delete(postId);
+	};
+}
+
+export function applyMyEngagement(postId: string, next: MyEngagement) {
+	if (!postId) return;
+	const prev = mine.get(postId);
+	const merged = { ...prev, ...next };
+	if (
+		prev &&
+		prev.liked === merged.liked &&
+		prev.bookmarked === merged.bookmarked &&
+		prev.reposted === merged.reposted
+	) {
+		return;
+	}
+	mine.set(postId, merged);
+	for (const fn of mineListeners.get(postId) ?? []) fn();
+}
