@@ -1667,7 +1667,12 @@ export const MessageBox = ({
 								>
 									<div
 										className={clsx(
-											"flex max-w-full items-center gap-1",
+											// justify-end packs against the bubble's own edge:
+											// the row can be wider than chip+capped-bubble
+											// (the text's natural width sets it), and without
+											// this the slack lands on the bubble's outer side
+											// and shoves it toward the centre.
+											"flex max-w-full items-center justify-end gap-1",
 											isMe ? "flex-row" : "flex-row-reverse",
 										)}
 									>
