@@ -184,16 +184,6 @@ export function ConversationList({
 							active ? "bg-raised" : "hover:bg-surface",
 						)}
 					>
-						{/* The active marker is a rail, not a full border: a border on
-						    every row turned the list into a ledger. */}
-						<span
-							aria-hidden
-							className={clsx(
-								"absolute left-0 top-1/2 h-8 w-[3px] -translate-y-1/2 rounded-r-pill bg-brand transition-opacity",
-								active ? "opacity-100" : "opacity-0",
-							)}
-						/>
-
 						<span className="relative shrink-0">
 							<span className="relative block h-14 w-14 overflow-hidden rounded-pill bg-raised">
 								<SafeAvatar src={u.avatar} />
