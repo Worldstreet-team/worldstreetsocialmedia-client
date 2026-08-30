@@ -1256,7 +1256,7 @@ export const MessageBox = ({
 						: "flex",
 				)}
 			>
-				<div className="border-b border-hairline px-4 pb-3 pt-4">
+				<div className="px-4 pb-1 pt-4">
 					<div className="mb-3 flex items-center gap-2">
 						{/* Phones only. On desktop the inbox sits inside the app
 						    shell with the rail right there; on a phone it fills
@@ -1306,7 +1306,7 @@ export const MessageBox = ({
 				<div className="flex-1 overflow-y-auto overscroll-contain pb-nav md:pb-0">
 					{/* Stories of the people you're aligned with — messaging is
 					    where you already are when you want to reply to one. */}
-					<div className="border-b border-hairline px-2 pt-2">
+					<div className="px-2 pt-1">
 						<StoriesRail />
 					</div>
 					{/* Primary / Requests as pill tabs (the one tab grammar).
@@ -1327,7 +1327,7 @@ export const MessageBox = ({
 								badge: requestConversations.length,
 							},
 						]}
-						className="border-b border-hairline px-4"
+						className="px-4"
 					/>
 					<ConversationList
 						conversations={
@@ -1699,7 +1699,10 @@ export const MessageBox = ({
 											// 70% of a 272px pane is 190px — too narrow to
 											// hold a sentence without shredding it. Phones
 											// get 85%, desktop keeps the original ratio.
-											"max-w-[85%] sm:max-w-[70%] min-w-0 overflow-hidden rounded-xl",
+											// Owner ruling 2026-08-30: chat bubbles are the one
+											// surface with a big, soft radius — the tight
+											// 4/7/10/13 ladder stays everywhere else.
+											"max-w-[85%] sm:max-w-[70%] min-w-0 overflow-hidden rounded-[22px]",
 											// Media IS the bubble: a picture wrapped in a
 											// coloured card with padding read as a picture
 											// in an envelope. Text keeps the padded fill.
@@ -1717,16 +1720,16 @@ export const MessageBox = ({
 														!m.content
 															? "text-brand-on"
 															: "bg-brand text-brand-on",
-														sameRunAsPrev && "rounded-tr-[4px]",
-														!endsRun && "rounded-br-[4px]",
+														sameRunAsPrev && "rounded-tr-[8px]",
+														!endsRun && "rounded-br-[8px]",
 													]
 												: [
 														(m.type === "image" || m.type === "video") &&
 														!m.content
 															? "text-primary"
 															: "bg-raised text-primary",
-														sameRunAsPrev && "rounded-tl-[4px]",
-														!endsRun && "rounded-bl-[4px]",
+														sameRunAsPrev && "rounded-tl-[8px]",
+														!endsRun && "rounded-bl-[8px]",
 													],
 										)}
 									>

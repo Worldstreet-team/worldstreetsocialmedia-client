@@ -12,6 +12,7 @@ import {
 	VideoCamera,
 } from "@phosphor-icons/react";
 
+import { Badge } from "@/components/ui/Badge";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { useT } from "@/i18n/client";
@@ -236,7 +237,7 @@ export function ConversationList({
 							<span
 								className={clsx(
 									"mt-0.5 flex items-center gap-1 font-sans text-[13px]",
-									unread ? "font-medium text-primary" : "text-muted",
+									unread ? "font-bold text-primary" : "text-muted",
 								)}
 							>
 								{mine && (
@@ -265,13 +266,10 @@ export function ConversationList({
 								)}
 							</span>
 						</span>
-						{/* One quiet dot on the trailing edge is the whole unread
-						    signal — the count would repeat what bold already says. */}
+						{/* The house numeric badge on the trailing edge — how many
+						    is part of the signal, not just that. */}
 						{unread && (
-							<span
-								aria-label={`${conv.unreadCount} unread`}
-								className="ml-2 h-2 w-2 shrink-0 rounded-pill bg-brand"
-							/>
+							<Badge count={conv.unreadCount} className="ml-2 shrink-0" />
 						)}
 					</button>
 					</SwipeRow>
