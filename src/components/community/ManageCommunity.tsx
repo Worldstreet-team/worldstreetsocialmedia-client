@@ -31,6 +31,7 @@ import {
   removeMemberAction,
   updateCommunityAction,
 } from "@/lib/community.actions";
+import { sendFormDirect } from "@/lib/upload-direct";
 
 /**
  * Everything an owner can do to their community, reachable from one ⋯
@@ -246,7 +247,9 @@ function EditCommunitySheet({
     form.append("description", description.trim());
     form.append("category", category);
     if (avatarFile) form.append("avatar", avatarFile);
-    const res = await updateCommunityAction(community.id, form);
+    const res = avatarFile
+      ? await sendFormDirect(`/api/communities/${community.id}`, form, "PATCH")
+      : await updateCommunityAction(community.id, form);
     setSaving(false);
     if (res.success) {
       toast(t("voice.saved"), { type: "success" });

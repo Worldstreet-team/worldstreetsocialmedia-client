@@ -1,6 +1,6 @@
 export const BACKEND_URL =
     process.env.NEXT_PUBLIC_API_URL ??
-    "https://worldstreetsocialmedia-gateway-f55k.onrender.com";
+    "https://social-api.worldstreetgold.com";
 /**
  * The gateway ORIGIN — the same value as BACKEND_URL with a trailing `/api`
  * stripped. Ably and the socket/call transports address the host, not the REST

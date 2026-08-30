@@ -25,7 +25,7 @@ import {
   STORY_BACKGROUNDS,
   storyCanvasCss,
 } from "@/lib/editor/storyBackgrounds";
-import { uploadSpaceCoverAction } from "@/lib/space.actions";
+import { sendFormDirect } from "@/lib/upload-direct";
 
 /** The scheduled space being edited, when the sheet opens in edit mode. */
 export interface EditableSpace {
@@ -147,7 +147,10 @@ export default function CreateSpaceSheet({
     try {
       const form = new FormData();
       form.append("cover", file);
-      const res = await uploadSpaceCoverAction(form);
+      const r = await sendFormDirect("/api/spaces/cover", form);
+      const res = r.success
+        ? { success: true as const, url: (r.data as any)?.url as string }
+        : { success: false as const, url: undefined, message: r.message };
       if (res.success && res.url) setCoverImage(res.url);
       else setCoverError(res.message || t("voice.coverNotImage"));
     } finally {

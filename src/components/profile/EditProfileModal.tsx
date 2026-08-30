@@ -5,6 +5,7 @@ import { compressImage } from "@/lib/image-compress";
 
 import { useState, useRef, useMemo } from "react";
 import Image from "next/image";
+import { sendFormDirect } from "@/lib/upload-direct";
 import { updateMyProfileAction } from "@/lib/user.actions";
 import { useSetAtom } from "jotai";
 import { userAtom } from "@/store/user.atom";
@@ -225,7 +226,19 @@ export default function EditProfileModal({
 		if (avatarFile) data.append("avatar", avatarFile);
 		if (bannerFile) data.append("banner", bannerFile);
 
-		const result = await updateMyProfileAction(data);
+		// Files go straight to the gateway — a server action means the bytes
+		// travel twice and must fit one function invocation, which is exactly
+		// how big mobile uploads died app-wide (2026-08-30). The direct path
+		// sets profile_stale itself: the cookie is non-httpOnly for this.
+		let result: Awaited<ReturnType<typeof updateMyProfileAction>>;
+		if (avatarFile || bannerFile) {
+			result = (await sendFormDirect("/api/users/me", data, "PUT")) as any;
+			if (result.success) {
+				document.cookie = "profile_stale=1; path=/; max-age=60";
+			}
+		} else {
+			result = await updateMyProfileAction(data);
+		}
 
 		if (result.success) {
 			// Update local atom

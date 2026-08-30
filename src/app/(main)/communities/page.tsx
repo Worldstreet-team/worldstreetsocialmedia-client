@@ -27,6 +27,7 @@ import {
 	getCommunityHomeAction,
 	toggleCommunityAction,
 } from "@/lib/community.actions";
+import { sendFormDirect } from "@/lib/upload-direct";
 import { mapApiPost as mapPost } from "@/lib/post-mapper";
 import {
 	communityDirAtom,
@@ -186,7 +187,19 @@ export default function CommunitiesPage() {
 				form.append("category", payload.category);
 				if (payload.avatar) form.append("avatar", payload.avatar);
 
-				const res = await createCommunityAction(form);
+				let res: Awaited<ReturnType<typeof createCommunityAction>>;
+				if (payload.avatar) {
+					const r = await sendFormDirect("/api/communities", form);
+					res = r.success
+						? {
+								success: true,
+								slug: (r.data as any)?.slug,
+								communityId: (r.data as any)?.communityId,
+							}
+						: ({ success: false, message: r.message } as any);
+				} else {
+					res = await createCommunityAction(form);
+				}
 				if (res.success && res.slug) {
 					setCreating(false);
 					toast(t("community.created"), { type: "success" });

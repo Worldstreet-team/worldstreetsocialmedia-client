@@ -585,9 +585,23 @@ RealtimeProvider, CallProvider and MessageBox read
 Repoint the whole app by setting `NEXT_PUBLIC_API_URL` in `.env.local`; never
 hardcode a URL in `const.ts` again.
 
-**The gateway is a free Render instance** (`worldstreetsocialmedia-gateway-f55k.onrender.com`).
-It spins down when idle — the first request after a cold start takes ~20-30s.
-A "hung" first load is usually this, not a bug.
+**Deploys are Coolify on a VPS, not Vercel/Render (moved 2026-08-30).**
+The client serves at `social.worldstreetgold.com`, the gateway at
+`social-api.worldstreetgold.com` — both auto-deploy from `main` via Coolify.
+The old Render instance (`worldstreetsocialmedia-gateway-f55k.onrender.com`)
+still answers against the SAME Atlas DB, so a probe there mutates prod data —
+always target `social-api`. `src/const.ts` falls back to the VPS host.
+
+**Media NEVER rides a server action** (root-caused 2026-08-30). A file
+through an action travels twice (browser → Next container → gateway) and the
+whole trip must fit one invocation — big mobile uploads died app-wide as
+bare "Server error". Every file upload goes browser → gateway via
+`src/lib/upload-direct.ts` (`sendFormDirect`, fresh Clerk token, action-shaped
+return): posts with media, stories, avatar/banner, community avatars, space
+covers, DM attachments, BM creatives. Text-only writes stay on actions. If a
+new surface uploads a file, wire it through `sendFormDirect` — never a new
+`"use server"` multipart hop. The direct profile update must also set the
+`profile_stale=1` cookie itself (non-httpOnly by design).
 
 **Ably auth is token-based, not key-based.** `RealtimeProvider` uses an
 `authCallback` that pulls `window.Clerk.session.getToken()` and hits

@@ -18,12 +18,16 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || BACKEND_URL;
  * swap the function and keep their logic. Writes without files stay on
  * server actions, where the serialization is a feature.
  */
-export async function postFormDirect(path: string, formData: FormData) {
+export async function sendFormDirect(
+	path: string,
+	formData: FormData,
+	method: "POST" | "PUT" | "PATCH" = "POST",
+) {
 	try {
 		const token = await (window as any).Clerk?.session?.getToken?.();
 		if (!token) return { success: false as const, message: "Unauthorized" };
 		const res = await fetch(`${API_URL}${path}`, {
-			method: "POST",
+			method,
 			headers: { Authorization: `Bearer ${token}` },
 			body: formData,
 		});
@@ -39,3 +43,6 @@ export async function postFormDirect(path: string, formData: FormData) {
 		return { success: false as const, message: "Network error" };
 	}
 }
+
+export const postFormDirect = (path: string, formData: FormData) =>
+	sendFormDirect(path, formData, "POST");
