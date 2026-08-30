@@ -67,7 +67,7 @@ import {
   storyCanvasCss,
 } from "@/lib/editor/storyBackgrounds";
 import { renderVoiceVideo, type VoiceTake } from "@/lib/editor/voiceRender";
-import { createStoryAction } from "@/lib/stories.actions";
+import { postFormDirect } from "@/lib/upload-direct";
 
 type ToolMode = "none" | "text" | "sticker" | "draw";
 
@@ -551,7 +551,7 @@ export default function StoryStudio({
     if (mentions.length > 0) {
       formData.append("mentions", JSON.stringify(mentions));
     }
-    return createStoryAction(formData);
+    return postFormDirect("/api/stories", formData);
   };
 
   const handleShare = async () => {

@@ -18,6 +18,7 @@ import { VanishingPlaceholder } from "@/components/ui/VanishingPlaceholder";
 import { useT } from "@/i18n/client";
 import { useUser } from "@clerk/nextjs";
 import { createPostAction } from "@/lib/post.actions";
+import { postFormDirect } from "@/lib/upload-direct";
 import { getSubscriptionAction } from "@/lib/subscription.actions";
 import { getCommunitiesAction } from "@/lib/community.actions";
 import {
@@ -826,7 +827,12 @@ export const PostComposer = ({
 				);
 			}
 
-			const result = await createPostAction(formData);
+			// Media rides direct to the gateway (one upload, no function
+			// timeout); a text-only post keeps the server-action path.
+			const result =
+				mediaItems.length > 0
+					? await postFormDirect("/api/posts", formData)
+					: await createPostAction(formData);
 
 			if (result.success) {
 				setContent("");
