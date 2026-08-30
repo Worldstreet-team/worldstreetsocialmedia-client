@@ -218,7 +218,12 @@ export function MessageDock() {
 								</div>
 								<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2">
 									<ConversationList
-										conversations={rows}
+										conversations={rows.filter(
+											// Requests belong to the full messages
+											// page and its accept banner — the dock
+											// is for conversations you already have.
+											(c: any) => !c.isRequestForMe,
+										)}
 										loading={loading}
 										query={query}
 										myProfileId={me._id}

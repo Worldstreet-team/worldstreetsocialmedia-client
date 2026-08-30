@@ -419,14 +419,24 @@ export const MessageBox = ({
 	const [replyTarget, setReplyTarget] = useState<Message | null>(null);
 	// The hold/right-click menu on a bubble: Reply, Copy. Position is where
 	// the finger or cursor was; closes on any tap elsewhere or Escape.
+	const [pendingDeleteConv, setPendingDeleteConv] =
+		useState<Conversation | null>(null);
 	const [msgMenu, setMsgMenu] = useState<{
 		x: number;
 		y: number;
 		message: Message;
 	} | null>(null);
+	const msgMenuOpenedAt = useRef(0);
 	useEffect(() => {
 		if (!msgMenu) return;
-		const close = () => setMsgMenu(null);
+		msgMenuOpenedAt.current = Date.now();
+		// The finger lifting off a long-press fires a click ~instantly after
+		// the menu opens — without this grace it closed itself before it was
+		// ever seen.
+		const close = () => {
+			if (Date.now() - msgMenuOpenedAt.current < 350) return;
+			setMsgMenu(null);
+		};
 		const key = (e: KeyboardEvent) => {
 			if (e.key === "Escape") close();
 		};
@@ -1281,7 +1291,16 @@ export const MessageBox = ({
 							setActiveConversation(conv as any);
 							router.push(`/messages/${conv._id}`);
 						}}
-						onDelete={(conv) => void declineRequest(conv._id)}
+						onDelete={(conv) => {
+							// A request declines instantly — that IS the gesture's
+							// meaning there. An accepted thread is history for two
+							// people; that gets a confirm before it burns.
+							if ((conv as any).isRequestForMe) {
+								void declineRequest(conv._id);
+							} else {
+								setPendingDeleteConv(conv as any);
+							}
+						}}
 					/>
 				</div>
 			</div>
@@ -2065,6 +2084,45 @@ export const MessageBox = ({
 					}}
 				/>
 			)}
+			{pendingDeleteConv && (
+				<div className="fixed inset-0 z-modal flex items-center justify-center">
+					<button
+						type="button"
+						aria-label="Cancel"
+						onClick={() => setPendingDeleteConv(null)}
+						className="absolute inset-0 cursor-default bg-scrim"
+					/>
+					<div className="relative w-[320px] rounded-xl border border-hairline bg-surface p-5 shadow-nav animate-rise">
+						<p className="font-sans text-[14.5px] font-semibold text-primary">
+							Delete this conversation?
+						</p>
+						<p className="mt-1 font-sans text-[12.5px] text-muted">
+							The whole thread is removed for both of you. This can't
+							be undone.
+						</p>
+						<div className="mt-4 flex justify-end gap-2">
+							<button
+								type="button"
+								onClick={() => setPendingDeleteConv(null)}
+								className="h-9 cursor-pointer rounded-pill bg-raised px-4 font-sans text-[13px] font-medium text-primary transition-colors hover:bg-chip"
+							>
+								Keep
+							</button>
+							<button
+								type="button"
+								onClick={() => {
+									void declineRequest(pendingDeleteConv._id);
+									setPendingDeleteConv(null);
+								}}
+								className="h-9 cursor-pointer rounded-pill bg-danger px-4 font-sans text-[13px] font-semibold text-white transition-colors hover:opacity-90"
+							>
+								Delete
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
 			{msgMenu && (
 				<div
 					role="menu"
