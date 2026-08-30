@@ -907,7 +907,7 @@ export default function Feed({
 			    loudest thing on the page. Same page ground and hairline rhythm
 			    as the posts below it. */}
 			<div
-				className="animate-rise border-b border-hairline"
+				className="animate-rise"
 				style={{ animationDelay: "60ms" }}
 			>
 				<PostComposer

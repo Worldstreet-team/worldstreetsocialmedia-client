@@ -15,7 +15,7 @@ interface PostSkeletonProps {
  */
 export const PostSkeleton = ({ hasMedia = false }: PostSkeletonProps) => {
 	return (
-		<div className="p-6 border-b border-hairline">
+		<div className="p-6">
 			<div className="flex gap-4">
 				<div className="shrink-0">
 					<div className="skeleton w-[42px] h-[42px] rounded-pill" />

@@ -745,7 +745,7 @@ export const PostCard = memo(
     return (
         // px-4 is the spec's minimum edge gutter on small screens; the old px-3
         // put post text 12px from the viewport edge.
-        <article className="relative block px-4 py-3 sm:py-3.5 border-b border-hairline/60 hover:bg-surface/40 transition-colors">
+        <article className="relative block px-4 py-3 sm:py-3.5 hover:bg-surface/40 transition-colors">
             {/* ... Rest of the component remains the same ... */}
             <Link
                 href={`/post/${post.id}`}

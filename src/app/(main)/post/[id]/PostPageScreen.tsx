@@ -199,7 +199,7 @@ export default function PostPageScreen() {
 						{t("post.title")}
 					</h1>
 				</header>
-				<div className="p-4 border-b border-hairline">
+				<div className="p-4">
 					<PostSkeleton />
 				</div>
 				<div className="p-4">
@@ -252,7 +252,7 @@ export default function PostPageScreen() {
 			    rather than two unrelated cards. Muted, because the reply is
 			    what the reader came for. */}
 			{parent && (
-				<div className="relative border-b border-hairline">
+				<div className="relative">
 					<PostCard post={parent} />
 					<span
 						aria-hidden
@@ -261,9 +261,7 @@ export default function PostPageScreen() {
 				</div>
 			)}
 
-			<div className="border-b border-hairline">
-				<PostCard post={post} />
-			</div>
+			<PostCard post={post} />
 
 			<CommentComposer
 				postId={postId}
@@ -273,9 +271,7 @@ export default function PostPageScreen() {
 
 			<div className="flex flex-col">
 				{isAddingComment && (
-					<div className="border-b border-hairline">
-						<PostSkeleton />
-					</div>
+					<PostSkeleton />
 				)}
 				{comments.length > 0
 					? comments.map((comment, i) => (

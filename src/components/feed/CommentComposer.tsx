@@ -133,7 +133,7 @@ export const CommentComposer = ({
 	};
 
 	return (
-		<div className="relative border-b border-hairline px-4 py-3.5">
+		<div className="relative px-4 py-3.5">
 			{replyingTo && (
 				<p className="mb-2 pl-[52px] font-sans text-[12.5px] text-muted">
 					Replying to <span className="font-medium text-gold">@{replyingTo}</span>
