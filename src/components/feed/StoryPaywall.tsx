@@ -58,11 +58,7 @@ export function StoryPaywall({
 			onUnlocked(res.url);
 			return;
 		}
-		setError(
-			res.code === "INSUFFICIENT_BALANCE"
-				? t("story.unlock.topup")
-				: (res.message ?? t("story.unlock.topup")),
-		);
+		setError(res.message ?? t("story.unlock.topup"));
 	};
 
 	return (

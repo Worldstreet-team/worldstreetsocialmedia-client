@@ -82,10 +82,13 @@ export function useOverlayDismiss(open: boolean, onClose: () => void) {
 export function OverlayScrim({
 	onClose,
 	dim = true,
+	strong = false,
 	label = "Close",
 }: {
 	onClose: () => void;
 	dim?: boolean;
+	/** Deeper wash for surfaces that float over a busy page (the create fan). */
+	strong?: boolean;
 	label?: string;
 }) {
 	return (
@@ -101,7 +104,11 @@ export function OverlayScrim({
 				"fixed inset-0 z-modal cursor-default",
 				// Dimmed on mobile even for popovers: down there the panel owns
 				// the screen and there is nothing to keep visible behind it.
-				dim ? "bg-black/50" : "bg-black/45 sm:bg-transparent",
+				strong
+					? "bg-black/70"
+					: dim
+						? "bg-black/50"
+						: "bg-black/45 sm:bg-transparent",
 			)}
 		/>
 	);

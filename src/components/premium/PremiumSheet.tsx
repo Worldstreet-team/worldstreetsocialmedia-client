@@ -159,7 +159,8 @@ export function PremiumSheet() {
       void load();
       return;
     }
-    if (res.code === "INSUFFICIENT_BALANCE") setError(t("premium.insufficient"));
+    if (res.code === "INSUFFICIENT_BALANCE")
+      setError(res.message ?? t("premium.insufficient"));
     else if (res.status === 503) setError(t("premium.unavailable"));
     else setError(res.message);
   };

@@ -688,7 +688,11 @@ export const PostCard = memo(
                 });
                 toast(t("post.unlocked.toast"), { type: "success" });
             } else if (!res.success && res.code === "INSUFFICIENT_BALANCE") {
-                toast(t("post.locked.insufficient"), { type: "error" });
+                // The gateway names the real gap (Dollar Account vs naira);
+                // the i18n line is only the no-message fallback.
+                toast(res.message ?? t("post.locked.insufficient"), {
+                    type: "error",
+                });
             } else {
                 toast(t("post.locked.failed"), { type: "error" });
             }
