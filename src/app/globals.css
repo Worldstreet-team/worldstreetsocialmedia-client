@@ -1180,3 +1180,14 @@ video,
 	);
 	animation: ws-sheen-sweep 2.6s var(--ws-ease) infinite;
 }
+
+/* The ballot falling into the hinged vote box: appears above the mouth,
+   drops through, fades as it passes the rim. Keyed remounts retrigger it. */
+@keyframes ws-ballot-drop {
+	0% { transform: translateY(-3px) rotate(-8deg); opacity: 0; }
+	30% { opacity: 1; }
+	100% { transform: translateY(7px) rotate(4deg); opacity: 0; }
+}
+.ws-ballot {
+	animation: ws-ballot-drop 0.55s var(--ws-ease) 0.16s both;
+}
