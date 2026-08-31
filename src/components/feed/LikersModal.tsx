@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence } from "framer-motion";
 import {
 	OverlayHeader,
@@ -61,7 +62,17 @@ export function LikersModal({
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [postId]);
 
-	return (
+	// Portaled to <body>: rendered in place it sat inside the card's
+	// transformed route template (so `fixed` anchored to the card, not the
+	// viewport) and under the card's overlay link (so the scrim click
+	// navigated instead of closing). The stopPropagation shield keeps
+	// clicks inside the modal from reaching the card's React handlers.
+	if (typeof document === "undefined") return null;
+	return createPortal(
+		<div
+			onClick={(e) => e.stopPropagation()}
+			onPointerDown={(e) => e.stopPropagation()}
+		>
 		<AnimatePresence>
 			<OverlayScrim key="s" onClose={onClose} />
 			<OverlayPanel key="p" variant="anchored" label="Liked by">
@@ -124,5 +135,7 @@ export function LikersModal({
 				</div>
 			</OverlayPanel>
 		</AnimatePresence>
+		</div>,
+		document.body,
 	);
 }

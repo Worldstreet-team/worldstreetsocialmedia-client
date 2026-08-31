@@ -46,7 +46,7 @@
        indicator, and it's `fixed`, so it covers the tail of every scrolling
        column. Everything that needs to clear it derives from these — never
        hardcode another magic bottom offset. */
-  --ws-mobile-nav-h: 64px;
+  --ws-mobile-nav-h: 76px;
   --ws-safe-bottom: env(safe-area-inset-bottom, 0px);
   --ws-safe-top: env(safe-area-inset-top, 0px);
   /* The bar is docked again (owner ruling 2026-08-27): flush to the bottom
