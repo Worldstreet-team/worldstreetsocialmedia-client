@@ -235,7 +235,7 @@ export function RightSidebar() {
 					<div className="mt-2.5">
 						<VoteCountdown />
 					</div>
-					<p className="mt-2 font-sans text-[12px] text-subtle">
+					<p className="shine-pill mt-2.5 inline-block rounded-pill px-3 py-1.5 font-sans text-[12px] font-semibold text-gold">
 						Most-voted post wins up to $200 Friday night
 					</p>
 				</Link>

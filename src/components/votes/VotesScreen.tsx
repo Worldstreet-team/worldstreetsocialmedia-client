@@ -81,7 +81,7 @@ export function VotesScreen() {
 
 			<div className="animate-rise flex flex-col items-center gap-2 px-4 pb-6 pt-4 text-center">
 				<VoteCountdown size="lg" />
-				<p className="font-sans text-[12.5px] text-subtle">
+				<p className="shine-pill inline-block rounded-pill px-4 py-2 font-sans text-[13px] font-semibold text-gold">
 					Ends Friday 11:59 PM · winner paid by tick — Bronze $50 · Silver
 					$100 · Gold $200
 				</p>

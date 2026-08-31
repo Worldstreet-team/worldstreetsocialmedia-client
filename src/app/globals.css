@@ -1143,3 +1143,37 @@ video,
 	animation: ws-flicker 1.5s var(--ws-ease) infinite;
 	transform-origin: 50% 88%;
 }
+
+/* Prize-line gloss: a brand-tinted pill with a light sweep passing over it.
+   Transform-only animation (the sweep is a translated pseudo-element), so
+   reduced-motion stills it with everything else. */
+@keyframes ws-shimmer {
+	0% { transform: translateX(-160%) skewX(-12deg); }
+	100% { transform: translateX(260%) skewX(-12deg); }
+}
+.shine-pill {
+	position: relative;
+	overflow: hidden;
+	/* Follows the rebrand token; lighter at the waist so it reads as a
+	   curved, lit surface. */
+	background: linear-gradient(
+		180deg,
+		color-mix(in srgb, var(--ws-brand-primary) 16%, transparent),
+		color-mix(in srgb, var(--ws-brand-primary) 6%, transparent) 55%,
+		color-mix(in srgb, var(--ws-brand-primary) 12%, transparent)
+	);
+}
+.shine-pill::after {
+	content: "";
+	pointer-events: none;
+	position: absolute;
+	inset: 0;
+	width: 45%;
+	background: linear-gradient(
+		105deg,
+		transparent,
+		rgb(255 255 255 / 0.28) 50%,
+		transparent
+	);
+	animation: ws-shimmer 2.6s var(--ws-ease) infinite;
+}
