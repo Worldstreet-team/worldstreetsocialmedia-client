@@ -1390,16 +1390,22 @@ export const PostCard = memo(
                         </a>
                     )}
 
+                    {/* The ballot row: right-aligned directly ABOVE the media
+                        (owner ruling — same corner as before, off the artwork).
+                        Text-only posts get the same row above the action bar. */}
+                    {((post.videos && post.videos.length > 0) ||
+                        (post.images && post.images.length > 0)) && (
+                        <VoteChip
+                            postId={post.id}
+                            votes={post.votes ?? 0}
+                            isMine={isOwnPost}
+                        />
+                    )}
                     {post.videos && post.videos.length > 0 && (
                         <div
-                            className="relative z-10 pointer-events-auto mt-2 mb-1.5 rounded-xl overflow-hidden border border-hairline bg-sunken"
+                            className="relative z-10 pointer-events-auto mt-1 mb-1.5 rounded-xl overflow-hidden border border-hairline bg-sunken"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <VoteChip
-                                postId={post.id}
-                                votes={post.votes ?? 0}
-                                isMine={isOwnPost}
-                            />
                             {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
                             {/* aspect-video is only the placeholder that holds
                                 the space until the metadata lands; fitToMedia
@@ -1438,11 +1444,6 @@ export const PostCard = memo(
                         // already did; this one didn't, so single-image posts
                         // silently could not be tapped to zoom.
                         <div className="relative mb-3 w-fit max-w-full pointer-events-auto">
-                            <VoteChip
-                                postId={post.id}
-                                votes={post.votes ?? 0}
-                                isMine={isOwnPost}
-                            />
                             <FeedImage
                                 src={post.images[0]}
                                 alt="Post attachment"
@@ -1489,6 +1490,14 @@ export const PostCard = memo(
                                 ))}
                         </div>
                     )}
+                    {!(post.videos && post.videos.length > 0) &&
+                        !(post.images && post.images.length > 0) && (
+                            <VoteChip
+                                postId={post.id}
+                                votes={post.votes ?? 0}
+                                isMine={isOwnPost}
+                            />
+                        )}
                     {/* Post actions the interaction cluster distributes across
                         the row like X: flex-1 + max-w + justify-between puts
                         reply/repost/like/bookmark/share at even intervals, each

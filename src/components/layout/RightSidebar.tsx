@@ -226,7 +226,7 @@ export function RightSidebar() {
 			<section className="animate-rise" style={{ animationDelay: "150ms" }}>
 				<Link
 					href="/votes"
-					className="block rounded-xl bg-surface p-4 transition-colors hover:bg-raised"
+					className="group block rounded-xl px-1 py-1 transition-opacity hover:opacity-90"
 				>
 					<span className="flex items-center gap-1.5 font-sans text-[11px] font-semibold uppercase tracking-widest text-gold">
 						<Lightning size={13} weight="fill" />
@@ -235,7 +235,7 @@ export function RightSidebar() {
 					<div className="mt-2.5">
 						<VoteCountdown />
 					</div>
-					<p className="mt-2 font-sans text-[12px] text-subtle">
+					<p className="shine-pill mt-2.5 inline-block rounded-pill px-3 py-1.5 font-sans text-[12px] font-semibold text-gold">
 						Most-voted post wins up to $200 Friday night
 					</p>
 				</Link>

@@ -53,7 +53,7 @@ export function FeedTabs() {
 	}, []);
 
 	const chip =
-		"relative flex items-center gap-1.5 h-9 px-3.5 rounded-pill font-sans text-[12.5px] whitespace-nowrap transition-colors shrink-0";
+		"relative flex items-center gap-2 h-10 px-4 rounded-pill font-sans text-[14px] whitespace-nowrap transition-colors shrink-0";
 	const idle = "font-medium text-muted hover:text-primary hover:bg-raised/50";
 
 	// The three timelines, in the order they are offered: ranked, then the
@@ -131,7 +131,7 @@ export function FeedTabs() {
 								{c.avatar ? (
 									<SafeAvatar src={c.avatar} className="object-cover" />
 								) : (
-									<span className="text-[9px] font-bold text-subtle font-sans uppercase">
+									<span className="text-[10px] font-bold text-subtle font-sans uppercase">
 										{c.name.slice(0, 1)}
 									</span>
 								)}

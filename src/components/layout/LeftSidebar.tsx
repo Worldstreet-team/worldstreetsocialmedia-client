@@ -16,7 +16,10 @@ import {
 } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { AnimatePresence } from "framer-motion";
+import { Flame } from "@phosphor-icons/react";
 import { BadgedIcon } from "@/components/ui/Badge";
+import { getVoteLeaders } from "@/lib/votes";
+import { Package, PackageOpen } from "lucide-react";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import {
 	OverlayHeader,
@@ -138,6 +141,19 @@ export function LeftSidebar() {
 
 	const setPremiumOpen = useSetAtom(premiumOpenAtom);
 
+	const [voteLeaders, setVoteLeaders] = useState<
+		{ avatar?: string; username?: string }[]
+	>([]);
+	useEffect(() => {
+		let alive = true;
+		void getVoteLeaders().then((l) => {
+			if (alive) setVoteLeaders(l);
+		});
+		return () => {
+			alive = false;
+		};
+	}, []);
+
 	const renderItem = (item: SidebarItem, index: number, offset: number) => {
 		const href =
 			item.title === "Profile" && user?.username
@@ -194,6 +210,53 @@ export function LeftSidebar() {
 
 			<nav className="flex flex-col gap-0.5 flex-1 px-2">
 				{mainNav.map((item, i) => renderItem(item, i, 60))}
+				{/* The Weekly Vote: the ballot box leads like any nav glyph;
+				    flexed right, the flame burns over the top-three faces —
+				    the race, glanceable without leaving the rail. */}
+				<Link
+					href="/votes"
+					style={{ animationDelay: `${60 + mainNav.length * 30}ms` }}
+					className={clsx(
+						"relative flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors group animate-rise",
+						pathname.startsWith("/votes")
+							? "bg-raised text-primary font-semibold"
+							: "text-muted hover:bg-surface hover:text-primary",
+					)}
+				>
+					{pathname.startsWith("/votes") ? (
+						<PackageOpen size={24} strokeWidth={2.5} />
+					) : (
+						<Package size={24} strokeWidth={2} />
+					)}
+					<span className="font-sans text-[16.5px]">Votes</span>
+					<span className="ml-auto flex items-center gap-1.5">
+						<Flame
+							size={17}
+							weight="fill"
+							className="animate-flicker text-gold"
+						/>
+						{voteLeaders.length > 0 && (
+							<span
+								className="flex -space-x-2"
+								title={
+									voteLeaders[0]?.username
+										? `@${voteLeaders[0].username} is leading`
+										: "This week's leaders"
+								}
+							>
+								{voteLeaders.map((l, i) => (
+									<span
+										key={l.username ?? i}
+										className="relative block h-6 w-6 shrink-0 overflow-hidden rounded-pill ring-2 ring-page"
+										style={{ zIndex: 3 - i }}
+									>
+										<SafeAvatar src={l.avatar} />
+									</span>
+								))}
+							</span>
+						)}
+					</span>
+				</Link>
 
 				<Eyebrow>{t("nav.you")}</Eyebrow>
 				{youNav
