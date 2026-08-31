@@ -19,7 +19,7 @@ import { AnimatePresence } from "framer-motion";
 import { Flame } from "@phosphor-icons/react";
 import { BadgedIcon } from "@/components/ui/Badge";
 import { getVoteLeaders } from "@/lib/votes";
-import { Package, PackageOpen } from "lucide-react";
+import { VoteBox } from "@/components/votes/VoteBox";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import {
 	OverlayHeader,
@@ -223,11 +223,7 @@ export function LeftSidebar() {
 							: "text-muted hover:bg-surface hover:text-primary",
 					)}
 				>
-					{pathname.startsWith("/votes") ? (
-						<PackageOpen size={24} strokeWidth={2.5} />
-					) : (
-						<Package size={24} strokeWidth={2} />
-					)}
+					<VoteBox open={pathname.startsWith("/votes")} size={24} />
 					<span className="font-sans text-[16.5px]">Votes</span>
 					<span className="ml-auto flex items-center gap-1.5">
 						<Flame

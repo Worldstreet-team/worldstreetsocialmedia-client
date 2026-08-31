@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Package, PackageOpen } from "lucide-react";
+import { VoteBox } from "@/components/votes/VoteBox";
 import { useCallback, useRef, useState } from "react";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { formatCompact } from "@/lib/utils";
@@ -33,6 +33,7 @@ export function VoteChip({
 	const [paidOpen, setPaidOpen] = useState(false);
 	const [qty, setQty] = useState("1");
 	const [boxOpen, setBoxOpen] = useState(false);
+	const [ballotKey, setBallotKey] = useState(0);
 	const inputRef = useRef<HTMLInputElement>(null);
 	const shutTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -50,6 +51,7 @@ export function VoteChip({
 				setPaidOpen(false);
 				setCount(d?.votes ?? count + n);
 				setBoxOpen(true);
+				setBallotKey((k) => k + 1);
 				if (shutTimer.current) clearTimeout(shutTimer.current);
 				shutTimer.current = setTimeout(() => setBoxOpen(false), 1100);
 				if (d?.freeUsed) {
@@ -143,32 +145,8 @@ export function VoteChip({
 				transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
 				className="flex cursor-pointer items-center gap-1.5 rounded-pill bg-raised px-3 py-1.5 font-sans text-[13px] font-semibold text-primary transition-colors hover:bg-chip disabled:opacity-60"
 			>
-				<span className="relative flex h-[17px] w-[17px] items-center justify-center text-gold">
-					<AnimatePresence mode="wait" initial={false}>
-						{boxOpen ? (
-							<motion.span
-								key="open"
-								initial={{ opacity: 0, scale: 0.7, rotate: -8 }}
-								animate={{ opacity: 1, scale: 1, rotate: 0 }}
-								exit={{ opacity: 0, scale: 0.8 }}
-								transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
-								className="flex"
-							>
-								<PackageOpen size={17} strokeWidth={2.2} />
-							</motion.span>
-						) : (
-							<motion.span
-								key="closed"
-								initial={{ opacity: 0, scale: 0.8 }}
-								animate={{ opacity: 1, scale: 1 }}
-								exit={{ opacity: 0, scale: 0.8 }}
-								transition={{ duration: 0.15 }}
-								className="flex"
-							>
-								<Package size={17} strokeWidth={2.2} />
-							</motion.span>
-						)}
-					</AnimatePresence>
+				<span className="relative flex h-[18px] w-[18px] items-center justify-center overflow-visible text-gold">
+					<VoteBox open={boxOpen} ballotKey={ballotKey} size={18} />
 				</span>
 				{count > 0 && (
 					<span className="relative overflow-hidden tabular-nums">
