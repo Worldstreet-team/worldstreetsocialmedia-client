@@ -5,10 +5,11 @@ import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 import { useGatewayRead } from "@/hooks/useGateway";
 import { useLiveNow } from "@/hooks/useLiveNow";
 import Link from "next/link";
-import { Aperture, Broadcast, Fire, MagnifyingGlass, UserPlus } from "@phosphor-icons/react";
+import { Aperture, Broadcast, Fire, Lightning, MagnifyingGlass, UserPlus } from "@phosphor-icons/react";
 import { PromoBanners } from "@/components/feed/PromoBanners";
 import { SidebarWallet } from "@/components/layout/SidebarWallet";
 import { SectionHead } from "@/components/layout/SectionHead";
+import { VoteCountdown } from "@/components/votes/VoteCountdown";
 import { SpacesRail } from "@/components/layout/SpacesRail";
 import { useAppPathname } from "@/i18n/useAppPathname";
 import { useToast } from "@/components/ui/Toast/ToastContext";
@@ -218,6 +219,26 @@ export function RightSidebar() {
 				style={{ animationDelay: "120ms" }}
 			>
 				<PromoBanners />
+			</section>
+
+			{/* The Weekly Vote clock: the drama lives on the rail so the race
+			    is felt from every feed page. The card IS the door to /votes. */}
+			<section className="animate-rise" style={{ animationDelay: "150ms" }}>
+				<Link
+					href="/votes"
+					className="block rounded-xl bg-surface p-4 transition-colors hover:bg-raised"
+				>
+					<span className="flex items-center gap-1.5 font-sans text-[11px] font-semibold uppercase tracking-widest text-gold">
+						<Lightning size={13} weight="fill" />
+						The Weekly Vote
+					</span>
+					<div className="mt-2.5">
+						<VoteCountdown />
+					</div>
+					<p className="mt-2 font-sans text-[12px] text-subtle">
+						Most-voted post wins up to $200 Friday night
+					</p>
+				</Link>
 			</section>
 
 			{/* Live rings the red ring grammar, above Happening now. Click a

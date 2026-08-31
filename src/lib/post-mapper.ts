@@ -47,6 +47,7 @@ export function mapApiPost(post: any): PostProps {
 		images: post.images,
 		videos: post.videos,
 		videoPlays: post.videoPlays,
+		votes: post.votes ?? 0,
 		audio: post.audio?.url ? post.audio : undefined,
 		stats: post.stats || { replies: 0, reposts: 0, likes: 0, views: 0 },
 		isLiked: post.isLiked,
