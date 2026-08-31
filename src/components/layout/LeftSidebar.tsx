@@ -16,7 +16,9 @@ import {
 } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { AnimatePresence } from "framer-motion";
+import { Flame } from "@phosphor-icons/react";
 import { BadgedIcon } from "@/components/ui/Badge";
+import { getVoteLeader } from "@/lib/votes";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import {
 	OverlayHeader,
@@ -138,6 +140,20 @@ export function LeftSidebar() {
 
 	const setPremiumOpen = useSetAtom(premiumOpenAtom);
 
+	const [voteLeader, setVoteLeader] = useState<{
+		avatar?: string;
+		username?: string;
+	} | null>(null);
+	useEffect(() => {
+		let alive = true;
+		void getVoteLeader().then((l) => {
+			if (alive) setVoteLeader(l);
+		});
+		return () => {
+			alive = false;
+		};
+	}, []);
+
 	const renderItem = (item: SidebarItem, index: number, offset: number) => {
 		const href =
 			item.title === "Profile" && user?.username
@@ -194,6 +210,33 @@ export function LeftSidebar() {
 
 			<nav className="flex flex-col gap-0.5 flex-1 px-2">
 				{mainNav.map((item, i) => renderItem(item, i, 60))}
+				{/* The Weekly Vote: a living flame, and the face currently
+				    wearing the crown floated right — the race, glanceable. */}
+				<Link
+					href="/votes"
+					style={{ animationDelay: `${60 + mainNav.length * 30}ms` }}
+					className={clsx(
+						"relative flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors group animate-rise",
+						pathname.startsWith("/votes")
+							? "bg-raised text-primary font-semibold"
+							: "text-muted hover:bg-surface hover:text-primary",
+					)}
+				>
+					<Flame
+						size={24}
+						weight={pathname.startsWith("/votes") ? "fill" : "regular"}
+						className="animate-flicker text-gold"
+					/>
+					<span className="font-sans text-[16.5px]">Votes</span>
+					{voteLeader?.avatar && (
+						<span
+							className="relative ml-auto block h-6 w-6 shrink-0 overflow-hidden rounded-pill ring-2 ring-gold/60"
+							title={voteLeader.username ? `@${voteLeader.username} is leading` : "This week's leader"}
+						>
+							<SafeAvatar src={voteLeader.avatar} />
+						</span>
+					)}
+				</Link>
 
 				<Eyebrow>{t("nav.you")}</Eyebrow>
 				{youNav

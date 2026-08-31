@@ -2,15 +2,15 @@
 
 import clsx from "clsx";
 import { useCallback, useState } from "react";
-import { Lightning } from "@phosphor-icons/react";
+import { VoteBox } from "@/components/votes/VoteBox";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { formatCompact } from "@/lib/utils";
 import { castVote, getVoteCycle, markFreeVoteUsed } from "@/lib/votes";
 
 /**
- * The Weekly Vote chip — rides the top-right corner of post media (the spot
- * the owner circled), fixed-white glass like every control that sits on
- * artwork. `overlay={false}` renders the same chip inline for text posts.
+ * The Weekly Vote chip — its own right-aligned row directly ABOVE the post
+ * media (owner ruling: same corner, but above the image, never on it). The
+ * ballot box swings open when a vote lands.
  *
  * Tap flow: while the voter still holds their free weekly vote, one tap
  * casts it instantly. After that a tap opens the tiny paid strip — +1 (5¢)
@@ -22,17 +22,17 @@ export function VoteChip({
 	postId,
 	votes,
 	isMine,
-	overlay = true,
 }: {
 	postId: string;
 	votes: number;
 	isMine: boolean;
-	overlay?: boolean;
 }) {
 	const { toast } = useToast();
 	const [count, setCount] = useState(votes);
 	const [busy, setBusy] = useState(false);
 	const [paidOpen, setPaidOpen] = useState(false);
+	// Momentary: flips true when a vote lands, falls shut ~900ms later.
+	const [boxOpen, setBoxOpen] = useState(false);
 
 	const cast = useCallback(
 		async (quantity: number) => {
@@ -44,6 +44,8 @@ export function VoteChip({
 			if (res.success) {
 				const d: any = res.data;
 				setCount(d?.votes ?? count + quantity);
+				setBoxOpen(true);
+				setTimeout(() => setBoxOpen(false), 900);
 				if (d?.freeUsed) {
 					markFreeVoteUsed();
 					toast("Your free vote this week is in");
@@ -81,10 +83,7 @@ export function VoteChip({
 
 	return (
 		<div
-			className={clsx(
-				"pointer-events-auto z-20 flex items-center gap-1.5",
-				overlay && "absolute right-2.5 top-2.5",
-			)}
+			className="pointer-events-auto relative z-10 mb-1.5 flex items-center justify-end gap-1.5"
 			onClick={(e) => e.stopPropagation()}
 		>
 			{paidOpen && (
@@ -92,24 +91,14 @@ export function VoteChip({
 					<button
 						type="button"
 						onClick={() => void cast(1)}
-						className={clsx(
-							"cursor-pointer rounded-pill px-2.5 py-1.5 font-sans text-[12px] font-semibold transition-colors",
-							overlay
-								? "bg-black/60 text-white hover:bg-black/75"
-								: "bg-raised text-primary hover:bg-chip",
-						)}
+						className="cursor-pointer rounded-pill bg-raised px-2.5 py-1.5 font-sans text-[12px] font-semibold text-primary transition-colors hover:bg-chip"
 					>
 						+1 · 5¢
 					</button>
 					<button
 						type="button"
 						onClick={() => void cast(10)}
-						className={clsx(
-							"cursor-pointer rounded-pill px-2.5 py-1.5 font-sans text-[12px] font-semibold transition-colors",
-							overlay
-								? "bg-black/60 text-white hover:bg-black/75"
-								: "bg-raised text-primary hover:bg-chip",
-						)}
+						className="cursor-pointer rounded-pill bg-raised px-2.5 py-1.5 font-sans text-[12px] font-semibold text-primary transition-colors hover:bg-chip"
 					>
 						+10 · 50¢
 					</button>
@@ -120,14 +109,9 @@ export function VoteChip({
 				aria-label="Vote for this post"
 				onClick={onTap}
 				disabled={busy}
-				className={clsx(
-					"flex cursor-pointer items-center gap-1.5 rounded-pill px-3 py-1.5 font-sans text-[13px] font-semibold transition-colors disabled:opacity-60",
-					overlay
-						? "bg-black/55 text-white backdrop-blur-md hover:bg-black/70"
-						: "bg-raised text-primary hover:bg-chip",
-				)}
+				className="flex cursor-pointer items-center gap-1.5 rounded-pill bg-raised px-3 py-1.5 font-sans text-[13px] font-semibold text-primary transition-colors hover:bg-chip disabled:opacity-60"
 			>
-				<Lightning size={14} weight="fill" className="text-gold" />
+				<VoteBox open={boxOpen} size={17} className="text-gold" />
 				{count > 0 && (
 					<span className="tabular-nums">{formatCompact(count)}</span>
 				)}

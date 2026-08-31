@@ -1130,3 +1130,16 @@ video,
 	content-visibility: auto;
 	contain-intrinsic-size: auto 420px;
 }
+
+/* The Weekly Vote flame: a live thing in the nav, transform/opacity only.
+   The global prefers-reduced-motion block stills it like everything else. */
+@keyframes ws-flicker {
+	0%, 100% { transform: scale(1) rotate(-2deg); opacity: 1; }
+	28% { transform: scale(1.12) rotate(2.5deg); opacity: 0.88; }
+	54% { transform: scale(0.94) rotate(-1deg); opacity: 1; }
+	78% { transform: scale(1.07) rotate(1.5deg); opacity: 0.94; }
+}
+.animate-flicker {
+	animation: ws-flicker 1.5s var(--ws-ease) infinite;
+	transform-origin: 50% 88%;
+}

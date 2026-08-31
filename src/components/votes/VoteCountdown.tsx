@@ -3,16 +3,19 @@
 import { useEffect, useState } from "react";
 import { getVoteCycle } from "@/lib/votes";
 
+const WEEK_MS = 7 * 24 * 3600 * 1000;
+
 /**
- * The dramatic clock. Gold, tabular, ticking every second toward Friday
- * 11:59 PM — the same numbers on the /votes stage and the right rail, so
- * the whole app agrees on when the race ends. Flips to the closed line at
- * zero.
+ * The clock, redesigned (owner note: the flat gold line read bland).
+ * Each unit sits in its own quiet raised tile — gold tabular digits, tiny
+ * uppercase labels — over a hairline track that fills as the week burns
+ * down. No card behind it: the tiles ARE the surface, so it floats on the
+ * page instead of sitting in a bright box.
  */
 export function VoteCountdown({
 	size = "md",
 }: {
-	/** md = right rail; lg = the /votes stage. */
+	/** md = right rail / sidebar; lg = the /votes stage. */
 	size?: "md" | "lg";
 }) {
 	const [endsAt, setEndsAt] = useState<number | null>(null);
@@ -30,13 +33,15 @@ export function VoteCountdown({
 		};
 	}, []);
 
+	const lg = size === "lg";
+
 	if (!endsAt) {
 		return (
 			<span
 				className={
-					size === "lg"
-						? "skeleton inline-block h-10 w-64 rounded-[7px]"
-						: "skeleton inline-block h-6 w-40 rounded-[4px]"
+					lg
+						? "skeleton inline-block h-14 w-72 rounded-[7px]"
+						: "skeleton inline-block h-9 w-44 rounded-[7px]"
 				}
 			/>
 		);
@@ -47,7 +52,7 @@ export function VoteCountdown({
 		return (
 			<span
 				className={
-					size === "lg"
+					lg
 						? "font-display text-2xl font-semibold text-gold"
 						: "font-display text-sm font-semibold text-gold"
 				}
@@ -61,6 +66,7 @@ export function VoteCountdown({
 	const m = Math.floor((left % 3_600_000) / 60_000);
 	const s = Math.floor((left % 60_000) / 1000);
 	const pad = (n: number) => String(n).padStart(2, "0");
+	const burned = Math.min(1, Math.max(0, 1 - left / WEEK_MS));
 
 	const cells: [string, string][] = [
 		[pad(d), "days"],
@@ -70,37 +76,58 @@ export function VoteCountdown({
 	];
 
 	return (
-		<span
-			className={
-				size === "lg"
-					? "flex items-end gap-3"
-					: "flex items-end gap-2"
-			}
+		<div
+			className={lg ? "inline-flex flex-col gap-2.5" : "inline-flex flex-col gap-2"}
 			role="timer"
 			aria-label="Time left in this week's vote"
 		>
-			{cells.map(([v, l]) => (
-				<span key={l} className="flex flex-col items-center">
-					<span
-						className={
-							size === "lg"
-								? "font-display text-[40px] font-semibold leading-none tabular-nums text-gold"
-								: "font-display text-[19px] font-semibold leading-none tabular-nums text-gold"
-						}
-					>
-						{v}
+			<div className={lg ? "flex items-center gap-2" : "flex items-center gap-1.5"}>
+				{cells.map(([v, l], i) => (
+					<span key={l} className="flex items-center gap-1.5">
+						{i > 0 && (
+							<span
+								className={
+									lg
+										? "-mt-4 font-display text-xl font-semibold text-subtle"
+										: "-mt-3 font-display text-[13px] font-semibold text-subtle"
+								}
+							>
+								:
+							</span>
+						)}
+						<span className="flex flex-col items-center gap-1">
+							<span
+								className={
+									lg
+										? "flex min-w-[62px] items-center justify-center rounded-[10px] bg-raised px-2.5 py-2.5 font-display text-[32px] font-semibold leading-none tabular-nums text-gold"
+										: "flex min-w-[36px] items-center justify-center rounded-[7px] bg-raised px-1.5 py-1.5 font-display text-[16px] font-semibold leading-none tabular-nums text-gold"
+								}
+							>
+								{v}
+							</span>
+							<span
+								className={
+									lg
+										? "font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-subtle"
+										: "font-sans text-[8.5px] font-semibold uppercase tracking-[0.16em] text-subtle"
+								}
+							>
+								{l}
+							</span>
+						</span>
 					</span>
-					<span
-						className={
-							size === "lg"
-								? "mt-1.5 font-sans text-[11px] uppercase tracking-widest text-subtle"
-								: "mt-1 font-sans text-[9.5px] uppercase tracking-widest text-subtle"
-						}
-					>
-						{l}
-					</span>
-				</span>
-			))}
-		</span>
+				))}
+			</div>
+			{/* The week, burning down. */}
+			<span
+				aria-hidden
+				className="block h-[3px] w-full overflow-hidden rounded-pill bg-raised"
+			>
+				<span
+					className="block h-full rounded-pill bg-gold"
+					style={{ width: `${Math.round(burned * 1000) / 10}%` }}
+				/>
+			</span>
+		</div>
 	);
 }
