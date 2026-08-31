@@ -1145,9 +1145,12 @@ video,
 }
 
 /* Prize-line gloss: a brand-tinted pill with a light sweep passing over it.
+   NOTE: named ws-sheen-sweep, NOT ws-shimmer — the skeleton utility owns
+   that name (a background-position sweep), and a second definition of it
+   here silently killed every skeleton's animation once already.
    Transform-only animation (the sweep is a translated pseudo-element), so
    reduced-motion stills it with everything else. */
-@keyframes ws-shimmer {
+@keyframes ws-sheen-sweep {
 	0% { transform: translateX(-160%) skewX(-12deg); }
 	100% { transform: translateX(260%) skewX(-12deg); }
 }
@@ -1175,5 +1178,5 @@ video,
 		rgb(255 255 255 / 0.28) 50%,
 		transparent
 	);
-	animation: ws-shimmer 2.6s var(--ws-ease) infinite;
+	animation: ws-sheen-sweep 2.6s var(--ws-ease) infinite;
 }
