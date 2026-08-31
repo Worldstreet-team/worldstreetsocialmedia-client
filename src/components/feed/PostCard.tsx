@@ -276,6 +276,9 @@ export const PostCard = memo(
     const post = revealed ?? postProp;
     const [unlocking, setUnlocking] = useState(false);
     const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
+    // Set when an unlock bounced on balance — opens the fund-your-account
+    // dialog with the gateway's balance-aware explanation.
+    const [topUpMessage, setTopUpMessage] = useState<string | null>(null);
     const [likersOpen, setLikersOpen] = useState(false);
     const [canPromote, setCanPromote] = useState(false);
     const [repostMenuOpen, setRepostMenuOpen] = useState(false);
@@ -688,11 +691,10 @@ export const PostCard = memo(
                 });
                 toast(t("post.unlocked.toast"), { type: "success" });
             } else if (!res.success && res.code === "INSUFFICIENT_BALANCE") {
-                // The gateway names the real gap (Dollar Account vs naira);
-                // the i18n line is only the no-message fallback.
-                toast(res.message ?? t("post.locked.insufficient"), {
-                    type: "error",
-                });
+                // The gateway names the real gap (Dollar Account vs naira).
+                // A toast alone strands them — the dialog carries the one
+                // action that fixes it: funding the Dollar Account on the hub.
+                setTopUpMessage(res.message ?? t("post.locked.insufficient"));
             } else {
                 toast(t("post.locked.failed"), { type: "error" });
             }
@@ -783,6 +785,22 @@ export const PostCard = memo(
                     .replace("{price}", salePriceLabel)
                     .replace("{seller}", `@${post.author.username}`)}
                 confirmText={t("post.buy.confirmCta")}
+            />
+
+            <ConfirmModal
+                isOpen={topUpMessage !== null}
+                onClose={() => setTopUpMessage(null)}
+                onConfirm={() => {
+                    setTopUpMessage(null);
+                    window.open(
+                        "https://worldstreetgold.com/welcome",
+                        "_blank",
+                        "noopener",
+                    );
+                }}
+                title="Fund your Dollar Account"
+                message={topUpMessage ?? ""}
+                confirmText="Fund Dollar Account"
             />
 
             <ConfirmModal
