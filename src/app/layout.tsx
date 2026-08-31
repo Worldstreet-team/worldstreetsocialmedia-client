@@ -28,6 +28,7 @@ import { CreateFab } from "@/components/ui/CreateFab";
 import VoiceRoomHost from "@/components/voice/VoiceRoomHost";
 import { LiveDock } from "@/components/live/LiveDock";
 import { NotificationCountSync } from "@/components/providers/NotificationCountSync";
+import { DeploymentSkewRecovery } from "@/components/providers/DeploymentSkewRecovery";
 import { SpacesLiveSync } from "@/components/providers/SpacesLiveSync";
 import { MessageCountSync } from "@/components/providers/MessageCountSync";
 import { BmCountSync } from "@/components/providers/BmCountSync";
@@ -202,6 +203,7 @@ export default async function RootLayout({
                                     </Suspense>
                                         <GlobalMessageListener />
                                         <NotificationCountSync />
+                                        <DeploymentSkewRecovery />
                                         <SpacesLiveSync />
 										<MessageCountSync />
 										<BmCountSync />

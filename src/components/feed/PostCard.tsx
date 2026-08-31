@@ -48,7 +48,6 @@ import { userAtom } from "@/store/user.atom";
 import { bookmarksAtom } from "@/store/bookmarks.atom";
 import {
     deletePostAction,
-    unlockPostAction,
     likePostAction,
     unlikePostAction,
     bookmarkPostAction,
@@ -61,6 +60,7 @@ import { FeedImage } from "@/components/ui/FeedImage";
 import VerifiedIcon from "@/assets/icons/VerifiedIcon";
 import { recordVideoPlayAction } from "@/lib/beacons";
 import { LikersModal } from "@/components/feed/LikersModal";
+import { postJsonDirect } from "@/lib/upload-direct";
 import { AudioCard } from "@/components/feed/AudioCard";
 import { Image as ImageGlyph, VideoCamera, MicrophoneStage } from "@phosphor-icons/react";
 import { renderRichText } from "@/components/ui/RichText";
@@ -677,7 +677,10 @@ export const PostCard = memo(
         if (unlocking) return;
         setUnlocking(true);
         try {
-            const res = await unlockPostAction(post.id);
+            // Direct to the gateway: an unlock must work even from a tab
+            // older than the current deployment (server-action ids die on
+            // redeploy — the "nobody can pay" incident, 2026-08-31).
+            const res = await postJsonDirect(`/api/posts/${post.id}/unlock`);
             if (res.success && res.data) {
                 const d: any = res.data;
                 setRevealed({

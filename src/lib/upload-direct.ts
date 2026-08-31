@@ -46,3 +46,36 @@ export async function sendFormDirect(
 
 export const postFormDirect = (path: string, formData: FormData) =>
 	sendFormDirect(path, formData, "POST");
+
+/**
+ * JSON write, browser -> gateway, same contract as sendFormDirect. For the
+ * few writes that must survive a redeploy mid-session: a server action id
+ * dies with its deployment ("Failed to find Server Action") and 2,499 of
+ * those in one log window is what "nobody can pay" looked like. Money paths
+ * call the gateway directly so a stale tab can still buy.
+ */
+export async function postJsonDirect(path: string, body?: unknown) {
+	try {
+		const token = await (window as any).Clerk?.session?.getToken?.();
+		if (!token) return { success: false as const, message: "Unauthorized" };
+		const res = await fetch(`${API_URL}${path}`, {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+			},
+			body: body === undefined ? undefined : JSON.stringify(body),
+		});
+		const payload = await res.json().catch(() => null);
+		if (!res.ok) {
+			return {
+				success: false as const,
+				code: payload?.code as string | undefined,
+				message: payload?.message || "Request failed",
+			};
+		}
+		return { success: true as const, data: payload?.data ?? payload };
+	} catch {
+		return { success: false as const, message: "Network error" };
+	}
+}
