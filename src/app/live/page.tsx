@@ -14,6 +14,7 @@ import {
 	X,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAtom, useAtomValue } from "jotai";
 import type { Room } from "livekit-client";
@@ -52,7 +53,6 @@ import {
 	unlikePostAction,
 } from "@/lib/post.actions";
 import { track } from "@/lib/telemetry";
-import { followUserAction } from "@/lib/user.actions";
 import { followingIdsAtom } from "@/store/ui.atom";
 import { userAtom } from "@/store/user.atom";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
@@ -666,7 +666,7 @@ function VerticalSurface() {
 		const target = slide.authorId ?? slide.username;
 		if (!target) return;
 		setFollowedIds((prev) => (prev.includes(target) ? prev : [...prev, target]));
-		const res = await followUserAction(target);
+		const res = await followUserDirect(target);
 		if (!res.success) {
 			setFollowedIds((prev) => prev.filter((id) => id !== target));
 			toast(res.message || t("rail.followFailed"), { type: "error" });

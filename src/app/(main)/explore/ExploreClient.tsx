@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 import { MagnifyingGlass, X } from "@phosphor-icons/react";
 import { Compass } from "lucide-react";
-import { followUserAction } from "@/lib/user.actions";
 import { useGatewayRead } from "@/hooks/useGateway";
 import { searchPostsAction } from "@/lib/post.actions";
 import { joinSpaceAction } from "@/lib/space.actions";
@@ -209,7 +209,7 @@ export default function ExploreClient({
   const follow = useCallback(
     async (id: string) => {
       setFollowingIds((prev) => [...prev, id]);
-      const res = await followUserAction(id);
+      const res = await followUserDirect(id);
       if (!res.success) {
         setFollowingIds((prev) => prev.filter((x) => x !== id));
         toast(t("rail.followFailed"), { type: "error" });

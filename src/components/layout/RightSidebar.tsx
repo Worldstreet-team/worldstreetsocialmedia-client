@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { followUserAction } from "@/lib/user.actions";
+import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 import { useGatewayRead } from "@/hooks/useGateway";
 import { useLiveNow } from "@/hooks/useLiveNow";
 import Link from "next/link";
@@ -162,7 +162,7 @@ export function RightSidebar() {
 	const handleFollow = async (userId: string) => {
 		setFollowedIds((prev) => [...prev, userId]);
 		toast(t("rail.following"), { type: "success" });
-		const res = await followUserAction(userId);
+		const res = await followUserDirect(userId);
 		if (!res.success) {
 			setFollowedIds((prev) => prev.filter((id) => id !== userId));
 			toast(t("rail.followFailed"), { type: "error" });

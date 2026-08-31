@@ -1,6 +1,7 @@
 "use client";
 
 import { useGatewayRead } from "@/hooks/useGateway";
+import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 
 import { useEffect, useState } from "react";
 import { AnimatePresence } from "framer-motion";
@@ -16,7 +17,6 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import Link from "next/link";
 import { useAtomValue } from "jotai";
 import { userAtom } from "@/store/user.atom";
-import { followUserAction, unfollowUserAction } from "@/lib/user.actions";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import clsx from "clsx";
 import { UserX } from "lucide-react";
@@ -145,9 +145,9 @@ export default function FollowsModal({
 
 		try {
 			if (isNowFollowing) {
-				await followUserAction(targetUser._id);
+				await followUserDirect(targetUser._id);
 			} else {
-				await unfollowUserAction(targetUser._id);
+				await unfollowUserDirect(targetUser._id);
 			}
 		} catch (error) {
 			console.error("Failed to toggle follow", error);

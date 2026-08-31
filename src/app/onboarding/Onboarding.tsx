@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 import { ArrowRight } from "lucide-react";
 import {
 	Broadcast,
@@ -16,7 +17,6 @@ import { InterestPicker } from "@/components/onboarding/InterestPicker";
 import { BrandRitual } from "@/components/layout/BrandRitual";
 import {
 	checkUsernameAction,
-	followUserAction,
 	getWhoToFollowAction,
 } from "@/lib/user.actions";
 import { USERNAME_RE } from "@/lib/username";
@@ -241,7 +241,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 			toast("Unfollowed user", { type: "info", position: "bottom-left" });
 		} else {
 			setFollowedUsers((prev) => [...prev, userId]);
-			await followUserAction(userId);
+			await followUserDirect(userId);
 			toast("Following user", { type: "success", position: "bottom-left" });
 		}
 	};

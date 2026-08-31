@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertTriangle, AtSign, BadgeCheck, Bell, UserPlus } from "lucide-react";
 import { Check } from "@phosphor-icons/react";
@@ -10,7 +11,6 @@ import { Tabs } from "@/components/ui/Tabs";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { markNotificationsReadAction } from "@/lib/notification.actions";
 import { useGatewayRead } from "@/hooks/useGateway";
-import { followUserAction } from "@/lib/user.actions";
 import { cacheKeys, fetchCached, invalidate } from "@/lib/cache";
 
 const NOTIFICATIONS_TTL = 60_000;
@@ -180,7 +180,7 @@ export default function NotificationsPage() {
       setFollowingIds((prev) =>
         prev.includes(profileId) ? prev : [...prev, profileId],
       );
-      const res = await followUserAction(profileId);
+      const res = await followUserDirect(profileId);
       if (!res.success) {
         setFollowingIds((prev) => prev.filter((x) => x !== profileId));
         toast(res.message || t("rail.followFailed"), { type: "error" });

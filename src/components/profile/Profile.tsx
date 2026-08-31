@@ -1,6 +1,7 @@
 "use client";
 
 import { useGatewayRead } from "@/hooks/useGateway";
+import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -27,9 +28,7 @@ import ReportSheet from "@/components/safety/ReportSheet";
 
 import {
 	blockUserAction,
-	followUserAction,
 	unblockUserAction,
-	unfollowUserAction,
 } from "@/lib/user.actions";
 import { useFeedEvents } from "@/hooks/useUserEvents";
 import { StoryViewer, type RailEntry } from "@/components/feed/StoryViewer";
@@ -336,8 +335,8 @@ export default function Profile({ username }: { username?: string }) {
 		setFollowLoading(true);
 
 		const res = wasFollowing
-			? await unfollowUserAction(profileUser._id)
-			: await followUserAction(profileUser._id);
+			? await unfollowUserDirect(profileUser._id)
+			: await followUserDirect(profileUser._id);
 
 		if (!res.success) {
 			setIsFollowing(wasFollowing);
