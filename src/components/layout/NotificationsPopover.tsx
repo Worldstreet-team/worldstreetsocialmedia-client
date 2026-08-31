@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { AnimatePresence } from "framer-motion";
@@ -23,7 +24,6 @@ import { groupNotifications } from "@/components/notifications/notification-grou
 import { NotificationRow } from "@/components/notifications/NotificationRow";
 import type { NotificationGroup } from "@/components/notifications/types";
 import { markNotificationsReadAction } from "@/lib/notification.actions";
-import { followUserAction } from "@/lib/user.actions";
 import { followingIdsAtom } from "@/store/ui.atom";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { useT } from "@/i18n/client";
@@ -70,7 +70,7 @@ export function NotificationsPopover() {
 			setFollowingIds((prev) =>
 				prev.includes(profileId) ? prev : [...prev, profileId],
 			);
-			const res = await followUserAction(profileId);
+			const res = await followUserDirect(profileId);
 			if (!res.success) {
 				setFollowingIds((prev) => prev.filter((x) => x !== profileId));
 				toast(res.message || "Could not follow", { type: "error" });

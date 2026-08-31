@@ -1,13 +1,13 @@
 "use client";
 
 import Image from "next/image";
+import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSetAtom } from "jotai";
 
 import {
-	followUserAction,
 	getProfileByUsernameAction,
 } from "@/lib/user.actions";
 import { UserBadges } from "@/components/ui/UserBadges";
@@ -156,7 +156,7 @@ export function ProfileHoverCard({
 		if (!profile || busy) return;
 		setBusy(true);
 		setFollowing(true);
-		const res = await followUserAction(profile._id);
+		const res = await followUserDirect(profile._id);
 		if (res.success) {
 			// The profile fetch is module-cached for the whole session, so
 			// without this the NEXT hover re-read a stale `isFollowing:false`

@@ -79,3 +79,15 @@ export async function postJsonDirect(path: string, body?: unknown) {
 		return { success: false as const, message: "Network error" };
 	}
 }
+
+/**
+ * Align/unalign, direct. The follow button is the highest-frequency write
+ * in the app and it was riding a server action — every redeploy turned it
+ * into "tap, wait 3s, watch it revert" on already-open tabs (the action id
+ * dies with the deployment, the rollback branch reads the 404 as failure).
+ * Same shape as the actions so call sites swap one identifier.
+ */
+export const followUserDirect = (targetUserId: string) =>
+	postJsonDirect(`/api/users/${targetUserId}/follow`);
+export const unfollowUserDirect = (targetUserId: string) =>
+	postJsonDirect(`/api/users/${targetUserId}/unfollow`);

@@ -1,6 +1,7 @@
 "use client";
 
 import clsx from "clsx";
+import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 import Link from "next/link";
 import { AnimatePresence } from "framer-motion";
 import { OverlayPanel, OverlayScrim } from "@/components/ui/Overlay";
@@ -15,7 +16,6 @@ import {
 	searchPosts as searchPostsLive,
 	searchUsers as searchUsersLive,
 } from "@/lib/search.client";
-import { followUserAction } from "@/lib/user.actions";
 import { formatTimeAgo } from "@/lib/utils";
 import { followingIdsAtom, searchOpenAtom, searchSeedAtom } from "@/store/ui.atom";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
@@ -211,7 +211,7 @@ export function SearchWindow() {
 
 	const follow = async (id: string) => {
 		setFollowedIds((prev) => [...prev, id]);
-		const res = await followUserAction(id);
+		const res = await followUserDirect(id);
 		if (!res.success) setFollowedIds((prev) => prev.filter((x) => x !== id));
 	};
 
