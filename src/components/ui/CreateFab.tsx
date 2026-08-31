@@ -161,6 +161,7 @@ export function CreateFab() {
           <OverlayScrim
             key="fab-scrim"
             onClose={closeFan}
+            strong
             label={t("fab.close")}
           />
         )}
@@ -230,7 +231,7 @@ export function CreateFab() {
                 }}
                 className="flex items-center gap-3 cursor-pointer group"
               >
-                <span className="rounded-pill glass-chip px-3 h-8 flex items-center font-sans text-[13px] font-semibold whitespace-nowrap">
+                <span className="rounded-pill glass-chip px-3.5 h-9 flex items-center font-sans text-[14px] font-bold whitespace-nowrap">
                   {action.label}
                   {action.badge ? (
                     <span className="ml-1.5 glass-ink-faint tabular-nums font-medium">
@@ -240,13 +241,13 @@ export function CreateFab() {
                 </span>
                 <span
                   className={clsx(
-                    "flex h-11 w-11 items-center justify-center rounded-pill backdrop-blur-md backdrop-saturate-150 transition-colors",
+                    "flex h-12 w-12 items-center justify-center rounded-pill backdrop-blur-md backdrop-saturate-150 transition-colors",
                     action.tone === "danger"
                       ? "glass-chip !text-danger group-hover:!bg-danger group-hover:!text-white"
                       : "glass-chip",
                   )}
                 >
-                  <action.icon size={19} weight="fill" />
+                  <action.icon size={21} weight="fill" />
                 </span>
               </motion.button>
             ))}

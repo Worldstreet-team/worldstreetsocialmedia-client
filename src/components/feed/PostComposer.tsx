@@ -899,6 +899,7 @@ export const PostComposer = ({
 						<span className="pointer-events-none absolute left-0 top-0 h-8 w-full">
 							<VanishingPlaceholder
 								texts={PROMPTS.map((k) => t(k))}
+								font="600 18px 'Public Sans', sans-serif"
 							/>
 						</span>
 					)}
@@ -1149,13 +1150,15 @@ export const PostComposer = ({
 							onClick={() => setSelling((v) => !v)}
 							aria-pressed={selling}
 							className={clsx(
-								"flex h-9 items-center gap-1.5 rounded-pill px-3 font-sans text-[12.5px] font-medium transition-colors cursor-pointer",
+								// Bigger on phones (owner: the sell entry was easy to miss on
+								// mobile); desktop keeps the quieter row.
+								"flex h-10 items-center gap-2 rounded-pill px-4 font-sans text-[13.5px] font-semibold transition-colors cursor-pointer sm:h-9 sm:gap-1.5 sm:px-3 sm:text-[12.5px]",
 								selling
 									? "bg-brand/[0.12] text-gold"
 									: "bg-raised/50 text-muted hover:bg-raised hover:text-primary",
 							)}
 						>
-							<LockSimple size={14} weight={selling ? "fill" : "regular"} />
+							<LockSimple size={15} weight={selling ? "fill" : "bold"} />
 							{selling ? t("composer.sellingOn") : t("composer.sellPost")}
 						</button>
 						{selling && (
