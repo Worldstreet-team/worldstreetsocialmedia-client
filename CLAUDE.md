@@ -645,6 +645,14 @@ new surface uploads a file, wire it through `sendFormDirect` — never a new
 `"use server"` multipart hop. The direct profile update must also set the
 `profile_stale=1` cookie itself (non-httpOnly by design).
 
+**Deployment skew kills open tabs** (2,499 errors in one Coolify log,
+2026-08-31): each push replaces the Next container and every open tab's
+server-action ids die ("Failed to find Server Action"). Two defenses, keep
+both: `DeploymentSkewRecovery` in the root layout reloads a stale tab once
+when it trips, and MONEY paths (post unlock via `postJsonDirect`) call the
+gateway directly so they work even from a stale tab. Put any new
+must-not-fail write on `postJsonDirect`, not a server action.
+
 **Ably auth is token-based, not key-based.** `RealtimeProvider` uses an
 `authCallback` that pulls `window.Clerk.session.getToken()` and hits
 `/api/messages/auth/token`. There is no `ABLY_API_KEY` in this app.
