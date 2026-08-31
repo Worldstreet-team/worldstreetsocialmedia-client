@@ -575,6 +575,48 @@ One survivor worth knowing: `x-user-data` is an HTTP header, so it must be
 **ASCII** — non-ASCII in a profile would throw `Cannot convert argument to a
 ByteString` when `proxy.ts` sets it.
 
+## Content taxonomy (added 2026-08-25)
+
+`src/data/categories.ts` is the shared vocabulary between the client and the
+ranking algorithm: **100 categories across 14 verticals**, plus a separate
+`REGIONS` axis (10 regions). `src/lib/categories.ts` holds the pure helpers.
+
+- **`ContentCategory.id` is a permanent algorithm key.** User interest vectors,
+  post tags and engagement counters on the gateway are stored against it. Never
+  rename or reuse an id — retire a category by deleting the entry and adding a
+  row to `LEGACY_CATEGORY_ALIASES`. `label` is display-only and free to reword.
+- **Geography is orthogonal.** A post is `football-soccer` + `africa`, never
+  "African football" — that is what keeps 100 categories worldwide-viable
+  instead of exploding into region-specific buckets.
+- **`sensitive: true`** (politics, law-justice, religion-faith, sports-betting,
+  mental-health, medical-health) means opt-in: `defaultCategoryIds(interests)`
+  excludes them unless the user explicitly selected them.
+- **`videoFirst`** (47 of the 100) is a video-feed ordering hint only — every
+  category is valid for both posts and videos.
+- `classifyText()` is best-effort client-side pre-tagging (hashtags, cashtags,
+  phrases, keywords) with a confidence floor of 3, so one generic word does not
+  produce a tag. It seeds suggestions; the ranking service stays authoritative.
+- **Ids, never labels, cross the wire.** The old flat 10-string
+  `src/data/onboarding.ts` `INTERESTS` list is deleted. Old profiles are
+  migrated on read by `normalizeCategoryIds()`.
+
+Where it is wired (every category surface in the app):
+
+| Surface | What it does |
+| --- | --- |
+| `components/ui/CategoryPicker.tsx` | THE topic picker — grouped chips + search, shared by the two places interests are edited. Don't fork it. |
+| Onboarding step 2 | `CategoryPicker`; requires `MIN_INTERESTS` (3), caps at `MAX_INTERESTS` (20); posts ids to `/api/users/onboard`. |
+| EditProfileModal → Topics | Same picker, so interests are editable after signup instead of a one-shot; appends `interests` (JSON ids) to the profile FormData. |
+| PostComposer | `suggestCategories()` on a 250ms-debounced draft; matches render as removable chips and ride along as `categories` (JSON ids). Suggestions are DERIVED — `removedTopics` is the only state, so a dismissed topic never re-appears while typing. |
+| StoryStudio publish | `classifyText(caption)` → `categories`, no chip UI (one-line caption). |
+| Explore → Browse topics | Vertical selector + category chips; a chip sets the search query, so browse and search share one path. |
+| Explore + RightSidebar trends | `resolveCategoryLabel(trend.category)` renders gateway strings as taxonomy labels, unknown values passing through unchanged. |
+
+`categories`/`interests` are sent as JSON strings on existing FormData payloads
+— the same forward-compatible seam as `imageAlts`: the gateway ignores unknown
+body fields today, so the transport is ready before the post model grows the
+column.
+
 ## Gotchas
 
 **Backend URL is unified through `src/const.ts`.** `BACKEND_URL` is
