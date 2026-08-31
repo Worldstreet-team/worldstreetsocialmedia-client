@@ -74,6 +74,7 @@ import {
     subscribeStats,
 } from "@/lib/engagementStore";
 import { VideoPlayer } from "@/components/ui/VideoPlayer";
+import { VoteChip } from "@/components/votes/VoteChip";
 import { Radio } from "lucide-react";
 import { promotePostAction } from "@/lib/campaign.actions";
 import { getSubscriptionAction } from "@/lib/subscription.actions";
@@ -179,6 +180,8 @@ export interface PostProps {
     images?: string[];
     videos?: string[];
     videoPlays?: number;
+    /** Weekly Vote count for the open cycle. */
+    votes?: number;
     /** Voice-note post: peaks are 64 ints (0-127) stored with the post. */
     audio?: {
         url: string;
@@ -1392,6 +1395,11 @@ export const PostCard = memo(
                             className="relative z-10 pointer-events-auto mt-2 mb-1.5 rounded-xl overflow-hidden border border-hairline bg-sunken"
                             onClick={(e) => e.stopPropagation()}
                         >
+                            <VoteChip
+                                postId={post.id}
+                                votes={post.votes ?? 0}
+                                isMine={isOwnPost}
+                            />
                             {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
                             {/* aspect-video is only the placeholder that holds
                                 the space until the metadata lands; fitToMedia
@@ -1429,7 +1437,12 @@ export const PostCard = memo(
                         // back in. The multi-image grid and the video block
                         // already did; this one didn't, so single-image posts
                         // silently could not be tapped to zoom.
-                        <div className="mb-3 w-full pointer-events-auto">
+                        <div className="relative mb-3 w-fit max-w-full pointer-events-auto">
+                            <VoteChip
+                                postId={post.id}
+                                votes={post.votes ?? 0}
+                                isMine={isOwnPost}
+                            />
                             <FeedImage
                                 src={post.images[0]}
                                 alt="Post attachment"
