@@ -25,7 +25,7 @@ import {
     CircleNotch,
     DotsThree,
     Heart,
-    PaperPlaneTilt,
+    Export,
     Repeat,
     Translate,
     UsersThree,
@@ -1486,12 +1486,16 @@ export const PostCard = memo(
                         fill. 03-icons: this row is the ONE place Phosphor is
                         used instead of Lucide, matching mobile. */}
                     <div className="flex items-center justify-between text-muted mt-1.5 -mb-1.5 pointer-events-auto">
-                        <div className="flex min-w-0 flex-1 max-w-[470px] items-center justify-between -ml-2 sm:mr-4">
+                        {/* Option B (owner pick): the four actions cluster left with
+                            FIXED gaps — nothing stretches, so the rhythm holds at any
+                            card width — and share + impressions ride the right edge
+                            together as the "do something with this / how it did" pair. */}
+                        <div className="flex min-w-0 items-center gap-1.5 -ml-2 sm:gap-7">
                         <Link
                             href={`/post/${post.id}`}
                             onClick={(e) => e.stopPropagation()}
                             aria-label="Reply"
-                            className="flex flex-1 items-center gap-0.5 sm:gap-1 hover:text-primary transition-colors group cursor-pointer"
+                            className="flex items-center gap-0.5 sm:gap-1 hover:text-primary transition-colors group cursor-pointer"
                         >
                             <span className="flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-primary/10 transition group-active:scale-[0.98]">
                                 <ChatCircle size={23} weight="bold" />
@@ -1509,7 +1513,7 @@ export const PostCard = memo(
                                     setRepostMenuOpen((v) => !v);
                                 }}
                                 className={clsx(
-                                    "flex flex-1 items-center gap-0.5 sm:gap-1 transition-colors group cursor-pointer",
+                                    "flex items-center gap-0.5 sm:gap-1 transition-colors group cursor-pointer",
                                     reposted ? "text-success" : "hover:text-success",
                                 )}
                             >
@@ -1585,7 +1589,7 @@ export const PostCard = memo(
                                 handleLike();
                             }}
                             className={clsx(
-                                "flex flex-1 items-center gap-0.5 sm:gap-1 transition-colors group cursor-pointer",
+                                "flex items-center gap-0.5 sm:gap-1 transition-colors group cursor-pointer",
                                 isLiked ? "text-danger" : "hover:text-danger",
                             )}
                         >
@@ -1671,7 +1675,7 @@ export const PostCard = memo(
                                 handleBookmark();
                             }}
                             className={clsx(
-                                "flex flex-1 items-center transition-colors group cursor-pointer",
+                                "flex items-center transition-colors group cursor-pointer",
                                 isBookmarked ? "text-gold" : "hover:text-gold",
                             )}
                         >
@@ -1706,6 +1710,9 @@ export const PostCard = memo(
                                 </motion.span>
                             </span>
                         </button>
+                        </div>
+
+                        <div className="flex items-center gap-0.5 sm:gap-2">
                         <button
                             type="button"
                             aria-label="Copy link to post"
@@ -1721,7 +1728,7 @@ export const PostCard = memo(
                                 );
                             }}
                             className={clsx(
-                                "flex flex-1 items-center transition-colors group cursor-pointer",
+                                "flex items-center transition-colors group cursor-pointer",
                                 linkCopied
                                     ? "text-success"
                                     : "hover:text-primary",
@@ -1761,7 +1768,7 @@ export const PostCard = memo(
                                             }}
                                             className="flex"
                                         >
-                                            <PaperPlaneTilt
+                                            <Export
                                                 size={23}
                                                 weight="bold"
                                             />
@@ -1770,7 +1777,6 @@ export const PostCard = memo(
                                 </AnimatePresence>
                             </span>
                         </button>
-                        </div>
 
                         <div
                             // Impressions belong at the end of this row, beside
@@ -1793,6 +1799,7 @@ export const PostCard = memo(
                             <span className="text-[13.5px] font-medium font-sans tabular-nums sm:text-[14px]">
                                 {formatCount(post.stats.views ?? 0) || "0"}
                             </span>
+                        </div>
                         </div>
                     </div>
                 </div>
