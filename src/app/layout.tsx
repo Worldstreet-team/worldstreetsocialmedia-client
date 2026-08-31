@@ -29,6 +29,7 @@ import VoiceRoomHost from "@/components/voice/VoiceRoomHost";
 import { LiveDock } from "@/components/live/LiveDock";
 import { NotificationCountSync } from "@/components/providers/NotificationCountSync";
 import { DeploymentSkewRecovery } from "@/components/providers/DeploymentSkewRecovery";
+import { HistorySpy } from "@/components/providers/HistorySpy";
 import { SpacesLiveSync } from "@/components/providers/SpacesLiveSync";
 import { MessageCountSync } from "@/components/providers/MessageCountSync";
 import { BmCountSync } from "@/components/providers/BmCountSync";
@@ -204,6 +205,7 @@ export default async function RootLayout({
                                         <GlobalMessageListener />
                                         <NotificationCountSync />
                                         <DeploymentSkewRecovery />
+                                        {process.env.NODE_ENV !== "production" && <HistorySpy />}
                                         <SpacesLiveSync />
 										<MessageCountSync />
 										<BmCountSync />
