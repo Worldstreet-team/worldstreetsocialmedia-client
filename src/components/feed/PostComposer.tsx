@@ -1153,8 +1153,10 @@ export const PostComposer = ({
 								// Bigger on phones (owner: the sell entry was easy to miss on
 								// mobile); desktop keeps the quieter row.
 								"flex h-10 items-center gap-2 rounded-pill px-4 font-sans text-[13.5px] font-semibold transition-colors cursor-pointer sm:h-9 sm:gap-1.5 sm:px-3 sm:text-[12.5px]",
+								// Money wears money/credit green, never the brand
+								// accent (owner ruling 2026-08-31).
 								selling
-									? "bg-brand/[0.12] text-gold"
+									? "bg-credit/[0.14] text-credit"
 									: "bg-raised/50 text-muted hover:bg-raised hover:text-primary",
 							)}
 						>
@@ -1173,10 +1175,10 @@ export const PostComposer = ({
 										"h-9 w-full min-w-0 flex-1 basis-full rounded-pill border bg-sunken px-3.5 font-sans text-[13px] text-primary outline-none transition-colors placeholder:text-subtle sm:basis-auto",
 										saleTitleMissing && salePrice
 											? "border-danger/50"
-											: "border-hairline focus:border-brand/60",
+											: "border-hairline focus:border-credit/60",
 									)}
 								/>
-								<label className="flex h-9 items-center gap-1 rounded-pill bg-sunken border border-hairline px-3 font-sans text-[13px] text-primary focus-within:border-brand/60 transition-colors">
+								<label className="flex h-9 items-center gap-1 rounded-pill bg-sunken border border-hairline px-3 font-sans text-[13px] text-primary focus-within:border-credit/60 transition-colors">
 									<span className="text-muted">$</span>
 									<input
 										type="text"
@@ -1211,7 +1213,7 @@ export const PostComposer = ({
 									className={clsx(
 										"flex h-9 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[12px] font-medium transition-colors",
 										saleHidePreview
-											? "bg-brand/15 text-gold"
+											? "bg-credit/[0.14] text-credit"
 											: "bg-sunken text-muted hover:bg-raised",
 									)}
 								>
