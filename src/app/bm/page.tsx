@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
+import { syncUrlIfStillOn } from "@/lib/url-sync";
 import axios from "axios";
 import clsx from "clsx";
 import { compressImage } from "@/lib/image-compress";
@@ -321,19 +322,14 @@ export default function BmPage() {
 			//   it takes you back".
 			// - null state strips the App Router's tree from the entry, and
 			//   the next back/forward restores the wrong page.
-			if (window.location.pathname === "/bm") {
-				window.history.replaceState(window.history.state, "", "/bm");
-			}
+			syncUrlIfStillOn("/bm", "/bm");
 		}
 	}, [dealParam, threads]);
 
 	const closeComposer = () => {
 		setComposerOpen(false);
-		if (
-			window.location.pathname === "/bm" &&
-			window.location.search.includes("book=")
-		) {
-			window.history.replaceState(window.history.state, "", "/bm");
+		if (window.location.search.includes("book=")) {
+			syncUrlIfStillOn("/bm", "/bm");
 		}
 	};
 

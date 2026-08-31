@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { categoryForHashtag } from "@/lib/categories";
 import type { ReactNode } from "react";
 import { Mention } from "@/components/ui/Mention";
 import { seedHandles } from "@/lib/mentionCache";
@@ -70,16 +71,30 @@ export function renderRichText(
         </Link>,
       );
     } else if (hashtag) {
-      nodes.push(
-        <Link
-          key={key}
-          href={`/explore?q=${encodeURIComponent(hashtag.slice(1))}`}
-          onClick={stop}
-          className="text-gold hover:underline relative z-10 pointer-events-auto break-words"
-        >
-          {hashtag}
-        </Link>,
-      );
+      // Hashtags are legacy — the platform tags by taxonomy topic now. A
+      // hashtag the classifier vocabulary recognizes links to its TOPIC
+      // (label query, same path the explore browse chips use); one it
+      // doesn't stays plain text instead of a dead-end search link.
+      const topic = categoryForHashtag(hashtag.slice(1));
+      if (topic) {
+        nodes.push(
+          <Link
+            key={key}
+            href={`/explore?q=${encodeURIComponent(topic.label)}`}
+            onClick={stop}
+            title={`Topic: ${topic.label}`}
+            className="text-gold hover:underline relative z-10 pointer-events-auto break-words"
+          >
+            {hashtag}
+          </Link>,
+        );
+      } else {
+        nodes.push(
+          <span key={key} className="text-muted break-words">
+            {hashtag}
+          </span>,
+        );
+      }
     } else if (mention) {
       // Mention resolves itself: it only becomes a chip once the account is
       // known to exist, and carries that person's avatar and marks when it

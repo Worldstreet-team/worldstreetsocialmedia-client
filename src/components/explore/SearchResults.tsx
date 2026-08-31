@@ -151,7 +151,7 @@ export function SearchResults({
           <EmptyState
             icon={Search}
             title={`No posts match "${query.trim()}"`}
-            caption="Try a different word, a $cashtag or a #hashtag."
+            caption="Try a different word, a $cashtag or a topic."
           />
         ) : (
           postList
@@ -174,7 +174,7 @@ export function SearchResults({
         <EmptyState
           icon={Search}
           title={`Nothing matches "${query.trim()}"`}
-          caption="Check the spelling, or try a name, a $cashtag or a #hashtag."
+          caption="Check the spelling, or try a name, a $cashtag or a topic."
         />
       ) : (
         <>
