@@ -14,6 +14,7 @@ import {
 	X,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { syncUrlIfStillOn } from "@/lib/url-sync";
 import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAtom, useAtomValue } from "jotai";
@@ -472,9 +473,7 @@ function VerticalSurface() {
 		const qs = params.toString();
 		const next = qs ? `/live?${qs}` : "/live";
 		if (next === window.location.pathname + window.location.search) return;
-		// Preserve the App Router's own history state — passing null strips
-		// it, and the next back/forward then restores the wrong tree.
-		window.history.replaceState(window.history.state, "", next);
+		syncUrlIfStillOn(window.location.pathname, next);
 	}, [active, slides, tab, demo]);
 
 	// ── telemetry + tail prefetch ────────────────────────────────────────

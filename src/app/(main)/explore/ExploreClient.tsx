@@ -16,6 +16,7 @@ import { useToast } from "@/components/ui/Toast/ToastContext";
 import { useT } from "@/i18n/client";
 import { mapApiPost } from "@/lib/post-mapper";
 import { useAtom } from "jotai";
+import { syncUrlIfStillOn } from "@/lib/url-sync";
 import { followingIdsAtom } from "@/store/ui.atom";
 import type { SpaceRow } from "@/components/voice/SpaceCard";
 
@@ -145,8 +146,17 @@ export default function ExploreClient({
    *    rewrite in proxy.ts, so a literal path silently dropped the prefix.
    *    location.pathname already carries it.
    */
+  const mountPathRef = useRef<string | null>(null);
+  useEffect(() => {
+    mountPathRef.current = window.location.pathname;
+  }, []);
   const syncUrl = useCallback((url: string) => {
-    window.history.replaceState(window.history.state, "", url);
+    // The 400ms debounce can outlive a navigation away; the helper's
+    // still-on-this-page guard (against the pathname captured at mount,
+    // locale prefix included) keeps a late write from rewriting the NEXT
+    // page's history entry.
+    if (mountPathRef.current)
+      syncUrlIfStillOn(mountPathRef.current, url);
   }, []);
 
   useEffect(() => {
