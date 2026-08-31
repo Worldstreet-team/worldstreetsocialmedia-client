@@ -313,14 +313,27 @@ export default function BmPage() {
 			setActiveId(t._id);
 			setAutoStatsFor(t._id);
 			setDealParam(null);
-			window.history.replaceState(null, "", "/bm");
+			// Guard + state pass-through, both load-bearing (see explore's
+			// syncUrl and live's slide sync for the history of each):
+			// - threads arrive seconds after mount, so this can fire AFTER
+			//   the person has already navigated elsewhere; rewriting the URL
+			//   then yanks them back to /bm — "enter a page, enter another,
+			//   it takes you back".
+			// - null state strips the App Router's tree from the entry, and
+			//   the next back/forward restores the wrong page.
+			if (window.location.pathname === "/bm") {
+				window.history.replaceState(window.history.state, "", "/bm");
+			}
 		}
 	}, [dealParam, threads]);
 
 	const closeComposer = () => {
 		setComposerOpen(false);
-		if (window.location.search.includes("book=")) {
-			window.history.replaceState(null, "", "/bm");
+		if (
+			window.location.pathname === "/bm" &&
+			window.location.search.includes("book=")
+		) {
+			window.history.replaceState(window.history.state, "", "/bm");
 		}
 	};
 
