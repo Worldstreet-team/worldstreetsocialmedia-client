@@ -1174,7 +1174,7 @@ export const PostCard = memo(
                     {/* Seller's own view: the listing state, quietly. */}
                     {post.sale && isSeller && (
                         <div className="mb-1 flex items-center gap-2">
-                            <span className="font-sans text-[11.5px] font-semibold text-gold">
+                            <span className="font-sans text-[11.5px] font-semibold text-credit">
                                 {t("post.forSale.selling").replace("{price}", salePriceLabel)}
                                 {post.sale.salesCount
                                     ? ` · ${t("post.forSale.sold").replace("{count}", String(post.sale.salesCount))}`
@@ -1951,7 +1951,7 @@ function SaleStorefront({
 
             <div className="mt-3 flex items-center justify-between gap-3 border-t border-hairline px-4 py-2.5">
                 <span className="flex items-center gap-1.5 font-sans text-[11.5px] text-subtle tabular-nums">
-                    <LockSimple size={13} weight="fill" className="text-gold" />
+                    <LockSimple size={13} weight="fill" className="text-credit" />
                     {(sale.salesCount ?? 0) > 0
                         ? `${(sale.salesCount ?? 0).toLocaleString()} unlocked`
                         : "Locked"}
@@ -1964,7 +1964,10 @@ function SaleStorefront({
                         if (isSeller) return;
                         onUnlock();
                     }}
-                    className="h-9 cursor-pointer rounded-pill bg-primary px-4 font-sans text-[12.5px] font-semibold text-page transition-colors hover:opacity-90 disabled:opacity-60"
+                    // Money CTA in money green; text-page flips with the theme
+                    // (near-black on the bright dark-mode green, white-ish on
+                    // the deep light-mode green) so it reads on both.
+                    className="h-9 cursor-pointer rounded-pill bg-credit px-4 font-sans text-[12.5px] font-semibold text-page transition-colors hover:opacity-90 disabled:opacity-60"
                 >
                     {unlocking ? "Unlocking…" : `Unlock for ${priceLabel}`}
                 </button>
