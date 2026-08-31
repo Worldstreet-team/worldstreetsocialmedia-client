@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useSetAtom } from "jotai";
+import VerifiedIcon from "@/assets/icons/VerifiedIcon";
+import { premiumOpenAtom } from "@/store/ui.atom";
 import { formatCompact } from "@/lib/utils";
 import Link from "next/link";
 import { Calendar, Link as LinkIcon, MapPin } from "lucide-react";
@@ -75,6 +78,8 @@ export function ProfileAbout({
     year: "numeric",
   });
 
+  const setPremiumOpen = useSetAtom(premiumOpenAtom);
+
   return (
     <div className="mt-6 flex flex-col gap-3 px-4">
       <div className="min-w-0">
@@ -89,6 +94,18 @@ export function ProfileAbout({
             <span className="shrink-0 rounded-[4px] bg-raised px-1.5 py-px font-sans text-[10px] font-semibold uppercase tracking-wide text-muted">
               {t("profile.followsYou")}
             </span>
+          )}
+          {/* X's grammar: an unverified OWN profile wears the invitation
+              right where the tick would sit. Opens the Premium sheet. */}
+          {isMe && !isVerified && (
+            <button
+              type="button"
+              onClick={() => setPremiumOpen(true)}
+              className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-pill border border-hairline px-3 py-1 font-sans text-[13px] font-semibold text-primary transition-colors hover:bg-raised"
+            >
+              <VerifiedIcon size={{ width: "15", height: "15" }} />
+              Get verified
+            </button>
           )}
         </div>
         <div className="truncate font-sans text-[17px] text-muted">@{username}</div>
