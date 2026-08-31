@@ -1486,17 +1486,17 @@ export const PostCard = memo(
                         fill. 03-icons: this row is the ONE place Phosphor is
                         used instead of Lucide, matching mobile. */}
                     <div className="flex items-center justify-between text-muted mt-1.5 -mb-1.5 pointer-events-auto">
-                        <div className="flex min-w-0 flex-1 max-w-[425px] items-center justify-between -ml-2 sm:mr-6">
+                        <div className="flex min-w-0 flex-1 max-w-[470px] items-center justify-between -ml-2 sm:mr-4">
                         <Link
                             href={`/post/${post.id}`}
                             onClick={(e) => e.stopPropagation()}
                             aria-label="Reply"
-                            className="flex items-center gap-0.5 hover:text-primary transition-colors group cursor-pointer"
+                            className="flex flex-1 items-center gap-0.5 sm:gap-1 hover:text-primary transition-colors group cursor-pointer"
                         >
-                            <span className="flex h-10 w-[34px] shrink-0 items-center justify-center rounded-pill sm:w-10 group-hover:bg-primary/10 transition group-active:scale-[0.98]">
-                                <ChatCircle size={21} weight="bold" />
+                            <span className="flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-primary/10 transition group-active:scale-[0.98]">
+                                <ChatCircle size={23} weight="bold" />
                             </span>
-                            <span className="text-[13px] font-sans tabular-nums sm:text-[13.5px]">
+                            <span className="text-[13.5px] font-medium font-sans tabular-nums sm:text-[14px]">
                                 {formatCount(shownReplies)}
                             </span>
                         </Link>
@@ -1509,17 +1509,17 @@ export const PostCard = memo(
                                     setRepostMenuOpen((v) => !v);
                                 }}
                                 className={clsx(
-                                    "flex items-center gap-0.5 transition-colors group cursor-pointer",
+                                    "flex flex-1 items-center gap-0.5 sm:gap-1 transition-colors group cursor-pointer",
                                     reposted ? "text-success" : "hover:text-success",
                                 )}
                             >
-                                <span className="flex h-10 w-[34px] shrink-0 items-center justify-center rounded-pill sm:w-10 group-hover:bg-success/10 transition group-active:scale-[0.98]">
+                                <span className="flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-success/10 transition group-active:scale-[0.98]">
                                     <Repeat
-                                        size={21}
+                                        size={23}
                                         weight={reposted ? "fill" : "bold"}
                                     />
                                 </span>
-                                <span className="text-[13px] font-medium font-sans tabular-nums sm:text-[14px]">
+                                <span className="text-[13.5px] font-medium font-sans tabular-nums sm:text-[14px]">
                                     {formatCount(
                                         (shownReposts ?? 0) + repostDelta,
                                     )}
@@ -1585,11 +1585,11 @@ export const PostCard = memo(
                                 handleLike();
                             }}
                             className={clsx(
-                                "flex items-center gap-0.5 transition-colors group cursor-pointer",
+                                "flex flex-1 items-center gap-0.5 sm:gap-1 transition-colors group cursor-pointer",
                                 isLiked ? "text-danger" : "hover:text-danger",
                             )}
                         >
-                            <span className="relative flex h-10 w-[34px] shrink-0 items-center justify-center rounded-pill sm:w-10 group-hover:bg-danger/10 transition group-active:scale-[0.98]">
+                            <span className="relative flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-danger/10 transition group-active:scale-[0.98]">
                                 {/* One-shot danger wash on like opacity-only,
                                     fades out over motion-slow and stays gone. */}
                                 <AnimatePresence>
@@ -1619,7 +1619,7 @@ export const PostCard = memo(
                                     className="flex"
                                 >
                                     <Heart
-                                        size={21}
+                                        size={23}
                                         weight={isLiked ? "fill" : "bold"}
                                     />
                                 </motion.span>
@@ -1639,7 +1639,7 @@ export const PostCard = memo(
                                     if (e.key === "Enter" && (shownLikes ?? 0) > 0)
                                         setLikersOpen(true);
                                 }}
-                                className="relative cursor-pointer overflow-hidden text-[13px] font-medium font-sans tabular-nums hover:underline sm:text-[14px]"
+                                className="relative cursor-pointer overflow-hidden text-[13.5px] font-medium font-sans tabular-nums hover:underline sm:text-[14px]"
                             >
                                 <AnimatePresence mode="wait" initial={false}>
                                     {/* Count rolls 8px in the direction of change. */}
@@ -1671,11 +1671,11 @@ export const PostCard = memo(
                                 handleBookmark();
                             }}
                             className={clsx(
-                                "flex items-center transition-colors group cursor-pointer",
+                                "flex flex-1 items-center transition-colors group cursor-pointer",
                                 isBookmarked ? "text-gold" : "hover:text-gold",
                             )}
                         >
-                            <span className="relative flex h-10 w-[34px] shrink-0 items-center justify-center rounded-pill sm:w-10 group-hover:bg-gold/10 transition group-active:scale-[0.98]">
+                            <span className="relative flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-gold/10 transition group-active:scale-[0.98]">
                                 <AnimatePresence>
                                     {isBookmarked && (
                                         <motion.span
@@ -1700,7 +1700,7 @@ export const PostCard = memo(
                                     className="flex"
                                 >
                                     <BookmarkSimple
-                                        size={21}
+                                        size={23}
                                         weight={isBookmarked ? "fill" : "bold"}
                                     />
                                 </motion.span>
@@ -1721,13 +1721,13 @@ export const PostCard = memo(
                                 );
                             }}
                             className={clsx(
-                                "flex items-center transition-colors group cursor-pointer",
+                                "flex flex-1 items-center transition-colors group cursor-pointer",
                                 linkCopied
                                     ? "text-success"
                                     : "hover:text-primary",
                             )}
                         >
-                            <span className="flex h-10 w-[34px] shrink-0 items-center justify-center rounded-pill sm:w-10 group-hover:bg-primary/10 transition group-active:scale-[0.98]">
+                            <span className="flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-primary/10 transition group-active:scale-[0.98]">
                                 <AnimatePresence mode="wait" initial={false}>
                                     {linkCopied ? (
                                         <motion.span
@@ -1762,7 +1762,7 @@ export const PostCard = memo(
                                             className="flex"
                                         >
                                             <PaperPlaneTilt
-                                                size={21}
+                                                size={23}
                                                 weight="bold"
                                             />
                                         </motion.span>
@@ -1788,9 +1788,9 @@ export const PostCard = memo(
                             title={t("post.views")}
                             aria-label={t("post.views")}
                         >
-                            <Pulse size={17} weight="bold" className="sm:hidden" />
-                            <Pulse size={18} weight="bold" className="hidden sm:block" />
-                            <span className="text-[13px] font-medium font-sans tabular-nums sm:text-[13.5px]">
+                            <Pulse size={19} weight="bold" className="sm:hidden" />
+                            <Pulse size={20} weight="bold" className="hidden sm:block" />
+                            <span className="text-[13.5px] font-medium font-sans tabular-nums sm:text-[14px]">
                                 {formatCount(post.stats.views ?? 0) || "0"}
                             </span>
                         </div>
