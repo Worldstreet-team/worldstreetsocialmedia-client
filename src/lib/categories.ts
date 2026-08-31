@@ -212,6 +212,21 @@ for (const category of CATEGORIES) {
 	}
 }
 
+/**
+ * The taxonomy topic a legacy #hashtag points at, if any.
+ *
+ * The platform moved from hashtags to the 100-category taxonomy (2026-08):
+ * ids ride posts, trends are topic-shaped, ranking reads categories first.
+ * Post text still contains hashtags people typed, so the UI maps them onto
+ * topics where the classifier vocabulary knows the word — and treats the
+ * rest as plain text rather than pretending they lead anywhere.
+ */
+export function categoryForHashtag(body: string): ContentCategory | undefined {
+	const key = body.toLowerCase().replace(/[^a-z0-9]/g, "");
+	const ids = HASHTAG_INDEX.get(key);
+	return ids?.length ? getCategory(ids[0]) : undefined;
+}
+
 const REGION_WORD_INDEX = new Map<string, RegionId[]>();
 const REGION_PHRASE_INDEX: [string, RegionId][] = [];
 
