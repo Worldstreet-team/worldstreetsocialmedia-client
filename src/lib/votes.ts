@@ -75,16 +75,18 @@ export async function getVoteLeaderboard(cycle?: string) {
 
 let leaderCache: { data: any; at: number } | null = null;
 
-/** The current #1's face for the sidebar — cached so the nav costs one
+/** The top three faces for the sidebar — cached so the nav costs one
  *  leaderboard read per few minutes, not one per render. */
-export async function getVoteLeader(): Promise<{
-	avatar?: string;
-	username?: string;
-} | null> {
+export async function getVoteLeaders(): Promise<
+	{ avatar?: string; username?: string }[]
+> {
 	if (leaderCache && Date.now() - leaderCache.at < 180_000)
 		return leaderCache.data;
 	const res: any = await getVoteLeaderboard();
-	const top = res?.board?.[0]?.author ?? null;
+	const top = (res?.board ?? [])
+		.slice(0, 3)
+		.map((r: any) => r.author)
+		.filter(Boolean);
 	leaderCache = { data: top, at: Date.now() };
 	return top;
 }

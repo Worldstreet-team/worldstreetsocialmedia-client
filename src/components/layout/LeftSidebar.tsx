@@ -18,7 +18,8 @@ import clsx from "clsx";
 import { AnimatePresence } from "framer-motion";
 import { Flame } from "@phosphor-icons/react";
 import { BadgedIcon } from "@/components/ui/Badge";
-import { getVoteLeader } from "@/lib/votes";
+import { getVoteLeaders } from "@/lib/votes";
+import { VoteBox } from "@/components/votes/VoteBox";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import {
 	OverlayHeader,
@@ -140,14 +141,13 @@ export function LeftSidebar() {
 
 	const setPremiumOpen = useSetAtom(premiumOpenAtom);
 
-	const [voteLeader, setVoteLeader] = useState<{
-		avatar?: string;
-		username?: string;
-	} | null>(null);
+	const [voteLeaders, setVoteLeaders] = useState<
+		{ avatar?: string; username?: string }[]
+	>([]);
 	useEffect(() => {
 		let alive = true;
-		void getVoteLeader().then((l) => {
-			if (alive) setVoteLeader(l);
+		void getVoteLeaders().then((l) => {
+			if (alive) setVoteLeaders(l);
 		});
 		return () => {
 			alive = false;
@@ -210,8 +210,9 @@ export function LeftSidebar() {
 
 			<nav className="flex flex-col gap-0.5 flex-1 px-2">
 				{mainNav.map((item, i) => renderItem(item, i, 60))}
-				{/* The Weekly Vote: a living flame, and the face currently
-				    wearing the crown floated right — the race, glanceable. */}
+				{/* The Weekly Vote: the ballot box leads like any nav glyph;
+				    flexed right, the flame burns over the top-three faces —
+				    the race, glanceable without leaving the rail. */}
 				<Link
 					href="/votes"
 					style={{ animationDelay: `${60 + mainNav.length * 30}ms` }}
@@ -222,20 +223,35 @@ export function LeftSidebar() {
 							: "text-muted hover:bg-surface hover:text-primary",
 					)}
 				>
-					<Flame
-						size={24}
-						weight={pathname.startsWith("/votes") ? "fill" : "regular"}
-						className="animate-flicker text-gold"
-					/>
+					<VoteBox open={pathname.startsWith("/votes")} size={24} />
 					<span className="font-sans text-[16.5px]">Votes</span>
-					{voteLeader?.avatar && (
-						<span
-							className="relative ml-auto block h-6 w-6 shrink-0 overflow-hidden rounded-pill ring-2 ring-gold/60"
-							title={voteLeader.username ? `@${voteLeader.username} is leading` : "This week's leader"}
-						>
-							<SafeAvatar src={voteLeader.avatar} />
-						</span>
-					)}
+					<span className="ml-auto flex items-center gap-1.5">
+						<Flame
+							size={17}
+							weight="fill"
+							className="animate-flicker text-gold"
+						/>
+						{voteLeaders.length > 0 && (
+							<span
+								className="flex -space-x-2"
+								title={
+									voteLeaders[0]?.username
+										? `@${voteLeaders[0].username} is leading`
+										: "This week's leaders"
+								}
+							>
+								{voteLeaders.map((l, i) => (
+									<span
+										key={l.username ?? i}
+										className="relative block h-6 w-6 shrink-0 overflow-hidden rounded-pill ring-2 ring-page"
+										style={{ zIndex: 3 - i }}
+									>
+										<SafeAvatar src={l.avatar} />
+									</span>
+								))}
+							</span>
+						)}
+					</span>
 				</Link>
 
 				<Eyebrow>{t("nav.you")}</Eyebrow>

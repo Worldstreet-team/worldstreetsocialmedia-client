@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import { getVoteCycle } from "@/lib/votes";
 
-const WEEK_MS = 7 * 24 * 3600 * 1000;
-
 /**
  * The clock, redesigned (owner note: the flat gold line read bland).
  * Each unit sits in its own quiet raised tile — gold tabular digits, tiny
@@ -66,7 +64,6 @@ export function VoteCountdown({
 	const m = Math.floor((left % 3_600_000) / 60_000);
 	const s = Math.floor((left % 60_000) / 1000);
 	const pad = (n: number) => String(n).padStart(2, "0");
-	const burned = Math.min(1, Math.max(0, 1 - left / WEEK_MS));
 
 	const cells: [string, string][] = [
 		[pad(d), "days"],
@@ -118,16 +115,6 @@ export function VoteCountdown({
 					</span>
 				))}
 			</div>
-			{/* The week, burning down. */}
-			<span
-				aria-hidden
-				className="block h-[3px] w-full overflow-hidden rounded-pill bg-raised"
-			>
-				<span
-					className="block h-full rounded-pill bg-gold"
-					style={{ width: `${Math.round(burned * 1000) / 10}%` }}
-				/>
-			</span>
 		</div>
 	);
 }
