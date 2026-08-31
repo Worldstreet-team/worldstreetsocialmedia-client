@@ -32,11 +32,25 @@ export function AudioCard({
 			? audio.peaks
 			: Array.from({ length: 64 }, () => 18);
 
+	// The element's own duration is a liar twice over: NaN before metadata
+	// arrives, and Infinity forever on MediaRecorder WebM (no duration
+	// header) — 0 x Infinity is the NaN:NaN clock. The stored durationSec
+	// rides the post precisely so playback never waits on the file.
+	const durOf = (el: HTMLAudioElement | null) => {
+		if (el && Number.isFinite(el.duration) && el.duration > 0)
+			return el.duration;
+		return Number.isFinite(audio.durationSec) && audio.durationSec > 0
+			? audio.durationSec
+			: 0;
+	};
+
 	useEffect(() => {
 		const el = audioRef.current;
 		if (!el) return;
-		const onTime = () =>
-			setProgress(el.duration > 0 ? el.currentTime / el.duration : 0);
+		const onTime = () => {
+			const d = durOf(el);
+			setProgress(d > 0 ? el.currentTime / d : 0);
+		};
 		const onEnd = () => {
 			setPlaying(false);
 			setProgress(0);
@@ -90,18 +104,25 @@ export function AudioCard({
 		e.stopPropagation();
 		e.preventDefault();
 		const el = audioRef.current;
-		if (!el || !el.duration) return;
+		const d = durOf(el);
+		if (!el || d <= 0) return;
 		const rect = e.currentTarget.getBoundingClientRect();
 		const frac = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
-		el.currentTime = frac * el.duration;
+		try {
+			el.currentTime = frac * d;
+		} catch {
+			/* pre-metadata seek on some browsers — the tap still paints */
+		}
 		setProgress(frac);
 	};
 
 	const clock = (sec: number) =>
-		`${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
+		Number.isFinite(sec)
+			? `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}`
+			: "0:00";
 	const shown = playing
-		? progress * (audioRef.current?.duration || audio.durationSec)
-		: audio.durationSec;
+		? progress * durOf(audioRef.current)
+		: durOf(audioRef.current);
 
 	return (
 		<div
@@ -109,7 +130,7 @@ export function AudioCard({
 			className="pointer-events-auto relative z-10 mb-3 overflow-hidden rounded-xl border border-hairline"
 		>
 			{/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-			<audio ref={audioRef} src={audio.url} preload="none" />
+			<audio ref={audioRef} src={audio.url} preload="metadata" />
 			{/* Ground: the author's art blurred into atmosphere, or flat
 			    surface if the poster opted out. The wash keeps the bars and
 			    clock honest on any picture. */}
