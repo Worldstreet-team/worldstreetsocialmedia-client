@@ -1191,3 +1191,29 @@ video,
 .ws-ballot {
 	animation: ws-ballot-drop 0.55s var(--ws-ease) 0.16s both;
 }
+
+/* Toast glass.
+   glass-frost sits at 82/86% so text stays legible on a full panel, which
+   over a dark page reads as a flat box: the blur has nothing to show. A
+   toast is small and short-lived, so it can afford to be genuinely
+   translucent. The inset rim is what makes glass read as glass, a lit top
+   edge against a darker body, and it replaces the border the frost family
+   deliberately drops. */
+.glass-toast {
+  /* Sits ABOVE the page in value, not level with it. A dark frost at page
+     colour is invisible on a #0C0A09 ground: there is nothing for the blur
+     or the rim to describe, so the toast reads as loose text. This is the
+     raised step, translucent, with a lit top edge. */
+  background: rgb(41 37 36 / 0.72);
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.14),
+    inset 0 0 0 1px rgb(255 255 255 / 0.08),
+    0 10px 30px rgb(0 0 0 / 0.5);
+}
+[data-ws-theme="platform-light"] .glass-toast {
+  background: rgb(255 255 255 / 0.72);
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.9),
+    inset 0 0 0 1px rgb(0 0 0 / 0.08),
+    0 10px 30px rgb(0 0 0 / 0.16);
+}
