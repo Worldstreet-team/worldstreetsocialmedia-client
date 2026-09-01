@@ -368,6 +368,7 @@ export default function SpaceRoom({
                 </span>
                 <UserBadges
                   isVerified={row.host.isVerified}
+                  verification={(row.host as any).verification}
                   badges={(row.host as any).badges}
                   size={13}
                 />
@@ -589,7 +590,11 @@ export default function SpaceRoom({
                         <span className="truncate font-sans text-[13.5px] font-semibold text-primary">
                           {menuFor.username}
                         </span>
-                        <UserBadges isVerified={menuFor.isVerified} size={12} />
+                        <UserBadges
+                          isVerified={menuFor.isVerified}
+                          verification={(menuFor as any).verification}
+                          size={12}
+                        />
                       </span>
                       <span className="truncate font-sans text-[11px] text-subtle">
                         {menuOnStage

@@ -273,6 +273,7 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 										<span className="truncate">@{community.owner.username}</span>
 										<UserBadges
 											isVerified={community.owner.isVerified}
+											verification={(community.owner as any).verification}
 											badges={community.owner?.badges}
 											size={11}
 										/>

@@ -158,6 +158,7 @@ export default function StickerTray({
                     </span>
                     <UserBadges
                       isVerified={user.isVerified}
+                      verification={(user as any).verification}
                       badges={(user as any).badges}
                       size={12}
                     />
