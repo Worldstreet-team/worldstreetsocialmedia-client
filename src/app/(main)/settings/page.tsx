@@ -184,6 +184,7 @@ export default function SettingsPage() {
 								</span>
 								<UserBadges
 									isVerified={user?.isVerified}
+									verification={(user as any)?.verification}
 									badges={user?.badges}
 									size={16}
 								/>

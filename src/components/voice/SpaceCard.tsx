@@ -162,6 +162,7 @@ export function LiveSpaceCard({
               </span>
               <UserBadges
                 isVerified={row.host.isVerified}
+                verification={(row.host as any).verification}
                 badges={(row.host as any).badges}
                 size={12}
               />
@@ -243,6 +244,7 @@ export function NextUpCard({
           </span>
           <UserBadges
             isVerified={row.host.isVerified}
+            verification={(row.host as any).verification}
             badges={(row.host as any).badges}
             size={12}
           />
