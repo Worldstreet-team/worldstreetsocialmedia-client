@@ -39,15 +39,41 @@ export function DeploymentSkewRecovery() {
 		window.addEventListener("beforeunload", markNav);
 		window.addEventListener("pagehide", markNav);
 
+		// ONE reload per incident, ever — never a rhythm of them.
+		//
+		// The first version reloaded again every 30s while the signature kept
+		// firing, and during a rolling deploy the freshly reloaded page can
+		// hit the OLD container and trip the signature again — so production
+		// tabs reloaded two, three, four times in a row. Users experience a
+		// reload as the app breaking; twice is unforgivable. Now: if THIS
+		// load is itself the recovery reload (stamp within 3 min), further
+		// auto-reloads are off entirely — a stale action then just fails its
+		// one call, which every call site already survives. And a lone error
+		// doesn't trigger anything: it takes two strikes inside 60s, so one
+		// transient blip during a deploy window costs nothing.
+		let coolingDown = false;
+		try {
+			const last = Number(sessionStorage.getItem(STAMP) ?? 0);
+			coolingDown = Date.now() - last < 180_000;
+		} catch {
+			/* unreadable storage: behave as if cooling down — never loop */
+			coolingDown = true;
+		}
+		let firstStrikeAt = 0;
+
 		const maybeReload = (message: unknown) => {
 			if (!SIGNATURE.test(String(message ?? ""))) return;
-			if (navigating) return;
+			if (navigating || coolingDown) return;
+			const now = Date.now();
+			if (now - firstStrikeAt > 60_000) {
+				firstStrikeAt = now;
+				return;
+			}
+			coolingDown = true;
 			try {
-				const last = Number(sessionStorage.getItem(STAMP) ?? 0);
-				if (Date.now() - last < 30_000) return;
-				sessionStorage.setItem(STAMP, String(Date.now()));
+				sessionStorage.setItem(STAMP, String(now));
 			} catch {
-				/* storage blocked — still better to reload once than stay dead */
+				/* storage blocked — the in-memory flag still prevents loops */
 			}
 			const href = window.location.href;
 			setTimeout(() => {
