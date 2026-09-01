@@ -193,6 +193,7 @@ export interface PostProps {
     };
     stats: {
         replies: number;
+        bookmarks?: number;
         reposts: number;
         likes: number;
         views?: number;
@@ -1559,126 +1560,6 @@ export const PostCard = memo(
                         <div className="flex min-w-0 items-center gap-1.5 -ml-2 sm:gap-7">
                         <button
                             type="button"
-                            aria-label={isBookmarked ? "Remove bookmark" : "Bookmark"}
-                            aria-pressed={isBookmarked}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleBookmark();
-                            }}
-                            className={clsx(
-                                "flex items-center transition-colors group cursor-pointer",
-                                isBookmarked ? "text-gold" : "hover:text-gold",
-                            )}
-                        >
-                            <span className="relative flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-gold/10 transition group-active:scale-[0.98]">
-                                <AnimatePresence>
-                                    {isBookmarked && (
-                                        <motion.span
-                                            key="bookmark-wash"
-                                            className="absolute inset-0 rounded-pill bg-gold/20"
-                                            initial={{ opacity: 0.7 }}
-                                            animate={{ opacity: 0 }}
-                                            exit={{ opacity: 0 }}
-                                            transition={{
-                                                duration: 0.32,
-                                                ease: [0.2, 0, 0, 1],
-                                            }}
-                                        />
-                                    )}
-                                </AnimatePresence>
-                                <motion.span
-                                    animate={{ scale: isBookmarked ? [0.98, 1] : 1 }}
-                                    transition={{
-                                        duration: 0.2,
-                                        ease: [0.2, 0, 0, 1],
-                                    }}
-                                    className="flex"
-                                >
-                                    <BookmarkSimple
-                                        size={23}
-                                        weight={isBookmarked ? "fill" : "bold"}
-                                    />
-                                </motion.span>
-                            </span>
-                        </button>
-                        <div className="relative">
-                            <button
-                                type="button"
-                                aria-label={t("post.repost")}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setRepostMenuOpen((v) => !v);
-                                }}
-                                className={clsx(
-                                    "flex items-center gap-0.5 sm:gap-1 transition-colors group cursor-pointer",
-                                    reposted ? "text-success" : "hover:text-success",
-                                )}
-                            >
-                                <span className="flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-success/10 transition group-active:scale-[0.98]">
-                                    <Repeat
-                                        size={23}
-                                        weight={reposted ? "fill" : "bold"}
-                                    />
-                                </span>
-                                <span className="text-[13.5px] font-medium font-sans tabular-nums sm:text-[14px]">
-                                    {formatCount(
-                                        (shownReposts ?? 0) + repostDelta,
-                                    )}
-                                </span>
-                            </button>
-                            {repostMenuOpen && (
-                                <div
-                                    className="absolute bottom-11 left-0 z-dropdown card-depth rounded-xl overflow-hidden py-1 w-40 animate-rise"
-                                    onClick={(e) => e.stopPropagation()}
-                                >
-                                    <button
-                                        type="button"
-                                        onClick={async () => {
-                                            setRepostMenuOpen(false);
-                                            const res = await repostPostAction(
-                                                post.id,
-                                            );
-                                            if (res.success) {
-                                                setReposted(
-                                                    Boolean(res.reposted),
-                                                );
-                                                applyMyEngagement(post.id, {
-                                                    reposted: Boolean(
-                                                        res.reposted,
-                                                    ),
-                                                });
-                                                setRepostDelta(
-                                                    res.reposted ? 1 : 0,
-                                                );
-                                                toast(
-                                                    res.reposted
-                                                        ? t("post.reposted")
-                                                        : t("post.unreposted"),
-                                                    { type: "success" },
-                                                );
-                                            }
-                                        }}
-                                        className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans cursor-pointer"
-                                    >
-                                        <Repeat size={16} weight="bold" />
-                                        {t("post.repost")}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setRepostMenuOpen(false);
-                                            setQuoteOpen(true);
-                                        }}
-                                        className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans cursor-pointer"
-                                    >
-                                        <ChatCircle size={16} weight="bold" />
-                                        {t("post.quote")}
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                        <button
-                            type="button"
                             aria-label={isLiked ? "Unlike" : "Like"}
                             aria-pressed={isLiked}
                             onClick={(e) => {
@@ -1763,6 +1644,82 @@ export const PostCard = memo(
                                 </AnimatePresence>
                             </span>
                         </button>
+                        <div className="relative">
+                            <button
+                                type="button"
+                                aria-label={t("post.repost")}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setRepostMenuOpen((v) => !v);
+                                }}
+                                className={clsx(
+                                    "flex items-center gap-0.5 sm:gap-1 transition-colors group cursor-pointer",
+                                    reposted ? "text-success" : "hover:text-success",
+                                )}
+                            >
+                                <span className="flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-success/10 transition group-active:scale-[0.98]">
+                                    <Repeat
+                                        size={23}
+                                        weight={reposted ? "fill" : "bold"}
+                                    />
+                                </span>
+                                <span className="text-[13.5px] font-medium font-sans tabular-nums sm:text-[14px]">
+                                    {formatCount(
+                                        (shownReposts ?? 0) + repostDelta,
+                                    )}
+                                </span>
+                            </button>
+                            {repostMenuOpen && (
+                                <div
+                                    className="absolute bottom-11 left-0 z-dropdown card-depth rounded-xl overflow-hidden py-1 w-40 animate-rise"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            setRepostMenuOpen(false);
+                                            const res = await repostPostAction(
+                                                post.id,
+                                            );
+                                            if (res.success) {
+                                                setReposted(
+                                                    Boolean(res.reposted),
+                                                );
+                                                applyMyEngagement(post.id, {
+                                                    reposted: Boolean(
+                                                        res.reposted,
+                                                    ),
+                                                });
+                                                setRepostDelta(
+                                                    res.reposted ? 1 : 0,
+                                                );
+                                                toast(
+                                                    res.reposted
+                                                        ? t("post.reposted")
+                                                        : t("post.unreposted"),
+                                                    { type: "success" },
+                                                );
+                                            }
+                                        }}
+                                        className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans cursor-pointer"
+                                    >
+                                        <Repeat size={16} weight="bold" />
+                                        {t("post.repost")}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setRepostMenuOpen(false);
+                                            setQuoteOpen(true);
+                                        }}
+                                        className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans cursor-pointer"
+                                    >
+                                        <ChatCircle size={16} weight="bold" />
+                                        {t("post.quote")}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                         <Link
                             href={`/post/${post.id}`}
                             onClick={(e) => e.stopPropagation()}
@@ -1779,6 +1736,55 @@ export const PostCard = memo(
                         </div>
 
                         <div className="flex items-center gap-0.5 sm:gap-2">
+                        <button
+                            type="button"
+                            aria-label={isBookmarked ? "Remove bookmark" : "Bookmark"}
+                            aria-pressed={isBookmarked}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleBookmark();
+                            }}
+                            className={clsx(
+                                "flex items-center transition-colors group cursor-pointer",
+                                isBookmarked ? "text-gold" : "hover:text-gold",
+                            )}
+                        >
+                            <span className="relative flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-gold/10 transition group-active:scale-[0.98]">
+                                <AnimatePresence>
+                                    {isBookmarked && (
+                                        <motion.span
+                                            key="bookmark-wash"
+                                            className="absolute inset-0 rounded-pill bg-gold/20"
+                                            initial={{ opacity: 0.7 }}
+                                            animate={{ opacity: 0 }}
+                                            exit={{ opacity: 0 }}
+                                            transition={{
+                                                duration: 0.32,
+                                                ease: [0.2, 0, 0, 1],
+                                            }}
+                                        />
+                                    )}
+                                </AnimatePresence>
+                                <motion.span
+                                    animate={{ scale: isBookmarked ? [0.98, 1] : 1 }}
+                                    transition={{
+                                        duration: 0.2,
+                                        ease: [0.2, 0, 0, 1],
+                                    }}
+                                    className="flex"
+                                >
+                                    <BookmarkSimple
+                                        size={23}
+                                        weight={isBookmarked ? "fill" : "bold"}
+                                    />
+                                </motion.span>
+                            </span>
+                            {(post.stats.bookmarks ?? 0) > 0 && (
+                                <span className="text-[13.5px] font-medium font-sans tabular-nums sm:text-[14px]">
+                                    {formatCount(post.stats.bookmarks ?? 0)}
+                                </span>
+                            )}
+                        </button>
                         <button
                             type="button"
                             aria-label="Copy link to post"

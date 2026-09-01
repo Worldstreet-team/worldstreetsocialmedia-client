@@ -49,7 +49,7 @@ export function mapApiPost(post: any): PostProps {
 		videoPlays: post.videoPlays,
 		votes: post.votes ?? 0,
 		audio: post.audio?.url ? post.audio : undefined,
-		stats: post.stats || { replies: 0, reposts: 0, likes: 0, views: 0 },
+		stats: post.stats || { replies: 0, reposts: 0, likes: 0, bookmarks: 0, views: 0 },
 		isLiked: post.isLiked,
 		isBookmarked: post.isBookmarked,
 		type: post.type,
