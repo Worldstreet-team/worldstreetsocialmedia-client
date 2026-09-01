@@ -24,6 +24,20 @@
 export function syncUrlIfStillOn(expectedPathname: string, url: string): boolean {
 	if (typeof window === "undefined") return false;
 	if (window.location.pathname !== expectedPathname) return false;
-	window.history.replaceState(window.history.state, "", url);
+	// Pass a state object WITHOUT Next's `__NA` marker.
+	//
+	// Next patches replaceState and short-circuits when the state carries
+	// `__NA` — so passing `window.history.state` straight through (which
+	// always carries it) moved the address bar while leaving the router's
+	// canonicalUrl stale. usePathname() then disagreed with the URL, and the
+	// router's next state change snapped the bar back. Passing `null` was the
+	// older, worse bug (it stripped the router tree). Cloning the state minus
+	// the marker keeps the tree AND lets Next re-sync (investigation
+	// 2026-09-01).
+	const { __NA, _N, ...tree } = (window.history.state ?? {}) as Record<
+		string,
+		unknown
+	>;
+	window.history.replaceState(tree, "", url);
 	return true;
 }

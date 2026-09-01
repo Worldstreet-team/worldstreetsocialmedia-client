@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { OverlayHeader, useOverlayDismiss } from "@/components/ui/Overlay";
+import { useImageZoom } from "@/hooks/useImageZoom";
 
 interface ImageModalProps {
 	isOpen: boolean;
@@ -30,6 +31,7 @@ export default function ImageModal({
 	initialIndex = 0,
 }: ImageModalProps) {
 	const [currentIndex, setCurrentIndex] = useState(initialIndex);
+	const zoomApi = useImageZoom();
 
 	useOverlayDismiss(isOpen, onClose);
 
@@ -61,7 +63,13 @@ export default function ImageModal({
 		};
 
 		window.addEventListener("keydown", handleKeyDown);
-		return () => window.removeEventListener("keydown", handleKeyDown);
+		// A new photo always starts fit-to-frame.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: reset on image change
+	useEffect(() => {
+		zoomApi.reset();
+	}, [currentIndex, isOpen]);
+
+	return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [isOpen, handleNext, handlePrev]);
 
 	if (!isOpen) return null;
@@ -114,15 +122,33 @@ export default function ImageModal({
 						// instead of letting them sit on top of the photo.
 						className="relative w-full h-full flex items-center justify-center px-2 py-14 sm:p-4 md:p-10"
 						onClick={(e) => e.stopPropagation()} // Prevent closing when clicking on image area
+						ref={zoomApi.bindWheelRef}
 					>
+						{/* Pinch, double-tap and drag. There was NO zoom here at
+						    all before — the only magnification a reader ever had
+						    was the browser's page pinch, which does nothing
+						    against a `fixed inset-0` layer because that is sized
+						    to the layout viewport (iOS audit 2026-09-01). */}
 						<motion.img
 							key={currentIndex}
 							src={images[currentIndex]}
 							alt={`Attachment ${currentIndex + 1} of ${images.length}`}
-							initial={{ opacity: 0, scale: 0.98 }}
-							animate={{ opacity: 1, scale: 1 }}
-							exit={{ opacity: 0, scale: 0.98 }}
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 0 }}
 							transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+							onTouchStart={zoomApi.handlers.onTouchStart}
+							onTouchMove={zoomApi.handlers.onTouchMove}
+							onTouchEnd={zoomApi.handlers.onTouchEnd}
+							style={{
+								transform: `translate(${zoomApi.zoom.x}px, ${zoomApi.zoom.y}px) scale(${zoomApi.zoom.scale})`,
+								transition: zoomApi.zoomed
+									? "none"
+									: "transform 160ms var(--ws-ease)",
+								// At rest a vertical swipe still belongs to the
+								// page; zoomed, every gesture is ours to pan.
+								touchAction: zoomApi.zoomed ? "none" : "pan-y",
+							}}
 							// h/w-full + contain, not max-*: max only shrinks, so a
 							// phone-sized upload sat tiny in the middle of the
 							// lightbox while large photos filled it — "some zoom
