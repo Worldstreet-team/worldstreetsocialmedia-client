@@ -37,14 +37,14 @@ export function BmCountSync() {
 			}
 		};
 		void load();
-		// The poll is the FALLBACK now — bm events on the user channel land
-		// instantly; this catches whatever a dropped connection missed.
-		const t = setInterval(() => void load(), 120_000);
+		// bm events on the user channel land instantly, and the focus
+		// listener below covers a dropped connection at the one moment it
+		// matters — when the person comes back. The 2-minute interval on top
+		// was pure duplication (audit 2026-09-01).
 		const onFocus = () => void load();
 		window.addEventListener("focus", onFocus);
 		return () => {
 			cancelled = true;
-			clearInterval(t);
 			window.removeEventListener("focus", onFocus);
 		};
 	}, [getToken, setCount]);

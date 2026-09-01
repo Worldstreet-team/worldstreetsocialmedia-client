@@ -5,6 +5,11 @@ const nextConfig: NextConfig = {
 		serverActions: {
 			bodySizeLimit: "20mb",
 		},
+		// Every route is dynamic (proxy.ts matches everything), and Next 16's
+		// default of 0 makes the router cache reuse NOTHING — each navigation
+		// re-renders RSC on the server. 30s of reuse turns back/forward and
+		// quick hops into instant paints (audit 2026-09-01).
+		staleTimes: { dynamic: 30 },
 	},
 	images: {
 		remotePatterns: [

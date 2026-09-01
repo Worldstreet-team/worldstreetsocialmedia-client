@@ -126,3 +126,57 @@ export function applyMyEngagement(postId: string, next: MyEngagement) {
 	mine.set(postId, merged);
 	for (const fn of mineListeners.get(postId) ?? []) fn();
 }
+
+/* ── My follow state ─────────────────────────────────────────────────────
+ * The align-revert bug, second act. The TRANSPORT was fixed (follows go
+ * direct to the gateway), but the STATE still re-seeded from whatever
+ * cached payload a surface rendered from — a 5-minute-old suggestion row,
+ * a cached post's author.isFollowing — so the button "always came back to
+ * its original state" on the next visit. Same cure as likes: the session
+ * remembers what YOU did, and that memory out-votes every stale payload.
+ * Keyed by the target's profile _id.
+ */
+const myFollows = new Map<string, boolean>();
+const followListeners = new Map<string, Set<() => void>>();
+const followAnyListeners = new Set<() => void>();
+
+export function getMyFollowState(profileId: string): boolean | undefined {
+	return myFollows.get(profileId);
+}
+
+export function applyMyFollowState(profileId: string, following: boolean) {
+	if (!profileId) return;
+	if (myFollows.get(profileId) === following) return;
+	myFollows.set(profileId, following);
+	for (const fn of followListeners.get(profileId) ?? []) fn();
+	for (const fn of followAnyListeners) fn();
+}
+
+export function subscribeMyFollowState(profileId: string, fn: () => void) {
+	let set = followListeners.get(profileId);
+	if (!set) {
+		set = new Set();
+		followListeners.set(profileId, set);
+	}
+	set.add(fn);
+	return () => {
+		set?.delete(fn);
+		if (set && set.size === 0) followListeners.delete(profileId);
+	};
+}
+
+/** Any-change subscription, for list surfaces that render many buttons. */
+export function subscribeMyFollowAny(fn: () => void) {
+	followAnyListeners.add(fn);
+	return () => {
+		followAnyListeners.delete(fn);
+	};
+}
+
+/** The override, applied to a payload's claim. */
+export function effectiveFollowing(
+	profileId: string,
+	payloadSaysFollowing: boolean | undefined,
+): boolean {
+	return myFollows.get(profileId) ?? Boolean(payloadSaysFollowing);
+}

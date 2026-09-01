@@ -19,6 +19,8 @@ import { useAtomValue } from "jotai";
 import { userAtom } from "@/store/user.atom";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import clsx from "clsx";
+import { effectiveFollowing } from "@/lib/engagementStore";
+import { useFollowVersion } from "@/hooks/useFollowState";
 import { UserX } from "lucide-react";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
@@ -54,6 +56,7 @@ export default function FollowsModal({
 	followersCount,
 	followingCount,
 }: FollowsModalProps) {
+	useFollowVersion();
 	const read = useGatewayRead();
 	const [activeTab, setActiveTab] = useState(initialTab); // Simplified from web's useStateAndSync
 	const [loading, setLoading] = useState(true);
@@ -135,8 +138,13 @@ export default function FollowsModal({
 	};
 
 	const handleFollowToggle = async (targetUser: UserItem) => {
-		// Optimistic update
-		const isNowFollowing = !targetUser.isFollowing;
+		// Decide from the EFFECTIVE state (session override included), not
+		// the payload — a stale payload here meant tapping "Aligned" sent a
+		// second follow instead of an unfollow.
+		const isNowFollowing = !effectiveFollowing(
+			targetUser._id,
+			targetUser.isFollowing,
+		);
 		setUsers((prev) =>
 			prev.map((u) =>
 				u._id === targetUser._id ? { ...u, isFollowing: isNowFollowing } : u,
@@ -287,21 +295,21 @@ export default function FollowsModal({
 														}}
 														className={clsx(
 															"rounded-pill px-4 py-1.5 font-semibold text-[13px] transition-colors min-w-[90px] border font-sans",
-															user.isFollowing
+															effectiveFollowing(user._id, user.isFollowing)
 																? "border-hairline bg-transparent text-primary hover:border-danger hover:text-danger"
 																: "bg-primary text-page border-transparent hover:bg-muted",
 														)}
 														onMouseEnter={(e) => {
-															if (user.isFollowing)
+															if (effectiveFollowing(user._id, user.isFollowing))
 																e.currentTarget.textContent = t("profile.unfollow");
 														}}
 														onMouseLeave={(e) => {
-															if (user.isFollowing)
+															if (effectiveFollowing(user._id, user.isFollowing))
 																e.currentTarget.textContent =
 																	t("profile.followingState");
 														}}
 													>
-														{user.isFollowing
+														{effectiveFollowing(user._id, user.isFollowing)
 																					? t("profile.followingState")
 																					: t("profile.follow")}
 													</button>

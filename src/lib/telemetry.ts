@@ -12,7 +12,36 @@
 //                meta carries peak coverage + longest continuous stretch.
 // Events queue locally and flush in batches so telemetry costs the UI nothing.
 
+import { BACKEND_URL } from "@/const";
 import { sendEventsAction } from "@/lib/telemetry.actions";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || BACKEND_URL;
+
+/**
+ * Impressions travel browser -> gateway with keepalive, not through a
+ * server action. The action route serializes behind every other in-flight
+ * action AND its unload-time flush is cancelled with the page — which lost
+ * exactly the last screenful of impressions, i.e. the posts most likely to
+ * "come back tomorrow" (audit 2026-09-01). keepalive survives pagehide.
+ */
+async function postEventsDirect(events: unknown[]): Promise<boolean> {
+	try {
+		const token = await (window as any).Clerk?.session?.getToken?.();
+		if (!token) return false;
+		const res = await fetch(`${API_URL}/api/events`, {
+			method: "POST",
+			keepalive: true,
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ events }),
+		});
+		return res.ok;
+	} catch {
+		return false;
+	}
+}
 import { detectCountry } from "@/lib/tz-country";
 
 export type Surface =
@@ -69,7 +98,8 @@ async function flush() {
 	const batch = queue.splice(0, 100);
 	let failed = false;
 	try {
-		await sendEventsAction(batch);
+		const ok = await postEventsDirect(batch);
+		if (!ok) await sendEventsAction(batch);
 	} catch {
 		failed = true;
 		// A dropped batch is not free: impressions are what damp already-seen
@@ -86,7 +116,7 @@ async function flush() {
 		// against an unreachable gateway as fast as the network rejects — the
 		// timer retries instead, one attempt per interval.
 		if (!failed && queue.length >= FLUSH_AT) void flush();
-		else if (failed) scheduleFlush();
+		else if (queue.length > 0) scheduleFlush();
 	}
 }
 

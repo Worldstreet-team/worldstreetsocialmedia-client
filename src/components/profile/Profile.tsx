@@ -37,6 +37,7 @@ import { useLiveNow } from "@/hooks/useLiveNow";
 import { mapApiPost as mapPost } from "@/lib/post-mapper";
 import { useT } from "@/i18n/client";
 import { userAtom } from "@/store/user.atom";
+import { getMyFollowState } from "@/lib/engagementStore";
 import {
 	cacheKeys,
 	fetchCached,
@@ -85,6 +86,11 @@ const FETCH_FOR: Record<ProfileTab, "posts" | "replies" | "media" | "likes"> = {
  * returns the full document.
  */
 function readIsFollowing(profile: any, currentUser: any): boolean {
+	// What YOU did this session beats whatever the cached copy claims —
+	// the 5-minute profile cache re-seeded the stale boolean on every
+	// remount, which is how Align "always came back to its original state".
+	const mine = getMyFollowState(String(profile?._id ?? ""));
+	if (typeof mine === "boolean") return mine;
 	if (typeof profile?.isFollowing === "boolean") return profile.isFollowing;
 	if (currentUser && Array.isArray(profile?.followers)) {
 		return profile.followers.includes(currentUser._id);
@@ -100,9 +106,16 @@ export default function Profile({ username }: { username?: string }) {
 	const currentUser = useAtomValue(userAtom);
 	const { entries: liveEntries } = useLiveNow();
 
-	const [profileUser, setProfileUser] = useState<any>(null);
+	const handle = username || currentUser?.username || null;
+	// A warm cached profile paints on the FIRST render — the old flow
+	// copied it in through an effect, so paint #1 was always a skeleton
+	// over data already in memory (audit 2026-09-01).
+	const seedProfile = handle
+		? readCache<any>(cacheKeys.profile(handle))?.data
+		: undefined;
+	const [profileUser, setProfileUser] = useState<any>(seedProfile ?? null);
 
-	const [loadingProfile, setLoadingProfile] = useState(true);
+	const [loadingProfile, setLoadingProfile] = useState(!seedProfile);
 	const [notFound, setNotFound] = useState(false);
 
 	const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
@@ -140,7 +153,7 @@ export default function Profile({ username }: { username?: string }) {
 	// /profile with no username used to read the hydrated atom and stop
 	// there, so your own profile rendered without counts, interests or
 	// block state. Resolve the handle, then read like any other profile.
-	const handle = username || currentUser?.username || null;
+
 
 	// Cached read: a profile visited in the last few minutes renders from
 	// memory with no request at all, and a stale one renders immediately while
@@ -353,6 +366,7 @@ export default function Profile({ username }: { username?: string }) {
 				if (cached) {
 					writeCache(key, {
 						...cached.data,
+						isFollowing: !wasFollowing,
 						followersCount: wasFollowing
 							? previousCount - 1
 							: previousCount + 1,

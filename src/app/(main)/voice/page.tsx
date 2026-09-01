@@ -159,7 +159,12 @@ function VoiceDirectory() {
     // gateway; real rows merge in whenever the fetch lands.
     if (demo) setLoading(false);
     void load();
-    const poll = setInterval(() => void load(), POLL_MS);
+    // Ably's `spaces` channel below is the fast path; this is only the
+    // dropped-socket floor, so it runs slow and never while hidden
+    // (audit 2026-09-01: the 20s duplicate poll is gone).
+    const poll = setInterval(() => {
+      if (document.visibilityState !== "hidden") void load();
+    }, 5 * 60_000);
     return () => clearInterval(poll);
   }, [load, demo]);
 

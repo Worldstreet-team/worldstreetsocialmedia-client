@@ -60,6 +60,7 @@ import ImageModal from "@/components/ui/ImageModal";
 import { FeedImage } from "@/components/ui/FeedImage";
 import VerifiedIcon from "@/assets/icons/VerifiedIcon";
 import { recordVideoPlayAction } from "@/lib/beacons";
+import { track } from "@/lib/telemetry";
 import { LikersModal } from "@/components/feed/LikersModal";
 import { postJsonDirect } from "@/lib/upload-direct";
 import { AudioCard } from "@/components/feed/AudioCard";
@@ -641,13 +642,24 @@ export const PostCard = memo(
                 setIsReportOpen(true);
             } else if (action === "block") {
                 setIsBlockModalOpen(true);
+            } else if (action === "not_interested") {
+                // Real negative feedback now, not a placebo: this lands in
+                // the ranker's "rejected" bucket, which was unreachable
+                // while the button only toasted (audit 2026-09-01).
+                track({
+                    action: "not_interested",
+                    post: post.id,
+                    author: post.author.id,
+                    surface: "feed_foryou",
+                });
+                toast("Got it — less of this");
             } else {
                 // Pin, activity and not-interested still have no gateway
                 // support — say so instead of silently no-oping.
                 toast("Not available yet coming soon", { type: "info" });
             }
         },
-        [post.id, toast],
+        [post.id, post.author.id, toast],
     );
 
     /** Block from the post menu, without leaving the feed. */

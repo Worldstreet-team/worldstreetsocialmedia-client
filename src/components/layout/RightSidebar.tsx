@@ -10,6 +10,8 @@ import { PromoBanners } from "@/components/feed/PromoBanners";
 import { SidebarWallet } from "@/components/layout/SidebarWallet";
 import { SectionHead } from "@/components/layout/SectionHead";
 import { VoteCountdown } from "@/components/votes/VoteCountdown";
+import { effectiveFollowing } from "@/lib/engagementStore";
+import { useFollowVersion } from "@/hooks/useFollowState";
 import { SpacesRail } from "@/components/layout/SpacesRail";
 import { useAppPathname } from "@/i18n/useAppPathname";
 import { useToast } from "@/components/ui/Toast/ToastContext";
@@ -170,8 +172,9 @@ export function RightSidebar() {
 		}
 	};
 
+	useFollowVersion();
 	const visibleSuggestions = suggestions.filter(
-		(u) => !followedIds.includes(u._id),
+		(u) => !followedIds.includes(u._id) && !effectiveFollowing(u._id, false),
 	);
 	const categories = [
 		"all",
