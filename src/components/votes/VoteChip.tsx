@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { VoteBox } from "@/components/votes/VoteBox";
 import { useCallback, useRef, useState } from "react";
+import { formatCompact } from "@/lib/utils";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { castVote, getVoteCycle, markFreeVoteUsed } from "@/lib/votes";
 
@@ -145,11 +146,27 @@ export function VoteChip({
 				transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
 				className={
 					boxOpen
-						? "pointer-events-auto flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill text-gold transition-colors disabled:opacity-60"
-						: "pointer-events-auto flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-gold/10 hover:text-gold disabled:opacity-60"
+						? "pointer-events-auto flex h-10 min-w-10 cursor-pointer items-center justify-center gap-1 rounded-pill px-1.5 text-gold transition-colors disabled:opacity-60"
+						: "pointer-events-auto flex h-10 min-w-10 cursor-pointer items-center justify-center gap-1 rounded-pill px-1.5 text-muted transition-colors hover:bg-gold/10 hover:text-gold disabled:opacity-60"
 				}
 			>
 				<VoteBox open={boxOpen} ballotKey={ballotKey} size={23} />
+				{count > 0 && (
+					<span className="relative overflow-hidden font-sans text-[13.5px] font-medium tabular-nums sm:text-[14px]">
+						<AnimatePresence mode="wait" initial={false}>
+							<motion.span
+								key={count}
+								initial={{ opacity: 0, y: 8 }}
+								animate={{ opacity: 1, y: 0 }}
+								exit={{ opacity: 0, y: -8, transition: { duration: 0.1 } }}
+								transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+								className="block"
+							>
+								{formatCompact(count)}
+							</motion.span>
+						</AnimatePresence>
+					</span>
+				)}
 			</motion.button>
 		</div>
 	);
