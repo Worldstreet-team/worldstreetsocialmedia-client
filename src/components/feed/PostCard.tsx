@@ -1582,6 +1582,82 @@ export const PostCard = memo(
                             card width — and share + impressions ride the right edge
                             together as the "do something with this / how it did" pair. */}
                         <div className="flex min-w-0 items-center gap-1.5 -ml-2 sm:gap-7">
+                        <div className="relative">
+                            <button
+                                type="button"
+                                aria-label={t("post.repost")}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setRepostMenuOpen((v) => !v);
+                                }}
+                                className={clsx(
+                                    "flex items-center gap-0.5 sm:gap-1 transition-colors group cursor-pointer",
+                                    reposted ? "text-success" : "hover:text-success",
+                                )}
+                            >
+                                <span className="flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-success/10 transition group-active:scale-[0.98]">
+                                    <Repeat
+                                        size={23}
+                                        weight={reposted ? "fill" : "bold"}
+                                    />
+                                </span>
+                                <span className="text-[13.5px] font-medium font-sans tabular-nums sm:text-[14px]">
+                                    {formatCount(
+                                        (shownReposts ?? 0) + repostDelta,
+                                    )}
+                                </span>
+                            </button>
+                            {repostMenuOpen && (
+                                <div
+                                    className="absolute bottom-11 left-0 z-dropdown card-depth rounded-xl overflow-hidden py-1 w-40 animate-rise"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            setRepostMenuOpen(false);
+                                            const res = await repostPostAction(
+                                                post.id,
+                                            );
+                                            if (res.success) {
+                                                setReposted(
+                                                    Boolean(res.reposted),
+                                                );
+                                                applyMyEngagement(post.id, {
+                                                    reposted: Boolean(
+                                                        res.reposted,
+                                                    ),
+                                                });
+                                                setRepostDelta(
+                                                    res.reposted ? 1 : 0,
+                                                );
+                                                toast(
+                                                    res.reposted
+                                                        ? t("post.reposted")
+                                                        : t("post.unreposted"),
+                                                    { type: "success" },
+                                                );
+                                            }
+                                        }}
+                                        className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans cursor-pointer"
+                                    >
+                                        <Repeat size={16} weight="bold" />
+                                        {t("post.repost")}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setRepostMenuOpen(false);
+                                            setQuoteOpen(true);
+                                        }}
+                                        className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans cursor-pointer"
+                                    >
+                                        <ChatCircle size={16} weight="bold" />
+                                        {t("post.quote")}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                         <button
                             type="button"
                             aria-label={isLiked ? "Unlike" : "Like"}
@@ -1668,82 +1744,6 @@ export const PostCard = memo(
                                 </AnimatePresence>
                             </span>
                         </button>
-                        <div className="relative">
-                            <button
-                                type="button"
-                                aria-label={t("post.repost")}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setRepostMenuOpen((v) => !v);
-                                }}
-                                className={clsx(
-                                    "flex items-center gap-0.5 sm:gap-1 transition-colors group cursor-pointer",
-                                    reposted ? "text-success" : "hover:text-success",
-                                )}
-                            >
-                                <span className="flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-success/10 transition group-active:scale-[0.98]">
-                                    <Repeat
-                                        size={23}
-                                        weight={reposted ? "fill" : "bold"}
-                                    />
-                                </span>
-                                <span className="text-[13.5px] font-medium font-sans tabular-nums sm:text-[14px]">
-                                    {formatCount(
-                                        (shownReposts ?? 0) + repostDelta,
-                                    )}
-                                </span>
-                            </button>
-                            {repostMenuOpen && (
-                                <div
-                                    className="absolute bottom-11 left-0 z-dropdown card-depth rounded-xl overflow-hidden py-1 w-40 animate-rise"
-                                    onClick={(e) => e.stopPropagation()}
-                                >
-                                    <button
-                                        type="button"
-                                        onClick={async () => {
-                                            setRepostMenuOpen(false);
-                                            const res = await repostPostAction(
-                                                post.id,
-                                            );
-                                            if (res.success) {
-                                                setReposted(
-                                                    Boolean(res.reposted),
-                                                );
-                                                applyMyEngagement(post.id, {
-                                                    reposted: Boolean(
-                                                        res.reposted,
-                                                    ),
-                                                });
-                                                setRepostDelta(
-                                                    res.reposted ? 1 : 0,
-                                                );
-                                                toast(
-                                                    res.reposted
-                                                        ? t("post.reposted")
-                                                        : t("post.unreposted"),
-                                                    { type: "success" },
-                                                );
-                                            }
-                                        }}
-                                        className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans cursor-pointer"
-                                    >
-                                        <Repeat size={16} weight="bold" />
-                                        {t("post.repost")}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setRepostMenuOpen(false);
-                                            setQuoteOpen(true);
-                                        }}
-                                        className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans cursor-pointer"
-                                    >
-                                        <ChatCircle size={16} weight="bold" />
-                                        {t("post.quote")}
-                                    </button>
-                                </div>
-                            )}
-                        </div>
                         <Link
                             href={`/post/${post.id}`}
                             onClick={(e) => e.stopPropagation()}
