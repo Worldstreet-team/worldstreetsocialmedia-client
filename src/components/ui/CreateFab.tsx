@@ -231,7 +231,7 @@ export function CreateFab() {
                 }}
                 className="flex items-center gap-3 cursor-pointer group"
               >
-                <span className="rounded-pill glass-chip px-3.5 h-9 flex items-center font-sans text-[14px] font-bold whitespace-nowrap">
+                <span className="rounded-pill glass-chip px-4 h-10 flex items-center font-sans text-[15px] font-bold whitespace-nowrap">
                   {action.label}
                   {action.badge ? (
                     <span className="ml-1.5 glass-ink-faint tabular-nums font-medium">
@@ -241,13 +241,13 @@ export function CreateFab() {
                 </span>
                 <span
                   className={clsx(
-                    "flex h-12 w-12 items-center justify-center rounded-pill backdrop-blur-md backdrop-saturate-150 transition-colors",
+                    "flex h-14 w-14 items-center justify-center rounded-pill backdrop-blur-md backdrop-saturate-150 transition-colors",
                     action.tone === "danger"
                       ? "glass-chip !text-danger group-hover:!bg-danger group-hover:!text-white"
                       : "glass-chip",
                   )}
                 >
-                  <action.icon size={21} weight="fill" />
+                  <action.icon size={24} weight="fill" />
                 </span>
               </motion.button>
             ))}

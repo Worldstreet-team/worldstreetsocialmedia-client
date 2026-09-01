@@ -270,6 +270,7 @@ export default function FollowsModal({
 														{user.firstName} {user.lastName}
 														<UserBadges
 											isVerified={user.isVerified}
+											verification={(user as any).verification}
 											badges={(user as any).badges}
 											size={16}
 										/>

@@ -583,7 +583,11 @@ export function StoryViewer({
 													<span className="truncate font-sans text-[14px] font-semibold text-primary">
 														{v.name || v.username}
 													</span>
-													<UserBadges isVerified={v.isVerified} size={13} />
+													<UserBadges
+														isVerified={v.isVerified}
+														verification={(v as any).verification}
+														size={13}
+													/>
 												</span>
 												<span className="block truncate font-sans text-[12.5px] text-muted">
 													@{v.username}
