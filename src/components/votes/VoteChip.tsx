@@ -36,9 +36,7 @@ export function VoteChip({
 	const inputRef = useRef<HTMLInputElement>(null);
 	const shutTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-	const [priceMinor, setPriceMinor] = useState(50);
 	const quantity = Math.min(1000, Math.max(0, Math.round(Number(qty) || 0)));
-	const priceLabel = `$${((quantity * priceMinor) / 100).toFixed(2)}`;
 
 	const cast = useCallback(
 		async (n: number) => {
@@ -80,7 +78,6 @@ export function VoteChip({
 				return;
 			}
 			const cycle = await getVoteCycle();
-			if (cycle?.priceMinor) setPriceMinor(cycle.priceMinor);
 			if (cycle?.freeAvailable) {
 				void cast(1);
 			} else {
@@ -127,9 +124,9 @@ export function VoteChip({
 							type="button"
 							disabled={busy || quantity < 1}
 							onClick={() => void cast(quantity)}
-							className="h-9 cursor-pointer rounded-pill bg-credit px-3.5 font-sans text-[12.5px] font-semibold tabular-nums text-page transition-colors hover:opacity-90 disabled:opacity-50"
+							className="h-9 cursor-pointer rounded-pill bg-primary px-3.5 font-sans text-[12.5px] font-semibold text-page transition-colors hover:opacity-90 disabled:opacity-50"
 						>
-							{busy ? "Casting…" : `Cast · ${priceLabel}`}
+							{busy ? "Casting…" : "Cast"}
 						</button>
 					</motion.div>
 				)}
