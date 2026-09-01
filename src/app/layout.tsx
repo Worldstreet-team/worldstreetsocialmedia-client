@@ -28,6 +28,7 @@ import { CreateFab } from "@/components/ui/CreateFab";
 import VoiceRoomHost from "@/components/voice/VoiceRoomHost";
 import { LiveDock } from "@/components/live/LiveDock";
 import { NotificationCountSync } from "@/components/providers/NotificationCountSync";
+import { PwaSync } from "@/components/providers/PwaSync";
 import { DeploymentSkewRecovery } from "@/components/providers/DeploymentSkewRecovery";
 import { HistorySpy } from "@/components/providers/HistorySpy";
 import { SpacesLiveSync } from "@/components/providers/SpacesLiveSync";
@@ -117,6 +118,21 @@ export const metadata: Metadata = {
     },
     description:
  "WorldSpace share ideas, follow traders and creators, and talk markets across the WorldStreet ecosystem.",
+    manifest: "/manifest.webmanifest",
+    icons: {
+        icon: [
+            { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+            { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+        ],
+        apple: "/icons/apple-touch-icon.png",
+    },
+    // Installed-mode identity on iOS: its own window, dark status bar area,
+    // the app's name under the icon.
+    appleWebApp: {
+        capable: true,
+        title: "WorldSpace",
+        statusBarStyle: "black-translucent",
+    },
 };
 
 export default async function RootLayout({
@@ -204,6 +220,7 @@ export default async function RootLayout({
                                     </Suspense>
                                         <GlobalMessageListener />
                                         <NotificationCountSync />
+                                        <PwaSync />
                                         <DeploymentSkewRecovery />
                                         {process.env.NODE_ENV !== "production" && <HistorySpy />}
                                         <SpacesLiveSync />

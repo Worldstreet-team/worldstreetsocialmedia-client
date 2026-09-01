@@ -15,6 +15,7 @@ import {
 import { Check, Moon, Sun } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { Tabs, type TabItem } from "@/components/ui/Tabs";
+import { InstallAppRow } from "@/components/settings/InstallAppRow";
 import { InterestPicker } from "@/components/onboarding/InterestPicker";
 import { BlockedAccounts } from "@/components/settings/BlockedAccounts";
 import { AccountLifecycle } from "@/components/settings/AccountLifecycle";
@@ -319,6 +320,7 @@ export default function SettingsPage() {
 					title={t("settings.display.title")}
 					caption={t("settings.display.caption")}
 				>
+					<InstallAppRow />
 					<div className="flex items-center justify-between gap-3 px-4 py-3">
 						<span className="font-sans text-sm font-medium text-primary">
 							{t("settings.display.theme")}
