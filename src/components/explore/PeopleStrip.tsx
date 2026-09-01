@@ -72,6 +72,7 @@ export function PeopleStrip({
                       </span>
                       <UserBadges
                         isVerified={u.isVerified}
+                        verification={(u as any).verification}
                         badges={u.badges}
                         size={13}
                       />

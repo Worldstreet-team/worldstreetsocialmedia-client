@@ -45,6 +45,7 @@ function UserRow({ user }: { user: UserResult }) {
           <span className="shrink-0">
             <UserBadges
               isVerified={user.isVerified}
+              verification={(user as any).verification}
               badges={user.badges}
               size={14}
             />

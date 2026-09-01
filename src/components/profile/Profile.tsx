@@ -617,6 +617,7 @@ export default function Profile({ username }: { username?: string }) {
 				fullName={fullName}
 				username={profileUser.username}
 				isVerified={profileUser.isVerified}
+				verification={profileUser.verification}
 				badges={profileUser.badges}
 				bio={profileUser.bio}
 				location={profileUser.location}

@@ -35,6 +35,7 @@ export function ProfileAbout({
   fullName,
   username,
   isVerified,
+  verification,
   badges,
   bio,
   location,
@@ -53,6 +54,8 @@ export function ProfileAbout({
   fullName: string;
   username: string;
   isVerified?: boolean;
+  /** Tier provenance — without it every tick renders gold. */
+  verification?: { tier?: "bronze" | "silver" | "gold" } | null;
   badges?: ProfileBadge[];
   bio?: string;
   location?: string;
@@ -88,7 +91,12 @@ export function ProfileAbout({
             <span className="truncate">{fullName}</span>
             {/* This was declared as a prop and never rendered, so the one
                 place a person's marks matter most showed none of them. */}
-            <UserBadges isVerified={isVerified} badges={badges} size={20} />
+            <UserBadges
+              isVerified={isVerified}
+              verification={verification}
+              badges={badges}
+              size={20}
+            />
           </h2>
           {followsYou && (
             <span className="shrink-0 rounded-[4px] bg-raised px-1.5 py-px font-sans text-[10px] font-semibold uppercase tracking-wide text-muted">

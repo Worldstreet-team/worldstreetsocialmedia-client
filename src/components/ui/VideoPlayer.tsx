@@ -89,6 +89,9 @@ export function VideoPlayer({
 	 * and keeps its bars — the same bound X uses. Everything between 4:5 and
 	 * 16:9, which is nearly everything, now fits its frame exactly.
 	 */
+	/** The height ceiling the feed gives a video; width is derived from it
+	 *  for portrait clips so nothing is letterboxed. */
+	const MAX_MEDIA_H = 600;
 	const [ratio, setRatio] = useState<number | null>(null);
 	const [current, setCurrent] = useState(0);
 	const [buffered, setBuffered] = useState(0);
@@ -445,7 +448,21 @@ export function VideoPlayer({
 				// space, so the frame resizes at most once and the feed below it
 				// never jumps twice.
 				fitToMedia && !full && ratio
-					? { aspectRatio: String(ratio) }
+					? {
+							aspectRatio: String(ratio),
+							// A portrait clip at full width would need ~1000px of
+							// height; the caller caps height at 600px, so the box
+							// stayed wide while the video shrank to fit — black
+							// bars down both sides (owner report 2026-09-01).
+							// Cap the WIDTH instead so the frame hugs the clip.
+							...(ratio < 1
+								? {
+										maxWidth: `${Math.round(MAX_MEDIA_H * ratio)}px`,
+										marginLeft: "auto",
+										marginRight: "auto",
+									}
+								: {}),
+						}
 					: undefined
 			}
 			onPointerMove={bump}

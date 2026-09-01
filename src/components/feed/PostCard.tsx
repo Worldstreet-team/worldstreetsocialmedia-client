@@ -921,7 +921,7 @@ export const PostCard = memo(
                 <div className="shrink-0 pointer-events-auto mt-1">
                     <Link
                         href={`/profile/${post.author.username}`}
-                        className="relative block w-[42px] h-[42px] rounded-pill overflow-hidden border border-hairline hover:border-brand transition-colors"
+                        className="relative block w-12 h-12 sm:w-[52px] sm:h-[52px] rounded-pill overflow-hidden border border-hairline hover:border-brand transition-colors"
                     >
                         <SafeAvatar src={post.author.avatar} className="object-cover" alt={post.author.username} />
                     </Link>
