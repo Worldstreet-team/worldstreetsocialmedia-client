@@ -63,14 +63,16 @@ export default function ImageModal({
 		};
 
 		window.addEventListener("keydown", handleKeyDown);
-		// A new photo always starts fit-to-frame.
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [isOpen, handleNext, handlePrev]);
+
+	// A new photo always starts fit-to-frame. Top-level hook — this was
+	// briefly nested INSIDE the keydown effect, which is an invalid hook call
+	// and crashed the lightbox in production.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: reset on image change
 	useEffect(() => {
 		zoomApi.reset();
 	}, [currentIndex, isOpen]);
-
-	return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [isOpen, handleNext, handlePrev]);
 
 	if (!isOpen) return null;
 
