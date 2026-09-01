@@ -13,6 +13,7 @@ import {
   Heart,
   Quotes,
   Repeat,
+  ShieldWarning,
   UserPlus,
   type Icon,
 } from "@phosphor-icons/react";
@@ -45,6 +46,13 @@ const CHIP: Record<NotificationType, { classes: string; glyph: Icon; weight: "fi
   // Money reads as money: the one chip in the success tone with a coin.
   sale: { classes: "bg-success/15 text-success", glyph: Coins, weight: "fill" },
   gift: { classes: "bg-success/15 text-success", glyph: Gift, weight: "fill" },
+  // A platform notice, in the warning tone. Not a social event: it is the
+  // platform telling you something happened to your content.
+  moderation: {
+    classes: "bg-warning/15 text-warning",
+    glyph: ShieldWarning,
+    weight: "fill",
+  },
 };
 
 /** Minor units to a readable figure. Money is never "1.2". */
@@ -183,6 +191,12 @@ export function NotificationRow({
           )}
           <span className="text-subtle"> · {formatTimeAgo(group.createdAt)}</span>
         </span>
+
+        {type === "moderation" && group.body && (
+          <span className="font-sans text-[13.5px] leading-snug text-primary whitespace-pre-line">
+            {group.body}
+          </span>
+        )}
 
         {excerpt && (
           <span

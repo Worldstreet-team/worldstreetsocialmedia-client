@@ -32,7 +32,8 @@ export type NotificationType =
   | "mention"
   | "live"
   | "sale"
-  | "gift";
+  | "gift"
+  | "moderation";
 
 export interface AppNotification {
   _id: string;
@@ -41,6 +42,8 @@ export interface AppNotification {
   post?: { _id: string; content?: string; images?: string[] };
   /** USD minor units — money notifications only. */
   amountMinor?: number;
+  /** Free text, moderation notices only: what was removed and why. */
+  body?: string;
   read: boolean;
   createdAt: string;
 }
@@ -53,6 +56,8 @@ export interface NotificationGroup {
   post?: AppNotification["post"];
   /** Carried up from the newest member, for the money types. */
   amountMinor?: number;
+  /** Carried up for moderation notices. */
+  body?: string;
   /** Every member id, so tapping a group marks all of it read. */
   ids: string[];
   createdAt: string;
