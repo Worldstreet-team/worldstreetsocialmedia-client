@@ -1,5 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { syncUser } from "./lib/auth.actions";
 
 // Per-isolate profile cache: userId → last good sync result. Best-effort —
@@ -86,6 +86,34 @@ export default clerkMiddleware(async (auth, req) => {
  *    header is set. JSON.stringify leaves those characters raw, so they are
  *    escaped to \uXXXX here — still valid JSON, restored intact by JSON.parse.
  */
+/**
+ * A speculative request: a Link prefetch, or an RSC payload fetch. Redirecting
+ * either one poisons the router (see the call sites).
+ */
+function isSpeculative(req: NextRequest): boolean {
+	const h = req.headers;
+	return (
+		h.get("Next-Router-Prefetch") === "1" ||
+		h.get("purpose") === "prefetch" ||
+		h.get("Purpose") === "prefetch" ||
+		h.get("x-middleware-prefetch") === "1"
+	);
+}
+
+/**
+ * Build a redirect target that KEEPS the original query string — Next attaches
+ * `_rsc` to client navigations, and a redirect that drops it returns a payload
+ * the router rejects, falling back to a hard navigation.
+ */
+function redirectTarget(path: string, req: NextRequest): URL {
+	const url = new URL(path, req.url);
+	const from = new URL(req.url);
+	from.searchParams.forEach((value, key) => {
+		if (!url.searchParams.has(key)) url.searchParams.set(key, value);
+	});
+	return url;
+}
+
 const HEADER_BUDGET = 8000;
 
 /**
@@ -193,9 +221,18 @@ function userDataHeader(profile: unknown): string {
 				response.cookies.delete("has_profile");
 				return response;
 			}
-			// Redirect to onboarding if they don't exist in your DB
+			// Redirect to onboarding if they don't exist in your DB.
+			//
+			// Never redirect a PREFETCH: Next caches the redirect from the
+			// speculative request and applies it to the later real click, and
+			// the rebuilt URL drops the `_rsc` cache-buster, which makes the
+			// router abandon the navigation and hard-load somewhere else —
+			// a documented route to "I tapped B and landed on A"
+			// (investigation 2026-09-01). Let the prefetch pass; the real
+			// navigation that follows redirects honestly.
+			if (isSpeculative(req)) return respond();
 			return NextResponse.redirect(
-				new URL(withLocale("/onboarding"), req.url),
+				redirectTarget(withLocale("/onboarding"), req),
 			);
 		}
 
@@ -203,7 +240,10 @@ function userDataHeader(profile: unknown): string {
 		// Decided from the sync result, not the cookie — a cleared cookie must
 		// not reopen onboarding for an existing profile.
 		if (isOnboardingPath && userExistsInDb?.profile) {
-			return NextResponse.redirect(new URL(withLocale("/") || "/", req.url));
+			if (isSpeculative(req)) return respond();
+			return NextResponse.redirect(
+				redirectTarget(withLocale("/") || "/", req),
+			);
 		}
 
 		// 3. They exist: set the cookie, forward the profile, continue
