@@ -4,7 +4,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { VoteBox } from "@/components/votes/VoteBox";
 import { useCallback, useRef, useState } from "react";
 import { useToast } from "@/components/ui/Toast/ToastContext";
-import { formatCompact } from "@/lib/utils";
 import { castVote, getVoteCycle, markFreeVoteUsed } from "@/lib/votes";
 
 /**
@@ -37,8 +36,9 @@ export function VoteChip({
 	const inputRef = useRef<HTMLInputElement>(null);
 	const shutTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+	const [priceMinor, setPriceMinor] = useState(50);
 	const quantity = Math.min(1000, Math.max(0, Math.round(Number(qty) || 0)));
-	const priceLabel = `$${((quantity * 5) / 100).toFixed(2)}`;
+	const priceLabel = `$${((quantity * priceMinor) / 100).toFixed(2)}`;
 
 	const cast = useCallback(
 		async (n: number) => {
@@ -80,6 +80,7 @@ export function VoteChip({
 				return;
 			}
 			const cycle = await getVoteCycle();
+			if (cycle?.priceMinor) setPriceMinor(cycle.priceMinor);
 			if (cycle?.freeAvailable) {
 				void cast(1);
 			} else {
@@ -92,10 +93,7 @@ export function VoteChip({
 	);
 
 	return (
-		<div
-			className="pointer-events-auto relative z-10 mb-1.5 flex items-center justify-end gap-1.5"
-			onClick={(e) => e.stopPropagation()}
-		>
+		<div className="pointer-events-none relative z-10 mb-0.5 flex items-center justify-end gap-1.5">
 			<AnimatePresence>
 				{paidOpen && (
 					<motion.div
@@ -103,7 +101,8 @@ export function VoteChip({
 						animate={{ opacity: 1, x: 0 }}
 						exit={{ opacity: 0, x: 14, transition: { duration: 0.12 } }}
 						transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-						className="flex items-center gap-1.5"
+						className="pointer-events-auto flex items-center gap-1.5"
+						onClick={(e) => e.stopPropagation()}
 					>
 						<label className="flex h-9 items-center gap-1 rounded-pill bg-raised px-3 font-sans text-[13px] text-primary focus-within:bg-chip transition-colors">
 							<input
@@ -136,36 +135,24 @@ export function VoteChip({
 				)}
 			</AnimatePresence>
 
+			{/* Owner ruling 2026-09-01: just the box — no pill, no label, no
+			    count. Same grammar as the action-row icons: quiet glyph,
+			    40px target, gold only while the vote lands. The count lives
+			    on /votes, not the card. */}
 			<motion.button
 				type="button"
 				aria-label="Vote for this post"
 				onClick={onTap}
 				disabled={busy}
-				animate={boxOpen ? { scale: [1, 1.12, 1] } : { scale: 1 }}
+				animate={boxOpen ? { scale: [1, 1.15, 1] } : { scale: 1 }}
 				transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
-				className="flex cursor-pointer items-center gap-1.5 rounded-pill bg-raised px-3 py-1.5 font-sans text-[13px] font-semibold text-primary transition-colors hover:bg-chip disabled:opacity-60"
+				className={
+					boxOpen
+						? "pointer-events-auto flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill text-gold transition-colors disabled:opacity-60"
+						: "pointer-events-auto flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-gold/10 hover:text-gold disabled:opacity-60"
+				}
 			>
-				<span className="relative flex h-[18px] w-[18px] items-center justify-center overflow-visible text-gold">
-					<VoteBox open={boxOpen} ballotKey={ballotKey} size={18} />
-				</span>
-				{count > 0 && (
-					<span className="relative overflow-hidden tabular-nums">
-						<AnimatePresence mode="wait" initial={false}>
-							{/* The count rolls the way the like counter does. */}
-							<motion.span
-								key={count}
-								initial={{ opacity: 0, y: 8 }}
-								animate={{ opacity: 1, y: 0 }}
-								exit={{ opacity: 0, y: -8, transition: { duration: 0.1 } }}
-								transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-								className="block"
-							>
-								{formatCompact(count)}
-							</motion.span>
-						</AnimatePresence>
-					</span>
-				)}
-				<span>Vote</span>
+				<VoteBox open={boxOpen} ballotKey={ballotKey} size={23} />
 			</motion.button>
 		</div>
 	);

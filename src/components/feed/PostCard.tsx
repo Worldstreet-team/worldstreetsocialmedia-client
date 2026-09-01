@@ -44,6 +44,7 @@ import {
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { TimeAgo } from "@/components/ui/TimeAgo";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { userAtom } from "@/store/user.atom";
 import { bookmarksAtom } from "@/store/bookmarks.atom";
 import {
@@ -435,6 +436,12 @@ export const PostCard = memo(
         };
     }, [isMenuOpen]);
 
+    const router = useRouter();
+    // Double-tap detection on the card overlay: last tap stamp + the pending
+    // single-tap navigation it may cancel.
+    const lastTapRef = useRef(0);
+    const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
     const handleLike = useCallback(async () => {
         if (!currentUser) {
             toast("Please login to like posts", { type: "error" });
@@ -761,6 +768,26 @@ export const PostCard = memo(
             {/* ... Rest of the component remains the same ... */}
             <Link
                 href={`/post/${post.id}`}
+                onClick={(e) => {
+                    // Double-tap (or double-click) likes; a single tap still
+                    // opens the post after a 260ms beat — the price of telling
+                    // the two apart on one surface.
+                    e.preventDefault();
+                    const now = Date.now();
+                    if (now - lastTapRef.current < 300) {
+                        lastTapRef.current = 0;
+                        if (navTimerRef.current)
+                            clearTimeout(navTimerRef.current);
+                        navTimerRef.current = null;
+                        if (!isLiked) void handleLike();
+                        return;
+                    }
+                    lastTapRef.current = now;
+                    if (navTimerRef.current) clearTimeout(navTimerRef.current);
+                    navTimerRef.current = setTimeout(() => {
+                        router.push(`/post/${post.id}`);
+                    }, 260);
+                }}
                 className="absolute inset-0 z-0"
                 aria-label="View post"
             />
@@ -1507,25 +1534,61 @@ export const PostCard = memo(
                         bg-surface that the row muted itself — and active stays
                         fill. 03-icons: this row is the ONE place Phosphor is
                         used instead of Lucide, matching mobile. */}
-                    <div className="flex items-center justify-between text-muted mt-1.5 -mb-1.5 pointer-events-auto">
+                    <div
+                        // Empty stretches of this row belong to the card:
+                        // clicking between buttons opens the post instead of
+                        // dying on the container.
+                        onClick={() => router.push(`/post/${post.id}`)}
+                        className="flex cursor-pointer items-center justify-between text-muted mt-1.5 -mb-1.5 pointer-events-auto">
                         {/* Option B (owner pick): the four actions cluster left with
                             FIXED gaps — nothing stretches, so the rhythm holds at any
                             card width — and share + impressions ride the right edge
                             together as the "do something with this / how it did" pair. */}
                         <div className="flex min-w-0 items-center gap-1.5 -ml-2 sm:gap-7">
-                        <Link
-                            href={`/post/${post.id}`}
-                            onClick={(e) => e.stopPropagation()}
-                            aria-label="Reply"
-                            className="flex items-center gap-0.5 sm:gap-1 hover:text-primary transition-colors group cursor-pointer"
+                        <button
+                            type="button"
+                            aria-label={isBookmarked ? "Remove bookmark" : "Bookmark"}
+                            aria-pressed={isBookmarked}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleBookmark();
+                            }}
+                            className={clsx(
+                                "flex items-center transition-colors group cursor-pointer",
+                                isBookmarked ? "text-gold" : "hover:text-gold",
+                            )}
                         >
-                            <span className="flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-primary/10 transition group-active:scale-[0.98]">
-                                <ChatCircle size={23} weight="bold" />
+                            <span className="relative flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-gold/10 transition group-active:scale-[0.98]">
+                                <AnimatePresence>
+                                    {isBookmarked && (
+                                        <motion.span
+                                            key="bookmark-wash"
+                                            className="absolute inset-0 rounded-pill bg-gold/20"
+                                            initial={{ opacity: 0.7 }}
+                                            animate={{ opacity: 0 }}
+                                            exit={{ opacity: 0 }}
+                                            transition={{
+                                                duration: 0.32,
+                                                ease: [0.2, 0, 0, 1],
+                                            }}
+                                        />
+                                    )}
+                                </AnimatePresence>
+                                <motion.span
+                                    animate={{ scale: isBookmarked ? [0.98, 1] : 1 }}
+                                    transition={{
+                                        duration: 0.2,
+                                        ease: [0.2, 0, 0, 1],
+                                    }}
+                                    className="flex"
+                                >
+                                    <BookmarkSimple
+                                        size={23}
+                                        weight={isBookmarked ? "fill" : "bold"}
+                                    />
+                                </motion.span>
                             </span>
-                            <span className="text-[13.5px] font-medium font-sans tabular-nums sm:text-[14px]">
-                                {formatCount(shownReplies)}
-                            </span>
-                        </Link>
+                        </button>
                         <div className="relative">
                             <button
                                 type="button"
@@ -1688,50 +1751,19 @@ export const PostCard = memo(
                                 </AnimatePresence>
                             </span>
                         </button>
-                        <button
-                            type="button"
-                            aria-label={isBookmarked ? "Remove bookmark" : "Bookmark"}
-                            aria-pressed={isBookmarked}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleBookmark();
-                            }}
-                            className={clsx(
-                                "flex items-center transition-colors group cursor-pointer",
-                                isBookmarked ? "text-gold" : "hover:text-gold",
-                            )}
+                        <Link
+                            href={`/post/${post.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label="Reply"
+                            className="flex items-center gap-0.5 sm:gap-1 hover:text-primary transition-colors group cursor-pointer"
                         >
-                            <span className="relative flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-gold/10 transition group-active:scale-[0.98]">
-                                <AnimatePresence>
-                                    {isBookmarked && (
-                                        <motion.span
-                                            key="bookmark-wash"
-                                            className="absolute inset-0 rounded-pill bg-gold/20"
-                                            initial={{ opacity: 0.7 }}
-                                            animate={{ opacity: 0 }}
-                                            exit={{ opacity: 0 }}
-                                            transition={{
-                                                duration: 0.32,
-                                                ease: [0.2, 0, 0, 1],
-                                            }}
-                                        />
-                                    )}
-                                </AnimatePresence>
-                                <motion.span
-                                    animate={{ scale: isBookmarked ? [0.98, 1] : 1 }}
-                                    transition={{
-                                        duration: 0.2,
-                                        ease: [0.2, 0, 0, 1],
-                                    }}
-                                    className="flex"
-                                >
-                                    <BookmarkSimple
-                                        size={23}
-                                        weight={isBookmarked ? "fill" : "bold"}
-                                    />
-                                </motion.span>
+                            <span className="flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-primary/10 transition group-active:scale-[0.98]">
+                                <ChatCircle size={23} weight="bold" />
                             </span>
-                        </button>
+                            <span className="text-[13.5px] font-medium font-sans tabular-nums sm:text-[14px]">
+                                {formatCount(shownReplies)}
+                            </span>
+                        </Link>
                         </div>
 
                         <div className="flex items-center gap-0.5 sm:gap-2">
