@@ -443,6 +443,18 @@ export const PostCard = memo(
     // single-tap navigation it may cancel.
     const lastTapRef = useRef(0);
     const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // useRouter() hands back an app-wide singleton, so a timer that survives
+    // its card navigates the whole app exactly as a live component would.
+    // React will not cancel it for us.
+    useEffect(
+        () => () => {
+            if (navTimerRef.current) {
+                clearTimeout(navTimerRef.current);
+                navTimerRef.current = null;
+            }
+        },
+        [],
+    );
 
     const handleLike = useCallback(async () => {
         if (!currentUser) {
@@ -797,7 +809,19 @@ export const PostCard = memo(
                     }
                     lastTapRef.current = now;
                     if (navTimerRef.current) clearTimeout(navTimerRef.current);
+                    // Remember WHERE this tap happened. A deferred navigation
+                    // that fires after the reader has already moved on is how
+                    // "I opened a page and got dragged back" happened: the
+                    // timer outlived its card and pushed anyway (found
+                    // 2026-09-01). Two guards — this one, and the unmount
+                    // cleanup below.
+                    const armedAt =
+                        typeof window === "undefined"
+                            ? ""
+                            : window.location.pathname;
                     navTimerRef.current = setTimeout(() => {
+                        navTimerRef.current = null;
+                        if (window.location.pathname !== armedAt) return;
                         router.push(`/post/${post.id}`);
                     }, 260);
                 }}
