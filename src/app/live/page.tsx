@@ -566,8 +566,15 @@ function VerticalSurface() {
 		for (const [key, el] of videoEls.current) {
 			if (key === activeSlideKey) {
 				// A rejected play() is normal (autoplay policy, or the element
-				// was torn down mid-promise) and must not surface.
-				el.play().catch(() => {});
+				// was torn down mid-promise) and must not surface — but a
+				// swipe is NOT a user activation, so once the viewer has
+				// unmuted, iOS refuses this and the slide freezes on a still
+				// frame. Retry muted; they can unmute with a tap
+				// (iOS audit 2026-09-01).
+				el.play().catch(() => {
+					el.muted = true;
+					el.play().catch(() => {});
+				});
 			} else if (!el.paused) {
 				el.pause();
 				el.currentTime = 0;

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useImageZoom } from "@/hooks/useImageZoom";
 import { OverlayHeader, useOverlayDismiss } from "@/components/ui/Overlay";
 
 export interface MediaItem {
@@ -32,6 +33,7 @@ export default function MediaModal({
 	initialIndex = 0,
 }: MediaModalProps) {
 	const [currentIndex, setCurrentIndex] = useState(initialIndex);
+	const zoomApi = useImageZoom();
 
 	useOverlayDismiss(isOpen, onClose);
 
@@ -117,10 +119,20 @@ export default function MediaModal({
 								key={`image-${currentIndex}`}
 								src={currentItem.url}
 								alt={`Media ${currentIndex + 1}`}
-								initial={{ opacity: 0, scale: 0.98 }}
-								animate={{ opacity: 1, scale: 1 }}
-								exit={{ opacity: 0, scale: 0.98 }}
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
+								exit={{ opacity: 0 }}
 								transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+								onTouchStart={zoomApi.handlers.onTouchStart}
+								onTouchMove={zoomApi.handlers.onTouchMove}
+								onTouchEnd={zoomApi.handlers.onTouchEnd}
+								style={{
+									transform: `translate(${zoomApi.zoom.x}px, ${zoomApi.zoom.y}px) scale(${zoomApi.zoom.scale})`,
+									transition: zoomApi.zoomed
+										? "none"
+										: "transform 160ms var(--ws-ease)",
+									touchAction: zoomApi.zoomed ? "none" : "pan-y",
+								}}
 								className="max-h-full max-w-full object-contain rounded-lg select-none"
 								draggable={false}
 							/>
@@ -133,6 +145,21 @@ export default function MediaModal({
 								   menu offers "Save video as" and routes around us. */
 								controlsList="nodownload"
 								autoPlay
+								/* iOS refuses autoplay outright without `muted`, and
+								   yanks any playing video into the native fullscreen
+								   player without `playsInline` — this element had
+								   neither, so every DM video was dead on iPhone
+								   (iOS audit 2026-09-01). */
+								muted
+								playsInline
+								ref={(el) => {
+									// The muted ATTRIBUTE, which React omits and
+									// iOS's autoplay gate requires.
+									if (el) {
+										el.defaultMuted = true;
+										el.setAttribute("muted", "");
+									}
+								}}
 								initial={{ opacity: 0, scale: 0.98 }}
 								animate={{ opacity: 1, scale: 1 }}
 								exit={{ opacity: 0, scale: 0.98 }}

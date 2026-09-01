@@ -73,6 +73,9 @@ export function VideoPlayer({
 	// a choice, motion is free. Muted-by-default is also what lets the
 	// browser allow the autoplay at all.
 	const [muted, setMuted] = useState(true);
+	// Autoplay refused by the platform (iOS Low Power Mode, an in-app
+	// WKWebView). Not an error — a state that needs a visible affordance.
+	const [autoplayBlocked, setAutoplayBlocked] = useState(false);
 	const [duration, setDuration] = useState(0);
 	/**
 	 * The clip's own aspect ratio, once the metadata says what it is.
@@ -144,6 +147,70 @@ export function VideoPlayer({
 	const resetZoom = useCallback(() => {
 		setZoom(1);
 		setPan({ x: 0, y: 0 });
+	}, []);
+
+	/* ── Touch-event pinch (the iOS-reliable path) ──────────────────────────
+	 * The Pointer Events pinch below is correct on desktop and Android but
+	 * frequently never completes on iOS, which cancels the second pointer as
+	 * soon as its own recogniser engages — so the app pinch failed while
+	 * `touch-action: pan-y` had already suppressed the native one, leaving no
+	 * zoom at all (iOS audit 2026-09-01). Both paths write the same state.
+	 */
+	const touchPinch = useRef<{ dist: number; zoom: number } | null>(null);
+	const touchPan = useRef<{
+		x: number;
+		y: number;
+		ox: number;
+		oy: number;
+	} | null>(null);
+
+	const onTouchStartZoom = useCallback(
+		(e: React.TouchEvent) => {
+			if (e.touches.length === 2) {
+				const [a, b] = [e.touches[0], e.touches[1]];
+				touchPinch.current = {
+					dist: Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY),
+					zoom,
+				};
+				touchPan.current = null;
+			} else if (e.touches.length === 1 && zoom > 1.01) {
+				touchPan.current = {
+					x: e.touches[0].clientX,
+					y: e.touches[0].clientY,
+					ox: pan.x,
+					oy: pan.y,
+				};
+			}
+		},
+		[zoom, pan.x, pan.y],
+	);
+
+	const onTouchMoveZoom = useCallback(
+		(e: React.TouchEvent) => {
+			if (e.touches.length === 2 && touchPinch.current) {
+				const [a, b] = [e.touches[0], e.touches[1]];
+				const dist = Math.hypot(
+					b.clientX - a.clientX,
+					b.clientY - a.clientY,
+				);
+				applyZoom(touchPinch.current.zoom * (dist / touchPinch.current.dist));
+			} else if (e.touches.length === 1 && touchPan.current) {
+				const p = touchPan.current;
+				setPan(
+					clampPan(
+						p.ox + (e.touches[0].clientX - p.x),
+						p.oy + (e.touches[0].clientY - p.y),
+						zoom,
+					),
+				);
+			}
+		},
+		[applyZoom, clampPan, zoom],
+	);
+
+	const onTouchEndZoom = useCallback((e: React.TouchEvent) => {
+		if (e.touches.length < 2) touchPinch.current = null;
+		if (e.touches.length === 0) touchPan.current = null;
 	}, []);
 
 	// Non-passive, because a trackpad pinch arrives as ctrl+wheel and the
@@ -228,14 +295,40 @@ export function VideoPlayer({
 	const toggle = useCallback(() => {
 		const v = videoRef.current;
 		if (!v) return;
-		if (v.paused) void v.play().catch(() => {});
-		else v.pause();
+		if (v.paused) {
+			// A tap IS a user activation, so this is the one call iOS will
+			// honour — but if the clip is unmuted and the platform still
+			// refuses, fall back to muted and try once more (the pattern
+			// StoryViewer already proved).
+			void v
+				.play()
+				.then(() => setAutoplayBlocked(false))
+				.catch(() => {
+					v.muted = true;
+					setMuted(true);
+					void v
+						.play()
+						.then(() => setAutoplayBlocked(false))
+						.catch(() => setAutoplayBlocked(true));
+				});
+		} else v.pause();
 	}, []);
 
 	// Autoplay on view, muted; leaving the viewport pauses. The observer only
 	// ever starts a MUTED clip — if the person unmuted and scrolled away, the
 	// pause keeps their place but the return replay stays silent until they
 	// choose sound again. 60% visible so half-cards don't all talk at once.
+	// React sets the muted PROPERTY but never the ATTRIBUTE
+	// (facebook/react#10389, open since 2016) — and iOS's autoplay gate reads
+	// the attribute. Without this, `muted autoPlay playsInline` still fails on
+	// iPhone (iOS audit 2026-09-01).
+	useEffect(() => {
+		const v = videoRef.current;
+		if (!v) return;
+		v.defaultMuted = true;
+		v.setAttribute("muted", "");
+	}, []);
+
 	useEffect(() => {
 		const el = wrapRef.current;
 		const v = videoRef.current;
@@ -246,13 +339,29 @@ export function VideoPlayer({
 					if (v.paused) {
 						v.muted = true;
 						setMuted(true);
-						void v.play().catch(() => {});
+						void v
+							.play()
+							.then(() => setAutoplayBlocked(false))
+							.catch((err: unknown) => {
+								// AbortError = a race (pause, src swap, unmount):
+								// NOT a policy block, and showing a play button
+								// for it would be a lie. NotAllowedError is the
+								// real one — Low Power Mode or an in-app
+								// WKWebView, neither overridable from here.
+								if ((err as { name?: string })?.name === "AbortError")
+									return;
+								setAutoplayBlocked(true);
+							});
 					}
 				} else if (!v.paused) {
 					v.pause();
 				}
 			},
-			{ threshold: 0.6 },
+			// 0.6 was structurally unreachable on iOS: the observed element is a
+			// descendant of a `content-visibility: auto` card, whose subtree has
+			// no layout boxes while skipped. A low threshold plus a rootMargin
+			// fires as the card becomes relevant instead of long after.
+			{ threshold: 0.25, rootMargin: "200px 0px" },
 		);
 		io.observe(el);
 		return () => io.disconnect();
@@ -270,8 +379,23 @@ export function VideoPlayer({
 	const toggleFull = useCallback(() => {
 		const el = wrapRef.current;
 		if (!el) return;
-		if (document.fullscreenElement) void document.exitFullscreen();
-		else void el.requestFullscreen?.().catch(() => {});
+		if (document.fullscreenElement) {
+			void document.exitFullscreen();
+			return;
+		}
+		// iPhone Safari implements NO Element.requestFullscreen — only
+		// HTMLVideoElement.webkitEnterFullscreen. The optional chain made this
+		// button a silent no-op on every iPhone, so a reader who also could
+		// not pinch had no way to see the video bigger (iOS audit
+		// 2026-09-01).
+		const v = videoRef.current as
+			| (HTMLVideoElement & { webkitEnterFullscreen?: () => void })
+			| null;
+		if (typeof el.requestFullscreen === "function") {
+			void el.requestFullscreen().catch(() => {});
+		} else if (v && typeof v.webkitEnterFullscreen === "function") {
+			v.webkitEnterFullscreen();
+		}
 	}, []);
 
 	useEffect(() => {
@@ -346,6 +470,14 @@ export function VideoPlayer({
 				src={src}
 				poster={poster}
 				playsInline
+				// autoPlay + muted + playsInline is the canonical iOS trio: Safari
+				// starts it when visible and pauses it off-screen on its own. The
+				// IntersectionObserver below stays for OUR pause/qualify logic,
+				// but autoplay no longer DEPENDS on it — the card sits inside a
+				// `content-visibility: auto` subtree whose descendants have no
+				// layout boxes while skipped, so the observer could never fire on
+				// iOS until the browser un-skipped it (audit 2026-09-01).
+				autoPlay
 				preload="metadata"
 				muted={muted}
 				className="h-full w-full object-contain"
@@ -359,6 +491,13 @@ export function VideoPlayer({
 					touchAction: zoomed ? "none" : "pan-y",
 					cursor: zoomed ? "grab" : undefined,
 				}}
+				// iOS drops the second pointer as soon as its own gesture
+				// recogniser engages, so the Pointer Events pinch never fires
+				// there. Touch events are reliable on iOS; both paths feed the
+				// same zoom state (iOS audit 2026-09-01).
+				onTouchStart={onTouchStartZoom}
+				onTouchMove={onTouchMoveZoom}
+				onTouchEnd={onTouchEndZoom}
 				onPointerDown={onPointerDown}
 				onPointerMove={onPointerMove}
 				onPointerUp={endPointer}
@@ -460,7 +599,16 @@ export function VideoPlayer({
 				</span>
 			)}
 
-			{/* centre affordance: only while paused, and never over the bar */}
+			{/* centre affordance: only while paused, and never over the bar.
+			    When the platform REFUSED autoplay it reads as a real
+			    invitation rather than a passive glyph. */}
+			{!playing && autoplayBlocked && (
+				<span className="pointer-events-none absolute inset-x-0 bottom-14 z-10 flex justify-center">
+					<span className="rounded-pill bg-black/65 px-3 py-1 font-sans text-[12px] font-semibold text-white">
+						Tap to play
+					</span>
+				</span>
+			)}
 			{!playing && (
 				<button
 					type="button"

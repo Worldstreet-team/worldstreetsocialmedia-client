@@ -328,14 +328,18 @@ export default function BmPage() {
 			//   it takes you back".
 			// - null state strips the App Router's tree from the entry, and
 			//   the next back/forward restores the wrong page.
-			syncUrlIfStillOn("/bm", "/bm");
+			// Capture the live pathname: a literal "/bm" can never match
+			// /es/bm, which silently disabled this under every locale prefix.
+			syncUrlIfStillOn(window.location.pathname, window.location.pathname);
 		}
 	}, [dealParam, threads]);
 
 	const closeComposer = () => {
 		setComposerOpen(false);
 		if (window.location.search.includes("book=")) {
-			syncUrlIfStillOn("/bm", "/bm");
+			// Capture the live pathname: a literal "/bm" can never match
+			// /es/bm, which silently disabled this under every locale prefix.
+			syncUrlIfStillOn(window.location.pathname, window.location.pathname);
 		}
 	};
 
