@@ -21,11 +21,33 @@ interface ToastProps {
  * Tone -> token: success = status/success, error = status/danger,
  * warning = status/warning, info = text/muted (the spec's neutral bell).
  */
+/**
+ * The glyph sits in a tone-tinted puck rather than floating bare: on a
+ * translucent surface a lone 16px icon reads as debris, while a small
+ * filled disc gives the message an anchor and carries the tone without
+ * tinting the whole pill.
+ */
 const icons = {
-	success: <Check className="w-4 h-4 text-success" />,
-	error: <X className="w-4 h-4 text-danger" />,
-	warning: <AlertTriangle className="w-4 h-4 text-warning" />,
-	info: <Bell className="w-4 h-4 text-muted" />,
+	success: (
+		<span className="flex h-6 w-6 items-center justify-center rounded-pill bg-success/15">
+			<Check className="h-3.5 w-3.5 text-success" />
+		</span>
+	),
+	error: (
+		<span className="flex h-6 w-6 items-center justify-center rounded-pill bg-danger/15">
+			<X className="h-3.5 w-3.5 text-danger" />
+		</span>
+	),
+	warning: (
+		<span className="flex h-6 w-6 items-center justify-center rounded-pill bg-warning/15">
+			<AlertTriangle className="h-3.5 w-3.5 text-warning" />
+		</span>
+	),
+	info: (
+		<span className="flex h-6 w-6 items-center justify-center rounded-pill bg-primary/10">
+			<Bell className="h-3.5 w-3.5 text-muted" />
+		</span>
+	),
 };
 
 export const ToastItem = ({ toast, removeToast }: ToastProps) => {
@@ -59,9 +81,15 @@ export const ToastItem = ({ toast, removeToast }: ToastProps) => {
 			className={clsx(
 				// min-w-0 on phones (the container stretches it full-width);
 				// the 280px floor only applies once there's room for it.
-				"flex items-center gap-2.5 px-3.5 py-3 w-full sm:w-auto sm:min-w-[280px] max-w-full sm:max-w-md rounded-lg bg-raised border border-hairline shadow-nav pointer-events-auto cursor-pointer",
+				// Adaptive frost (glass-frost follows the theme) with the blur
+				// at the usage site, per the one-blur-per-stack rule. No
+				// border: the frost IS the surface; shadow-nav keeps it lifted
+				// off whatever it floats over.
+				"flex items-center gap-3 px-3.5 py-3 w-full sm:w-auto sm:min-w-[280px] max-w-full sm:max-w-md rounded-xl glass-frost backdrop-blur-xl backdrop-saturate-150 shadow-nav pointer-events-auto cursor-pointer",
 				"transition-[opacity,transform] duration-[var(--ws-motion-base)] ease-ws",
-				isVisible ? "opacity-100 translate-x-0 translate-y-0" : clsx("opacity-0", offscreen),
+				isVisible
+					? "opacity-100 translate-x-0 translate-y-0 scale-100"
+					: clsx("opacity-0 scale-[0.98]", offscreen),
 			)}
 			onClick={handleDismiss}
 			role={isDanger ? "alert" : "status"}
