@@ -104,7 +104,19 @@ export const handleSignOut = async (
  */
 export function mainScroller(): HTMLElement | (Window & typeof globalThis) {
 	if (typeof document === "undefined") return window;
-	return document.getElementById("ws-main-scroll") ?? window;
+	// getElementById returns the FIRST match — and a hydration hiccup can
+	// strand a hidden streamed copy of the page in the DOM, whose scroller
+	// has zero height. Talking to that ghost is why scroll save/restore and
+	// back-to-top silently did nothing (found 2026-09-01: two
+	// #ws-main-scroll nodes, the first invisible). Prefer the one that can
+	// actually scroll.
+	const candidates = document.querySelectorAll<HTMLElement>(
+		"#ws-main-scroll",
+	);
+	for (const el of candidates) {
+		if (el.clientHeight > 0) return el;
+	}
+	return candidates[0] ?? window;
 }
 
 /** Current scroll offset of the main scroller, window or element alike. */

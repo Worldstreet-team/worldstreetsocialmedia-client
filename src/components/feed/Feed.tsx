@@ -151,6 +151,7 @@ export default function Feed({
 	// home carries no initialData, but the timeline is still sitting in
 	// feedAtom — opening with skeletons over posts we already hold was the
 	// single biggest "the app reloads itself" feeling (audit 2026-09-01).
+	const lastScrollRef = useRef(0);
 	const [loading, setLoading] = useState(
 		!initialData?.posts?.length && feedState.posts.length === 0,
 	);
@@ -387,14 +388,31 @@ export default function Feed({
 			window.history.scrollRestoration = "manual";
 		}
 
+		// Record the position AS the reader scrolls, not at unmount: in App
+		// Router transitions the cleanup can run after the scroller has
+		// already been swapped or reset, so the unmount read said 0 and the
+		// feed "forgot where you were" on every open-a-post-and-return
+		// (owner report 2026-09-01). A passive listener into a ref costs
+		// nothing per frame; unmount just persists the last honest value.
+		const scroller = mainScroller();
+		const onScroll = () => {
+			lastScrollRef.current = mainScrollTop();
+		};
+		scroller.addEventListener?.("scroll", onScroll, { passive: true });
+
 		// Cached posts only stand in for a fetch if they are THIS tab's posts.
 		if (feedState.posts.length > 0 && feedState.mode === tab) {
 			setLoading(false);
-			// Restore scroll position with a slight delay to ensure DOM is ready
+			// Restore once the DOM has real height — a single early attempt
+			// landed short while images were still reserving space.
 			if (feedState.scrollPosition > 0) {
+				const target = feedState.scrollPosition;
+				setTimeout(() => mainScroller().scrollTo(0, target), 10);
 				setTimeout(() => {
-					mainScroller().scrollTo(0, feedState.scrollPosition);
-				}, 10);
+					if (Math.abs(mainScrollTop() - target) > 40) {
+						mainScroller().scrollTo(0, target);
+					}
+				}, 150);
 			}
 		} else if (initialRef.current && tab === "foryou") {
 			// The server already fetched page one and it rendered in the
@@ -440,11 +458,16 @@ export default function Feed({
 			}
 		}
 
-		// Save scroll position on unmount
+		// Save scroll position on unmount — from the ref the listener kept
+		// honest, never from a live read of a possibly-reset scroller.
 		return () => {
+			scroller.removeEventListener?.("scroll", onScroll);
 			if (typeof window !== "undefined") {
 				window.history.scrollRestoration = "auto";
-				setFeedState((prev) => ({ ...prev, scrollPosition: mainScrollTop() }));
+				setFeedState((prev) => ({
+					...prev,
+					scrollPosition: lastScrollRef.current,
+				}));
 			}
 		};
 	}, []);
