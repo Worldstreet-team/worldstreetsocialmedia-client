@@ -1,22 +1,21 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { VoteBox } from "@/components/votes/VoteBox";
 import { useCallback, useRef, useState } from "react";
-import { formatCompact } from "@/lib/utils";
 import { useToast } from "@/components/ui/Toast/ToastContext";
+import { VoteBox } from "@/components/votes/VoteBox";
+import { formatCompact } from "@/lib/utils";
 import { castVote, getVoteCycle, markFreeVoteUsed } from "@/lib/votes";
 
 /**
- * The Weekly Vote chip — its own right-aligned row directly ABOVE the post
- * media (owner ruling: same corner, off the artwork).
+ * The Weekly Vote control: the hinged ballot box and the post's total —
+ * nothing else.
  *
- * The box is Lucide's Package / PackageOpen pair (a properly drawn icon,
- * not a hand-rolled path): it springs open when a vote lands and falls
- * shut a beat later. While the voter still holds their free weekly vote,
- * one tap casts it. After that, a tap slides out the paid strip where they
- * TYPE how many votes they want — the price updates live at 5¢ each — and
- * cast in one go.
+ * Owner ruling 2026-09-01: no quantity input, no Cast button, no price on
+ * the card. A tap casts one vote (the free weekly one first, then the
+ * per-vote charge) and the box swings open as it lands. The number beside
+ * it is the post's running total, which is the only thing this control
+ * exists to say on a feed card.
  */
 export function VoteChip({
 	postId,
@@ -30,25 +29,25 @@ export function VoteChip({
 	const { toast } = useToast();
 	const [count, setCount] = useState(votes);
 	const [busy, setBusy] = useState(false);
-	const [paidOpen, setPaidOpen] = useState(false);
-	const [qty, setQty] = useState("1");
 	const [boxOpen, setBoxOpen] = useState(false);
 	const [ballotKey, setBallotKey] = useState(0);
-	const inputRef = useRef<HTMLInputElement>(null);
 	const shutTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-	const quantity = Math.min(1000, Math.max(0, Math.round(Number(qty) || 0)));
-
-	const cast = useCallback(
-		async (n: number) => {
-			if (busy || n < 1) return;
+	const onTap = useCallback(
+		async (e: React.MouseEvent) => {
+			e.stopPropagation();
+			e.preventDefault();
+			if (busy) return;
+			if (isMine) {
+				toast("You can't vote for your own post", { type: "error" });
+				return;
+			}
 			setBusy(true);
-			const res: any = await castVote(postId, n);
+			const res: any = await castVote(postId, 1);
 			setBusy(false);
 			if (res.success) {
 				const d: any = res.data;
-				setPaidOpen(false);
-				setCount(d?.votes ?? count + n);
+				setCount(d?.votes ?? count + 1);
 				setBoxOpen(true);
 				setBallotKey((k) => k + 1);
 				if (shutTimer.current) clearTimeout(shutTimer.current);
@@ -57,86 +56,19 @@ export function VoteChip({
 					markFreeVoteUsed();
 					toast("Your free vote this week is in");
 				} else {
-					toast(`${n} vote${n === 1 ? "" : "s"} counted`);
+					toast("Vote counted");
 				}
+				// Keeps the cached cycle honest for the next chip that asks.
+				void getVoteCycle();
 			} else {
 				toast(res.message ?? "That vote didn't count", { type: "error" });
 			}
 		},
-		[busy, postId, count, toast],
-	);
-
-	const onTap = useCallback(
-		async (e: React.MouseEvent) => {
-			e.stopPropagation();
-			e.preventDefault();
-			if (isMine) {
-				toast("You can't vote for your own post", { type: "error" });
-				return;
-			}
-			if (paidOpen) {
-				setPaidOpen(false);
-				return;
-			}
-			const cycle = await getVoteCycle();
-			if (cycle?.freeAvailable) {
-				void cast(1);
-			} else {
-				setQty("1");
-				setPaidOpen(true);
-				setTimeout(() => inputRef.current?.select(), 60);
-			}
-		},
-		[isMine, paidOpen, cast, toast],
+		[busy, isMine, postId, count, toast],
 	);
 
 	return (
-		<div className="pointer-events-none relative z-10 mb-0.5 flex items-center justify-end gap-1.5">
-			<AnimatePresence>
-				{paidOpen && (
-					<motion.div
-						initial={{ opacity: 0, x: 14 }}
-						animate={{ opacity: 1, x: 0 }}
-						exit={{ opacity: 0, x: 14, transition: { duration: 0.12 } }}
-						transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-						className="pointer-events-auto flex items-center gap-1.5"
-						onClick={(e) => e.stopPropagation()}
-					>
-						<label className="flex h-9 items-center gap-1 rounded-pill bg-raised px-3 font-sans text-[13px] text-primary focus-within:bg-chip transition-colors">
-							<input
-								ref={inputRef}
-								type="text"
-								inputMode="numeric"
-								value={qty}
-								onChange={(e) =>
-									setQty(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))
-								}
-								onKeyDown={(e) => {
-									if (e.key === "Enter" && quantity > 0)
-										void cast(quantity);
-								}}
-								aria-label="Number of votes"
-								className="w-12 bg-transparent text-center tabular-nums outline-none placeholder:text-subtle"
-								placeholder="10"
-							/>
-							<span className="text-subtle">votes</span>
-						</label>
-						<button
-							type="button"
-							disabled={busy || quantity < 1}
-							onClick={() => void cast(quantity)}
-							className="h-9 cursor-pointer rounded-pill bg-primary px-3.5 font-sans text-[12.5px] font-semibold text-page transition-colors hover:opacity-90 disabled:opacity-50"
-						>
-							{busy ? "Casting…" : "Cast"}
-						</button>
-					</motion.div>
-				)}
-			</AnimatePresence>
-
-			{/* Owner ruling 2026-09-01: just the box — no pill, no label, no
-			    count. Same grammar as the action-row icons: quiet glyph,
-			    40px target, gold only while the vote lands. The count lives
-			    on /votes, not the card. */}
+		<div className="pointer-events-none relative z-10 mb-0.5 flex items-center justify-end">
 			<motion.button
 				type="button"
 				aria-label="Vote for this post"
