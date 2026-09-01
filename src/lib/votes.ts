@@ -58,7 +58,14 @@ export async function castVote(postId: string, quantity: number) {
 	return postJsonDirect(`/api/votes/${postId}`, { quantity });
 }
 
+let boardCache: { key: string; data: any; at: number } | null = null;
+
 export async function getVoteLeaderboard(cycle?: string) {
+	// 60s memory: the /votes stage and the sidebar leaders share one read,
+	// and a revisit paints instantly instead of skeleton-refetching.
+	const key = cycle ?? "current";
+	if (boardCache && boardCache.key === key && Date.now() - boardCache.at < 60_000)
+		return boardCache.data;
 	try {
 		const token = await (window as any).Clerk?.session?.getToken?.();
 		if (!token) return null;
@@ -67,7 +74,9 @@ export async function getVoteLeaderboard(cycle?: string) {
 			headers: { Authorization: `Bearer ${token}` },
 		});
 		if (!res.ok) return null;
-		return await res.json();
+		const data = await res.json();
+		boardCache = { key, data, at: Date.now() };
+		return data;
 	} catch {
 		return null;
 	}

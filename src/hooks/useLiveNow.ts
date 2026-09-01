@@ -80,15 +80,37 @@ export function useLiveNow(pollMs = 20_000) {
 		subscribers.add(onChange);
 		// Render what is already known; only fetch if nobody has yet.
 		if (!sharedLoaded) void loadLive();
-		if (!pollTimer) pollTimer = setInterval(() => void loadLive(), pollMs);
-		return () => {
-			subscribers.delete(onChange);
-			// Last one out turns off the poll — a backgrounded surface should
-			// not keep the app talking to the gateway.
-			if (subscribers.size === 0 && pollTimer) {
+		// The poll respects the tab: hidden tabs stop asking (this ran on a
+		// 20s clock app-wide, for every user, on every page — the single
+		// heaviest poll in the audit 2026-09-01), and returning refetches
+		// once so the rail is honest again immediately. The Ably `live`
+		// channel below stays subscribed either way, so a broadcast starting
+		// mid-hide still lands the moment it matters.
+		const startPoll = () => {
+			if (!pollTimer)
+				pollTimer = setInterval(() => void loadLive(), pollMs);
+		};
+		const stopPoll = () => {
+			if (pollTimer) {
 				clearInterval(pollTimer);
 				pollTimer = null;
 			}
+		};
+		const onVisibility = () => {
+			if (document.visibilityState === "hidden") stopPoll();
+			else {
+				void loadLive();
+				startPoll();
+			}
+		};
+		if (document.visibilityState !== "hidden") startPoll();
+		document.addEventListener("visibilitychange", onVisibility);
+		return () => {
+			subscribers.delete(onChange);
+			document.removeEventListener("visibilitychange", onVisibility);
+			// Last one out turns off the poll — a backgrounded surface should
+			// not keep the app talking to the gateway.
+			if (subscribers.size === 0) stopPoll();
 		};
 	}, [pollMs]);
 

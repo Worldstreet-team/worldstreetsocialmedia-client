@@ -664,7 +664,15 @@ function VerticalSurface() {
 		// this the button was simply inert on every live broadcast.
 		const target = slide.authorId ?? slide.username;
 		if (!target) return;
-		setFollowedIds((prev) => (prev.includes(target) ? prev : [...prev, target]));
+		// followingIdsAtom (and the session follow store) key on profile
+		// _id everywhere else — a username entry can never match and only
+		// pollutes both. Without a resolved id, the button still works, it
+		// just can't feed the shared state.
+		const keyable = Boolean(slide.authorId);
+		if (keyable)
+			setFollowedIds((prev) =>
+				prev.includes(target) ? prev : [...prev, target],
+			);
 		const res = await followUserDirect(target);
 		if (!res.success) {
 			setFollowedIds((prev) => prev.filter((id) => id !== target));

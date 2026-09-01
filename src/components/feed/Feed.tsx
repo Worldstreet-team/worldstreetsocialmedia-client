@@ -147,7 +147,13 @@ export default function Feed({
 	// doesn't re-translate what an earlier page already resolved.
 	const translationsRef = useRef(translations);
 	translationsRef.current = translations;
-	const [loading, setLoading] = useState(!initialData?.posts?.length);
+	// Seeded from the atom as well as SSR data: a soft navigation back to
+	// home carries no initialData, but the timeline is still sitting in
+	// feedAtom — opening with skeletons over posts we already hold was the
+	// single biggest "the app reloads itself" feeling (audit 2026-09-01).
+	const [loading, setLoading] = useState(
+		!initialData?.posts?.length && feedState.posts.length === 0,
+	);
 	// New posts announce themselves, they don't jump in: yanking the timeline
 	// under someone mid-read is worse than letting them choose when to see
 	// them. Held as the actual posts rather than a count so the pill can show

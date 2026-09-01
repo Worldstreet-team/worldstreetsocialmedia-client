@@ -209,7 +209,11 @@ export default function BmPage() {
 	useEffect(() => {
 		void loadThreads();
 		// Fallback cadence only — bm events refresh instantly below.
-		const t = setInterval(() => void loadThreads(), 60_000);
+		const t = setInterval(() => {
+			// The `bm` user event is the fast path; this is the dropped-
+			// socket floor (audit 2026-09-01).
+			if (document.visibilityState !== "hidden") void loadThreads();
+		}, 5 * 60_000);
 		return () => clearInterval(t);
 	}, [loadThreads]);
 
@@ -247,7 +251,9 @@ export default function BmPage() {
 	useEffect(() => {
 		if (pane !== "requests") return;
 		void loadRequests();
-		const t = setInterval(() => void loadRequests(), 30_000);
+		const t = setInterval(() => {
+			if (document.visibilityState !== "hidden") void loadRequests();
+		}, 5 * 60_000);
 		return () => clearInterval(t);
 	}, [pane, loadRequests]);
 	// The tab badge must be honest before the tab is ever opened.
@@ -337,7 +343,10 @@ export default function BmPage() {
 		if (!activeId) return;
 		void loadMessages(activeId);
 		// Fallback only; the bm event above is the fast path.
-		const t = setInterval(() => void loadMessages(activeId), 20_000);
+		const t = setInterval(() => {
+			if (document.visibilityState !== "hidden")
+				void loadMessages(activeId);
+		}, 2 * 60_000);
 		return () => clearInterval(t);
 	}, [activeId, loadMessages]);
 

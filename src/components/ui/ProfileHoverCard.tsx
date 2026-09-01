@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { effectiveFollowing } from "@/lib/engagementStore";
 import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -131,7 +132,7 @@ export function ProfileHoverCard({
 			const data = await fetchProfile(username);
 			if (!data) return;
 			setProfile(data);
-			setFollowing(Boolean(data.isFollowing));
+			setFollowing(effectiveFollowing(String((data as any)._id ?? ""), data.isFollowing));
 			place();
 			setOpen(true);
 		}, OPEN_DELAY);
@@ -155,6 +156,21 @@ export function ProfileHoverCard({
 		e.stopPropagation();
 		if (!profile || busy) return;
 		setBusy(true);
+		// The card could only ever follow; tapping "Aligned" now unaligns.
+		if (following) {
+			setFollowing(false);
+			const res = await unfollowUserDirect(profile._id);
+			if (res.success) {
+				patchCachedProfile(profile.username, { isFollowing: false });
+				setFollowedIds((prev: string[]) =>
+					prev.filter((id) => id !== profile._id),
+				);
+			} else {
+				setFollowing(true);
+			}
+			setBusy(false);
+			return;
+		}
 		setFollowing(true);
 		const res = await followUserDirect(profile._id);
 		if (res.success) {

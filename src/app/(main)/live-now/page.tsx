@@ -34,7 +34,9 @@ export default function LiveNowPage() {
 			setLoading(false);
 		};
 		void load();
-		const poll = setInterval(load, 15_000);
+		const poll = setInterval(() => {
+			if (document.visibilityState !== "hidden") load();
+		}, 20_000);
 		return () => {
 			cancelled = true;
 			clearInterval(poll);

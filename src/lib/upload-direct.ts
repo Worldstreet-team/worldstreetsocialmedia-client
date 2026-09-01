@@ -1,6 +1,7 @@
 "use client";
 
 import { BACKEND_URL } from "@/const";
+import { applyMyFollowState } from "@/lib/engagementStore";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || BACKEND_URL;
 
@@ -87,7 +88,13 @@ export async function postJsonDirect(path: string, body?: unknown) {
  * dies with the deployment, the rollback branch reads the 404 as failure).
  * Same shape as the actions so call sites swap one identifier.
  */
-export const followUserDirect = (targetUserId: string) =>
-	postJsonDirect(`/api/users/${targetUserId}/follow`);
-export const unfollowUserDirect = (targetUserId: string) =>
-	postJsonDirect(`/api/users/${targetUserId}/unfollow`);
+export const followUserDirect = async (targetUserId: string) => {
+	const res = await postJsonDirect(`/api/users/${targetUserId}/follow`);
+	if (res.success) applyMyFollowState(targetUserId, true);
+	return res;
+};
+export const unfollowUserDirect = async (targetUserId: string) => {
+	const res = await postJsonDirect(`/api/users/${targetUserId}/unfollow`);
+	if (res.success) applyMyFollowState(targetUserId, false);
+	return res;
+};

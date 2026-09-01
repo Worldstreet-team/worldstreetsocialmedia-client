@@ -49,6 +49,8 @@ export function VotesScreen() {
 	const [history, setHistory] = useState<any[]>([]);
 
 	useEffect(() => {
+		// The 60s module cache resolves synchronously-fast on a revisit, so
+		// the skeletons only ever show on a genuinely cold stage.
 		void getVoteLeaderboard().then((res: any) => {
 			setBoard(res?.board ?? []);
 			setHistory(res?.history ?? []);

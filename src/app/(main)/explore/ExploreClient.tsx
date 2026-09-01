@@ -17,6 +17,8 @@ import { useT } from "@/i18n/client";
 import { mapApiPost } from "@/lib/post-mapper";
 import { useAtom } from "jotai";
 import { syncUrlIfStillOn } from "@/lib/url-sync";
+import { effectiveFollowing } from "@/lib/engagementStore";
+import { useFollowVersion } from "@/hooks/useFollowState";
 import { followingIdsAtom } from "@/store/ui.atom";
 import type { SpaceRow } from "@/components/voice/SpaceCard";
 
@@ -229,7 +231,10 @@ export default function ExploreClient({
   );
 
   const isSearching = query.trim().length > 0;
-  const unfollowed = people.filter((u) => !followingIds.includes(u._id));
+  useFollowVersion();
+  const unfollowed = people.filter(
+    (u) => !followingIds.includes(u._id) && !effectiveFollowing(u._id, false),
+  );
 
   return (
     <div className="w-full min-w-0 pb-nav md:pb-10">

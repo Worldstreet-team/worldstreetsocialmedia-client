@@ -24,7 +24,11 @@ export function VoteCountdown({
 		void getVoteCycle().then((c) => {
 			if (alive && c) setEndsAt(new Date(c.endsAt).getTime());
 		});
-		const t = setInterval(() => setNow(Date.now()), 1000);
+		// Render-only tick, but it mounts app-wide via the rail — a hidden
+		// tab has no business re-rendering every second (audit 2026-09-01).
+		const t = setInterval(() => {
+			if (document.visibilityState !== "hidden") setNow(Date.now());
+		}, 1000);
 		return () => {
 			alive = false;
 			clearInterval(t);

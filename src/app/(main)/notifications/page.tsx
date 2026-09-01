@@ -11,7 +11,8 @@ import { Tabs } from "@/components/ui/Tabs";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { markNotificationsReadAction } from "@/lib/notification.actions";
 import { useGatewayRead } from "@/hooks/useGateway";
-import { cacheKeys, fetchCached, invalidate } from "@/lib/cache";
+import { cacheKeys, fetchCached,
+  readCache, invalidate } from "@/lib/cache";
 
 const NOTIFICATIONS_TTL = 60_000;
 import { useUserEvents } from "@/hooks/useUserEvents";
@@ -74,7 +75,12 @@ export default function NotificationsPage() {
   const t = useT();
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Warm cache = no skeleton: the sync provider fetched this list on app
+  // load, so remounts were flashing six skeleton rows over data already in
+  // memory, with no network involved (audit 2026-09-01).
+  const [loading, setLoading] = useState(
+    () => !readCache(cacheKeys.notifications()),
+  );
   const [failed, setFailed] = useState(false);
   const [filter, setFilter] = useAtom(notificationFilterAtom);
   const [followingIds, setFollowingIds] = useAtom(followingIdsAtom);
@@ -92,7 +98,7 @@ export default function NotificationsPage() {
 
   const load = useCallback(
     async (opts: { merge?: boolean } = {}) => {
-      setLoading(true);
+      setLoading(!readCache(cacheKeys.notifications()));
       setFailed(false);
       // Shares the list NotificationCountSync already fetched on app load —
       // arriving here used to fire a second identical request. A pull-to-
