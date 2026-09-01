@@ -6,10 +6,13 @@ const nextConfig: NextConfig = {
 			bodySizeLimit: "20mb",
 		},
 		// Every route is dynamic (proxy.ts matches everything), and Next 16's
-		// default of 0 makes the router cache reuse NOTHING — each navigation
-		// re-renders RSC on the server. 30s of reuse turns back/forward and
-		// quick hops into instant paints (audit 2026-09-01).
-		staleTimes: { dynamic: 30 },
+		// default of 0 makes the router cache reuse NOTHING: each navigation
+		// re-renders RSC on the server. Five minutes of reuse makes tab hops
+		// paint in one frame. The RSC payload here is chrome; everything the
+		// reader actually watches (posts, counts, presence) arrives through
+		// client fetches with their own freshness, so a reused page render is
+		// not stale data, it is a stale frame around live data.
+		staleTimes: { dynamic: 300 },
 	},
 	images: {
 		remotePatterns: [

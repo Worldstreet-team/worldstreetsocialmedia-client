@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePressPrefetch } from "@/hooks/usePressPrefetch";
 import { Fragment, useEffect, useState } from "react";
 import { useAppPathname } from "@/i18n/useAppPathname";
 import { EcosystemSheet } from "@/components/layout/EcosystemSheet";
@@ -57,6 +58,7 @@ ProfileIcon.displayName = "ProfileIcon";
 export const MobileBottomNav = () => {
 	const t = useT();
 	const pathname = useAppPathname();
+	const press = usePressPrefetch();
 	const [ecosystemOpen, setEcosystemOpen] = useState(false);
 	const unreadMessages = useAtomValue(unreadMessagesCountAtom);
 	const storedUser = useAtomValue(userAtom);
@@ -184,6 +186,7 @@ export const MobileBottomNav = () => {
 							)}
 						<Link
 							href={item.href}
+							{...press(item.href)}
 							className={clsx(
 								// 05-screens responsive spec: icon 20 + 10px label.
 								// `.glass-nav` follows the theme, so the ink is the

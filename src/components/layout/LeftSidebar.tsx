@@ -19,6 +19,7 @@ import { AnimatePresence } from "framer-motion";
 import { Flame } from "@phosphor-icons/react";
 import { BadgedIcon } from "@/components/ui/Badge";
 import { getVoteLeaders } from "@/lib/votes";
+import { usePressPrefetch } from "@/hooks/usePressPrefetch";
 import { VoteBox } from "@/components/votes/VoteBox";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import {
@@ -77,6 +78,7 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
 export function LeftSidebar() {
 	const t = useT();
 	const pathname = useAppPathname();
+	const press = usePressPrefetch();
 	const user = useAtomValue(userAtom);
 	const unreadCount = useAtomValue(unreadMessagesCountAtom);
 	const unreadNotifications = useAtomValue(unreadNotificationsCountAtom);
@@ -167,6 +169,7 @@ export function LeftSidebar() {
 			<Link
 				key={item.title}
 				href={href}
+				{...press(href)}
 				style={{ animationDelay: `${offset + index * 30}ms` }}
 				className={clsx(
 					// Active = light chip + filled glyph; nothing heavier.
@@ -215,6 +218,7 @@ export function LeftSidebar() {
 				    the race, glanceable without leaving the rail. */}
 				<Link
 					href="/votes"
+					{...press("/votes")}
 					style={{ animationDelay: `${60 + mainNav.length * 30}ms` }}
 					className={clsx(
 						"relative flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors group animate-rise",
