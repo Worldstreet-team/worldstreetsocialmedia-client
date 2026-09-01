@@ -20,6 +20,10 @@ const STAMP = "ws-skew-reloaded-at";
 
 export function DeploymentSkewRecovery() {
 	useEffect(() => {
+		// Dev is exempt: Turbopack HMR regenerates action ids on every edit,
+		// so the skew signature fires constantly and the reload fights the
+		// dev loop (it also killed pending navigations while testing).
+		if (process.env.NODE_ENV !== "production") return;
 		// A reload must NEVER race a navigation. The user taps a link; while
 		// the next page is still loading, a stale request from the OLD page
 		// rejects with the skew signature — and reload() at that moment
