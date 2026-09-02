@@ -17,7 +17,12 @@ import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { useT } from "@/i18n/client";
 import { formatTimeAgo } from "@/lib/utils";
+import {
+	conversationIdentity,
+	displayNameOf,
+} from "@/lib/conversation-identity";
 import { onlineIdsAtom } from "@/store/ui.atom";
+import { Users } from "lucide-react";
 
 export interface ConversationRowUser {
 	_id: string;
@@ -32,7 +37,13 @@ export interface ConversationRowUser {
 
 export interface ConversationRow {
 	_id: string;
-	otherParticipant: ConversationRowUser;
+	/** DM only — a group has no single "other". */
+	otherParticipant?: ConversationRowUser;
+	kind?: "dm" | "group";
+	name?: string;
+	avatar?: string;
+	memberCount?: number;
+	myRole?: "owner" | "admin" | "member";
 	lastMessage?: {
 		content?: string;
 		type?: string;
@@ -109,10 +120,10 @@ export function ConversationList({
 		const q = query.trim().toLowerCase();
 		if (!q) return conversations;
 		return conversations.filter((c) => {
-			const u = c.otherParticipant;
+			const id = conversationIdentity(c);
 			return (
-				displayName(u).toLowerCase().includes(q) ||
-				(u.username ?? "").toLowerCase().includes(q) ||
+				id.title.toLowerCase().includes(q) ||
+				(id.peer?.username ?? "").toLowerCase().includes(q) ||
 				(c.lastMessage?.content ?? "").toLowerCase().includes(q)
 			);
 		});
@@ -124,7 +135,8 @@ export function ConversationList({
 	const ambiguous = useMemo(() => {
 		const seen = new Map<string, number>();
 		for (const c of rows) {
-			const n = displayName(c.otherParticipant).toLowerCase();
+			if (c.kind === "group") continue;
+			const n = conversationIdentity(c).title.toLowerCase();
 			seen.set(n, (seen.get(n) ?? 0) + 1);
 		}
 		return seen;
@@ -157,6 +169,8 @@ export function ConversationList({
 	return (
 		<div className="flex flex-col">
 			{rows.map((conv) => {
+				const identity = conversationIdentity(conv);
+				const isGroup = identity.kind === "group";
 				const u = conv.otherParticipant;
 				const unread = conv.unreadCount > 0;
 				const active = activeId === conv._id;
@@ -185,12 +199,15 @@ export function ConversationList({
 						)}
 					>
 						<span className="relative shrink-0">
-							<span className="relative block h-14 w-14 overflow-hidden rounded-pill bg-raised">
-								<SafeAvatar src={u.avatar} />
+							<span className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-pill bg-raised">
+								{isGroup && !identity.avatar ? (
+									<Users className="h-6 w-6 text-muted" />
+								) : (
+									<SafeAvatar src={identity.avatar} />
+								)}
 							</span>
-							{/* Ringed in the page colour so the dot reads as ON the
-							    avatar rather than floating beside it. */}
-							{online.has(u._id) && (
+							{/* Presence is a 1:1 fact — a group has many. */}
+							{!isGroup && u && online.has(u._id) && (
 								<span
 									aria-label="Online"
 									className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-pill bg-success ring-2 ring-page"
@@ -208,20 +225,32 @@ export function ConversationList({
 											: "font-medium text-primary",
 									)}
 								>
-									{displayName(u)}
+									{identity.title}
 								</span>
-								<UserBadges
-									isVerified={u.isVerified}
-									verification={u.verification}
-									badges={u.badges}
-									size={13}
-								/>
-								{(ambiguous.get(displayName(u).toLowerCase()) ?? 0) > 1 &&
-									u.username && (
-										<span className="min-w-0 shrink truncate font-sans text-[12px] text-subtle">
-											@{u.username}
-										</span>
-									)}
+								{isGroup ? (
+									<span className="flex shrink-0 items-center gap-0.5 font-sans text-[12px] text-subtle">
+										<Users className="h-3 w-3" />
+										{identity.memberCount ?? ""}
+									</span>
+								) : (
+									u && (
+										<>
+											<UserBadges
+												isVerified={u.isVerified}
+												verification={u.verification}
+												badges={u.badges}
+												size={13}
+											/>
+											{(ambiguous.get(identity.title.toLowerCase()) ??
+												0) > 1 &&
+												u.username && (
+													<span className="min-w-0 shrink truncate font-sans text-[12px] text-subtle">
+														@{u.username}
+													</span>
+												)}
+										</>
+									)
+								)}
 							</span>
 
 							<span

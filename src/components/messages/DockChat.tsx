@@ -18,6 +18,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useCall } from "@/providers/CallProvider";
 import { useRealtime } from "@/components/providers/RealtimeProvider";
+import { Users } from "lucide-react";
+import { conversationIdentity } from "@/lib/conversation-identity";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { VoiceMessage } from "@/components/messages/VoiceMessage";
 import type { ConversationRow } from "@/components/messages/ConversationList";
@@ -99,11 +101,10 @@ export function DockChat({
 	const [draft, setDraft] = useState("");
 	const endRef = useRef<HTMLDivElement | null>(null);
 
+	const identity = conversationIdentity(conversation as any);
+	const isGroup = identity.kind === "group";
 	const other = conversation.otherParticipant;
-	const peerName =
-		[other.firstName, other.lastName].filter(Boolean).join(" ") ||
-		other.username ||
-		"";
+	const peerName = identity.title;
 
 	const scrollDown = useCallback(() => {
 		endRef.current?.scrollIntoView({ block: "end" });
@@ -202,7 +203,10 @@ export function DockChat({
 		}
 	};
 
-	const call = (isVideo: boolean) =>
+	const call = (isVideo: boolean) => {
+		// Group calls are deferred (register 112); the buttons are hidden for
+		// groups, so this only ever runs for a DM peer.
+		if (!other) return;
 		startCall({
 			conversationId: conversation._id,
 			peer: {
@@ -213,6 +217,7 @@ export function DockChat({
 			},
 			isVideo,
 		});
+	};
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
@@ -227,10 +232,14 @@ export function DockChat({
 					<ArrowLeft size={16} weight="bold" />
 				</button>
 				<span className="relative shrink-0">
-					<span className="relative block h-8 w-8 overflow-hidden rounded-pill bg-raised">
-						<SafeAvatar src={other.avatar} />
+					<span className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-pill bg-raised">
+						{isGroup && !identity.avatar ? (
+							<Users className="h-4 w-4 text-muted" />
+						) : (
+							<SafeAvatar src={identity.avatar} />
+						)}
 					</span>
-					{online.has(other._id) && (
+					{!isGroup && other && online.has(other._id) && (
 						<span
 							aria-hidden
 							className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-pill bg-success ring-2 ring-page"
@@ -240,30 +249,36 @@ export function DockChat({
 				<span className="min-w-0 flex-1">
 					<span className="flex items-center gap-1 truncate font-sans text-[13.5px] font-semibold text-primary">
 						<span className="min-w-0 truncate">{peerName}</span>
-						<UserBadges
-							isVerified={(other as any).isVerified}
-							verification={(other as any).verification}
-							badges={(other as any).badges}
-							size={13}
-						/>
+						{!isGroup && other && (
+							<UserBadges
+								isVerified={(other as any).isVerified}
+								verification={(other as any).verification}
+								badges={(other as any).badges}
+								size={13}
+							/>
+						)}
 					</span>
 				</span>
-				<button
-					type="button"
-					onClick={() => call(false)}
-					aria-label="Start voice call"
-					className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary"
-				>
-					<Phone size={16} weight="fill" />
-				</button>
-				<button
-					type="button"
-					onClick={() => call(true)}
-					aria-label="Start video call"
-					className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary"
-				>
-					<VideoCamera size={16} weight="fill" />
-				</button>
+				{!isGroup && (
+					<>
+						<button
+							type="button"
+							onClick={() => call(false)}
+							aria-label="Start voice call"
+							className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary"
+						>
+							<Phone size={16} weight="fill" />
+						</button>
+						<button
+							type="button"
+							onClick={() => call(true)}
+							aria-label="Start video call"
+							className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary"
+						>
+							<VideoCamera size={16} weight="fill" />
+						</button>
+					</>
+				)}
 			</div>
 
 			{/* thread */}

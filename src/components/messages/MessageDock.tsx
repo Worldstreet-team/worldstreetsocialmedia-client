@@ -104,8 +104,8 @@ export function MessageDock() {
 	// in progress also owns the corner — the call dock parks exactly here.
 	if (!me?._id || pathname?.startsWith("/messages")) return null;
 
-	const onlineCount = rows.filter((r) =>
-		online.has(r.otherParticipant?._id),
+	const onlineCount = rows.filter(
+		(r) => r.otherParticipant && online.has(r.otherParticipant._id),
 	).length;
 
 	return (

@@ -31,6 +31,7 @@ export interface ThreadListProps {
 	peerName: string;
 	peerTyping: boolean;
 	peerRecording?: boolean;
+	isGroup?: boolean;
 	deliveredAt: number | null;
 	readAt: number | null;
 	peerReadUpTo?: string | null;
@@ -63,6 +64,7 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 			peerName,
 			peerTyping,
 			peerRecording,
+			isGroup,
 			deliveredAt,
 			readAt,
 			peerReadUpTo,
@@ -151,6 +153,7 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 						peerReadUpTo={peerReadUpTo}
 						autoplayNextId={nextAudioId.get(m._id)}
 						myProfileId={myProfileId}
+						isGroup={isGroup}
 						{...handlers}
 					/>
 				);

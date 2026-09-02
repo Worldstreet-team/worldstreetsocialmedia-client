@@ -9,6 +9,11 @@ import { VoiceMessage } from "@/components/messages/VoiceMessage";
 import { PaymentBubble } from "@/components/messages/PaymentBubble";
 import { CallLogRow } from "@/components/messages/CallLogRow";
 import { Attachment } from "./Attachment";
+import {
+	senderColor,
+	systemEventCopy,
+	type SystemEvent,
+} from "./groupSystem";
 
 /** Structural shape only — MessageBox's richer interfaces satisfy it. */
 export interface BubbleMessage {
@@ -29,6 +34,7 @@ export interface BubbleMessage {
 	/** Transient, this tab only: the upload or send failed; offer retry. */
 	failed?: boolean;
 	reactions?: { profile: string; emoji: string }[];
+	systemEvent?: SystemEvent;
 	storyRef?: { story: string; thumbnail: string; authorUsername: string };
 	replyTo?: {
 		_id: string;
@@ -118,6 +124,8 @@ export interface BubbleProps {
 	/** Next voice note downthread — finished notes chain (register 87). */
 	autoplayNextId?: string;
 	myProfileId?: string;
+	/** Group threads name their senders and colour them (register 105). */
+	isGroup?: boolean;
 	onReply: (m: BubbleMessage) => void;
 	onMenu: (x: number, y: number, m: BubbleMessage) => void;
 	onJump: (id: string) => void;
@@ -155,6 +163,7 @@ export const MessageBubble = memo(function MessageBubble({
 	peerReadUpTo,
 	autoplayNextId,
 	myProfileId,
+	isGroup,
 	onReply,
 	onMenu,
 	onJump,
@@ -184,6 +193,24 @@ export const MessageBubble = memo(function MessageBubble({
 		}
 	};
 
+	if (m.type === "system") {
+		const copy = m.systemEvent
+			? systemEventCopy(
+					m.systemEvent,
+					(m.sender as { firstName?: string; username?: string })
+						?.firstName ||
+						(m.sender as { username?: string })?.username,
+				)
+			: m.content;
+		if (!copy) return null;
+		return (
+			<div className="flex justify-center px-4 py-1.5">
+				<span className="rounded-pill bg-page/70 px-3 py-1 text-center font-sans text-[11.5px] font-medium text-muted">
+					{copy}
+				</span>
+			</div>
+		);
+	}
 	if (m.type === "payment") {
 		return (
 			<PaymentBubble
@@ -312,6 +339,16 @@ export const MessageBubble = memo(function MessageBubble({
 								: "text-primary",
 						)}
 					>
+						{isGroup && !isMe && !sameRunAsPrev && (
+							<span
+								className="mb-0.5 block truncate font-sans text-[12px] font-semibold"
+								style={{ color: senderColor(String(m.sender._id)) }}
+							>
+								{(m.sender as { firstName?: string })?.firstName ||
+									(m.sender as { username?: string })?.username ||
+									"Member"}
+							</span>
+						)}
 						{m.replyTo && (
 							<button
 								type="button"

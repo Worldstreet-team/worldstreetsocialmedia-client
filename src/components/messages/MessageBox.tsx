@@ -22,6 +22,7 @@ import {
 	Plus,
 	ArrowLeft,
 	MessageCircle,
+	Users,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
@@ -71,6 +72,7 @@ import {
 } from "@/components/messages/thread/ComposerInput";
 import type { VirtuosoHandle } from "react-virtuoso";
 import { imageMeta, videoMeta } from "@/lib/media-meta";
+import { conversationIdentity } from "@/lib/conversation-identity";
 import { compressImage } from "@/lib/image-compress";
 import { postJsonDirect, sendFormProgress } from "@/lib/upload-direct";
 import {
@@ -99,6 +101,8 @@ import {
 	type WallpaperSetting,
 } from "@/components/messages/thread/wallpaper";
 import { SendMoneySheet } from "@/components/messages/SendMoneySheet";
+import { GroupSheet } from "@/components/messages/GroupSheet";
+import { GroupCreateModal } from "@/components/messages/GroupCreateModal";
 import { BACKEND_ORIGIN } from "@/const";
 
 const API_URL = BACKEND_ORIGIN;
@@ -388,6 +392,8 @@ export const MessageBox = ({
 	} | null>(null);
 	const msgMenuOpenedAt = useRef(0);
 	const [menuPicker, setMenuPicker] = useState(false);
+	const [groupSheetOpen, setGroupSheetOpen] = useState(false);
+	const [showGroupCreate, setShowGroupCreate] = useState(false);
 	useEffect(() => {
 		if (!msgMenu) setMenuPicker(false);
 	}, [msgMenu]);
@@ -1593,6 +1599,12 @@ export const MessageBox = ({
 	const chatRef = useRef(chat);
 	chatRef.current = chat;
 
+	const headerIdentity = useMemo(
+		() => conversationIdentity(activeConversation as any),
+		[activeConversation],
+	);
+	const isGroupThread = headerIdentity.kind === "group";
+
 	/** The peer's persisted read mark, for ticks that survive reload. */
 	const peerReadUpTo = useMemo(() => {
 		const peerId = activeConversation?.otherParticipant?._id;
@@ -1742,14 +1754,25 @@ export const MessageBox = ({
 								{totalUnread}
 							</span>
 						)}
-						<button
-							type="button"
-							onClick={() => setShowNewConversationModal(true)}
-							aria-label={t("messages.newChat")}
-							className="ml-auto flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill bg-chip text-muted transition-colors hover:text-primary"
-						>
-							<UserCirclePlus size={18} weight="bold" />
-						</button>
+						<span className="ml-auto flex items-center gap-1.5">
+							<button
+								type="button"
+								onClick={() => setShowGroupCreate(true)}
+								aria-label="New group"
+								title="New group"
+								className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill bg-chip text-muted transition-colors hover:text-primary"
+							>
+								<Users className="h-[18px] w-[18px]" />
+							</button>
+							<button
+								type="button"
+								onClick={() => setShowNewConversationModal(true)}
+								aria-label={t("messages.newChat")}
+								className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill bg-chip text-muted transition-colors hover:text-primary"
+							>
+								<UserCirclePlus size={18} weight="bold" />
+							</button>
+						</span>
 					</div>
 					<div className="relative">
 						<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" />
@@ -1844,77 +1867,119 @@ export const MessageBox = ({
 							{/* The face and the name open the profile. Tapping the
 							    person you are talking to and having nothing happen is
 							    the first thing anyone tries in a thread. */}
-							<Link
-								href={`/profile/${activeConversation.otherParticipant.username}`}
-								className="flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 transition-colors hover:bg-raised md:gap-3"
-							>
-							<span className="relative shrink-0">
-								<SafeAvatar
-									src={activeConversation.otherParticipant.avatar}
-									width={40}
-									height={40}
-									className="h-10 w-10 rounded-pill object-cover"
-									alt="avatar"
-								/>
-								{/* The dot belongs on the face, not in a line of text
-								    below it — it is the first thing you look for. */}
-								{peerOnline && (
-									<span
-										aria-hidden
-										className="absolute bottom-0 right-0 h-3 w-3 rounded-pill bg-success ring-2 ring-page"
-									/>
-								)}
-							</span>
-							<div className="min-w-0">
-								<h2 className="flex items-center gap-1 font-semibold text-sm truncate">
-									<span className="min-w-0 truncate">
-										{activeConversation.otherParticipant.firstName}{" "}
-										{activeConversation.otherParticipant.lastName}
-									</span>
-									<UserBadges
-										isVerified={
-											(activeConversation.otherParticipant as any)
-												.isVerified
-										}
-										verification={
-											(activeConversation.otherParticipant as any)
-												.verification
-										}
-										badges={
-											(activeConversation.otherParticipant as any)
-												.badges
-										}
-										size={14}
-									/>
-								</h2>
-								{chat.peerRecording ? (
-									<p className="truncate text-xs text-gold">
-										recording audio…
-									</p>
-								) : chat.peerTyping ? (
-									<p className="text-xs text-gold truncate">typing…</p>
-								) : peerOnline ? (
-									// No dot here — the avatar already carries one, and
-									// two green dots for one fact read as two facts.
-									<p className="truncate text-xs text-muted">Online</p>
-								) : (activeConversation.otherParticipant as any)
-										?.lastSeenAt ? (
-									<p className="truncate text-xs text-muted">
-										Seen{" "}
-										{formatLastSeen(
-											(activeConversation.otherParticipant as any)
-												.lastSeenAt,
+							{/* DM header links to the peer's profile; a group header
+							    opens the member sheet — a group has no one profile. */}
+							{isGroupThread ? (
+								<button
+									type="button"
+									onClick={() => setGroupSheetOpen(true)}
+									className="flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 text-left transition-colors hover:bg-raised md:gap-3"
+								>
+									<span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-pill bg-raised">
+										{headerIdentity.avatar ? (
+											<SafeAvatar
+												src={headerIdentity.avatar}
+												width={40}
+												height={40}
+												className="h-10 w-10 rounded-pill object-cover"
+												alt="group"
+											/>
+										) : (
+											<Users className="h-5 w-5 text-muted" />
 										)}
-									</p>
-								) : (
-									<p className="text-xs text-muted truncate">
-										@{activeConversation.otherParticipant.username}
-									</p>
-								)}
-							</div>
-							</Link>
+									</span>
+									<div className="min-w-0">
+										<h2 className="truncate font-semibold text-sm">
+											{headerIdentity.title}
+										</h2>
+										{chat.peerRecording || chat.peerTyping ? (
+											<p className="truncate text-xs text-gold">
+												{chat.peerRecording
+													? "someone is recording…"
+													: "someone is typing…"}
+											</p>
+										) : (
+											<p className="truncate text-xs text-muted">
+												{headerIdentity.memberCount ?? 0} members
+											</p>
+										)}
+									</div>
+								</button>
+							) : (
+								<Link
+									href={`/profile/${activeConversation.otherParticipant?.username ?? ""}`}
+									className="flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 transition-colors hover:bg-raised md:gap-3"
+								>
+								<span className="relative shrink-0">
+									<SafeAvatar
+										src={activeConversation.otherParticipant?.avatar}
+										width={40}
+										height={40}
+										className="h-10 w-10 rounded-pill object-cover"
+										alt="avatar"
+									/>
+									{/* The dot belongs on the face, not in a line of text
+									    below it — it is the first thing you look for. */}
+									{peerOnline && (
+										<span
+											aria-hidden
+											className="absolute bottom-0 right-0 h-3 w-3 rounded-pill bg-success ring-2 ring-page"
+										/>
+									)}
+								</span>
+								<div className="min-w-0">
+									<h2 className="flex items-center gap-1 font-semibold text-sm truncate">
+										<span className="min-w-0 truncate">
+											{activeConversation.otherParticipant?.firstName}{" "}
+											{activeConversation.otherParticipant?.lastName}
+										</span>
+										<UserBadges
+											isVerified={
+												(activeConversation.otherParticipant as any)
+													?.isVerified
+											}
+											verification={
+												(activeConversation.otherParticipant as any)
+													?.verification
+											}
+											badges={
+												(activeConversation.otherParticipant as any)
+													?.badges
+											}
+											size={14}
+										/>
+									</h2>
+									{chat.peerRecording ? (
+										<p className="truncate text-xs text-gold">
+											recording audio…
+										</p>
+									) : chat.peerTyping ? (
+										<p className="text-xs text-gold truncate">typing…</p>
+									) : peerOnline ? (
+										// No dot here — the avatar already carries one, and
+										// two green dots for one fact read as two facts.
+										<p className="truncate text-xs text-muted">Online</p>
+									) : (activeConversation.otherParticipant as any)
+											?.lastSeenAt ? (
+										<p className="truncate text-xs text-muted">
+											Seen{" "}
+											{formatLastSeen(
+												(activeConversation.otherParticipant as any)
+													.lastSeenAt,
+											)}
+										</p>
+									) : (
+										<p className="text-xs text-muted truncate">
+											@{activeConversation.otherParticipant?.username}
+										</p>
+									)}
+								</div>
+								</Link>
+							)}
 						</div>
 						<div className="flex shrink-0 text-muted">
+							{!isGroupThread && (
+							<>
 							<button
 								type="button"
 								aria-label="Start voice call"
@@ -1961,6 +2026,8 @@ export const MessageBox = ({
 							>
 								<Video className="w-5 h-5" />
 							</button>
+							</>
+							)}
 							<button
 								type="button"
 								aria-label="Chat appearance"
@@ -2052,6 +2119,7 @@ export const MessageBox = ({
 							}
 							peerTyping={chat.peerTyping}
 							peerRecording={chat.peerRecording}
+							isGroup={isGroupThread}
 							deliveredAt={chat.deliveredAt}
 							readAt={chat.readAt}
 							peerReadUpTo={peerReadUpTo}
@@ -2343,6 +2411,36 @@ export const MessageBox = ({
 					onApplied={(w) => setWallpaper(w)}
 				/>
 			)}
+			{groupSheetOpen && activeConversation && isGroupThread && myProfileId && (
+				<GroupSheet
+					open={groupSheetOpen}
+					onClose={() => setGroupSheetOpen(false)}
+					conversationId={activeConversation._id}
+					name={headerIdentity.title}
+					avatar={headerIdentity.avatar}
+					members={(activeConversation.members ?? []) as any}
+					participants={(activeConversation.participants ?? []) as any}
+					myProfileId={myProfileId}
+					onChanged={() => {
+						setGroupSheetOpen(false);
+						void fetchConversations();
+					}}
+					onLeft={() => {
+						setActiveConversation(null);
+						void fetchConversations();
+						goBack("/messages");
+					}}
+				/>
+			)}
+			<GroupCreateModal
+				isOpen={showGroupCreate}
+				onClose={() => setShowGroupCreate(false)}
+				currentUserId={user?.id || ""}
+				onCreated={(cid) => {
+					void fetchConversations();
+					router.push(`/messages/${cid}`);
+				}}
+			/>
 			{activeConversation && (
 				<SendMoneySheet
 					open={showSendMoney}
