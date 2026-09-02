@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -161,6 +162,7 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 		RailEntry[],
 		(v: RailEntry[]) => void,
 	];
+	const router = useRouter();
 	const [open, setOpen] = useState<RailEntry | null>(null);
 	// Posting now runs through the Story Studio (crop/filters/text/stickers/
 	// draw), which owns its own picker, preview and posting state. The plus
@@ -367,7 +369,12 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 						type="button"
 						onClick={() => {
 							if (entry.isLive && liveStory?.streamRef) {
-								window.location.assign(
+								// Client navigation. location.assign was a full
+								// document load: every cache and socket died,
+								// and the back from the stream reloaded home
+								// from scratch — the single worst "back always
+								// loads" trigger in the app.
+								router.push(
 									`/live?tab=live&s=${liveStory.streamRef}`,
 								);
 								return;

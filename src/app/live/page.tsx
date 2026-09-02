@@ -1,5 +1,6 @@
 "use client";
 
+import { useBackWithFallback } from "@/lib/nav";
 import {
 	BookmarkSimple,
 	Broadcast,
@@ -145,6 +146,7 @@ function VerticalSurface() {
 	const [commentsLoading, setCommentsLoading] = useState(false);
 	const [draft, setDraft] = useState("");
 	const [sending, setSending] = useState(false);
+	const goBack = useBackWithFallback();
 	const containerRef = useRef<HTMLDivElement>(null);
 	const fetchingRef = useRef(false);
 	const startedRef = useRef<Set<string>>(new Set());
@@ -759,13 +761,18 @@ function VerticalSurface() {
 		>
 			{/* ── top chrome ── */}
 			<div className="fixed top-0 inset-x-0 z-modal flex items-center px-4 h-16 pt-safe box-content bg-gradient-to-b from-black/70 to-transparent pointer-events-none">
-				<Link
-					href="/"
+				{/* Back, not home: entering from Explore, a live-now row or a
+				    deep link, the X used to dump you at "/" and stack a ghost
+				    history entry. Fallback home only when there is no in-app
+				    history below us. */}
+				<button
+					type="button"
+					onClick={() => goBack("/")}
 					aria-label="Close"
-					className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-pill bg-white/[0.09] backdrop-blur-md text-white hover:bg-white/[0.18] transition-colors"
+					className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-pill bg-white/[0.09] backdrop-blur-md text-white hover:bg-white/[0.18] transition-colors cursor-pointer"
 				>
 					<X size={17} />
-				</Link>
+				</button>
 
 				<div className="flex-1 flex justify-center pointer-events-auto">
 					<div className="flex items-center gap-1 rounded-pill bg-white/[0.09] backdrop-blur-md p-1">

@@ -433,6 +433,12 @@ export default function Feed({
 		// nothing per frame; unmount just persists the last honest value.
 		const scroller = mainScroller();
 		const onScroll = () => {
+			// Only trust a reading taken while home is the URL. Now that the
+			// scroller PERSISTS across the (main) group, the navigation's own
+			// scroll-to-top fires one last event on this same listener — with
+			// the URL already flipped to the destination — and used to clobber
+			// the saved position with 0 right before unmount.
+			if (window.location.pathname !== "/") return;
 			lastScrollRef.current = mainScrollTop();
 		};
 		scroller.addEventListener?.("scroll", onScroll, { passive: true });

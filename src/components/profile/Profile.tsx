@@ -1,5 +1,6 @@
 "use client";
 
+import { useBackWithFallback } from "@/lib/nav";
 import { useGatewayRead } from "@/hooks/useGateway";
 import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 
@@ -101,6 +102,7 @@ function readIsFollowing(profile: any, currentUser: any): boolean {
 export default function Profile({ username }: { username?: string }) {
 	const read = useGatewayRead();
 	const router = useRouter();
+	const goBack = useBackWithFallback();
 	const t = useT();
 	const { toast } = useToast();
 	const currentUser = useAtomValue(userAtom);
@@ -568,7 +570,7 @@ export default function Profile({ username }: { username?: string }) {
 				followLoading={followLoading}
 				blockedByYou={profileUser.isBlockedByYou}
 				blockedByThem={profileUser.isBlockedByThem}
-				onBack={() => router.back()}
+				onBack={() => goBack("/")}
 				onEdit={() => setIsEditProfileOpen(true)}
 				onFollowToggle={handleFollowToggle}
 				onMessage={handleMessage}

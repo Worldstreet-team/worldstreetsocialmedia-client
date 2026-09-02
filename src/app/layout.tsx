@@ -29,6 +29,7 @@ import VoiceRoomHost from "@/components/voice/VoiceRoomHost";
 import { LiveDock } from "@/components/live/LiveDock";
 import { NotificationCountSync } from "@/components/providers/NotificationCountSync";
 import { PwaSync } from "@/components/providers/PwaSync";
+import { NavHistoryTracker } from "@/lib/nav";
 import { DeploymentSkewRecovery } from "@/components/providers/DeploymentSkewRecovery";
 import { HistorySpy } from "@/components/providers/HistorySpy";
 import { SpacesLiveSync } from "@/components/providers/SpacesLiveSync";
@@ -221,6 +222,7 @@ export default async function RootLayout({
                                         <GlobalMessageListener />
                                         <NotificationCountSync />
                                         <PwaSync />
+                                        <NavHistoryTracker />
                                         <DeploymentSkewRecovery />
                                         {process.env.NODE_ENV !== "production" && <HistorySpy />}
                                         <SpacesLiveSync />

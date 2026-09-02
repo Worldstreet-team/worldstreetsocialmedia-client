@@ -1,5 +1,6 @@
 "use client";
 
+import { useBackWithFallback } from "@/lib/nav";
 import Link from "next/link";
 import clsx from "clsx";
 import { useAtomValue } from "jotai";
@@ -40,6 +41,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 	const user = useAtomValue(userAtom);
 	const pathname = useAppPathname();
 
+	const goBack = useBackWithFallback();
+
 	return (
 		<div className="ambient-field min-h-dvh">
 			<header className="sticky top-0 z-sticky">
@@ -48,6 +51,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 					<div className="mx-auto flex h-14 w-full max-w-[1180px] items-center gap-3 px-4 sm:px-6">
 						<Link
 							href="/"
+						onClick={(e) => { e.preventDefault(); goBack("/"); }}
 							aria-label="Back to WorldSpace"
 							className="flex h-9 w-9 items-center justify-center rounded-pill text-muted transition-colors hover:bg-raised hover:text-primary"
 						>

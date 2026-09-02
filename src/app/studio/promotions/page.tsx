@@ -59,16 +59,11 @@ export default function StudioPromotions() {
 			<PageHead
 				title={t("studio.nav.promotions")}
 				caption={t("studio.promo.caption")}
-				action={
-					<span className="rounded-pill bg-[#fafaf9]/[0.08] px-2.5 py-1 font-sans text-[10.5px] font-bold uppercase tracking-[0.08em] glass-ink-dim">
-						{t("studio.soon")}
-					</span>
-				}
 			/>
 
-			{/* The campaign plumbing is built end to end, but promotion isn't
-			    switched on yet — say so rather than let the controls imply
-			    a spend that will not happen. */}
+			{/* Promotion is LIVE and paid now — the banner states the money
+			    terms instead of the old "coming soon" that shipped beside
+			    working controls. */}
 			<div className="mb-3 flex items-start gap-3 rounded-2xl bg-[#171614] p-4">
 				<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[var(--ws-brand-primary)]/12 text-[var(--ws-brand-primary)]">
 					<Megaphone size={16} weight="bold" />

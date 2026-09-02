@@ -48,6 +48,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { userAtom } from "@/store/user.atom";
 import { bookmarksAtom } from "@/store/bookmarks.atom";
+import { updateSinglePostCacheAtom } from "@/store/postCache";
 import {
     deletePostAction,
     likePostAction,
@@ -79,7 +80,6 @@ import {
 import { VideoPlayer } from "@/components/ui/VideoPlayer";
 import { VoteChip } from "@/components/votes/VoteChip";
 import { Radio } from "lucide-react";
-import { promotePostAction } from "@/lib/campaign.actions";
 import { getSubscriptionAction } from "@/lib/subscription.actions";
 import { repostPostAction } from "@/lib/post.actions";
 import { QuoteModal } from "@/components/feed/QuoteModal";
@@ -285,6 +285,7 @@ export const PostCard = memo(
     const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
     // Set when an unlock bounced on balance — opens the fund-your-account
     // dialog with the gateway's balance-aware explanation.
+    const [isPromoteOpen, setIsPromoteOpen] = useState(false);
     const [topUpMessage, setTopUpMessage] = useState<string | null>(null);
     const [likersOpen, setLikersOpen] = useState(false);
     const [canPromote, setCanPromote] = useState(false);
@@ -382,6 +383,7 @@ export const PostCard = memo(
     const currentUser = useAtomValue(userAtom);
     const setUser = useSetAtom(userAtom);
     const setBookmarks = useSetAtom(bookmarksAtom);
+    const seedPostCache = useSetAtom(updateSinglePostCacheAtom);
     const { toast } = useToast();
 
     // Menu State
@@ -802,6 +804,20 @@ export const PostCard = memo(
                     // opens the post after a 260ms beat — the price of telling
                     // the two apart on one surface.
                     e.preventDefault();
+                    // Hand the detail page everything we already hold, so it
+                    // paints instantly and revalidates behind the content —
+                    // the feed was the only surface NOT seeding the post
+                    // cache, so first open always skeletoned.
+                    seedPostCache({ postId: post.id, post });
+                    // Double-tap disambiguation is a touch concept; a mouse
+                    // click should not pay the 260ms tax.
+                    const coarse =
+                        typeof window !== "undefined" &&
+                        window.matchMedia("(pointer: coarse)").matches;
+                    if (!coarse) {
+                        router.push(`/post/${post.id}`);
+                        return;
+                    }
                     const now = Date.now();
                     if (now - lastTapRef.current < 300) {
                         lastTapRef.current = 0;
@@ -859,6 +875,35 @@ export const PostCard = memo(
                     .replace("{price}", salePriceLabel)
                     .replace("{seller}", `@${post.author.username}`)}
                 confirmText={t("post.buy.confirmCta")}
+            />
+
+            <ConfirmModal
+                isOpen={isPromoteOpen}
+                onClose={() => setIsPromoteOpen(false)}
+                onConfirm={async () => {
+                    setIsPromoteOpen(false);
+                    // Direct to the gateway: a money write must survive
+                    // deployment skew, same doctrine as post unlock.
+                    const res = await postJsonDirect("/api/campaigns", {
+                        postId: post.id,
+                    });
+                    if (res.success) {
+                        toast(t("promo.created"), { type: "success" });
+                        return;
+                    }
+                    if ((res as any).code === "INSUFFICIENT_BALANCE") {
+                        setTopUpMessage(
+                            (res as any).message ?? t("promo.failed"),
+                        );
+                        return;
+                    }
+                    toast((res as any).message ?? t("promo.failed"), {
+                        type: "error",
+                    });
+                }}
+                title={t("promo.confirmTitle")}
+                message={t("promo.confirmBody")}
+                confirmText={t("promo.confirmCta")}
             />
 
             <ConfirmModal
@@ -1103,24 +1148,14 @@ export const PostCard = memo(
                                                 {canPromote && (
                                                     <button
                                                         type="button"
-                                                        onClick={async (e) => {
+                                                        onClick={(e) => {
                                                             e.stopPropagation();
                                                             setIsMenuOpen(false);
-                                                            const res =
-                                                                await promotePostAction(
-                                                                    post.id,
-                                                                );
-                                                            toast(
-                                                                res.success
-                                                                    ? t("promo.created")
-                                                                    : (res.message ??
-                                                                            t("promo.failed")),
-                                                                {
-                                                                    type: res.success
-                                                                        ? "success"
-                                                                        : "error",
-                                                                },
-                                                            );
+                                                            // Money asks first. The old one-tap
+                                                            // flow silently created the campaign
+                                                            // (and, once billing landed, would
+                                                            // have silently charged $10).
+                                                            setIsPromoteOpen(true);
                                                         }}
                                                         className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
                                                     >
@@ -1586,7 +1621,10 @@ export const PostCard = memo(
                         // Empty stretches of this row belong to the card:
                         // clicking between buttons opens the post instead of
                         // dying on the container.
-                        onClick={() => router.push(`/post/${post.id}`)}
+                        onClick={() => {
+                            seedPostCache({ postId: post.id, post });
+                            router.push(`/post/${post.id}`);
+                        }}
                         className="flex cursor-pointer items-center justify-between text-muted mt-1.5 -mb-1.5 pointer-events-auto">
                         {/* Option B (owner pick): the four actions cluster left with
                             FIXED gaps — nothing stretches, so the rhythm holds at any
