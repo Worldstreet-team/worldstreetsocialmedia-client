@@ -1721,6 +1721,19 @@ export const PostCard = memo(
                                 </div>
                             )}
                         </div>
+                        <Link
+                            href={`/post/${post.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label="Reply"
+                            className="flex items-center gap-0.5 sm:gap-1 hover:text-primary transition-colors group cursor-pointer"
+                        >
+                            <span className="flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-primary/10 transition group-active:scale-[0.98]">
+                                <ChatCircle size={23} weight="bold" />
+                            </span>
+                            <span className="text-[13.5px] font-medium font-sans tabular-nums sm:text-[14px]">
+                                {formatCount(shownReplies)}
+                            </span>
+                        </Link>
                         <button
                             type="button"
                             aria-label={isLiked ? "Unlike" : "Like"}
@@ -1807,19 +1820,6 @@ export const PostCard = memo(
                                 </AnimatePresence>
                             </span>
                         </button>
-                        <Link
-                            href={`/post/${post.id}`}
-                            onClick={(e) => e.stopPropagation()}
-                            aria-label="Reply"
-                            className="flex items-center gap-0.5 sm:gap-1 hover:text-primary transition-colors group cursor-pointer"
-                        >
-                            <span className="flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-primary/10 transition group-active:scale-[0.98]">
-                                <ChatCircle size={23} weight="bold" />
-                            </span>
-                            <span className="text-[13.5px] font-medium font-sans tabular-nums sm:text-[14px]">
-                                {formatCount(shownReplies)}
-                            </span>
-                        </Link>
                         </div>
 
                         <div className="flex items-center gap-0.5 sm:gap-2">
