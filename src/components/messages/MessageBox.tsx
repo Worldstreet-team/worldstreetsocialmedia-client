@@ -84,6 +84,12 @@ import {
 } from "@/components/messages/thread/ComposerInput";
 import type { VirtuosoHandle } from "react-virtuoso";
 import { imageMeta } from "@/lib/media-meta";
+import { ThreadBackdrop } from "@/components/messages/thread/ThreadBackdrop";
+import { WallpaperSheet } from "@/components/messages/thread/WallpaperSheet";
+import {
+	DEFAULT_WALLPAPER,
+	type WallpaperSetting,
+} from "@/components/messages/thread/wallpaper";
 import { CallLogRow } from "@/components/messages/CallLogRow";
 import { SendMoneySheet } from "@/components/messages/SendMoneySheet";
 import { PaymentBubble } from "@/components/messages/PaymentBubble";
@@ -448,6 +454,10 @@ export const MessageBox = ({
 	// Virtuoso backwards-pagination plumbing (register items 24-25).
 	const [firstItemIndex, setFirstItemIndex] = useState(100000);
 	const [pendingNew, setPendingNew] = useState(0);
+	// W2 skin: per-thread wallpaper + the send pulse that rotates gradients.
+	const [wallpaper, setWallpaper] = useState<WallpaperSetting>(DEFAULT_WALLPAPER);
+	const [wallpaperOpen, setWallpaperOpen] = useState(false);
+	const [sendPulse, setSendPulse] = useState(0);
 	const hasMoreOlderRef = useRef(true);
 	const loadingOlderRef = useRef(false);
 	const atBottomRef = useRef(true);
@@ -1363,6 +1373,8 @@ export const MessageBox = ({
 					),
 				};
 			});
+			// The wallpaper takes one breath per sent message (register 49).
+			setSendPulse((n) => n + 1);
 			return true;
 		} catch (error: any) {
 			if (error?.response?.status === 403) {
@@ -1479,6 +1491,15 @@ export const MessageBox = ({
 	useEffect(() => {
 		if (activeConversation) fetchMessages(activeConversation._id);
 	}, [activeConversation?._id]); // Only trigger when ID changes
+
+	useEffect(() => {
+		const mine = activeConversation?.members?.find((mm) => {
+			const pid = typeof mm.profile === "string" ? mm.profile : mm.profile?._id;
+			return String(pid) === String(myProfileId);
+		}) as { wallpaper?: WallpaperSetting } | undefined;
+		setWallpaper(mine?.wallpaper ? { ...mine.wallpaper } : DEFAULT_WALLPAPER);
+		// biome-ignore lint/correctness/useExhaustiveDependencies: identity by thread
+	}, [activeConversation?._id, myProfileId]);
 
 	return (
 		// 100dvh, not 100vh: on mobile 100vh is the address-bar-expanded height,
@@ -1750,10 +1771,21 @@ export const MessageBox = ({
 							>
 								<Video className="w-5 h-5" />
 							</button>
+							<button
+								type="button"
+								aria-label="Chat appearance"
+								title="Chat appearance"
+								onClick={() => setWallpaperOpen(true)}
+								className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary md:h-10 md:w-10"
+							>
+								<Info className="w-5 h-5" />
+							</button>
 						</div>
 					</div>
 
-					<div className="flex-1 min-h-0 flex flex-col bg-sunken/30">
+					<div className="relative flex-1 min-h-0 flex flex-col">
+						<ThreadBackdrop wallpaper={wallpaper} pulse={sendPulse} />
+						<div className="relative z-10 flex min-h-0 flex-1 flex-col">
 						{activeConversation.isRequestForMe && (
 							<div className="shrink-0 px-4 pt-4">
 								<div className="mx-auto max-w-[420px] rounded-xl bg-surface p-4 text-center">
@@ -1815,11 +1847,12 @@ export const MessageBox = ({
 							onShowNew={() => scrollToBottom()}
 							handlers={bubbleHandlers}
 						/>
+						</div>
 					</div>
 
 					{/* shrink-0 + pb-safe: the composer is the flex row that must never
 					    be squeezed out, and it sits on the iOS home indicator. */}
-					<div className="shrink-0 p-3 pt-1.5 sm:p-4 sm:pt-1.5 bg-page pb-safe">
+					<div className="relative z-10 shrink-0 p-3 pt-1.5 sm:p-4 sm:pt-1.5 bg-page/85 pb-safe">
 						{/* The thumb demarcator: a grabber pill marks where the
 						    composer region begins, instead of a full-width rule. */}
 						<span aria-hidden className="mx-auto mb-2 block h-1 w-9 rounded-pill bg-raised" />
@@ -1996,6 +2029,14 @@ export const MessageBox = ({
 				onClose={() => setShowGifPicker(false)}
 				onPick={(url) => void sendGif(url)}
 			/>
+			{wallpaperOpen && activeConversation && (
+				<WallpaperSheet
+					conversationId={activeConversation._id}
+					current={wallpaper}
+					onClose={() => setWallpaperOpen(false)}
+					onApplied={(w) => setWallpaper(w)}
+				/>
+			)}
 			{activeConversation && (
 				<SendMoneySheet
 					open={showSendMoney}

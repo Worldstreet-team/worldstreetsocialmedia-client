@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import { format } from "date-fns";
 import { memo, useRef } from "react";
-import { ArrowBendUpLeft } from "@phosphor-icons/react";
+import { RiReplyLine } from "@remixicon/react";
 import { MessageTicks, tickStateFor } from "@/components/messages/MessageTicks";
 import { VoiceMessage } from "@/components/messages/VoiceMessage";
 import { PaymentBubble } from "@/components/messages/PaymentBubble";
@@ -95,6 +95,11 @@ export function dayLabel(iso: string) {
 export interface BubbleProps {
 	m: BubbleMessage;
 	isMe: boolean;
+	/** First-in-run inbound messages carry the sender's face. */
+	showAvatar?: boolean;
+	avatarUrl?: string;
+	/** Live arrival — the only bubbles that animate in (register 152). */
+	fresh?: boolean;
 	showDay: boolean;
 	sameRunAsPrev: boolean;
 	endsRun: boolean;
@@ -123,6 +128,9 @@ export interface BubbleProps {
 export const MessageBubble = memo(function MessageBubble({
 	m,
 	isMe,
+	showAvatar,
+	avatarUrl,
+	fresh,
 	showDay,
 	sameRunAsPrev,
 	endsRun,
@@ -176,7 +184,7 @@ export const MessageBubble = memo(function MessageBubble({
 		<>
 			{showDay && (
 				<div className="flex justify-center py-2">
-					<span className="rounded-pill bg-raised px-3 py-1 font-sans text-[11px] font-semibold text-muted">
+					<span className="rounded-pill bg-page/70 px-3 py-1 font-sans text-[11px] font-semibold text-muted">
 						{dayLabel(m.createdAt)}
 					</span>
 				</div>
@@ -227,6 +235,7 @@ export const MessageBubble = memo(function MessageBubble({
 					sameRunAsPrev ? "mt-[2px]" : "mt-4",
 					isMe ? "items-end" : "items-start",
 					flashed && "rounded-xl bg-brand/10",
+					fresh && "animate-message-in",
 				)}
 			>
 				<div
@@ -245,30 +254,43 @@ export const MessageBubble = memo(function MessageBubble({
 								"opacity-100 md:opacity-0 md:group-hover/msg:opacity-100 md:focus-visible:opacity-100",
 							)}
 						>
-							<ArrowBendUpLeft size={14} weight="bold" />
+							<RiReplyLine size={14} />
 						</button>
+					)}
+					{/* Inbound face: only the first message of a run wears it —
+					    ink-and-air density (register 43-44). */}
+					{!isMe && (
+						<span className="mb-0.5 w-[26px] shrink-0 self-end">
+							{showAvatar && avatarUrl && (
+								// eslint-disable-next-line @next/next/no-img-element
+								<img
+									src={avatarUrl}
+									alt=""
+									className="h-[22px] w-[22px] rounded-pill object-cover"
+								/>
+							)}
+						</span>
 					)}
 					<div
 						className={clsx(
-							"max-w-[85%] sm:max-w-[70%] min-w-0 overflow-hidden rounded-[22px]",
+							"max-w-[85%] sm:max-w-[70%] min-w-0 overflow-hidden",
 							(m.type === "image" || m.type === "video") && !m.content
 								? "p-0"
-								: "px-3.5 py-2 sm:px-4",
+								: isMe
+									? "px-3.5 py-2 sm:px-4"
+									: "py-0.5",
+							// The locked skin: MINE wears frosted gold glass over the
+							// wallpaper; THEIRS is bare ink — no bubble at all.
 							isMe
 								? [
+										"rounded-[22px]",
 										(m.type === "image" || m.type === "video") && !m.content
-											? "text-brand-on"
-											: "bg-brand text-brand-on",
+											? "text-primary"
+											: "bg-[rgba(234,179,8,0.16)] text-primary",
 										sameRunAsPrev && "rounded-tr-[8px]",
 										!endsRun && "rounded-br-[8px]",
 									]
-								: [
-										(m.type === "image" || m.type === "video") && !m.content
-											? "text-primary"
-											: "bg-raised text-primary",
-										sameRunAsPrev && "rounded-tl-[8px]",
-										!endsRun && "rounded-bl-[8px]",
-									],
+								: "text-primary",
 						)}
 					>
 						{m.replyTo && (
@@ -277,15 +299,10 @@ export const MessageBubble = memo(function MessageBubble({
 								onClick={() => onJump(m.replyTo!._id)}
 								className={clsx(
 									"mb-1.5 flex w-full cursor-pointer items-stretch gap-2 rounded-[7px] px-2 py-1.5 text-left transition-opacity hover:opacity-80",
-									isMe ? "bg-black/15" : "bg-black/20",
+									isMe ? "bg-page/30" : "bg-raised/80",
 								)}
 							>
-								<span
-									className={clsx(
-										"w-[2px] shrink-0 rounded-pill",
-										isMe ? "bg-brand-on/50" : "bg-brand",
-									)}
-								/>
+								<span className="w-[2px] shrink-0 rounded-pill bg-brand" />
 								<span className="flex min-w-0 flex-col">
 									<span className="truncate font-sans text-[11.5px] font-semibold opacity-80">
 										{m.replyTo.sender?.username
@@ -345,7 +362,12 @@ export const MessageBubble = memo(function MessageBubble({
 					</div>
 				</div>
 				{endsRun && (
-					<span className="mt-1 flex items-center gap-1 font-sans text-[11px] tabular-nums text-subtle">
+					<span
+						className={clsx(
+							"mt-1 flex items-center gap-1 font-sans text-[11px] tabular-nums text-subtle",
+							!isMe && "pl-[26px]",
+						)}
+					>
 						{format(new Date(m.createdAt), "h:mm a")}
 						{isMe && (
 							<MessageTicks

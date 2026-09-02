@@ -1,7 +1,12 @@
 "use client";
 
-import { Mic, Plus, Send, Smile } from "lucide-react";
-import { CurrencyDollarSimple } from "@phosphor-icons/react";
+import {
+	RiAddLine,
+	RiEmotionLine,
+	RiMoneyDollarCircleLine,
+	RiSendPlane2Fill,
+	RiVoiceprintFill,
+} from "@remixicon/react";
 import EmojiPicker, { Theme } from "emoji-picker-react";
 import { useTheme } from "next-themes";
 import {
@@ -74,14 +79,14 @@ export const ComposerInput = forwardRef<
 	};
 
 	return (
-		<div className="flex min-w-0 flex-1 items-end gap-1 rounded-2xl bg-sunken py-1.5 pl-1.5 pr-2 transition-colors focus-within:bg-raised sm:gap-2">
+		<div className="flex min-w-0 flex-1 items-end gap-1 rounded-2xl bg-raised/70 py-1.5 pl-1.5 pr-2 transition-colors focus-within:bg-raised sm:gap-2">
 			<button
 				type="button"
 				onClick={onAttach}
 				aria-label="Attach a file"
 				className="mb-0.5 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary"
 			>
-				<Plus className="w-5 h-5" />
+				<RiAddLine size={20} />
 			</button>
 			<textarea
 				ref={inputRef}
@@ -107,7 +112,7 @@ export const ComposerInput = forwardRef<
 					title="Send money"
 					className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-raised hover:text-primary"
 				>
-					<CurrencyDollarSimple size={20} weight="bold" />
+					<RiMoneyDollarCircleLine size={20} />
 				</button>
 				{gifEnabled && (
 					<button
@@ -126,7 +131,7 @@ export const ComposerInput = forwardRef<
 						aria-label="Insert emoji"
 						className="flex h-10 w-10 items-center justify-center rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors cursor-pointer"
 					>
-						<Smile className="w-6 h-6" />
+						<RiEmotionLine size={22} />
 					</button>
 					{showEmoji && (
 						<div className="fixed left-1/2 bottom-24 -translate-x-1/2 sm:absolute sm:left-auto sm:bottom-12 sm:right-0 sm:translate-x-0 w-[min(320px,calc(100vw-1.5rem))] z-dropdown animate-rise ws-emoji-picker">
@@ -148,7 +153,7 @@ export const ComposerInput = forwardRef<
 						aria-label="Send message"
 						className="flex h-9 w-9 items-center justify-center bg-brand text-brand-on rounded-pill hover:bg-brand-active transition-colors disabled:opacity-50 cursor-pointer"
 					>
-						<Send className="w-4 h-4" />
+						<RiSendPlane2Fill size={16} />
 					</button>
 				) : (
 					<button
@@ -157,7 +162,7 @@ export const ComposerInput = forwardRef<
 						aria-label="Record a voice message"
 						className="flex h-10 w-10 items-center justify-center rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors cursor-pointer"
 					>
-						<Mic className="w-6 h-6" />
+						<RiVoiceprintFill size={22} />
 					</button>
 				)}
 			</div>

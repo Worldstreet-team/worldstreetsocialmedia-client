@@ -14,6 +14,7 @@
   "dependencies": {
     "@clerk/nextjs": "^6.37.4",
     "@phosphor-icons/react": "^2.1.10",
+    "@remixicon/react": "^4.9.0",
     "ably": "^2.17.1",
     "axios": "^1.13.5",
     "clsx": "^2.1.1",

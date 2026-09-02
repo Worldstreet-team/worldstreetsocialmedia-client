@@ -2,7 +2,7 @@
 
 import { forwardRef, useCallback, useMemo, useState } from "react";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
-import { ArrowDown } from "@phosphor-icons/react";
+import { RiArrowDownLine } from "@remixicon/react";
 import { TypingIndicator } from "@/components/messages/TypingIndicator";
 import {
 	MessageBubble,
@@ -65,6 +65,9 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 		ref,
 	) {
 		const [atBottom, setAtBottom] = useState(true);
+		// Live-arrival gate: only messages born after this mount animate in.
+		// biome-ignore lint/correctness/useExhaustiveDependencies: per-thread stamp
+		const mountTs = useMemo(() => Date.now(), [threadId]);
 
 		const Footer = useCallback(
 			() => (
@@ -108,6 +111,9 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 					<MessageBubble
 						m={m}
 						isMe={isMe}
+						showAvatar={!isMe && !sameRunAsPrev}
+						avatarUrl={(m.sender as { avatar?: string })?.avatar}
+						fresh={new Date(m.createdAt).getTime() > mountTs}
 						showDay={showDay}
 						sameRunAsPrev={sameRunAsPrev}
 						endsRun={endsRun}
@@ -122,6 +128,7 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 			},
 			[
 				messages,
+				mountTs,
 				firstItemIndex,
 				myProfileId,
 				flashedId,
@@ -139,6 +146,16 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 				    firstItemIndex, its initial-position pass never resolves and
 				    the item wrapper sits visibility:hidden forever. Keyed per
 				    thread so each conversation gets a fresh initial layout. */}
+				{messages.length === 0 && (
+					<div className="flex h-full flex-col items-center justify-center gap-2 px-8 text-center">
+						<span className="font-sans text-[14px] font-semibold text-primary">
+							Say the first thing
+						</span>
+						<span className="font-sans text-[12.5px] text-muted">
+							Messages here are between the two of you.
+						</span>
+					</div>
+				)}
 				{messages.length > 0 && (
 				<Virtuoso<BubbleMessage>
 					key={threadId}
@@ -171,7 +188,7 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 						onClick={onShowNew}
 						className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 cursor-pointer items-center gap-1.5 rounded-pill bg-raised px-3.5 py-1.5 font-sans text-[12.5px] font-semibold text-primary shadow-nav transition-colors hover:bg-chip"
 					>
-						<ArrowDown size={13} weight="bold" />
+						<RiArrowDownLine size={13} />
 						{pendingNew === 1 ? "1 new message" : `${pendingNew} new messages`}
 					</button>
 				)}

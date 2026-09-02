@@ -204,8 +204,8 @@ export function ConversationList({
 									className={clsx(
 										"truncate font-sans text-[15px]",
 										unread
-											? "font-bold text-primary"
-											: "font-semibold text-primary",
+											? "font-semibold text-primary"
+											: "font-medium text-primary",
 									)}
 								>
 									{displayName(u)}
@@ -227,7 +227,7 @@ export function ConversationList({
 							<span
 								className={clsx(
 									"mt-0.5 flex items-center gap-1 font-sans text-[13px]",
-									unread ? "font-bold text-primary" : "text-muted",
+									unread ? "font-medium text-primary" : "text-muted",
 								)}
 							>
 								{mine && (
@@ -259,7 +259,12 @@ export function ConversationList({
 						{/* The house numeric badge on the trailing edge — how many
 						    is part of the signal, not just that. */}
 						{unread && (
-							<Badge count={conv.unreadCount} className="ml-2 shrink-0" />
+							<span className="ml-2 flex shrink-0 items-center gap-1.5">
+								{unread && (
+									<span className="h-2 w-2 rounded-pill bg-brand" />
+								)}
+								<Badge count={conv.unreadCount} />
+							</span>
 						)}
 					</button>
 					</SwipeRow>

@@ -1,30 +1,19 @@
 "use client";
 
-import { motion } from "framer-motion";
-
 /**
- * The three-dot "still writing" bubble.
- *
- * Shaped and coloured like an inbound message so it reads as a message being
- * born rather than as a loading spinner — it sits where their next bubble
- * will land.
+ * The three-dot "still writing" bubble — a pure-CSS stagger loop now: a
+ * framer per-dot animation re-scheduled JS frames forever; a CSS keyframe
+ * costs the compositor and nothing else (register item 157).
  */
 export function TypingIndicator({ name }: { name?: string }) {
 	return (
-		<div className="mb-4 flex flex-col items-start">
-			<div className="flex items-center gap-1.5 rounded-xl bg-raised px-3.5 py-3">
+		<div className="flex flex-col items-start">
+			<div className="flex items-center gap-1.5 rounded-xl bg-raised/80 px-3.5 py-3">
 				{[0, 1, 2].map((i) => (
-					<motion.span
+					<span
 						key={i}
-						className="h-1.5 w-1.5 rounded-pill bg-muted"
-						animate={{ opacity: [0.35, 1, 0.35], y: [0, -2, 0] }}
-						transition={{
-							duration: 1.1,
-							repeat: Infinity,
-							ease: "easeInOut",
-							// Staggered so it reads as a travelling wave, not a blink.
-							delay: i * 0.16,
-						}}
+						className="ws-typing-dot h-1.5 w-1.5 rounded-pill bg-muted"
+						style={{ animationDelay: `${i * 0.16}s` }}
 					/>
 				))}
 			</div>

@@ -1243,3 +1243,16 @@ video,
 .animate-slide-in-r { animation: ws-slide-in-r var(--ws-motion-base, 200ms) var(--ws-ease) backwards; }
 .animate-slide-in-l { animation: ws-slide-in-l var(--ws-motion-base, 200ms) var(--ws-ease) backwards; }
 .animate-content-in { animation: ws-fade-in 150ms var(--ws-ease) backwards; }
+
+/* W2 messenger motion: live arrivals only (history renders static), and
+   the CSS-loop typing dots that cost zero React renders. */
+@keyframes ws-message-in {
+	from { opacity: 0; transform: translateY(8px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+.animate-message-in { animation: ws-message-in var(--ws-motion-base, 200ms) var(--ws-ease) backwards; }
+@keyframes ws-typing-dot {
+	0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+	30% { transform: translateY(-3px); opacity: 1; }
+}
+.ws-typing-dot { animation: ws-typing-dot 1.3s var(--ws-ease) infinite; }
