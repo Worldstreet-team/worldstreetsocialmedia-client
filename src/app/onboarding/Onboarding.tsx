@@ -1,5 +1,6 @@
 "use client";
 
+import { captureAcquisition, readAcquisition } from "@/lib/acquisition";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { useEffect, useState } from "react";
 import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
@@ -199,7 +200,9 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 			const token = await getToken();
 			const res = await axios.post(
 				`${BACKEND_URL}/api/users/onboard`,
-				formData,
+				// How they arrived, captured on first landing — the one moment
+				// this is knowable.
+				{ ...formData, acquisition: readAcquisition() },
 				{
 					headers: { Authorization: `Bearer ${token}` },
 				},
