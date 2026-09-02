@@ -77,6 +77,7 @@ export function mapApiPost(post: any): PostProps {
 						avatar: post.repostOf.author?.avatar || DEFAULT_AVATAR,
 						isVerified: post.repostOf.author?.isVerified,
 						tier: post.repostOf.author?.verification?.tier,
+						badges: post.repostOf.author?.badges ?? [],
 						content: post.repostOf.content ?? "",
 						image: post.repostOf.images?.[0],
 						timestamp: formatTimeAgo(post.repostOf.createdAt),

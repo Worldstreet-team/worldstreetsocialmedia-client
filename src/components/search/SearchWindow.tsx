@@ -16,7 +16,7 @@ import {
 	searchPosts as searchPostsLive,
 	searchUsers as searchUsersLive,
 } from "@/lib/search.client";
-import { formatTimeAgo } from "@/lib/utils";
+import { formatTimeAgo, formatCompact } from "@/lib/utils";
 import { followingIdsAtom, searchOpenAtom, searchSeedAtom } from "@/store/ui.atom";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";
@@ -414,7 +414,7 @@ export function SearchWindow() {
 												</span>
 												<span className="block truncate font-sans text-[13px] text-muted">
 													<span className="tabular-nums">
-														{Number(c.membersCount ?? 0).toLocaleString()}
+														{formatCompact(Number(c.membersCount ?? 0))}
 													</span>{" "}
 													{t("search.members")}
 												</span>

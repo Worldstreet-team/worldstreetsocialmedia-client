@@ -1,5 +1,6 @@
 "use client";
 
+import { formatCompact } from "@/lib/utils";
 import { useBackWithFallback } from "@/lib/nav";
 import {
 	BookmarkSimple,
@@ -978,7 +979,7 @@ function VerticalSurface() {
 									{isActive && (
 										<span className="flex items-center gap-1.5 rounded-[4px] bg-black/50 backdrop-blur-md px-2 h-6 text-[11px] font-semibold text-white/85 font-sans tabular-nums">
 											<Eye size={12} />
-											{viewers}
+											{formatCompact(viewers)}
 										</span>
 									)}
 									{slide.category && (

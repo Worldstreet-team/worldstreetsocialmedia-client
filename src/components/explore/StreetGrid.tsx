@@ -1,5 +1,6 @@
 "use client";
 
+import { formatCompact } from "@/lib/utils";
 import Link from "next/link";
 import { Heart, Play } from "@phosphor-icons/react";
 import { useT } from "@/i18n/client";
@@ -62,7 +63,7 @@ export function StreetGrid({
                 <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0c0a09]/85 to-transparent px-2 pb-1.5 pt-6">
                   <span className="flex items-center gap-1 font-sans text-[11px] font-semibold tabular-nums text-[#fafaf9]">
                     <Heart size={11} weight="fill" />
-                    {p.stats?.likes ?? 0}
+                    {formatCompact(p.stats?.likes ?? 0)}
                   </span>
                 </span>
               </Link>

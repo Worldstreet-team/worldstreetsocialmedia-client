@@ -1,5 +1,6 @@
 "use client";
 
+import { UserBadges } from "@/components/ui/UserBadges";
 import { useEffect, useState } from "react";
 import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 import { ArrowRight } from "lucide-react";
@@ -625,8 +626,14 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 														<SafeAvatar src={user.avatar} className="object-cover" alt={user.username} />
 													</div>
 													<div className="text-left min-w-0">
-														<p className="font-semibold text-primary text-sm font-sans truncate">
-															{user.firstName}
+														<p className="flex items-center gap-1 font-semibold text-primary text-sm font-sans truncate">
+															<span className="min-w-0 truncate">{user.firstName}</span>
+															<UserBadges
+																isVerified={(user as any).isVerified}
+																verification={(user as any).verification}
+																badges={(user as any).badges}
+																size={13}
+															/>
 														</p>
 														<p className="text-xs text-muted font-sans truncate">
 															@{user.username}

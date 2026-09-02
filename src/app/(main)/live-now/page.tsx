@@ -1,5 +1,6 @@
 "use client";
 
+import { formatCompact } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Eye } from "@phosphor-icons/react";
@@ -88,7 +89,7 @@ export default function LiveNowPage() {
 							</span>
 							<span className="flex items-center gap-1.5 font-sans text-[12.5px] text-muted tabular-nums shrink-0">
 								<Eye size={14} />
-								{row.viewers}
+								{formatCompact(row.viewers)}
 							</span>
 							<span className="shrink-0 flex items-center gap-1 rounded-[4px] bg-danger px-1.5 py-px text-[10px] font-bold tracking-wide text-white font-sans">
 								{t("live.badge")}

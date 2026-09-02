@@ -125,15 +125,16 @@ export function mainScrollTop(): number {
 	return s instanceof Window ? s.scrollY : s.scrollTop;
 }
 
-/** Compact count for dense chrome (trend rows, rails): 843 -> "843",
- *  1234 -> "1.2k", 2_400_000 -> "2.4M". Owner ruling: compaction starts at
- *  one thousand here, unlike post-action counts which hold full figures to
- *  10k per the typography spec — a trend row has no room for "1,066". */
+/** THE count format, app-wide (owner ruling 2026-09-02, superseding the old
+ *  hold-full-figures-to-10k typography carve-out): 843 -> "843",
+ *  1234 -> "1.2k", 2_400_000 -> "2.4m". Lowercase k and m, compaction from
+ *  one thousand, everywhere a count renders. Money stays exact — never
+ *  compact a currency amount. */
 export const formatCompact = (n: number): string => {
 	if (!Number.isFinite(n)) return "0";
 	if (n < 1000) return String(n);
 	if (n < 1_000_000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k`;
-	return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+	return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}m`;
 };
 
 /** The gateway sends trend volume as a finished string ("1066 posts");

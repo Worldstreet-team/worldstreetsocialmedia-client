@@ -124,6 +124,7 @@ export function VotesScreen() {
 										<UserBadges
 											isVerified={leader.author.isVerified}
 											verification={leader.author.verification}
+							badges={(leader.author as any)?.badges}
 											size={15}
 										/>
 									</span>
@@ -187,6 +188,7 @@ export function VotesScreen() {
 									<UserBadges
 										isVerified={row.author.isVerified}
 										verification={row.author.verification}
+							badges={(row.author as any)?.badges}
 										size={13}
 									/>
 									<span className="min-w-0 truncate font-sans text-[12.5px] text-subtle">
@@ -239,6 +241,7 @@ export function VotesScreen() {
 											<UserBadges
 												isVerified={h.winnerAuthor.isVerified}
 												verification={h.winnerAuthor.verification}
+							badges={(h.winnerAuthor as any)?.badges}
 												size={13}
 											/>
 										)}

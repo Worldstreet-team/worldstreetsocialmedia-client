@@ -1,5 +1,6 @@
 "use client";
 
+import { formatCompact } from "@/lib/utils";
 import { useCallback, useEffect, useState } from "react";
 import { getAdminRevenueAction } from "@/lib/admin.actions";
 import { Pane, PaneHead } from "@/components/admin/AdminShell";
@@ -178,8 +179,8 @@ export default function AdminRevenuePage() {
 					<Stat label="Recorded spend" value={money(c.committedMinor)} />
 					<Stat
 						label="Engagements"
-						value={String(c.engagements)}
-						sub={`${c.impressions} impressions`}
+						value={formatCompact(c.engagements)}
+						sub={`${formatCompact(c.impressions)} impressions`}
 					/>
 				</div>
 				<Caveat>

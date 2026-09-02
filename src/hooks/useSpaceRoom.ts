@@ -12,6 +12,8 @@ export interface RoomMember {
   avatar?: string;
   hand: boolean;
   isVerified?: boolean;
+  verification?: { tier?: "bronze" | "silver" | "gold" } | null;
+  badges?: import("@/components/ui/UserBadges").ProfileBadge[];
 }
 
 export interface RoomReaction {
@@ -88,6 +90,11 @@ export function useSpaceRoom(spaceId: string | null) {
           username: me.username,
           avatar: me.avatar,
           isVerified: me.isVerified,
+          // Tier and marks ride presence too — without them the host's
+          // participant popover showed every member as gold and wolf/W
+          // marks never appeared in a room (tick audit 2026-09-02).
+          verification: (me as any).verification ?? null,
+          badges: (me as any).badges ?? [],
           hand: false,
         });
         if (cancelled) return;
@@ -137,6 +144,8 @@ export function useSpaceRoom(spaceId: string | null) {
           username: me?.username,
           avatar: me?.avatar,
           isVerified: me?.isVerified,
+          verification: (me as any)?.verification ?? null,
+          badges: (me as any)?.badges ?? [],
           hand: next,
         })
         .catch(() => {});

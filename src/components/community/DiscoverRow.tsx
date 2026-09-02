@@ -3,7 +3,7 @@
 import Link from "next/link";
 import clsx from "clsx";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
-import { fmt } from "@/components/studio/studio-ui";
+import { formatCompact as fmt } from "@/lib/utils";
 import { resolveCategoryLabel } from "@/lib/categories";
 import { useT } from "@/i18n/client";
 

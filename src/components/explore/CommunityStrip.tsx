@@ -1,5 +1,6 @@
 "use client";
 
+import { formatCompact } from "@/lib/utils";
 import Link from "next/link";
 import { useT } from "@/i18n/client";
 import { ExploreSection, SectionLink } from "./ExploreSection";
@@ -70,7 +71,7 @@ export function CommunityStrip({
                     {row.name}
                   </Link>
                   <span className="font-sans text-[11px] font-semibold uppercase tracking-wider text-subtle">
-                    <span className="tabular-nums">{row.membersCount}</span>{" "}
+                    <span className="tabular-nums">{formatCompact(row.membersCount)}</span>{" "}
                     {t("community.members")}
                   </span>
                   {row.description && (

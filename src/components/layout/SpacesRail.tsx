@@ -1,5 +1,6 @@
 "use client";
 
+import { formatCompact } from "@/lib/utils";
 import clsx from "clsx";
 import { motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
@@ -145,7 +146,7 @@ function SpaceRow({ space, live }: { space: Space; live: boolean }) {
 					className="min-w-0 font-sans text-[11.5px] text-[#fafaf9]/80"
 				/>
 				<span className="ml-auto shrink-0 font-sans text-[11px] font-semibold tabular-nums text-[#fafaf9]/85">
-					{count} {live ? t("rail.spaces.listening") : t("rail.spaces.going")}
+					{formatCompact(count)} {live ? t("rail.spaces.listening") : t("rail.spaces.going")}
 				</span>
 			</span>
 		</Link>

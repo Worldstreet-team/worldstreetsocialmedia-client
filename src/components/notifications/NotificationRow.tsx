@@ -20,7 +20,7 @@ import {
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { renderRichText } from "@/components/ui/RichText";
-import { formatTimeAgo } from "@/lib/utils";
+import { formatTimeAgo, formatCompact } from "@/lib/utils";
 import { useT } from "@/i18n/client";
 import { senderName, type NotificationGroup, type NotificationType } from "./types";
 
@@ -177,7 +177,7 @@ export function NotificationRow({
               {" "}
               {others === 1
                 ? t("notif.others.one")
-                : t("notif.others.many").replace("{n}", String(others))}
+                : t("notif.others.many").replace("{n}", formatCompact(others))}
             </span>
           )}
           <span className="text-muted"> {t(`notif.verb.${type}`)}</span>

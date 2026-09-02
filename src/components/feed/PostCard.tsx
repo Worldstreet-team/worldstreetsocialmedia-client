@@ -1,3 +1,4 @@
+import { formatCompact } from "@/lib/utils";
 import Link from "next/link";
 import { haptic } from "@/lib/haptics";
 import type { ProfileBadge } from "@/components/ui/UserBadges";
@@ -209,6 +210,7 @@ export interface PostProps {
         avatar: string;
         isVerified?: boolean;
         tier?: "bronze" | "silver" | "gold";
+        badges?: ProfileBadge[];
         content: string;
         image?: string;
         timestamp: string;
@@ -238,14 +240,10 @@ export interface PostProps {
     };
 }
 
-/* Count formatting per 02-typography number rules: full 1,204 below 10K,
-   K/M abbreviation from 10K up tabular-nums keeps rolls steady. */
-const formatCount = (n: number) => {
-    if (!n) return "";
-    if (n < 10_000) return n.toLocaleString();
-    if (n < 1_000_000) return `${(n / 1000).toFixed(0)}K`;
-    return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
-};
+/* Counts follow the app-wide rule now (owner 2026-09-02): compact from one
+   thousand, lowercase k/m — formatCompact. Zero still renders as empty in
+   the action row, so the wrapper only preserves that. */
+const formatCount = (n: number) => (!n ? "" : formatCompact(n));
 
 /**
  * Can this account promote a post? One request per page load, shared by every
@@ -1308,7 +1306,7 @@ export const PostCard = memo(
                             <span className="font-sans text-[11.5px] font-semibold text-credit">
                                 {t("post.forSale.selling").replace("{price}", salePriceLabel)}
                                 {post.sale.salesCount
-                                    ? ` · ${t("post.forSale.sold").replace("{count}", String(post.sale.salesCount))}`
+                                    ? ` · ${t("post.forSale.sold").replace("{count}", formatCompact(post.sale.salesCount))}`
                                     : ""}
                             </span>
                             <button
@@ -1444,12 +1442,12 @@ export const PostCard = memo(
                                 {/* The tick travels with the repost — a
                                     verified author quoted wholesale must not
                                     arrive stripped of their mark. */}
-                                {post.repostOf.isVerified && (
-                                    <VerifiedIcon
-                                        size={{ width: "13", height: "13" }}
-                                        tier={post.repostOf.tier}
-                                    />
-                                )}
+                                <UserBadges
+                                    isVerified={post.repostOf.isVerified}
+                                    verification={{ tier: post.repostOf.tier }}
+                                    badges={post.repostOf.badges}
+                                    size={13}
+                                />
                                 <span className="text-[12px] text-subtle font-sans truncate shrink-0">
                                     @{post.repostOf.username} · {post.repostOf.timestamp}
                                 </span>
@@ -1980,6 +1978,8 @@ export const PostCard = memo(
                         avatar: post.author.avatar,
                         content: post.content || post.repostOf?.content || "",
                         timestamp: post.timestamp,
+                        isVerified: post.author.isVerified,
+                        verification: (post.author as any).verification,
                     }}
                     onClose={() => setQuoteOpen(false)}
                 />
