@@ -377,7 +377,7 @@ export function GoLiveSheet({
 			/>
 			<OverlayPanel
 				key="golive-panel"
-				variant="sheet"
+				dragClose={close} variant="sheet"
 				label={obsInfo ? t("golive.obs.title") : t("golive.title")}
 				className={clsx(
 					obsInfo

@@ -171,7 +171,7 @@ export function MobileNavigation() {
 				{isOpen && (
 					<OverlayPanel
 						key="nav-panel"
-						variant="sheet"
+						dragClose={closeDrawer} variant="sheet"
 						label="Navigation menu"
 						className="md:hidden"
 					>

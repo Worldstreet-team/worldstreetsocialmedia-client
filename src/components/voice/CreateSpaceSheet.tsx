@@ -164,7 +164,7 @@ export default function CreateSpaceSheet({
     <ConfirmModalPortal>
       <OverlayScrim onClose={onClose} label={t("common.close")} />
       <OverlayPanel
-        variant="sheet"
+        dragClose={onClose} variant="sheet"
         label={isEdit ? t("voice.editSpace") : t("voice.create")}
       >
         <OverlayHeader onClose={onClose} closeLabel={t("common.close")}>

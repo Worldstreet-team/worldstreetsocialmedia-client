@@ -150,7 +150,7 @@ export function NotificationsPopover() {
 						{open && (
 							<OverlayPanel
 								key="notif-panel"
-								variant="anchored"
+								dragClose={close} variant="anchored"
 								label={t("nav.notifications")}
 							>
 								<OverlayHeader onClose={close}>

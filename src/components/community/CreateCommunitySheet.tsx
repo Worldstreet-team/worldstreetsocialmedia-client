@@ -111,7 +111,7 @@ export default function CreateCommunitySheet({
   return (
     <ConfirmModalPortal>
       <OverlayScrim onClose={onClose} label={t("common.cancel")} />
-      <OverlayPanel variant="sheet" label={t("community.new.title")}>
+      <OverlayPanel dragClose={onClose} variant="sheet" label={t("community.new.title")}>
         <OverlayHeader onClose={onClose} closeLabel={t("common.cancel")}>
           <div className="min-w-0 flex-1">
             <h2 className="truncate font-sans text-[14px] font-semibold text-primary">

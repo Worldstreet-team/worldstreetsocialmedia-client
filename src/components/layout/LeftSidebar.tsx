@@ -405,7 +405,7 @@ export function LeftSidebar() {
 							{menuOpen && (
 								<OverlayPanel
 									key="account-panel"
-									variant="anchored"
+									dragClose={closeMenu} variant="anchored"
 									label={`@${user.username}`}
 									// Neutralise the variant's bottom-right desktop
 									// parking so the measured anchor wins.

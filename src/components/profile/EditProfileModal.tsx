@@ -264,7 +264,7 @@ export default function EditProfileModal({
 	return (
 		<ConfirmModalPortal>
 			<OverlayScrim onClose={onClose} />
-			<OverlayPanel variant="sheet" label="Edit profile">
+			<OverlayPanel dragClose={onClose} variant="sheet" label="Edit profile">
 				{/* Header. Save rides in the header row so it is reachable
 				    without scrolling the form to its end. */}
 				<OverlayHeader onClose={onClose}>

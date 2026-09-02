@@ -113,7 +113,7 @@ export default function ReportSheet({
 	return (
 		<ConfirmModalPortal>
 			<OverlayScrim onClose={onClose} label={t("common.close")} />
-			<OverlayPanel variant="sheet" label={heading}>
+			<OverlayPanel dragClose={onClose} variant="sheet" label={heading}>
 				{/* header */}
 				<OverlayHeader onClose={onClose} closeLabel={t("common.close")}>
 					{step === "detail" && (

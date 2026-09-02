@@ -75,7 +75,7 @@ export function LikersModal({
 		>
 		<AnimatePresence>
 			<OverlayScrim key="s" onClose={onClose} />
-			<OverlayPanel key="p" variant="anchored" label="Liked by">
+			<OverlayPanel key="p" dragClose={onClose} variant="anchored" label="Liked by">
 				<OverlayHeader title="Liked by" onClose={onClose} />
 				<div className="max-h-[60dvh] overflow-y-auto pb-3">
 					{loading ? (

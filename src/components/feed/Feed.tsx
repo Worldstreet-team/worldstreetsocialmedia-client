@@ -4,6 +4,7 @@ import { useGatewayRead } from "@/hooks/useGateway";
 
 import { mainScrollTop, mainScroller } from "@/lib/utils";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { useSwipeTabs } from "@/hooks/useSwipeTabs";
 import { haptic } from "@/lib/haptics";
 
 import {
@@ -13,9 +14,9 @@ import {
 	useSyncExternalStore,
 } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { feedAtom } from "@/store/feed.atom";
-import { feedTabAtom } from "@/store/ui.atom";
+import { type FeedTab, feedTabAtom } from "@/store/ui.atom";
 import { autoTranslateAtom, translationsAtom } from "@/store/translate.atom";
 import { prefetchTranslations } from "@/lib/translate.prefetch";
 import {
@@ -143,6 +144,7 @@ export default function Feed({
 	// Never repopulated: the seed describes one page load, not a subscription.
 	const initialRef = useRef(initialData);
 	const tab = useAtomValue(feedTabAtom);
+	const setFeedTab = useSetAtom(feedTabAtom);
 	const autoTranslate = useAtomValue(autoTranslateAtom);
 	const [translations, setTranslations] = useAtom(translationsAtom);
 	// Read through a ref inside the prefetch so a page landing mid-flight
@@ -173,6 +175,12 @@ export default function Feed({
 	const fetchFeedRef = useRef<
 		((reset: boolean, opts?: { silent?: boolean }) => Promise<unknown>) | null
 	>(null);
+	// Same order the tab bar offers; swiping left walks toward "newest".
+	const swipeApi = useSwipeTabs<FeedTab>(
+		["foryou", "following", "newest"],
+		tab,
+		setFeedTab,
+	);
 	const pullApi = usePullToRefresh(async () => {
 		if (refreshingRef.current) return;
 		showNewPostsRef.current();
@@ -885,7 +893,21 @@ export default function Feed({
 	showNewPostsRef.current = showNewPosts;
 
 	return (
-		<div className="w-full min-w-0 pb-nav md:pb-20" {...pullApi.handlers}>
+		<div
+			className="w-full min-w-0 pb-nav md:pb-20"
+			onTouchStart={(e) => {
+				pullApi.handlers.onTouchStart(e);
+				swipeApi.handlers.onTouchStart(e);
+			}}
+			onTouchMove={(e) => {
+				pullApi.handlers.onTouchMove(e);
+				swipeApi.handlers.onTouchMove(e);
+			}}
+			onTouchEnd={() => {
+				pullApi.handlers.onTouchEnd();
+				swipeApi.handlers.onTouchEnd();
+			}}
+		>
 			{/* The owned pull-to-refresh: a spacer that grows with the finger,
 			    a ring that turns toward the trigger and spins while the
 			    refresh runs. Height-only, so the feed slides down under it. */}
@@ -992,8 +1014,10 @@ export default function Feed({
 				/>
 			</div>
 
-			{/* Keyed by tab so switching timelines replays the rise (no stagger). */}
-			<div key={tab}>
+			{/* Keyed by tab so switching timelines replays the rise (no stagger).
+			    The swipe hint translates this container, so the drag moves the
+			    timeline itself, not the composer above it. */}
+			<div key={tab} ref={swipeApi.bindContentRef}>
 				{isPosting && <PostSkeleton />}
 				{visiblePosts.map((post, index) => (
 					<ImpressionSensor
