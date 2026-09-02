@@ -36,6 +36,13 @@ export interface Message {
 		sender?: { username?: string; firstName?: string; lastName?: string };
 	} | null;
 	createdAt: string;
+	/** Sender-generated dedup id — the stable list key across the
+	 *  optimistic→server swap (W1). */
+	clientKey?: string;
+	width?: number;
+	height?: number;
+	thumbhash?: string;
+	peaks?: number[];
 }
 
 // Map conversationId -> Message[]

@@ -1,0 +1,366 @@
+"use client";
+
+import clsx from "clsx";
+import { format } from "date-fns";
+import { memo, useRef } from "react";
+import { ArrowBendUpLeft } from "@phosphor-icons/react";
+import { MessageTicks, tickStateFor } from "@/components/messages/MessageTicks";
+import { VoiceMessage } from "@/components/messages/VoiceMessage";
+import { PaymentBubble } from "@/components/messages/PaymentBubble";
+import { CallLogRow } from "@/components/messages/CallLogRow";
+import { Attachment } from "./Attachment";
+
+/** Structural shape only — MessageBox's richer interfaces satisfy it. */
+export interface BubbleMessage {
+	_id: string;
+	clientKey?: string;
+	content: string;
+	type: string;
+	mediaUrl?: string;
+	amountMinor?: number;
+	durationSec?: number;
+	width?: number;
+	height?: number;
+	thumbhash?: string;
+	storyRef?: { story: string; thumbnail: string; authorUsername: string };
+	replyTo?: {
+		_id: string;
+		content?: string;
+		type?: string;
+		durationSec?: number;
+		sender?: { username?: string };
+	} | null;
+	sender: { _id: string } & Record<string, unknown>;
+	createdAt: string;
+}
+
+function quotedPreview(r: {
+	content?: string;
+	type?: string;
+	durationSec?: number;
+}): string {
+	if (r.content?.trim()) return r.content.trim();
+	switch (r.type) {
+		case "image":
+			return "Photo";
+		case "video":
+			return "Video";
+		case "audio":
+			return r.durationSec
+				? `Voice note · ${Math.floor(r.durationSec / 60)}:${String(
+						Math.round(r.durationSec % 60),
+					).padStart(2, "0")}`
+				: "Voice note";
+		case "payment":
+			return "Payment";
+		default:
+			return "Message";
+	}
+}
+
+const URL_RE = /(https?:\/\/[^\s<]+)/g;
+function linkify(text: string) {
+	return text.split(URL_RE).map((part, i) =>
+		URL_RE.test(part) ? (
+			<a
+				// biome-ignore lint/suspicious/noArrayIndexKey: static split of one string
+				key={i}
+				href={part}
+				target="_blank"
+				rel="noopener noreferrer"
+				className="break-all underline underline-offset-2 opacity-90 hover:opacity-100"
+				onClick={(e) => e.stopPropagation()}
+			>
+				{part}
+			</a>
+		) : (
+			part
+		),
+	);
+}
+
+export function dayLabel(iso: string) {
+	const d = new Date(iso);
+	const today = new Date();
+	const yday = new Date();
+	yday.setDate(today.getDate() - 1);
+	if (d.toDateString() === today.toDateString()) return "Today";
+	if (d.toDateString() === yday.toDateString()) return "Yesterday";
+	return format(
+		d,
+		d.getFullYear() === today.getFullYear() ? "MMM d" : "MMM d, yyyy",
+	);
+}
+
+export interface BubbleProps {
+	m: BubbleMessage;
+	isMe: boolean;
+	showDay: boolean;
+	sameRunAsPrev: boolean;
+	endsRun: boolean;
+	flashed: boolean;
+	peerName: string;
+	deliveredAt: number | null;
+	readAt: number | null;
+	peerReadUpTo?: string | null;
+	onReply: (m: BubbleMessage) => void;
+	onMenu: (x: number, y: number, m: BubbleMessage) => void;
+	onJump: (id: string) => void;
+	onMediaClick: (id: string) => void;
+	onStory: (ref: NonNullable<BubbleMessage["storyRef"]>) => void;
+	onCallBack: (video: boolean) => void;
+}
+
+/**
+ * One message, memoized — the fix for the thread's signature jank.
+ *
+ * Every keystroke, receipt and presence tick used to re-render EVERY bubble
+ * because they all rendered inline in a 2,293-line component. Now a bubble
+ * re-renders only when its own props move. The swipe-to-reply gesture lives
+ * HERE, on refs and direct style writes: dragging a bubble costs zero React
+ * renders anywhere.
+ */
+export const MessageBubble = memo(function MessageBubble({
+	m,
+	isMe,
+	showDay,
+	sameRunAsPrev,
+	endsRun,
+	flashed,
+	peerName,
+	deliveredAt,
+	readAt,
+	peerReadUpTo,
+	onReply,
+	onMenu,
+	onJump,
+	onMediaClick,
+	onStory,
+	onCallBack,
+}: BubbleProps) {
+	const rowRef = useRef<HTMLDivElement | null>(null);
+	const touch = useRef<{ x: number; y: number } | null>(null);
+	const dxRef = useRef(0);
+	const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const isTemp = m._id.startsWith("temp-");
+
+	const setDx = (dx: number) => {
+		dxRef.current = dx;
+		const el = rowRef.current;
+		if (!el) return;
+		if (dx === 0) {
+			el.style.transition = "transform 200ms var(--ws-ease)";
+			el.style.transform = "";
+		} else {
+			el.style.transition = "none";
+			el.style.transform = `translateX(${dx}px)`;
+		}
+	};
+
+	if (m.type === "payment") {
+		return (
+			<PaymentBubble
+				amountMinor={m.amountMinor ?? 0}
+				note={m.content}
+				at={m.createdAt}
+				mine={isMe}
+				peerName={peerName}
+			/>
+		);
+	}
+	if (m.type === "call") {
+		return <CallLogRow content={m.content} at={m.createdAt} onCallBack={onCallBack} />;
+	}
+
+	return (
+		<>
+			{showDay && (
+				<div className="flex justify-center py-2">
+					<span className="rounded-pill bg-raised px-3 py-1 font-sans text-[11px] font-semibold text-muted">
+						{dayLabel(m.createdAt)}
+					</span>
+				</div>
+			)}
+			<div
+				ref={rowRef}
+				id={`msg-${m._id}`}
+				onContextMenu={(e) => {
+					if (isTemp) return;
+					e.preventDefault();
+					onMenu(e.clientX, e.clientY, m);
+				}}
+				onTouchStart={(e) => {
+					if (isTemp) return;
+					const t = e.touches[0];
+					touch.current = { x: t.clientX, y: t.clientY };
+					holdTimer.current = setTimeout(() => {
+						onMenu(t.clientX, t.clientY, m);
+						holdTimer.current = null;
+					}, 450);
+				}}
+				onTouchMove={(e) => {
+					const start = touch.current;
+					if (!start) return;
+					const t = e.touches[0];
+					const dx = t.clientX - start.x;
+					const dy = Math.abs(t.clientY - start.y);
+					if (holdTimer.current && (Math.abs(dx) > 8 || dy > 8)) {
+						clearTimeout(holdTimer.current);
+						holdTimer.current = null;
+					}
+					// Swipe RIGHT to reply — resistance past the commit point.
+					if (dy < 24 && dx > 0) {
+						setDx(dx < 56 ? dx : 56 + (dx - 56) * 0.25);
+					}
+				}}
+				onTouchEnd={() => {
+					if (holdTimer.current) {
+						clearTimeout(holdTimer.current);
+						holdTimer.current = null;
+					}
+					if (dxRef.current > 48) onReply(m);
+					setDx(0);
+					touch.current = null;
+				}}
+				className={clsx(
+					"group/msg flex flex-col scroll-mt-24 touch-pan-y px-3 sm:px-4",
+					sameRunAsPrev ? "mt-[2px]" : "mt-4",
+					isMe ? "items-end" : "items-start",
+					flashed && "rounded-xl bg-brand/10",
+				)}
+			>
+				<div
+					className={clsx(
+						"flex max-w-full items-center justify-end gap-1",
+						isMe ? "flex-row" : "flex-row-reverse",
+					)}
+				>
+					{!isTemp && (
+						<button
+							type="button"
+							onClick={() => onReply(m)}
+							aria-label="Reply to this message"
+							className={clsx(
+								"flex h-8 w-8 shrink-0 items-center justify-center rounded-pill text-subtle transition hover:bg-raised hover:text-muted",
+								"opacity-100 md:opacity-0 md:group-hover/msg:opacity-100 md:focus-visible:opacity-100",
+							)}
+						>
+							<ArrowBendUpLeft size={14} weight="bold" />
+						</button>
+					)}
+					<div
+						className={clsx(
+							"max-w-[85%] sm:max-w-[70%] min-w-0 overflow-hidden rounded-[22px]",
+							(m.type === "image" || m.type === "video") && !m.content
+								? "p-0"
+								: "px-3.5 py-2 sm:px-4",
+							isMe
+								? [
+										(m.type === "image" || m.type === "video") && !m.content
+											? "text-brand-on"
+											: "bg-brand text-brand-on",
+										sameRunAsPrev && "rounded-tr-[8px]",
+										!endsRun && "rounded-br-[8px]",
+									]
+								: [
+										(m.type === "image" || m.type === "video") && !m.content
+											? "text-primary"
+											: "bg-raised text-primary",
+										sameRunAsPrev && "rounded-tl-[8px]",
+										!endsRun && "rounded-bl-[8px]",
+									],
+						)}
+					>
+						{m.replyTo && (
+							<button
+								type="button"
+								onClick={() => onJump(m.replyTo!._id)}
+								className={clsx(
+									"mb-1.5 flex w-full cursor-pointer items-stretch gap-2 rounded-[7px] px-2 py-1.5 text-left transition-opacity hover:opacity-80",
+									isMe ? "bg-black/15" : "bg-black/20",
+								)}
+							>
+								<span
+									className={clsx(
+										"w-[2px] shrink-0 rounded-pill",
+										isMe ? "bg-brand-on/50" : "bg-brand",
+									)}
+								/>
+								<span className="flex min-w-0 flex-col">
+									<span className="truncate font-sans text-[11.5px] font-semibold opacity-80">
+										{m.replyTo.sender?.username
+											? `@${m.replyTo.sender.username}`
+											: "Message"}
+									</span>
+									<span className="truncate font-sans text-[12.5px] opacity-70">
+										{quotedPreview(m.replyTo)}
+									</span>
+								</span>
+							</button>
+						)}
+						{(m.type === "image" || m.type === "video") && m.mediaUrl && (
+							<Attachment
+								src={m.mediaUrl}
+								type={m.type}
+								isTemp={isTemp}
+								width={m.width}
+								height={m.height}
+								thumbhash={m.thumbhash}
+								onClick={() => onMediaClick(m._id)}
+							/>
+						)}
+						{m.type === "audio" && m.mediaUrl && (
+							<div className="relative w-full max-w-[256px] mb-1">
+								<VoiceMessage src={m.mediaUrl} isMe={isMe} />
+							</div>
+						)}
+						{m.storyRef && (
+							<button
+								type="button"
+								onClick={() => m.storyRef && onStory(m.storyRef)}
+								className="relative mb-1.5 block h-40 w-28 cursor-pointer overflow-hidden rounded-lg border border-current/15 transition-opacity hover:opacity-90"
+								aria-label="View story"
+							>
+								{/* eslint-disable-next-line @next/next/no-img-element */}
+								<img
+									src={m.storyRef.thumbnail}
+									alt=""
+									className="h-full w-full object-cover"
+								/>
+								<span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0c0a09]/85 to-transparent px-2 pb-1.5 pt-5 text-left font-sans text-[10px] font-semibold text-[#fafaf9]/90">
+									View story
+								</span>
+							</button>
+						)}
+						{m.content && (
+							<p
+								className={clsx(
+									"text-sm leading-relaxed break-words whitespace-pre-wrap",
+									m.mediaUrl && "mt-2",
+								)}
+							>
+								{linkify(m.content)}
+							</p>
+						)}
+					</div>
+				</div>
+				{endsRun && (
+					<span className="mt-1 flex items-center gap-1 font-sans text-[11px] tabular-nums text-subtle">
+						{format(new Date(m.createdAt), "h:mm a")}
+						{isMe && (
+							<MessageTicks
+								state={tickStateFor({
+									id: m._id,
+									createdAt: m.createdAt,
+									deliveredAt,
+									readAt,
+									peerReadUpTo,
+								})}
+							/>
+						)}
+					</span>
+				)}
+			</div>
+		</>
+	);
+});

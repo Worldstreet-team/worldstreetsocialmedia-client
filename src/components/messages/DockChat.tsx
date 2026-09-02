@@ -3,7 +3,7 @@
 import { UserBadges } from "@/components/ui/UserBadges";
 import axios from "axios";
 import clsx from "clsx";
-import { useAtomValue } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useAuth } from "@clerk/nextjs";
 import {
 	ArrowLeft,
@@ -21,7 +21,11 @@ import { useRealtime } from "@/components/providers/RealtimeProvider";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { VoiceMessage } from "@/components/messages/VoiceMessage";
 import type { ConversationRow } from "@/components/messages/ConversationList";
-import type { Message } from "@/store/messageCache";
+import {
+	messageCacheAtom,
+	unreadMessagesCountAtom,
+	type Message,
+} from "@/store/messageCache";
 import { onlineIdsAtom } from "@/store/ui.atom";
 import { BACKEND_URL } from "@/const";
 
@@ -74,7 +78,23 @@ export function DockChat({
 	const { startCall } = useCall();
 	const online = useAtomValue(onlineIdsAtom);
 
-	const [messages, setMessages] = useState<Message[]>([]);
+	// Register item 16: the dock reads and writes the SAME cache as the
+	// full page — a thread read here stops looking unread there, and the
+	// history fetched by either surface serves both.
+	const [cache, setCache] = useAtom(messageCacheAtom);
+	const setUnreadTotal = useSetAtom(unreadMessagesCountAtom);
+	const messages = cache[conversation._id] ?? [];
+	const setMessages = useCallback(
+		(updater: Message[] | ((prev: Message[]) => Message[])) => {
+			setCache((prev: Record<string, Message[]>) => {
+				const cur = prev[conversation._id] ?? [];
+				const next =
+					typeof updater === "function" ? updater(cur) : updater;
+				return { ...prev, [conversation._id]: next };
+			});
+		},
+		[conversation._id, setCache],
+	);
 	const [loading, setLoading] = useState(true);
 	const [draft, setDraft] = useState("");
 	const endRef = useRef<HTMLDivElement | null>(null);
@@ -89,14 +109,33 @@ export function DockChat({
 		endRef.current?.scrollIntoView({ block: "end" });
 	}, []);
 
-	// History on open.
+	// History on open — newest page only, and the shared cache short-circuits.
 	useEffect(() => {
+		void (async () => {
+			try {
+				const token = await getToken();
+				await axios.post(
+					`${API_URL}/api/messages/${conversation._id}/read`,
+					{},
+					{ headers: { Authorization: `Bearer ${token}` } },
+				);
+				setUnreadTotal((n: number) =>
+					Math.max(0, n - (conversation as { unreadCount?: number }).unreadCount!) || 0,
+				);
+			} catch {
+				// Read marks are best-effort from the dock.
+			}
+		})();
+		if ((cache[conversation._id]?.length ?? 0) > 0) {
+			setLoading(false);
+			return;
+		}
 		let dead = false;
 		(async () => {
 			try {
 				const token = await getToken();
 				const res = await axios.get(
-					`${API_URL}/api/messages/${conversation._id}`,
+					`${API_URL}/api/messages/${conversation._id}?limit=50`,
 					{ headers: { Authorization: `Bearer ${token}` } },
 				);
 				if (dead) return;

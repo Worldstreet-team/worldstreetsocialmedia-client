@@ -33,7 +33,8 @@ export type NotificationType =
   | "live"
   | "sale"
   | "gift"
-  | "moderation";
+  | "moderation"
+  | "message";
 
 export interface AppNotification {
   _id: string;
@@ -44,6 +45,8 @@ export interface AppNotification {
   amountMinor?: number;
   /** Free text, moderation notices only: what was removed and why. */
   body?: string;
+  /** DM notifications: the thread to open. */
+  conversation?: string;
   read: boolean;
   createdAt: string;
 }
@@ -58,6 +61,7 @@ export interface NotificationGroup {
   amountMinor?: number;
   /** Carried up for moderation notices. */
   body?: string;
+  conversation?: string;
   /** Every member id, so tapping a group marks all of it read. */
   ids: string[];
   createdAt: string;

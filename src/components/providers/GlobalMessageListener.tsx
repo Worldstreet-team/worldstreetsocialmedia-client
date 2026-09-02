@@ -29,6 +29,19 @@ export default function GlobalMessageListener() {
 
 			const { message: newMessage, conversationId } = message.data;
 
+			// Own echo from another device/tab (W1 multi-device fanout): the
+			// badge and toast are for the RECIPIENT, not the author.
+			if (String(newMessage?.sender?._id) === String(user._id)) return;
+
+			// Register item 18: while the inbox itself is on screen, the row
+			// update IS the notification — a toast on top is noise.
+			if (window.location.pathname.startsWith("/messages")) {
+				if (conversationId !== activeConversationId) {
+					setUnreadCount((n) => n + 1);
+				}
+				return;
+			}
+
 			// Suppressed only for the thread actually on screen. Keying off the
 			// /messages path instead dropped every message that arrived while you
 			// were reading a different conversation.

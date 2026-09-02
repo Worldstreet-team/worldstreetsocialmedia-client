@@ -6,8 +6,12 @@ import Link from "next/link";
 
 import dynamic from "next/dynamic";
 
-import { useState, useEffect, useRef, useCallback,
-	Fragment,
+import {
+	useState,
+	useEffect,
+	useRef,
+	useCallback,
+	useMemo,
 } from "react";
 import { VideoPlayer } from "@/components/ui/VideoPlayer";
 import {
@@ -73,6 +77,13 @@ import { useCall } from "@/providers/CallProvider";
 import { useChatSignals } from "@/hooks/useChatSignals";
 import { TypingIndicator } from "@/components/messages/TypingIndicator";
 import { MessageTicks, tickStateFor } from "@/components/messages/MessageTicks";
+import { ThreadList } from "@/components/messages/thread/ThreadList";
+import {
+	ComposerInput,
+	type ComposerInputHandle,
+} from "@/components/messages/thread/ComposerInput";
+import type { VirtuosoHandle } from "react-virtuoso";
+import { imageMeta } from "@/lib/media-meta";
 import { CallLogRow } from "@/components/messages/CallLogRow";
 import { SendMoneySheet } from "@/components/messages/SendMoneySheet";
 import { PaymentBubble } from "@/components/messages/PaymentBubble";
@@ -176,6 +187,13 @@ interface Message {
 		sender?: { username?: string; firstName?: string; lastName?: string };
 	} | null;
 	createdAt: string;
+	/** Sender-generated dedup id; doubles as the STABLE list key across the
+	 *  optimistic→server swap, so a confirmed send never remounts. */
+	clientKey?: string;
+	width?: number;
+	height?: number;
+	thumbhash?: string;
+	peaks?: number[];
 }
 
 /**
@@ -232,6 +250,12 @@ interface Conversation {
 	 *  quiet, unbadged — until accepted (replying accepts). */
 	isRequestForMe?: boolean;
 	status?: "accepted" | "request";
+	/** Member records with high-water read marks (gateway W1). */
+	members?: {
+		profile: string | { _id: string };
+		readUpTo?: string;
+		readUpToAt?: string;
+	}[];
 }
 
 const Attachment = ({
@@ -376,8 +400,10 @@ export const MessageBox = ({
 	const goBack = useBackWithFallback();
 
 	const [myProfileId, setMyProfileId] = useState<string | null>(null);
+	const conversationsRef = useRef<Conversation[]>([]);
 	const [conversations, setConversations] =
 		useState<Conversation[]>(initialConversations);
+	conversationsRef.current = conversations;
 	const [activeConversation, setActiveConversation] =
 		useState<Conversation | null>(() => {
 			if (initialConversationId && initialConversations.length > 0) {
@@ -419,6 +445,18 @@ export const MessageBox = ({
 	const messages = activeConversation
 		? messageCache[activeConversation._id] || []
 		: [];
+	// Virtuoso backwards-pagination plumbing (register items 24-25).
+	const [firstItemIndex, setFirstItemIndex] = useState(100000);
+	const [pendingNew, setPendingNew] = useState(0);
+	const hasMoreOlderRef = useRef(true);
+	const loadingOlderRef = useRef(false);
+	const atBottomRef = useRef(true);
+	const lastMarkRef = useRef(0);
+	const virtuosoRef = useRef<VirtuosoHandle | null>(null);
+	const composerRef = useRef<ComposerInputHandle | null>(null);
+	const messageCacheRef = useRef(messageCache);
+	messageCacheRef.current = messageCache;
+	const myProfileIdRef = useRef<string | null>(null);
 	const [messageInput, setMessageInput] = useState("");
 	/** The message the composer is currently answering, if any. */
 	const [replyTarget, setReplyTarget] = useState<Message | null>(null);
@@ -452,9 +490,8 @@ export const MessageBox = ({
 			window.removeEventListener("keydown", key);
 		};
 	}, [msgMenu]);
-	const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const bubbleTouch = useRef<{ x: number; y: number; id: string } | null>(null);
-	const [swipeDx, setSwipeDx] = useState<{ id: string; dx: number } | null>(null);
+	// Gestures live inside MessageBubble now (refs + direct style writes);
+	// the parent no longer re-renders the thread per touchmove.
 	/** Briefly highlighted after a jump, so the eye lands on the right bubble. */
 	const [flashedId, setFlashedId] = useState<string | null>(null);
 
@@ -477,13 +514,22 @@ export const MessageBox = ({
 		return () => window.removeEventListener("keydown", onKey);
 	}, [replyTarget]);
 
-	const jumpToMessage = (id: string) => {
-		const el = document.getElementById(`msg-${id}`);
-		if (!el) return;
-		el.scrollIntoView({ behavior: "smooth", block: "center" });
-		setFlashedId(id);
-		setTimeout(() => setFlashedId((cur) => (cur === id ? null : cur)), 1200);
-	};
+	const jumpToMessage = useCallback(
+		(id: string) => {
+			const conv = activeIdRef.current;
+			const list = conv ? messageCacheRef.current[conv] || [] : [];
+			const idx = list.findIndex((mm) => mm._id === id);
+			if (idx < 0) return;
+			virtuosoRef.current?.scrollToIndex({
+				index: firstItemIndex + idx,
+				align: "center",
+				behavior: "smooth",
+			});
+			setFlashedId(id);
+			setTimeout(() => setFlashedId((cur) => (cur === id ? null : cur)), 1200);
+		},
+		[firstItemIndex],
+	);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [isLoadingConversations, setIsLoadingConversations] = useState(
 		initialConversations.length === 0,
@@ -764,14 +810,44 @@ export const MessageBox = ({
 
 		const formData = new FormData();
 		formData.append("file", audioBlob, "voice-note.webm");
-		// Outside the try so the catch can roll the optimistic bubble back.
+		formData.append("conversationId", activeConversation._id);
 		const tempId = `temp-${Date.now()}`;
+		const clientKey =
+			typeof crypto !== "undefined" && "randomUUID" in crypto
+				? crypto.randomUUID()
+				: `ck-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+		// Register item 20: the bubble exists BEFORE the upload — the only
+		// send feedback used to be a toast while the network worked.
+		const localUrl = URL.createObjectURL(audioBlob);
+		const optimisticMessage: Message = {
+			_id: tempId,
+			clientKey,
+			conversationId: activeConversation._id,
+			sender: {
+				_id: myProfileId,
+				firstName: user?.firstName || "",
+				lastName: user?.lastName || "",
+				username: user?.username || "",
+				avatar: me?.avatar || user?.imageUrl || "",
+			},
+			content: "",
+			type: "audio",
+			mediaUrl: localUrl,
+			durationSec: recordingDuration,
+			createdAt: new Date().toISOString(),
+		};
+		setMessageCache((prev) => ({
+			...prev,
+			[activeConversation._id]: [
+				...(prev[activeConversation._id] || []),
+				optimisticMessage,
+			],
+		}));
+		scrollToBottom();
 
 		try {
-			toast.info("Sending voice note...");
 			const token = await getToken();
 
-			// 1. Upload
 			const uploadRes = await axios.post(
 				`${API_URL}/api/messages/upload`,
 				formData,
@@ -783,33 +859,7 @@ export const MessageBox = ({
 				},
 			);
 
-			const { url } = uploadRes.data;
-
-			// 2. Send Message
-			const optimisticMessage: Message = {
-				_id: tempId,
-				conversationId: activeConversation._id,
-				sender: {
-					_id: myProfileId,
-					firstName: user?.firstName || "",
-					lastName: user?.lastName || "",
-					username: user?.username || "",
-					avatar: me?.avatar || user?.imageUrl || "",
-				},
-				content: "",
-				type: "audio",
-				mediaUrl: url,
-				createdAt: new Date().toISOString(),
-			};
-
-			setMessageCache((prev) => ({
-				...prev,
-				[activeConversation._id]: [
-					...(prev[activeConversation._id] || []),
-					optimisticMessage,
-				],
-			}));
-			scrollToBottom();
+			const key = uploadRes.data.key ?? uploadRes.data.url;
 
 			const response = await axios.post(
 				`${API_URL}/api/messages`,
@@ -817,10 +867,11 @@ export const MessageBox = ({
 					conversationId: activeConversation._id,
 					content: "",
 					type: "audio",
-					mediaUrl: url,
+					mediaUrl: key,
 					// The recorder counts this anyway; sending it lets the inbox
 					// preview say "0:23" instead of just "Voice note".
 					durationSec: recordingDuration,
+					clientKey,
 				},
 				{ headers: { Authorization: `Bearer ${token}` } },
 			);
@@ -828,7 +879,10 @@ export const MessageBox = ({
 			setMessageCache((prev) => ({
 				...prev,
 				[activeConversation._id]: (prev[activeConversation._id] || []).map(
-					(m) => (m._id === tempId ? response.data : m),
+					(m) =>
+						m._id === tempId
+							? { ...response.data, clientKey }
+							: m,
 				),
 			}));
 		} catch (error: any) {
@@ -887,31 +941,39 @@ export const MessageBox = ({
 	};
 
 	const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
-		setTimeout(() => {
-			messagesEndRef.current?.scrollIntoView({ behavior });
-		}, 100);
+		virtuosoRef.current?.scrollToIndex({
+			index: "LAST",
+			behavior: behavior === "auto" ? "auto" : "smooth",
+		});
 	}, []);
 
-	const markAsRead = async (conversationId: string) => {
+	const markAsRead = async (conversationId: string, upTo?: string) => {
+		// Batched: once per 1.5s per focus burst, not once per incoming
+		// message (register item 13).
+		const nowT = Date.now();
+		if (nowT - lastMarkRef.current < 1500) return;
+		lastMarkRef.current = nowT;
 		try {
 			const token = await getToken();
 			await axios.post(
 				`${API_URL}/api/messages/${conversationId}/read`,
-				{},
+				{ upTo },
 				{
 					headers: { Authorization: `Bearer ${token}` },
 				},
 			);
-			// Drop this thread's share of the nav badge too. Patching only the
-			// local row left the badge stuck until a reload.
-			setConversations((prev) => {
-				const cleared = prev.find((c) => c._id === conversationId);
-				if (cleared?.unreadCount)
-					setUnreadMessages((n) => Math.max(0, n - cleared.unreadCount));
-				return prev.map((c) =>
+			// Badge math runs OUTSIDE the updater (StrictMode double-fire
+			// class, register item 15).
+			const cleared = conversationsRef.current.find(
+				(c) => c._id === conversationId,
+			);
+			if (cleared?.unreadCount)
+				setUnreadMessages((n) => Math.max(0, n - cleared.unreadCount));
+			setConversations((prev) =>
+				prev.map((c) =>
 					c._id === conversationId ? { ...c, unreadCount: 0 } : c,
-				);
-			});
+				),
+			);
 		} catch (e) {
 			console.error("Failed to mark as read", e);
 		}
@@ -942,35 +1004,100 @@ export const MessageBox = ({
 		}
 	};
 
+	/** Newest-first union merge: server rows win, temps ride the tail. */
+	const mergeMessages = (a: Message[], b: Message[]): Message[] => {
+		const byId = new Map<string, Message>();
+		for (const m of [...a, ...b]) {
+			const k = m.clientKey ?? m._id;
+			const prior = byId.get(k);
+			// A server row (real _id) always beats an optimistic twin.
+			if (!prior || prior._id.startsWith("temp-")) byId.set(k, m);
+		}
+		return [...byId.values()].sort((x, y) =>
+			x.createdAt < y.createdAt ? -1 : x.createdAt > y.createdAt ? 1 : 0,
+		);
+	};
+
 	const fetchMessages = async (conversationId: string) => {
-		// Use cache if available
-		if (messageCache[conversationId]?.length > 0) {
-			scrollToBottom("auto");
-			// Optional: Background refresh could go here if needed
+		hasMoreOlderRef.current = true;
+		setFirstItemIndex(100000);
+		setPendingNew(0);
+		const cached = messageCache[conversationId];
+		if (cached?.length > 0) {
+			// Register item 14: the cache paints instantly, the newest page
+			// revalidates BEHIND it — missed-while-offline messages stop
+			// being invisible for the whole session.
+			void (async () => {
+				try {
+					const token = await getToken();
+					const r = await axios.get(
+						`${API_URL}/api/messages/${conversationId}?limit=50`,
+						{ headers: { Authorization: `Bearer ${token}` } },
+					);
+					setMessageCache((prev) => ({
+						...prev,
+						[conversationId]: mergeMessages(
+							prev[conversationId] || [],
+							r.data,
+						),
+					}));
+				} catch {
+					// Silent: the cached copy is already on screen.
+				}
+			})();
 			return;
 		}
 
 		try {
 			setIsLoadingMessages(true);
-			// setMessages([]); // No longer needed with cache
 			const token = await getToken();
 			const response = await axios.get(
-				`${API_URL}/api/messages/${conversationId}`,
+				`${API_URL}/api/messages/${conversationId}?limit=50`,
 				{
 					headers: { Authorization: `Bearer ${token}` },
 				},
 			);
+			hasMoreOlderRef.current = response.data.length === 50;
 			setMessageCache((prev) => ({
 				...prev,
 				[conversationId]: response.data,
 			}));
-			scrollToBottom("auto");
 		} catch (error) {
 			toast.error("Failed to load messages");
 		} finally {
 			setIsLoadingMessages(false);
 		}
 	};
+
+	/** Older page prepend — virtuoso preserves the visual position via the
+	 *  shrinking firstItemIndex (register item 24). */
+	const loadOlder = useCallback(async () => {
+		const conv = activeIdRef.current;
+		if (!conv || loadingOlderRef.current || !hasMoreOlderRef.current) return;
+		const list = messageCacheRef.current[conv] || [];
+		const oldest = list.find((m) => !m._id.startsWith("temp-"));
+		if (!oldest) return;
+		loadingOlderRef.current = true;
+		try {
+			const token = await getToken();
+			const r = await axios.get(
+				`${API_URL}/api/messages/${conv}?limit=50&before=${oldest._id}`,
+				{ headers: { Authorization: `Bearer ${token}` } },
+			);
+			hasMoreOlderRef.current = r.data.length === 50;
+			if (r.data.length > 0) {
+				setMessageCache((prev) => ({
+					...prev,
+					[conv]: [...r.data, ...(prev[conv] || [])],
+				}));
+				setFirstItemIndex((i) => i - r.data.length);
+			}
+		} catch {
+			// Scrolling further retries; no toast for a background page.
+		} finally {
+			loadingOlderRef.current = false;
+		}
+	}, [getToken]);
 
 	const onMessage = useCallback((ablyMessage: any) => {
 		if (
@@ -990,15 +1117,57 @@ export const MessageBox = ({
 		}
 		if (
 			ablyMessage.name === "event" &&
+			ablyMessage.data.type === "message:read"
+		) {
+			// The peer's persisted high-water mark moved — hydrate ticks.
+			const { conversationId, readerId, readUpTo } = ablyMessage.data;
+			if (!readUpTo) return;
+			const bump = (c: Conversation): Conversation =>
+				c._id !== conversationId
+					? c
+					: {
+							...c,
+							members: (c.members ?? []).map((mm) => {
+								const pid =
+									typeof mm.profile === "string"
+										? mm.profile
+										: mm.profile?._id;
+								return String(pid) === String(readerId)
+									? { ...mm, readUpTo, readUpToAt: new Date().toISOString() }
+									: mm;
+							}),
+						};
+			setConversations((prev) => prev.map(bump));
+			setActiveConversation((prev) => (prev ? bump(prev) : prev));
+			return;
+		}
+		if (
+			ablyMessage.name === "event" &&
 			ablyMessage.data.type === "message:new"
 		) {
 			const { message: newMessage, conversationId } = ablyMessage.data;
 			const currentActiveId = activeIdRef.current;
+			const mine =
+				String(newMessage?.sender?._id ?? newMessage?.sender) ===
+				String(myProfileIdRef.current);
 
-			// 1. Update Messages if current chat is open (or even if not, update cache!)
-			// Update cache for the conversationId regardless of active state
 			setMessageCache((prev) => {
 				const currentMessages = prev[conversationId] || [];
+				// clientKey reconciliation: this device's own echo (or the
+				// POST response racing the echo) replaces the optimistic
+				// bubble IN PLACE — same key, no remount, no twin.
+				if (newMessage.clientKey) {
+					const ti = currentMessages.findIndex(
+						(m) =>
+							m.clientKey === newMessage.clientKey ||
+							m._id === newMessage._id,
+					);
+					if (ti >= 0) {
+						const copy = [...currentMessages];
+						copy[ti] = { ...newMessage };
+						return { ...prev, [conversationId]: copy };
+					}
+				}
 				if (currentMessages.find((m) => m._id === newMessage._id)) return prev;
 				return {
 					...prev,
@@ -1006,49 +1175,56 @@ export const MessageBox = ({
 				};
 			});
 
-			if (currentActiveId === conversationId) {
-				scrollToBottom();
-				markAsRead(conversationId);
-				// Their message reached a client that is showing it — both
-				// receipts are true at the same instant.
+			if (currentActiveId === conversationId && !mine) {
 				chatRef.current.notifyDelivered();
-				chatRef.current.notifyRead();
+				if (atBottomRef.current) {
+					// Reading it right now — one batched mark, receipts true.
+					void markAsRead(conversationId, newMessage._id);
+					chatRef.current.notifyRead();
+				} else {
+					// Never yank a reader who scrolled up — offer the pill.
+					setPendingNew((n) => n + 1);
+				}
 			}
 
-			// 2. Update Conversation List (Move to top + Unread count)
+			// Register item 15: the refetch decision runs OUTSIDE the updater.
+			const known = conversationsRef.current.some(
+				(c) => c._id === conversationId,
+			);
+			if (!known) void fetchConversations();
+
 			setConversations((prev) => {
 				const index = prev.findIndex((c) => c._id === conversationId);
-				if (index === -1) {
-					fetchConversations(); // Handle completely new thread
-					return prev;
-				}
-
+				if (index === -1) return prev;
 				const updated = [...prev];
 				const conv = { ...updated[index] };
 				conv.lastMessage = newMessage;
 				conv.lastMessageAt = newMessage.createdAt;
-
-				if (currentActiveId !== conversationId) {
+				if (currentActiveId !== conversationId && !mine) {
 					conv.unreadCount += 1;
 				}
-
 				updated.splice(index, 1);
 				return [conv, ...updated];
 			});
 		}
 	}, []);
 
-	const sendMessage = async () => {
+	const sendMessage = async (textArg?: string): Promise<boolean> => {
+		const text = (textArg ?? "").trim();
 		if (
-			(!messageInput.trim() && !selectedFile) ||
+			(!text && !selectedFile) ||
 			!activeConversation ||
 			!myProfileId ||
 			isUploading
 		)
-			return;
+			return false;
 
+		const clientKey =
+			typeof crypto !== "undefined" && "randomUUID" in crypto
+				? crypto.randomUUID()
+				: `ck-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 		const tempId = `temp-${Date.now()}`;
-		const content = messageInput;
+		const content = text;
 		// Captured before the optimistic clear, so a fast second send cannot
 		// attach this reply to the wrong message.
 		const currentReply = replyTarget;
@@ -1056,7 +1232,6 @@ export const MessageBox = ({
 		const currentFile = selectedFile;
 		const currentPreview = previewUrl;
 
-		// Determine optimistic type
 		let optimisticType: "text" | "image" | "video" | "file" = "text";
 		if (currentFile) {
 			if (currentFile.type.startsWith("image")) optimisticType = "image";
@@ -1064,8 +1239,20 @@ export const MessageBox = ({
 			else optimisticType = "file";
 		}
 
+		// Geometry + thumbhash at send (register item 26): the receiver
+		// reserves the exact box and paints a placeholder from metadata.
+		let meta: { width?: number; height?: number; thumbhash?: string } = {};
+		if (currentFile && optimisticType === "image") {
+			try {
+				meta = await imageMeta(currentFile);
+			} catch {
+				// Geometry is an enhancement; the send never waits on it.
+			}
+		}
+
 		const optimisticMessage: Message = {
 			_id: tempId,
+			clientKey,
 			conversationId: activeConversation._id,
 			sender: {
 				_id: myProfileId,
@@ -1077,6 +1264,7 @@ export const MessageBox = ({
 			content: content,
 			type: optimisticType as any,
 			mediaUrl: currentPreview || undefined,
+			...meta,
 			replyTo: currentReply
 				? {
 						_id: currentReply._id,
@@ -1097,8 +1285,8 @@ export const MessageBox = ({
 				optimisticMessage,
 			],
 		}));
+		setPendingNew(0);
 		scrollToBottom();
-		setMessageInput("");
 		setReplyTarget(null);
 		clearSelectedFile();
 		setIsUploading(true);
@@ -1108,10 +1296,12 @@ export const MessageBox = ({
 			let mediaUrl = "";
 			let finalType = "text";
 
-			// 1. Upload if file exists
 			if (currentFile) {
 				const formData = new FormData();
 				formData.append("file", currentFile);
+				// Binds the upload to this thread so the gateway can enforce
+				// membership at the door (register item 40).
+				formData.append("conversationId", activeConversation._id);
 				const uploadRes = await axios.post(
 					`${API_URL}/api/messages/upload`,
 					formData,
@@ -1122,7 +1312,9 @@ export const MessageBox = ({
 						},
 					},
 				);
-				mediaUrl = uploadRes.data.url;
+				// Private bucket: STORE the key; the presigned url is only for
+				// this tab's preview (register item 41).
+				mediaUrl = uploadRes.data.key ?? uploadRes.data.url;
 				const type = uploadRes.data.type;
 				finalType = type.startsWith("image")
 					? "image"
@@ -1131,7 +1323,6 @@ export const MessageBox = ({
 						: "file";
 			}
 
-			// 2. Send Message
 			const response = await axios.post(
 				`${API_URL}/api/messages`,
 				{
@@ -1142,14 +1333,20 @@ export const MessageBox = ({
 					// The gateway drops this unless it names a message in THIS
 					// thread, so a stale id degrades to a plain message.
 					replyTo: currentReply?._id,
+					clientKey,
+					...meta,
 				},
 				{ headers: { Authorization: `Bearer ${token}` } },
 			);
 
 			setMessageCache((prev) => {
 				const currentMsgs = prev[activeConversation._id] || [];
-				const realExists = currentMsgs.find((m) => m._id === response.data._id);
-				if (realExists) {
+				const server = { ...response.data, clientKey };
+				const already = currentMsgs.findIndex(
+					(m) => m._id === server._id && m._id !== tempId,
+				);
+				if (already >= 0) {
+					// The realtime echo beat the POST response; drop the temp.
 					return {
 						...prev,
 						[activeConversation._id]: currentMsgs.filter(
@@ -1157,18 +1354,17 @@ export const MessageBox = ({
 						),
 					};
 				}
+				// Same clientKey key in the list — the bubble UPDATES in
+				// place instead of remounting (register item 10).
 				return {
 					...prev,
 					[activeConversation._id]: currentMsgs.map((m) =>
-						m._id === tempId ? response.data : m,
+						m._id === tempId ? server : m,
 					),
 				};
 			});
+			return true;
 		} catch (error: any) {
-			// A 403 is the gateway REFUSING, not failing — blocked, or the
-			// mutual-follow gate. Say so plainly, and no console.error for an
-			// expected refusal: in dev that paints the crash overlay over a
-			// message that was handled.
 			if (error?.response?.status === 403) {
 				toast.error(
 					error?.response?.data?.message ||
@@ -1186,6 +1382,8 @@ export const MessageBox = ({
 					(m) => m._id !== tempId,
 				),
 			}));
+			// The composer restores the draft when we report failure.
+			return false;
 		} finally {
 			setIsUploading(false);
 		}
@@ -1206,6 +1404,61 @@ export const MessageBox = ({
 	const chatRef = useRef(chat);
 	chatRef.current = chat;
 
+	/** The peer's persisted read mark, for ticks that survive reload. */
+	const peerReadUpTo = useMemo(() => {
+		const peerId = activeConversation?.otherParticipant?._id;
+		const mm = activeConversation?.members?.find((x) => {
+			const pid = typeof x.profile === "string" ? x.profile : x.profile?._id;
+			return String(pid) === String(peerId);
+		});
+		return mm?.readUpTo ? String(mm.readUpTo) : null;
+	}, [activeConversation]);
+
+	const handleAtBottom = useCallback((b: boolean) => {
+		atBottomRef.current = b;
+		if (b) {
+			setPendingNew(0);
+			const id = activeIdRef.current;
+			if (id) void markAsRead(id);
+		}
+		// biome-ignore lint/correctness/useExhaustiveDependencies: refs + stable fns
+	}, []);
+
+	const replyAndFocus = useCallback((m: unknown) => {
+		setReplyTarget(m as Message);
+		composerRef.current?.focus();
+	}, []);
+
+	const bubbleHandlers = useMemo(
+		() => ({
+			onReply: replyAndFocus,
+			onMenu: (x: number, y: number, m: unknown) =>
+				setMsgMenu({ x, y, message: m as Message }),
+			onJump: jumpToMessage,
+			onMediaClick: handleMediaClick,
+			onStory: (ref: { story: string; thumbnail: string; authorUsername: string }) =>
+				void openStoryRef(ref),
+			onCallBack: (video: boolean) => {
+				if (!activeConversation) return;
+				startCall({
+					conversationId: activeConversation._id,
+					peer: {
+						id: activeConversation.otherParticipant?._id || "",
+						name:
+							`${activeConversation.otherParticipant?.firstName || ""} ${activeConversation.otherParticipant?.lastName || ""}`.trim() ||
+							activeConversation.otherParticipant?.username ||
+							"",
+						avatar: activeConversation.otherParticipant?.avatar || "",
+						username: activeConversation.otherParticipant?.username || "",
+					},
+					isVideo: video,
+				});
+			},
+		}),
+		// biome-ignore lint/correctness/useExhaustiveDependencies: identity by thread
+		[replyAndFocus, jumpToMessage, activeConversation?._id],
+	);
+
 	useEffect(() => {
 		const fetchMe = async () => {
 			const token = await getToken();
@@ -1213,6 +1466,7 @@ export const MessageBox = ({
 				headers: { Authorization: `Bearer ${token}` },
 			});
 			setMyProfileId(res.data._id);
+			myProfileIdRef.current = res.data._id;
 		};
 		if (user) {
 			fetchMe();
@@ -1499,383 +1753,68 @@ export const MessageBox = ({
 						</div>
 					</div>
 
-					<div className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-sunken/30 px-4 py-4 sm:p-6">
+					<div className="flex-1 min-h-0 flex flex-col bg-sunken/30">
 						{activeConversation.isRequestForMe && (
-							<div className="mx-auto mb-4 max-w-[420px] rounded-xl bg-surface p-4 text-center">
-								<p className="font-sans text-[13.5px] font-semibold text-primary">
-									{displayNameOf(activeConversation.otherParticipant)}{" "}
-									wants to message you
-								</p>
-								<p className="mt-1 font-sans text-[12px] text-muted">
-									They won't know you've seen this until you accept —
-									replying accepts too.
-								</p>
-								<div className="mt-3 flex justify-center gap-2">
-									<button
-										type="button"
-										onClick={() =>
-											void acceptRequest(activeConversation._id)
-										}
-										className="h-9 cursor-pointer rounded-pill bg-primary px-4 font-sans text-[12.5px] font-semibold text-page transition-colors hover:opacity-90"
-									>
-										Accept
-									</button>
-									<button
-										type="button"
-										onClick={() =>
-											void declineRequest(activeConversation._id)
-										}
-										className="h-9 cursor-pointer rounded-pill bg-raised px-4 font-sans text-[12.5px] font-medium text-danger transition-colors hover:bg-chip"
-									>
-										Delete
-									</button>
+							<div className="shrink-0 px-4 pt-4">
+								<div className="mx-auto max-w-[420px] rounded-xl bg-surface p-4 text-center">
+									<p className="font-sans text-[13.5px] font-semibold text-primary">
+										{displayNameOf(activeConversation.otherParticipant)}{" "}
+										wants to message you
+									</p>
+									<p className="mt-1 font-sans text-[12px] text-muted">
+										They won't know you've seen this until you accept —
+										replying accepts too.
+									</p>
+									<div className="mt-3 flex justify-center gap-2">
+										<button
+											type="button"
+											onClick={() =>
+												void acceptRequest(activeConversation._id)
+											}
+											className="h-9 cursor-pointer rounded-pill bg-primary px-4 font-sans text-[12.5px] font-semibold text-page transition-colors hover:opacity-90"
+										>
+											Accept
+										</button>
+										<button
+											type="button"
+											onClick={() =>
+												void declineRequest(activeConversation._id)
+											}
+											className="h-9 cursor-pointer rounded-pill bg-raised px-4 font-sans text-[12.5px] font-medium text-danger transition-colors hover:bg-chip"
+										>
+											Delete
+										</button>
+									</div>
 								</div>
 							</div>
 						)}
 						{isLoadingMessages && (
-							<div className="text-center text-muted font-sans text-sm">
+							<div className="shrink-0 py-3 text-center text-muted font-sans text-sm">
 								Loading history...
 							</div>
 						)}
-						{messages.map((m, mi) => {
-							const isMe =
-								m.sender._id === myProfileId || m._id.startsWith("temp-");
-							const prev = messages[mi - 1];
-							const next = messages[mi + 1];
-							// A day separator wherever the calendar turns over, so a
-							// thread read months later still says when things happened.
-							const showDay =
-								!prev ||
-								new Date(prev.createdAt).toDateString() !==
-									new Date(m.createdAt).toDateString();
-							// A run is the same person inside five minutes. Without
-							// this, five quick lines rendered as five separate events,
-							// each with its own timestamp — the visual weight of a
-							// conversation that never happened that way.
-							const sameRunAsPrev =
-								!!prev &&
-								prev.type !== "call" &&
-								(prev.sender._id === m.sender._id ||
-									(isMe && prev._id.startsWith("temp-"))) &&
-								!showDay &&
-								new Date(m.createdAt).getTime() -
-									new Date(prev.createdAt).getTime() <
-									5 * 60 * 1000;
-							const endsRun =
-								!next ||
-								next.type === "call" ||
-								next.sender._id !== m.sender._id ||
-								new Date(next.createdAt).getTime() -
-									new Date(m.createdAt).getTime() >=
-									5 * 60 * 1000 ||
-								new Date(next.createdAt).toDateString() !==
-									new Date(m.createdAt).toDateString();
-							// A call isn't something either side said, so it gets a
-							// centred chip instead of a bubble on one shore.
-							if (m.type === "payment") {
-								// Money is not something either side "said"
-								// either, but unlike a call it very much has a
-								// sender — so it stays on its shore, as a
-								// receipt rather than a speech bubble.
-								return (
-									<PaymentBubble
-										key={m._id}
-										amountMinor={(m as any).amountMinor ?? 0}
-										note={m.content}
-										at={m.createdAt}
-										mine={
-											(typeof m.sender === "string"
-												? m.sender
-												: m.sender?._id) === myProfileId
-										}
-										peerName={
-											activeConversation.otherParticipant?.firstName ||
-											activeConversation.otherParticipant?.username ||
-											""
-										}
-									/>
-								);
+						<ThreadList
+							ref={virtuosoRef}
+							threadId={activeConversation._id}
+							messages={messages as never}
+							firstItemIndex={firstItemIndex}
+							myProfileId={myProfileId ?? ""}
+							flashedId={flashedId}
+							peerName={
+								activeConversation.otherParticipant?.firstName ||
+								activeConversation.otherParticipant?.username ||
+								""
 							}
-							if (m.type === "call") {
-								return (
-									<CallLogRow
-										key={m._id}
-										content={m.content}
-										at={m.createdAt}
-										onCallBack={(video) =>
-											startCall({
-												conversationId: activeConversation._id,
-												peer: {
-													id: activeConversation.otherParticipant?._id || "",
-													name:
-														`${activeConversation.otherParticipant?.firstName || ""} ${activeConversation.otherParticipant?.lastName || ""}`.trim() ||
-														activeConversation.otherParticipant?.username ||
-														"",
-													avatar:
-														activeConversation.otherParticipant?.avatar || "",
-													username:
-														activeConversation.otherParticipant?.username ||
-														"",
-												},
-												isVideo: video,
-											})
-										}
-									/>
-								);
-							}
-							return (
-								<Fragment key={m._id}>
-									{showDay && (
-										<div className="flex justify-center py-2">
-											<span className="rounded-pill bg-raised px-3 py-1 font-sans text-[11px] font-semibold text-muted">
-												{dayLabel(m.createdAt)}
-											</span>
-										</div>
-									)}
-								<div
-									id={`msg-${m._id}`}
-									onContextMenu={(e) => {
-										if (m._id.startsWith("temp-")) return;
-										e.preventDefault();
-										setMsgMenu({ x: e.clientX, y: e.clientY, message: m });
-									}}
-									onTouchStart={(e) => {
-										if (m._id.startsWith("temp-")) return;
-										const t = e.touches[0];
-										bubbleTouch.current = { x: t.clientX, y: t.clientY, id: m._id };
-										holdTimer.current = setTimeout(() => {
-											setMsgMenu({ x: t.clientX, y: t.clientY, message: m });
-											holdTimer.current = null;
-										}, 450);
-									}}
-									onTouchMove={(e) => {
-										const start = bubbleTouch.current;
-										if (!start) return;
-										const t = e.touches[0];
-										const dx = t.clientX - start.x;
-										const dy = Math.abs(t.clientY - start.y);
-										// Movement cancels the hold — it's a drag now.
-										if (holdTimer.current && (Math.abs(dx) > 8 || dy > 8)) {
-											clearTimeout(holdTimer.current);
-											holdTimer.current = null;
-										}
-										// Swipe RIGHT to reply — the messenger gesture.
-										if (dy < 24 && dx > 0) {
-											setSwipeDx({ id: m._id, dx: Math.min(dx, 72) });
-										}
-									}}
-									onTouchEnd={() => {
-										if (holdTimer.current) {
-											clearTimeout(holdTimer.current);
-											holdTimer.current = null;
-										}
-										if (swipeDx?.id === m._id && swipeDx.dx > 48) {
-											setReplyTarget(m);
-										}
-										setSwipeDx(null);
-										bubbleTouch.current = null;
-									}}
-									style={
-										swipeDx?.id === m._id
-											? {
-													transform: `translateX(${swipeDx.dx}px)`,
-													transition: "none",
-												}
-											: { transition: "transform 200ms var(--ws-ease)" }
-									}
-									className={clsx(
-										"group/msg flex flex-col scroll-mt-24 touch-pan-y",
-										sameRunAsPrev ? "mt-[2px]" : "mt-4",
-										isMe ? "items-end" : "items-start",
-										// Jump target: a brief wash so the eye lands on the
-										// right bubble instead of hunting the thread.
-										flashedId === m._id && "rounded-xl bg-brand/10",
-									)}
-								>
-									<div
-										className={clsx(
-											// justify-end packs against the bubble's own edge:
-											// the row can be wider than chip+capped-bubble
-											// (the text's natural width sets it), and without
-											// this the slack lands on the bubble's outer side
-											// and shoves it toward the centre.
-											"flex max-w-full items-center justify-end gap-1",
-											isMe ? "flex-row" : "flex-row-reverse",
-										)}
-									>
-									{/* Reply rides BESIDE the bubble on its inner side
-									    (owner ruling): left of yours, right of theirs —
-									    where the thumb already is, without pushing the
-									    thread taller. Hover-revealed on pointer devices,
-									    always present on touch. */}
-									{!m._id.startsWith("temp-") && (
-										<button
-											type="button"
-											onClick={() => setReplyTarget(m)}
-											aria-label="Reply to this message"
-											className={clsx(
-												"flex h-8 w-8 shrink-0 items-center justify-center rounded-pill text-subtle transition hover:bg-raised hover:text-muted",
-												"opacity-100 md:opacity-0 md:group-hover/msg:opacity-100 md:focus-visible:opacity-100",
-											)}
-										>
-											<ArrowBendUpLeft size={14} weight="bold" />
-										</button>
-									)}
-									<div
-										className={clsx(
-											// 70% of a 272px pane is 190px — too narrow to
-											// hold a sentence without shredding it. Phones
-											// get 85%, desktop keeps the original ratio.
-											// Owner ruling 2026-08-30: chat bubbles are the one
-											// surface with a big, soft radius — the tight
-											// 4/7/10/13 ladder stays everywhere else.
-											"max-w-[85%] sm:max-w-[70%] min-w-0 overflow-hidden rounded-[22px]",
-											// Media IS the bubble: a picture wrapped in a
-											// coloured card with padding read as a picture
-											// in an envelope. Text keeps the padded fill.
-											(m.type === "image" || m.type === "video") &&
-												!m.content
-												? "p-0"
-												: "px-3.5 py-2 sm:px-4",
-											// Run-aware corners: inside a run, the corners that
-											// face the neighbouring bubble flatten, so a burst
-											// reads as one utterance in parts — the messenger
-											// grammar — instead of a stack of identical pills.
-											isMe
-												? [
-														(m.type === "image" || m.type === "video") &&
-														!m.content
-															? "text-brand-on"
-															: "bg-brand text-brand-on",
-														sameRunAsPrev && "rounded-tr-[8px]",
-														!endsRun && "rounded-br-[8px]",
-													]
-												: [
-														(m.type === "image" || m.type === "video") &&
-														!m.content
-															? "text-primary"
-															: "bg-raised text-primary",
-														sameRunAsPrev && "rounded-tl-[8px]",
-														!endsRun && "rounded-bl-[8px]",
-													],
-										)}
-									>
-										{/* What this message is answering. Tapping it jumps
-										    to the original and flashes it, so a reply to
-										    something far up the thread stays findable. */}
-										{m.replyTo && (
-											<button
-												type="button"
-												onClick={() => jumpToMessage(m.replyTo!._id)}
-												className={clsx(
-													"mb-1.5 flex w-full cursor-pointer items-stretch gap-2 rounded-[7px] px-2 py-1.5 text-left transition-opacity hover:opacity-80",
-													// Tinted against the bubble it sits in, not
-													// against the page: on my own gold bubble a
-													// surface-coloured quote would be a hole.
-													isMe ? "bg-black/15" : "bg-black/20",
-												)}
-											>
-												<span
-													className={clsx(
-														"w-[2px] shrink-0 rounded-pill",
-														isMe ? "bg-brand-on/50" : "bg-brand",
-													)}
-												/>
-												<span className="flex min-w-0 flex-col">
-													<span className="truncate font-sans text-[11.5px] font-semibold opacity-80">
-														{m.replyTo.sender?.username
-															? `@${m.replyTo.sender.username}`
-															: "Message"}
-													</span>
-													<span className="truncate font-sans text-[12.5px] opacity-70">
-														{quotedPreview(m.replyTo)}
-													</span>
-												</span>
-											</button>
-										)}
-										{m.type === "image" && m.mediaUrl && (
-											<Attachment
-												src={m.mediaUrl}
-												type="image"
-												isMe={isMe}
-												isTemp={m._id.startsWith("temp-")}
-												onClick={() => handleMediaClick(m._id)}
-											/>
-										)}
-										{m.type === "video" && m.mediaUrl && (
-											<Attachment
-												src={m.mediaUrl}
-												type="video"
-												isMe={isMe}
-												isTemp={m._id.startsWith("temp-")}
-												onClick={() => handleMediaClick(m._id)}
-											/>
-										)}
-										{m.type === "audio" && m.mediaUrl && (
-											// Was a hard w-64 (256px) inside a bubble that can
-											// only be ~190px wide on a 320px screen — it blew
-											// the bubble out of the pane.
-											<div className="relative w-full max-w-[256px] mb-1">
-												<VoiceMessage src={m.mediaUrl} isMe={isMe} />
-											</div>
-										)}
-										{m.storyRef && (
-											<button
-												type="button"
-												onClick={() =>
-													m.storyRef && void openStoryRef(m.storyRef)
-												}
-												className="relative mb-1.5 block h-40 w-28 cursor-pointer overflow-hidden rounded-lg border border-current/15 transition-opacity hover:opacity-90"
-												aria-label={t("story.viewStory")}
-											>
-												{/* eslint-disable-next-line @next/next/no-img-element */}
-												<img
-													src={m.storyRef.thumbnail}
-													alt=""
-													className="h-full w-full object-cover"
-												/>
-												<span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0c0a09]/85 to-transparent px-2 pb-1.5 pt-5 text-left font-sans text-[10px] font-semibold text-[#fafaf9]/90">
-													{t("story.viewStory")}
-												</span>
-											</button>
-										)}
-										{m.content && (
-											<p
-												className={clsx(
-													// break-words: a pasted URL with no spaces
-													// used to widen the bubble past the pane.
-													"text-sm leading-relaxed break-words whitespace-pre-wrap",
-													m.mediaUrl && "mt-2",
-												)}
-											>
-												{linkify(m.content)}
-											</p>
-										)}
-									</div>
-									</div>
-									{/* One stamp per run, on its last line. A time under
-									    every bubble is noise the eye has to step over. */}
-									{endsRun && (
-										<span className="mt-1 flex items-center gap-1 font-sans text-[11px] tabular-nums text-subtle">
-											{format(new Date(m.createdAt), "h:mm a")}
-											{isMe && (
-												<MessageTicks
-													state={tickStateFor({
-														id: m._id,
-														createdAt: m.createdAt,
-														deliveredAt: chat.deliveredAt,
-														readAt: chat.readAt,
-													})}
-												/>
-											)}
-										</span>
-									)}
-								</div>
-								</Fragment>
-							);
-						})}
-						{chat.peerTyping && <TypingIndicator />}
-						<div ref={messagesEndRef} />
+							peerTyping={chat.peerTyping}
+							deliveredAt={chat.deliveredAt}
+							readAt={chat.readAt}
+							peerReadUpTo={peerReadUpTo}
+							pendingNew={pendingNew}
+							onLoadOlder={loadOlder}
+							onAtBottomChange={handleAtBottom}
+							onShowNew={() => scrollToBottom()}
+							handlers={bubbleHandlers}
+						/>
 					</div>
 
 					{/* shrink-0 + pb-safe: the composer is the flex row that must never
@@ -2000,116 +1939,19 @@ export const MessageBox = ({
 							) : (
 								/* A fill that lifts on focus. The bordered card read as
 								   a form field in an app that has none anywhere else. */
-								<div className="flex min-w-0 flex-1 items-end gap-1 rounded-2xl bg-sunken py-1.5 pl-1.5 pr-2 transition-colors focus-within:bg-raised sm:gap-2">
-									{/* Attach lives INSIDE the pill. A row of loose parts —
-									    plus, field, icons — read as a toolbar; a messenger
-									    composer is one object with everything in reach. */}
-									<button
-										type="button"
-										// Straight to the picker. The photo/video tile menu
-										// was one extra tap that answered a question the OS
-										// file sheet already asks.
-										onClick={() => fileInputRef.current?.click()}
-										aria-label="Attach a file"
-										className="mb-0.5 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary"
-									>
-										<Plus className="w-5 h-5" />
-									</button>
-									<textarea
-										value={messageInput}
-										onChange={(e) => {
-											setMessageInput(e.target.value);
-											if (e.target.value) chat.notifyTyping();
-											else chat.notifyStoppedTyping();
-										}}
-										onKeyDown={(e) =>
-											e.key === "Enter" &&
-											!e.shiftKey &&
-											(e.preventDefault(), sendMessage())
-										}
-										placeholder="Type a message..."
-										// text-base: a sub-16px message field is the classic
-										// iOS "page zooms in when you start typing" trigger.
-										className="flex-1 min-w-0 bg-transparent border-none outline-none text-base text-primary placeholder:text-subtle resize-none max-h-[100px] py-2.5"
-										rows={1}
-										style={{ minHeight: "24px" }}
+								<ComposerInput
+										ref={composerRef}
+										disabled={isUploading}
+										hasAttachment={!!selectedFile}
+										gifEnabled={Boolean(GIPHY_KEY)}
+										onSend={(text) => sendMessage(text)}
+										onTyping={chat.notifyTyping}
+										onStopTyping={chat.notifyStoppedTyping}
+										onAttach={() => fileInputRef.current?.click()}
+										onMoney={() => setShowSendMoney(true)}
+										onGif={() => setShowGifPicker(true)}
+										onStartRecording={startRecording}
 									/>
-
-									{/* Right Side Icons */}
-									<div className="flex items-center shrink-0">
-										<button
-											type="button"
-											onClick={() => setShowSendMoney(true)}
-											aria-label="Send money"
-											title="Send money"
-											className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-raised hover:text-primary"
-										>
-											<CurrencyDollarSimple size={20} weight="bold" />
-										</button>
-										{GIPHY_KEY && (
-											<button
-												type="button"
-												onClick={() => setShowGifPicker(true)}
-												aria-label="Send a GIF"
-												className="flex h-10 cursor-pointer items-center justify-center rounded-pill px-1.5 font-sans text-[11px] font-bold tracking-wide text-muted transition-colors hover:bg-chip hover:text-primary"
-											>
-												GIF
-											</button>
-										)}
-										<div className="relative">
-											<button
-												type="button"
-												onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-												aria-label="Insert emoji"
-												className="flex h-10 w-10 items-center justify-center rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors cursor-pointer"
-											>
-												<Smile className="w-6 h-6" />
-											</button>
-											{showEmojiPicker && (
-												// The default picker is ~350px wide anchored to
-												// the right edge of a field that starts ~60px in
-												// — it ran off both sides on a phone. Clamp to
-												// the viewport and let it fill that width.
-												<div className="fixed left-1/2 bottom-24 -translate-x-1/2 sm:absolute sm:left-auto sm:bottom-12 sm:right-0 sm:translate-x-0 w-[min(320px,calc(100vw-1.5rem))] z-dropdown animate-rise ws-emoji-picker">
-													<EmojiPicker
-														theme={
-															resolvedTheme === "light"
-																? Theme.LIGHT
-																: Theme.DARK
-														}
-														width="100%"
-														height={360}
-														lazyLoadEmojis={true}
-														onEmojiClick={(e) =>
-															setMessageInput((p) => p + e.emoji)
-														}
-													/>
-												</div>
-											)}
-										</div>
-
-										{messageInput.trim() || selectedFile ? (
-											<button
-												type="button"
-												onClick={sendMessage}
-												disabled={isUploading}
-												aria-label="Send message"
-												className="flex h-9 w-9 items-center justify-center bg-brand text-brand-on rounded-pill hover:bg-brand-active transition-colors disabled:opacity-50 cursor-pointer"
-											>
-												<Send className="w-4 h-4" />
-											</button>
-										) : (
-											<button
-												type="button"
-												onClick={startRecording}
-												aria-label="Record a voice message"
-												className="flex h-10 w-10 items-center justify-center rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors cursor-pointer"
-											>
-												<Mic className="w-6 h-6" />
-											</button>
-										)}
-									</div>
-								</div>
 							)}
 						</div>
 					</div>

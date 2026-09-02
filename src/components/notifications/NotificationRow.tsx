@@ -53,6 +53,7 @@ const CHIP: Record<NotificationType, { classes: string; glyph: Icon; weight: "fi
     glyph: ShieldWarning,
     weight: "fill",
   },
+  message: { classes: "bg-raised text-primary", glyph: ChatCircle, weight: "fill" },
 };
 
 /** Minor units to a readable figure. Money is never "1.2". */
@@ -98,13 +99,17 @@ export function NotificationRow({
   const alreadyFollowing = followed || Boolean(lead?.isFollowing);
 
   const href =
-    type === "follow"
-      ? lead.username
-        ? `/profile/${lead.username}`
-        : "#"
-      : post?._id
-        ? `/post/${post._id}`
-        : "#";
+    type === "message"
+      ? group.conversation
+        ? `/messages/${group.conversation}`
+        : "/messages"
+      : type === "follow"
+        ? lead.username
+          ? `/profile/${lead.username}`
+          : "#"
+        : post?._id
+          ? `/post/${post._id}`
+          : "#";
 
   const others = senders.length - 1;
   const excerpt = post?.content;
@@ -192,7 +197,7 @@ export function NotificationRow({
           <span className="text-subtle"> · {formatTimeAgo(group.createdAt)}</span>
         </span>
 
-        {type === "moderation" && group.body && (
+        {(type === "moderation" || type === "message") && group.body && (
           <span className="font-sans text-[13.5px] leading-snug text-primary whitespace-pre-line">
             {group.body}
           </span>

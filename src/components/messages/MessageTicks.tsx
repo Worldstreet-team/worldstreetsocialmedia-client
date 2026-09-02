@@ -22,14 +22,21 @@ export function tickStateFor({
 	createdAt,
 	deliveredAt,
 	readAt,
+	peerReadUpTo,
 }: {
 	id: string;
 	createdAt: string;
 	deliveredAt: number | null;
 	readAt: number | null;
+	/** The peer's persisted high-water mark (a message id). ObjectIds are
+	 *  time-ordered hex of equal length, so a plain string compare answers
+	 *  "is my message at or before their mark" — this is what makes ticks
+	 *  SURVIVE RELOAD instead of resetting to a single grey check. */
+	peerReadUpTo?: string | null;
 }): TickState {
 	// Optimistic bubbles carry a temp id until the server answers.
 	if (id.startsWith("temp-")) return "sending";
+	if (peerReadUpTo && id <= peerReadUpTo) return "read";
 	const sentAt = new Date(createdAt).getTime();
 	if (readAt !== null && readAt >= sentAt) return "read";
 	if (deliveredAt !== null && deliveredAt >= sentAt) return "delivered";
