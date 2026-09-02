@@ -886,6 +886,9 @@ export const PostCard = memo(
                     // deployment skew, same doctrine as post unlock.
                     const res = await postJsonDirect("/api/campaigns", {
                         postId: post.id,
+                        // The consent flag: the gateway refuses to charge any
+                        // client that has not shown the user the price.
+                        confirmCharge: true,
                     });
                     if (res.success) {
                         toast(t("promo.created"), { type: "success" });

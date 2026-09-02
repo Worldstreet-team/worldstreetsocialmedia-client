@@ -45,7 +45,11 @@ export default function StudioPromotions() {
 
 	const mutate = async (
 		id: string,
-		body: { status?: "active" | "paused"; addBudgetUsdMinor?: number },
+		body: {
+			status?: "active" | "paused";
+			addBudgetUsdMinor?: number;
+			confirmCharge?: boolean;
+		},
 	) => {
 		setBusyId(id);
 		const res = await updateCampaignAction(id, body);
@@ -188,7 +192,10 @@ export default function StudioPromotions() {
 											type="button"
 											disabled={busyId === c._id}
 											onClick={() =>
-												mutate(c._id, { addBudgetUsdMinor: 500 })
+												mutate(c._id, {
+													addBudgetUsdMinor: 500,
+													confirmCharge: true,
+												})
 											}
 											className="h-8 px-3.5 rounded-pill bg-[#fafaf9] text-[#0c0a09] hover:bg-white font-sans text-[12.5px] font-semibold transition-colors cursor-pointer disabled:opacity-50 active:brightness-95"
 										>
