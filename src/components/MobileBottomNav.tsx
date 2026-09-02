@@ -198,7 +198,7 @@ export const MobileBottomNav = () => {
 								item.active ? "text-gold" : "text-muted",
 							)}
 						>
-							<BadgedIcon count={item.badge} label={item.label}>
+							<BadgedIcon count={item.badge} label={item.label} size={50}>
 								<item.icon isActive={item.active} />
 							</BadgedIcon>
 						</Link>
