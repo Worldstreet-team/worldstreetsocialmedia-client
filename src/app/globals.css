@@ -1217,3 +1217,8 @@ video,
     inset 0 0 0 1px rgb(0 0 0 / 0.08),
     0 10px 30px rgb(0 0 0 / 0.16);
 }
+
+/* Pull-to-refresh ring while the refresh promise runs. */
+@keyframes ws-spin {
+	to { transform: rotate(360deg); }
+}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { haptic } from "@/lib/haptics";
 import type { ProfileBadge } from "@/components/ui/UserBadges";
 import Image from "next/image";
 // 03-icons: `copy` for copy-link, `bar-chart-3` for activity (both in-set).
@@ -463,6 +464,7 @@ export const PostCard = memo(
         }
 
         const newIsLiked = !isLiked;
+        if (newIsLiked) haptic(8);
         // Optimistic, and written THROUGH to the shared store. Without that,
         // a like that had already arrived from someone else would keep winning
         // and the viewer's own tap would look like it did nothing.

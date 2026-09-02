@@ -3,6 +3,8 @@
 import { useGatewayRead } from "@/hooks/useGateway";
 
 import { mainScrollTop, mainScroller } from "@/lib/utils";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { haptic } from "@/lib/haptics";
 
 import {
 	useState,
@@ -162,6 +164,20 @@ export default function Feed({
 	const [pending, setPending] = useState<PendingPost[]>([]);
 	const [refreshing, setRefreshing] = useState(false);
 	const refreshingRef = useRef(false);
+	/**
+	 * Pull-to-refresh. A pull delivers whatever the pill has announced, then
+	 * reconciles the top of the timeline silently. Refs, because the handler
+	 * is declared long before showNewPosts/fetchFeed exist below.
+	 */
+	const showNewPostsRef = useRef<() => void>(() => {});
+	const fetchFeedRef = useRef<
+		((reset: boolean, opts?: { silent?: boolean }) => Promise<unknown>) | null
+	>(null);
+	const pullApi = usePullToRefresh(async () => {
+		if (refreshingRef.current) return;
+		showNewPostsRef.current();
+		await fetchFeedRef.current?.(true, { silent: true });
+	});
 	/**
 	 * Announced posts, fetched the moment they are announced rather than on
 	 * click. The click then has nothing to wait for.
@@ -754,6 +770,7 @@ export default function Feed({
 
 	const showNewPosts = () => {
 		if (refreshingRef.current) return;
+		haptic(8);
 
 		// Snapshot: anything that arrives while this runs stays pending, so the
 		// pill re-appears for it.
@@ -864,8 +881,38 @@ export default function Feed({
 		}
 	};
 
+	fetchFeedRef.current = fetchFeed as never;
+	showNewPostsRef.current = showNewPosts;
+
 	return (
-		<div className="w-full min-w-0 pb-nav md:pb-20">
+		<div className="w-full min-w-0 pb-nav md:pb-20" {...pullApi.handlers}>
+			{/* The owned pull-to-refresh: a spacer that grows with the finger,
+			    a ring that turns toward the trigger and spins while the
+			    refresh runs. Height-only, so the feed slides down under it. */}
+			<div
+				aria-hidden={pullApi.pull === 0}
+				className="flex items-end justify-center overflow-hidden"
+				style={{
+					height: pullApi.pull,
+					transition:
+						pullApi.pull === 0 || pullApi.refreshing
+							? "height 200ms var(--ws-ease)"
+							: "none",
+				}}
+			>
+				<span
+					className="mb-2.5 inline-block h-6 w-6 rounded-pill border-2 border-hairline border-t-gold"
+					style={{
+						transform: `rotate(${pullApi.pull * 2.6}deg)`,
+						opacity: Math.min(1, pullApi.pull / 40),
+						animation: pullApi.refreshing
+							? "ws-spin 700ms linear infinite"
+							: undefined,
+					}}
+					role={pullApi.refreshing ? "status" : undefined}
+					aria-label={pullApi.refreshing ? "Refreshing" : undefined}
+				/>
+			</div>
 			{/* New posts announce themselves; the reader decides when to jump.
 			    The stack says WHO posted before the click — a name you follow is
 			    worth interrupting a read for, a count on its own isn't. */}

@@ -12,6 +12,13 @@
  *     action ids — a cached RSC body would fight it.
  *   - navigations only get a fallback when the network itself fails: the
  *     branded offline page.
+ *
+ * Escape hatch (lesson from X, whose live sw.js in 2026 is a self-destroying
+ * worker cleaning up its predecessor): because this worker never caches HTML,
+ * a bad deploy cannot strand users on a stale shell — but if this file ever
+ * needs killing, ship a version that skips waiting, claims clients, deletes
+ * every "ws-" cache and calls registration.unregister(). The browser re-checks
+ * this file on every navigation, so the kill lands within one page load.
  */
 const VERSION = "ws-v1";
 const STATIC_CACHE = `${VERSION}-static`;

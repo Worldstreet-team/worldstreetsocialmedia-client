@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import { motion } from "framer-motion";
 import { X } from "@phosphor-icons/react";
-import { useEffect } from "react";
+import { useRef, useEffect } from "react";
 
 /**
  * THE overlay grammar. Every popover, sheet, select and modal in the app is
@@ -55,21 +55,79 @@ export const anchoredMotion = {
 /**
  * Esc to dismiss, and the page behind must not scroll under the panel.
  * Every overlay needs both; almost none of them had both.
+ *
+ * Two close signals beyond Esc (research pass 2026-09-01):
+ *
+ * - CloseWatcher, where the platform has it (Chromium): the Android back
+ *   gesture closes the overlay instead of leaving the page — THE native
+ *   expectation on that platform. It also owns Esc, so the manual keydown
+ *   listener only exists as the fallback on browsers without it (Safari).
+ * - `backSentinel`, opt-in for surfaces a user would call "a screen"
+ *   (lightboxes, the story viewer): a history entry is minted on open, so
+ *   iOS's edge swipe-back — Safari and standalone both — dismisses the
+ *   surface instead of leaving the app. X ships its media viewer as a
+ *   route for exactly this reason. Never enable it for menus or popovers;
+ *   transient UI in the back stack wrecks the back button.
  */
-export function useOverlayDismiss(open: boolean, onClose: () => void) {
+export function useOverlayDismiss(
+	open: boolean,
+	onClose: () => void,
+	opts: { backSentinel?: boolean } = {},
+) {
+	const { backSentinel = false } = opts;
+	// The close callback is almost always an inline arrow; chasing its
+	// identity would tear down and re-mint the sentinel every render.
+	const onCloseRef = useRef(onClose);
+	onCloseRef.current = onClose;
+
 	useEffect(() => {
 		if (!open) return;
-		const onKey = (e: KeyboardEvent) => {
-			if (e.key === "Escape") onClose();
-		};
-		window.addEventListener("keydown", onKey);
 		const prev = document.body.style.overflow;
 		document.body.style.overflow = "hidden";
+
+		type Watcher = { onclose: (() => void) | null; destroy: () => void };
+		let watcher: Watcher | null = null;
+		let onKey: ((e: KeyboardEvent) => void) | null = null;
+		const CW = (
+			window as unknown as { CloseWatcher?: new () => Watcher }
+		).CloseWatcher;
+		if (typeof CW === "function") {
+			try {
+				watcher = new CW();
+				watcher.onclose = () => onCloseRef.current();
+			} catch {
+				watcher = null;
+			}
+		}
+		if (!watcher) {
+			onKey = (e: KeyboardEvent) => {
+				if (e.key === "Escape") onCloseRef.current();
+			};
+			window.addEventListener("keydown", onKey);
+		}
+
+		let popped = false;
+		let onPop: (() => void) | null = null;
+		if (backSentinel) {
+			window.history.pushState({ wsOverlay: true }, "");
+			onPop = () => {
+				popped = true;
+				onCloseRef.current();
+			};
+			window.addEventListener("popstate", onPop);
+		}
+
 		return () => {
-			window.removeEventListener("keydown", onKey);
 			document.body.style.overflow = prev;
+			watcher?.destroy();
+			if (onKey) window.removeEventListener("keydown", onKey);
+			if (onPop) window.removeEventListener("popstate", onPop);
+			// Closed by button/drag/Esc: consume our own entry so the NEXT
+			// back press leaves the page, not a ghost. Closed BY the pop:
+			// the entry is already gone.
+			if (backSentinel && !popped) window.history.back();
 		};
-	}, [open, onClose]);
+	}, [open, backSentinel]);
 }
 
 /**

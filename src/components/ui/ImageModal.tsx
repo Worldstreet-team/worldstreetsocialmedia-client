@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { OverlayHeader, useOverlayDismiss } from "@/components/ui/Overlay";
 import { useImageZoom } from "@/hooks/useImageZoom";
@@ -32,8 +32,25 @@ export default function ImageModal({
 }: ImageModalProps) {
 	const [currentIndex, setCurrentIndex] = useState(initialIndex);
 	const zoomApi = useImageZoom();
+	/**
+	 * Drag-to-dismiss: at rest (scale 1) a vertical pull moves the picture
+	 * with the finger and fades the ground; past the threshold or on a
+	 * flick, release closes. A horizontal fling at rest pages between
+	 * images. Zoomed, every touch still belongs to the zoom hook's pan.
+	 */
+	const [pullY, setPullY] = useState(0);
+	const [dragging, setDragging] = useState(false);
+	const gestureRef = useRef<{
+		x: number;
+		y: number;
+		intent: "none" | "v" | "h" | "off";
+	} | null>(null);
+	const lastMoveRef = useRef<{ y: number; t: number }>({ y: 0, t: 0 });
+	const velocityRef = useRef(0);
 
-	useOverlayDismiss(isOpen, onClose);
+	// A "screen"-class surface: system back (Android) and edge swipe-back
+	// (iOS) must close the viewer, not leave the page.
+	useOverlayDismiss(isOpen, onClose, { backSentinel: true });
 
 	useEffect(() => {
 		if (isOpen) setCurrentIndex(initialIndex);
@@ -55,6 +72,65 @@ export default function ImageModal({
 		[images.length],
 	);
 
+	const onTouchStart = (e: React.TouchEvent) => {
+		zoomApi.handlers.onTouchStart(e);
+		if (e.touches.length !== 1 || zoomApi.zoomed) {
+			gestureRef.current = { x: 0, y: 0, intent: "off" };
+			return;
+		}
+		const t = e.touches[0];
+		gestureRef.current = { x: t.clientX, y: t.clientY, intent: "none" };
+		lastMoveRef.current = { y: t.clientY, t: Date.now() };
+		velocityRef.current = 0;
+	};
+
+	const onTouchMove = (e: React.TouchEvent) => {
+		zoomApi.handlers.onTouchMove(e);
+		const g = gestureRef.current;
+		if (!g || g.intent === "off" || zoomApi.zoomed || e.touches.length !== 1)
+			return;
+		const t = e.touches[0];
+		const dx = t.clientX - g.x;
+		const dy = t.clientY - g.y;
+		if (g.intent === "none") {
+			if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+			g.intent = Math.abs(dy) >= Math.abs(dx) ? "v" : "h";
+			if (g.intent === "v") setDragging(true);
+		}
+		if (g.intent === "v") {
+			const now = Date.now();
+			const last = lastMoveRef.current;
+			// Real touches arrive per frame (8-16ms). Sub-frame samples (a
+			// double-fired event) produce absurd velocities, so they are
+			// ignored rather than clamped.
+			if (now - last.t >= 8) {
+				velocityRef.current = (t.clientY - last.y) / (now - last.t);
+				lastMoveRef.current = { y: t.clientY, t: now };
+			}
+			// Downward follows 1:1; upward is damped resistance, not a pan.
+			setPullY(dy >= 0 ? dy : dy * 0.25);
+		}
+	};
+
+	const onTouchEnd = (e: React.TouchEvent) => {
+		zoomApi.handlers.onTouchEnd(e);
+		const g = gestureRef.current;
+		if (!g || e.touches.length > 0) return;
+		gestureRef.current = null;
+		if (g.intent === "h" && images.length > 1) {
+			const endX = e.changedTouches[0]?.clientX ?? g.x;
+			const dx = endX - g.x;
+			if (dx <= -56) handleNext();
+			else if (dx >= 56) handlePrev();
+			return;
+		}
+		if (g.intent === "v") {
+			setDragging(false);
+			if (pullY > 130 || (pullY > 40 && velocityRef.current > 0.6)) onClose();
+			else setPullY(0);
+		}
+	};
+
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (!isOpen) return;
@@ -72,6 +148,8 @@ export default function ImageModal({
 	// biome-ignore lint/correctness/useExhaustiveDependencies: reset on image change
 	useEffect(() => {
 		zoomApi.reset();
+		setPullY(0);
+		setDragging(false);
 	}, [currentIndex, isOpen]);
 
 	if (!isOpen) return null;
@@ -90,12 +168,20 @@ export default function ImageModal({
 					animate={{ opacity: 1 }}
 					exit={{ opacity: 0 }}
 					transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-					className="fixed inset-0 h-[100dvh] z-modal flex items-center justify-center bg-page"
+					className="fixed inset-0 h-[100dvh] z-modal flex items-center justify-center"
 					onClick={(e) => {
 						e.stopPropagation();
 						onClose();
 					}}
 				>
+					{/* The ground is its own layer so a drag fades it while the
+					    picture keeps full opacity — the picture leaves, the room
+					    dims back in. */}
+					<div
+						aria-hidden
+						className="absolute inset-0 bg-page"
+						style={{ opacity: Math.max(0.3, 1 - pullY / 480) }}
+					/>
 					{/* Navigation Arrows */}
 					{images.length > 1 && (
 						<>
@@ -125,6 +211,18 @@ export default function ImageModal({
 						className="relative w-full h-full flex items-center justify-center px-2 py-14 sm:p-4 md:p-10"
 						onClick={(e) => e.stopPropagation()} // Prevent closing when clicking on image area
 						ref={zoomApi.bindWheelRef}
+						onTouchStart={onTouchStart}
+						onTouchMove={onTouchMove}
+						onTouchEnd={onTouchEnd}
+						style={{
+							transform: `translateY(${pullY}px)`,
+							transition: dragging
+								? "none"
+								: "transform 200ms var(--ws-ease)",
+							// Both axes are ours in here: vertical is dismiss,
+							// horizontal pages, pinch belongs to the zoom hook.
+							touchAction: "none",
+						}}
 					>
 						{/* Pinch, double-tap and drag. There was NO zoom here at
 						    all before — the only magnification a reader ever had
@@ -139,17 +237,11 @@ export default function ImageModal({
 							animate={{ opacity: 1 }}
 							exit={{ opacity: 0 }}
 							transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-							onTouchStart={zoomApi.handlers.onTouchStart}
-							onTouchMove={zoomApi.handlers.onTouchMove}
-							onTouchEnd={zoomApi.handlers.onTouchEnd}
 							style={{
 								transform: `translate(${zoomApi.zoom.x}px, ${zoomApi.zoom.y}px) scale(${zoomApi.zoom.scale})`,
 								transition: zoomApi.zoomed
 									? "none"
 									: "transform 160ms var(--ws-ease)",
-								// At rest a vertical swipe still belongs to the
-								// page; zoomed, every gesture is ours to pan.
-								touchAction: zoomApi.zoomed ? "none" : "pan-y",
 							}}
 							// h/w-full + contain, not max-*: max only shrinks, so a
 							// phone-sized upload sat tiny in the middle of the

@@ -124,13 +124,18 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
 	}, [state.status]);
 
 	// Closing the tab mid-call should hang up, not leave a ghost in the room.
+	// Registered only WHILE a call exists: a permanently-attached lifecycle
+	// listener costs back/forward-cache eligibility on every page for a
+	// hang-up that only matters mid-call. pagehide, not beforeunload —
+	// beforeunload never fires on iOS and is the classic bfcache killer.
 	useEffect(() => {
-		const onUnload = () => {
+		if (state.status === "idle") return;
+		const onLeave = () => {
 			if (callManager.getState().status !== "idle") callManager.endCall();
 		};
-		window.addEventListener("beforeunload", onUnload);
-		return () => window.removeEventListener("beforeunload", onUnload);
-	}, []);
+		window.addEventListener("pagehide", onLeave);
+		return () => window.removeEventListener("pagehide", onLeave);
+	}, [state.status]);
 
 	const startCall = useCallback(
 		(opts: { conversationId: string; peer: CallPeer; isVideo: boolean }) => {

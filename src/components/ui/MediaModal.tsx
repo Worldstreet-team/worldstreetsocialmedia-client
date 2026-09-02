@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useImageZoom } from "@/hooks/useImageZoom";
@@ -35,7 +35,64 @@ export default function MediaModal({
 	const [currentIndex, setCurrentIndex] = useState(initialIndex);
 	const zoomApi = useImageZoom();
 
-	useOverlayDismiss(isOpen, onClose);
+	// Screen-class surface: Android back and iOS swipe-back close it.
+	useOverlayDismiss(isOpen, onClose, { backSentinel: true });
+
+	/** Drag-to-dismiss for images (video keeps its native controls: a drag
+	 *  there would fight the seek bar). Same mechanics as ImageModal. */
+	const [pullY, setPullY] = useState(0);
+	const [dragging, setDragging] = useState(false);
+	const gestureRef = useRef<{
+		x: number;
+		y: number;
+		intent: "none" | "v" | "off";
+	} | null>(null);
+	const lastMoveRef = useRef<{ y: number; t: number }>({ y: 0, t: 0 });
+	const velocityRef = useRef(0);
+
+	const onImgTouchStart = (e: React.TouchEvent) => {
+		zoomApi.handlers.onTouchStart(e);
+		if (e.touches.length !== 1 || zoomApi.zoomed) {
+			gestureRef.current = { x: 0, y: 0, intent: "off" };
+			return;
+		}
+		const t = e.touches[0];
+		gestureRef.current = { x: t.clientX, y: t.clientY, intent: "none" };
+		lastMoveRef.current = { y: t.clientY, t: Date.now() };
+		velocityRef.current = 0;
+	};
+	const onImgTouchMove = (e: React.TouchEvent) => {
+		zoomApi.handlers.onTouchMove(e);
+		const g = gestureRef.current;
+		if (!g || g.intent === "off" || zoomApi.zoomed || e.touches.length !== 1)
+			return;
+		const t = e.touches[0];
+		const dx = t.clientX - g.x;
+		const dy = t.clientY - g.y;
+		if (g.intent === "none") {
+			if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+			g.intent = Math.abs(dy) >= Math.abs(dx) ? "v" : "off";
+			if (g.intent === "v") setDragging(true);
+			else return;
+		}
+		const now = Date.now();
+		const last = lastMoveRef.current;
+		if (now > last.t)
+			velocityRef.current = (t.clientY - last.y) / (now - last.t);
+		lastMoveRef.current = { y: t.clientY, t: now };
+		setPullY(dy >= 0 ? dy : dy * 0.25);
+	};
+	const onImgTouchEnd = (e: React.TouchEvent) => {
+		zoomApi.handlers.onTouchEnd(e);
+		const g = gestureRef.current;
+		if (!g || e.touches.length > 0) return;
+		gestureRef.current = null;
+		if (g.intent === "v") {
+			setDragging(false);
+			if (pullY > 130 || (pullY > 40 && velocityRef.current > 0.6)) onClose();
+			else setPullY(0);
+		}
+	};
 
 	useEffect(() => {
 		if (isOpen) setCurrentIndex(initialIndex);
@@ -81,7 +138,7 @@ export default function MediaModal({
 					animate={{ opacity: 1 }}
 					exit={{ opacity: 0 }}
 					transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-					className="fixed inset-0 h-[100dvh] z-modal flex items-center justify-center bg-page"
+					className="fixed inset-0 h-[100dvh] z-modal flex items-center justify-center"
 					onClick={(e) => {
 						e.stopPropagation();
 						onClose();
@@ -109,6 +166,11 @@ export default function MediaModal({
 						</>
 					)}
 
+					<div
+						aria-hidden
+						className="absolute inset-0 -z-10 bg-page"
+						style={{ opacity: Math.max(0.3, 1 - pullY / 480) }}
+					/>
 					{/* Media Container */}
 					<div
 						className="relative w-full h-full flex items-center justify-center px-16 py-16 sm:p-4 md:p-10"
@@ -123,15 +185,16 @@ export default function MediaModal({
 								animate={{ opacity: 1 }}
 								exit={{ opacity: 0 }}
 								transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-								onTouchStart={zoomApi.handlers.onTouchStart}
-								onTouchMove={zoomApi.handlers.onTouchMove}
-								onTouchEnd={zoomApi.handlers.onTouchEnd}
+								onTouchStart={onImgTouchStart}
+								onTouchMove={onImgTouchMove}
+								onTouchEnd={onImgTouchEnd}
 								style={{
-									transform: `translate(${zoomApi.zoom.x}px, ${zoomApi.zoom.y}px) scale(${zoomApi.zoom.scale})`,
-									transition: zoomApi.zoomed
-										? "none"
-										: "transform 160ms var(--ws-ease)",
-									touchAction: zoomApi.zoomed ? "none" : "pan-y",
+									transform: `translateY(${pullY}px) translate(${zoomApi.zoom.x}px, ${zoomApi.zoom.y}px) scale(${zoomApi.zoom.scale})`,
+									transition:
+										zoomApi.zoomed || dragging
+											? "none"
+											: "transform 180ms var(--ws-ease)",
+									touchAction: "none",
 								}}
 								className="max-h-full max-w-full object-contain rounded-lg select-none"
 								draggable={false}
