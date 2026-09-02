@@ -306,6 +306,7 @@ interface Conversation {
 		profile: string | { _id: string };
 		readUpTo?: string;
 		readUpToAt?: string;
+		wallpaper?: WallpaperSetting;
 	}[];
 }
 
@@ -2660,7 +2661,35 @@ export const MessageBox = ({
 					conversationId={activeConversation._id}
 					current={wallpaper}
 					onClose={() => setWallpaperOpen(false)}
-					onApplied={(w) => setWallpaper(w)}
+					onApplied={(w) => {
+						setWallpaper(w);
+						// Write it through to the IN-MEMORY conversation too.
+						// The thread re-derives its wallpaper from
+						// activeConversation.members on every open, and that
+						// copy was stale: close the chat, reopen, and the
+						// wallpaper you just set vanished until a full refetch
+						// (owner, 2026-09-02). The server already has it; this
+						// keeps the session's copy honest.
+						const stamp = (c: Conversation): Conversation =>
+							c._id !== activeConversation._id
+								? c
+								: {
+										...c,
+										members: (c.members ?? []).map((mm) => {
+											const pid =
+												typeof mm.profile === "string"
+													? mm.profile
+													: mm.profile?._id;
+											return String(pid) === String(myProfileId)
+												? { ...mm, wallpaper: { ...w } }
+												: mm;
+										}),
+									};
+						setConversations((prev) => prev.map(stamp));
+						setActiveConversation((prev) =>
+							prev ? stamp(prev) : prev,
+						);
+					}}
 				/>
 			)}
 			{groupSheetOpen && activeConversation && isGroupThread && myProfileId && (

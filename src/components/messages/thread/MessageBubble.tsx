@@ -335,8 +335,8 @@ export const MessageBubble = memo(function MessageBubble({
 						// bubble's 85% cap resolved against its own content and text
 						// wrapped at a dozen characters (owner: "totally trash",
 						// 2026-09-02). A real row width makes 85% mean 85%.
-						"flex w-full items-center justify-end gap-1",
-						isMe ? "flex-row" : "flex-row-reverse",
+						"flex w-full items-center gap-1",
+						isMe ? "justify-end" : "justify-start",
 					)}
 				>
 					{!isTemp && (
@@ -345,6 +345,11 @@ export const MessageBubble = memo(function MessageBubble({
 							onClick={() => onReply(m)}
 							aria-label="Reply to this message"
 							className={clsx(
+								// Mine: reply sits before the bubble on the right
+								// edge. Theirs: avatar, bubble, THEN reply — the
+								// face leads an incoming message (owner 2026-09-02;
+								// the old row-reverse painted it backwards).
+								isMe ? "order-1" : "order-3",
 								"flex h-8 w-8 shrink-0 items-center justify-center rounded-pill text-subtle transition hover:bg-raised hover:text-muted",
 								"opacity-100 md:opacity-0 md:group-hover/msg:opacity-100 md:focus-visible:opacity-100",
 							)}
@@ -355,37 +360,42 @@ export const MessageBubble = memo(function MessageBubble({
 					{/* Inbound face: only the first message of a run wears it —
 					    ink-and-air density (register 43-44). */}
 					{!isMe && (
-						<span className="mb-0.5 w-[26px] shrink-0 self-end">
+						<span className="order-1 mb-0.5 w-[30px] shrink-0 self-end">
 							{showAvatar && avatarUrl && (
 								// eslint-disable-next-line @next/next/no-img-element
 								<img
 									src={avatarUrl}
 									alt=""
-									className="h-[22px] w-[22px] rounded-pill object-cover"
+									className="h-[26px] w-[26px] rounded-pill object-cover"
 								/>
 							)}
 						</span>
 					)}
 					<div
 						className={clsx(
-							"max-w-[85%] sm:max-w-[70%] min-w-0 overflow-hidden",
+							"order-2 max-w-[85%] sm:max-w-[70%] min-w-0 overflow-hidden",
 							(m.type === "image" || m.type === "video") && !m.content
 								? "p-0"
+								: "px-3.5 py-2 sm:px-4",
+							// MINE wears frosted gold glass over the wallpaper;
+							// THEIRS a soft raised bubble. (The bare-ink
+							// experiment died 2026-09-02: no padding read as no
+							// design.) Run corners mirror per side.
+							"rounded-[22px] text-primary",
+							(m.type === "image" || m.type === "video") && !m.content
+								? null
 								: isMe
-									? "px-3.5 py-2 sm:px-4"
-									: "py-0.5",
-							// The locked skin: MINE wears frosted gold glass over the
-							// wallpaper; THEIRS is bare ink — no bubble at all.
+									? "bg-[rgba(234,179,8,0.16)]"
+									: "bg-raised/85",
 							isMe
 								? [
-										"rounded-[22px]",
-										(m.type === "image" || m.type === "video") && !m.content
-											? "text-primary"
-											: "bg-[rgba(234,179,8,0.16)] text-primary",
 										sameRunAsPrev && "rounded-tr-[8px]",
 										!endsRun && "rounded-br-[8px]",
 									]
-								: "text-primary",
+								: [
+										sameRunAsPrev && "rounded-tl-[8px]",
+										!endsRun && "rounded-bl-[8px]",
+									],
 						)}
 					>
 						{isGroup && !isMe && !sameRunAsPrev && (
@@ -510,7 +520,7 @@ export const MessageBubble = memo(function MessageBubble({
 					<div
 						className={clsx(
 							"mt-1 flex flex-wrap gap-1",
-							!isMe && "pl-[26px]",
+							!isMe && "pl-[34px]",
 						)}
 					>
 						{Object.entries(
@@ -554,7 +564,7 @@ export const MessageBubble = memo(function MessageBubble({
 					<span
 						className={clsx(
 							"mt-1 flex items-center gap-1 font-sans text-[11px] tabular-nums text-subtle",
-							!isMe && "pl-[26px]",
+							!isMe && "pl-[34px]",
 						)}
 					>
 						{format(new Date(m.createdAt), "h:mm a")}
