@@ -294,6 +294,13 @@ interface Conversation {
 	 *  quiet, unbadged — until accepted (replying accepts). */
 	isRequestForMe?: boolean;
 	status?: "accepted" | "request";
+	kind?: "dm" | "group";
+	name?: string;
+	avatar?: string;
+	memberCount?: number;
+	myRole?: "owner" | "admin" | "member";
+	/** Group lock: only admins may post while true (register 99). */
+	adminsOnly?: boolean;
 	/** Member records with high-water read marks (gateway W1). */
 	members?: {
 		profile: string | { _id: string };
@@ -1147,6 +1154,34 @@ export const MessageBox = ({
 			);
 			setConversations(response.data);
 
+			// Warm the top of the inbox (register 35, the part that matters):
+			// the newest page of the first few uncached threads loads quietly
+			// now, so tapping between chats paints instantly instead of
+			// flashing a loading state. Fire-and-forget, absent-only writes —
+			// an open thread's fresher cache always wins.
+			void (async () => {
+				const targets = (response.data as Conversation[])
+					.slice(0, 8)
+					.filter((c) => !(messageCache[c._id]?.length > 0));
+				await Promise.all(
+					targets.map(async (c) => {
+						try {
+							const r = await axios.get(
+								`${API_URL}/api/messages/${c._id}?limit=30`,
+								{ headers: { Authorization: `Bearer ${token}` } },
+							);
+							setMessageCache((prev) =>
+								prev[c._id]?.length
+									? prev
+									: { ...prev, [c._id]: r.data },
+							);
+						} catch {
+							/* a cold thread just loads on open like before */
+						}
+					}),
+				);
+			})();
+
 			if (initialConversationId) {
 				const target = response.data.find(
 					(c: Conversation) => c._id === initialConversationId,
@@ -1634,6 +1669,32 @@ export const MessageBox = ({
 			}));
 	}, [isGroupThread, activeConversation, myProfileId]);
 
+	/** "Alice is typing…", "Alice and Bob are typing…", then "several
+	 *  people…" — names, never "someone" (owner 2026-09-02, register 106). */
+	const groupActivityLine = useCallback(
+		(typers: { id: string; kind: "typing" | "recording" }[]) => {
+			if (typers.length === 0) return null;
+			const names = typers
+				.map(
+					(t) =>
+						groupRoster.find((m) => m.id === t.id)?.name?.split(" ")[0],
+				)
+				.filter(Boolean) as string[];
+			if (names.length === 1)
+				return typers[0].kind === "recording"
+					? `${names[0]} is recording audio…`
+					: `${names[0]} is typing…`;
+			if (names.length === 2)
+				return `${names[0]} and ${names[1]} are typing…`;
+			if (names.length > 2) return "several people are typing…";
+			// Roster miss (someone just added): stay generic rather than wrong.
+			return typers[0].kind === "recording"
+				? "recording audio…"
+				: "typing…";
+		},
+		[groupRoster],
+	);
+
 	/** The peer's persisted read mark, for ticks that survive reload. */
 	const peerReadUpTo = useMemo(() => {
 		const peerId = activeConversation?.otherParticipant?._id;
@@ -1921,11 +1982,9 @@ export const MessageBox = ({
 										<h2 className="truncate font-semibold text-sm">
 											{headerIdentity.title}
 										</h2>
-										{chat.peerRecording || chat.peerTyping ? (
+										{chat.typers.length > 0 ? (
 											<p className="truncate text-xs text-gold">
-												{chat.peerRecording
-													? "someone is recording…"
-													: "someone is typing…"}
+												{groupActivityLine(chat.typers)}
 											</p>
 										) : (
 											<p className="truncate text-xs text-muted">
@@ -2173,11 +2232,6 @@ export const MessageBox = ({
 								</div>
 							</div>
 						)}
-						{isLoadingMessages && (
-							<div className="shrink-0 py-3 text-center text-muted font-sans text-sm">
-								Loading history...
-							</div>
-						)}
 						<ThreadList
 							ref={virtuosoRef}
 							threadId={activeConversation._id}
@@ -2197,6 +2251,7 @@ export const MessageBox = ({
 							readAt={chat.readAt}
 							peerReadUpTo={peerReadUpTo}
 							pendingNew={pendingNew}
+							loading={isLoadingMessages}
 							onLoadOlder={loadOlder}
 							onAtBottomChange={handleAtBottom}
 							onShowNew={() => scrollToBottom()}
@@ -2395,6 +2450,15 @@ export const MessageBox = ({
 							/>
 						)}
 
+						{isGroupThread &&
+						activeConversation.adminsOnly &&
+						activeConversation.myRole === "member" ? (
+							<div className="flex h-[52px] items-center justify-center rounded-2xl bg-raised/70 px-4">
+								<span className="font-sans text-[13px] text-muted">
+									Only admins can send messages in this group
+								</span>
+							</div>
+						) : (
 						<div className="relative flex items-center gap-2 sm:gap-3">
 							{/* Hidden File Input */}
 							<input
@@ -2437,6 +2501,7 @@ export const MessageBox = ({
 								/>
 							)}
 						</div>
+						)}
 					</div>
 				</div>
 			) : (
@@ -2494,6 +2559,8 @@ export const MessageBox = ({
 					conversationId={activeConversation._id}
 					name={headerIdentity.title}
 					avatar={headerIdentity.avatar}
+					adminsOnly={Boolean(activeConversation.adminsOnly)}
+					currentClerkId={user?.id || ""}
 					members={(activeConversation.members ?? []) as any}
 					participants={(activeConversation.participants ?? []) as any}
 					myProfileId={myProfileId}

@@ -6,8 +6,10 @@ import {
 	Crown,
 	LogOut,
 	Pencil,
+	Search,
 	Shield,
 	UserMinus,
+	UserPlus,
 	Users,
 } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
@@ -57,6 +59,27 @@ async function del(path: string) {
 	}
 }
 
+async function post(path: string, data: unknown) {
+	try {
+		const token = await (window as any).Clerk?.session?.getToken?.();
+		const API =
+			process.env.NEXT_PUBLIC_API_URL ||
+			(await import("@/const")).BACKEND_URL;
+		const res = await fetch(`${API}${path}`, {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(data),
+		});
+		const body = await res.json().catch(() => null);
+		return { success: res.ok, message: body?.message };
+	} catch {
+		return { success: false, message: "Network error" };
+	}
+}
+
 async function patch(path: string, data: unknown) {
 	try {
 		const token = await (window as any).Clerk?.session?.getToken?.();
@@ -89,6 +112,8 @@ export function GroupSheet({
 	conversationId,
 	name,
 	avatar,
+	adminsOnly,
+	currentClerkId,
 	members,
 	participants,
 	myProfileId,
@@ -100,6 +125,10 @@ export function GroupSheet({
 	conversationId: string;
 	name: string;
 	avatar?: string;
+	/** Group lock: only admins may post while true (register 99). */
+	adminsOnly?: boolean;
+	/** Clerk id, for the relations endpoint behind Add people. */
+	currentClerkId?: string;
 	members: MemberRecord[];
 	participants: ParticipantUser[];
 	myProfileId: string;
@@ -110,6 +139,10 @@ export function GroupSheet({
 	const [draftName, setDraftName] = useState(name);
 	const [busy, setBusy] = useState<string | null>(null);
 	const photoInputRef = useRef<HTMLInputElement | null>(null);
+	const [addOpen, setAddOpen] = useState(false);
+	const [candidates, setCandidates] = useState<ParticipantUser[]>([]);
+	const [candidatesLoaded, setCandidatesLoaded] = useState(false);
+	const [addQuery, setAddQuery] = useState("");
 
 	const byId = useMemo(() => {
 		const m = new Map<string, ParticipantUser>();
@@ -180,6 +213,50 @@ export function GroupSheet({
 		} finally {
 			setBusy(null);
 		}
+	};
+
+	const toggleLock = async () => {
+		setBusy("lock");
+		const res = await patch(`/api/messages/groups/${conversationId}`, {
+			adminsOnly: !adminsOnly,
+		});
+		setBusy(null);
+		if (res.success) onChanged();
+		else toast.error(res.message || "Couldn't change that");
+	};
+
+	/** People I follow who aren't in the room yet; the gateway keeps only
+	 *  mutuals on add, same as creation. Fetched once, on first open. */
+	const openAdd = async () => {
+		setAddOpen((v) => !v);
+		if (candidatesLoaded || !currentClerkId) return;
+		setCandidatesLoaded(true);
+		try {
+			const token = await (window as any).Clerk?.session?.getToken?.();
+			const API =
+				process.env.NEXT_PUBLIC_API_URL ||
+				(await import("@/const")).BACKEND_URL;
+			const res = await fetch(
+				`${API}/api/users/${currentClerkId}/following?limit=100`,
+				{ headers: { Authorization: `Bearer ${token}` } },
+			);
+			const body = await res.json().catch(() => null);
+			const rows = body?.data ?? [];
+			setCandidates(Array.isArray(rows) ? rows : []);
+		} catch {
+			/* the section just stays empty */
+		}
+	};
+
+	const addMember = async (id: string) => {
+		setBusy(id);
+		const res = await post(
+			`/api/messages/groups/${conversationId}/members`,
+			{ memberIds: [id] },
+		);
+		setBusy(null);
+		if (res.success) onChanged();
+		else toast.error(res.message || "Couldn't add them");
 	};
 
 	const setRole = async (id: string, role: "admin" | "member") => {
@@ -294,6 +371,90 @@ export function GroupSheet({
 									{active.length} members
 								</span>
 							</div>
+
+							{/* Admin controls (register 99): the lock and the door. */}
+							{iAmAdmin && (
+								<div className="border-t border-hairline px-4 py-2">
+									<button
+										type="button"
+										onClick={toggleLock}
+										disabled={busy === "lock"}
+										className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-[10px] px-1 py-2 text-left transition-colors hover:bg-raised disabled:opacity-60"
+									>
+										<span className="min-w-0">
+											<span className="block font-sans text-[14px] font-medium text-primary">
+												Only admins can send
+											</span>
+											<span className="block font-sans text-[12px] text-muted">
+												Members can read but not post
+											</span>
+										</span>
+										<span
+											className={
+												adminsOnly
+													? "relative h-6 w-11 shrink-0 rounded-pill bg-brand transition-colors"
+													: "relative h-6 w-11 shrink-0 rounded-pill bg-chip transition-colors"
+											}
+										>
+											<span
+												className={
+													adminsOnly
+														? "absolute top-0.5 left-[22px] h-5 w-5 rounded-pill bg-page transition-all"
+														: "absolute top-0.5 left-0.5 h-5 w-5 rounded-pill bg-page transition-all"
+												}
+											/>
+										</span>
+									</button>
+									<button
+										type="button"
+										onClick={() => void openAdd()}
+										className="flex w-full cursor-pointer items-center gap-2.5 rounded-[10px] px-1 py-2.5 text-left font-sans text-[14px] font-medium text-primary transition-colors hover:bg-raised"
+									>
+										<UserPlus className="h-4 w-4 text-muted" />
+										Add people
+									</button>
+									{addOpen && (
+										<div className="pb-2">
+											<div className="relative mb-1">
+												<Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-subtle" />
+												<input
+													value={addQuery}
+													onChange={(e) => setAddQuery(e.target.value)}
+													placeholder="Search people you follow"
+													className="w-full rounded-pill bg-sunken py-2 pl-9 pr-3 font-sans text-[13px] text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised"
+												/>
+											</div>
+											{candidates
+												.filter(
+													(c) =>
+														!active.some((a) => a.id === String(c._id)) &&
+														(!addQuery.trim() ||
+															`${c.firstName ?? ""} ${c.lastName ?? ""} ${c.username ?? ""}`
+																.toLowerCase()
+																.includes(addQuery.toLowerCase())),
+												)
+												.slice(0, 6)
+												.map((c) => (
+													<button
+														key={String(c._id)}
+														type="button"
+														onClick={() => void addMember(String(c._id))}
+														disabled={busy === String(c._id)}
+														className="flex w-full cursor-pointer items-center gap-2.5 rounded-[10px] px-1 py-1.5 text-left transition-colors hover:bg-raised disabled:opacity-50"
+													>
+														<span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-pill bg-raised">
+															<SafeAvatar src={c.avatar} eager />
+														</span>
+														<span className="min-w-0 flex-1 truncate font-sans text-[13px] text-primary">
+															{`${c.firstName ?? ""} ${c.lastName ?? ""}`.trim() || c.username}
+														</span>
+														<UserPlus className="h-3.5 w-3.5 shrink-0 text-muted" />
+													</button>
+												))}
+										</div>
+									)}
+								</div>
+							)}
 
 							{/* Roster */}
 							<div className="border-t border-hairline">

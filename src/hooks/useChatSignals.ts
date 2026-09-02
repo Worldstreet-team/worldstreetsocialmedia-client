@@ -35,6 +35,9 @@ export interface ChatSignals {
 	peerTyping: boolean;
 	/** They are holding the mic right now — "recording audio…". */
 	peerRecording: boolean;
+	/** WHO is typing/recording, for group copy ("Alice is typing…",
+	 *  register 106). Ids map to names through the roster at the call site. */
+	typers: { id: string; kind: "typing" | "recording" }[];
 	/** Peer's client acknowledged receipt of everything up to this time. */
 	deliveredAt: number | null;
 	/** Peer had read everything up to this time. */
@@ -73,16 +76,21 @@ export function useChatSignals({
 	const { client } = useRealtime();
 
 	const [peerOnline, setPeerOnline] = useState(false);
-	const [peerTyping, setPeerTyping] = useState(false);
-	const [peerRecording, setPeerRecording] = useState(false);
+	const [typers, setTypers] = useState<
+		{ id: string; kind: "typing" | "recording" }[]
+	>([]);
+	const peerTyping = typers.some((t) => t.kind === "typing");
+	const peerRecording = typers.some((t) => t.kind === "recording");
 	const [deliveredAt, setDeliveredAt] = useState<number | null>(null);
 	const [readAt, setReadAt] = useState<number | null>(null);
 
 	const channelRef = useRef<any>(null);
 	const onReactionRef = useRef(onReaction);
 	onReactionRef.current = onReaction;
-	const typingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const recordingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	/** Per-person expiry timers: each typer self-clears on silence. */
+	const typerTimersRef = useRef(
+		new Map<string, ReturnType<typeof setTimeout>>(),
+	);
 	const lastTypingSentRef = useRef(0);
 	const idleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -94,8 +102,9 @@ export function useChatSignals({
 		// A new thread starts with a clean slate — otherwise the previous
 		// conversation's ticks bleed into this one.
 		setPeerOnline(false);
-		setPeerTyping(false);
-		setPeerRecording(false);
+		for (const t of typerTimersRef.current.values()) clearTimeout(t);
+		typerTimersRef.current.clear();
+		setTypers([]);
 		setDeliveredAt(null);
 		setReadAt(null);
 
@@ -117,24 +126,39 @@ export function useChatSignals({
 			const from = message?.data?.from;
 			if (!from || from === myProfileId) return;
 
+			// One person is either typing or recording, never both; each
+			// entry self-expires so a tab that dies mid-word never strands a
+			// bubble on screen.
+			const markTyper = (id: string, kind: "typing" | "recording") => {
+				const timers = typerTimersRef.current;
+				const prior = timers.get(id);
+				if (prior) clearTimeout(prior);
+				timers.set(
+					id,
+					setTimeout(() => {
+						timers.delete(id);
+						setTypers((cur) => cur.filter((t) => t.id !== id));
+					}, TYPING_TTL_MS),
+				);
+				setTypers((cur) => [
+					...cur.filter((t) => t.id !== id),
+					{ id, kind },
+				]);
+			};
+			const clearTyper = (id: string) => {
+				const timers = typerTimersRef.current;
+				const prior = timers.get(id);
+				if (prior) clearTimeout(prior);
+				timers.delete(id);
+				setTypers((cur) => cur.filter((t) => t.id !== id));
+			};
+
 			switch (message.name) {
 				case "typing":
-					setPeerTyping(true);
-					setPeerRecording(false);
-					if (typingClearRef.current) clearTimeout(typingClearRef.current);
-					// Self-expiring: if their tab dies mid-word we don't strand a
-					// typing bubble on screen forever.
-					typingClearRef.current = setTimeout(
-						() => setPeerTyping(false),
-						TYPING_TTL_MS,
-					);
+					markTyper(String(from), "typing");
 					break;
 				case "typing:stop":
-					if (typingClearRef.current) clearTimeout(typingClearRef.current);
-					if (recordingClearRef.current)
-						clearTimeout(recordingClearRef.current);
-					setPeerTyping(false);
-					setPeerRecording(false);
+					clearTyper(String(from));
 					break;
 				case "reaction":
 					if (message.data?.messageId)
@@ -146,17 +170,7 @@ export function useChatSignals({
 						});
 					break;
 				case "recording":
-					// Same lifecycle as typing: self-expiring, killed by an
-					// explicit stop. One person is either typing or holding the
-					// mic, never both.
-					setPeerRecording(true);
-					setPeerTyping(false);
-					if (recordingClearRef.current)
-						clearTimeout(recordingClearRef.current);
-					recordingClearRef.current = setTimeout(
-						() => setPeerRecording(false),
-						TYPING_TTL_MS,
-					);
+					markTyper(String(from), "recording");
 					break;
 				case "delivered":
 					setDeliveredAt(message.data.at ?? Date.now());
@@ -176,8 +190,8 @@ export function useChatSignals({
 		void refreshPresence();
 
 		return () => {
-			if (typingClearRef.current) clearTimeout(typingClearRef.current);
-			if (recordingClearRef.current) clearTimeout(recordingClearRef.current);
+			for (const t of typerTimersRef.current.values()) clearTimeout(t);
+			typerTimersRef.current.clear();
 			if (idleRef.current) clearTimeout(idleRef.current);
 			try {
 				channel.unsubscribe(onSignal);
@@ -253,6 +267,7 @@ export function useChatSignals({
 		peerOnline,
 		peerTyping,
 		peerRecording,
+		typers,
 		deliveredAt,
 		readAt,
 		notifyTyping,

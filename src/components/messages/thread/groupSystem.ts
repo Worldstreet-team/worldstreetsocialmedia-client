@@ -44,6 +44,10 @@ export function systemEventCopy(
 			return `${subject} is now an admin`;
 		case "group.demoted":
 			return `${subject} is no longer an admin`;
+		case "group.locked":
+			return `${actor} locked the group — only admins can send`;
+		case "group.unlocked":
+			return `${actor} unlocked the group`;
 		default:
 			return "";
 	}

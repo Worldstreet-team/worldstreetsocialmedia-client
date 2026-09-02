@@ -36,6 +36,9 @@ export interface ThreadListProps {
 	readAt: number | null;
 	peerReadUpTo?: string | null;
 	pendingNew: number;
+	/** First fetch of an uncached thread — the ground stays clean; neither
+	 *  the empty note nor a skeleton flashes (owner no-skeleton rule). */
+	loading?: boolean;
 	onLoadOlder: () => void;
 	onAtBottomChange: (atBottom: boolean) => void;
 	onShowNew: () => void;
@@ -69,6 +72,7 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 			readAt,
 			peerReadUpTo,
 			pendingNew,
+			loading,
 			onLoadOlder,
 			onAtBottomChange,
 			onShowNew,
@@ -179,7 +183,7 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 				    firstItemIndex, its initial-position pass never resolves and
 				    the item wrapper sits visibility:hidden forever. Keyed per
 				    thread so each conversation gets a fresh initial layout. */}
-				{messages.length === 0 && (
+				{messages.length === 0 && !loading && (
 					<div className="flex h-full flex-col items-center justify-center gap-2 px-8 text-center">
 						<span className="font-sans text-[14px] font-semibold text-primary">
 							Say the first thing

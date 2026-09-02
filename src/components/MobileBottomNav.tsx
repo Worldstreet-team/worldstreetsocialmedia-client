@@ -24,7 +24,9 @@ import { useT } from "@/i18n/client";
 const navIcon = (Icon: PhosphorIcon) => {
 	const NavIcon = ({ isActive }: { isActive?: boolean }) => (
 		<Icon
-			size={28}
+			// Icon-only bar (owner ruling 2026-09-02): the glyph carries the
+			// tab alone, so it earns the size the label used to take.
+			size={32}
 			weight={isActive ? "fill" : "duotone"}
 			aria-hidden="true"
 		/>
@@ -51,7 +53,7 @@ const MessageIcon = navIcon(ChatCircleDots);
  * the client — the whole reason this component had to defer its first paint.
  */
 const ProfileIcon = ({ isActive }: { isActive?: boolean }) => (
-	<UserCircle size={28} weight={isActive ? "fill" : "duotone"} aria-hidden />
+	<UserCircle size={32} weight={isActive ? "fill" : "duotone"} aria-hidden />
 );
 ProfileIcon.displayName = "ProfileIcon";
 
@@ -147,7 +149,7 @@ export const MobileBottomNav = () => {
 				    owns the safe-area inset again (a floating bar cleared it via
 				    its own `bottom` offset instead). */}
 				<div style={{ paddingBottom: "var(--ws-safe-bottom)" }}>
-				<div className="flex justify-between items-center h-[76px] px-1">
+				<div className="flex justify-between items-center h-[64px] px-1">
 					{navItems.map((item, index) => (
 						<Fragment key={item.href}>
 							{/* The centre slot is the brand, not a destination. It used
@@ -159,7 +161,8 @@ export const MobileBottomNav = () => {
 									onClick={() => setEcosystemOpen(true)}
 									aria-haspopup="dialog"
 									aria-expanded={ecosystemOpen}
-									className="flex h-full w-full min-w-0 flex-col items-center justify-center gap-1 transition-colors active:bg-primary/10"
+									aria-label="WorldStreet"
+									className="flex h-full w-full min-w-0 items-center justify-center transition-colors active:bg-primary/10"
 								>
 									{/* The real animated mark, not the flat PNG: it draws
 									    itself on the same 5.2s ritual as the rail's lockup
@@ -168,47 +171,34 @@ export const MobileBottomNav = () => {
 									    resolves it to the finished W. */}
 									<span
 										className={clsx(
-											"flex h-[38px] w-[38px] items-center justify-center rounded-[7px] transition-colors",
+											"flex h-[44px] w-[44px] items-center justify-center rounded-[7px] transition-colors",
 											ecosystemOpen && "bg-raised",
 										)}
 									>
-										{/* Bigger than the 22px Phosphor glyphs beside it on
+										{/* Bigger than the Phosphor glyphs beside it on
 										    purpose: the W is a thin two-stroke outline, so at
 										    a matched size it reads lighter than the solid
 										    duotone icons it sits between. */}
-										<BrandMark size={34} />
-									</span>
-									{/* The name, not "More" — this tab is the brand. */}
-									<span className="max-w-full truncate px-0.5 font-sans text-[12.5px] font-semibold leading-none whitespace-nowrap text-muted">
-										WorldStreet
+										<BrandMark size={38} />
 									</span>
 								</button>
 							)}
 						<Link
 							href={item.href}
 							{...press(item.href)}
+							aria-label={item.label}
 							className={clsx(
-								// 05-screens responsive spec: icon 20 + 10px label.
-								// `.glass-nav` follows the theme, so the ink is the
-								// normal token pair — text-gold resolves to the AA
-								// dark gold on paper and bright gold on stone.
-								"flex flex-col items-center justify-center gap-1 w-full h-full min-w-0 active:bg-primary/10 transition-colors",
+								// Icon-only (owner ruling 2026-09-02): no labels, the
+								// glyphs a size up. The name lives on as the aria-label
+								// and the badge label. `.glass-nav` follows the theme,
+								// so the ink is the normal token pair.
+								"flex items-center justify-center w-full h-full min-w-0 active:bg-primary/10 transition-colors",
 								item.active ? "text-gold" : "text-muted",
 							)}
 						>
 							<BadgedIcon count={item.badge} label={item.label}>
 								<item.icon isActive={item.active} />
 							</BadgedIcon>
-							<span
-								className={clsx(
-									// One line, ellipsized: long locales ("Notificaciones",
-									// "Nachrichten") must not wrap or squeeze siblings.
-									"text-[12.5px] font-semibold leading-none font-sans whitespace-nowrap truncate max-w-full px-0.5",
-									item.active ? "font-semibold" : "font-medium",
-								)}
-							>
-								{item.label}
-							</span>
 						</Link>
 						</Fragment>
 					))}

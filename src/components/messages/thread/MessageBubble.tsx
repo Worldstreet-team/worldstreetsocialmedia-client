@@ -313,7 +313,11 @@ export const MessageBubble = memo(function MessageBubble({
 			>
 				<div
 					className={clsx(
-						"flex max-w-full items-center justify-end gap-1",
+						// w-full, not max-w-full: the row was shrink-to-fit, so the
+						// bubble's 85% cap resolved against its own content and text
+						// wrapped at a dozen characters (owner: "totally trash",
+						// 2026-09-02). A real row width makes 85% mean 85%.
+						"flex w-full items-center justify-end gap-1",
 						isMe ? "flex-row" : "flex-row-reverse",
 					)}
 				>
