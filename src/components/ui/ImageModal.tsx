@@ -12,6 +12,9 @@ interface ImageModalProps {
 	onClose: () => void;
 	images: string[];
 	initialIndex?: number;
+	/** The tapped thumbnail's rect: the lightbox opens FROM it and the close
+	 *  chip returns to it — the shared-element moment. Absent, it fades. */
+	originRect?: DOMRect | null;
 }
 
 /**
@@ -29,9 +32,52 @@ export default function ImageModal({
 	onClose,
 	images,
 	initialIndex = 0,
+	originRect = null,
 }: ImageModalProps) {
 	const [currentIndex, setCurrentIndex] = useState(initialIndex);
 	const zoomApi = useImageZoom();
+
+	/**
+	 * FLIP morph between the feed thumbnail and the lightbox frame. Enter:
+	 * start the frame at the thumbnail's position and scale, then release it
+	 * to identity in one 200ms beat. Close (chip/Esc/back): play the same
+	 * path in reverse, then actually unmount. The wrapper is separate from
+	 * the img so the morph transform never fights the zoom transform.
+	 */
+	const flipRef = useRef<HTMLDivElement | null>(null);
+	const closingRef = useRef(false);
+	const originDelta = () => {
+		const el = flipRef.current;
+		if (!el || !originRect) return null;
+		const t = el.getBoundingClientRect();
+		if (t.width === 0) return null;
+		return {
+			dx: originRect.left + originRect.width / 2 - (t.left + t.width / 2),
+			dy: originRect.top + originRect.height / 2 - (t.top + t.height / 2),
+			s: Math.max(0.06, originRect.width / t.width),
+		};
+	};
+	const requestClose = useCallback(() => {
+		if (closingRef.current) return;
+		const el = flipRef.current;
+		const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+		if (reduced || !el || !originRect || zoomApi.zoomed) {
+			onClose();
+			return;
+		}
+		const d = originDelta();
+		if (!d || Math.abs(d.dy) > window.innerHeight * 1.5) {
+			onClose();
+			return;
+		}
+		closingRef.current = true;
+		el.style.transition =
+			"transform 200ms var(--ws-ease), opacity 200ms var(--ws-ease)";
+		el.style.transform = `translate(${d.dx}px, ${d.dy}px) scale(${d.s})`;
+		el.style.opacity = "0.4";
+		window.setTimeout(onClose, 190);
+		// biome-ignore lint/correctness/useExhaustiveDependencies: refs + stable math
+	}, [onClose, originRect, zoomApi.zoomed]);
 	/**
 	 * Drag-to-dismiss: at rest (scale 1) a vertical pull moves the picture
 	 * with the finger and fades the ground; past the threshold or on a
@@ -50,7 +96,7 @@ export default function ImageModal({
 
 	// A "screen"-class surface: system back (Android) and edge swipe-back
 	// (iOS) must close the viewer, not leave the page.
-	useOverlayDismiss(isOpen, onClose, { backSentinel: true });
+	useOverlayDismiss(isOpen, requestClose, { backSentinel: true });
 
 	useEffect(() => {
 		if (isOpen) setCurrentIndex(initialIndex);
@@ -142,6 +188,32 @@ export default function ImageModal({
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [isOpen, handleNext, handlePrev]);
 
+	// The enter morph, once per open. Double-rAF so the start state paints
+	// before the release; reduced motion opens in place.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: once per open
+	useEffect(() => {
+		if (!isOpen) return;
+		closingRef.current = false;
+		const el = flipRef.current;
+		if (!el) return;
+		el.style.transition = "";
+		el.style.transform = "";
+		el.style.opacity = "";
+		if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+		const d = originDelta();
+		if (!d) return;
+		// A thumbnail nowhere near the viewport would morph across half the
+		// document — a teleport, not a shared element. Fade instead.
+		if (Math.abs(d.dy) > window.innerHeight * 1.5) return;
+		el.style.transition = "none";
+		el.style.transform = `translate(${d.dx}px, ${d.dy}px) scale(${d.s})`;
+		// Forced reflow commits the start state; no rAF, so the release is
+		// not hostage to background-tab frame throttling.
+		void el.offsetWidth;
+		el.style.transition = "transform 200ms var(--ws-ease)";
+		el.style.transform = "";
+	}, [isOpen]);
+
 	// A new photo always starts fit-to-frame. Top-level hook — this was
 	// briefly nested INSIDE the keydown effect, which is an invalid hook call
 	// and crashed the lightbox in production.
@@ -171,7 +243,7 @@ export default function ImageModal({
 					className="fixed inset-0 h-[100dvh] z-modal flex items-center justify-center"
 					onClick={(e) => {
 						e.stopPropagation();
-						onClose();
+						requestClose();
 					}}
 				>
 					{/* The ground is its own layer so a drag fades it while the
@@ -229,6 +301,10 @@ export default function ImageModal({
 						    was the browser's page pinch, which does nothing
 						    against a `fixed inset-0` layer because that is sized
 						    to the layout viewport (iOS audit 2026-09-01). */}
+						<div
+							ref={flipRef}
+							className="flex h-full w-full items-center justify-center"
+						>
 						<motion.img
 							key={currentIndex}
 							src={images[currentIndex]}
@@ -250,6 +326,7 @@ export default function ImageModal({
 							className="h-full w-full object-contain select-none"
 							draggable={false}
 						/>
+						</div>
 
 						{/* Image Counter */}
 						{images.length > 1 && (
@@ -268,7 +345,7 @@ export default function ImageModal({
 					key="image-modal-chrome"
 					className="pointer-events-none fixed inset-x-0 top-[env(safe-area-inset-top,0px)] z-modal [&_button]:pointer-events-auto"
 				>
-					<OverlayHeader onClose={onClose} closeLabel="Close image viewer">
+					<OverlayHeader onClose={requestClose} closeLabel="Close image viewer">
 						<span className="flex-1" aria-hidden />
 					</OverlayHeader>
 				</div>

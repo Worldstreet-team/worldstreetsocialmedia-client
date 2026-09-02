@@ -365,11 +365,13 @@ export default function ExploreClient({
                 caption={t("explore.emptyCaption")}
               />
             ) : (
-              popularPosts.map((post) => (
-                <div key={post.id} className="border-b border-hairline">
-                  <PostCard post={post} />
-                </div>
-              ))
+              <div className="animate-content-in">
+                {popularPosts.map((post) => (
+                  <div key={post.id} className="border-b border-hairline">
+                    <PostCard post={post} />
+                  </div>
+                ))}
+              </div>
             )}
           </section>
         </>

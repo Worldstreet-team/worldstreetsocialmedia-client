@@ -176,11 +176,24 @@ export default function Feed({
 		((reset: boolean, opts?: { silent?: boolean }) => Promise<unknown>) | null
 	>(null);
 	// Same order the tab bar offers; swiping left walks toward "newest".
-	const swipeApi = useSwipeTabs<FeedTab>(
-		["foryou", "following", "newest"],
-		tab,
-		setFeedTab,
-	);
+	const TAB_ORDER: readonly FeedTab[] = ["foryou", "following", "newest"];
+	const swipeApi = useSwipeTabs<FeedTab>(TAB_ORDER, tab, setFeedTab);
+	/** Which way the new timeline should enter: it slides in FROM the
+	 *  direction of travel, whether the switch came from a swipe or a tap.
+	 *  Refs, not derived-per-render state: the class must SURVIVE later
+	 *  re-renders (deriving it stripped the class mid-animation the moment
+	 *  anything else re-rendered), and it replays anyway because the tab
+	 *  key remounts the container. First load stays on the intro rise. */
+	const prevTabRef = useRef<FeedTab>(tab);
+	const slideClassRef = useRef("");
+	if (prevTabRef.current !== tab) {
+		const d =
+			TAB_ORDER.indexOf(tab) - TAB_ORDER.indexOf(prevTabRef.current);
+		slideClassRef.current =
+			d > 0 ? "animate-slide-in-r" : "animate-slide-in-l";
+		prevTabRef.current = tab;
+	}
+	const slideClass = slideClassRef.current;
 	const pullApi = usePullToRefresh(async () => {
 		if (refreshingRef.current) return;
 		showNewPostsRef.current();
@@ -1017,7 +1030,7 @@ export default function Feed({
 			{/* Keyed by tab so switching timelines replays the rise (no stagger).
 			    The swipe hint translates this container, so the drag moves the
 			    timeline itself, not the composer above it. */}
-			<div key={tab} ref={swipeApi.bindContentRef}>
+			<div key={tab} ref={swipeApi.bindContentRef} className={slideClass}>
 				{isPosting && <PostSkeleton />}
 				{visiblePosts.map((post, index) => (
 					<ImpressionSensor

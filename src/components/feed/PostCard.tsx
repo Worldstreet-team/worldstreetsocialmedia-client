@@ -396,6 +396,8 @@ export const PostCard = memo(
     const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
 
     // Image Modal State
+    /** The tapped thumbnail's rect, so the lightbox can morph from it. */
+    const lightboxOriginRef = useRef<DOMRect | null>(null);
     const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(
         null,
     );
@@ -902,6 +904,7 @@ export const PostCard = memo(
                 onClose={() => setSelectedImageIndex(null)}
                 images={post.images || []}
                 initialIndex={selectedImageIndex || 0}
+                originRect={lightboxOriginRef.current}
             />
 
             {/* Which community this came from, above the author row. In an
@@ -1521,6 +1524,9 @@ export const PostCard = memo(
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     e.preventDefault();
+                                    lightboxOriginRef.current = (
+                                        e.currentTarget as HTMLElement
+                                    ).getBoundingClientRect();
                                     setSelectedImageIndex(0);
                                 }}
                             />
@@ -1550,6 +1556,9 @@ export const PostCard = memo(
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             e.preventDefault();
+                                            lightboxOriginRef.current = (
+                                                e.currentTarget as HTMLElement
+                                            ).getBoundingClientRect();
                                             setSelectedImageIndex(i);
                                         }}
                                     />
