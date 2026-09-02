@@ -150,3 +150,30 @@ export const compactTrendPosts = (t: {
 	const suffix = String(t.posts ?? "").replace(/^[0-9.,\s]+/, "") || "posts";
 	return `${formatCompact(n)} ${suffix}`;
 };
+
+/**
+ * "Seen just now / today at 3:41 PM" copy rules (register 124/126) — one
+ * formatter, everywhere a last-seen renders. Rounds young ages to 5-minute
+ * steps: presence is a courtesy, not surveillance.
+ */
+export function formatLastSeen(iso: string | Date): string {
+	const then = new Date(iso);
+	const now = new Date();
+	const mins = Math.floor((now.getTime() - then.getTime()) / 60000);
+	if (Number.isNaN(mins) || mins < 0) return "recently";
+	if (mins < 2) return "just now";
+	if (mins < 60) return `${Math.max(5, Math.round(mins / 5) * 5)}m ago`;
+	const time = then.toLocaleTimeString(undefined, {
+		hour: "numeric",
+		minute: "2-digit",
+	});
+	if (then.toDateString() === now.toDateString()) return `today at ${time}`;
+	const yday = new Date(now);
+	yday.setDate(now.getDate() - 1);
+	if (then.toDateString() === yday.toDateString())
+		return `yesterday at ${time}`;
+	return then.toLocaleDateString(undefined, {
+		month: "short",
+		day: "numeric",
+	});
+}

@@ -28,6 +28,7 @@ export interface BubbleMessage {
 	uploadPct?: number;
 	/** Transient, this tab only: the upload or send failed; offer retry. */
 	failed?: boolean;
+	reactions?: { profile: string; emoji: string }[];
 	storyRef?: { story: string; thumbnail: string; authorUsername: string };
 	replyTo?: {
 		_id: string;
@@ -116,6 +117,7 @@ export interface BubbleProps {
 	peerReadUpTo?: string | null;
 	/** Next voice note downthread — finished notes chain (register 87). */
 	autoplayNextId?: string;
+	myProfileId?: string;
 	onReply: (m: BubbleMessage) => void;
 	onMenu: (x: number, y: number, m: BubbleMessage) => void;
 	onJump: (id: string) => void;
@@ -124,6 +126,8 @@ export interface BubbleProps {
 	onCallBack: (video: boolean) => void;
 	onRetryUpload?: (clientKey: string) => void;
 	onCancelUpload?: (clientKey: string) => void;
+	/** Toggle MY reaction on this message (register 132/134). */
+	onReact?: (m: BubbleMessage, emoji: string) => void;
 }
 
 /**
@@ -150,6 +154,7 @@ export const MessageBubble = memo(function MessageBubble({
 	readAt,
 	peerReadUpTo,
 	autoplayNextId,
+	myProfileId,
 	onReply,
 	onMenu,
 	onJump,
@@ -158,6 +163,7 @@ export const MessageBubble = memo(function MessageBubble({
 	onCallBack,
 	onRetryUpload,
 	onCancelUpload,
+	onReact,
 }: BubbleProps) {
 	const rowRef = useRef<HTMLDivElement | null>(null);
 	const touch = useRef<{ x: number; y: number } | null>(null);
@@ -413,6 +419,50 @@ export const MessageBubble = memo(function MessageBubble({
 						)}
 					</div>
 				</div>
+				{m.reactions && m.reactions.length > 0 && (
+					<div
+						className={clsx(
+							"mt-1 flex flex-wrap gap-1",
+							!isMe && "pl-[26px]",
+						)}
+					>
+						{Object.entries(
+							m.reactions.reduce<
+								Record<string, { count: number; mine: boolean }>
+							>((acc, r) => {
+								const slot = acc[r.emoji] ?? {
+									count: 0,
+									mine: false,
+								};
+								slot.count += 1;
+								if (myProfileId && r.profile === myProfileId)
+									slot.mine = true;
+								acc[r.emoji] = slot;
+								return acc;
+							}, {}),
+						).map(([emoji, info]) => (
+							<button
+								key={emoji}
+								type="button"
+								onClick={() => onReact?.(m, emoji)}
+								aria-label={`${emoji} reaction${info.count > 1 ? `, ${info.count}` : ""}${info.mine ? ", including yours" : ""}`}
+								className={clsx(
+									"flex cursor-pointer items-center gap-1 rounded-pill px-1.5 py-0.5 font-sans text-[12px] transition-colors",
+									info.mine
+										? "bg-brand/20 ring-1 ring-brand/60"
+										: "bg-raised/90 hover:bg-chip",
+								)}
+							>
+								<span>{emoji}</span>
+								{info.count > 1 && (
+									<span className="tabular-nums text-[10.5px] font-semibold text-muted">
+										{info.count}
+									</span>
+								)}
+							</button>
+						))}
+					</div>
+				)}
 				{endsRun && (
 					<span
 						className={clsx(

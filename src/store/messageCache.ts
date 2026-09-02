@@ -49,6 +49,8 @@ export interface Message {
 	uploadPct?: number;
 	/** Transient, sender's tab only: send failed, retry offered. */
 	failed?: boolean;
+	/** One per person, replace-on-re-react (register 132). */
+	reactions?: { profile: string; emoji: string }[];
 }
 
 // Map conversationId -> Message[]

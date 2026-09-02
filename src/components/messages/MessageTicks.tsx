@@ -54,13 +54,16 @@ export function MessageTicks({ state }: { state: TickState }) {
 	const Icon = state === "sending" ? Clock : state === "sent" ? Check : Checks;
 	return (
 		<span
+			// Re-keyed per state so each morph crossfades in at the fast tier
+			// (register 122) — a tick that silently swaps reads as a glitch.
+			key={state}
 			// The label is the accessible text; the glyph alone would announce
 			// as nothing at all.
 			role="img"
 			aria-label={LABEL[state]}
 			title={LABEL[state]}
 			className={clsx(
-				"inline-flex items-center",
+				"inline-flex items-center animate-tick-in",
 				state === "read" ? "text-gold" : "text-muted",
 			)}
 		>

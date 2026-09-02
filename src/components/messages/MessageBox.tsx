@@ -19,6 +19,7 @@ import {
 	Phone,
 	Video,
 	UserPlus,
+	Plus,
 	ArrowLeft,
 	MessageCircle,
 } from "lucide-react";
@@ -31,13 +32,14 @@ import axios from "axios";
 import { useUser, useAuth } from "@clerk/nextjs";
 import { useChannel, ChannelProvider } from "ably/react";
 import { useTheme } from "next-themes";
+import EmojiPicker, { Theme } from "emoji-picker-react";
 import { useT } from "@/i18n/client";
 import { getUserStoriesAction } from "@/lib/stories.actions";
 import { StoryViewer, type RailEntry } from "@/components/feed/StoryViewer";
 import { toast } from "sonner";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { format } from "date-fns";
-import { formatTimeAgo } from "@/lib/utils";
+import { formatLastSeen, formatTimeAgo } from "@/lib/utils";
 import { useRealtime } from "../providers/RealtimeProvider";
 import MediaModal from "../ui/MediaModal";
 import {
@@ -150,6 +152,9 @@ interface PendingAttachment {
 	durationSec?: number;
 	peaks?: number[];
 }
+
+/** The WhatsApp-six (register 134); the plus opens the full picker. */
+const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
 const newKey = () =>
 	typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -382,6 +387,11 @@ export const MessageBox = ({
 		message: Message;
 	} | null>(null);
 	const msgMenuOpenedAt = useRef(0);
+	const [menuPicker, setMenuPicker] = useState(false);
+	useEffect(() => {
+		if (!msgMenu) setMenuPicker(false);
+	}, [msgMenu]);
+
 	useEffect(() => {
 		if (!msgMenu) return;
 		msgMenuOpenedAt.current = Date.now();
@@ -1512,11 +1522,69 @@ export const MessageBox = ({
 	// --- Call Logic (Global) ---
 	const { startCall } = useCall();
 
+	/**
+	 * Toggle MY reaction (register 132-134): optimistic replace-on-re-react
+	 * mirroring the gateway, live hop on the conversation channel, then the
+	 * persisting POST — whose answer is authoritative.
+	 */
+	const reactTo = useCallback(
+		(mRaw: unknown, emoji: string) => {
+			const m = mRaw as Message;
+			const convId = activeIdRef.current;
+			const meId = myProfileIdRef.current;
+			if (!convId || !meId || m._id.startsWith("temp-")) return;
+			const cur =
+				(messageCache[convId] || []).find((x) => x._id === m._id)
+					?.reactions ?? [];
+			const mine = cur.find((r) => r.profile === meId);
+			const next = cur.filter((r) => r.profile !== meId);
+			if (!mine || mine.emoji !== emoji)
+				next.push({ profile: meId, emoji });
+			setMessageCache((prev) => ({
+				...prev,
+				[convId]: (prev[convId] || []).map((x) =>
+					x._id === m._id ? { ...x, reactions: next } : x,
+				),
+			}));
+			chatRef.current.notifyReaction?.(m._id, next);
+			void postJsonDirect(`/api/messages/message/${m._id}/react`, {
+				emoji,
+			}).then((res) => {
+				if (res.success && Array.isArray(res.data?.reactions)) {
+					const reactions = res.data.reactions.map(
+						(r: { profile: unknown; emoji: string }) => ({
+							profile: String(r.profile),
+							emoji: r.emoji,
+						}),
+					);
+					setMessageCache((prev) => ({
+						...prev,
+						[convId]: (prev[convId] || []).map((x) =>
+							x._id === m._id ? { ...x, reactions } : x,
+						),
+					}));
+				}
+			});
+		},
+		// biome-ignore lint/correctness/useExhaustiveDependencies: refs carry the rest
+		[messageCache, setMessageCache],
+	);
+
 	// Typing / presence / receipts. Ephemeral signals go client-to-client on the
 	// conversation channel; only "read" is persisted.
 	const chat = useChatSignals({
 		conversationId: activeConversation?._id ?? null,
 		myProfileId: myProfileId ?? null,
+		onReaction: (e) => {
+			const convId = activeIdRef.current;
+			if (!convId) return;
+			setMessageCache((prev) => ({
+				...prev,
+				[convId]: (prev[convId] || []).map((m) =>
+					m._id === e.messageId ? { ...m, reactions: e.reactions } : m,
+				),
+			}));
+		},
 	});
 	const peerOnline =
 		chat.peerOnline ||
@@ -1565,6 +1633,7 @@ export const MessageBox = ({
 			onMediaClick: handleMediaClick,
 			onRetryUpload: retryUpload,
 			onCancelUpload: cancelUpload,
+			onReact: reactTo,
 			onStory: (ref: { story: string; thumbnail: string; authorUsername: string }) =>
 				void openStoryRef(ref),
 			onCallBack: (video: boolean) => {
@@ -1585,7 +1654,7 @@ export const MessageBox = ({
 			},
 		}),
 		// biome-ignore lint/correctness/useExhaustiveDependencies: identity by thread
-		[replyAndFocus, jumpToMessage, retryUpload, cancelUpload, activeConversation?._id],
+		[replyAndFocus, jumpToMessage, retryUpload, cancelUpload, reactTo, activeConversation?._id],
 	);
 
 	useEffect(() => {
@@ -1831,8 +1900,8 @@ export const MessageBox = ({
 								) : (activeConversation.otherParticipant as any)
 										?.lastSeenAt ? (
 									<p className="truncate text-xs text-muted">
-										Last seen{" "}
-										{formatTimeAgo(
+										Seen{" "}
+										{formatLastSeen(
 											(activeConversation.otherParticipant as any)
 												.lastSeenAt,
 										)}
@@ -2346,9 +2415,54 @@ export const MessageBox = ({
 						left: Math.min(msgMenu.x, window.innerWidth - 180),
 						top: Math.min(msgMenu.y, window.innerHeight - 120),
 					}}
-					className="fixed z-dropdown w-[170px] overflow-hidden rounded-xl card-depth py-1 animate-rise"
+					className="fixed z-dropdown w-[190px] overflow-hidden rounded-xl card-depth animate-rise"
 					onClick={(e) => e.stopPropagation()}
 				>
+					{/* Quick-react row (register 134): the six, then a plus for
+					    the full picker. A temp bubble can't be reacted to. */}
+					{!msgMenu.message._id.startsWith("temp-") && (
+						<div className="flex items-center gap-0.5 border-b border-hairline px-1.5 py-1.5">
+							{QUICK_REACTIONS.map((emoji) => (
+								<button
+									key={emoji}
+									type="button"
+									onClick={() => {
+										reactTo(msgMenu.message, emoji);
+										setMsgMenu(null);
+									}}
+									aria-label={`React ${emoji}`}
+									className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-pill text-[17px] transition-colors hover:bg-raised"
+								>
+									{emoji}
+								</button>
+							))}
+							<button
+								type="button"
+								onClick={() => setMenuPicker((v) => !v)}
+								aria-label="More reactions"
+								className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-raised hover:text-primary"
+							>
+								<Plus className="h-4 w-4" />
+							</button>
+						</div>
+					)}
+					{menuPicker && (
+						<div className="border-b border-hairline p-1 ws-emoji-picker">
+							<EmojiPicker
+								theme={
+									resolvedTheme === "light" ? Theme.LIGHT : Theme.DARK
+								}
+								width="100%"
+								height={320}
+								lazyLoadEmojis
+								onEmojiClick={(e) => {
+									reactTo(msgMenu.message, e.emoji);
+									setMsgMenu(null);
+								}}
+							/>
+						</div>
+					)}
+					<div className="py-1">
 					<button
 						type="button"
 						role="menuitem"
@@ -2395,6 +2509,7 @@ export const MessageBox = ({
 						</button>
 					)}
 				</div>
+					</div>
 			)}
 
 			<NewConversationModal

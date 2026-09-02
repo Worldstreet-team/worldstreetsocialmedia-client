@@ -48,6 +48,7 @@ export interface ThreadListProps {
 		| "onCallBack"
 		| "onRetryUpload"
 		| "onCancelUpload"
+		| "onReact"
 	>;
 }
 
@@ -149,6 +150,7 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 						readAt={readAt}
 						peerReadUpTo={peerReadUpTo}
 						autoplayNextId={nextAudioId.get(m._id)}
+						myProfileId={myProfileId}
 						{...handlers}
 					/>
 				);

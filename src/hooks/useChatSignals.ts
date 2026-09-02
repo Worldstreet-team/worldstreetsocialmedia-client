@@ -21,10 +21,12 @@ import { useRealtime } from "@/components/providers/RealtimeProvider";
  * outlive the sender's tab.
  */
 
-/** How long a typing bubble survives without a refresh from the other side. */
-const TYPING_TTL_MS = 4_000;
+/** How long a typing bubble survives without a refresh from the other side.
+ *  12s TTL against an 8s refresh is the platform-tuned pair (register 120):
+ *  a third of the old wire volume, no flicker window. */
+const TYPING_TTL_MS = 12_000;
 /** Don't republish "still typing" more often than this. */
-const TYPING_THROTTLE_MS = 2_500;
+const TYPING_THROTTLE_MS = 8_000;
 /** Idle this long and we announce that typing stopped. */
 const TYPING_IDLE_MS = 3_000;
 
@@ -47,14 +49,26 @@ export interface ChatSignals {
 	notifyDelivered: () => void;
 	/** Tell the other side their messages have been read, now. */
 	notifyRead: () => void;
+	/** Broadcast a reaction change with the message's new reaction set. */
+	notifyReaction: (
+		messageId: string,
+		reactions: { profile: string; emoji: string }[],
+	) => void;
 }
 
 export function useChatSignals({
 	conversationId,
 	myProfileId,
+	onReaction,
 }: {
 	conversationId: string | null;
 	myProfileId: string | null;
+	/** A peer changed a reaction; payload carries the message's full new
+	 *  reaction set, so applying it is idempotent (register 133). */
+	onReaction?: (e: {
+		messageId: string;
+		reactions: { profile: string; emoji: string }[];
+	}) => void;
 }): ChatSignals {
 	const { client } = useRealtime();
 
@@ -65,6 +79,8 @@ export function useChatSignals({
 	const [readAt, setReadAt] = useState<number | null>(null);
 
 	const channelRef = useRef<any>(null);
+	const onReactionRef = useRef(onReaction);
+	onReactionRef.current = onReaction;
 	const typingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const recordingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const lastTypingSentRef = useRef(0);
@@ -120,6 +136,15 @@ export function useChatSignals({
 					setPeerTyping(false);
 					setPeerRecording(false);
 					break;
+				case "reaction":
+					if (message.data?.messageId)
+						onReactionRef.current?.({
+							messageId: String(message.data.messageId),
+							reactions: Array.isArray(message.data.reactions)
+								? message.data.reactions
+								: [],
+						});
+					break;
 				case "recording":
 					// Same lifecycle as typing: self-expiring, killed by an
 					// explicit stop. One person is either typing or holding the
@@ -169,7 +194,9 @@ export function useChatSignals({
 		(name: string, data: Record<string, unknown> = {}) => {
 			if (!channelRef.current || !myProfileId) return;
 			void channelRef.current
-				.publish(name, { from: myProfileId, at: Date.now(), ...data })
+				// v marks the payload schema (register 127) so a future shape
+				// change can coexist with clients in the field.
+				.publish(name, { v: 1, from: myProfileId, at: Date.now(), ...data })
 				.catch(() => {
 					/* a dropped typing signal is not worth surfacing */
 				});
@@ -204,6 +231,16 @@ export function useChatSignals({
 		idleRef.current = setTimeout(notifyStoppedTyping, TYPING_IDLE_MS);
 	}, [publish, notifyStoppedTyping]);
 
+	const notifyReaction = useCallback(
+		(
+			messageId: string,
+			reactions: { profile: string; emoji: string }[],
+		) => {
+			publish("reaction", { messageId, reactions });
+		},
+		[publish],
+	);
+
 	const notifyDelivered = useCallback(() => {
 		publish("delivered");
 	}, [publish]);
@@ -223,5 +260,6 @@ export function useChatSignals({
 		notifyRecording,
 		notifyDelivered,
 		notifyRead,
+		notifyReaction,
 	};
 }
