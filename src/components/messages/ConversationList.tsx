@@ -50,7 +50,9 @@ export interface ConversationRow {
 		type?: string;
 		createdAt?: string;
 		durationSec?: number;
-		sender?: string | { _id?: string };
+		sender?: string | { _id?: string; firstName?: string; username?: string };
+		/** Group membership events; the row renders their copy, not "". */
+		systemEvent?: { kind: string; params?: Record<string, unknown> };
 	};
 	/** Not sent by the gateway today — see `rowTime`. Kept for callers. */
 	lastMessageAt?: string;
@@ -260,21 +262,35 @@ export function ConversationList({
 									unread ? "font-medium text-primary" : "text-muted",
 								)}
 							>
-								{mine && (
+								{mine && conv.lastMessage?.type !== "system" && (
 									<span className="shrink-0 text-subtle">
 										{t("messages.you")}
 									</span>
 								)}
-								{Glyph && (
+								{Glyph && conv.lastMessage?.type !== "system" && (
 									<Glyph size={13} weight="fill" className="shrink-0 text-subtle" />
 								)}
 								<span className="truncate">
-									{kind
-										? conv.lastMessage?.type === "audio" &&
-											conv.lastMessage?.durationSec
-											? `${Math.floor(conv.lastMessage.durationSec / 60)}:${String(conv.lastMessage.durationSec % 60).padStart(2, "0")}`
-											: t(kind.key)
-										: conv.lastMessage?.content || t("messages.noMessages")}
+									{conv.lastMessage?.type === "system"
+										? conv.lastMessage.systemEvent
+											? systemEventCopy(
+													conv.lastMessage.systemEvent,
+													typeof conv.lastMessage.sender ===
+														"object"
+														? (conv.lastMessage.sender
+																?.firstName ??
+															conv.lastMessage.sender
+																?.username)
+														: undefined,
+												)
+											: t("messages.noMessages")
+										: kind
+											? conv.lastMessage?.type === "audio" &&
+												conv.lastMessage?.durationSec
+												? `${Math.floor(conv.lastMessage.durationSec / 60)}:${String(conv.lastMessage.durationSec % 60).padStart(2, "0")}`
+												: t(kind.key)
+											: conv.lastMessage?.content ||
+												t("messages.noMessages")}
 								</span>
 								{/* The time rides the preview line ("Heyy · 3d"),
 								    which frees the top line for the name alone. */}
