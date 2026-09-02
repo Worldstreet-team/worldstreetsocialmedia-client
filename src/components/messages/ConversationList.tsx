@@ -23,6 +23,7 @@ import {
 } from "@/lib/conversation-identity";
 import { onlineIdsAtom } from "@/store/ui.atom";
 import { Users } from "lucide-react";
+import { systemEventCopy } from "./thread/groupSystem";
 
 export interface ConversationRowUser {
 	_id: string;

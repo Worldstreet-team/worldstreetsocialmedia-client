@@ -1144,7 +1144,13 @@ export const MessageBox = ({
 
 	const fetchConversations = async () => {
 		try {
-			setIsLoadingConversations(true);
+			// Skeletons belong to the FIRST load only. Every refresh — a
+			// rename, a lock flip, a member add, an incoming message —
+			// called this and flipped the whole inbox back to placeholders,
+			// so a one-tap action looked like a page reload (owner
+			// 2026-09-02). A refresh now repaints in place.
+			if (conversationsRef.current.length === 0)
+				setIsLoadingConversations(true);
 			const token = await getToken();
 			const response = await axios.get(
 				`${API_URL}/api/messages/conversations`,

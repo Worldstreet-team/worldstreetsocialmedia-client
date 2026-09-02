@@ -2,6 +2,7 @@
 
 import clsx from "clsx";
 import { format } from "date-fns";
+import { motion } from "framer-motion";
 import { memo, useRef } from "react";
 import { RiReplyLine } from "@remixicon/react";
 import { MessageTicks, tickStateFor } from "@/components/messages/MessageTicks";
@@ -262,8 +263,22 @@ export const MessageBubble = memo(function MessageBubble({
 					</span>
 				</div>
 			)}
-			<div
+			<motion.div
 				ref={rowRef}
+				// layout: the row TWEENS between sizes instead of snapping —
+				// an optimistic bubble growing into its server twin, a
+				// reaction chip appearing, a tail radius changing when the
+				// next message joins the run (owner ruling 2026-09-02).
+				// Fresh arrivals also spring in from 8px below; history is
+				// static, so a scroll never animates a wall of bubbles.
+				layout="position"
+				initial={fresh ? { opacity: 0, y: 8, scale: 0.98 } : false}
+				animate={{ opacity: 1, y: 0, scale: 1 }}
+				transition={{
+					layout: { type: "spring", stiffness: 420, damping: 34 },
+					duration: 0.2,
+					ease: [0.2, 0, 0, 1],
+				}}
 				id={`msg-${m._id}`}
 				onContextMenu={(e) => {
 					if (isTemp) return;
@@ -308,7 +323,6 @@ export const MessageBubble = memo(function MessageBubble({
 					sameRunAsPrev ? "mt-[2px]" : "mt-4",
 					isMe ? "items-end" : "items-start",
 					flashed && "rounded-xl bg-brand/10",
-					fresh && "animate-message-in",
 				)}
 			>
 				<div
@@ -552,7 +566,7 @@ export const MessageBubble = memo(function MessageBubble({
 						)}
 					</span>
 				)}
-			</div>
+			</motion.div>
 		</>
 	);
 });
