@@ -46,20 +46,10 @@ export const ThreadBackdrop = memo(function ThreadBackdrop({
 					style={wp.blur ? { filter: "blur(14px)" } : undefined}
 				/>
 			)}
-			{/* The brand doodle: the mark tiled at whisper opacity. Sits over
-			    fills, under the dim, and skips photo wallpapers (texture on a
-			    photo reads as dirt). */}
-			{wp.type !== "image" && (
-				<div
-					className="absolute inset-0 opacity-[0.05]"
-					style={{
-						backgroundImage: "url(/images/worldspace-mark.png)",
-						backgroundSize: "72px 72px",
-						backgroundRepeat: "repeat",
-						filter: "grayscale(1)",
-					}}
-				/>
-			)}
+			{/* The tiled brand-mark doodle lived here (Telegram-style) and was
+			    KILLED by owner ruling 2026-09-02 — at any opacity the repeated
+			    logo read as watermark spam, not texture. The ground is clean;
+			    wallpapers are the personality layer now. Don't bring it back. */}
 			{/* The one-div legibility answer: a dim wash over anything. */}
 			{dim > 0 && (
 				<div

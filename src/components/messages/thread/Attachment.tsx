@@ -52,7 +52,10 @@ export function Attachment({
 		<div
 			onClick={uploading || failed ? undefined : onClick}
 			className={clsx(
-				"relative w-full max-w-[280px] overflow-hidden rounded-xl transition-opacity",
+				// w-[280px], not w-full: the bubble is shrink-to-fit, and 100% of
+				// an auto-width parent is ZERO — the tile collapsed to a bare
+				// timestamp row (found 2026-09-02). max-w-full keeps phones honest.
+				"relative w-[280px] max-w-full overflow-hidden rounded-xl transition-opacity",
 				!uploading && !failed && "cursor-zoom-in hover:opacity-95",
 				isTemp && !uploading && !failed && "opacity-70",
 			)}

@@ -422,7 +422,7 @@ export const MessageBubble = memo(function MessageBubble({
 							/>
 						)}
 						{m.type === "audio" && m.mediaUrl && (
-							<div className="relative w-full max-w-[256px] mb-1">
+							<div className="relative w-[256px] max-w-full mb-1">
 								<VoiceMessage
 									src={m.mediaUrl}
 									isMe={isMe}
