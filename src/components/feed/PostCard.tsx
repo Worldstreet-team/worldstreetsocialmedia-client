@@ -1574,6 +1574,9 @@ export const PostCard = memo(
                                 src={post.videos[0]}
                                 fitToMedia
                                 plays={post.videoPlays}
+                                onDoubleTap={() => {
+                                    if (!isLiked) void handleLike();
+                                }}
                                 onFirstPlay={() => {
                                     void recordVideoPlayAction(post.id).catch(
                                         () => {},

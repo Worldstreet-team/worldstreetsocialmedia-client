@@ -51,6 +51,7 @@ export function VideoPlayer({
 	fitToMedia = false,
 	plays,
 	onFirstPlay,
+	onDoubleTap,
 }: {
 	src: string;
 	poster?: string;
@@ -60,6 +61,10 @@ export function VideoPlayer({
 	fitToMedia?: boolean;
 	/** Play count worn as a quiet chip on the frame. */
 	plays?: number;
+	/** Feed usage: double-tap means LIKE, not fullscreen (owner
+	 *  2026-09-02). When set, fullscreen lives only on its control-bar
+	 *  button and the single-tap action waits a beat to disambiguate. */
+	onDoubleTap?: () => void;
 	/** Fired once per mount, the first time playback actually starts. */
 	onFirstPlay?: () => void;
 }) {
@@ -161,6 +166,11 @@ export function VideoPlayer({
 	 * zoom at all (iOS audit 2026-09-01). Both paths write the same state.
 	 */
 	const touchPinch = useRef<{ dist: number; zoom: number } | null>(null);
+	/** Double-tap disambiguation when onDoubleTap is wired. */
+	const tapRef = useRef<{
+		at: number;
+		timer: ReturnType<typeof setTimeout> | null;
+	}>({ at: 0, timer: null });
 	const touchPan = useRef<{
 		x: number;
 		y: number;
@@ -531,18 +541,41 @@ export function VideoPlayer({
 					// question — sound on/off — the way every muted-autoplay
 					// feed works. Pause lives on the control bar. Elsewhere
 					// (detail pages, modals) a tap still means play/pause.
-					if (fitToMedia && playing) {
-						setMuted((m) => {
-							const v = videoRef.current;
-							if (v) v.muted = !m;
-							return !m;
-						});
-						bump();
+					const primary = () => {
+						if (fitToMedia && playing) {
+							setMuted((m) => {
+								const v = videoRef.current;
+								if (v) v.muted = !m;
+								return !m;
+							});
+							bump();
+							return;
+						}
+						toggle();
+					};
+					if (!onDoubleTap) {
+						primary();
 						return;
 					}
-					toggle();
+					// Same 300ms grammar as photos: a second tap upgrades the
+					// gesture to a like and the pending single-tap never fires.
+					const now = Date.now();
+					const st = tapRef.current;
+					if (now - st.at < 300) {
+						st.at = 0;
+						if (st.timer) clearTimeout(st.timer);
+						st.timer = null;
+						onDoubleTap();
+						return;
+					}
+					st.at = now;
+					if (st.timer) clearTimeout(st.timer);
+					st.timer = setTimeout(() => {
+						st.timer = null;
+						primary();
+					}, 260);
 				}}
-				onDoubleClick={toggleFull}
+				onDoubleClick={onDoubleTap ? undefined : toggleFull}
 				onPlay={() => {
 					setPlaying(true);
 					// A play QUALIFIES after ~3s of continuous playback — a
