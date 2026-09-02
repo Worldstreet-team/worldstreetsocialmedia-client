@@ -3,6 +3,9 @@
 import { useGatewayRead } from "@/hooks/useGateway";
 
 import { mainScrollTop, mainScroller } from "@/lib/utils";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { useSwipeTabs } from "@/hooks/useSwipeTabs";
+import { haptic } from "@/lib/haptics";
 
 import {
 	useState,
@@ -11,9 +14,9 @@ import {
 	useSyncExternalStore,
 } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { feedAtom } from "@/store/feed.atom";
-import { feedTabAtom } from "@/store/ui.atom";
+import { type FeedTab, feedTabAtom } from "@/store/ui.atom";
 import { autoTranslateAtom, translationsAtom } from "@/store/translate.atom";
 import { prefetchTranslations } from "@/lib/translate.prefetch";
 import {
@@ -141,6 +144,7 @@ export default function Feed({
 	// Never repopulated: the seed describes one page load, not a subscription.
 	const initialRef = useRef(initialData);
 	const tab = useAtomValue(feedTabAtom);
+	const setFeedTab = useSetAtom(feedTabAtom);
 	const autoTranslate = useAtomValue(autoTranslateAtom);
 	const [translations, setTranslations] = useAtom(translationsAtom);
 	// Read through a ref inside the prefetch so a page landing mid-flight
@@ -162,6 +166,39 @@ export default function Feed({
 	const [pending, setPending] = useState<PendingPost[]>([]);
 	const [refreshing, setRefreshing] = useState(false);
 	const refreshingRef = useRef(false);
+	/**
+	 * Pull-to-refresh. A pull delivers whatever the pill has announced, then
+	 * reconciles the top of the timeline silently. Refs, because the handler
+	 * is declared long before showNewPosts/fetchFeed exist below.
+	 */
+	const showNewPostsRef = useRef<() => void>(() => {});
+	const fetchFeedRef = useRef<
+		((reset: boolean, opts?: { silent?: boolean }) => Promise<unknown>) | null
+	>(null);
+	// Same order the tab bar offers; swiping left walks toward "newest".
+	const TAB_ORDER: readonly FeedTab[] = ["foryou", "following", "newest"];
+	const swipeApi = useSwipeTabs<FeedTab>(TAB_ORDER, tab, setFeedTab);
+	/** Which way the new timeline should enter: it slides in FROM the
+	 *  direction of travel, whether the switch came from a swipe or a tap.
+	 *  Refs, not derived-per-render state: the class must SURVIVE later
+	 *  re-renders (deriving it stripped the class mid-animation the moment
+	 *  anything else re-rendered), and it replays anyway because the tab
+	 *  key remounts the container. First load stays on the intro rise. */
+	const prevTabRef = useRef<FeedTab>(tab);
+	const slideClassRef = useRef("");
+	if (prevTabRef.current !== tab) {
+		const d =
+			TAB_ORDER.indexOf(tab) - TAB_ORDER.indexOf(prevTabRef.current);
+		slideClassRef.current =
+			d > 0 ? "animate-slide-in-r" : "animate-slide-in-l";
+		prevTabRef.current = tab;
+	}
+	const slideClass = slideClassRef.current;
+	const pullApi = usePullToRefresh(async () => {
+		if (refreshingRef.current) return;
+		showNewPostsRef.current();
+		await fetchFeedRef.current?.(true, { silent: true });
+	});
 	/**
 	 * Announced posts, fetched the moment they are announced rather than on
 	 * click. The click then has nothing to wait for.
@@ -396,6 +433,12 @@ export default function Feed({
 		// nothing per frame; unmount just persists the last honest value.
 		const scroller = mainScroller();
 		const onScroll = () => {
+			// Only trust a reading taken while home is the URL. Now that the
+			// scroller PERSISTS across the (main) group, the navigation's own
+			// scroll-to-top fires one last event on this same listener — with
+			// the URL already flipped to the destination — and used to clobber
+			// the saved position with 0 right before unmount.
+			if (window.location.pathname !== "/") return;
 			lastScrollRef.current = mainScrollTop();
 		};
 		scroller.addEventListener?.("scroll", onScroll, { passive: true });
@@ -754,6 +797,7 @@ export default function Feed({
 
 	const showNewPosts = () => {
 		if (refreshingRef.current) return;
+		haptic(8);
 
 		// Snapshot: anything that arrives while this runs stays pending, so the
 		// pill re-appears for it.
@@ -864,8 +908,52 @@ export default function Feed({
 		}
 	};
 
+	fetchFeedRef.current = fetchFeed as never;
+	showNewPostsRef.current = showNewPosts;
+
 	return (
-		<div className="w-full min-w-0 pb-nav md:pb-20">
+		<div
+			className="w-full min-w-0 pb-nav md:pb-20"
+			onTouchStart={(e) => {
+				pullApi.handlers.onTouchStart(e);
+				swipeApi.handlers.onTouchStart(e);
+			}}
+			onTouchMove={(e) => {
+				pullApi.handlers.onTouchMove(e);
+				swipeApi.handlers.onTouchMove(e);
+			}}
+			onTouchEnd={() => {
+				pullApi.handlers.onTouchEnd();
+				swipeApi.handlers.onTouchEnd();
+			}}
+		>
+			{/* The owned pull-to-refresh: a spacer that grows with the finger,
+			    a ring that turns toward the trigger and spins while the
+			    refresh runs. Height-only, so the feed slides down under it. */}
+			<div
+				aria-hidden={pullApi.pull === 0}
+				className="flex items-end justify-center overflow-hidden"
+				style={{
+					height: pullApi.pull,
+					transition:
+						pullApi.pull === 0 || pullApi.refreshing
+							? "height 200ms var(--ws-ease)"
+							: "none",
+				}}
+			>
+				<span
+					className="mb-2.5 inline-block h-6 w-6 rounded-pill border-2 border-hairline border-t-gold"
+					style={{
+						transform: `rotate(${pullApi.pull * 2.6}deg)`,
+						opacity: Math.min(1, pullApi.pull / 40),
+						animation: pullApi.refreshing
+							? "ws-spin 700ms linear infinite"
+							: undefined,
+					}}
+					role={pullApi.refreshing ? "status" : undefined}
+					aria-label={pullApi.refreshing ? "Refreshing" : undefined}
+				/>
+			</div>
 			{/* New posts announce themselves; the reader decides when to jump.
 			    The stack says WHO posted before the click — a name you follow is
 			    worth interrupting a read for, a count on its own isn't. */}
@@ -945,8 +1033,10 @@ export default function Feed({
 				/>
 			</div>
 
-			{/* Keyed by tab so switching timelines replays the rise (no stagger). */}
-			<div key={tab}>
+			{/* Keyed by tab so switching timelines replays the rise (no stagger).
+			    The swipe hint translates this container, so the drag moves the
+			    timeline itself, not the composer above it. */}
+			<div key={tab} ref={swipeApi.bindContentRef} className={slideClass}>
 				{isPosting && <PostSkeleton />}
 				{visiblePosts.map((post, index) => (
 					<ImpressionSensor

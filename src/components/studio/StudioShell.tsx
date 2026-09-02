@@ -1,5 +1,6 @@
 "use client";
 
+import { useBackWithFallback } from "@/lib/nav";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
@@ -52,6 +53,7 @@ const GROUPS = [
  */
 export function StudioShell({ children }: { children: React.ReactNode }) {
 	const t = useT();
+	const goBack = useBackWithFallback();
 	const pathname = usePathname();
 	const user = useAtomValue(userAtom);
 	// The user atom hydrates client-side, so the identity card renders after
@@ -73,6 +75,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 				<aside className="sticky top-0 hidden h-dvh w-[240px] shrink-0 flex-col bg-[#141312] px-4 pb-4 pt-5 md:flex">
 					<Link
 						href="/"
+						onClick={(e) => { e.preventDefault(); goBack("/"); }}
 						className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 glass-ink-faint transition-colors hover:glass-ink hover:bg-[#fafaf9]/[0.05]"
 					>
 						<ArrowLeft size={14} />
@@ -170,6 +173,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 						<div className="flex items-center gap-2">
 							<Link
 								href="/"
+						onClick={(e) => { e.preventDefault(); goBack("/"); }}
 								aria-label={t("studio.back")}
 								className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#fafaf9]/[0.06] glass-ink"
 							>

@@ -236,7 +236,7 @@ export function RecordVoiceSheet({
 			{open && (
 				<>
 					<OverlayScrim onClose={onClose} />
-					<OverlayPanel variant="sheet" label="Record a voice note">
+					<OverlayPanel dragClose={onClose} variant="sheet" label="Record a voice note">
 						<OverlayHeader title="Voice note" onClose={onClose} />
 						<div className="flex flex-col items-center gap-5 px-5 pb-6 pt-1">
 							{/* live meter while recording; in review the REAL card

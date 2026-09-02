@@ -101,7 +101,7 @@ export function TranslatePanel({
 	return createPortal(
 		<>
 			<OverlayScrim onClose={onClose} label={t("fab.close")} />
-			<OverlayPanel variant="sheet" label={t("translate.panel")}>
+			<OverlayPanel dragClose={onClose} variant="sheet" label={t("translate.panel")}>
 				<OverlayHeader onClose={onClose} closeLabel={t("fab.close")}>
 					<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-pill bg-brand/10 text-gold">
 						<Translate size={17} />

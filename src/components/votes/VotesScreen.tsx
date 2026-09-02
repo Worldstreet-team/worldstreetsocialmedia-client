@@ -1,5 +1,6 @@
 "use client";
 
+import { useBackWithFallback } from "@/lib/nav";
 import clsx from "clsx";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -45,6 +46,7 @@ const PRIZE: Record<string, string> = {
  */
 export function VotesScreen() {
 	const router = useRouter();
+	const goBack = useBackWithFallback();
 	const [board, setBoard] = useState<BoardRow[] | null>(null);
 	const [history, setHistory] = useState<any[]>([]);
 
@@ -65,7 +67,7 @@ export function VotesScreen() {
 			<header className="sticky top-0 z-sticky flex items-center gap-3 bg-page px-4 py-3">
 				<button
 					type="button"
-					onClick={() => router.back()}
+					onClick={() => goBack("/")}
 					aria-label="Back"
 					className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-raised hover:text-primary"
 				>

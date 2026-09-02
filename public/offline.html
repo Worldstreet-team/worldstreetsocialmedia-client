@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0C0A09">
+<title>Offline · WorldSpace</title>
+<style>
+	body{margin:0;min-height:100dvh;display:flex;align-items:center;justify-content:center;
+		background:#0C0A09;color:#FAFAF9;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+		text-align:center;padding:24px}
+	img{width:56px;height:56px;margin-bottom:18px}
+	h1{font-size:20px;font-weight:600;margin:0 0 8px}
+	p{font-size:14.5px;color:#A8A29E;margin:0 0 22px;line-height:1.5}
+	button{background:#EAB308;color:#0C0A09;border:0;border-radius:999px;
+		padding:12px 26px;font-size:14.5px;font-weight:600;cursor:pointer}
+</style>
+</head>
+<body>
+<div>
+	<img src="/images/worldspace-mark.png" alt="">
+	<h1>You are offline</h1>
+	<p>WorldSpace needs a connection.<br>We will reload the moment you are back.</p>
+	<button onclick="location.reload()">Try again</button>
+</div>
+<script>addEventListener("online",()=>location.reload());</script>
+</body>
+</html>

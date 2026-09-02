@@ -248,7 +248,7 @@ export const CommentComposer = ({
 											/>
 											<OverlayPanel
 												key="emoji-panel"
-												variant="anchored"
+												dragClose={closeEmoji} variant="anchored"
 												label="Emoji"
 											>
 												<OverlayHeader

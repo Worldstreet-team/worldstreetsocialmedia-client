@@ -1,5 +1,6 @@
 "use client";
 
+import { useBackWithFallback } from "@/lib/nav";
 import type { ProfileBadge } from "@/components/ui/UserBadges";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -62,6 +63,7 @@ interface CommunityDetail {
 export default function CommunityScreen({ slug }: { slug: string }) {
 	const t = useT();
 	const router = useRouter();
+	const goBack = useBackWithFallback();
 	const { toast } = useToast();
 
 	const [community, setCommunity] = useState<CommunityDetail | null>(null);
@@ -203,7 +205,7 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 				<button
 					type="button"
 					aria-label={t("common.back")}
-					onClick={() => router.back()}
+					onClick={() => goBack("/communities")}
 					className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-primary transition-colors hover:bg-raised"
 				>
 					<ArrowLeft size={19} weight="bold" />

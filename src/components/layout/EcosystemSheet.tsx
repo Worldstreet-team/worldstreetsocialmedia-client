@@ -46,7 +46,7 @@ export function EcosystemSheet({
 			{open && (
 				<OverlayPanel
 					key="ecosystem-panel"
-					variant="anchored"
+					dragClose={onClose} variant="anchored"
 					label="More from WorldStreet"
 					// Sits ABOVE the bar it grew out of, and clears the home
 					// indicator via the same clearance token the bar uses.

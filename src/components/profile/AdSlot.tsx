@@ -855,7 +855,7 @@ function RatesSheet({
 	return (
 		<>
 			<OverlayScrim onClose={onClose} />
-			<OverlayPanel variant="sheet" label="Your ad rates">
+			<OverlayPanel dragClose={onClose} variant="sheet" label="Your ad rates">
 				<OverlayHeader title="Your ad space" onClose={onClose} />
 				<div className="flex flex-col gap-3 overflow-y-auto px-5 pb-5">
 					<p className="font-sans text-[13px] leading-relaxed text-muted">

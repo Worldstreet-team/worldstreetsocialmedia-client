@@ -1,5 +1,6 @@
 "use client";
 
+import { useBackWithFallback } from "@/lib/nav";
 import Link from "next/link";
 
 import dynamic from "next/dynamic";
@@ -371,6 +372,7 @@ export const MessageBox = ({
 	const { getToken } = useAuth();
 	const { isConnected } = useRealtime();
 	const router = useRouter();
+	const goBack = useBackWithFallback();
 
 	const [myProfileId, setMyProfileId] = useState<string | null>(null);
 	const [conversations, setConversations] =
@@ -1264,7 +1266,7 @@ export const MessageBox = ({
 						    browser's own back gesture. */}
 						<button
 							type="button"
-							onClick={() => router.push("/")}
+							onClick={() => goBack("/")}
 							aria-label={t("common.back")}
 							className="-ml-2 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary md:hidden"
 						>
@@ -1364,7 +1366,14 @@ export const MessageBox = ({
 						<div className="flex items-center gap-2 md:gap-3 min-w-0">
 							<button
 								type="button"
-								onClick={() => setActiveConversation(null)}
+								onClick={() => {
+									// The thread OPEN pushed /messages/<id>;
+									// closing state-only left that URL (and a
+									// ghost entry) behind — refresh reopened
+									// the thread you had just left.
+									setActiveConversation(null);
+									goBack("/messages");
+								}}
 								aria-label="Back to conversations"
 								className="md:hidden h-11 w-11 shrink-0 flex items-center justify-center rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors"
 							>

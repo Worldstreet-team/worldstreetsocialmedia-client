@@ -111,7 +111,7 @@ export function ManageCommunity({
           {open && (
             <OverlayPanel
               key="manage-panel"
-              variant="anchored"
+              dragClose={close} variant="anchored"
               label={t("community.manage")}
             >
               <OverlayHeader
@@ -263,7 +263,7 @@ function EditCommunitySheet({
     // A form that wants the width: the grammar's `sheet`.
     <ConfirmModalPortal>
       <OverlayScrim onClose={onClose} label={t("common.back")} />
-      <OverlayPanel variant="sheet" label={t("community.edit")}>
+      <OverlayPanel dragClose={close} variant="sheet" label={t("community.edit")}>
         <OverlayHeader
           title={t("community.edit")}
           onClose={onClose}
@@ -417,7 +417,7 @@ function MembersSheet({
     // The roster is a flow that wants the width: the grammar's `sheet`.
     <ConfirmModalPortal>
       <OverlayScrim onClose={onClose} label={t("common.back")} />
-      <OverlayPanel variant="sheet" label={t("community.members.title")}>
+      <OverlayPanel dragClose={close} variant="sheet" label={t("community.members.title")}>
         <OverlayHeader
           title={t("community.members.title")}
           onClose={onClose}

@@ -17,6 +17,7 @@ import { StoryPaywall } from "@/components/feed/StoryPaywall";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { useAtomValue } from "jotai";
 import { useT } from "@/i18n/client";
+import { useOverlayDismiss } from "@/components/ui/Overlay";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 export interface RailStory {
@@ -68,6 +69,9 @@ export function StoryViewer({
 }) {
 	const t = useT();
 	const { toast } = useToast();
+	// Screen-class surface: Android back / iOS swipe-back dismiss the viewer
+	// instead of leaving the app (mounted only while open, so `true`).
+	useOverlayDismiss(true, onClose, { backSentinel: true });
 	const [index, setIndex] = useState(() =>
 		Math.max(
 			0,

@@ -106,7 +106,7 @@ export default function StoryCreateSheet({
   return (
     <ConfirmModalPortal>
       <OverlayScrim onClose={onClose} />
-      <OverlayPanel variant="sheet" label="Create a story">
+      <OverlayPanel dragClose={onClose} variant="sheet" label="Create a story">
         <OverlayHeader onClose={onClose}>
           <div className="min-w-0 flex-1">
             <span className="block font-sans text-[10px] font-bold uppercase tracking-[0.14em] text-subtle">

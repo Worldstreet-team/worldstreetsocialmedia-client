@@ -45,7 +45,13 @@ export async function getMyCampaignsAction() {
 
 export async function updateCampaignAction(
 	id: string,
-	body: { status?: "active" | "paused"; addBudgetUsdMinor?: number },
+	body: {
+		status?: "active" | "paused";
+		addBudgetUsdMinor?: number;
+		/** Required by the gateway for any top-up: proof the UI showed the
+		 *  price before spending. The studio button states the amount. */
+		confirmCharge?: boolean;
+	},
 ) {
 	const { getToken } = await auth();
 	const token = await getToken();

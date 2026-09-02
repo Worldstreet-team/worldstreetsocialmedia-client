@@ -1,5 +1,6 @@
 "use client";
 
+import { useBackWithFallback } from "@/lib/nav";
 import { useGatewayRead } from "@/hooks/useGateway";
 import clsx from "clsx";
 import { ImpressionSensor } from "@/components/feed/ImpressionSensor";
@@ -26,6 +27,7 @@ export default function PostPageScreen() {
   const read = useGatewayRead();
 	const params = useParams();
 	const router = useRouter();
+	const goBack = useBackWithFallback();
 	const t = useT();
 	const postId = params.id as string;
 	const { toast } = useToast();
@@ -191,7 +193,7 @@ export default function PostPageScreen() {
 						className="rounded-pill h-11 w-11 sm:h-9 sm:w-9 shrink-0 hover:bg-raised flex items-center justify-center transition-colors cursor-pointer text-primary"
 						type="button"
 						aria-label="Go back"
-						onClick={() => router.back()}
+						onClick={() => goBack("/")}
 					>
 						<ArrowLeft className="w-5 h-5" />
 					</button>
@@ -217,7 +219,7 @@ export default function PostPageScreen() {
 					icon={Search}
 					title="This post doesn't exist"
 					caption="It may have been deleted, or the link is wrong."
-					action={{ label: "Go back", onClick: () => router.back() }}
+					action={{ label: "Go back", onClick: () => goBack("/") }}
 				/>
 			</div>
 		);
@@ -238,7 +240,7 @@ export default function PostPageScreen() {
 				<button
 					className="rounded-pill h-11 w-11 sm:h-9 sm:w-9 shrink-0 hover:bg-raised flex items-center justify-center transition-colors cursor-pointer text-primary"
 					type="button"
-					onClick={() => router.back()}
+					onClick={() => goBack("/")}
 				>
 					<ArrowLeft className="w-5 h-5" />
 				</button>

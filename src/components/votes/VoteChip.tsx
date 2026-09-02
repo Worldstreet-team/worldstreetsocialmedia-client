@@ -6,6 +6,7 @@ import { useToast } from "@/components/ui/Toast/ToastContext";
 import { VoteBox } from "@/components/votes/VoteBox";
 import { formatCompact } from "@/lib/utils";
 import { castVote, getVoteCycle, markFreeVoteUsed } from "@/lib/votes";
+import { haptic } from "@/lib/haptics";
 
 /**
  * The Weekly Vote control: the hinged ballot box and the post's total —
@@ -43,6 +44,7 @@ export function VoteChip({
 				return;
 			}
 			setBusy(true);
+			haptic(8);
 			const res: any = await castVote(postId, 1);
 			setBusy(false);
 			if (res.success) {

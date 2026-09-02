@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import { motion } from "framer-motion";
 import { X } from "@phosphor-icons/react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 /**
  * THE overlay grammar. Every popover, sheet, select and modal in the app is
@@ -55,21 +55,79 @@ export const anchoredMotion = {
 /**
  * Esc to dismiss, and the page behind must not scroll under the panel.
  * Every overlay needs both; almost none of them had both.
+ *
+ * Two close signals beyond Esc (research pass 2026-09-01):
+ *
+ * - CloseWatcher, where the platform has it (Chromium): the Android back
+ *   gesture closes the overlay instead of leaving the page — THE native
+ *   expectation on that platform. It also owns Esc, so the manual keydown
+ *   listener only exists as the fallback on browsers without it (Safari).
+ * - `backSentinel`, opt-in for surfaces a user would call "a screen"
+ *   (lightboxes, the story viewer): a history entry is minted on open, so
+ *   iOS's edge swipe-back — Safari and standalone both — dismisses the
+ *   surface instead of leaving the app. X ships its media viewer as a
+ *   route for exactly this reason. Never enable it for menus or popovers;
+ *   transient UI in the back stack wrecks the back button.
  */
-export function useOverlayDismiss(open: boolean, onClose: () => void) {
+export function useOverlayDismiss(
+	open: boolean,
+	onClose: () => void,
+	opts: { backSentinel?: boolean } = {},
+) {
+	const { backSentinel = false } = opts;
+	// The close callback is almost always an inline arrow; chasing its
+	// identity would tear down and re-mint the sentinel every render.
+	const onCloseRef = useRef(onClose);
+	onCloseRef.current = onClose;
+
 	useEffect(() => {
 		if (!open) return;
-		const onKey = (e: KeyboardEvent) => {
-			if (e.key === "Escape") onClose();
-		};
-		window.addEventListener("keydown", onKey);
 		const prev = document.body.style.overflow;
 		document.body.style.overflow = "hidden";
+
+		type Watcher = { onclose: (() => void) | null; destroy: () => void };
+		let watcher: Watcher | null = null;
+		let onKey: ((e: KeyboardEvent) => void) | null = null;
+		const CW = (
+			window as unknown as { CloseWatcher?: new () => Watcher }
+		).CloseWatcher;
+		if (typeof CW === "function") {
+			try {
+				watcher = new CW();
+				watcher.onclose = () => onCloseRef.current();
+			} catch {
+				watcher = null;
+			}
+		}
+		if (!watcher) {
+			onKey = (e: KeyboardEvent) => {
+				if (e.key === "Escape") onCloseRef.current();
+			};
+			window.addEventListener("keydown", onKey);
+		}
+
+		let popped = false;
+		let onPop: (() => void) | null = null;
+		if (backSentinel) {
+			window.history.pushState({ wsOverlay: true }, "");
+			onPop = () => {
+				popped = true;
+				onCloseRef.current();
+			};
+			window.addEventListener("popstate", onPop);
+		}
+
 		return () => {
-			window.removeEventListener("keydown", onKey);
 			document.body.style.overflow = prev;
+			watcher?.destroy();
+			if (onKey) window.removeEventListener("keydown", onKey);
+			if (onPop) window.removeEventListener("popstate", onPop);
+			// Closed by button/drag/Esc: consume our own entry so the NEXT
+			// back press leaves the page, not a ghost. Closed BY the pop:
+			// the entry is already gone.
+			if (backSentinel && !popped) window.history.back();
 		};
-	}, [open, onClose]);
+	}, [open, backSentinel]);
 }
 
 /**
@@ -135,6 +193,7 @@ export function OverlayPanel({
 	ground = "frost",
 	label,
 	role = "dialog",
+	dragClose,
 	children,
 }: {
 	variant?: OverlayVariant;
@@ -160,15 +219,75 @@ export function OverlayPanel({
 	 * `dialog` here quietly downgraded every confirm in the app.
 	 */
 	role?: "dialog" | "alertdialog";
+	/**
+	 * Phone sheets: dragging the top strip down dismisses. Pass the same
+	 * close the scrim gets. The gesture arms only in the panel's top 64px —
+	 * the handle/header strip — so the sheet body's own scrolling is never
+	 * fought over. No-op on desktop pointers and on the centred plate.
+	 */
+	dragClose?: () => void;
 	children: React.ReactNode;
 }) {
 	const motionProps = variant === "center" ? centerMotion : anchoredMotion;
+	const panelRef = useRef<HTMLDivElement | null>(null);
+	const dragRef = useRef<{ y: number; t: number; dy: number } | null>(null);
+	const closingRef = useRef(false);
+
+	const drag =
+		dragClose && variant !== "center"
+			? {
+					onTouchStart: (e: React.TouchEvent) => {
+						if (e.touches.length !== 1 || closingRef.current) return;
+						const el = panelRef.current;
+						if (!el) return;
+						const y = e.touches[0].clientY;
+						if (y - el.getBoundingClientRect().top > 64) return;
+						dragRef.current = { y, t: Date.now(), dy: 0 };
+					},
+					onTouchMove: (e: React.TouchEvent) => {
+						const d = dragRef.current;
+						const el = panelRef.current;
+						if (!d || !el) return;
+						d.dy = Math.max(0, e.touches[0].clientY - d.y);
+						if (
+							matchMedia("(prefers-reduced-motion: reduce)").matches
+						)
+							return;
+						el.style.transition = "none";
+						el.style.transform = d.dy
+							? `translateY(${d.dy}px)`
+							: "";
+					},
+					onTouchEnd: () => {
+						const d = dragRef.current;
+						const el = panelRef.current;
+						dragRef.current = null;
+						if (!d || !el) return;
+						const speed = d.dy / Math.max(1, Date.now() - d.t);
+						if (d.dy > 120 || (d.dy > 40 && speed > 0.5)) {
+							closingRef.current = true;
+							el.style.transition =
+								"transform 200ms var(--ws-ease), opacity 200ms var(--ws-ease)";
+							el.style.transform = "translateY(100%)";
+							el.style.opacity = "0";
+							window.setTimeout(() => dragClose(), 170);
+						} else {
+							el.style.transition =
+								"transform 200ms var(--ws-ease)";
+							el.style.transform = "";
+						}
+					},
+				}
+			: null;
+
 	return (
 		<motion.div
+			ref={panelRef}
 			role={role}
 			aria-modal="true"
 			aria-label={label}
 			{...motionProps}
+			{...(drag ?? {})}
 			style={{
 				...(variant === "anchored" ? { transformOrigin: "bottom right" } : null),
 				...style,

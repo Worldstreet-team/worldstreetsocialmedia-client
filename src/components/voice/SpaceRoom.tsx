@@ -579,7 +579,7 @@ export default function SpaceRoom({
           {menuFor && (
             <div onClick={(e) => e.stopPropagation()}>
               <OverlayScrim dim={false} onClose={() => setMenuFor(null)} />
-              <OverlayPanel variant="anchored" label={menuFor.username}>
+              <OverlayPanel dragClose={() => setMenuFor(null)} variant="anchored" label={menuFor.username}>
                 <OverlayHeader onClose={() => setMenuFor(null)}>
                   <span className="flex min-w-0 flex-1 items-center gap-2.5">
                     <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-pill bg-chip">

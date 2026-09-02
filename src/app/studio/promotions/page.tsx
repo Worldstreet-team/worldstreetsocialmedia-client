@@ -45,7 +45,11 @@ export default function StudioPromotions() {
 
 	const mutate = async (
 		id: string,
-		body: { status?: "active" | "paused"; addBudgetUsdMinor?: number },
+		body: {
+			status?: "active" | "paused";
+			addBudgetUsdMinor?: number;
+			confirmCharge?: boolean;
+		},
 	) => {
 		setBusyId(id);
 		const res = await updateCampaignAction(id, body);
@@ -59,16 +63,11 @@ export default function StudioPromotions() {
 			<PageHead
 				title={t("studio.nav.promotions")}
 				caption={t("studio.promo.caption")}
-				action={
-					<span className="rounded-pill bg-[#fafaf9]/[0.08] px-2.5 py-1 font-sans text-[10.5px] font-bold uppercase tracking-[0.08em] glass-ink-dim">
-						{t("studio.soon")}
-					</span>
-				}
 			/>
 
-			{/* The campaign plumbing is built end to end, but promotion isn't
-			    switched on yet — say so rather than let the controls imply
-			    a spend that will not happen. */}
+			{/* Promotion is LIVE and paid now — the banner states the money
+			    terms instead of the old "coming soon" that shipped beside
+			    working controls. */}
 			<div className="mb-3 flex items-start gap-3 rounded-2xl bg-[#171614] p-4">
 				<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[var(--ws-brand-primary)]/12 text-[var(--ws-brand-primary)]">
 					<Megaphone size={16} weight="bold" />
@@ -193,7 +192,10 @@ export default function StudioPromotions() {
 											type="button"
 											disabled={busyId === c._id}
 											onClick={() =>
-												mutate(c._id, { addBudgetUsdMinor: 500 })
+												mutate(c._id, {
+													addBudgetUsdMinor: 500,
+													confirmCharge: true,
+												})
 											}
 											className="h-8 px-3.5 rounded-pill bg-[#fafaf9] text-[#0c0a09] hover:bg-white font-sans text-[12.5px] font-semibold transition-colors cursor-pointer disabled:opacity-50 active:brightness-95"
 										>

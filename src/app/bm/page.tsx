@@ -866,7 +866,7 @@ function CampaignStatsSheet({
 	return (
 		<>
 			<OverlayScrim onClose={onClose} />
-			<OverlayPanel variant="anchored" label="Campaign analytics">
+			<OverlayPanel dragClose={onClose} variant="anchored" label="Campaign analytics">
 				<OverlayHeader title="Campaign analytics" onClose={onClose} />
 				<div className="px-4 pb-4 md:px-5 md:pb-5">
 					<div className="grid grid-cols-3 gap-1.5">
@@ -1550,7 +1550,7 @@ function NewBookingSheet({
 	return (
 		<>
 			<OverlayScrim onClose={onClose} />
-			<OverlayPanel variant="sheet" label="Book ad space">
+			<OverlayPanel dragClose={onClose} variant="sheet" label="Book ad space">
 				<OverlayHeader
 					title={step === "preview" ? "Preview" : "Book ad space"}
 					onClose={onClose}

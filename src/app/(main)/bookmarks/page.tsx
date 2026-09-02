@@ -57,9 +57,11 @@ export default function BookmarksPage() {
 						))}
 					</div>
 				) : bookmarks.length > 0 ? (
-					bookmarks.map((post) => (
-						<PostCard key={post.id} post={post} />
-					))
+					<div className="animate-content-in flex flex-col">
+						{bookmarks.map((post) => (
+							<PostCard key={post.id} post={post} />
+						))}
+					</div>
 				) : (
 					<div className="py-10">
 						<EmptyState

@@ -92,7 +92,7 @@ export function AudiencePicker({
               {/* A picker is not a modal: the composer you are addressing
                   stays visible behind it on desktop. */}
               <OverlayScrim onClose={close} dim={false} label={t("common.close")} />
-              <OverlayPanel variant="anchored" label={t("community.audience.label")}>
+              <OverlayPanel dragClose={close} variant="anchored" label={t("community.audience.label")}>
                 <OverlayHeader
                   title={t("community.audience.label")}
                   onClose={close}

@@ -1,13 +1,9 @@
 import { Suspense } from "react";
 import { headers } from "next/headers";
 import Feed, { type FeedSeed } from "@/components/feed/Feed";
-import { FeedSkeleton } from "@/components/feed/FeedSkeleton";
-import { StoriesRail } from "@/components/feed/StoriesRail";
+import { FeedFallback } from "@/components/feed/FeedFallback";
 import { FeedTabs } from "@/components/feed/FeedTabs";
 import { FeedHeaderActions } from "@/components/feed/FeedHeaderActions";
-import { LeftSidebar } from "@/components/layout/LeftSidebar";
-import { RightSidebar } from "@/components/layout/RightSidebar";
-import { MobileNavigation } from "@/components/layout/MobileNavigation";
 import { getFeedAction } from "@/lib/feed.actions";
 import { mapApiPost } from "@/lib/post-mapper";
 
@@ -72,47 +68,38 @@ async function StreamedFeed() {
 	return <Feed initialData={initialData} />;
 }
 
+/**
+ * Home, now INSIDE the (main) group — the same shell instance as post
+ * detail, profile and bookmarks. It used to be a self-contained duplicate
+ * of the group layout, so every hop between / and /post remounted both
+ * rails, the story strip and the scroller in BOTH directions (and left a
+ * ghost #ws-main-scroll behind). The column below is the only thing that
+ * swaps now, which is most of what "native back" means. (Nav audit
+ * 2026-09-02, finding 4.)
+ */
 export default function Home() {
 	return (
-		<main className="min-h-dvh bg-page text-primary">
-			<MobileNavigation />
-			{/* Widths come from tokens: --ws-container-max 1280, --ws-feed-width 620 */}
-			<div className="max-w-[var(--ws-container-max)] mx-auto flex justify-center min-h-dvh">
-				<LeftSidebar />
-				<div className="flex h-dvh w-full min-w-0 max-w-[var(--ws-feed-width)] flex-col sm:border-x border-hairline pt-topbar md:pt-0">
-					{/* Stories above everything, fixed: they sit outside the
-					    scroll container, same structure as the (main) layout. */}
-					<div
-						className="shrink-0 animate-rise"
-						style={{ animationDelay: "40ms" }}
-					>
-						<StoriesRail />
+		<>
+			{/* Sticky inside the group scroller: the tabs pin under the fixed
+			    rail while posts scroll beneath them. */}
+			<header
+				className="sticky top-0 z-sticky h-14 border-b border-hairline bg-page animate-rise"
+				style={{ animationDelay: "70ms" }}
+			>
+				<h1 className="sr-only">Home</h1>
+				<div className="flex items-center h-full">
+					<div className="flex-1 h-full min-w-0">
+						<FeedTabs />
 					</div>
-					<div id="ws-main-scroll" className="min-h-0 flex-1 overflow-y-auto">
-						{/* Sticky inside the scroller: the tabs pin under the fixed
-						    rail while posts scroll beneath them. */}
-						<header
-							className="sticky top-0 z-sticky h-14 border-b border-hairline bg-page animate-rise"
-							style={{ animationDelay: "70ms" }}
-						>
-							<h1 className="sr-only">Home</h1>
-							<div className="flex items-center h-full">
-								<div className="flex-1 h-full min-w-0">
-									<FeedTabs />
-								</div>
-								<FeedHeaderActions />
-							</div>
-						</header>
-						{/* The shell above streams immediately; the feed fills in
-						    when the gateway answers. Without this boundary the
-						    whole page would wait on the slowest request. */}
-						<Suspense fallback={<FeedSkeleton count={5} />}>
-							<StreamedFeed />
-						</Suspense>
-					</div>
+					<FeedHeaderActions />
 				</div>
-				<RightSidebar />
-			</div>
-		</main>
+			</header>
+			{/* The shell streams immediately; the feed fills in when the
+			    gateway answers. Without this boundary the whole page would
+			    wait on the slowest request. */}
+			<Suspense fallback={<FeedFallback />}>
+				<StreamedFeed />
+			</Suspense>
+		</>
 	);
 }

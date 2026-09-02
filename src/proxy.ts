@@ -3,10 +3,13 @@ import { type NextRequest, NextResponse } from "next/server";
 import { syncUser } from "./lib/auth.actions";
 
 // Per-isolate profile cache: userId → last good sync result. Best-effort —
-// a new isolate just re-syncs. 30s staleness is invisible in practice and
-// removes the biggest per-request latency in the whole app.
+// a new isolate just re-syncs. Five minutes is safe because the one thing
+// that actually changes this payload, a profile edit, busts the entry
+// explicitly through the profile_stale cookie below; everything else about
+// it is stable for hours. This removes the gateway round trip from almost
+// every navigation.
 const profileCache = new Map<string, { profile: unknown; at: number }>();
-const PROFILE_CACHE_TTL_MS = 30_000;
+const PROFILE_CACHE_TTL_MS = 300_000;
 import {
 	LOCALE_COOKIE,
 	LOCALE_HEADER,

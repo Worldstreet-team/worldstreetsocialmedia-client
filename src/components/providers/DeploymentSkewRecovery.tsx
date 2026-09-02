@@ -36,7 +36,9 @@ export function DeploymentSkewRecovery() {
 		const markNav = () => {
 			navigating = true;
 		};
-		window.addEventListener("beforeunload", markNav);
+		// pagehide alone: it fires on every real departure (beforeunload does
+		// not exist on iOS), and a beforeunload listener blocks the
+		// back/forward cache in Firefox for zero benefit here.
 		window.addEventListener("pagehide", markNav);
 
 		// ONE reload per incident, ever — never a rhythm of them.
@@ -92,7 +94,7 @@ export function DeploymentSkewRecovery() {
 		return () => {
 			window.removeEventListener("unhandledrejection", onRejection);
 			window.removeEventListener("error", onError);
-			window.removeEventListener("beforeunload", markNav);
+
 			window.removeEventListener("pagehide", markNav);
 		};
 	}, []);

@@ -1217,3 +1217,29 @@ video,
     inset 0 0 0 1px rgb(0 0 0 / 0.08),
     0 10px 30px rgb(0 0 0 / 0.16);
 }
+
+/* Pull-to-refresh ring while the refresh promise runs. */
+@keyframes ws-spin {
+	to { transform: rotate(360deg); }
+}
+
+/* Phase 5 motion. Timeline switches slide in FROM the direction of travel
+   (swipe left = the next timeline enters from the right); first loads
+   crossfade from skeleton to content instead of popping. Transform and
+   opacity only, base duration, the one easing; the global reduced-motion
+   block stills all three. */
+@keyframes ws-slide-in-r {
+	from { opacity: 0; transform: translateX(18px); }
+	to { opacity: 1; transform: translateX(0); }
+}
+@keyframes ws-slide-in-l {
+	from { opacity: 0; transform: translateX(-18px); }
+	to { opacity: 1; transform: translateX(0); }
+}
+@keyframes ws-fade-in {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+.animate-slide-in-r { animation: ws-slide-in-r var(--ws-motion-base, 200ms) var(--ws-ease) backwards; }
+.animate-slide-in-l { animation: ws-slide-in-l var(--ws-motion-base, 200ms) var(--ws-ease) backwards; }
+.animate-content-in { animation: ws-fade-in 150ms var(--ws-ease) backwards; }

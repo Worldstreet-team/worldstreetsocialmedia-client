@@ -37,7 +37,7 @@ export default function MainLayout({
 				<div className="shrink-0">
 					<StoriesRail />
 				</div>
-				<div id="ws-main-scroll" className="min-h-0 flex-1 overflow-y-auto">
+				<div id="ws-main-scroll" className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
 					{children}
 				</div>
 			</main>
