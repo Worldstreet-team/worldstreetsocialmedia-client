@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
 	Check,
 	Crown,
@@ -19,7 +19,8 @@ import {
 	useOverlayDismiss,
 } from "@/components/ui/Overlay";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
-import { postJsonDirect } from "@/lib/upload-direct";
+import { sendFormDirect } from "@/lib/upload-direct";
+import { compressImage } from "@/lib/image-compress";
 import { senderColor } from "./thread/groupSystem";
 
 type Role = "owner" | "admin" | "member";
@@ -108,6 +109,7 @@ export function GroupSheet({
 	const [renaming, setRenaming] = useState(false);
 	const [draftName, setDraftName] = useState(name);
 	const [busy, setBusy] = useState<string | null>(null);
+	const photoInputRef = useRef<HTMLInputElement | null>(null);
 
 	const byId = useMemo(() => {
 		const m = new Map<string, ParticipantUser>();
@@ -152,6 +154,34 @@ export function GroupSheet({
 		else toast.error(res.message || "Couldn't rename");
 	};
 
+	/** Group photo: compress -> direct upload (files never ride a server
+	 *  action) -> PATCH the returned KEY; the gateway presigns on read. */
+	const changePhoto = async (file: File) => {
+		setBusy("photo");
+		try {
+			const small = await compressImage(file, {
+				maxEdge: 512,
+				quality: 0.85,
+				skipUnderBytes: 40 * 1024,
+			});
+			const fd = new FormData();
+			fd.append("file", small);
+			const up = await sendFormDirect("/api/messages/upload", fd);
+			if (!up.success) {
+				toast.error(up.message || "Couldn't upload the photo");
+				return;
+			}
+			const key = up.data?.key ?? up.data?.url;
+			const res = await patch(`/api/messages/groups/${conversationId}`, {
+				avatar: key,
+			});
+			if (res.success) onChanged();
+			else toast.error(res.message || "Couldn't change the photo");
+		} finally {
+			setBusy(null);
+		}
+	};
+
 	const setRole = async (id: string, role: "admin" | "member") => {
 		setBusy(id);
 		const res = await patch(
@@ -192,13 +222,39 @@ export function GroupSheet({
 						<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
 							{/* Identity */}
 							<div className="flex flex-col items-center gap-3 px-4 pb-4 pt-2">
-								<span className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-pill bg-raised">
+								<button
+									type="button"
+									onClick={() => iAmAdmin && photoInputRef.current?.click()}
+									disabled={busy === "photo"}
+									aria-label={iAmAdmin ? "Change group photo" : undefined}
+									className={
+										iAmAdmin
+											? "group/photo relative flex h-20 w-20 cursor-pointer items-center justify-center overflow-hidden rounded-pill bg-raised disabled:opacity-60"
+											: "relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-pill bg-raised"
+									}
+								>
 									{avatar ? (
 										<SafeAvatar src={avatar} eager />
 									) : (
 										<Users className="h-8 w-8 text-muted" />
 									)}
-								</span>
+									{iAmAdmin && (
+										<span className="absolute inset-x-0 bottom-0 bg-scrim py-0.5 text-center font-sans text-[9px] font-semibold uppercase tracking-wide text-primary opacity-0 transition-opacity group-hover/photo:opacity-100">
+											Change
+										</span>
+									)}
+								</button>
+								<input
+									ref={photoInputRef}
+									type="file"
+									accept="image/*"
+									className="hidden"
+									onChange={(e) => {
+										const f = e.target.files?.[0];
+										if (f) void changePhoto(f);
+										if (photoInputRef.current) photoInputRef.current.value = "";
+									}}
+								/>
 								{renaming ? (
 									<div className="flex w-full items-center gap-2">
 										<input

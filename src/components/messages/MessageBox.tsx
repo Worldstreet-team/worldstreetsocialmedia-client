@@ -1605,6 +1605,35 @@ export const MessageBox = ({
 	);
 	const isGroupThread = headerIdentity.kind === "group";
 
+	/** Active roster minus me — money targets, @mention candidates. */
+	const groupRoster = useMemo(() => {
+		if (!isGroupThread || !activeConversation) return [];
+		const activeIds = new Set(
+			(activeConversation.members ?? [])
+				.filter((m) => !(m as { leftAt?: string }).leftAt)
+				.map((m) =>
+					String(
+						typeof m.profile === "string" ? m.profile : m.profile?._id,
+					),
+				),
+		);
+		return (activeConversation.participants ?? [])
+			.filter(
+				(p) =>
+					activeIds.has(String(p._id)) &&
+					String(p._id) !== String(myProfileId),
+			)
+			.map((p) => ({
+				id: String(p._id),
+				name:
+					`${p.firstName ?? ""} ${p.lastName ?? ""}`.trim() ||
+					p.username ||
+					"Member",
+				username: p.username,
+				avatar: p.avatar,
+			}));
+	}, [isGroupThread, activeConversation, myProfileId]);
+
 	/** The peer's persisted read mark, for ticks that survive reload. */
 	const peerReadUpTo = useMemo(() => {
 		const peerId = activeConversation?.otherParticipant?._id;
@@ -1978,6 +2007,50 @@ export const MessageBox = ({
 							)}
 						</div>
 						<div className="flex shrink-0 text-muted">
+							{isGroupThread && (
+								<>
+									<button
+										type="button"
+										aria-label="Start group voice call"
+										className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary md:h-10 md:w-10"
+										onClick={() =>
+											startCall({
+												conversationId: activeConversation._id,
+												peer: {
+													id: activeConversation._id,
+													name: headerIdentity.title,
+													avatar: headerIdentity.avatar,
+													username: "",
+												},
+												isVideo: false,
+												isGroup: true,
+											})
+										}
+									>
+										<Phone className="w-5 h-5" />
+									</button>
+									<button
+										type="button"
+										aria-label="Start group video call"
+										className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary md:h-10 md:w-10"
+										onClick={() =>
+											startCall({
+												conversationId: activeConversation._id,
+												peer: {
+													id: activeConversation._id,
+													name: headerIdentity.title,
+													avatar: headerIdentity.avatar,
+													username: "",
+												},
+												isVideo: true,
+												isGroup: true,
+											})
+										}
+									>
+										<Video className="w-5 h-5" />
+									</button>
+								</>
+							)}
 							{!isGroupThread && (
 							<>
 							<button
@@ -2345,6 +2418,9 @@ export const MessageBox = ({
 								onGif={() => setShowGifPicker(true)}
 								onFiles={addFiles}
 								onRecordStart={(startPoint) => setRecording(startPoint)}
+								mentionCandidates={
+									isGroupThread ? groupRoster : undefined
+								}
 							/>
 							{/* The recorder overlays the pill; gesture listeners live
 							    on window, so this mount order is never fragile. */}
@@ -2452,6 +2528,7 @@ export const MessageBox = ({
 						"them"
 					}
 					peerHandle={activeConversation.otherParticipant?.username}
+					members={isGroupThread ? groupRoster : undefined}
 					// The transfer is appended locally rather than waiting for
 					// the Ably round-trip — the sender should see their own
 					// receipt the instant it clears.

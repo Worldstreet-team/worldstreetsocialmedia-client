@@ -34,6 +34,8 @@ export interface BubbleMessage {
 	/** Transient, this tab only: the upload or send failed; offer retry. */
 	failed?: boolean;
 	reactions?: { profile: string; emoji: string }[];
+	payTo?: string;
+	payToName?: string;
 	systemEvent?: SystemEvent;
 	storyRef?: { story: string; thumbnail: string; authorUsername: string };
 	replyTo?: {
@@ -71,25 +73,43 @@ function quotedPreview(r: {
 	}
 }
 
-const URL_RE = /(https?:\/\/[^\s<]+)/g;
+const URL_RE = /(https?:\/\/[^\s<]+)/;
+const TOKEN_RE = /(https?:\/\/[^\s<]+|@[A-Za-z0-9_.]{2,32})/g;
 function linkify(text: string) {
-	return text.split(URL_RE).map((part, i) =>
-		URL_RE.test(part) ? (
-			<a
-				// biome-ignore lint/suspicious/noArrayIndexKey: static split of one string
-				key={i}
-				href={part}
-				target="_blank"
-				rel="noopener noreferrer"
-				className="break-all underline underline-offset-2 opacity-90 hover:opacity-100"
-				onClick={(e) => e.stopPropagation()}
-			>
-				{part}
-			</a>
-		) : (
-			part
-		),
-	);
+	return text.split(TOKEN_RE).map((part, i) => {
+		if (URL_RE.test(part) && part.startsWith("http")) {
+			return (
+				<a
+					// biome-ignore lint/suspicious/noArrayIndexKey: static split of one string
+					key={i}
+					href={part}
+					target="_blank"
+					rel="noopener noreferrer"
+					className="break-all underline underline-offset-2 opacity-90 hover:opacity-100"
+					onClick={(e) => e.stopPropagation()}
+				>
+					{part}
+				</a>
+			);
+		}
+		if (part.startsWith("@") && part.length > 2) {
+			// A tag reads gold and opens the profile (register 136). Handles
+			// that resolve to nobody still render — the gateway only ever
+			// NOTIFIES real roster members, styling is just styling.
+			return (
+				<a
+					// biome-ignore lint/suspicious/noArrayIndexKey: static split of one string
+					key={i}
+					href={`/profile/${part.slice(1)}`}
+					className="font-medium text-gold hover:underline"
+					onClick={(e) => e.stopPropagation()}
+				>
+					{part}
+				</a>
+			);
+		}
+		return part;
+	});
 }
 
 export function dayLabel(iso: string) {
@@ -212,13 +232,20 @@ export const MessageBubble = memo(function MessageBubble({
 		);
 	}
 	if (m.type === "payment") {
+		const senderName =
+			(m.sender as { firstName?: string })?.firstName ||
+			(m.sender as { username?: string })?.username ||
+			undefined;
 		return (
 			<PaymentBubble
 				amountMinor={m.amountMinor ?? 0}
 				note={m.content}
 				at={m.createdAt}
 				mine={isMe}
-				peerName={peerName}
+				peerName={isGroup ? undefined : peerName}
+				toName={m.payToName}
+				toMe={!!myProfileId && m.payTo === myProfileId}
+				senderName={isGroup ? senderName : peerName}
 			/>
 		);
 	}

@@ -96,6 +96,97 @@ function RemoteAudio({ track }: { track: RemoteTrack | null }) {
 	return <audio ref={ref} autoPlay className="hidden" />;
 }
 
+/** One person on the group grid: their video, or an initial with their name. */
+function GridTile({
+	name,
+	videoTrack,
+	micMuted,
+	speaking,
+	mirrored,
+	isSelf,
+}: {
+	name: string;
+	videoTrack: LocalVideoTrack | RemoteTrack | null;
+	micMuted: boolean;
+	speaking: boolean;
+	mirrored?: boolean;
+	isSelf?: boolean;
+}) {
+	return (
+		<div
+			className={clsx(
+				"relative overflow-hidden rounded-xl glass-well",
+				// The speaker glow: an inset ring, opacity-only, never a border.
+				speaking && "ring-2 ring-[#EAB308]/80",
+			)}
+		>
+			{videoTrack ? (
+				<VideoTile track={videoTrack} mirrored={mirrored} />
+			) : (
+				<div className="flex h-full w-full items-center justify-center">
+					<span className="flex h-14 w-14 items-center justify-center rounded-pill glass-chip text-[20px] font-semibold glass-ink">
+						{(name || "?").slice(0, 1).toUpperCase()}
+					</span>
+				</div>
+			)}
+			<span className="absolute bottom-1.5 left-1.5 flex max-w-[calc(100%-12px)] items-center gap-1 rounded-pill glass-chip-canvas backdrop-blur-md px-2 py-0.5 text-[11px] glass-ink">
+				{micMuted && <MicrophoneSlash size={11} weight="fill" />}
+				<span className="truncate">{isSelf ? "You" : name}</span>
+			</span>
+		</div>
+	);
+}
+
+/**
+ * The group stage (owner ruling 2026-09-02): everyone in one grid, video or
+ * initial, gold ring on whoever is speaking, every remote mic attached to
+ * its own audio element. Ten seats — 2 columns to 5x2.
+ */
+function GroupStage({
+	micOn,
+	camOn,
+	facing,
+	localVideo,
+}: {
+	micOn: boolean;
+	camOn: boolean;
+	facing: "user" | "environment";
+	localVideo: LocalVideoTrack | null;
+}) {
+	const people = callManager.remoteParticipantsInfo;
+	const total = people.length + 1;
+	const cols = total <= 2 ? 1 : total <= 4 ? 2 : 3;
+	return (
+		<div className="h-full w-full p-2 pb-[84px]">
+			<div
+				className="grid h-full w-full gap-2"
+				style={{
+					gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+					gridAutoRows: "1fr",
+				}}
+			>
+				<GridTile
+					name="You"
+					isSelf
+					videoTrack={camOn ? localVideo : null}
+					micMuted={!micOn}
+					speaking={false}
+					mirrored={facing === "user"}
+				/>
+				{people.map((p) => (
+					<GridTile
+						key={p.identity}
+						name={p.name}
+						videoTrack={p.videoTrack}
+						micMuted={p.micMuted}
+						speaking={p.speaking}
+					/>
+				))}
+			</div>
+		</div>
+	);
+}
+
 function useElapsed(startedAt: number | null) {
 	const [now, setNow] = useState(() => Date.now());
 	useEffect(() => {
@@ -241,6 +332,14 @@ function usePreviewState() {
 	}, []);
 	if (!preview) return null;
 	const base = {
+		isGroup: false,
+		groupCaller: null as null | {
+			id: string;
+			name: string;
+			avatar: string;
+			username: string;
+		},
+		participantCount: 0,
 		peer: {
 			id: "preview",
 			name: "Greg Osimiri",
@@ -268,6 +367,30 @@ function usePreviewState() {
 	if (preview === "ring")
 		// Incoming is spelled "ringing" + isIncoming in the real state union.
 		return { ...base, status: "ringing" as const, startedAt: null };
+	if (preview === "groupring")
+		return {
+			...base,
+			status: "ringing" as const,
+			startedAt: null,
+			isIncoming: true,
+			isGroup: true,
+			peer: { ...base.peer, name: "Design Guild", username: "" },
+			groupCaller: {
+				id: "x",
+				name: "Thy Richfield",
+				avatar: "",
+				username: "richiee",
+			},
+		};
+	if (preview === "group")
+		return {
+			...base,
+			status: "connected" as const,
+			startedAt: Date.now() - 154_000,
+			isGroup: true,
+			participantCount: 3,
+			peer: { ...base.peer, name: "Design Guild", username: "" },
+		};
 	if (preview === "rejoin")
 		return {
 			...base,
@@ -357,6 +480,9 @@ export function CallSurface() {
 		isIncoming,
 		isVideo,
 		peer,
+		isGroup,
+		groupCaller,
+		participantCount,
 		minimized,
 		startedAt,
 		endReason,
@@ -388,7 +514,13 @@ export function CallSurface() {
 	// expand the call every time someone moved it. Set on drag, read and
 	// cleared by the expand handler.
 	const draggedRef = useRef(false);
-	const line = statusLine(status, isIncoming, isVideo, endReason, elapsed);
+	let line = statusLine(status, isIncoming, isVideo, endReason, elapsed);
+	if (isGroup) {
+		if (status === "ringing" && isIncoming)
+			line = isVideo ? "Incoming group video call" : "Incoming group call";
+		else if (status === "connected")
+			line = `${elapsed ?? ""} · ${participantCount + 1} in call`.replace(/^ · /, "");
+	}
 	const pending = status === "ringing" || status === "connecting";
 
 	// An unanswered incoming ring is a toast, not a takeover: the compact
@@ -409,7 +541,17 @@ export function CallSurface() {
 
 	return (
 		<>
-			<RemoteAudio track={remoteAudio} />
+			{/* Audio lives HERE, not in the stage: minimizing a group call
+			    must never silence nine people. */}
+			{isGroup ? (
+				callManager.remoteParticipantsInfo.map((p) =>
+					p.audioTrack ? (
+						<RemoteAudio key={`ga-${p.identity}`} track={p.audioTrack} />
+					) : null,
+				)
+			) : (
+				<RemoteAudio track={remoteAudio} />
+			)}
 
 			<AnimatePresence mode="wait">
 				{incomingToast ? (
@@ -433,7 +575,11 @@ export function CallSurface() {
 									{peer.name}
 								</p>
 								<p className="flex items-center gap-1.5 text-[12px] glass-ink-dim">
-									<span className="truncate">{line}</span>
+									<span className="truncate">
+										{isGroup && groupCaller
+											? `${groupCaller.name} · ${line}`
+											: line}
+									</span>
 									<PendingDots />
 								</p>
 							</div>
@@ -496,6 +642,15 @@ export function CallSurface() {
 							<div className="relative h-[128px] w-full overflow-hidden glass-well">
 								{showVideoStage && remoteVideo ? (
 									<VideoTile track={remoteVideo} />
+								) : isGroup ? (
+									<div className="flex h-full w-full flex-col items-center justify-center gap-1">
+										<span className="flex h-[44px] w-[44px] items-center justify-center rounded-pill glass-chip text-[16px] font-semibold glass-ink">
+											{(peer.name || "G").slice(0, 1).toUpperCase()}
+										</span>
+										<span className="text-[10.5px] glass-ink-dim">
+											{participantCount + 1} in call
+										</span>
+									</div>
 								) : (
 									<div className="flex h-full w-full items-center justify-center">
 										<SafeAvatar
@@ -577,7 +732,7 @@ export function CallSurface() {
 							transition={{ duration: 0.26, ease: EASE }}
 							className={clsx(
 								"relative flex w-full flex-col overflow-hidden rounded-2xl",
-								showVideoStage
+								showVideoStage || (isGroup && status === "connected")
 									? // The picture is the ground; nothing sits behind it.
 										"h-[min(88vh,760px)] max-w-4xl glass-well"
 									: "max-w-[380px] glass-dock backdrop-blur-2xl backdrop-saturate-150",
@@ -601,7 +756,45 @@ export function CallSurface() {
 								</button>
 							)}
 
-							{showVideoStage ? (
+							{isGroup && status === "connected" ? (
+								<div className="relative h-[min(88vh,760px)] w-full">
+									<GroupStage
+										micOn={micOn}
+										camOn={camOn}
+										facing={facing}
+										localVideo={localVideo}
+									/>
+									{/* Identity + state over the grid, same chip. */}
+									<div className="absolute left-3 top-3 z-10 flex max-w-[calc(100%-72px)] flex-wrap items-center gap-1.5">
+										<span className="flex h-8 items-center gap-2 rounded-pill glass-chip-canvas backdrop-blur-md px-3 text-[12.5px] font-semibold glass-ink">
+											<span className="truncate">{peer.name}</span>
+											<span className="font-medium tabular-nums glass-ink-dim">
+												{line}
+											</span>
+										</span>
+										{poorConnection && <WeakChip />}
+									</div>
+									{error && (
+										<div className="absolute inset-x-0 bottom-[86px] z-10 flex justify-center px-4">
+											<span className="rounded-pill bg-danger px-3 py-1.5 text-[12.5px] font-medium text-white">
+												{error}
+											</span>
+										</div>
+									)}
+									<div className="absolute inset-x-0 bottom-0 z-10 flex justify-center p-3">
+										<div className="flex items-center gap-2.5 rounded-pill glass-dock backdrop-blur-xl backdrop-saturate-150 px-3 py-2">
+											<Controls
+												call={call}
+												status={status}
+												isIncoming={isIncoming}
+												micOn={micOn}
+												camOn={camOn}
+												line={line}
+											/>
+										</div>
+									</div>
+								</div>
+							) : showVideoStage ? (
 								<div className="relative h-full w-full">
 									{remoteVideo && remoteVideoOn ? (
 										<VideoTile track={remoteVideo} />

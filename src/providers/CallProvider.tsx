@@ -22,6 +22,8 @@ interface CallContextType extends CallState {
 		conversationId: string;
 		peer: CallPeer;
 		isVideo: boolean;
+		/** Ring the whole room; the surface renders the N-tile grid. */
+		isGroup?: boolean;
 	}) => void;
 	acceptCall: () => void;
 	declineCall: () => void;
@@ -100,9 +102,17 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
 		if (document.visibilityState === "visible") return;
 
 		const notification = new Notification(
-			`${state.peer.name} is calling`,
+			state.isGroup
+				? `${state.groupCaller?.name ?? "Someone"} is calling ${state.peer.name}`
+				: `${state.peer.name} is calling`,
 			{
-				body: state.isVideo ? "Incoming video call" : "Incoming voice call",
+				body: state.isGroup
+					? state.isVideo
+						? "Incoming group video call"
+						: "Incoming group call"
+					: state.isVideo
+						? "Incoming video call"
+						: "Incoming voice call",
 				icon: state.peer.avatar || undefined,
 				tag: "ws-incoming-call",
 			},
@@ -138,7 +148,12 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
 	}, [state.status]);
 
 	const startCall = useCallback(
-		(opts: { conversationId: string; peer: CallPeer; isVideo: boolean }) => {
+		(opts: {
+			conversationId: string;
+			peer: CallPeer;
+			isVideo: boolean;
+			isGroup?: boolean;
+		}) => {
 			void callManager.startCall(opts);
 		},
 		[],

@@ -12,9 +12,26 @@ import { useTheme } from "next-themes";
 import {
 	forwardRef,
 	useImperativeHandle,
+	useMemo,
 	useRef,
 	useState,
 } from "react";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
+
+export interface MentionCandidate {
+	id: string;
+	username?: string;
+	name: string;
+	avatar?: string;
+}
+
+/** The @token under the caret, if the caret sits inside one. */
+function mentionTokenAt(text: string, caret: number) {
+	const upto = text.slice(0, caret);
+	const m = upto.match(/(^|\s)@([A-Za-z0-9_.]{0,32})$/);
+	if (!m) return null;
+	return { query: m[2], start: caret - m[2].length - 1 };
+}
 
 export interface ComposerInputHandle {
 	focus: () => void;
@@ -50,6 +67,8 @@ export const ComposerInput = forwardRef<
 			y: number;
 			pointerType: string;
 		}) => void;
+		/** Group rosters only (register 136): typing @ offers the room. */
+		mentionCandidates?: MentionCandidate[];
 	}
 >(function ComposerInput(
 	{
@@ -64,13 +83,50 @@ export const ComposerInput = forwardRef<
 		onGif,
 		onFiles,
 		onRecordStart,
+		mentionCandidates,
 	},
 	ref,
 ) {
 	const [value, setValue] = useState("");
 	const [showEmoji, setShowEmoji] = useState(false);
+	const [mentionQuery, setMentionQuery] = useState<{
+		query: string;
+		start: number;
+	} | null>(null);
 	const inputRef = useRef<HTMLTextAreaElement | null>(null);
 	const { resolvedTheme } = useTheme();
+
+	const mentionMatches = useMemo(() => {
+		if (!mentionQuery || !mentionCandidates?.length) return [];
+		const q = mentionQuery.query.toLowerCase();
+		return mentionCandidates
+			.filter(
+				(c) =>
+					!q ||
+					(c.username ?? "").toLowerCase().startsWith(q) ||
+					c.name.toLowerCase().includes(q),
+			)
+			.slice(0, 6);
+	}, [mentionQuery, mentionCandidates]);
+
+	const insertMention = (c: MentionCandidate) => {
+		if (!mentionQuery || !c.username) return;
+		const el = inputRef.current;
+		const caret = el?.selectionStart ?? value.length;
+		const next = `${value.slice(0, mentionQuery.start)}@${c.username} ${value.slice(caret)}`;
+		setValue(next);
+		setMentionQuery(null);
+		requestAnimationFrame(() => {
+			const pos = mentionQuery.start + (c.username?.length ?? 0) + 2;
+			el?.focus();
+			el?.setSelectionRange(pos, pos);
+		});
+	};
+
+	const refreshMention = (text: string, caret: number) => {
+		if (!mentionCandidates?.length) return;
+		setMentionQuery(mentionTokenAt(text, caret));
+	};
 
 	useImperativeHandle(ref, () => ({
 		focus: () => inputRef.current?.focus(),
@@ -88,7 +144,7 @@ export const ComposerInput = forwardRef<
 	};
 
 	return (
-		<div className="flex min-w-0 flex-1 items-end gap-1 rounded-2xl bg-raised/70 py-1.5 pl-1.5 pr-2 transition-colors focus-within:bg-raised sm:gap-2">
+		<div className="relative flex min-w-0 flex-1 items-end gap-1 rounded-2xl bg-raised/70 py-1.5 pl-1.5 pr-2 transition-colors focus-within:bg-raised sm:gap-2">
 			<button
 				type="button"
 				onClick={onAttach}
@@ -102,12 +158,33 @@ export const ComposerInput = forwardRef<
 				value={value}
 				onChange={(e) => {
 					setValue(e.target.value);
+					refreshMention(
+						e.target.value,
+						e.target.selectionStart ?? e.target.value.length,
+					);
 					if (e.target.value) onTyping();
 					else onStopTyping();
 				}}
-				onKeyDown={(e) =>
-					e.key === "Enter" && !e.shiftKey && (e.preventDefault(), void send())
-				}
+				onKeyDown={(e) => {
+					// While the @ picker is open, Enter takes the top match
+					// and Escape dismisses — sending waits its turn.
+					if (mentionQuery && mentionMatches.length > 0) {
+						if (e.key === "Enter" || e.key === "Tab") {
+							e.preventDefault();
+							insertMention(mentionMatches[0]);
+							return;
+						}
+						if (e.key === "Escape") {
+							e.preventDefault();
+							setMentionQuery(null);
+							return;
+						}
+					}
+					if (e.key === "Enter" && !e.shiftKey) {
+						e.preventDefault();
+						void send();
+					}
+				}}
 				onPaste={(e) => {
 					const files = Array.from(e.clipboardData?.files ?? []);
 					if (files.length > 0) {
@@ -120,6 +197,37 @@ export const ComposerInput = forwardRef<
 				rows={1}
 				style={{ minHeight: "24px" }}
 			/>
+			{mentionQuery && mentionMatches.length > 0 && (
+				<div className="absolute bottom-full left-0 z-dropdown mb-2 w-[min(300px,90vw)] overflow-hidden rounded-xl card-depth py-1 animate-rise">
+					{mentionMatches.map((c) => (
+						<button
+							key={c.id}
+							type="button"
+							onMouseDown={(e) => {
+								// mousedown, not click: the textarea must not
+								// blur before the insert reads the caret.
+								e.preventDefault();
+								insertMention(c);
+							}}
+							className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-raised"
+						>
+							<span className="relative h-7 w-7 shrink-0 overflow-hidden rounded-pill bg-raised">
+								<SafeAvatar src={c.avatar} eager />
+							</span>
+							<span className="min-w-0 flex-1">
+								<span className="block truncate font-sans text-[13px] font-medium text-primary">
+									{c.name}
+								</span>
+								{c.username && (
+									<span className="block truncate font-sans text-[11.5px] text-muted">
+										@{c.username}
+									</span>
+								)}
+							</span>
+						</button>
+					))}
+				</div>
+			)}
 			<div className="flex items-center shrink-0">
 				<button
 					type="button"

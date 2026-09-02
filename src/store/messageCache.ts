@@ -51,6 +51,9 @@ export interface Message {
 	failed?: boolean;
 	/** One per person, replace-on-re-react (register 132). */
 	reactions?: { profile: string; emoji: string }[];
+	/** Group payments name their target; DMs imply the peer. */
+	payTo?: string;
+	payToName?: string;
 }
 
 // Map conversationId -> Message[]

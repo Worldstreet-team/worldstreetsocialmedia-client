@@ -22,14 +22,26 @@ export function PaymentBubble({
 	at,
 	mine,
 	peerName,
+	toName,
+	toMe,
+	senderName,
 }: {
 	amountMinor: number;
 	note?: string;
 	at?: string;
 	mine: boolean;
 	peerName?: string;
+	/** Group payments name their target (owner ruling 2026-09-02). */
+	toName?: string;
+	/** The target is the viewer — "Received", even in a room of ten. */
+	toMe?: boolean;
+	/** Who paid, for the third-party reading of a group payment. */
+	senderName?: string;
 }) {
 	const amount = `$${(amountMinor / 100).toFixed(2).replace(/\.00$/, "")}`;
+	// A payment between two OTHER people is thread news, not my money:
+	// neutral header, both names, no received styling.
+	const bystander = !mine && !!toName && !toMe;
 	const Arrow = mine ? ArrowUp : ArrowDown;
 
 	return (
@@ -51,7 +63,7 @@ export function PaymentBubble({
 					</span>
 					<span className="min-w-0">
 						<span className="block font-sans text-[11px] font-semibold uppercase tracking-[0.12em] opacity-70">
-							{mine ? "Sent" : "Received"}
+							{mine ? "Sent" : bystander ? "Payment" : "Received"}
 						</span>
 						<span className="block font-display text-[19px] font-semibold tabular-nums leading-tight">
 							{amount}
@@ -67,7 +79,11 @@ export function PaymentBubble({
 
 				<span className="mt-2 flex items-center justify-between gap-2 font-sans text-[11px] opacity-70">
 					<span className="truncate">
-						{mine ? `To ${peerName || "them"}` : `From ${peerName || "them"}`}
+						{mine
+							? `To ${toName || peerName || "them"}`
+							: bystander
+								? `${senderName || "Someone"} → ${toName}`
+								: `From ${senderName || peerName || "them"}`}
 					</span>
 					{at ? (
 						<span className="shrink-0 tabular-nums">

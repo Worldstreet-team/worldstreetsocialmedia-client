@@ -103,13 +103,17 @@ export function NotificationRow({
       ? group.conversation
         ? `/messages/${group.conversation}`
         : "/messages"
-      : type === "follow"
-        ? lead.username
-          ? `/profile/${lead.username}`
-          : "#"
-        : post?._id
-          ? `/post/${post._id}`
-          : "#";
+      : // A chat @mention carries a conversation, never a post — it lands in
+        // the thread it happened in (group mentions, register 136).
+        type === "mention" && !post?._id && group.conversation
+        ? `/messages/${group.conversation}`
+        : type === "follow"
+          ? lead.username
+            ? `/profile/${lead.username}`
+            : "#"
+          : post?._id
+            ? `/post/${post._id}`
+            : "#";
 
   const others = senders.length - 1;
   const excerpt = post?.content;

@@ -10,6 +10,7 @@ import {
 	OverlayScrim,
 	useOverlayDismiss,
 } from "@/components/ui/Overlay";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { BACKEND_URL } from "@/const";
 
@@ -37,6 +38,13 @@ const fmt = (minor: number) =>
  * float and multiplying by 100 is how you ship a transfer that sends $12.29:
  * 12.3 * 100 is 1229.9999999999998.
  */
+export interface MoneyMember {
+	id: string;
+	name: string;
+	username?: string;
+	avatar?: string;
+}
+
 export function SendMoneySheet({
 	open,
 	onClose,
@@ -44,6 +52,7 @@ export function SendMoneySheet({
 	peerName,
 	peerHandle,
 	balanceMinor,
+	members,
 	onSent,
 }: {
 	open: boolean;
@@ -53,6 +62,9 @@ export function SendMoneySheet({
 	peerHandle?: string;
 	/** Shown so the sender can see what they have without leaving the thread. */
 	balanceMinor?: number | null;
+	/** GROUP mode: the active roster minus yourself. Present -> the sheet
+	 *  opens on a "who's it for" step and the transfer names its target. */
+	members?: MoneyMember[];
 	onSent?: (message: any) => void;
 }) {
 	const { getToken } = useAuth();
@@ -61,6 +73,10 @@ export function SendMoneySheet({
 	const [note, setNote] = useState("");
 	const [confirming, setConfirming] = useState(false);
 	const [sending, setSending] = useState(false);
+	const [recipient, setRecipient] = useState<MoneyMember | null>(null);
+	const groupMode = Array.isArray(members) && members.length > 0;
+	const targetName = groupMode ? (recipient?.name ?? "") : peerName;
+	const targetHandle = groupMode ? recipient?.username : peerHandle;
 
 	useOverlayDismiss(open, onClose);
 
@@ -69,6 +85,7 @@ export function SendMoneySheet({
 			setRaw("");
 			setNote("");
 			setConfirming(false);
+			setRecipient(null);
 		}
 	}, [open]);
 
@@ -95,7 +112,13 @@ export function SendMoneySheet({
 						"Content-Type": "application/json",
 						Authorization: `Bearer ${token}`,
 					},
-					body: JSON.stringify({ amountMinor, note: note.trim() }),
+					body: JSON.stringify({
+						amountMinor,
+						note: note.trim(),
+						// Groups name their target; the gateway validates the
+						// roster either way.
+						recipientId: groupMode ? recipient?.id : undefined,
+					}),
 				},
 			);
 			const body = await res.json().catch(() => null);
@@ -104,7 +127,7 @@ export function SendMoneySheet({
 				setConfirming(false);
 				return;
 			}
-			toast(`${fmt(amountMinor)} sent to ${peerName}`, { type: "success" });
+			toast(`${fmt(amountMinor)} sent to ${targetName}`, { type: "success" });
 			onSent?.(body);
 			onClose();
 		} catch {
@@ -123,16 +146,47 @@ export function SendMoneySheet({
 					<OverlayPanel variant="center" label="Send money">
 						<OverlayHeader onClose={onClose}>
 							<span className="font-sans text-[15px] font-semibold text-primary">
-								{confirming ? "Confirm" : `Send to ${peerName}`}
+								{confirming
+									? "Confirm"
+									: groupMode && !recipient
+										? "Who's it for?"
+										: `Send to ${targetName}`}
 							</span>
 						</OverlayHeader>
 
-						{confirming ? (
+						{groupMode && !recipient ? (
+							/* Step 0, groups only: money needs a name before an
+							   amount — a room is not a recipient. */
+							<div className="max-h-[50vh] overflow-y-auto overscroll-contain pb-2">
+								{members?.map((m) => (
+									<button
+										key={m.id}
+										type="button"
+										onClick={() => setRecipient(m)}
+										className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-raised"
+									>
+										<span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-pill bg-raised">
+											<SafeAvatar src={m.avatar} eager />
+										</span>
+										<span className="min-w-0 flex-1">
+											<span className="block truncate font-sans text-[14px] font-medium text-primary">
+												{m.name}
+											</span>
+											{m.username && (
+												<span className="block truncate font-sans text-[12px] text-muted">
+													@{m.username}
+												</span>
+											)}
+										</span>
+									</button>
+								))}
+							</div>
+						) : confirming ? (
 							<div className="px-5 pb-5">
 								<p className="font-sans text-[15px] leading-relaxed text-primary">
 									Send <span className="font-semibold">{fmt(amountMinor)}</span>{" "}
-									to {peerName}
-									{peerHandle ? ` (@${peerHandle})` : ""}?
+									to {targetName}
+									{targetHandle ? ` (@${targetHandle})` : ""}?
 								</p>
 								<p className="mt-1.5 font-sans text-[13px] text-muted">
 									It leaves your wallet straight away. Transfers can&apos;t be

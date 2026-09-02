@@ -84,6 +84,7 @@ export interface CallPeer {
 export interface RejoinableCall {
 	conversationId: string;
 	isVideo: boolean;
+	isGroup?: boolean;
 	peer: CallPeer;
 	/** The original connect time, so a rejoined call's timer is honest. */
 	startedAt: number;
@@ -92,8 +93,15 @@ export interface RejoinableCall {
 export interface CallState {
 	status: CallStatus;
 	isIncoming: boolean;
-	/** The other side of the call — the person whose face/name the UI shows. */
+	/** DM: the other person. GROUP: the room's card (name/avatar = group). */
 	peer: CallPeer | null;
+	/** Group call semantics (owner ruling 2026-09-02): the room outlives any
+	 *  one leg, decline/busy are per-member, the grid renders N tiles. */
+	isGroup: boolean;
+	/** Who rang, for the incoming line of a group call. */
+	groupCaller: CallPeer | null;
+	/** Remote participant count — bumps re-render the grid. */
+	participantCount: number;
 	conversationId: string | null;
 	isVideo: boolean;
 	/** Docked to the corner instead of filling the screen. */
@@ -139,6 +147,7 @@ const REJOIN_GRACE_MS = 10_000;
 interface StoredActiveCall {
 	conversationId: string;
 	isVideo: boolean;
+	isGroup?: boolean;
 	peerJson: string;
 	startedAt: number;
 	at: number;
@@ -148,6 +157,9 @@ const IDLE_STATE: CallState = {
 	status: "idle",
 	isIncoming: false,
 	peer: null,
+	isGroup: false,
+	groupCaller: null,
+	participantCount: 0,
 	conversationId: null,
 	isVideo: false,
 	minimized: false,
@@ -194,6 +206,50 @@ class CallManager {
 	/** Track handles the UI attaches to <video>/<audio> elements. */
 	public localVideoTrack: LocalVideoTrack | null = null;
 	public remoteTracks = new Map<string, RemoteTrack>();
+
+	/**
+	 * Everyone else in the room, for the group grid: one entry per remote
+	 * participant with their live track handles. Reads the room directly —
+	 * every change that matters fires a state notify, so renders line up.
+	 */
+	get remoteParticipantsInfo(): Array<{
+		identity: string;
+		name: string;
+		videoTrack: RemoteTrack | null;
+		audioTrack: RemoteTrack | null;
+		micMuted: boolean;
+		camOn: boolean;
+		speaking: boolean;
+	}> {
+		const room = this.room;
+		if (!room) return [];
+		const out: Array<{
+			identity: string;
+			name: string;
+			videoTrack: RemoteTrack | null;
+			audioTrack: RemoteTrack | null;
+			micMuted: boolean;
+			camOn: boolean;
+			speaking: boolean;
+		}> = [];
+		for (const p of room.remoteParticipants.values()) {
+			const cam = p.getTrackPublication(LK().Track.Source.Camera);
+			const mic = p.getTrackPublication(LK().Track.Source.Microphone);
+			out.push({
+				identity: p.identity,
+				name: p.name || p.identity,
+				videoTrack:
+					cam && cam.isSubscribed && !cam.isMuted
+						? ((cam.track as RemoteTrack) ?? null)
+						: null,
+				audioTrack: (mic?.track as RemoteTrack) ?? null,
+				micMuted: mic ? mic.isMuted : false,
+				camOn: Boolean(cam && !cam.isMuted && cam.isSubscribed),
+				speaking: p.isSpeaking,
+			});
+		}
+		return out;
+	}
 
 	/** The other side's camera, if they have one publishing. */
 	get remoteVideo(): RemoteTrack | null {
@@ -300,6 +356,7 @@ class CallManager {
 		conversationId: string;
 		peer: CallPeer;
 		isVideo: boolean;
+		isGroup?: boolean;
 	}) {
 		if (this.state.status !== "idle") return;
 		const { conversationId, peer, isVideo } = opts;
@@ -309,6 +366,9 @@ class CallManager {
 			status: "ringing",
 			isIncoming: false,
 			peer,
+			isGroup: Boolean(opts.isGroup),
+			groupCaller: null,
+			participantCount: 0,
 			conversationId,
 			isVideo,
 			minimized: false,
@@ -377,7 +437,12 @@ class CallManager {
 		if (this.state.status === "idle") return;
 		const wasRinging =
 			this.state.status === "ringing" && !this.state.isIncoming;
-		this.signal(wasRinging ? "call:cancel" : "call:end");
+		// A group leg leaving is not the call ending — skip the broadcast
+		// (receivers ignore it anyway); the room disconnect says it all.
+		// A group CALLER abandoning the ring still cancels everyone's
+		// ringer.
+		if (wasRinging) this.signal("call:cancel");
+		else if (!this.state.isGroup) this.signal("call:end");
 		this.finish(wasRinging ? "cancelled" : "ended");
 	}
 
@@ -480,6 +545,7 @@ class CallManager {
 			// thread.
 			isIncoming: true,
 			peer: record.peer,
+			isGroup: Boolean(record.isGroup),
 			conversationId: record.conversationId,
 			isVideo: record.isVideo,
 			minimized: false,
@@ -573,10 +639,25 @@ class CallManager {
 		room
 			.on(LK().RoomEvent.ParticipantConnected, () => this.syncRemote())
 			.on(LK().RoomEvent.ParticipantDisconnected, () => {
-				// In a 1:1 call the other side leaving is the call ending.
-				if (room.remoteParticipants.size === 0) {
+				// 1:1 — the other side leaving IS the call ending. A group
+				// room outlives any one leg: the last person can sit alone
+				// until they hang up themselves.
+				if (
+					!this.state.isGroup &&
+					room.remoteParticipants.size === 0
+				) {
 					this.finish("ended");
+					return;
 				}
+				this.set({
+					participantCount: room.remoteParticipants.size,
+				});
+				this.syncRemote();
+			})
+			.on(LK().RoomEvent.ActiveSpeakersChanged, () => {
+				// Speaking highlights on the grid — a bare notify re-reads
+				// remoteParticipantsInfo.
+				if (this.state.isGroup) this.set({});
 			})
 			.on(LK().RoomEvent.TrackSubscribed, (track: RemoteTrack) => {
 				this.remoteTracks.set(track.sid ?? track.kind, track);
@@ -605,6 +686,10 @@ class CallManager {
 		const room = this.room;
 		if (!room) return;
 
+		if (room.remoteParticipants.size !== this.state.participantCount) {
+			this.set({ participantCount: room.remoteParticipants.size });
+		}
+
 		const remote = room.remoteParticipants.values().next().value;
 		if (!remote) return;
 
@@ -626,6 +711,21 @@ class CallManager {
 			);
 		}
 
+		if (this.state.isGroup) {
+			// The grid reads per-participant state; the 1:1 flags only need
+			// to be truthy enough to drive the shared "any video" stage.
+			let anyVideo = false;
+			for (const p of room.remoteParticipants.values()) {
+				const cam = p.getTrackPublication(LK().Track.Source.Camera);
+				if (cam && !cam.isMuted && cam.isSubscribed) {
+					anyVideo = true;
+					break;
+				}
+			}
+			this.set({ remoteMuted: false, remoteVideoOn: anyVideo });
+			return;
+		}
+
 		const mic = remote.getTrackPublication(LK().Track.Source.Microphone);
 		const cam = remote.getTrackPublication(LK().Track.Source.Camera);
 		this.set({
@@ -645,6 +745,7 @@ class CallManager {
 			const record: StoredActiveCall = {
 				conversationId,
 				isVideo,
+				isGroup: this.state.isGroup,
 				peerJson: JSON.stringify(peer),
 				startedAt,
 				at: Date.now(),
@@ -693,6 +794,7 @@ class CallManager {
 				rejoinable: {
 					conversationId: record.conversationId,
 					isVideo: Boolean(record.isVideo),
+					isGroup: Boolean(record.isGroup),
 					peer,
 					startedAt:
 						typeof record.startedAt === "number"
@@ -714,6 +816,7 @@ class CallManager {
 		switch (name) {
 			case "call:incoming": {
 				// Already busy — tell them so instead of silently dropping it.
+				// (Group callers ignore per-member busy; DM callers show it.)
 				if (this.state.status !== "idle") {
 					this.api
 						?.("/api/calls/signal", {
@@ -723,11 +826,24 @@ class CallManager {
 						.catch(() => {});
 					return;
 				}
+				const incomingGroup = data.kind === "group";
 				this.clearTimers();
 				this.set({
 					status: "ringing",
 					isIncoming: true,
-					peer: data.caller ?? null,
+					// GROUP: the surface wears the room's name; the caller
+					// rides alongside for the "X is calling" line.
+					peer: incomingGroup
+						? {
+								id: String(data.conversationId ?? ""),
+								name: data.group?.name ?? "Group call",
+								avatar: "",
+								username: "",
+							}
+						: (data.caller ?? null),
+					isGroup: incomingGroup,
+					groupCaller: incomingGroup ? (data.caller ?? null) : null,
+					participantCount: 0,
 					conversationId: data.conversationId ?? null,
 					isVideo: Boolean(data.isVideo),
 					minimized: false,
@@ -748,15 +864,22 @@ class CallManager {
 				}
 				break;
 			case "call:decline":
+				// One member of a group declining is their business, not the
+				// call's — the room rings on for everyone else.
+				if (this.state.isGroup) break;
 				this.finish("declined");
 				break;
 			case "call:busy":
+				if (this.state.isGroup) break;
 				this.finish("busy");
 				break;
 			case "call:cancel":
 				if (this.state.isIncoming) this.finish("cancelled");
 				break;
 			case "call:end":
+				// A group leg ends by LEAVING THE ROOM; the disconnect event
+				// carries the fact. The signal only ends 1:1 calls.
+				if (this.state.isGroup) break;
 				this.finish("ended");
 				break;
 		}
