@@ -53,7 +53,7 @@ export function FeedTabs() {
 	}, []);
 
 	const chip =
-		"relative flex items-center gap-2 h-10 px-4 rounded-pill font-sans text-[14px] whitespace-nowrap transition-colors shrink-0";
+		"relative flex items-center gap-2 h-11 px-4 rounded-pill font-sans text-[15.5px] whitespace-nowrap transition-colors shrink-0";
 	const idle = "font-medium text-muted hover:text-primary hover:bg-raised/50";
 
 	// The three timelines, in the order they are offered: ranked, then the
@@ -90,7 +90,7 @@ export function FeedTabs() {
 						transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
 						className="flex items-center gap-1.5"
 					>
-						<active.Icon size={14} weight="fill" className="text-gold" />
+						<active.Icon size={15} weight="fill" className="text-gold" />
 						{active.label}
 					</motion.span>
 				</AnimatePresence>
@@ -109,7 +109,7 @@ export function FeedTabs() {
 						onClick={() => setTab(x.key)}
 						className={clsx(chip, idle, "cursor-pointer")}
 					>
-						<x.Icon size={14} weight="duotone" />
+						<x.Icon size={15} weight="duotone" />
 						{x.label}
 					</button>
 				))}
