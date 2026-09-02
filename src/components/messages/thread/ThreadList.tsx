@@ -192,14 +192,17 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 					ref={ref}
 					className="h-full"
 					data={messages}
-					computeItemKey={(_i, m) => m.clientKey ?? m._id}
+					// Defensive: virtuoso can probe an index past the data for
+					// one frame while the initial window settles under a
+					// shifted firstItemIndex — a bare m.clientKey crashed the
+					// whole route there (found 2026-09-02).
+					computeItemKey={(i, m) => m?.clientKey ?? m?._id ?? `i${i}`}
 					firstItemIndex={firstItemIndex}
+					// NOTE: no initialItemCount here. It is an SSR knob that
+					// assumes data starts at index 0; combined with
+					// firstItemIndex=100000 it built a window past the array
+					// and threw before first paint.
 					initialTopMostItemIndex={firstItemIndex + messages.length - 1}
-					// Synchronous first paint (the SSR path): the newest page
-					// renders before any animation frame is granted — cold
-					// opens paint instantly, and background tabs (frozen rAF)
-					// still show the thread instead of a hidden shell.
-					initialItemCount={Math.min(messages.length, 30)}
 					followOutput={(bottom) => (bottom ? "smooth" : false)}
 					atBottomThreshold={80}
 					atBottomStateChange={(bottom) => {
