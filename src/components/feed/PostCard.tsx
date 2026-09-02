@@ -1417,6 +1417,17 @@ export const PostCard = memo(
                                 )}
                             </div>
                         )}
+                    {/* The ballot row leads a repost as well: above the quoted
+                        card, same corner it holds above media (owner ruling —
+                        it had fallen into the text-only branch and rendered
+                        under the embed). */}
+                    {post.repostOf && (
+                        <VoteChip
+                            postId={post.id}
+                            votes={post.votes ?? 0}
+                            isMine={isOwnPost}
+                        />
+                    )}
                     {post.repostOf && (
                         <Link
                             href={`/post/${post.repostOf.id}`}
@@ -1500,7 +1511,8 @@ export const PostCard = memo(
                     {/* The ballot row: right-aligned directly ABOVE the media
                         (owner ruling — same corner as before, off the artwork).
                         Text-only posts get the same row above the action bar. */}
-                    {((post.videos && post.videos.length > 0) ||
+                    {!post.repostOf &&
+                        ((post.videos && post.videos.length > 0) ||
                         (post.images && post.images.length > 0)) && (
                         <VoteChip
                             postId={post.id}
@@ -1603,7 +1615,8 @@ export const PostCard = memo(
                                 ))}
                         </div>
                     )}
-                    {!(post.videos && post.videos.length > 0) &&
+                    {!post.repostOf &&
+                        !(post.videos && post.videos.length > 0) &&
                         !(post.images && post.images.length > 0) && (
                             <VoteChip
                                 postId={post.id}

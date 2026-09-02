@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { headers } from "next/headers";
 import Feed, { type FeedSeed } from "@/components/feed/Feed";
-import { FeedSkeleton } from "@/components/feed/FeedSkeleton";
+import { FeedFallback } from "@/components/feed/FeedFallback";
 import { FeedTabs } from "@/components/feed/FeedTabs";
 import { FeedHeaderActions } from "@/components/feed/FeedHeaderActions";
 import { getFeedAction } from "@/lib/feed.actions";
@@ -97,7 +97,7 @@ export default function Home() {
 			{/* The shell streams immediately; the feed fills in when the
 			    gateway answers. Without this boundary the whole page would
 			    wait on the slowest request. */}
-			<Suspense fallback={<FeedSkeleton count={5} />}>
+			<Suspense fallback={<FeedFallback />}>
 				<StreamedFeed />
 			</Suspense>
 		</>
