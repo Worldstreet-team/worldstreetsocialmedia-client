@@ -41,7 +41,15 @@ export const ComposerInput = forwardRef<
 		onAttach: () => void;
 		onMoney: () => void;
 		onGif: () => void;
-		onStartRecording: () => void;
+		/** Paste-to-attach (register 75): files from the clipboard. */
+		onFiles: (files: File[]) => void;
+		/** Mic pressed — carries the pointer so the recorder can track the
+		 *  hold gesture (slide to cancel / lock) from where it began. */
+		onRecordStart: (start: {
+			x: number;
+			y: number;
+			pointerType: string;
+		}) => void;
 	}
 >(function ComposerInput(
 	{
@@ -54,7 +62,8 @@ export const ComposerInput = forwardRef<
 		onAttach,
 		onMoney,
 		onGif,
-		onStartRecording,
+		onFiles,
+		onRecordStart,
 	},
 	ref,
 ) {
@@ -99,6 +108,13 @@ export const ComposerInput = forwardRef<
 				onKeyDown={(e) =>
 					e.key === "Enter" && !e.shiftKey && (e.preventDefault(), void send())
 				}
+				onPaste={(e) => {
+					const files = Array.from(e.clipboardData?.files ?? []);
+					if (files.length > 0) {
+						e.preventDefault();
+						onFiles(files);
+					}
+				}}
 				placeholder="Type a message..."
 				className="flex-1 min-w-0 bg-transparent border-none outline-none text-base text-primary placeholder:text-subtle resize-none max-h-[100px] py-2.5"
 				rows={1}
@@ -158,9 +174,19 @@ export const ComposerInput = forwardRef<
 				) : (
 					<button
 						type="button"
-						onClick={onStartRecording}
+						onPointerDown={(e) => {
+							// Touch holds to record (slide left cancels, up
+							// locks); a mouse click starts locked. The recorder
+							// tracks the rest on window listeners.
+							e.preventDefault();
+							onRecordStart({
+								x: e.clientX,
+								y: e.clientY,
+								pointerType: e.pointerType,
+							});
+						}}
 						aria-label="Record a voice message"
-						className="flex h-10 w-10 items-center justify-center rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors cursor-pointer"
+						className="flex h-10 w-10 touch-none items-center justify-center rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors cursor-pointer"
 					>
 						<RiVoiceprintFill size={22} />
 					</button>

@@ -356,7 +356,13 @@ export function DockChat({
 												mine ? "text-brand-on" : "text-primary",
 											)}
 										>
-											<VoiceMessage src={m.mediaUrl} isMe={mine} />
+											<VoiceMessage
+											src={m.mediaUrl}
+											isMe={mine}
+											peaks={m.peaks}
+											durationSec={m.durationSec}
+											messageId={m._id}
+										/>
 										</span>
 									)}
 									{m.content && (

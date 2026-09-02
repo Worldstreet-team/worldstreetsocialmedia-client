@@ -692,7 +692,7 @@ export const PostComposer = ({
 		}
 		const remainingSlots = 4 - mediaItems.length;
 		const compressed = await Promise.all(
-			files.slice(0, remainingSlots).map(compressImage),
+			files.slice(0, remainingSlots).map((f) => compressImage(f)),
 		);
 		const newItems: MediaItem[] = compressed.map((file) => ({
 			url: URL.createObjectURL(file),

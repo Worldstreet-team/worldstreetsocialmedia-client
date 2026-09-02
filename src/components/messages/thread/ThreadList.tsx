@@ -30,6 +30,7 @@ export interface ThreadListProps {
 	flashedId: string | null;
 	peerName: string;
 	peerTyping: boolean;
+	peerRecording?: boolean;
 	deliveredAt: number | null;
 	readAt: number | null;
 	peerReadUpTo?: string | null;
@@ -39,7 +40,14 @@ export interface ThreadListProps {
 	onShowNew: () => void;
 	handlers: Pick<
 		BubbleProps,
-		"onReply" | "onMenu" | "onJump" | "onMediaClick" | "onStory" | "onCallBack"
+		| "onReply"
+		| "onMenu"
+		| "onJump"
+		| "onMediaClick"
+		| "onStory"
+		| "onCallBack"
+		| "onRetryUpload"
+		| "onCancelUpload"
 	>;
 }
 
@@ -53,6 +61,7 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 			flashedId,
 			peerName,
 			peerTyping,
+			peerRecording,
 			deliveredAt,
 			readAt,
 			peerReadUpTo,
@@ -72,11 +81,28 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 		const Footer = useCallback(
 			() => (
 				<div className="flex h-9 items-end px-4 pb-1">
-					{peerTyping && <TypingIndicator />}
+					{(peerTyping || peerRecording) && (
+						<TypingIndicator
+							mode={peerRecording ? "recording" : "typing"}
+						/>
+					)}
 				</div>
 			),
-			[peerTyping],
+			[peerTyping, peerRecording],
 		);
+
+		// Voice-run chaining (register 87): each audio message knows the id of
+		// the NEXT audio message downthread, so a finished note plays it.
+		const nextAudioId = useMemo(() => {
+			const map = new Map<string, string>();
+			let prevAudio: string | null = null;
+			for (const m of messages) {
+				if (m.type !== "audio") continue;
+				if (prevAudio) map.set(prevAudio, m._id);
+				prevAudio = m._id;
+			}
+			return map;
+		}, [messages]);
 
 		const itemContent = useCallback(
 			(index: number, m: BubbleMessage) => {
@@ -122,6 +148,7 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 						deliveredAt={deliveredAt}
 						readAt={readAt}
 						peerReadUpTo={peerReadUpTo}
+						autoplayNextId={nextAudioId.get(m._id)}
 						{...handlers}
 					/>
 				);
@@ -129,6 +156,7 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 			[
 				messages,
 				mountTs,
+				nextAudioId,
 				firstItemIndex,
 				myProfileId,
 				flashedId,

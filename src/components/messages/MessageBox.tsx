@@ -13,24 +13,15 @@ import {
 	useCallback,
 	useMemo,
 } from "react";
-import { VideoPlayer } from "@/components/ui/VideoPlayer";
 import {
 	Search,
-	Send,
-	Smile,
-	Image as ImageIcon,
 	Info,
 	Phone,
 	Video,
-	Mic,
-	StopCircle,
-	X,
-	Plus,
 	UserPlus,
 	ArrowLeft,
 	MessageCircle,
-	MessageSquarePlus,
-	Play,} from "lucide-react";
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Badge } from "@/components/ui/Badge";
@@ -39,7 +30,6 @@ import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import axios from "axios";
 import { useUser, useAuth } from "@clerk/nextjs";
 import { useChannel, ChannelProvider } from "ably/react";
-import EmojiPicker, { Theme } from "emoji-picker-react";
 import { useTheme } from "next-themes";
 import { useT } from "@/i18n/client";
 import { getUserStoriesAction } from "@/lib/stories.actions";
@@ -52,8 +42,6 @@ import { useRealtime } from "../providers/RealtimeProvider";
 import MediaModal from "../ui/MediaModal";
 import {
 	ArrowBendUpLeft,
-	CurrencyDollarSimple,
-	PencilSimple,
 	UserCirclePlus,
 	Tray,
 	CopySimple,
@@ -68,31 +56,47 @@ const MediaEditor = dynamic(
 	() => import("@/components/editor/MediaEditor"),
 	{ ssr: false },
 );
-import { VoiceMessage } from "./VoiceMessage";
 import { ConversationList } from "./ConversationList";
 import { StoriesRail } from "@/components/feed/StoriesRail";
 import { GIPHY_KEY, GifPicker } from "./GifPicker";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { useCall } from "@/providers/CallProvider";
 import { useChatSignals } from "@/hooks/useChatSignals";
-import { TypingIndicator } from "@/components/messages/TypingIndicator";
-import { MessageTicks, tickStateFor } from "@/components/messages/MessageTicks";
 import { ThreadList } from "@/components/messages/thread/ThreadList";
 import {
 	ComposerInput,
 	type ComposerInputHandle,
 } from "@/components/messages/thread/ComposerInput";
 import type { VirtuosoHandle } from "react-virtuoso";
-import { imageMeta } from "@/lib/media-meta";
+import { imageMeta, videoMeta } from "@/lib/media-meta";
+import { compressImage } from "@/lib/image-compress";
+import { postJsonDirect, sendFormProgress } from "@/lib/upload-direct";
+import {
+	VoiceRecorder,
+	type RecorderStart,
+	type VoiceMeta,
+} from "@/components/messages/thread/VoiceRecorder";
+import {
+	subscribeVoicePlayback,
+	toggleVoicePlayback,
+	type VoicePlaybackState,
+} from "./VoiceMessage";
+import {
+	RiAddLine,
+	RiCloseLine,
+	RiHdLine,
+	RiPauseFill,
+	RiPencilLine,
+	RiPlayFill,
+	RiVoiceprintFill,
+} from "@remixicon/react";
 import { ThreadBackdrop } from "@/components/messages/thread/ThreadBackdrop";
 import { WallpaperSheet } from "@/components/messages/thread/WallpaperSheet";
 import {
 	DEFAULT_WALLPAPER,
 	type WallpaperSetting,
 } from "@/components/messages/thread/wallpaper";
-import { CallLogRow } from "@/components/messages/CallLogRow";
 import { SendMoneySheet } from "@/components/messages/SendMoneySheet";
-import { PaymentBubble } from "@/components/messages/PaymentBubble";
 import { BACKEND_ORIGIN } from "@/const";
 
 const API_URL = BACKEND_ORIGIN;
@@ -133,6 +137,25 @@ const ChannelSubscriptionInner = ({
 };
 
 // Types
+/** A file waiting in the composer tray (register 62-63). */
+interface PendingAttachment {
+	id: string;
+	file: File;
+	previewUrl: string;
+	kind: "image" | "video" | "audio";
+	caption: string;
+	width?: number;
+	height?: number;
+	thumbhash?: string;
+	durationSec?: number;
+	peaks?: number[];
+}
+
+const newKey = () =>
+	typeof crypto !== "undefined" && "randomUUID" in crypto
+		? crypto.randomUUID()
+		: `ck-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
 interface UserProfile {
 	_id: string;
 	firstName: string;
@@ -200,6 +223,12 @@ interface Message {
 	height?: number;
 	thumbhash?: string;
 	peaks?: number[];
+	/** Multi-image sends cluster under one groupKey (register 63). */
+	groupKey?: string;
+	/** Transient, sender's tab only: upload progress 0..1. */
+	uploadPct?: number;
+	/** Transient, sender's tab only: send failed, retry offered. */
+	failed?: boolean;
 }
 
 /**
@@ -263,133 +292,6 @@ interface Conversation {
 		readUpToAt?: string;
 	}[];
 }
-
-const Attachment = ({
-	src,
-	type,
-	isMe,
-	isTemp,
-	onClick,
-}: {
-	src: string;
-	type: "image" | "video";
-	isMe: boolean;
-	isTemp: boolean;
-	onClick: () => void;
-}) => {
-	const [progress, setProgress] = useState(0);
-	const [loaded, setLoaded] = useState(false);
-	const [retryKey, setRetryKey] = useState(0);
-	const [objectUrl, setObjectUrl] = useState<string | null>(null);
-
-	useEffect(() => {
-		// If it's me (sender), we assume we have the file or it's loading via shimmer
-		if (isMe) {
-			setLoaded(true);
-			return;
-		}
-
-		let mounted = true;
-		const fetchMedia = async () => {
-			try {
-				const response = await axios.get(src, {
-					responseType: "blob",
-					onDownloadProgress: (progressEvent) => {
-						if (progressEvent.total) {
-							const percent = Math.round(
-								(progressEvent.loaded * 100) / progressEvent.total,
-							);
-							setProgress(percent);
-						}
-					},
-				});
-				if (mounted) {
-					const url = URL.createObjectURL(response.data);
-					setObjectUrl(url);
-					setLoaded(true);
-				}
-			} catch (e) {
-				console.error("Failed to load media", e);
-				if (mounted) setLoaded(true); // Fallback to allow retry or show error
-			}
-		};
-
-		fetchMedia();
-
-		return () => {
-			mounted = false;
-			if (objectUrl) URL.revokeObjectURL(objectUrl);
-		};
-	}, [src, isMe]);
-
-	const displaySrc = objectUrl || src;
-
-	if (!loaded && !isMe) {
-		return (
-			// w-full + max-w so the tile shrinks with the bubble instead of
-			// forcing it wider than the message pane on small screens.
-			<div className="relative w-full max-w-[256px] aspect-square rounded-lg overflow-hidden mb-1 bg-sunken flex items-center justify-center">
-				<div className="flex flex-col items-center gap-2">
-					<div className="w-8 h-8 rounded-full border-2 border-raised border-t-brand animate-spin" />
-					<span className="text-xs font-sans tabular-nums text-muted">{progress}%</span>
-				</div>
-			</div>
-		);
-	}
-
-	return (
-		<div
-			onClick={onClick}
-			className={clsx(
-				"relative w-full max-w-[280px] cursor-zoom-in overflow-hidden rounded-xl transition-opacity hover:opacity-95",
-				isTemp && "opacity-70",
-			)}
-		>
-			{isTemp && (
-				<div className="absolute inset-0 z-10 bg-page/20 animate-pulse" />
-			)}
-			{type === "image" ? (
-				<div className="relative w-full aspect-square bg-sunken">
-					{/* R2 is eventually consistent: the URL the upload returns can
-					    404 for a beat, and the browser's broken-image glyph made a
-					    just-sent picture look failed. Retry quietly instead. */}
-					<img
-						key={retryKey}
-						src={displaySrc}
-						alt="attachment"
-						className="h-full w-full object-cover"
-						onError={() => {
-							if (retryKey < 4)
-								setTimeout(
-									() => setRetryKey((k) => k + 1),
-									600 * (retryKey + 1),
-								);
-						}}
-					/>
-				</div>
-			) : (
-				/* A tile, not an inline player. The full control bar crammed into
-				   a 256px bubble was unreadable; the lightbox is one tap away and
-				   has room for real controls. */
-				<div className="relative w-full bg-sunken">
-					{/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-					<video
-						src={`${displaySrc}#t=0.1`}
-						preload="metadata"
-						muted
-						playsInline
-						className="max-h-64 w-full object-cover"
-					/>
-					<span className="absolute inset-0 flex items-center justify-center">
-						<span className="flex h-12 w-12 items-center justify-center rounded-pill bg-scrim text-primary">
-							<Play className="ml-0.5 h-5 w-5" fill="currentColor" />
-						</span>
-					</span>
-				</div>
-			)}
-		</div>
-	);
-};
 
 export const MessageBox = ({
 	initialConversationId,
@@ -667,16 +569,34 @@ export const MessageBox = ({
 	const activeIdRef = useRef<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const searchInputRef = useRef<HTMLInputElement>(null);
-	const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-	const audioChunksRef = useRef<Blob[]>([]);
-
-	const [isRecording, setIsRecording] = useState(false);
-	const [recordingDuration, setRecordingDuration] = useState(0);
-
-	const [selectedFile, setSelectedFile] = useState<File | null>(null);
-	const [editingAttachment, setEditingAttachment] = useState(false);
-	const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-	const [isUploading, setIsUploading] = useState(false);
+	// ── The composer tray: up to 8 files queued before a send ──
+	const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
+	const [selectedAttId, setSelectedAttId] = useState<string | null>(null);
+	const [editingAttId, setEditingAttId] = useState<string | null>(null);
+	// HD chip (register 66): a lighter compression cap, never the original.
+	const [hdSend, setHdSend] = useState(false);
+	const hdRef = useRef(false);
+	const [dragOver, setDragOver] = useState(false);
+	// Voice recorder overlay; the start descriptor carries the hold gesture.
+	const [recording, setRecording] = useState<RecorderStart | null>(null);
+	// In-flight upload handles + everything needed to retry a failed send.
+	const uploadAbortRef = useRef(new Map<string, AbortController>());
+	const retryRef = useRef(
+		new Map<
+			string,
+			{
+				att: PendingAttachment;
+				caption: string;
+				convId: string;
+				groupKey?: string;
+				replyToId?: string;
+				key?: string;
+			}
+		>(),
+	);
+	// Mini player (register 88): what the voice store says is playing.
+	const [voiceBar, setVoiceBar] = useState<VoicePlaybackState | null>(null);
+	const voiceBarThrottleRef = useRef(0);
 
 	const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
 	const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
@@ -697,80 +617,290 @@ export const MessageBox = ({
 		}
 	};
 
-	// Timer for recording duration
 	useEffect(() => {
-		let interval: NodeJS.Timeout;
-		if (isRecording) {
-			interval = setInterval(() => {
-				setRecordingDuration((prev) => prev + 1);
-			}, 1000);
-		} else {
-			setRecordingDuration(0);
-		}
-		return () => clearInterval(interval);
-	}, [isRecording]);
-
-	const startRecording = async () => {
 		try {
-			const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-			const mediaRecorder = new MediaRecorder(stream);
-			mediaRecorderRef.current = mediaRecorder;
-			audioChunksRef.current = [];
+			const hd = localStorage.getItem("ws-dm-hd") === "1";
+			setHdSend(hd);
+			hdRef.current = hd;
+		} catch {
+			/* storage unavailable */
+		}
+	}, []);
 
-			mediaRecorder.ondataavailable = (event) => {
-				if (event.data.size > 0) {
-					audioChunksRef.current.push(event.data);
-				}
-			};
+	const toggleHd = () => {
+		setHdSend((v) => {
+			hdRef.current = !v;
+			try {
+				localStorage.setItem("ws-dm-hd", !v ? "1" : "0");
+			} catch {}
+			return !v;
+		});
+	};
 
-			// Automatically send on stop
-			mediaRecorder.onstop = async () => {
-				const audioBlob = new Blob(audioChunksRef.current, {
-					type: "audio/webm",
+	// The playback store publishes per frame while a note plays; the mini
+	// player only needs id/playing edges immediately and time twice a second.
+	useEffect(
+		() =>
+			subscribeVoicePlayback((st) => {
+				const now = Date.now();
+				setVoiceBar((prev) => {
+					if (
+						prev?.id !== st.id ||
+						prev?.playing !== st.playing ||
+						now - voiceBarThrottleRef.current > 500
+					) {
+						voiceBarThrottleRef.current = now;
+						return { ...st };
+					}
+					return prev;
 				});
-				await sendAudioMessage(audioBlob);
-				stream.getTracks().forEach((track) => track.stop()); // Stop mic access
-			};
+			}),
+		[],
+	);
 
-			mediaRecorder.start();
-			setIsRecording(true);
-		} catch (error) {
-			console.error("Error accessing microphone:", error);
-			toast.error("Microphone access denied");
-		}
-	};
+	// ── The upload pipeline (registers 20, 68, 69, 93): every media send —
+	// image, clip, voice note — is one machine: optimistic bubble with a
+	// progress ring, retry that keeps the bubble, cancel that removes it. ──
 
-	const stopRecording = () => {
-		if (mediaRecorderRef.current && isRecording) {
-			mediaRecorderRef.current.stop();
-			setIsRecording(false);
-		}
-	};
-
-	const cancelRecording = () => {
-		if (mediaRecorderRef.current && isRecording) {
-			// Override onstop to do nothing
-			mediaRecorderRef.current.onstop = () => {
-				const stream = mediaRecorderRef.current?.stream;
-				stream?.getTracks().forEach((track) => track.stop());
-			};
-			mediaRecorderRef.current.stop();
-			setIsRecording(false);
-		}
-	};
-
-
-	/** A GIF is just an image message whose URL lives on GIPHY's CDN. */
-	const sendGif = async (url: string) => {
-		if (!activeConversation || !myProfileId) return;
-		const tempId = `temp-${Date.now()}`;
+	/** Merge fields into the cached message carrying this clientKey. */
+	const patchByClientKey = (
+		convId: string,
+		clientKey: string,
+		fields: Partial<Message>,
+	) => {
 		setMessageCache((prev) => ({
 			...prev,
-			[activeConversation._id]: [
-				...(prev[activeConversation._id] || []),
+			[convId]: (prev[convId] || []).map((m) =>
+				m.clientKey === clientKey ? { ...m, ...fields } : m,
+			),
+		}));
+	};
+
+	const removeByClientKey = (convId: string, clientKey: string) => {
+		setMessageCache((prev) => ({
+			...prev,
+			[convId]: (prev[convId] || []).filter(
+				(m) => m.clientKey !== clientKey,
+			),
+		}));
+	};
+
+	/** Optimistic bubble + retry registration; upload runs separately. */
+	const queueAttachment = (
+		att: PendingAttachment,
+		caption: string,
+		convId: string,
+		groupKey?: string,
+		replyToMsg?: Message | null,
+	) => {
+		const clientKey = att.id;
+		const optimistic: Message = {
+			_id: `temp-${clientKey}`,
+			clientKey,
+			conversationId: convId,
+			sender: {
+				_id: myProfileId ?? "",
+				firstName: user?.firstName || "",
+				lastName: user?.lastName || "",
+				username: user?.username || "",
+				avatar: me?.avatar || user?.imageUrl || "",
+			},
+			content: caption,
+			type: att.kind,
+			mediaUrl: att.previewUrl,
+			width: att.width,
+			height: att.height,
+			thumbhash: att.thumbhash,
+			durationSec: att.durationSec,
+			peaks: att.peaks,
+			groupKey,
+			uploadPct: 0,
+			replyTo: replyToMsg
+				? {
+						_id: replyToMsg._id,
+						content: replyToMsg.content,
+						type: replyToMsg.type,
+						mediaUrl: replyToMsg.mediaUrl,
+						durationSec: replyToMsg.durationSec,
+						sender: replyToMsg.sender,
+					}
+				: null,
+			createdAt: new Date().toISOString(),
+		};
+		setMessageCache((prev) => ({
+			...prev,
+			[convId]: [...(prev[convId] || []), optimistic],
+		}));
+		retryRef.current.set(clientKey, {
+			att,
+			caption,
+			convId,
+			groupKey,
+			replyToId: replyToMsg?._id,
+		});
+	};
+
+	const runAttachmentUpload = async (clientKey: string): Promise<boolean> => {
+		const job = retryRef.current.get(clientKey);
+		if (!job) return false;
+		patchByClientKey(job.convId, clientKey, {
+			failed: undefined,
+			uploadPct: job.key ? 1 : 0,
+		});
+		if (!job.key) {
+			let file = job.att.file;
+			if (job.att.kind === "image") {
+				file = await compressImage(
+					file,
+					hdRef.current
+						? {
+								maxEdge: 4096,
+								quality: 0.9,
+								skipUnderBytes: 1024 * 1024,
+							}
+						: undefined,
+				);
+			}
+			const fd = new FormData();
+			fd.append("file", file, file.name || "attachment");
+			fd.append("conversationId", job.convId);
+			const ctl = new AbortController();
+			uploadAbortRef.current.set(clientKey, ctl);
+			let lastPct = 0;
+			const up = await sendFormProgress("/api/messages/upload", fd, {
+				onProgress: (pct) => {
+					// ~16 cache writes per upload, not one per network event.
+					if (pct - lastPct >= 0.06 || pct >= 1) {
+						lastPct = pct;
+						patchByClientKey(job.convId, clientKey, {
+							uploadPct: pct,
+						});
+					}
+				},
+				signal: ctl.signal,
+			});
+			uploadAbortRef.current.delete(clientKey);
+			if (!up.success) {
+				if (up.aborted) {
+					removeByClientKey(job.convId, clientKey);
+					retryRef.current.delete(clientKey);
+					return false;
+				}
+				patchByClientKey(job.convId, clientKey, {
+					failed: true,
+					uploadPct: undefined,
+				});
+				return false;
+			}
+			job.key = up.data.key ?? up.data.url;
+		}
+		// The write itself rides direct JSON — a media send mid-deploy must
+		// not die with a server-action id.
+		const res = await postJsonDirect("/api/messages", {
+			conversationId: job.convId,
+			content: job.caption,
+			type: job.att.kind,
+			mediaUrl: job.key,
+			clientKey,
+			replyTo: job.replyToId,
+			width: job.att.width,
+			height: job.att.height,
+			thumbhash: job.att.thumbhash,
+			durationSec: job.att.durationSec,
+			peaks: job.att.peaks,
+			groupKey: job.groupKey,
+		});
+		if (!res.success) {
+			patchByClientKey(job.convId, clientKey, {
+				failed: true,
+				uploadPct: undefined,
+			});
+			toast.error(res.message || "Failed to send");
+			return false;
+		}
+		const server = res.data as Message;
+		setMessageCache((prev) => ({
+			...prev,
+			[job.convId]: (prev[job.convId] || []).map((m) => {
+				if (m.clientKey !== clientKey) return m;
+				// Keep the LOCAL preview when the server echoes a bare key:
+				// the blob in memory beats a not-yet-signed R2 key, and the
+				// next fetch swaps in a presigned URL anyway.
+				const mediaUrl = server.mediaUrl?.includes("://")
+					? server.mediaUrl
+					: m.mediaUrl;
+				return {
+					...server,
+					clientKey,
+					mediaUrl,
+					uploadPct: undefined,
+					failed: undefined,
+				};
+			}),
+		}));
+		retryRef.current.delete(clientKey);
+		setSendPulse((n) => n + 1);
+		return true;
+	};
+
+	const retryUpload = useCallback((clientKey: string) => {
+		void runAttachmentUpload(clientKey);
+		// biome-ignore lint/correctness/useExhaustiveDependencies: refs + setters only
+	}, []);
+
+	const cancelUpload = useCallback((clientKey: string) => {
+		const ctl = uploadAbortRef.current.get(clientKey);
+		if (ctl) {
+			ctl.abort();
+			return;
+		}
+		const job = retryRef.current.get(clientKey);
+		if (job) {
+			removeByClientKey(job.convId, clientKey);
+			retryRef.current.delete(clientKey);
+		}
+		// biome-ignore lint/correctness/useExhaustiveDependencies: refs + setters only
+	}, []);
+
+	/** Voice notes ride the same machinery as any attachment (register 93). */
+	const sendVoiceNote = async (blob: Blob, meta: VoiceMeta) => {
+		if (!activeConversation || !myProfileId) return;
+		const convId = activeConversation._id;
+		const ext = meta.mime.includes("mp4") ? "m4a" : "webm";
+		const att: PendingAttachment = {
+			id: newKey(),
+			file: new File([blob], `voice-note.${ext}`, { type: meta.mime }),
+			previewUrl: URL.createObjectURL(blob),
+			kind: "audio",
+			caption: "",
+			durationSec: meta.durationSec,
+			peaks: meta.peaks,
+		};
+		queueAttachment(att, "", convId);
+		setPendingNew(0);
+		scrollToBottom();
+		await runAttachmentUpload(att.id);
+	};
+
+	/**
+	 * GIFs re-host to R2 on send (register 71): a third-party CDN URL in a
+	 * thread leaks every reader's IP to GIPHY and dies whenever they prune.
+	 * The optimistic bubble paints from the CDN instantly; the stored copy
+	 * is ours. If the fetch fails the hotlink still sends — a GIF that
+	 * works today beats a principled empty bubble.
+	 */
+	const sendGif = async (url: string) => {
+		if (!activeConversation || !myProfileId) return;
+		const convId = activeConversation._id;
+		const clientKey = newKey();
+		setMessageCache((prev) => ({
+			...prev,
+			[convId]: [
+				...(prev[convId] || []),
 				{
-					_id: tempId,
-					conversationId: activeConversation._id,
+					_id: `temp-${clientKey}`,
+					clientKey,
+					conversationId: convId,
 					sender: {
 						_id: myProfileId,
 						firstName: user?.firstName || "",
@@ -779,139 +909,76 @@ export const MessageBox = ({
 						avatar: me?.avatar || user?.imageUrl || "",
 					},
 					content: "",
-					type: "image",
+					type: "image" as const,
 					mediaUrl: url,
+					uploadPct: 0,
 					createdAt: new Date().toISOString(),
 				},
 			],
 		}));
+		setPendingNew(0);
 		scrollToBottom();
+		let mediaUrl = url;
 		try {
-			const token = await getToken();
-			const response = await axios.post(
-				`${API_URL}/api/messages`,
-				{
-					conversationId: activeConversation._id,
-					content: "",
-					type: "image",
-					mediaUrl: url,
-				},
-				{ headers: { Authorization: `Bearer ${token}` } },
-			);
-			setMessageCache((prev) => ({
-				...prev,
-				[activeConversation._id]: (prev[activeConversation._id] || []).map(
-					(m) => (m._id === tempId ? response.data : m),
-				),
-			}));
-		} catch (error: any) {
-			toast.error(error?.response?.data?.message || "Failed to send GIF");
-			setMessageCache((prev) => ({
-				...prev,
-				[activeConversation._id]: (prev[activeConversation._id] || []).filter(
-					(m) => m._id !== tempId,
-				),
-			}));
+			const r = await fetch(url);
+			if (r.ok) {
+				const blob = await r.blob();
+				if (blob.size > 0 && blob.size <= 15 * 1024 * 1024) {
+					const fd = new FormData();
+					fd.append(
+						"file",
+						new File([blob], "gif.gif", {
+							type: blob.type || "image/gif",
+						}),
+					);
+					fd.append("conversationId", convId);
+					const up = await sendFormProgress(
+						"/api/messages/upload",
+						fd,
+						{
+							onProgress: (pct) =>
+								patchByClientKey(convId, clientKey, {
+									uploadPct: pct,
+								}),
+						},
+					);
+					if (up.success) mediaUrl = up.data.key ?? up.data.url;
+				}
+			}
+		} catch {
+			/* hotlink fallback */
 		}
-	};
-
-	const sendAudioMessage = async (audioBlob: Blob) => {
-		if (!activeConversation || !myProfileId) return;
-
-		const formData = new FormData();
-		formData.append("file", audioBlob, "voice-note.webm");
-		formData.append("conversationId", activeConversation._id);
-		const tempId = `temp-${Date.now()}`;
-		const clientKey =
-			typeof crypto !== "undefined" && "randomUUID" in crypto
-				? crypto.randomUUID()
-				: `ck-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-		// Register item 20: the bubble exists BEFORE the upload — the only
-		// send feedback used to be a toast while the network worked.
-		const localUrl = URL.createObjectURL(audioBlob);
-		const optimisticMessage: Message = {
-			_id: tempId,
-			clientKey,
-			conversationId: activeConversation._id,
-			sender: {
-				_id: myProfileId,
-				firstName: user?.firstName || "",
-				lastName: user?.lastName || "",
-				username: user?.username || "",
-				avatar: me?.avatar || user?.imageUrl || "",
-			},
+		const res = await postJsonDirect("/api/messages", {
+			conversationId: convId,
 			content: "",
-			type: "audio",
-			mediaUrl: localUrl,
-			durationSec: recordingDuration,
-			createdAt: new Date().toISOString(),
-		};
+			type: "image",
+			mediaUrl,
+			clientKey,
+		});
+		if (!res.success) {
+			toast.error(res.message || "Failed to send GIF");
+			removeByClientKey(convId, clientKey);
+			return;
+		}
+		const server = res.data as Message;
 		setMessageCache((prev) => ({
 			...prev,
-			[activeConversation._id]: [
-				...(prev[activeConversation._id] || []),
-				optimisticMessage,
-			],
+			[convId]: (prev[convId] || []).map((m) =>
+				m.clientKey === clientKey
+					? {
+							...server,
+							clientKey,
+							// The CDN copy is already painted; keep it until a
+							// fetch delivers the presigned R2 read.
+							mediaUrl: server.mediaUrl?.includes("://")
+								? server.mediaUrl
+								: url,
+							uploadPct: undefined,
+						}
+					: m,
+			),
 		}));
-		scrollToBottom();
-
-		try {
-			const token = await getToken();
-
-			const uploadRes = await axios.post(
-				`${API_URL}/api/messages/upload`,
-				formData,
-				{
-					headers: {
-						Authorization: `Bearer ${token}`,
-						"Content-Type": "multipart/form-data",
-					},
-				},
-			);
-
-			const key = uploadRes.data.key ?? uploadRes.data.url;
-
-			const response = await axios.post(
-				`${API_URL}/api/messages`,
-				{
-					conversationId: activeConversation._id,
-					content: "",
-					type: "audio",
-					mediaUrl: key,
-					// The recorder counts this anyway; sending it lets the inbox
-					// preview say "0:23" instead of just "Voice note".
-					durationSec: recordingDuration,
-					clientKey,
-				},
-				{ headers: { Authorization: `Bearer ${token}` } },
-			);
-
-			setMessageCache((prev) => ({
-				...prev,
-				[activeConversation._id]: (prev[activeConversation._id] || []).map(
-					(m) =>
-						m._id === tempId
-							? { ...response.data, clientKey }
-							: m,
-				),
-			}));
-		} catch (error: any) {
-			console.error("Failed to send audio", error);
-			// The gateway refuses with a sentence worth reading — "You can
-			// only message or call people who follow you back" is a rule, and
-			// a generic "failed" sends the user off debugging their mic.
-			toast.error(
-				error?.response?.data?.message || "Failed to send voice note",
-			);
-			// The optimistic bubble stayed in the thread on failure, so a
-			// refused voice note LOOKED sent and silently never arrived.
-			setMessageCache((prev) => ({
-				...prev,
-				[activeConversation._id]: (prev[activeConversation._id] || []).filter(
-					(m) => m._id !== tempId,
-				),
-			}));
-		}
+		setSendPulse((n) => n + 1);
 	};
 
 	// Sync ref with state so real-time listener stays updated
@@ -923,31 +990,94 @@ export const MessageBox = ({
 		}
 	}, [activeConversation]);
 
+	/**
+	 * Files enter the tray from the picker, paste, or drag-drop (register
+	 * 75) — one intake, up to 8 (register 63). Geometry and thumbhash are
+	 * probed in the background so a queued file is ready by send time.
+	 */
+	const addFiles = useCallback(
+		(incoming: File[]) => {
+			const media = incoming.filter((f) =>
+				/^(image|video)\//.test(f.type),
+			);
+			if (media.length === 0) return;
+			const room = 8 - attachments.length;
+			if (media.length > room)
+				toast.error("Up to 8 attachments per send");
+			const accepted = media.slice(0, Math.max(0, room));
+			if (accepted.length === 0) return;
+			const items: PendingAttachment[] = accepted.map((f) => ({
+				id: newKey(),
+				file: f,
+				previewUrl: URL.createObjectURL(f),
+				kind: f.type.startsWith("image") ? "image" : "video",
+				caption: "",
+			}));
+			setAttachments((prev) => [...prev, ...items]);
+			setSelectedAttId(items[items.length - 1].id);
+			for (const item of items) {
+				void (async () => {
+					try {
+						const meta =
+							item.kind === "image"
+								? await imageMeta(item.file)
+								: await videoMeta(item.file);
+						setAttachments((prev) =>
+							prev.map((a) =>
+								a.id === item.id ? { ...a, ...meta } : a,
+							),
+						);
+					} catch {
+						/* geometry is a garnish */
+					}
+				})();
+			}
+		},
+		[attachments.length],
+	);
+
 	const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const file = e.target.files?.[0];
-		if (file) {
-			setSelectedFile(file);
-			const url = URL.createObjectURL(file);
-			setPreviewUrl(url);
-		}
+		addFiles(Array.from(e.target.files ?? []));
 		if (fileInputRef.current) fileInputRef.current.value = "";
 	};
 
 	// Pre-send edit: the Studio sheet swaps the attachment in place, so the
-	// existing upload path (POST /api/messages/upload) is untouched.
-	const applyEditedAttachment = (file: File) => {
-		if (previewUrl) URL.revokeObjectURL(previewUrl);
-		setSelectedFile(file);
-		setPreviewUrl(URL.createObjectURL(file));
-		setEditingAttachment(false);
+	// upload path is untouched. Geometry re-probes — the crop changed it.
+	const applyEditedAttachment = (id: string, file: File) => {
+		setAttachments((prev) =>
+			prev.map((a) => {
+				if (a.id !== id) return a;
+				URL.revokeObjectURL(a.previewUrl);
+				return {
+					...a,
+					file,
+					previewUrl: URL.createObjectURL(file),
+					width: undefined,
+					height: undefined,
+					thumbhash: undefined,
+				};
+			}),
+		);
+		setEditingAttId(null);
+		void (async () => {
+			try {
+				const meta = await imageMeta(file);
+				setAttachments((prev) =>
+					prev.map((a) => (a.id === id ? { ...a, ...meta } : a)),
+				);
+			} catch {
+				/* geometry is a garnish */
+			}
+		})();
 	};
 
-	const clearSelectedFile = () => {
-		setSelectedFile(null);
-		if (previewUrl) {
-			URL.revokeObjectURL(previewUrl);
-			setPreviewUrl(null);
-		}
+	const removeAttachment = (id: string) => {
+		setAttachments((prev) => {
+			const target = prev.find((a) => a.id === id);
+			if (target) URL.revokeObjectURL(target.previewUrl);
+			return prev.filter((a) => a.id !== id);
+		});
+		setSelectedAttId((sel) => (sel === id ? null : sel));
 	};
 
 	const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
@@ -1219,62 +1349,32 @@ export const MessageBox = ({
 		}
 	}, []);
 
-	const sendMessage = async (textArg?: string): Promise<boolean> => {
-		const text = (textArg ?? "").trim();
-		if (
-			(!text && !selectedFile) ||
-			!activeConversation ||
-			!myProfileId ||
-			isUploading
-		)
-			return false;
-
-		const clientKey =
-			typeof crypto !== "undefined" && "randomUUID" in crypto
-				? crypto.randomUUID()
-				: `ck-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-		const tempId = `temp-${Date.now()}`;
-		const content = text;
-		// Captured before the optimistic clear, so a fast second send cannot
-		// attach this reply to the wrong message.
-		const currentReply = replyTarget;
-		chat.notifyStoppedTyping();
-		const currentFile = selectedFile;
-		const currentPreview = previewUrl;
-
-		let optimisticType: "text" | "image" | "video" | "file" = "text";
-		if (currentFile) {
-			if (currentFile.type.startsWith("image")) optimisticType = "image";
-			else if (currentFile.type.startsWith("video")) optimisticType = "video";
-			else optimisticType = "file";
-		}
-
-		// Geometry + thumbhash at send (register item 26): the receiver
-		// reserves the exact box and paints a placeholder from metadata.
-		let meta: { width?: number; height?: number; thumbhash?: string } = {};
-		if (currentFile && optimisticType === "image") {
-			try {
-				meta = await imageMeta(currentFile);
-			} catch {
-				// Geometry is an enhancement; the send never waits on it.
-			}
-		}
-
+	/**
+	 * Text-only send. `waitFor` sequences a trailing text under a media
+	 * batch: the bubble paints immediately, the POST waits its turn so both
+	 * sides read the thread in the same order.
+	 */
+	const sendText = async (
+		text: string,
+		convId: string,
+		currentReply: Message | null,
+		waitFor?: Promise<unknown>,
+	): Promise<boolean> => {
+		const clientKey = newKey();
+		const tempId = `temp-${clientKey}`;
 		const optimisticMessage: Message = {
 			_id: tempId,
 			clientKey,
-			conversationId: activeConversation._id,
+			conversationId: convId,
 			sender: {
-				_id: myProfileId,
+				_id: myProfileId ?? "",
 				firstName: user?.firstName || "",
 				lastName: user?.lastName || "",
 				username: user?.username || "",
 				avatar: me?.avatar || user?.imageUrl || "",
 			},
-			content: content,
-			type: optimisticType as any,
-			mediaUrl: currentPreview || undefined,
-			...meta,
+			content: text,
+			type: "text",
 			replyTo: currentReply
 				? {
 						_id: currentReply._id,
@@ -1287,70 +1387,32 @@ export const MessageBox = ({
 				: null,
 			createdAt: new Date().toISOString(),
 		};
-
 		setMessageCache((prev) => ({
 			...prev,
-			[activeConversation._id]: [
-				...(prev[activeConversation._id] || []),
-				optimisticMessage,
-			],
+			[convId]: [...(prev[convId] || []), optimisticMessage],
 		}));
 		setPendingNew(0);
 		scrollToBottom();
-		setReplyTarget(null);
-		clearSelectedFile();
-		setIsUploading(true);
 
 		try {
+			if (waitFor) await waitFor.catch(() => {});
 			const token = await getToken();
-			let mediaUrl = "";
-			let finalType = "text";
-
-			if (currentFile) {
-				const formData = new FormData();
-				formData.append("file", currentFile);
-				// Binds the upload to this thread so the gateway can enforce
-				// membership at the door (register item 40).
-				formData.append("conversationId", activeConversation._id);
-				const uploadRes = await axios.post(
-					`${API_URL}/api/messages/upload`,
-					formData,
-					{
-						headers: {
-							Authorization: `Bearer ${token}`,
-							"Content-Type": "multipart/form-data",
-						},
-					},
-				);
-				// Private bucket: STORE the key; the presigned url is only for
-				// this tab's preview (register item 41).
-				mediaUrl = uploadRes.data.key ?? uploadRes.data.url;
-				const type = uploadRes.data.type;
-				finalType = type.startsWith("image")
-					? "image"
-					: type.startsWith("video")
-						? "video"
-						: "file";
-			}
-
 			const response = await axios.post(
 				`${API_URL}/api/messages`,
 				{
-					conversationId: activeConversation._id,
-					content,
-					type: currentFile ? finalType : "text",
-					mediaUrl: mediaUrl || undefined,
+					conversationId: convId,
+					content: text,
+					type: "text",
 					// The gateway drops this unless it names a message in THIS
 					// thread, so a stale id degrades to a plain message.
 					replyTo: currentReply?._id,
 					clientKey,
-					...meta,
 				},
 				{ headers: { Authorization: `Bearer ${token}` } },
 			);
 
 			setMessageCache((prev) => {
-				const currentMsgs = prev[activeConversation._id] || [];
+				const currentMsgs = prev[convId] || [];
 				const server = { ...response.data, clientKey };
 				const already = currentMsgs.findIndex(
 					(m) => m._id === server._id && m._id !== tempId,
@@ -1359,16 +1421,14 @@ export const MessageBox = ({
 					// The realtime echo beat the POST response; drop the temp.
 					return {
 						...prev,
-						[activeConversation._id]: currentMsgs.filter(
-							(m) => m._id !== tempId,
-						),
+						[convId]: currentMsgs.filter((m) => m._id !== tempId),
 					};
 				}
 				// Same clientKey key in the list — the bubble UPDATES in
 				// place instead of remounting (register item 10).
 				return {
 					...prev,
-					[activeConversation._id]: currentMsgs.map((m) =>
+					[convId]: currentMsgs.map((m) =>
 						m._id === tempId ? server : m,
 					),
 				};
@@ -1390,16 +1450,65 @@ export const MessageBox = ({
 			}
 			setMessageCache((prev) => ({
 				...prev,
-				[activeConversation._id]: (prev[activeConversation._id] || []).filter(
-					(m) => m._id !== tempId,
-				),
+				[convId]: (prev[convId] || []).filter((m) => m._id !== tempId),
 			}));
 			// The composer restores the draft when we report failure.
 			return false;
-		} finally {
-			setIsUploading(false);
 		}
 	};
+
+	const sendMessage = async (textArg?: string): Promise<boolean> => {
+		const text = (textArg ?? "").trim();
+		if (
+			(!text && attachments.length === 0) ||
+			!activeConversation ||
+			!myProfileId
+		)
+			return false;
+		const convId = activeConversation._id;
+		// Captured before the optimistic clear, so a fast second send cannot
+		// attach this reply to the wrong message.
+		const currentReply = replyTarget;
+		chat.notifyStoppedTyping();
+		setReplyTarget(null);
+
+		if (attachments.length > 0) {
+			const queue = attachments;
+			setAttachments([]);
+			setSelectedAttId(null);
+			setEditingAttId(null);
+			// One message per file, clustered under one groupKey (register 63).
+			const groupKey = queue.length > 1 ? newKey() : undefined;
+			let textUsed = false;
+			for (let i = 0; i < queue.length; i++) {
+				let caption = queue[i].caption.trim();
+				if (!caption && i === 0 && text) {
+					caption = text;
+					textUsed = true;
+				}
+				queueAttachment(
+					queue[i],
+					caption,
+					convId,
+					groupKey,
+					i === 0 ? currentReply : null,
+				);
+			}
+			setPendingNew(0);
+			scrollToBottom();
+			// Uploads run serially so rows land in tray order; the bubbles
+			// are already all on screen with their rings.
+			const chain = (async () => {
+				for (const att of queue) await runAttachmentUpload(att.id);
+			})();
+			if (text && !textUsed)
+				void sendText(text, convId, null, chain);
+			return true;
+		}
+
+		return sendText(text, convId, currentReply);
+	};
+
 	// --- Call Logic (Global) ---
 	const { startCall } = useCall();
 
@@ -1441,6 +1550,12 @@ export const MessageBox = ({
 		composerRef.current?.focus();
 	}, []);
 
+	const selectedAtt =
+		attachments.find(
+			(a) => a.id === (selectedAttId ?? attachments[0]?.id),
+		) ?? null;
+	const editingAtt = attachments.find((a) => a.id === editingAttId) ?? null;
+
 	const bubbleHandlers = useMemo(
 		() => ({
 			onReply: replyAndFocus,
@@ -1448,6 +1563,8 @@ export const MessageBox = ({
 				setMsgMenu({ x, y, message: m as Message }),
 			onJump: jumpToMessage,
 			onMediaClick: handleMediaClick,
+			onRetryUpload: retryUpload,
+			onCancelUpload: cancelUpload,
 			onStory: (ref: { story: string; thumbnail: string; authorUsername: string }) =>
 				void openStoryRef(ref),
 			onCallBack: (video: boolean) => {
@@ -1468,7 +1585,7 @@ export const MessageBox = ({
 			},
 		}),
 		// biome-ignore lint/correctness/useExhaustiveDependencies: identity by thread
-		[replyAndFocus, jumpToMessage, activeConversation?._id],
+		[replyAndFocus, jumpToMessage, retryUpload, cancelUpload, activeConversation?._id],
 	);
 
 	useEffect(() => {
@@ -1701,7 +1818,11 @@ export const MessageBox = ({
 										size={14}
 									/>
 								</h2>
-								{chat.peerTyping ? (
+								{chat.peerRecording ? (
+									<p className="truncate text-xs text-gold">
+										recording audio…
+									</p>
+								) : chat.peerTyping ? (
 									<p className="text-xs text-gold truncate">typing…</p>
 								) : peerOnline ? (
 									// No dot here — the avatar already carries one, and
@@ -1783,8 +1904,31 @@ export const MessageBox = ({
 						</div>
 					</div>
 
-					<div className="relative flex-1 min-h-0 flex flex-col">
+					<div
+						className="relative flex-1 min-h-0 flex flex-col"
+						onDragOver={(e) => {
+							if (e.dataTransfer.types.includes("Files")) {
+								e.preventDefault();
+								setDragOver(true);
+							}
+						}}
+						onDragLeave={(e) => {
+							if (e.currentTarget === e.target) setDragOver(false);
+						}}
+						onDrop={(e) => {
+							e.preventDefault();
+							setDragOver(false);
+							addFiles(Array.from(e.dataTransfer.files ?? []));
+						}}
+					>
 						<ThreadBackdrop wallpaper={wallpaper} pulse={sendPulse} />
+						{dragOver && (
+							<div className="pointer-events-none absolute inset-2 z-20 flex items-center justify-center rounded-xl border-2 border-dashed border-brand bg-page/60">
+								<span className="rounded-pill bg-raised px-4 py-2 font-sans text-[13px] font-semibold text-primary">
+									Drop to send
+								</span>
+							</div>
+						)}
 						<div className="relative z-10 flex min-h-0 flex-1 flex-col">
 						{activeConversation.isRequestForMe && (
 							<div className="shrink-0 px-4 pt-4">
@@ -1838,6 +1982,7 @@ export const MessageBox = ({
 								""
 							}
 							peerTyping={chat.peerTyping}
+							peerRecording={chat.peerRecording}
 							deliveredAt={chat.deliveredAt}
 							readAt={chat.readAt}
 							peerReadUpTo={peerReadUpTo}
@@ -1883,108 +2028,200 @@ export const MessageBox = ({
 								</button>
 							</div>
 						)}
-						{/* Preview Area */}
-						{selectedFile && previewUrl && (
-							<div className="mb-2 relative inline-block">
-								<div className="relative overflow-hidden rounded-xl bg-sunken">
-									{selectedFile.type.startsWith("image") ? (
-										<img
-											src={previewUrl}
-											alt="Preview"
-											className="h-20 w-auto object-cover"
-										/>
-									) : (
-										<video
-											src={previewUrl}
-											className="h-20 w-auto object-cover"
-											controls={false}
-										/>
-									)}
-								</div>
+						{/* Mini player (register 88): the note keeps playing while you
+						    scroll or read; the bar keeps its controls in reach. */}
+						{voiceBar?.id && voiceBar.playing && (
+							<div className="mb-2 flex items-center gap-2 rounded-[10px] bg-raised/90 px-2 py-1.5">
+								<RiVoiceprintFill size={16} className="ml-1 shrink-0 text-gold" />
 								<button
 									type="button"
-									onClick={clearSelectedFile}
-									aria-label="Remove attachment"
-									className="absolute -right-2.5 -top-2.5 flex h-9 w-9 items-center justify-center rounded-pill bg-raised text-muted transition-colors hover:text-primary"
+									onClick={() => voiceBar.id && jumpToMessage(voiceBar.id)}
+									className="min-w-0 flex-1 cursor-pointer text-left"
 								>
-									<X className="w-3.5 h-3.5" />
+									<span className="block truncate font-sans text-[12px] font-semibold text-primary">
+										Voice note
+									</span>
+									<span className="mt-1 block h-[3px] w-full overflow-hidden rounded-pill bg-chip">
+										<span
+											className="block h-full rounded-pill bg-brand"
+											style={{
+												width: `${voiceBar.duration > 0 ? Math.min(100, (voiceBar.time / voiceBar.duration) * 100) : 0}%`,
+											}}
+										/>
+									</span>
 								</button>
- {/* Images only the editor can't decode video. */}
-								{selectedFile.type.startsWith("image/") && (
+								<span className="shrink-0 font-sans text-[11px] tabular-nums text-muted">
+									{Math.floor(voiceBar.time / 60)}:
+									{String(Math.floor(voiceBar.time % 60)).padStart(2, "0")}
+								</span>
+								<button
+									type="button"
+									onClick={toggleVoicePlayback}
+									aria-label="Pause voice note"
+									className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-primary transition-colors hover:bg-chip"
+								>
+									<RiPauseFill size={18} />
+								</button>
+							</div>
+						)}
+						{/* The tray (register 62-63): thumbs, per-image caption for
+						    the selected one, HD chip, and the editor a tap away. */}
+						{attachments.length > 0 && (
+							<div className="mb-2 rounded-xl bg-sunken/80 p-2">
+								<div className="flex items-center gap-2 overflow-x-auto pb-0.5">
+									{attachments.map((att) => (
+										<div
+											key={att.id}
+											onClick={() => setSelectedAttId(att.id)}
+											className={clsx(
+												"relative h-[72px] w-[72px] shrink-0 cursor-pointer overflow-hidden rounded-[10px] bg-raised",
+												selectedAtt?.id === att.id
+													? "ring-2 ring-brand"
+													: "ring-1 ring-hairline",
+											)}
+										>
+											{att.kind === "image" ? (
+												// eslint-disable-next-line @next/next/no-img-element
+												<img
+													src={att.previewUrl}
+													alt=""
+													className="h-full w-full object-cover"
+												/>
+											) : (
+												<video
+													src={att.previewUrl}
+													muted
+													playsInline
+													className="h-full w-full object-cover"
+												/>
+											)}
+											{att.caption.trim() && (
+												<span className="absolute inset-x-0 bottom-0 h-[3px] bg-brand/80" />
+											)}
+											<button
+												type="button"
+												onClick={(e) => {
+													e.stopPropagation();
+													removeAttachment(att.id);
+												}}
+												aria-label="Remove attachment"
+												className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-pill bg-scrim text-primary transition-colors hover:bg-page"
+											>
+												<RiCloseLine size={14} />
+											</button>
+											{att.kind === "image" && (
+												<button
+													type="button"
+													onClick={(e) => {
+														e.stopPropagation();
+														setEditingAttId(att.id);
+													}}
+													aria-label="Edit image"
+													className="absolute bottom-1 right-1 flex h-7 w-7 items-center justify-center rounded-pill bg-scrim text-primary transition-colors hover:bg-page"
+												>
+													<RiPencilLine size={13} />
+												</button>
+											)}
+										</div>
+									))}
+									{attachments.length < 8 && (
+										<button
+											type="button"
+											onClick={() => fileInputRef.current?.click()}
+											aria-label="Add another file"
+											className="flex h-[72px] w-11 shrink-0 cursor-pointer items-center justify-center rounded-[10px] bg-raised text-muted transition-colors hover:bg-chip hover:text-primary"
+										>
+											<RiAddLine size={18} />
+										</button>
+									)}
+									{/* HD = a lighter cap, never the original (register 66). */}
 									<button
 										type="button"
-										onClick={() => setEditingAttachment(true)}
-										aria-label="Edit image"
-										className="absolute -left-2.5 -top-2.5 flex h-9 w-9 items-center justify-center rounded-pill bg-raised text-muted transition-colors hover:text-primary"
+										onClick={toggleHd}
+										aria-pressed={hdSend}
+										aria-label="Send in higher quality"
+										title="Send in higher quality"
+										className={clsx(
+											"ml-auto flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center self-center rounded-pill transition-colors",
+											hdSend
+												? "bg-brand text-brand-on"
+												: "bg-raised text-muted hover:text-primary",
+										)}
 									>
-										<PencilSimple size={15} weight="bold" />
+										<RiHdLine size={16} />
 									</button>
+								</div>
+								{selectedAtt && (
+									<input
+										value={selectedAtt.caption}
+										onChange={(e) =>
+											setAttachments((prev) =>
+												prev.map((a) =>
+													a.id === selectedAtt.id
+														? { ...a, caption: e.target.value }
+														: a,
+												),
+											)
+										}
+										placeholder={
+											attachments.length > 1
+												? `Caption for item ${attachments.findIndex((a) => a.id === selectedAtt.id) + 1} of ${attachments.length}`
+												: "Add a caption…"
+										}
+										className="mt-2 w-full rounded-[7px] bg-transparent px-1.5 py-1 font-sans text-[13px] text-primary outline-none placeholder:text-subtle"
+									/>
 								)}
 							</div>
 						)}
 
-						{editingAttachment && selectedFile && (
+						{editingAtt && (
 							<MediaEditor
-								file={selectedFile}
+								file={editingAtt.file}
 								title="Edit image"
-								onClose={() => setEditingAttachment(false)}
-								onSave={({ file }) => applyEditedAttachment(file)}
+								onClose={() => setEditingAttId(null)}
+								onSave={({ file }) =>
+									applyEditedAttachment(editingAtt.id, file)
+								}
 							/>
 						)}
 
-						<div className="flex items-center gap-2 sm:gap-3 relative">
-
+						<div className="relative flex items-center gap-2 sm:gap-3">
 							{/* Hidden File Input */}
 							<input
 								type="file"
 								ref={fileInputRef}
 								className="hidden"
-								accept="image/*,video/*" // Default, overridden by menu
+								multiple
+								accept="image/*,video/*"
 								onChange={handleFileSelect}
 							/>
-
-							{/* Recording UI */}
-							{isRecording ? (
-								<div className="flex h-[56px] min-w-0 flex-1 items-center gap-2 rounded-pill bg-sunken px-3 sm:gap-4 sm:px-6">
-									{/* Recording dot sanctioned live-state loop (06-motion):
-										    opacity-only pulse while recording is active. */}
-										<div className="w-3 h-3 shrink-0 rounded-full bg-danger animate-pulse" />
-									<div className="flex-1 min-w-0 font-sans tabular-nums text-primary text-sm sm:text-base">
-										{Math.floor(recordingDuration / 60)}:
-										{(recordingDuration % 60).toString().padStart(2, "0")}
-									</div>
-									<button
-										type="button"
-										onClick={cancelRecording}
-										className="shrink-0 h-11 px-2 flex items-center text-sm text-muted hover:text-primary transition-colors cursor-pointer"
-									>
-										Cancel
-									</button>
-									<button
-										type="button"
-										onClick={stopRecording}
-										aria-label="Send voice message"
-										className="flex h-10 w-10 shrink-0 items-center justify-center bg-primary text-page rounded-pill hover:bg-muted transition-colors cursor-pointer"
-									>
-										<Send className="w-4 h-4" />
-									</button>
-								</div>
-							) : (
-								/* A fill that lifts on focus. The bordered card read as
-								   a form field in an app that has none anywhere else. */
-								<ComposerInput
-										ref={composerRef}
-										disabled={isUploading}
-										hasAttachment={!!selectedFile}
-										gifEnabled={Boolean(GIPHY_KEY)}
-										onSend={(text) => sendMessage(text)}
-										onTyping={chat.notifyTyping}
-										onStopTyping={chat.notifyStoppedTyping}
-										onAttach={() => fileInputRef.current?.click()}
-										onMoney={() => setShowSendMoney(true)}
-										onGif={() => setShowGifPicker(true)}
-										onStartRecording={startRecording}
-									/>
+							<ComposerInput
+								ref={composerRef}
+								disabled={false}
+								hasAttachment={attachments.length > 0}
+								gifEnabled={Boolean(GIPHY_KEY)}
+								onSend={(text) => sendMessage(text)}
+								onTyping={chat.notifyTyping}
+								onStopTyping={chat.notifyStoppedTyping}
+								onAttach={() => fileInputRef.current?.click()}
+								onMoney={() => setShowSendMoney(true)}
+								onGif={() => setShowGifPicker(true)}
+								onFiles={addFiles}
+								onRecordStart={(startPoint) => setRecording(startPoint)}
+							/>
+							{/* The recorder overlays the pill; gesture listeners live
+							    on window, so this mount order is never fragile. */}
+							{recording && (
+								<VoiceRecorder
+									start={recording}
+									onSend={(blob, meta) => {
+										setRecording(null);
+										void sendVoiceNote(blob, meta);
+									}}
+									onClose={() => setRecording(null)}
+									onError={(msg) => toast.error(msg)}
+									onSignal={chat.notifyRecording}
+								/>
 							)}
 						</div>
 					</div>

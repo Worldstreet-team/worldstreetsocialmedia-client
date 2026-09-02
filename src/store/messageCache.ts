@@ -43,6 +43,12 @@ export interface Message {
 	height?: number;
 	thumbhash?: string;
 	peaks?: number[];
+	/** Multi-image sends cluster under one groupKey (register 63). */
+	groupKey?: string;
+	/** Transient, sender's tab only: upload progress 0..1. */
+	uploadPct?: number;
+	/** Transient, sender's tab only: send failed, retry offered. */
+	failed?: boolean;
 }
 
 // Map conversationId -> Message[]

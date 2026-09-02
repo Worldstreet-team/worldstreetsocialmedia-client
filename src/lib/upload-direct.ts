@@ -49,6 +49,68 @@ export const postFormDirect = (path: string, formData: FormData) =>
 	sendFormDirect(path, formData, "POST");
 
 /**
+ * sendFormDirect with a progress meter and a cancel handle (register 68).
+ *
+ * fetch() cannot report UPLOAD progress — only download — so the one place
+ * the user stares at a moving number has to be XMLHttpRequest. Same token,
+ * same `{ success, data?, message? }` contract; `aborted` distinguishes the
+ * user's own cancel from a network failure so callers don't toast about it.
+ */
+export function sendFormProgress(
+	path: string,
+	formData: FormData,
+	opts: {
+		onProgress?: (frac: number) => void;
+		signal?: AbortSignal;
+	} = {},
+): Promise<
+	| { success: true; data: any }
+	| { success: false; message: string; aborted?: boolean }
+> {
+	return new Promise((resolve) => {
+		void (async () => {
+			const token = await (window as any).Clerk?.session?.getToken?.();
+			if (!token) {
+				resolve({ success: false, message: "Unauthorized" });
+				return;
+			}
+			const xhr = new XMLHttpRequest();
+			xhr.open("POST", `${API_URL}${path}`);
+			xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+			xhr.responseType = "json";
+			xhr.upload.onprogress = (e) => {
+				if (e.lengthComputable && opts.onProgress)
+					opts.onProgress(Math.min(1, e.loaded / e.total));
+			};
+			xhr.onload = () => {
+				if (xhr.status >= 200 && xhr.status < 300) {
+					resolve({ success: true, data: xhr.response });
+				} else {
+					resolve({
+						success: false,
+						message: xhr.response?.message || "Upload failed",
+					});
+				}
+			};
+			xhr.onerror = () =>
+				resolve({ success: false, message: "Network error" });
+			xhr.onabort = () =>
+				resolve({ success: false, message: "Cancelled", aborted: true });
+			if (opts.signal) {
+				if (opts.signal.aborted) {
+					resolve({ success: false, message: "Cancelled", aborted: true });
+					return;
+				}
+				opts.signal.addEventListener("abort", () => xhr.abort(), {
+					once: true,
+				});
+			}
+			xhr.send(formData);
+		})();
+	});
+}
+
+/**
  * JSON write, browser -> gateway, same contract as sendFormDirect. For the
  * few writes that must survive a redeploy mid-session: a server action id
  * dies with its deployment ("Failed to find Server Action") and 2,499 of

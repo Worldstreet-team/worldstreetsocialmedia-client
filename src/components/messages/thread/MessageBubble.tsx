@@ -22,6 +22,12 @@ export interface BubbleMessage {
 	width?: number;
 	height?: number;
 	thumbhash?: string;
+	peaks?: number[];
+	groupKey?: string;
+	/** Transient, this tab only: 0..1 while the media uploads. */
+	uploadPct?: number;
+	/** Transient, this tab only: the upload or send failed; offer retry. */
+	failed?: boolean;
 	storyRef?: { story: string; thumbnail: string; authorUsername: string };
 	replyTo?: {
 		_id: string;
@@ -108,12 +114,16 @@ export interface BubbleProps {
 	deliveredAt: number | null;
 	readAt: number | null;
 	peerReadUpTo?: string | null;
+	/** Next voice note downthread — finished notes chain (register 87). */
+	autoplayNextId?: string;
 	onReply: (m: BubbleMessage) => void;
 	onMenu: (x: number, y: number, m: BubbleMessage) => void;
 	onJump: (id: string) => void;
 	onMediaClick: (id: string) => void;
 	onStory: (ref: NonNullable<BubbleMessage["storyRef"]>) => void;
 	onCallBack: (video: boolean) => void;
+	onRetryUpload?: (clientKey: string) => void;
+	onCancelUpload?: (clientKey: string) => void;
 }
 
 /**
@@ -139,12 +149,15 @@ export const MessageBubble = memo(function MessageBubble({
 	deliveredAt,
 	readAt,
 	peerReadUpTo,
+	autoplayNextId,
 	onReply,
 	onMenu,
 	onJump,
 	onMediaClick,
 	onStory,
 	onCallBack,
+	onRetryUpload,
+	onCancelUpload,
 }: BubbleProps) {
 	const rowRef = useRef<HTMLDivElement | null>(null);
 	const touch = useRef<{ x: number; y: number } | null>(null);
@@ -323,12 +336,51 @@ export const MessageBubble = memo(function MessageBubble({
 								width={m.width}
 								height={m.height}
 								thumbhash={m.thumbhash}
+								uploadPct={m.uploadPct}
+								failed={m.failed}
 								onClick={() => onMediaClick(m._id)}
+								onRetry={
+									m.clientKey && onRetryUpload
+										? () => onRetryUpload(m.clientKey!)
+										: undefined
+								}
+								onCancelUpload={
+									m.clientKey && onCancelUpload
+										? () => onCancelUpload(m.clientKey!)
+										: undefined
+								}
 							/>
 						)}
 						{m.type === "audio" && m.mediaUrl && (
 							<div className="relative w-full max-w-[256px] mb-1">
-								<VoiceMessage src={m.mediaUrl} isMe={isMe} />
+								<VoiceMessage
+									src={m.mediaUrl}
+									isMe={isMe}
+									peaks={m.peaks}
+									durationSec={m.durationSec}
+									messageId={m._id}
+									autoplayNextId={autoplayNextId}
+								/>
+								{/* A refused voice note stays visible and retryable
+								    (register 93) instead of evaporating. */}
+								{m.failed && m.clientKey && (
+									<span className="flex items-center gap-2 pl-1 pb-1">
+										<button
+											type="button"
+											onClick={() => onRetryUpload?.(m.clientKey!)}
+											className="cursor-pointer rounded-pill bg-raised px-2.5 py-0.5 font-sans text-[11.5px] font-semibold text-danger transition-colors hover:bg-chip"
+										>
+											Failed — retry
+										</button>
+										<button
+											type="button"
+											onClick={() => onCancelUpload?.(m.clientKey!)}
+											className="cursor-pointer font-sans text-[11px] text-muted transition-colors hover:text-primary"
+										>
+											Discard
+										</button>
+									</span>
+								)}
 							</div>
 						)}
 						{m.storyRef && (

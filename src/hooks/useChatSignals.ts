@@ -31,6 +31,8 @@ const TYPING_IDLE_MS = 3_000;
 export interface ChatSignals {
 	peerOnline: boolean;
 	peerTyping: boolean;
+	/** They are holding the mic right now — "recording audio…". */
+	peerRecording: boolean;
 	/** Peer's client acknowledged receipt of everything up to this time. */
 	deliveredAt: number | null;
 	/** Peer had read everything up to this time. */
@@ -39,6 +41,8 @@ export interface ChatSignals {
 	notifyTyping: () => void;
 	/** Call when the draft is sent or cleared. */
 	notifyStoppedTyping: () => void;
+	/** Heartbeat while a voice note is being recorded (register 84). */
+	notifyRecording: () => void;
 	/** Call when an inbound message lands while the thread is open. */
 	notifyDelivered: () => void;
 	/** Tell the other side their messages have been read, now. */
@@ -56,11 +60,13 @@ export function useChatSignals({
 
 	const [peerOnline, setPeerOnline] = useState(false);
 	const [peerTyping, setPeerTyping] = useState(false);
+	const [peerRecording, setPeerRecording] = useState(false);
 	const [deliveredAt, setDeliveredAt] = useState<number | null>(null);
 	const [readAt, setReadAt] = useState<number | null>(null);
 
 	const channelRef = useRef<any>(null);
 	const typingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const recordingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const lastTypingSentRef = useRef(0);
 	const idleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -73,6 +79,7 @@ export function useChatSignals({
 		// conversation's ticks bleed into this one.
 		setPeerOnline(false);
 		setPeerTyping(false);
+		setPeerRecording(false);
 		setDeliveredAt(null);
 		setReadAt(null);
 
@@ -97,6 +104,7 @@ export function useChatSignals({
 			switch (message.name) {
 				case "typing":
 					setPeerTyping(true);
+					setPeerRecording(false);
 					if (typingClearRef.current) clearTimeout(typingClearRef.current);
 					// Self-expiring: if their tab dies mid-word we don't strand a
 					// typing bubble on screen forever.
@@ -107,7 +115,23 @@ export function useChatSignals({
 					break;
 				case "typing:stop":
 					if (typingClearRef.current) clearTimeout(typingClearRef.current);
+					if (recordingClearRef.current)
+						clearTimeout(recordingClearRef.current);
 					setPeerTyping(false);
+					setPeerRecording(false);
+					break;
+				case "recording":
+					// Same lifecycle as typing: self-expiring, killed by an
+					// explicit stop. One person is either typing or holding the
+					// mic, never both.
+					setPeerRecording(true);
+					setPeerTyping(false);
+					if (recordingClearRef.current)
+						clearTimeout(recordingClearRef.current);
+					recordingClearRef.current = setTimeout(
+						() => setPeerRecording(false),
+						TYPING_TTL_MS,
+					);
 					break;
 				case "delivered":
 					setDeliveredAt(message.data.at ?? Date.now());
@@ -128,6 +152,7 @@ export function useChatSignals({
 
 		return () => {
 			if (typingClearRef.current) clearTimeout(typingClearRef.current);
+			if (recordingClearRef.current) clearTimeout(recordingClearRef.current);
 			if (idleRef.current) clearTimeout(idleRef.current);
 			try {
 				channel.unsubscribe(onSignal);
@@ -169,6 +194,16 @@ export function useChatSignals({
 		idleRef.current = setTimeout(notifyStoppedTyping, TYPING_IDLE_MS);
 	}, [publish, notifyStoppedTyping]);
 
+	const notifyRecording = useCallback(() => {
+		const now = Date.now();
+		if (now - lastTypingSentRef.current > TYPING_THROTTLE_MS) {
+			lastTypingSentRef.current = now;
+			publish("recording");
+		}
+		if (idleRef.current) clearTimeout(idleRef.current);
+		idleRef.current = setTimeout(notifyStoppedTyping, TYPING_IDLE_MS);
+	}, [publish, notifyStoppedTyping]);
+
 	const notifyDelivered = useCallback(() => {
 		publish("delivered");
 	}, [publish]);
@@ -180,10 +215,12 @@ export function useChatSignals({
 	return {
 		peerOnline,
 		peerTyping,
+		peerRecording,
 		deliveredAt,
 		readAt,
 		notifyTyping,
 		notifyStoppedTyping,
+		notifyRecording,
 		notifyDelivered,
 		notifyRead,
 	};

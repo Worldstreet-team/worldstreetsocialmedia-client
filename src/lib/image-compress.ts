@@ -17,17 +17,30 @@ const MAX_EDGE = 2048;
 const QUALITY = 0.82;
 const SKIP_UNDER_BYTES = 300 * 1024;
 
-export async function compressImage(file: File): Promise<File> {
+export interface CompressOptions {
+	/** Longest-edge cap. The HD send tier passes 4096 (register 66). */
+	maxEdge?: number;
+	quality?: number;
+	skipUnderBytes?: number;
+}
+
+export async function compressImage(
+	file: File,
+	opts: CompressOptions = {},
+): Promise<File> {
+	const maxEdge = opts.maxEdge ?? MAX_EDGE;
+	const quality = opts.quality ?? QUALITY;
+	const skipUnder = opts.skipUnderBytes ?? SKIP_UNDER_BYTES;
 	try {
 		if (!file.type.startsWith("image/")) return file;
 		if (file.type === "image/gif" || file.type === "image/svg+xml")
 			return file;
-		if (file.size < SKIP_UNDER_BYTES) return file;
+		if (file.size < skipUnder) return file;
 
 		const bitmap = await createImageBitmap(file);
 		const scale = Math.min(
 			1,
-			MAX_EDGE / Math.max(bitmap.width, bitmap.height),
+			maxEdge / Math.max(bitmap.width, bitmap.height),
 		);
 		const w = Math.round(bitmap.width * scale);
 		const h = Math.round(bitmap.height * scale);
@@ -41,7 +54,7 @@ export async function compressImage(file: File): Promise<File> {
 		bitmap.close();
 
 		const blob = await new Promise<Blob | null>((resolve) =>
-			canvas.toBlob(resolve, "image/webp", QUALITY),
+			canvas.toBlob(resolve, "image/webp", quality),
 		);
 		// A "compressed" file bigger than the original is a downgrade.
 		if (!blob || blob.size >= file.size) return file;
@@ -58,5 +71,5 @@ export async function compressImage(file: File): Promise<File> {
 
 /** Convenience for multi-file intakes (picker + paste share it). */
 export function compressImages(files: File[]): Promise<File[]> {
-	return Promise.all(files.map(compressImage));
+	return Promise.all(files.map((f) => compressImage(f)));
 }
