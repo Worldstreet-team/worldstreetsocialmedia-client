@@ -25,8 +25,10 @@ const navIcon = (Icon: PhosphorIcon) => {
 	const NavIcon = ({ isActive }: { isActive?: boolean }) => (
 		<Icon
 			// Icon-only bar (owner ruling 2026-09-02): the glyph carries the
-			// tab alone, so it earns the size the label used to take.
-			size={32}
+			// tab alone, so it earns the size the label used to take. 36, not
+			// 32 — with the label gone the bar reads empty until the glyph
+			// actually fills its share of it (owner: "too small").
+			size={36}
 			weight={isActive ? "fill" : "duotone"}
 			aria-hidden="true"
 		/>
@@ -53,7 +55,7 @@ const MessageIcon = navIcon(ChatCircleDots);
  * the client — the whole reason this component had to defer its first paint.
  */
 const ProfileIcon = ({ isActive }: { isActive?: boolean }) => (
-	<UserCircle size={32} weight={isActive ? "fill" : "duotone"} aria-hidden />
+	<UserCircle size={36} weight={isActive ? "fill" : "duotone"} aria-hidden />
 );
 ProfileIcon.displayName = "ProfileIcon";
 
@@ -149,7 +151,7 @@ export const MobileBottomNav = () => {
 				    owns the safe-area inset again (a floating bar cleared it via
 				    its own `bottom` offset instead). */}
 				<div style={{ paddingBottom: "var(--ws-safe-bottom)" }}>
-				<div className="flex justify-between items-center h-[64px] px-1">
+				<div className="flex justify-between items-center h-[68px] px-1">
 					{navItems.map((item, index) => (
 						<Fragment key={item.href}>
 							{/* The centre slot is the brand, not a destination. It used
@@ -171,7 +173,7 @@ export const MobileBottomNav = () => {
 									    resolves it to the finished W. */}
 									<span
 										className={clsx(
-											"flex h-[44px] w-[44px] items-center justify-center rounded-[7px] transition-colors",
+											"flex h-[48px] w-[48px] items-center justify-center rounded-[7px] transition-colors",
 											ecosystemOpen && "bg-raised",
 										)}
 									>
@@ -179,7 +181,7 @@ export const MobileBottomNav = () => {
 										    purpose: the W is a thin two-stroke outline, so at
 										    a matched size it reads lighter than the solid
 										    duotone icons it sits between. */}
-										<BrandMark size={38} />
+										<BrandMark size={42} />
 									</span>
 								</button>
 							)}

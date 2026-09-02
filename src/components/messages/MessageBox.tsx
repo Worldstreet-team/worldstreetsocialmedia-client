@@ -568,13 +568,23 @@ export const MessageBox = ({
 		async (conversationId: string) => {
 			try {
 				const token = await getToken();
-				await fetch(
+				const res = await fetch(
 					`${API_URL}/api/messages/conversations/${conversationId}`,
 					{
 						method: "DELETE",
 						headers: { Authorization: `Bearer ${token}` },
 					},
 				);
+				if (!res.ok) {
+					// The gateway said no (e.g. a non-owner deleting a group).
+					// Mutating local state anyway made rows vanish and then
+					// resurrect on the next fetch (audit finding 4).
+					const body = await res.json().catch(() => null);
+					toast.error(
+						body?.message || "Couldn't remove the conversation",
+					);
+					return;
+				}
 				setConversations((prev) =>
 					prev.filter((c) => c._id !== conversationId),
 				);
@@ -583,6 +593,42 @@ export const MessageBox = ({
 				);
 			} catch {
 				toast.error("Couldn't remove the conversation");
+			}
+		},
+		[getToken],
+	);
+
+	/** Leave a group from the list swipe — self-remove, then purge. */
+	const leaveGroupFromList = useCallback(
+		async (conversationId: string) => {
+			const meId = myProfileIdRef.current;
+			if (!meId) return;
+			try {
+				const token = await getToken();
+				const res = await fetch(
+					`${API_URL}/api/messages/groups/${conversationId}/members/${meId}`,
+					{
+						method: "DELETE",
+						headers: { Authorization: `Bearer ${token}` },
+					},
+				);
+				if (!res.ok) {
+					const body = await res.json().catch(() => null);
+					toast.error(body?.message || "Couldn't leave the group");
+					return;
+				}
+				setConversations((prev) =>
+					prev.filter((c) => c._id !== conversationId),
+				);
+				setMessageCache((prev) => {
+					const { [conversationId]: _gone, ...rest } = prev;
+					return rest;
+				});
+				setActiveConversation((prev) =>
+					prev?._id === conversationId ? null : prev,
+				);
+			} catch {
+				toast.error("Couldn't leave the group");
 			}
 		},
 		[getToken],
@@ -1299,6 +1345,28 @@ export const MessageBox = ({
 	const onMessage = useCallback((ablyMessage: any) => {
 		if (
 			ablyMessage.name === "event" &&
+			(ablyMessage.data.type === "conversation:deleted" ||
+				ablyMessage.data.type === "conversation:removed")
+		) {
+			// The owner deleted the group. Open clients drop it in place
+			// instead of ghosting on a dead id.
+			const goneId = String(ablyMessage.data.conversationId ?? "");
+			setConversations((prev) => prev.filter((c) => c._id !== goneId));
+			setMessageCache((prev) => {
+				const { [goneId]: _gone, ...rest } = prev;
+				return rest;
+			});
+			if (activeIdRef.current === goneId) {
+				setActiveConversation(null);
+				if (ablyMessage.data.type === "conversation:deleted")
+					toast.error("This group was deleted");
+				else if (!ablyMessage.data.left)
+					toast.error("You were removed from the group");
+			}
+			return;
+		}
+		if (
+			ablyMessage.name === "event" &&
 			ablyMessage.data.type === "message:unsent"
 		) {
 			// The other side took a message back — it vanishes in place, no
@@ -1646,6 +1714,17 @@ export const MessageBox = ({
 	);
 	const isGroupThread = headerIdentity.kind === "group";
 
+	/** Did I LEAVE this group? History stays readable; writes are gone. */
+	const iLeftGroup = useMemo(() => {
+		if (!isGroupThread || !activeConversation || !myProfileId) return false;
+		const mine = (activeConversation.members ?? []).find((m) => {
+			const pid =
+				typeof m.profile === "string" ? m.profile : m.profile?._id;
+			return String(pid) === String(myProfileId);
+		}) as { leftAt?: string } | undefined;
+		return !mine || Boolean(mine.leftAt);
+	}, [isGroupThread, activeConversation, myProfileId]);
+
 	/** Active roster minus me — money targets, @mention candidates. */
 	const groupRoster = useMemo(() => {
 		if (!isGroupThread || !activeConversation) return [];
@@ -1701,15 +1780,34 @@ export const MessageBox = ({
 		[groupRoster],
 	);
 
-	/** The peer's persisted read mark, for ticks that survive reload. */
+	/** The persisted read mark that drives ticks (survives reload).
+	 *  DM: the peer's mark. GROUP: the MINIMUM across the other active
+	 *  members — gold means read by ALL, the WhatsApp rule. The live
+	 *  one-member `readAt` signal is deliberately ignored in groups: one
+	 *  reader out of nine must not light the gold tick (audit finding 9). */
 	const peerReadUpTo = useMemo(() => {
+		if (isGroupThread) {
+			const marks = (activeConversation?.members ?? [])
+				.filter((x) => {
+					const pid =
+						typeof x.profile === "string" ? x.profile : x.profile?._id;
+					return (
+						!(x as { leftAt?: string }).leftAt &&
+						String(pid) !== String(myProfileId)
+					);
+				})
+				.map((x) => (x.readUpTo ? String(x.readUpTo) : null));
+			if (marks.length === 0 || marks.some((m) => m === null))
+				return null;
+			return (marks as string[]).sort()[0];
+		}
 		const peerId = activeConversation?.otherParticipant?._id;
 		const mm = activeConversation?.members?.find((x) => {
 			const pid = typeof x.profile === "string" ? x.profile : x.profile?._id;
 			return String(pid) === String(peerId);
 		});
 		return mm?.readUpTo ? String(mm.readUpTo) : null;
-	}, [activeConversation]);
+	}, [activeConversation, isGroupThread, myProfileId]);
 
 	const handleAtBottom = useCallback((b: boolean) => {
 		atBottomRef.current = b;
@@ -1968,7 +2066,7 @@ export const MessageBox = ({
 							{isGroupThread ? (
 								<button
 									type="button"
-									onClick={() => setGroupSheetOpen(true)}
+									onClick={() => !iLeftGroup && setGroupSheetOpen(true)}
 									className="flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 text-left transition-colors hover:bg-raised md:gap-3"
 								>
 									<span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-pill bg-raised">
@@ -2253,8 +2351,8 @@ export const MessageBox = ({
 							peerTyping={chat.peerTyping}
 							peerRecording={chat.peerRecording}
 							isGroup={isGroupThread}
-							deliveredAt={chat.deliveredAt}
-							readAt={chat.readAt}
+							deliveredAt={isGroupThread ? null : chat.deliveredAt}
+							readAt={isGroupThread ? null : chat.readAt}
 							peerReadUpTo={peerReadUpTo}
 							pendingNew={pendingNew}
 							loading={isLoadingMessages}
@@ -2276,10 +2374,11 @@ export const MessageBox = ({
 						    Sending clears it; so does Escape, because a reply you
 						    cannot cancel is a trap. */}
 						{replyTarget && (
-							<div className="mb-2 flex items-stretch gap-2 rounded-[7px] bg-sunken px-2.5 py-2">
-								<span className="w-[2px] shrink-0 rounded-pill bg-brand" />
-								<span className="flex min-w-0 flex-1 flex-col">
-									<span className="truncate font-sans text-[11.5px] font-semibold text-muted">
+							/* Same modern quote grammar as the bubbles: soft inset
+							   chip, gold name, no border bar. */
+							<div className="mb-2 flex items-center gap-2 rounded-[10px] bg-sunken px-3 py-2">
+								<span className="flex min-w-0 flex-1 flex-col gap-0.5">
+									<span className="truncate font-sans text-[11.5px] font-semibold text-gold">
 										Replying to{" "}
 										{replyTarget.sender?._id === myProfileId
 											? "yourself"
@@ -2456,7 +2555,13 @@ export const MessageBox = ({
 							/>
 						)}
 
-						{isGroupThread &&
+						{iLeftGroup ? (
+							<div className="flex h-[52px] items-center justify-center rounded-2xl bg-raised/70 px-4">
+								<span className="font-sans text-[13px] text-muted">
+									You left this group
+								</span>
+							</div>
+						) : isGroupThread &&
 						activeConversation.adminsOnly &&
 						activeConversation.myRole === "member" ? (
 							<div className="flex h-[52px] items-center justify-center rounded-2xl bg-raised/70 px-4">
@@ -2575,6 +2680,17 @@ export const MessageBox = ({
 						void fetchConversations();
 					}}
 					onLeft={() => {
+						// Purge NOW — the refetch confirms, but stale local state
+						// is exactly how a left group reopened with a live
+						// composer (audit finding 3).
+						const goneId = activeConversation._id;
+						setConversations((prev) =>
+							prev.filter((c) => c._id !== goneId),
+						);
+						setMessageCache((prev) => {
+							const { [goneId]: _gone, ...rest } = prev;
+							return rest;
+						});
 						setActiveConversation(null);
 						void fetchConversations();
 						goBack("/messages");
@@ -2627,11 +2743,18 @@ export const MessageBox = ({
 					/>
 					<div className="relative w-[320px] rounded-xl bg-surface p-5 shadow-nav animate-rise">
 						<p className="font-sans text-[14.5px] font-semibold text-primary">
-							Delete this conversation?
+							{pendingDeleteConv.kind === "group"
+								? pendingDeleteConv.myRole === "owner"
+									? "Delete this group?"
+									: "Leave this group?"
+								: "Delete this conversation?"}
 						</p>
 						<p className="mt-1 font-sans text-[12.5px] text-muted">
-							The whole thread is removed for both of you. This can't
-							be undone.
+							{pendingDeleteConv.kind === "group"
+								? pendingDeleteConv.myRole === "owner"
+									? "The group and its messages are removed for everyone. This can't be undone."
+									: "You'll stop receiving messages. The group keeps going without you."
+								: "The whole thread is removed for both of you. This can't be undone."}
 						</p>
 						<div className="mt-4 flex justify-end gap-2">
 							<button
@@ -2644,12 +2767,27 @@ export const MessageBox = ({
 							<button
 								type="button"
 								onClick={() => {
-									void declineRequest(pendingDeleteConv._id);
+									// Swipe on a group row means LEAVE unless you
+									// own it — deletion is the owner's call
+									// (audit finding 4, the platform norm).
+									if (
+										pendingDeleteConv.kind === "group" &&
+										pendingDeleteConv.myRole !== "owner"
+									) {
+										void leaveGroupFromList(
+											pendingDeleteConv._id,
+										);
+									} else {
+										void declineRequest(pendingDeleteConv._id);
+									}
 									setPendingDeleteConv(null);
 								}}
 								className="h-9 cursor-pointer rounded-pill bg-danger px-4 font-sans text-[13px] font-semibold text-white transition-colors hover:opacity-90"
 							>
-								Delete
+								{pendingDeleteConv.kind === "group" &&
+								pendingDeleteConv.myRole !== "owner"
+									? "Leave"
+									: "Delete"}
 							</button>
 						</div>
 					</div>

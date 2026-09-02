@@ -19,14 +19,23 @@ function actorName(
 	return (params?.actorName as string) || senderName || "Someone";
 }
 
-/** One line describing a system event. Returns "" for unknown kinds. */
+/** One line describing a system event. Returns "" for unknown kinds.
+ *  Viewer-relative: when the viewer IS the actor or the subject the copy
+ *  says "You", the way Signal/Telegram/WhatsApp all render it. */
 export function systemEventCopy(
 	event: SystemEvent,
 	senderName?: string,
+	viewerId?: string,
 ): string {
 	const p = event.params ?? {};
-	const actor = actorName(p, senderName);
-	const subject = (p.subjectName as string) || "someone";
+	const viewerIsActor =
+		Boolean(viewerId) && String(p.actor ?? "") === String(viewerId);
+	const viewerIsSubject =
+		Boolean(viewerId) && String(p.subject ?? "") === String(viewerId);
+	const actor = viewerIsActor ? "You" : actorName(p, senderName);
+	const subject = viewerIsSubject
+		? "you"
+		: (p.subjectName as string) || "someone";
 	switch (event.kind) {
 		case "group.created":
 			return `${actor} created "${(p.name as string) ?? "the group"}"`;
@@ -37,11 +46,15 @@ export function systemEventCopy(
 		case "group.joined":
 			return `${actor} added ${subject}`;
 		case "group.left":
-			return `${subject} left`;
+			return viewerIsSubject ? "You left the group" : `${subject} left`;
 		case "group.removed":
-			return `${actor} removed ${subject}`;
+			return viewerIsSubject
+				? `${actor} removed you`
+				: `${actor} removed ${subject}`;
 		case "group.promoted":
-			return `${subject} is now an admin`;
+			return viewerIsSubject
+				? "You're an admin now"
+				: `${subject} is now an admin`;
 		case "group.demoted":
 			return `${subject} is no longer an admin`;
 		case "group.locked":

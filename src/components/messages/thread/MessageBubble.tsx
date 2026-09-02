@@ -221,11 +221,12 @@ export const MessageBubble = memo(function MessageBubble({
 					(m.sender as { firstName?: string; username?: string })
 						?.firstName ||
 						(m.sender as { username?: string })?.username,
+					myProfileId,
 				)
 			: m.content;
 		if (!copy) return null;
 		return (
-			<div className="flex justify-center px-4 py-1.5">
+			<div className="mx-auto flex w-full max-w-[52rem] justify-center px-4 py-1.5">
 				<span className="rounded-pill bg-page/70 px-3 py-1 text-center font-sans text-[11.5px] font-medium text-muted">
 					{copy}
 				</span>
@@ -319,7 +320,10 @@ export const MessageBubble = memo(function MessageBubble({
 					touch.current = null;
 				}}
 				className={clsx(
-					"group/msg flex flex-col scroll-mt-24 touch-pan-y px-3 sm:px-4",
+					// A reading column, not a wall: real gutters so bubbles never
+					// kiss the viewport edge, and a centered max-width on wide
+					// panes — every messenger does this (owner, 2026-09-02).
+					"group/msg mx-auto flex w-full max-w-[52rem] flex-col scroll-mt-24 touch-pan-y px-4 sm:px-6",
 					sameRunAsPrev ? "mt-[2px]" : "mt-4",
 					isMe ? "items-end" : "items-start",
 					flashed && "rounded-xl bg-brand/10",
@@ -395,24 +399,25 @@ export const MessageBubble = memo(function MessageBubble({
 							</span>
 						)}
 						{m.replyTo && (
+							/* The quote is a soft inset chip now — no border bar.
+							   The gold NAME carries the "this is a reference"
+							   signal; the wash does the separation (owner ruling
+							   2026-09-02: side borders are dated). */
 							<button
 								type="button"
 								onClick={() => onJump(m.replyTo!._id)}
 								className={clsx(
-									"mb-1.5 flex w-full cursor-pointer items-stretch gap-2 rounded-[7px] px-2 py-1.5 text-left transition-opacity hover:opacity-80",
-									isMe ? "bg-page/30" : "bg-raised/80",
+									"mb-1.5 flex w-full cursor-pointer flex-col gap-0.5 rounded-[10px] px-2.5 py-1.5 text-left transition-opacity hover:opacity-80",
+									isMe ? "bg-page/25" : "bg-raised/70",
 								)}
 							>
-								<span className="w-[2px] shrink-0 rounded-pill bg-brand" />
-								<span className="flex min-w-0 flex-col">
-									<span className="truncate font-sans text-[11.5px] font-semibold opacity-80">
-										{m.replyTo.sender?.username
-											? `@${m.replyTo.sender.username}`
-											: "Message"}
-									</span>
-									<span className="truncate font-sans text-[12.5px] opacity-70">
-										{quotedPreview(m.replyTo)}
-									</span>
+								<span className="truncate font-sans text-[11.5px] font-semibold text-gold">
+									{m.replyTo.sender?.username
+										? `@${m.replyTo.sender.username}`
+										: "Message"}
+								</span>
+								<span className="truncate font-sans text-[12.5px] opacity-70">
+									{quotedPreview(m.replyTo)}
 								</span>
 							</button>
 						)}

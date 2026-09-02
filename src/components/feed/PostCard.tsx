@@ -446,6 +446,13 @@ export const PostCard = memo(
     // single-tap navigation it may cancel.
     const lastTapRef = useRef(0);
     const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // The same double-tap grammar for the PHOTO. The card overlay owns
+    // single-tap-open / double-tap-like, but an image sits above it and stops
+    // propagation, so on the photo neither ever fired. Its own stamp + timer.
+    const imgTapRef = useRef<{
+        at: number;
+        timer: ReturnType<typeof setTimeout> | null;
+    }>({ at: 0, timer: null });
     // useRouter() hands back an app-wide singleton, so a timer that survives
     // its card navigates the whole app exactly as a live component would.
     // React will not cancel it for us.
@@ -496,6 +503,41 @@ export const PostCard = memo(
             toast("Failed to update like", { type: "error" });
         }
     }, [currentUser, isLiked, post.id, shownLikes, toast]);
+
+    /**
+     * A tap on the photo itself: single tap zooms, double tap likes.
+     * On touch the zoom waits ~260ms to see whether a second tap turns it
+     * into a like (the rule every photo feed uses); a mouse zooms at once,
+     * because a pointer has no double-tap idiom to protect.
+     */
+    const handleImageTap = (index: number, rect: DOMRect) => {
+        const coarse =
+            typeof window !== "undefined" &&
+            window.matchMedia?.("(pointer: coarse)").matches;
+        const openZoom = () => {
+            lightboxOriginRef.current = rect;
+            setSelectedImageIndex(index);
+        };
+        if (!coarse) {
+            openZoom();
+            return;
+        }
+        const state = imgTapRef.current;
+        const now = Date.now();
+        if (now - state.at < 300) {
+            state.at = 0;
+            if (state.timer) clearTimeout(state.timer);
+            state.timer = null;
+            if (!isLiked) void handleLike();
+            return;
+        }
+        state.at = now;
+        if (state.timer) clearTimeout(state.timer);
+        state.timer = setTimeout(() => {
+            state.timer = null;
+            openZoom();
+        }, 260);
+    };
 
     const handleBookmark = useCallback(async () => {
         if (!currentUser) {
@@ -1572,10 +1614,12 @@ export const PostCard = memo(
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     e.preventDefault();
-                                    lightboxOriginRef.current = (
-                                        e.currentTarget as HTMLElement
-                                    ).getBoundingClientRect();
-                                    setSelectedImageIndex(0);
+                                    handleImageTap(
+                                        0,
+                                        (
+                                            e.currentTarget as HTMLElement
+                                        ).getBoundingClientRect(),
+                                    );
                                 }}
                             />
                         </div>
@@ -1604,10 +1648,12 @@ export const PostCard = memo(
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             e.preventDefault();
-                                            lightboxOriginRef.current = (
-                                                e.currentTarget as HTMLElement
-                                            ).getBoundingClientRect();
-                                            setSelectedImageIndex(i);
+                                            handleImageTap(
+                                                i,
+                                                (
+                                                    e.currentTarget as HTMLElement
+                                                ).getBoundingClientRect(),
+                                            );
                                         }}
                                     />
                                 ))}

@@ -1,6 +1,13 @@
 "use client";
 
-import { forwardRef, useCallback, useMemo, useState } from "react";
+import clsx from "clsx";
+import {
+	forwardRef,
+	useCallback,
+	useEffect,
+	useMemo,
+	useState,
+} from "react";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import { RiArrowDownLine } from "@remixicon/react";
 import { TypingIndicator } from "@/components/messages/TypingIndicator";
@@ -81,6 +88,18 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 		ref,
 	) {
 		const [atBottom, setAtBottom] = useState(true);
+		// One beat of invisibility per thread: virtuoso paints at estimated
+		// heights, measures, then snaps to the true bottom — visible as a
+		// flicker. Two frames cover the correction without reading as a load.
+		const [settled, setSettled] = useState(false);
+		// biome-ignore lint/correctness/useExhaustiveDependencies: per-thread reset
+		useEffect(() => {
+			setSettled(false);
+			const raf = requestAnimationFrame(() =>
+				requestAnimationFrame(() => setSettled(true)),
+			);
+			return () => cancelAnimationFrame(raf);
+		}, [threadId, messages.length > 0]);
 		// Live-arrival gate: only messages born after this mount animate in.
 		// biome-ignore lint/correctness/useExhaustiveDependencies: per-thread stamp
 		const mountTs = useMemo(() => Date.now(), [threadId]);
@@ -197,7 +216,15 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 				<Virtuoso<BubbleMessage>
 					key={threadId}
 					ref={ref}
-					className="h-full"
+					// overflow-x-hidden: swipe-to-reply translates rows sideways,
+					// and without this the scroller grew a horizontal scrollbar
+					// mid-gesture (owner, 2026-09-02). The settle veil hides the
+					// one frame where virtuoso corrects its estimated offsets —
+					// threads opened looking like they were still arriving.
+					className={clsx(
+						"h-full overflow-x-hidden transition-opacity duration-100",
+						settled ? "opacity-100" : "opacity-0",
+					)}
 					data={messages}
 					// Defensive: virtuoso can probe an index past the data for
 					// one frame while the initial window settles under a
