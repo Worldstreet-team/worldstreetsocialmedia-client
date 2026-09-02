@@ -377,6 +377,7 @@
   "notif.new": "new activity",
   "notif.verb.moderation": "removed one of your posts",
   "notif.verb.message": "sent you a message",
+  "notif.verb.announcement": "announced",
   "notif.verb.like": "liked your post",
   "notif.verb.repost": "reposted your post",
   "notif.verb.quote": "quoted your post",

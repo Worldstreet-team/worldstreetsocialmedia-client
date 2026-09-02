@@ -16,6 +16,7 @@ import {
   ShieldWarning,
   UserPlus,
   type Icon,
+  Megaphone,
 } from "@phosphor-icons/react";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";
@@ -54,6 +55,12 @@ const CHIP: Record<NotificationType, { classes: string; glyph: Icon; weight: "fi
     weight: "fill",
   },
   message: { classes: "bg-raised text-primary", glyph: ChatCircle, weight: "fill" },
+  // The platform speaking to everyone at once: brand gold, a megaphone.
+  announcement: {
+    classes: "bg-brand/15 text-gold",
+    glyph: Megaphone,
+    weight: "fill",
+  },
 };
 
 /** Minor units to a readable figure. Money is never "1.2". */
@@ -103,10 +110,12 @@ export function NotificationRow({
       ? group.conversation
         ? `/messages/${group.conversation}`
         : "/messages"
-      : // A chat @mention carries a conversation, never a post — it lands in
-        // the thread it happened in (group mentions, register 136).
-        type === "mention" && !post?._id && group.conversation
-        ? `/messages/${group.conversation}`
+      : type === "announcement"
+        ? group.href || "#"
+        : // A chat @mention carries a conversation, never a post — it lands in
+          // the thread it happened in (group mentions, register 136).
+          type === "mention" && !post?._id && group.conversation
+          ? `/messages/${group.conversation}`
         : type === "follow"
           ? lead.username
             ? `/profile/${lead.username}`
@@ -201,7 +210,15 @@ export function NotificationRow({
           <span className="text-subtle"> · {formatTimeAgo(group.createdAt)}</span>
         </span>
 
-        {(type === "moderation" || type === "message") && group.body && (
+        {type === "announcement" && group.title && (
+          <span className="font-sans text-[14px] font-semibold leading-snug text-primary">
+            {group.title}
+          </span>
+        )}
+        {(type === "moderation" ||
+          type === "message" ||
+          type === "announcement") &&
+          group.body && (
           <span className="font-sans text-[13.5px] leading-snug text-primary whitespace-pre-line">
             {group.body}
           </span>

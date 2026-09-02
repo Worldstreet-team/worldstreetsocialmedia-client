@@ -34,7 +34,8 @@ export type NotificationType =
   | "sale"
   | "gift"
   | "moderation"
-  | "message";
+  | "message"
+  | "announcement";
 
 export interface AppNotification {
   _id: string;
@@ -47,6 +48,9 @@ export interface AppNotification {
   body?: string;
   /** DM notifications: the thread to open. */
   conversation?: string;
+  /** Announcements: optional headline + in-app destination. */
+  title?: string;
+  href?: string;
   read: boolean;
   createdAt: string;
 }
@@ -62,6 +66,8 @@ export interface NotificationGroup {
   /** Carried up for moderation notices. */
   body?: string;
   conversation?: string;
+  title?: string;
+  href?: string;
   /** Every member id, so tapping a group marks all of it read. */
   ids: string[];
   createdAt: string;
