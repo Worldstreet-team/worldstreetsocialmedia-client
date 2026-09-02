@@ -1,5 +1,6 @@
 "use client";
 
+import { formatCompact } from "@/lib/utils";
 import { useBackWithFallback } from "@/lib/nav";
 import type { ProfileBadge } from "@/components/ui/UserBadges";
 
@@ -216,7 +217,7 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 					</h1>
 					{community && (
 						<span className="font-sans text-[13px] tabular-nums text-muted">
-							{community.membersCount.toLocaleString()} {t("community.members")}
+							{formatCompact(community.membersCount)} {t("community.members")}
 						</span>
 					)}
 				</div>
@@ -324,7 +325,7 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 								))}
 								<span className="font-sans text-[14px] text-muted">
 									<span className="font-semibold tabular-nums text-primary">
-										{community.membersCount.toLocaleString()}
+										{formatCompact(community.membersCount)}
 									</span>{" "}
 									{t("community.members")}
 								</span>

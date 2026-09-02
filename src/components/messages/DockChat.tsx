@@ -1,5 +1,6 @@
 "use client";
 
+import { UserBadges } from "@/components/ui/UserBadges";
 import axios from "axios";
 import clsx from "clsx";
 import { useAtomValue } from "jotai";
@@ -198,8 +199,14 @@ export function DockChat({
 					)}
 				</span>
 				<span className="min-w-0 flex-1">
-					<span className="block truncate font-sans text-[13.5px] font-semibold text-primary">
-						{peerName}
+					<span className="flex items-center gap-1 truncate font-sans text-[13.5px] font-semibold text-primary">
+						<span className="min-w-0 truncate">{peerName}</span>
+						<UserBadges
+							isVerified={(other as any).isVerified}
+							verification={(other as any).verification}
+							badges={(other as any).badges}
+							size={13}
+						/>
 					</span>
 				</span>
 				<button

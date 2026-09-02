@@ -1,5 +1,6 @@
 "use client";
 
+import { UserBadges } from "@/components/ui/UserBadges";
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
@@ -27,6 +28,8 @@ export interface QuoteTarget {
 	avatar: string;
 	content: string;
 	timestamp: string;
+	isVerified?: boolean;
+	verification?: { tier?: "bronze" | "silver" | "gold" } | null;
 }
 
 type Attachment = { file: File; url: string; kind: "image" | "video" };
@@ -197,8 +200,15 @@ export function QuoteModal({
 							<span className="relative h-5 w-5 shrink-0 overflow-hidden rounded-pill">
 								<SafeAvatar src={target.avatar} className="object-cover" />
 							</span>
-							<span className="truncate font-sans text-[13px] font-semibold text-primary">
-								{target.authorName}
+							<span className="flex min-w-0 items-center gap-1 truncate font-sans text-[13px] font-semibold text-primary">
+								<span className="min-w-0 truncate">
+									{target.authorName}
+								</span>
+								<UserBadges
+									isVerified={target.isVerified}
+									verification={target.verification}
+									size={13}
+								/>
 							</span>
 							<span className="truncate font-sans text-[12px] text-subtle">
 								@{target.username} · {target.timestamp}

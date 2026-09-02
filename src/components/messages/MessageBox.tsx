@@ -1,5 +1,6 @@
 "use client";
 
+import { UserBadges } from "@/components/ui/UserBadges";
 import { useBackWithFallback } from "@/lib/nav";
 import Link from "next/link";
 
@@ -1404,9 +1405,26 @@ export const MessageBox = ({
 								)}
 							</span>
 							<div className="min-w-0">
-								<h2 className="font-semibold text-sm truncate">
-									{activeConversation.otherParticipant.firstName}{" "}
-									{activeConversation.otherParticipant.lastName}
+								<h2 className="flex items-center gap-1 font-semibold text-sm truncate">
+									<span className="min-w-0 truncate">
+										{activeConversation.otherParticipant.firstName}{" "}
+										{activeConversation.otherParticipant.lastName}
+									</span>
+									<UserBadges
+										isVerified={
+											(activeConversation.otherParticipant as any)
+												.isVerified
+										}
+										verification={
+											(activeConversation.otherParticipant as any)
+												.verification
+										}
+										badges={
+											(activeConversation.otherParticipant as any)
+												.badges
+										}
+										size={14}
+									/>
 								</h2>
 								{chat.peerTyping ? (
 									<p className="text-xs text-gold truncate">typing…</p>

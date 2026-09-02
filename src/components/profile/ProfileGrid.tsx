@@ -1,5 +1,6 @@
 "use client";
 
+import { formatCompact } from "@/lib/utils";
 import Link from "next/link";
 import Image from "next/image";
 import { Heart, Play } from "@phosphor-icons/react";
@@ -57,7 +58,7 @@ export function ProfileGrid({
             <span className="absolute inset-0 flex items-end bg-gradient-to-t from-[#0c0a09]/70 to-transparent px-2 pb-1.5 pt-6 opacity-0 transition-opacity group-hover:opacity-100">
               <span className="flex items-center gap-1 font-sans text-[11px] font-semibold tabular-nums text-[#fafaf9]">
                 <Heart size={11} weight="fill" />
-                {post.stats?.likes ?? 0}
+                {formatCompact(post.stats?.likes ?? 0)}
               </span>
             </span>
           </Link>

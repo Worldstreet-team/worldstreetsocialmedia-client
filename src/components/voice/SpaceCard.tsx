@@ -1,5 +1,6 @@
 "use client";
 
+import { formatCompact } from "@/lib/utils";
 import { BellRinging, CalendarBlank, Users } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { UserBadges } from "@/components/ui/UserBadges";
@@ -37,6 +38,8 @@ export interface SpaceRow {
     firstName?: string;
     lastName?: string;
     isVerified?: boolean;
+    verification?: { tier?: "bronze" | "silver" | "gold" } | null;
+    badges?: import("@/components/ui/UserBadges").ProfileBadge[];
   };
   community?: { name: string; slug: string } | null;
   membersCount: number;
@@ -137,7 +140,7 @@ export function LiveSpaceCard({
           <EqBars className="text-gold" />
           <span className="flex items-center gap-1 font-sans text-[12px] font-semibold tabular-nums">
             <Users size={13} weight="bold" />
-            {row.membersCount}
+            {formatCompact(row.membersCount)}
           </span>
         </span>
       </span>
@@ -331,8 +334,14 @@ export function UpcomingSpaceRow({
         <span className="truncate font-sans text-[14.5px] font-semibold text-primary">
           {row.title}
         </span>
-        <span className="truncate font-sans text-[12px] text-subtle">
+        <span className="flex min-w-0 items-center gap-1 truncate font-sans text-[12px] text-subtle">
           {hostName(row.host)}
+          <UserBadges
+            isVerified={row.host.isVerified}
+            verification={(row.host as any).verification}
+            badges={(row.host as any).badges}
+            size={11}
+          />
           {when
             ? ` · ${when.toLocaleString([], { hour: "2-digit", minute: "2-digit" })}`
             : ""}

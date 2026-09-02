@@ -1,5 +1,6 @@
 "use client";
 
+import { UserBadges } from "@/components/ui/UserBadges";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 
@@ -430,8 +431,14 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 								</span>
 
 								{/* Card-only: name over the cover. */}
-								<span className={clsx("absolute inset-x-2 bottom-2 hidden truncate text-left font-sans text-[12px] font-semibold text-white", !circlesOnly && "sm:block")}>
-									@{name}
+								<span className={clsx("absolute inset-x-2 bottom-2 hidden items-center gap-1 text-left font-sans text-[12px] font-semibold text-white", !circlesOnly && "sm:flex")}>
+									<span className="min-w-0 truncate">@{name}</span>
+									<UserBadges
+										isVerified={entry.author.isVerified}
+										verification={entry.author.verification}
+										badges={entry.author.badges as any}
+										size={11}
+									/>
 								</span>
 							</span>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { formatCompact } from "@/lib/utils";
 import {
   ArrowsInSimple,
   Fire,
@@ -339,7 +340,7 @@ export default function SpaceRoom({
               <EqBars className="text-gold" />
               <span className="flex items-center gap-1 font-semibold tabular-nums">
                 <Users size={13} weight="bold" />
-                {listenerCount} {t("voice.listeners")}
+                {formatCompact(listenerCount)} {t("voice.listeners")}
               </span>
               {row.community && (
                 <span className="truncate rounded-pill bg-[#fafaf9]/12 px-2 py-px text-[10.5px] font-medium">
@@ -433,8 +434,16 @@ export default function SpaceRoom({
                             )}
                           </span>
                         </span>
-                        <span className="max-w-full truncate font-sans text-[10.5px] glass-ink-dim">
-                          {m.username}
+                        <span className="flex max-w-full items-center gap-0.5">
+                          <span className="min-w-0 truncate font-sans text-[10.5px] glass-ink-dim">
+                            {m.username}
+                          </span>
+                          <UserBadges
+                            isVerified={m.isVerified}
+                            verification={m.verification}
+                            badges={m.badges as any}
+                            size={10}
+                          />
                         </span>
                       </Tag>
                     );
@@ -444,7 +453,7 @@ export default function SpaceRoom({
                 <p className="mt-3 font-sans text-[12.5px] glass-ink-dim">
                   {realtime
                     ? t("voice.roomQuiet")
-                    : `${listenerCount} ${t("voice.listeners")}`}
+                    : `${formatCompact(listenerCount)} ${t("voice.listeners")}`}
                 </p>
               )}
             </div>

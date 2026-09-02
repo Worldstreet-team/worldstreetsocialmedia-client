@@ -1,5 +1,6 @@
 "use client";
 
+import { formatCompact } from "@/lib/utils";
 import {
 	useCallback,
 	useEffect,
@@ -609,9 +610,7 @@ export function VideoPlayer({
 			{plays !== undefined && plays > 0 && (
 				<span className="pointer-events-none absolute left-2 top-2 flex items-center gap-1 rounded-pill bg-black/55 px-2 py-0.5 font-sans text-[11px] font-medium text-white tabular-nums">
 					<Play size={10} weight="fill" />
-					{plays >= 1000
-						? `${(plays / 1000).toFixed(1).replace(/\.0$/, "")}k`
-						: plays.toLocaleString()}{" "}
+					{formatCompact(plays)}{" "}
 					plays
 				</span>
 			)}

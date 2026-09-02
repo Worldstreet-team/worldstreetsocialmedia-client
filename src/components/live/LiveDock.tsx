@@ -1,5 +1,6 @@
 "use client";
 
+import { formatCompact } from "@/lib/utils";
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -343,7 +344,7 @@ export function LiveDock() {
 						{clockLabel}
 					</span>
 					<span className="glass-ink-dim font-sans text-[11.5px] tabular-nums">
-						· {viewers} {t("dock.watching")}
+						· {formatCompact(viewers)} {t("dock.watching")}
 					</span>
 					<button
 						type="button"

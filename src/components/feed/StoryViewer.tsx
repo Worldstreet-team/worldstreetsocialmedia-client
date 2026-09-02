@@ -1,5 +1,6 @@
 "use client";
 
+import { formatCompact } from "@/lib/utils";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
@@ -41,6 +42,9 @@ export interface RailEntry {
 		avatar?: string;
 		firstName?: string;
 		lastName?: string;
+		isVerified?: boolean;
+		verification?: { tier?: "bronze" | "silver" | "gold" } | null;
+		badges?: import("@/components/ui/UserBadges").ProfileBadge[];
 	};
 	stories: RailStory[];
 	hasUnseen: boolean;
@@ -342,8 +346,16 @@ export function StoryViewer({
 							<SafeAvatar src={entry.author.avatar} className="object-cover" alt={entry.author.username} />
 						</div>
 						<span className="flex min-w-0 flex-col leading-tight">
-							<span className="truncate font-sans text-[14px] font-semibold text-white">
-								{name}
+							<span className="flex min-w-0 items-center gap-1">
+								<span className="min-w-0 truncate font-sans text-[14px] font-semibold text-white">
+									{name}
+								</span>
+								<UserBadges
+									isVerified={entry.author.isVerified}
+									verification={entry.author.verification}
+									badges={entry.author.badges as any}
+									size={13}
+								/>
 							</span>
 							<span className="font-sans text-[11.5px] text-white/65">
 								@{entry.author.username}
@@ -505,7 +517,7 @@ export function StoryViewer({
 								) : (
 									<>
 										{/* tabular-nums: a count that changes as people watch. */}
-										<span className="tabular-nums">{viewsCount}</span>
+										<span className="tabular-nums">{formatCompact(viewsCount)}</span>
 										<span>
 											{viewsCount === 1
 												? t("story.viewer")
@@ -569,7 +581,7 @@ export function StoryViewer({
 									<div className="glass-frost sticky top-0 flex items-center gap-2 px-4 pb-2 pt-4">
 										<Eye className="h-4 w-4 text-muted" />
 										<span className="font-sans text-[14px] font-semibold text-primary">
-											<span className="tabular-nums">{viewsCount}</span>{" "}
+											<span className="tabular-nums">{formatCompact(viewsCount)}</span>{" "}
 											{viewsCount === 1 ? t("story.viewer") : t("story.viewers")}
 										</span>
 									</div>
