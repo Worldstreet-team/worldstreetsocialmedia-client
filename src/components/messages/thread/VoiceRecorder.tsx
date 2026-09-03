@@ -167,6 +167,13 @@ export function VoiceRecorder({
 	// ── Acquire mic + recorder + analyser ──
 	useEffect(() => {
 		let alive = true;
+		// StrictMode runs acquire → cleanup → acquire on one mount, and the
+		// cleanup below sets closedRef true. Without resetting it here, the
+		// SECOND acquire records into a recorder whose onstop sees
+		// closedRef=true and treats every stop — including "send" — as a
+		// discard: the voice note recorded, sent, and silently vanished
+		// (owner report 2026-09-03).
+		closedRef.current = false;
 		void (async () => {
 			try {
 				const stream = await navigator.mediaDevices.getUserMedia({
@@ -354,8 +361,10 @@ export function VoiceRecorder({
 			if (dy < LOCK_DY) setLocked(true);
 		};
 		const onUp = () => {
-			// A sub-second press is a misfire, not a message.
-			if (elapsedMsRef.current < 700) finish("discard");
+			// A sub-second press is a TAP, not a hold: lock and keep
+			// recording (Telegram grammar). Discarding here made the mic
+			// button feel dead on phones — tap, overlay blinks, nothing.
+			if (elapsedMsRef.current < 700) setLocked(true);
 			else finish("send");
 		};
 		window.addEventListener("pointermove", onMove);

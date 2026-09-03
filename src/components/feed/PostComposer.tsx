@@ -19,6 +19,7 @@ import {
 	RiLockFill,
 	RiMicLine,
 	RiEditLine,
+	RiListCheck3,
 } from "@remixicon/react";
 import { VanishingPlaceholder } from "@/components/ui/VanishingPlaceholder";
 import { useT } from "@/i18n/client";
@@ -364,6 +365,13 @@ export const PostComposer = ({
 	};
 	const [isPosting, setIsPosting] = useState(false);
 	const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+	// Poll authoring (owner-ratified 2026-09-03): 2-4 options + a duration.
+	// null = no poll. A poll is the post's content — media and selling are
+	// disabled while one is attached, and vice versa.
+	const [poll, setPoll] = useState<{
+		options: string[];
+		durationHours: number;
+	} | null>(null);
 	const [editingIndex, setEditingIndex] = useState<number | null>(null);
 	const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
@@ -732,15 +740,37 @@ export const PostComposer = ({
 
 	const isOverLimit = content.length > charBudget;
 
+	// A poll posts when at least two options carry text; a half-filled one
+	// blocks the Post button rather than silently dropping options.
+	const pollFilled = poll
+		? poll.options.filter((o) => o.trim()).length
+		: 0;
+	const pollReady = !!poll && pollFilled >= 2;
+	const pollBlocking = !!poll && pollFilled < 2;
+
 	const handleSubmit = async () => {
-		if ((!content.trim() && mediaItems.length === 0) || isPosting) return;
-		if (isOverLimit) return;
+		if ((!content.trim() && mediaItems.length === 0 && !pollReady) || isPosting)
+			return;
+		if (isOverLimit || pollBlocking) return;
 
 		onPostStart?.();
 		setIsPosting(true);
 		try {
 			const formData = new FormData();
 			formData.append("content", content);
+
+			if (pollReady && poll) {
+				formData.append(
+					"poll",
+					JSON.stringify({
+						options: poll.options
+							.map((o) => o.trim())
+							.filter(Boolean)
+							.slice(0, 4),
+						durationHours: poll.durationHours,
+					}),
+				);
+			}
 
 			// The gateway verifies membership before accepting this.
 			if (audience) formData.append("community", audience.id);
@@ -852,6 +882,7 @@ export const PostComposer = ({
 					postedUrls.forEach((url) => URL.revokeObjectURL(url));
 				}, 1000);
 				setMediaItems([]);
+				setPoll(null);
 				setSelling(false);
 				setSalePrice("");
 				setTaggedUserPool([]);
@@ -1230,6 +1261,117 @@ export const PostComposer = ({
 					</div>
 					)}
 
+					{/* Poll editor (owner-ratified): 2-4 outline-pill option inputs,
+					    a duration select, one remove affordance. Lives where media
+					    previews live — a poll IS the post's attachment. */}
+					{poll && (
+						<div className="mt-3 rounded-xl border border-hairline p-3">
+							<div className="flex flex-col gap-2">
+								{poll.options.map((opt, i) => (
+									<div
+										// biome-ignore lint/suspicious/noArrayIndexKey: positional inputs
+										key={i}
+										className="flex items-center gap-2"
+									>
+										<input
+											value={opt}
+											onChange={(e) =>
+												setPoll((p) =>
+													p
+														? {
+																...p,
+																options: p.options.map(
+																	(o, j) =>
+																		j === i
+																			? e.target.value.slice(0, 40)
+																			: o,
+																),
+															}
+														: p,
+												)
+											}
+											placeholder={`${t("poll.option")} ${i + 1}${i >= 2 ? ` (${t("poll.optional")})` : ""}`}
+											className="h-10 min-w-0 flex-1 rounded-pill border border-hairline bg-transparent px-4 font-sans text-[14px] text-primary outline-none transition-colors placeholder:text-subtle focus:border-primary/40"
+										/>
+										{i >= 2 && (
+											<button
+												type="button"
+												onClick={() =>
+													setPoll((p) =>
+														p
+															? {
+																	...p,
+																	options: p.options.filter(
+																		(_, j) => j !== i,
+																	),
+																}
+															: p,
+													)
+												}
+												aria-label={t("poll.removeOption")}
+												className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-raised hover:text-danger"
+											>
+												<RiCloseLine size={16} />
+											</button>
+										)}
+									</div>
+								))}
+							</div>
+							<div className="mt-2.5 flex items-center justify-between gap-2">
+								{poll.options.length < 4 ? (
+									<button
+										type="button"
+										onClick={() =>
+											setPoll((p) =>
+												p
+													? { ...p, options: [...p.options, ""] }
+													: p,
+											)
+										}
+										className="flex h-8 cursor-pointer items-center gap-1 rounded-pill px-3 font-sans text-[12.5px] font-medium text-gold transition-colors hover:bg-raised"
+									>
+										<RiAddLine size={15} />
+										{t("poll.addOption")}
+									</button>
+								) : (
+									<span />
+								)}
+								<div className="flex items-center gap-2">
+									<select
+										value={poll.durationHours}
+										onChange={(e) =>
+											setPoll((p) =>
+												p
+													? {
+															...p,
+															durationHours: Number(
+																e.target.value,
+															),
+														}
+													: p,
+											)
+										}
+										aria-label={t("poll.duration")}
+										className="h-8 cursor-pointer rounded-pill bg-raised px-3 font-sans text-[12.5px] font-medium text-primary outline-none"
+									>
+										<option value={1}>1h</option>
+										<option value={6}>6h</option>
+										<option value={24}>24h</option>
+										<option value={72}>3d</option>
+										<option value={168}>7d</option>
+									</select>
+									<button
+										type="button"
+										onClick={() => setPoll(null)}
+										className="h-8 cursor-pointer rounded-pill px-3 font-sans text-[12.5px] font-medium text-danger transition-colors hover:bg-danger/10"
+									>
+										{t("poll.remove")}
+									</button>
+								</div>
+							</div>
+						</div>
+					)}
+
 					<div className="flex items-center justify-between mt-1 pt-2 sm:mt-2 sm:pt-3 border-t border-hairline/60">
 						<div className="flex items-center gap-2 relative">
 							{/* Faded word-chips from sm up: the toolbar says what it does.
@@ -1238,13 +1380,15 @@ export const PostComposer = ({
 							    icon-only targets. Go Live moved out to the create FAB. */}
 							<button
 								type="button"
-								onClick={() => !linkPreview && fileInputRef.current?.click()}
-								disabled={!!linkPreview}
+								onClick={() =>
+									!linkPreview && !poll && fileInputRef.current?.click()
+								}
+								disabled={!!linkPreview || !!poll}
 								aria-label={t("composer.media")}
 								title={t("composer.media")}
 								className={clsx(
 									"flex h-10 w-10 items-center justify-center rounded-pill transition-colors",
-									linkPreview
+									linkPreview || poll
 										? "bg-raised/40 text-subtle cursor-not-allowed"
 										: "bg-raised/50 text-muted hover:bg-raised hover:text-primary cursor-pointer",
 								)}
@@ -1253,18 +1397,43 @@ export const PostComposer = ({
 							</button>
 							<button
 								type="button"
-								onClick={() => !linkPreview && setRecordOpen(true)}
-								disabled={!!linkPreview}
+								onClick={() => !linkPreview && !poll && setRecordOpen(true)}
+								disabled={!!linkPreview || !!poll}
 								aria-label="Record a voice note"
 								title="Voice note"
 								className={clsx(
 									"flex h-10 w-10 items-center justify-center rounded-pill transition-colors",
-									linkPreview
+									linkPreview || poll
 										? "bg-raised/40 text-subtle cursor-not-allowed"
 										: "bg-raised/50 text-muted hover:bg-raised hover:text-primary cursor-pointer",
 								)}
 							>
 								<RiMicLine className="h-[18px] w-[18px] shrink-0" size={18} />
+							</button>
+							{/* Poll — the locked ruling: the glyph is a LIST, never a
+							    bar chart. Mutually exclusive with media and selling. */}
+							<button
+								type="button"
+								onClick={() =>
+									mediaItems.length === 0 &&
+									!selling &&
+									setPoll((p) =>
+										p ? null : { options: ["", ""], durationHours: 24 },
+									)
+								}
+								disabled={mediaItems.length > 0 || selling}
+								aria-label={t("poll.title")}
+								title={t("poll.title")}
+								className={clsx(
+									"flex h-10 w-10 items-center justify-center rounded-pill transition-colors",
+									mediaItems.length > 0 || selling
+										? "bg-raised/40 text-subtle cursor-not-allowed"
+										: poll
+											? "bg-raised text-gold cursor-pointer"
+											: "bg-raised/50 text-muted hover:bg-raised hover:text-primary cursor-pointer",
+								)}
+							>
+								<RiListCheck3 className="h-[18px] w-[18px] shrink-0" />
 							</button>
 							<input
 								type="file"
@@ -1345,9 +1514,10 @@ export const PostComposer = ({
 							<button
 							onClick={handleSubmit}
 							disabled={
-								(!content.trim() && mediaItems.length === 0) ||
+								(!content.trim() && mediaItems.length === 0 && !pollReady) ||
 								isPosting ||
 								isOverLimit ||
+								pollBlocking ||
 								saleInvalid ||
 								saleTitleMissing
 							}
@@ -1355,9 +1525,10 @@ export const PostComposer = ({
 							className={clsx(
 								// h-11 on touch (44px target), the DS's 36px pill from sm up.
 								"px-4 sm:px-[18px] h-10 sm:h-9 shrink-0 rounded-pill font-semibold text-[13px] font-sans transition-colors flex items-center gap-2 cursor-pointer",
-								(!content.trim() && mediaItems.length === 0) ||
+								(!content.trim() && mediaItems.length === 0 && !pollReady) ||
 									isPosting ||
 									isOverLimit ||
+									pollBlocking ||
 									saleInvalid ||
 									saleTitleMissing
 									? "bg-raised text-subtle cursor-not-allowed opacity-50"

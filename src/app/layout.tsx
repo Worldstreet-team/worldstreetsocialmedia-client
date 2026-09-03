@@ -24,6 +24,7 @@ import GlobalMessageListener from "@/components/providers/GlobalMessageListener"
 import { MediaGuard } from "@/components/providers/MediaGuard";
 import { PresenceSync } from "@/components/providers/PresenceSync";
 import { PremiumSheet } from "@/components/premium/PremiumSheet";
+import { ComposeSheet } from "@/components/ui/ComposeSheet";
 import { CreateFab } from "@/components/ui/CreateFab";
 import VoiceRoomHost from "@/components/voice/VoiceRoomHost";
 import { LiveDock } from "@/components/live/LiveDock";
@@ -236,6 +237,7 @@ export default async function RootLayout({
                                         <MediaGuard />
                                         <PresenceSync />
                                         <PremiumSheet />
+                                        <ComposeSheet />
                                         <CreateFab />
                                         <LiveDock />
                                         <VoiceRoomHost />

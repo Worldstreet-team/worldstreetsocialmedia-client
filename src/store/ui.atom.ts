@@ -37,6 +37,11 @@ export const followingIdsAtom = atom<string[]>([]);
  *  them, so the FAB can open them from any route. */
 export const goLiveOpenAtom = atom(false);
 
+/** The compose window (owner ruling: posting must not require going home).
+ *  Desktop = centered modal, phone = near-full sheet; ComposeSheet in the
+ *  root layout renders it, so any surface can open it through this atom. */
+export const composeOpenAtom = atom(false);
+
 /** The verified-subscription sheet, openable from the sidebar and settings. */
 export const premiumOpenAtom = atom(false);
 

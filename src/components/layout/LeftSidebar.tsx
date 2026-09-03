@@ -46,7 +46,7 @@ import { handleSignOut } from "@/lib/utils";
 import { withThemeTransition } from "@/lib/theme-transition";
 import { mainScroller } from "@/lib/utils";
 import VerifiedIcon from "@/assets/icons/VerifiedIcon";
-import { premiumOpenAtom } from "@/store/ui.atom";
+import { composeOpenAtom, premiumOpenAtom } from "@/store/ui.atom";
 import { BrandRitual } from "@/components/layout/BrandRitual";
 import { LanguageMenu } from "@/components/ui/LanguageMenu";
 import { useT } from "@/i18n/client";
@@ -142,6 +142,7 @@ export function LeftSidebar() {
 		badgeForNavKey(item.labelKey, unreadNotifications, unreadCount, unreadBm);
 
 	const setPremiumOpen = useSetAtom(premiumOpenAtom);
+	const setComposeOpen = useSetAtom(composeOpenAtom);
 
 	const [voteLeaders, setVoteLeaders] = useState<
 		{ avatar?: string; username?: string }[]
@@ -360,17 +361,12 @@ export function LeftSidebar() {
 				>
 					<button
 						type="button"
+						// The compose WINDOW, from any route (owner ruling
+						// 2026-09-03) — this used to scroll to the home feed's
+						// composer, which meant posting required going home.
 						onClick={() => {
-							const composer =
-								document.querySelector<HTMLTextAreaElement>(
-									"#post-composer-input",
-								);
-							if (composer) {
-								mainScroller().scrollTo({ top: 0, behavior: "smooth" });
-								composer.focus();
-							} else {
-								router.push("/");
-							}
+							console.log("[compose] sidebar Post clicked");
+							setComposeOpen(true);
 						}}
 						className="w-full h-12 shine bg-brand hover:bg-brand-active text-brand-on font-semibold text-[15px] rounded-pill font-sans transition-colors cursor-pointer"
 					>

@@ -65,6 +65,7 @@ import ConfirmModal from "@/components/ui/ConfirmModal";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import ImageModal from "@/components/ui/ImageModal";
 import { FeedImage } from "@/components/ui/FeedImage";
+import { PostPoll } from "@/components/feed/PostPoll";
 import VerifiedIcon from "@/assets/icons/VerifiedIcon";
 import { recordVideoPlayAction } from "@/lib/beacons";
 import { track } from "@/lib/telemetry";
@@ -119,6 +120,9 @@ export function hasRenderableBody(post: PostProps): boolean {
         post.content?.trim() ||
             post.images?.length ||
             post.videos?.length ||
+            post.audio ||
+            // A poll with no question text is still a whole post.
+            post.poll ||
             post.live ||
             post.repostOf ||
             // A locked paid post is empty ON PURPOSE — the gateway strips its
@@ -200,6 +204,15 @@ export interface PostProps {
         durationSec: number;
         peaks: number[];
         blurBg: boolean;
+    };
+    /** Poll, serialized by the gateway: counts + the viewer's own vote only
+     *  (voter ids never leave the server). */
+    poll?: {
+        options: { text: string; count: number }[];
+        endsAt: string;
+        totalVotes: number;
+        myVote: number | null;
+        ended: boolean;
     };
     stats: {
         replies: number;
@@ -1605,6 +1618,9 @@ export const PostCard = memo(
                             audio={post.audio}
                             avatar={post.author.avatar}
                         />
+                    )}
+                    {post.poll && (
+                        <PostPoll postId={post.id} poll={post.poll} />
                     )}
                     {post.images && post.images.length === 1 && (
                         // pointer-events-auto: the card body is

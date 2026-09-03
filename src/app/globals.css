@@ -220,7 +220,11 @@ html {
 }
 
 @utility pb-safe {
-  padding-bottom: var(--ws-safe-bottom);
+  /* Floor at 12px: env(safe-area-inset-bottom) is 0 everywhere except iOS
+     Safari, and this utility overrides the caller's own padding utilities —
+     so the chat composer sat flush on the screen edge on Android and in
+     devtools emulation ("the input nearly cuts off", owner 2026-09-03). */
+  padding-bottom: max(var(--ws-safe-bottom), 0.75rem);
 }
 
 /* Clear the fixed mobile top bar (56px + the status-bar safe area). Columns

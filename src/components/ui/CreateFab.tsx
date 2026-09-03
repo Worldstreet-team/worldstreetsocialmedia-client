@@ -22,7 +22,11 @@ import { listPresetsAction } from "@/lib/creator.actions";
 import { liveSessionAtom } from "@/store/live.atom";
 import { DraftsSheet } from "@/components/ui/DraftsSheet";
 import { draftsAtom, draftsOpenAtom } from "@/store/drafts.atom";
-import { goLiveOpenAtom, storyStudioSignalAtom } from "@/store/ui.atom";
+import {
+  composeOpenAtom,
+  goLiveOpenAtom,
+  storyStudioSignalAtom,
+} from "@/store/ui.atom";
 import { useT } from "@/i18n/client";
 import clsx from "clsx";
 
@@ -62,6 +66,7 @@ export function CreateFab() {
     })();
   }, []);
   const setDraftsOpen = useSetAtom(draftsOpenAtom);
+  const setComposeOpen = useSetAtom(composeOpenAtom);
   const setStorySignal = useSetAtom(storyStudioSignalAtom);
   const drafts = useAtomValue(draftsAtom);
 
@@ -104,22 +109,14 @@ export function CreateFab() {
     after();
   };
 
-  const focusComposer = () => {
-    const el = document.querySelector<HTMLTextAreaElement>(
-      "#post-composer-input",
-    );
-    if (el) {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      el.focus();
-    }
-  };
-
   const actions = [
     {
       key: "post",
       label: t("fab.post"),
       icon: PencilSimple,
-      onClick: () => goHomeThen(() => setTimeout(focusComposer, 60)),
+      // The compose window, in place (owner ruling 2026-09-03) — never a
+      // trip back home to reach the feed composer.
+      onClick: () => setComposeOpen(true),
     },
     {
       key: "story",
