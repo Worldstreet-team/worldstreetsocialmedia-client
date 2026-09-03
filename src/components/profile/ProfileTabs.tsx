@@ -5,7 +5,9 @@ import { useT } from "@/i18n/client";
 
 export type ProfileTab = "posts" | "replies" | "street" | "media" | "likes";
 
-const KEYS: ProfileTab[] = ["posts", "replies", "street", "media", "likes"];
+// Media leads (owner ruling 2026-09-03): a profile opens on what the person
+// has MADE visually, then the words.
+const KEYS: ProfileTab[] = ["media", "posts", "replies", "street", "likes"];
 
 export function ProfileTabs({
   active,

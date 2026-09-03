@@ -128,7 +128,9 @@ export default function Profile({ username }: { username?: string }) {
 		"followers" | "following"
 	>("followers");
 
-	const [activeTab, setActiveTab] = useState<ProfileTab>("posts");
+	// Media is the landing tab (owner ruling 2026-09-03) — the tab row leads
+	// with it too (ProfileTabs KEYS).
+	const [activeTab, setActiveTab] = useState<ProfileTab>("media");
 	const [feedPosts, setFeedPosts] = useState<PostProps[]>([]);
 	const [loadingFeed, setLoadingFeed] = useState(false);
 	const [communities, setCommunities] = useState<CommunityChip[]>([]);

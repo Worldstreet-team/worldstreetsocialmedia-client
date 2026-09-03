@@ -20,6 +20,8 @@ import {
 	RiMicLine,
 	RiEditLine,
 	RiListCheck3,
+	RiArrowDownSLine,
+	RiCheckLine,
 } from "@remixicon/react";
 import { VanishingPlaceholder } from "@/components/ui/VanishingPlaceholder";
 import { useT } from "@/i18n/client";
@@ -100,6 +102,15 @@ interface MediaItem {
 // enforces the real number; the ring below reads it from the same shared
 // entitlements fetch the video and audio caps ride.
 const MAX_LENGTH = POST_CHAR_BUDGET;
+
+// The poll duration vocabulary - label is display, hours cross the wire.
+const POLL_DURATIONS = [
+	{ hours: 1, label: "1 hour" },
+	{ hours: 6, label: "6 hours" },
+	{ hours: 24, label: "24 hours" },
+	{ hours: 72, label: "3 days" },
+	{ hours: 168, label: "7 days" },
+];
 
 /**
  * Character-budget ring: gold while comfortable, status/warning inside the
@@ -372,6 +383,7 @@ export const PostComposer = ({
 		options: string[];
 		durationHours: number;
 	} | null>(null);
+	const [pollDurOpen, setPollDurOpen] = useState(false);
 	const [editingIndex, setEditingIndex] = useState<number | null>(null);
 	const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
@@ -1337,29 +1349,93 @@ export const PostComposer = ({
 									<span />
 								)}
 								<div className="flex items-center gap-2">
-									<select
-										value={poll.durationHours}
-										onChange={(e) =>
-											setPoll((p) =>
-												p
-													? {
-															...p,
-															durationHours: Number(
-																e.target.value,
-															),
-														}
-													: p,
-											)
-										}
-										aria-label={t("poll.duration")}
-										className="h-8 cursor-pointer rounded-pill bg-raised px-3 font-sans text-[12.5px] font-medium text-primary outline-none"
-									>
-										<option value={1}>1h</option>
-										<option value={6}>6h</option>
-										<option value={24}>24h</option>
-										<option value={72}>3d</option>
-										<option value={168}>7d</option>
-									</select>
+									{/* Custom duration menu (owner 2026-09-03: never
+									    the OS-native select) — a chip that opens an
+									    on-token card, the house popover grammar. */}
+									<div className="relative">
+										<button
+											type="button"
+											onClick={() => setPollDurOpen((v) => !v)}
+											aria-label={t("poll.duration")}
+											aria-expanded={pollDurOpen}
+											aria-haspopup="listbox"
+											className={clsx(
+												"flex h-8 cursor-pointer items-center gap-1 rounded-pill px-3 font-sans text-[12.5px] font-medium transition-colors",
+												pollDurOpen
+													? "bg-raised text-primary"
+													: "bg-raised/70 text-primary hover:bg-raised",
+											)}
+										>
+											{POLL_DURATIONS.find(
+												(d) => d.hours === poll.durationHours,
+											)?.label ?? `${poll.durationHours}h`}
+											<RiArrowDownSLine
+												size={14}
+												className={clsx(
+													"text-muted transition-transform",
+													pollDurOpen && "rotate-180",
+												)}
+											/>
+										</button>
+										{pollDurOpen && (
+											<>
+												{/* Click-away catcher, no dim: a chip
+												    menu is not a modal. */}
+												<button
+													type="button"
+													aria-hidden
+													tabIndex={-1}
+													onClick={() => setPollDurOpen(false)}
+													className="fixed inset-0 z-dropdown cursor-default"
+												/>
+												<div
+													role="listbox"
+													aria-label={t("poll.duration")}
+													className="absolute bottom-full right-0 z-dropdown mb-1.5 w-36 overflow-hidden rounded-xl card-depth py-1 animate-rise"
+												>
+													{POLL_DURATIONS.map((d) => (
+														<button
+															key={d.hours}
+															type="button"
+															role="option"
+															aria-selected={
+																poll.durationHours ===
+																d.hours
+															}
+															onClick={() => {
+																setPoll((p) =>
+																	p
+																		? {
+																				...p,
+																				durationHours:
+																					d.hours,
+																			}
+																		: p,
+																);
+																setPollDurOpen(false);
+															}}
+															className={clsx(
+																"flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left font-sans text-[13px] transition-colors hover:bg-raised",
+																poll.durationHours ===
+																	d.hours
+																	? "font-semibold text-primary"
+																	: "text-muted",
+															)}
+														>
+															{d.label}
+															{poll.durationHours ===
+																d.hours && (
+																<RiCheckLine
+																	size={14}
+																	className="text-gold"
+																/>
+															)}
+														</button>
+													))}
+												</div>
+											</>
+										)}
+									</div>
 									<button
 										type="button"
 										onClick={() => setPoll(null)}

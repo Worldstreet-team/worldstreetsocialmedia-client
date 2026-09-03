@@ -67,6 +67,11 @@ import { useToast } from "@/components/ui/Toast/ToastContext";
 import ImageModal from "@/components/ui/ImageModal";
 import { FeedImage } from "@/components/ui/FeedImage";
 import { PostPoll } from "@/components/feed/PostPoll";
+import { ShareMenu, sharePost } from "@/components/feed/ShareMenu";
+import {
+    EmbeddedPost,
+    firstPlatformPostId,
+} from "@/components/feed/EmbeddedPost";
 import VerifiedIcon from "@/assets/icons/VerifiedIcon";
 import { recordVideoPlayAction } from "@/lib/beacons";
 import { track } from "@/lib/telemetry";
@@ -434,6 +439,7 @@ export const PostCard = memo(
 
     // Share feedback: the paper plane briefly swaps to a success Check after copying.
     const [linkCopied, setLinkCopied] = useState(false);
+    const [shareOpen, setShareOpen] = useState(false);
     const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     useEffect(
         () => () => {
@@ -821,6 +827,13 @@ export const PostCard = memo(
         () =>
             shouldTruncate ? post.content.slice(0, MAX_LENGTH) : post.content,
         [shouldTruncate, post.content],
+    );
+
+    // A platform post link in the body embeds that post as a card below the
+    // text (owner 2026-09-03). Never the post itself.
+    const embeddedPostId = useMemo(
+        () => firstPlatformPostId(post.content, post.id),
+        [post.content, post.id],
     );
 
     // URLs, $cashtags, #hashtags and @mentions become links (RichText).
@@ -1573,7 +1586,7 @@ export const PostCard = memo(
                     )}
 
                     {/* Link Preview */}
-                    {post.linkPreview && !post.images?.length && (
+                    {post.linkPreview && !post.images?.length && !embeddedPostId && (
                         <a
                             href={post.linkPreview.url}
                             target="_blank"
@@ -1660,6 +1673,11 @@ export const PostCard = memo(
                     )}
                     {post.poll && (
                         <PostPoll postId={post.id} poll={post.poll} />
+                    )}
+                    {/* A linked platform post renders AS the post (owner
+                        2026-09-03), the quote-card grammar. */}
+                    {embeddedPostId && (
+                        <EmbeddedPost postId={embeddedPostId} />
                     )}
                     {post.images && post.images.length === 1 && (
                         // pointer-events-auto: the card body is
@@ -1987,19 +2005,33 @@ export const PostCard = memo(
                                 </span>
                             )}
                         </button>
+                        <div className="relative">
                         <button
                             type="button"
-                            aria-label="Copy link to post"
+                            aria-label="Share post"
+                            aria-expanded={shareOpen}
                             onClick={(e) => {
                                 e.stopPropagation();
-                                handleMenuAction("copy_link");
-                                setLinkCopied(true);
-                                if (copiedTimerRef.current)
-                                    clearTimeout(copiedTimerRef.current);
-                                copiedTimerRef.current = setTimeout(
-                                    () => setLinkCopied(false),
-                                    1500,
-                                );
+                                // Phones get the OS share sheet — every app
+                                // the person has beats any menu we could
+                                // draw. Desktop gets the socials popover
+                                // (owner 2026-09-03: "not just copy") even
+                                // where navigator.share exists; the macOS
+                                // sheet has no WhatsApp/X in it.
+                                const coarse = window.matchMedia(
+                                    "(pointer: coarse)",
+                                ).matches;
+                                if (!coarse) {
+                                    setShareOpen((v) => !v);
+                                    return;
+                                }
+                                void sharePost({
+                                    url: `${window.location.origin}/post/${post.id}`,
+                                    text: post.content?.trim(),
+                                }).then((outcome) => {
+                                    if (outcome === "unsupported")
+                                        setShareOpen((v) => !v);
+                                });
                             }}
                             className={clsx(
                                 "flex items-center transition-colors group cursor-pointer",
@@ -2050,6 +2082,24 @@ export const PostCard = memo(
                                 </AnimatePresence>
                             </span>
                         </button>
+                        {shareOpen && (
+                            <ShareMenu
+                                url={`${typeof window !== "undefined" ? window.location.origin : ""}/post/${post.id}`}
+                                text={post.content?.trim()}
+                                onClose={() => setShareOpen(false)}
+                                onCopy={() => {
+                                    handleMenuAction("copy_link");
+                                    setLinkCopied(true);
+                                    if (copiedTimerRef.current)
+                                        clearTimeout(copiedTimerRef.current);
+                                    copiedTimerRef.current = setTimeout(
+                                        () => setLinkCopied(false),
+                                        1500,
+                                    );
+                                }}
+                            />
+                        )}
+                        </div>
 
                         <div
                             // Impressions belong at the end of this row, beside
