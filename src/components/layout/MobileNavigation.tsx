@@ -1,6 +1,6 @@
 "use client";
 
-import { useAtomValue, useSetAtom } from "jotai";
+import { useAtomValue } from "jotai";
 import { userAtom } from "@/store/user.atom";
 import { useClerk } from "@clerk/nextjs";
 import { useAppPathname } from "@/i18n/useAppPathname";
@@ -10,7 +10,6 @@ import { AnimatePresence } from "framer-motion";
 import {
 	ArrowUpRight,
 	CaretDown,
-	MagnifyingGlass,
 	Moon,
 	SignOut,
 	Sun,
@@ -38,7 +37,6 @@ import { unreadMessagesCountAtom } from "@/store/messageCache";
 import {
 	badgeForNavKey,
 	unreadBmCountAtom,
-	searchOpenAtom,
 	unreadNotificationsCountAtom,
 } from "@/store/ui.atom";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
@@ -56,13 +54,6 @@ export function MobileNavigation() {
 	const [isOpen, setIsOpen] = useState(false);
 	const [langOpen, setLangOpen] = useState(false);
 	const [productsOpen, setProductsOpen] = useState(false);
-	// The magnifier opens the same SearchWindow the desktop rail opens.
-	// It used to open the command palette, which is a different thing —
-	// the palette is a keyboard launcher (Ctrl+K), search is search — so
-	// tapping the magnifier on a phone gave a different feature than
-	// clicking "Search" on the web.
-	const setSearchOpen = useSetAtom(searchOpenAtom);
-
 	useEffect(() => setMounted(true), []);
 	const isLight = mounted && resolvedTheme === "light";
 
@@ -132,18 +123,10 @@ export function MobileNavigation() {
 						<BrandRitual size={36} wordSize={18} />
 					</Link>
 
-					{/* Search, bell, live: three identical 44px cells on one
-					    axis, so the glyphs sit on a shared centreline instead of
-					    three different-sized boxes eyeballing it. */}
+					{/* Bell + live in identical 44px cells on one axis. Search
+					    left the header (owner 2026-09-03) — it lives on the
+					    bottom tab bar now, where Explore used to sit. */}
 					<div className="flex items-center shrink-0">
-						<button
-							type="button"
-							onClick={() => setSearchOpen(true)}
-							aria-label={t("rail.search")}
-							className="flex h-11 w-11 items-center justify-center rounded-pill text-muted active:bg-raised transition-colors"
-						>
-							<MagnifyingGlass size={23} />
-						</button>
 						{/* Notifications moved UP out of the bottom bar: it is
 						    something you check, not somewhere you navigate, and it
 						    was holding a permanent tab slot for a glance. */}

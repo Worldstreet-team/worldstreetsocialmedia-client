@@ -11,13 +11,14 @@ import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import {
 	ChatCircleDots,
 	House,
-	Binoculars,
+	MagnifyingGlass,
 	UserCircle,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { BadgedIcon } from "@/components/ui/Badge";
-import { useAtomValue } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
 import { unreadMessagesCountAtom } from "@/store/messageCache";
+import { searchOpenAtom } from "@/store/ui.atom";
 import { userAtom } from "@/store/user.atom";
 import { useT } from "@/i18n/client";
 
@@ -41,8 +42,9 @@ const navIcon = (Icon: PhosphorIcon) => {
 const CENTER_SLOT = 2;
 
 const HomeIcon = navIcon(House);
-// Binoculars matches the rail's Explore glyph (owner ruling 2026-08-28).
-const SearchIcon = navIcon(Binoculars);
+// Search replaced Explore on the bar (owner ruling 2026-09-03): the tab
+// opens the SearchWindow overlay, the same one the desktop rail opens.
+const SearchIcon = navIcon(MagnifyingGlass);
 const MessageIcon = navIcon(ChatCircleDots);
 
 
@@ -64,6 +66,7 @@ export const MobileBottomNav = () => {
 	const pathname = useAppPathname();
 	const press = usePressPrefetch();
 	const [ecosystemOpen, setEcosystemOpen] = useState(false);
+	const [searchOpen, setSearchOpen] = useAtom(searchOpenAtom);
 	const unreadMessages = useAtomValue(unreadMessagesCountAtom);
 	const storedUser = useAtomValue(userAtom);
 	/**
@@ -88,10 +91,14 @@ export const MobileBottomNav = () => {
 			active: pathname === "/",
 		},
 		{
+			// Search took Explore's slot (owner 2026-09-03): the tab opens the
+			// SearchWindow overlay rather than navigating — explore itself
+			// stays reachable from search results and the drawer.
+			action: () => setSearchOpen(true),
 			href: "/explore",
 			icon: SearchIcon,
-			label: t("nav.explore"),
-			active: pathname.startsWith("/explore"),
+			label: t("rail.search"),
+			active: searchOpen,
 		},
 		{
 			href: "/messages",
@@ -185,6 +192,25 @@ export const MobileBottomNav = () => {
 									</span>
 								</button>
 							)}
+						{item.action ? (
+							<button
+								type="button"
+								onClick={item.action}
+								aria-label={item.label}
+								className={clsx(
+									"flex items-center justify-center w-full h-full min-w-0 active:bg-primary/10 transition-colors",
+									item.active ? "text-gold" : "text-muted",
+								)}
+							>
+								<BadgedIcon
+									count={item.badge}
+									label={item.label}
+									size={29}
+								>
+									<item.icon isActive={item.active} />
+								</BadgedIcon>
+							</button>
+						) : (
 						<Link
 							href={item.href}
 							{...press(item.href)}
@@ -202,6 +228,7 @@ export const MobileBottomNav = () => {
 								<item.icon isActive={item.active} />
 							</BadgedIcon>
 						</Link>
+						)}
 						</Fragment>
 					))}
 					</div>
