@@ -1808,7 +1808,10 @@ export const PostCard = memo(
                             )}
                         </div>
                         <Link
-                            href={`/post/${post.id}`}
+                            // #comments: the post page scrolls to the reply
+                            // box instead of the post top (owner 2026-09-03 —
+                            // tapping the comment icon landed you at the post).
+                            href={`/post/${post.id}#comments`}
                             onClick={(e) => e.stopPropagation()}
                             aria-label="Reply"
                             className="flex items-center gap-0.5 sm:gap-1 hover:text-primary transition-colors group cursor-pointer"

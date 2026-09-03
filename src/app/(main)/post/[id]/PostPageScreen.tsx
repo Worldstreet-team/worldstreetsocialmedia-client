@@ -185,6 +185,19 @@ export default function PostPageScreen() {
 		}
 	}, [postId, fetchPostData]);
 
+	// Arriving via the comment icon (#comments): the browser's native hash
+	// scroll fires before the async post has rendered, so it lands at the
+	// top. Scroll ourselves once the layout is real (owner 2026-09-03).
+	useEffect(() => {
+		if (loading || window.location.hash !== "#comments") return;
+		const id = window.setTimeout(() => {
+			document
+				.getElementById("comments")
+				?.scrollIntoView({ block: "start", behavior: "smooth" });
+		}, 80);
+		return () => window.clearTimeout(id);
+	}, [loading]);
+
 	if (loading) {
 		return (
 			<div className="flex flex-col min-h-dvh pb-20">
@@ -265,11 +278,13 @@ export default function PostPageScreen() {
 
 			<PostCard post={post} />
 
-			<CommentComposer
-				postId={postId}
-				onCommentStart={handleCommentStart}
-				onCommentSuccess={handleCommentSuccess}
-			/>
+			<div id="comments" className="scroll-mt-16">
+				<CommentComposer
+					postId={postId}
+					onCommentStart={handleCommentStart}
+					onCommentSuccess={handleCommentSuccess}
+				/>
+			</div>
 
 			<div className="flex flex-col">
 				{isAddingComment && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useAtomValue } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import { userAtom } from "@/store/user.atom";
 import { useClerk } from "@clerk/nextjs";
 import { useAppPathname } from "@/i18n/useAppPathname";
@@ -10,6 +10,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
 	ArrowUpRight,
 	CaretDown,
+	MagnifyingGlass,
 	Moon,
 	SignOut,
 	Sun,
@@ -36,6 +37,7 @@ import { FeedHeaderActions } from "@/components/feed/FeedHeaderActions";
 import { unreadMessagesCountAtom } from "@/store/messageCache";
 import {
 	badgeForNavKey,
+	searchOpenAtom,
 	unreadBmCountAtom,
 	unreadNotificationsCountAtom,
 } from "@/store/ui.atom";
@@ -54,6 +56,7 @@ export function MobileNavigation() {
 	const [isOpen, setIsOpen] = useState(false);
 	const [langOpen, setLangOpen] = useState(false);
 	const [productsOpen, setProductsOpen] = useState(false);
+	const setSearchOpen = useSetAtom(searchOpenAtom);
 	useEffect(() => setMounted(true), []);
 	const isLight = mounted && resolvedTheme === "light";
 
@@ -90,27 +93,39 @@ export function MobileNavigation() {
 					    than taken from the icon set: every stock "list" glyph is
 					    two or three FULL-width bars, and the asymmetry is the
 					    whole point of the mark. */}
-					<button
-						type="button"
-						onClick={() => setIsOpen(true)}
-						aria-label="Open navigation menu"
-						className="flex h-12 w-12 shrink-0 items-center justify-center rounded-pill text-primary active:bg-raised transition-colors"
-					>
-						<svg
-							width="24"
-							height="24"
-							viewBox="0 0 20 20"
-							fill="none"
-							aria-hidden="true"
+					<div className="flex items-center shrink-0">
+						<button
+							type="button"
+							onClick={() => setIsOpen(true)}
+							aria-label="Open navigation menu"
+							className="flex h-12 w-12 shrink-0 items-center justify-center rounded-pill text-primary active:bg-raised transition-colors"
 						>
-							<path
-								d="M3 7h14M3 13h7"
-								stroke="currentColor"
-								strokeWidth="2"
-								strokeLinecap="round"
-							/>
-						</svg>
-					</button>
+							<svg
+								width="24"
+								height="24"
+								viewBox="0 0 20 20"
+								fill="none"
+								aria-hidden="true"
+							>
+								<path
+									d="M3 7h14M3 13h7"
+									stroke="currentColor"
+									strokeWidth="2"
+									strokeLinecap="round"
+								/>
+							</svg>
+						</button>
+						{/* The magnifier rides beside the menu (owner 2026-09-03):
+						    opens the same SearchWindow the desktop rail opens. */}
+						<button
+							type="button"
+							onClick={() => setSearchOpen(true)}
+							aria-label={t("rail.search")}
+							className="flex h-11 w-11 items-center justify-center rounded-pill text-muted active:bg-raised transition-colors"
+						>
+							<MagnifyingGlass size={23} />
+						</button>
+					</div>
 
 					{/* The animated lockup, centred (owner 2026-09-03: back to the
 					    middle): absolute so it stays centred no matter how wide
@@ -123,9 +138,7 @@ export function MobileNavigation() {
 						<BrandRitual size={36} wordSize={18} />
 					</Link>
 
-					{/* Bell + live in identical 44px cells on one axis. Search
-					    left the header (owner 2026-09-03) — finding things is
-					    the explore tab*s job on the bottom bar. */}
+					{/* Bell + live in identical 44px cells on one axis. */}
 					<div className="flex items-center shrink-0">
 						{/* Notifications moved UP out of the bottom bar: it is
 						    something you check, not somewhere you navigate, and it
