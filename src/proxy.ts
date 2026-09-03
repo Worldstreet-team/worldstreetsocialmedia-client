@@ -34,18 +34,16 @@ const isProtectedRoute = createRouteMatcher(["/(.*)"]);
  *    NEXT_PUBLIC_CLERK_IS_SATELLITE/_DOMAIN unset, `auth.protect()` cannot
  *    build the primary-domain sign-in redirect. (Vision hit exactly this in
  *    prod and rewrote signed-out visitors to a 404.)
- * 2. Redirecting signed-out visitors OURSELVES, the way the academy does,
- *    rather than leaving it to `auth.protect()` — its satellite handshake
- *    lands browsers on an ugly `?redirect_url=...&__clerk_synced=false` URL.
+ * 2. `signInUrl` pointing at the hub's own /login, so an unauthenticated
+ *    visitor is sent there rather than to Clerk's portal.
  *
- * Local dev keeps `auth.protect()`: there is no hub to send a laptop to, and
- * this app has no /login route of its own.
+ * Do NOT replace `auth.protect()` with a hand-rolled redirect to the hub: it
+ * skips the satellite handshake and loops (see the call site).
  */
 const isLocalDev =
 	process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.startsWith("pk_test_");
 const HUB_LOGIN_URL = "https://www.worldstreetgold.com/login";
 const HUB_REGISTER_URL = "https://www.worldstreetgold.com/register";
-const APP_ORIGIN = "https://social.worldstreetgold.com";
 
 export default clerkMiddleware(async (auth, req) => {
 	// ── i18n: /es/foo serves the same app as /foo ─────────────────────────
@@ -85,23 +83,24 @@ export default clerkMiddleware(async (auth, req) => {
 	// ── auth ──────────────────────────────────────────────────────────────
 	const { userId, getToken } = await auth();
 
-	if (isProtectedRoute(req) && !userId) {
-		// Never redirect a PREFETCH — Next caches it and applies it to the
-		// later real click (same trap the onboarding redirect documents below).
-		if (isSpeculative(req)) return respond();
-		if (isLocalDev) {
-			await auth.protect();
-		} else {
-			// `redirect_url` is the param the hub's AuthArea actually reads,
-			// and it must be an absolute first-party URL to pass its
-			// open-redirect allowlist (*.worldstreetgold.com).
-			const authUrl = new URL(HUB_LOGIN_URL);
-			authUrl.searchParams.set(
-				"redirect_url",
-				`${APP_ORIGIN}${req.nextUrl.pathname}${req.nextUrl.search}`,
-			);
-			return NextResponse.redirect(authUrl);
-		}
+	if (isProtectedRoute(req)) {
+		// `auth.protect()`, NOT a hand-rolled redirect to the hub.
+		//
+		// The satellite handshake is the thing that copies an existing hub
+		// session onto this domain, and protect() is what performs it. A
+		// manual redirect skips it, so a signed-in visitor arrives with no
+		// session, gets sent to the hub, is bounced straight back because the
+		// hub knows them, still has no session — ERR_TOO_MANY_REDIRECTS
+		// (production, 2026-09-03).
+		//
+		// Academy and arcade CAN hand-roll it because they protect a handful
+		// of routes and the handshake lands on a public one. Here
+		// `isProtectedRoute` is /(.*) — every path — so there is nowhere for
+		// it to land and the loop is unavoidable. The satellite config passed
+		// to clerkMiddleware below is what makes protect() send genuinely
+		// signed-out people to the hub's /login instead of Clerk's hosted
+		// portal, which was the original complaint.
+		await auth.protect();
 	}
 
 	// Route checks run against the locale-stripped path so /es/onboarding
