@@ -6,7 +6,7 @@ import { useClerk } from "@clerk/nextjs";
 import { useAppPathname } from "@/i18n/useAppPathname";
 import { useCallback, useState, useEffect } from "react";
 import { useTheme } from "next-themes";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
 	ArrowUpRight,
 	CaretDown,
@@ -27,7 +27,7 @@ import { BrandRitual } from "@/components/layout/BrandRitual";
 import { SidebarWallet } from "@/components/layout/SidebarWallet";
 import {
 	OverlayHeader,
-	OverlayPanel,
+	overlayPanelClass,
 	OverlayScrim,
 	useOverlayDismiss,
 } from "@/components/ui/Overlay";
@@ -124,8 +124,8 @@ export function MobileNavigation() {
 					</Link>
 
 					{/* Bell + live in identical 44px cells on one axis. Search
-					    left the header (owner 2026-09-03) — it lives on the
-					    bottom tab bar now, where Explore used to sit. */}
+					    left the header (owner 2026-09-03) — finding things is
+					    the explore tab*s job on the bottom bar. */}
 					<div className="flex items-center shrink-0">
 						{/* Notifications moved UP out of the bottom bar: it is
 						    something you check, not somewhere you navigate, and it
@@ -158,11 +158,22 @@ export function MobileNavigation() {
 					</div>
 				)}
 				{isOpen && (
-					<OverlayPanel
+					<motion.aside
 						key="nav-panel"
-						dragClose={closeDrawer} variant="sheet"
-						label="Navigation menu"
-						className="md:hidden"
+						role="dialog"
+						aria-modal="true"
+						aria-label="Navigation menu"
+						initial={{ x: "-100%" }}
+						animate={{ x: 0 }}
+						exit={{ x: "-100%" }}
+						transition={{ duration: 0.26, ease: [0.2, 0, 0, 1] }}
+						// A SIDE sheet (owner 2026-09-03): slides in from the left
+						// like a hamburger menu should, not up from the bottom.
+						// Same frost ground as every overlay panel.
+						className={clsx(
+							overlayPanelClass,
+							"fixed inset-y-0 left-0 z-modal w-[82%] max-w-[340px] rounded-r-2xl md:hidden",
+						)}
 					>
 						{/* Identity replaces the header title outright — whose menu
 						    this is IS the heading. */}
@@ -204,6 +215,18 @@ export function MobileNavigation() {
 								.filter(
 									(item) =>
 										item.title !== "Studio" || user?.role === "creator",
+								)
+								// The bottom bar already carries these four — the
+								// drawer holds what the bar can't (owner 2026-09-03:
+								// no repetition).
+								.filter(
+									(item) =>
+										![
+											"nav.home",
+											"nav.explore",
+											"nav.messages",
+											"nav.profile",
+										].includes(item.labelKey),
 								)
 								.map((item) => {
 								const rowClasses = (isActive: boolean) =>
@@ -312,7 +335,7 @@ export function MobileNavigation() {
 								{t("nav.logout")}
 							</button>
 						</div>
-					</OverlayPanel>
+					</motion.aside>
 				)}
 			</AnimatePresence>
 		</>

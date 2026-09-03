@@ -1790,9 +1790,9 @@ export const PostCard = memo(
                             >
                                 <span className="flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-success/10 transition group-active:scale-[0.98]">
                                     {reposted ? (
-                                        <RiRepeatFill size={24} />
+                                        <RiRepeatFill size={26} />
                                     ) : (
-                                        <RiRepeatLine size={24} />
+                                        <RiRepeatLine size={26} />
                                     )}
                                 </span>
                                 <span className="text-[13.5px] font-medium font-sans tabular-nums sm:text-[14px]">
@@ -1859,7 +1859,7 @@ export const PostCard = memo(
                             className="flex items-center gap-0.5 sm:gap-1 hover:text-primary transition-colors group cursor-pointer"
                         >
                             <span className="flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-primary/10 transition group-active:scale-[0.98]">
-                                <RiChat3Line size={23} />
+                                <RiChat3Line size={26} />
                             </span>
                             <span className="text-[13.5px] font-medium font-sans tabular-nums sm:text-[14px]">
                                 {formatCount(shownReplies)}
@@ -1908,9 +1908,9 @@ export const PostCard = memo(
                                     className="flex"
                                 >
                                     {isLiked ? (
-                                        <RiHeartFill size={24} />
+                                        <RiHeartFill size={26} />
                                     ) : (
-                                        <RiHeartLine size={24} />
+                                        <RiHeartLine size={26} />
                                     )}
                                 </motion.span>
                             </span>
@@ -1993,9 +1993,9 @@ export const PostCard = memo(
                                     className="flex"
                                 >
                                     {isBookmarked ? (
-                                        <RiBookmarkFill size={24} />
+                                        <RiBookmarkFill size={26} />
                                     ) : (
-                                        <RiBookmarkLine size={24} />
+                                        <RiBookmarkLine size={26} />
                                     )}
                                 </motion.span>
                             </span>
@@ -2075,7 +2075,7 @@ export const PostCard = memo(
                                             className="flex"
                                         >
                                             <RiShareForwardLine
-                                                size={23}
+                                                size={26}
                                             />
                                         </motion.span>
                                     )}
