@@ -325,9 +325,11 @@ export function DockChat({
 								<div
 									className={clsx(
 										"max-w-[85%] min-w-0 overflow-hidden rounded-xl",
+										// Same pocket as the full thread's bubbles
+										// (owner 2026-09-03: bubbles lacked padding).
 										m.type === "image" || m.type === "video"
 											? "p-0"
-											: "px-3 py-1.5",
+											: "px-3.5 py-2",
 										mine
 											? m.type === "image" || m.type === "video"
 												? ""

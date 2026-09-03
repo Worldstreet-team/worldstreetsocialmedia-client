@@ -374,9 +374,12 @@ export const MessageBubble = memo(function MessageBubble({
 					<div
 						className={clsx(
 							"order-2 max-w-[85%] sm:max-w-[70%] min-w-0 overflow-hidden",
+							// Real padding (owner 2026-09-03: "the bubbles lack
+							// padding"): 16/10 on phones, 18/11 from sm — the
+							// WhatsApp/Telegram pocket, not a tight chip.
 							(m.type === "image" || m.type === "video") && !m.content
 								? "p-0"
-								: "px-3.5 py-2 sm:px-4",
+								: "px-4 py-2.5 sm:px-[18px] sm:py-[11px]",
 							// MINE wears frosted gold glass over the wallpaper;
 							// THEIRS a soft raised bubble. (The bare-ink
 							// experiment died 2026-09-02: no padding read as no
