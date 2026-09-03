@@ -175,26 +175,19 @@ export function MobileNavigation() {
 							"fixed inset-y-0 left-0 z-modal w-[88%] max-w-[380px] rounded-r-2xl md:hidden",
 						)}
 					>
-						{/* Identity replaces the header title outright — whose menu
-						    this is IS the heading. */}
-						<OverlayHeader
-							onClose={closeDrawer}
-							closeLabel="Close navigation menu"
-						>
-							<div className="flex items-center gap-2.5 min-w-0 flex-1">
-								<div className="relative w-8 h-8 shrink-0 rounded-full overflow-hidden border border-hairline">
-									<SafeAvatar src={user.avatar} className="object-cover" alt={user.username || "User"} />
+						{/* The brand leads the sheet (owner 2026-09-03): the lockup
+						    up top with real breathing room — clear of the status
+						    bar — and the profile moved down to the footer. */}
+						<div className="pt-safe shrink-0">
+							<OverlayHeader
+								onClose={closeDrawer}
+								closeLabel="Close navigation menu"
+							>
+								<div className="flex min-w-0 flex-1 items-center pt-1 pb-0.5">
+									<BrandRitual size={34} wordSize={17} />
 								</div>
-								<div className="flex flex-col min-w-0">
-									<span className="font-bold text-primary text-[14px] truncate font-sans leading-tight">
-										{fullName}
-									</span>
-									<span className="text-subtle text-[12px] truncate font-sans leading-tight">
-										@{user.username}
-									</span>
-								</div>
-							</div>
-						</OverlayHeader>
+							</OverlayHeader>
+						</div>
 
 						{/* One scroll column owns everything between the identity
 						    header and the footer — the wallet strip scrolls WITH
@@ -311,6 +304,33 @@ export function MobileNavigation() {
 						    home indicator gets its clearance here rather than on a
 						    wrapper the panel no longer has. */}
 						<div className="shrink-0 border-t border-hairline px-3 pt-2 pb-[calc(8px+var(--ws-safe-bottom))]">
+							{/* Whose menu this is, at the bottom now (owner
+							    2026-09-03) — a tap goes to the profile. */}
+							<Link
+								href={
+									user.username
+										? `/profile/${user.username}`
+										: "/profile"
+								}
+								onClick={closeDrawer}
+								className="flex items-center gap-3 rounded-pill px-4 py-3 transition-colors hover:bg-raised"
+							>
+								<div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full border border-hairline">
+									<SafeAvatar
+										src={user.avatar}
+										className="object-cover"
+										alt={user.username || "User"}
+									/>
+								</div>
+								<div className="flex min-w-0 flex-col">
+									<span className="truncate font-sans text-[15px] font-bold leading-tight text-primary">
+										{fullName}
+									</span>
+									<span className="truncate font-sans text-[12.5px] leading-tight text-subtle">
+										@{user.username}
+									</span>
+								</div>
+							</Link>
 							<button
 								type="button"
 								onClick={() =>
