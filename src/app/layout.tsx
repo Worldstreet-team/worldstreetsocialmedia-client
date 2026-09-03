@@ -113,6 +113,33 @@ export const viewport: Viewport = {
     interactiveWidget: "resizes-content",
 };
 
+/** Local dev runs on a pk_test_ key; prod is the hub satellite. */
+const isLocalDev =
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.startsWith("pk_test_");
+
+/**
+ * Satellite of the worldstreetgold.com hub, declared in CODE the way the
+ * dashboard, academy and arcade declare it. Without it the provider builds
+ * sign-in links to Clerk's hosted `*.accounts.dev` portal — a domain that is
+ * not ours — instead of the hub's own login page (owner 2026-09-03).
+ *
+ * Cast because Clerk types `domain`/`isSatellite`/`proxyUrl` as a
+ * discriminated union that a conditional spread cannot narrow.
+ */
+const satelliteProps = (
+    isLocalDev
+        ? {}
+        : {
+              domain: "worldstreetgold.com",
+              isSatellite: true,
+              signInUrl: "https://www.worldstreetgold.com/login",
+              signUpUrl: "https://www.worldstreetgold.com/register",
+              signInFallbackRedirectUrl: "https://social.worldstreetgold.com/",
+              signUpFallbackRedirectUrl:
+                  "https://social.worldstreetgold.com/onboarding",
+          }
+) as React.ComponentProps<typeof ClerkProvider>;
+
 export const metadata: Metadata = {
     title: {
         default: "WorldSpace",
@@ -164,6 +191,11 @@ export default async function RootLayout({
 
     return (
         <ClerkProvider
+            // Satellite of the worldstreetgold.com hub, declared in CODE the
+            // way the dashboard, academy and arcade declare it. Without this
+            // the provider builds sign-in links to Clerk's hosted
+            // `*.accounts.dev` portal instead of the hub's own login page.
+            {...satelliteProps}
             appearance={{
                 captcha: {
                     theme: "dark",

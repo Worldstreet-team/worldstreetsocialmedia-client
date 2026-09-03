@@ -21,6 +21,32 @@ import {
 
 const isProtectedRoute = createRouteMatcher(["/(.*)"]);
 
+/**
+ * Auth belongs to the WorldStreet hub, not to us.
+ *
+ * This app is a Clerk SATELLITE of worldstreetgold.com, exactly like the
+ * dashboard, academy and arcade. Two things make that real, and this app had
+ * NEITHER — so every signed-out visitor was dumped on Clerk's hosted
+ * `*.accounts.dev` portal, a domain that is not ours and that users read as a
+ * phishing page (owner 2026-09-03).
+ *
+ * 1. The satellite config below, in CODE not env: with
+ *    NEXT_PUBLIC_CLERK_IS_SATELLITE/_DOMAIN unset, `auth.protect()` cannot
+ *    build the primary-domain sign-in redirect. (Vision hit exactly this in
+ *    prod and rewrote signed-out visitors to a 404.)
+ * 2. Redirecting signed-out visitors OURSELVES, the way the academy does,
+ *    rather than leaving it to `auth.protect()` — its satellite handshake
+ *    lands browsers on an ugly `?redirect_url=...&__clerk_synced=false` URL.
+ *
+ * Local dev keeps `auth.protect()`: there is no hub to send a laptop to, and
+ * this app has no /login route of its own.
+ */
+const isLocalDev =
+	process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.startsWith("pk_test_");
+const HUB_LOGIN_URL = "https://www.worldstreetgold.com/login";
+const HUB_REGISTER_URL = "https://www.worldstreetgold.com/register";
+const APP_ORIGIN = "https://social.worldstreetgold.com";
+
 export default clerkMiddleware(async (auth, req) => {
 	// ── i18n: /es/foo serves the same app as /foo ─────────────────────────
 	// The locale prefix is stripped via rewrite so app/ keeps its structure;
@@ -59,8 +85,23 @@ export default clerkMiddleware(async (auth, req) => {
 	// ── auth ──────────────────────────────────────────────────────────────
 	const { userId, getToken } = await auth();
 
-	if (isProtectedRoute(req)) {
-		await auth.protect();
+	if (isProtectedRoute(req) && !userId) {
+		// Never redirect a PREFETCH — Next caches it and applies it to the
+		// later real click (same trap the onboarding redirect documents below).
+		if (isSpeculative(req)) return respond();
+		if (isLocalDev) {
+			await auth.protect();
+		} else {
+			// `redirect_url` is the param the hub's AuthArea actually reads,
+			// and it must be an absolute first-party URL to pass its
+			// open-redirect allowlist (*.worldstreetgold.com).
+			const authUrl = new URL(HUB_LOGIN_URL);
+			authUrl.searchParams.set(
+				"redirect_url",
+				`${APP_ORIGIN}${req.nextUrl.pathname}${req.nextUrl.search}`,
+			);
+			return NextResponse.redirect(authUrl);
+		}
 	}
 
 	// Route checks run against the locale-stripped path so /es/onboarding
@@ -286,7 +327,17 @@ function userDataHeader(profile: unknown): string {
 	}
 
 	return respond();
-});
+},
+	// Satellite config lives in CODE, mirroring dashboard/academy/arcade.
+	isLocalDev
+		? {}
+		: {
+				domain: "worldstreetgold.com",
+				isSatellite: true,
+				signInUrl: HUB_LOGIN_URL,
+				signUpUrl: HUB_REGISTER_URL,
+			},
+);
 
 export const config = {
 	matcher: [
