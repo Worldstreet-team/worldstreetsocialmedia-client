@@ -97,7 +97,6 @@ import {
 import { VideoPlayer } from "@/components/ui/VideoPlayer";
 import { VoteChip } from "@/components/votes/VoteChip";
 import { Radio } from "lucide-react";
-import { getSubscriptionAction } from "@/lib/subscription.actions";
 import { repostPostAction } from "@/lib/post.actions";
 import { QuoteModal } from "@/components/feed/QuoteModal";
 import { Megaphone } from "lucide-react";
@@ -273,24 +272,6 @@ export interface PostProps {
    the action row, so the wrapper only preserves that. */
 const formatCount = (n: number) => (!n ? "" : formatCompact(n));
 
-/**
- * Can this account promote a post? One request per page load, shared by every
- * card, cached at module scope.
- *
- * Promotion is a membership perk and the gateway enforces that — but the menu
- * item was offered to everyone, so free accounts were invited to promote and
- * only found out it was not for them from a failed toast.
- */
-let canPromotePromise: Promise<boolean> | null = null;
-function fetchCanPromote(): Promise<boolean> {
-	canPromotePromise ??= getSubscriptionAction()
-		.then((res) =>
-			res.success ? Boolean(res.data.entitlements?.subscriber) : false,
-		)
-		.catch(() => false);
-	return canPromotePromise;
-}
-
 export const PostCard = memo(
     ({
         post: postProp,
@@ -314,7 +295,6 @@ export const PostCard = memo(
     const [isPromoteOpen, setIsPromoteOpen] = useState(false);
     const [topUpMessage, setTopUpMessage] = useState<string | null>(null);
     const [likersOpen, setLikersOpen] = useState(false);
-    const [canPromote, setCanPromote] = useState(false);
     const [repostMenuOpen, setRepostMenuOpen] = useState(false);
     const [quoteOpen, setQuoteOpen] = useState(false);
     const [reposted, setReposted] = useState(false);
@@ -468,10 +448,6 @@ export const PostCard = memo(
 
         if (isMenuOpen) {
             document.addEventListener("mousedown", handleClickOutside);
-            // Asked only when a menu actually opens, not once per card on
-            // mount. The promise is module-scoped, so however many cards ask,
-            // one request goes out per page load.
-            void fetchCanPromote().then(setCanPromote);
         }
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
@@ -1236,24 +1212,26 @@ export const PostCard = memo(
                                                     <Trash2 className="w-4 h-4" />
                                                     Delete post
                                                 </button>
-                                                {canPromote && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setIsMenuOpen(false);
-                                                            // Money asks first. The old one-tap
-                                                            // flow silently created the campaign
-                                                            // (and, once billing landed, would
-                                                            // have silently charged $10).
-                                                            setIsPromoteOpen(true);
-                                                        }}
-                                                        className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
-                                                    >
-                                                        <Megaphone className="w-4 h-4" />
-                                                        {t("promo.menu")}
-                                                    </button>
-                                                )}
+                                                {/* Everyone may promote their own post
+                                                    (owner ruling 2026-09-03) — the wallet
+                                                    charge is the gate, not a membership
+                                                    tier. */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setIsMenuOpen(false);
+                                                        // Money asks first. The old one-tap
+                                                        // flow silently created the campaign
+                                                        // (and, once billing landed, would
+                                                        // have silently charged $10).
+                                                        setIsPromoteOpen(true);
+                                                    }}
+                                                    className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
+                                                >
+                                                    <Megaphone className="w-4 h-4" />
+                                                    {t("promo.menu")}
+                                                </button>
                                             </>
                                         ) : (
                                             <>
