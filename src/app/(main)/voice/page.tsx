@@ -149,8 +149,15 @@ function VoiceDirectory() {
     setSpacesFetchedAt,
   ]);
 
+  // Skip the first run: the mount effect below already loads, and the two
+  // together used to issue the listing twice back to back on every visit.
+  const refreshInitRef = useRef(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: refreshTick is the signal; its value is unused.
   useEffect(() => {
+    if (!refreshInitRef.current) {
+      refreshInitRef.current = true;
+      return;
+    }
     void load();
   }, [refreshTick, load]);
 

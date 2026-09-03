@@ -251,6 +251,109 @@ export async function setSpeakerAction(
 	}
 }
 
+/** Host only: appoint or dismiss a co-host (cap 2, gateway-enforced). */
+export async function setCohostAction(
+	id: string,
+	profileId: string,
+	grant: boolean,
+) {
+	const headers = await bearer();
+	if (!headers) return { success: false, message: "Unauthorized" };
+	try {
+		await axios.post(
+			`${BACKEND_URL}/api/spaces/${id}/cohosts`,
+			{ profileId, grant },
+			{ headers },
+		);
+		return { success: true };
+	} catch (error: any) {
+		return {
+			success: false,
+			message: error.response?.data?.message || "Couldn't update co-hosts",
+		};
+	}
+}
+
+/** Host/co-host: server-enforced mute of a speaker's published audio. */
+export async function muteSpeakerAction(id: string, profileId: string) {
+	const headers = await bearer();
+	if (!headers) return { success: false, message: "Unauthorized" };
+	try {
+		await axios.post(
+			`${BACKEND_URL}/api/spaces/${id}/mute`,
+			{ profileId },
+			{ headers },
+		);
+		return { success: true };
+	} catch (error: any) {
+		return {
+			success: false,
+			message: error.response?.data?.message || "Couldn't mute them",
+		};
+	}
+}
+
+/** Host/co-host: remove someone from the space (disconnect + ban). */
+export async function removeFromSpaceAction(id: string, profileId: string) {
+	const headers = await bearer();
+	if (!headers) return { success: false, message: "Unauthorized" };
+	try {
+		await axios.post(
+			`${BACKEND_URL}/api/spaces/${id}/remove`,
+			{ profileId },
+			{ headers },
+		);
+		return { success: true };
+	} catch (error: any) {
+		return {
+			success: false,
+			message: error.response?.data?.message || "Couldn't remove them",
+		};
+	}
+}
+
+/** Host/co-host: invite a listener to speak (they accept or decline). */
+export async function inviteSpeakAction(id: string, profileId: string) {
+	const headers = await bearer();
+	if (!headers) return { success: false, message: "Unauthorized" };
+	try {
+		await axios.post(
+			`${BACKEND_URL}/api/spaces/${id}/invite`,
+			{ profileId },
+			{ headers },
+		);
+		return { success: true };
+	} catch (error: any) {
+		return {
+			success: false,
+			message: error.response?.data?.message || "Couldn't send the invite",
+		};
+	}
+}
+
+/** The invitee's answer to a speaker invite. */
+export async function respondInviteAction(id: string, accept: boolean) {
+	const headers = await bearer();
+	if (!headers) return { success: false as const, granted: false };
+	try {
+		const res = await axios.post(
+			`${BACKEND_URL}/api/spaces/${id}/invite/respond`,
+			{ accept },
+			{ headers },
+		);
+		return {
+			success: true as const,
+			granted: Boolean(res.data?.granted),
+		};
+	} catch (error: any) {
+		return {
+			success: false as const,
+			granted: false,
+			message: error.response?.data?.message as string | undefined,
+		};
+	}
+}
+
 /** Upload a custom cover image; returns the URL to store on the space. */
 export async function uploadSpaceCoverAction(form: FormData) {
 	const headers = await bearer();

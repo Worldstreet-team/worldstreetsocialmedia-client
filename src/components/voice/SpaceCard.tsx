@@ -43,12 +43,24 @@ export interface SpaceRow {
   };
   community?: { name: string; slug: string } | null;
   membersCount: number;
+  /** Webhook-maintained live occupancy; 0 = not wired, fall back to
+   *  membersCount. */
+  liveCount?: number;
   joined: boolean;
   isHost: boolean;
+  isCohost?: boolean;
+  /** Profile ids of the host's deputies, for the stage chips. */
+  cohosts?: string[];
   isSpeaker?: boolean;
   requestedToSpeak?: boolean;
   /** Hands up, waiting on the host. Only meaningful to the host. */
   speakRequestCount?: number;
+}
+
+/** Honest headcount for a live room: webhook occupancy when wired,
+ *  cumulative membership otherwise. */
+export function spaceListenerCount(row: SpaceRow) {
+  return row.liveCount && row.liveCount > 0 ? row.liveCount : row.membersCount;
 }
 
 /** The room's art: the host's chosen canvas, or a stable hash of the id for
@@ -140,7 +152,7 @@ export function LiveSpaceCard({
           <EqBars className="text-gold" />
           <span className="flex items-center gap-1 font-sans text-[12px] font-semibold tabular-nums">
             <Users size={13} weight="bold" />
-            {formatCompact(row.membersCount)}
+            {formatCompact(spaceListenerCount(row))}
           </span>
         </span>
       </span>

@@ -8,6 +8,7 @@ export type AudioState =
   | "idle"
   | "connecting"
   | "listening"
+  | "reconnecting"
   | "unavailable"
   | "failed";
 
@@ -32,13 +33,18 @@ export function useSpaceAudio(spaceId: string | null, live: boolean) {
   const [ended, setEnded] = useState(false);
   const [muted, setMuted] = useState(true);
   const [speakingIds, setSpeakingIds] = useState<string[]>([]);
+  // iOS/Safari block un-gestured playback: tracks are attached but silent
+  // until a tap calls unlockAudio(). True means the room must show the
+  // "tap to listen" affordance — the alternative is a listener sitting in
+  // a silent room believing it is quiet.
+  const [needsUnlock, setNeedsUnlock] = useState(false);
   // The connected Room, exposed so the stage can read per-participant
   // audio levels (the breathing ring) and live publish permissions
   // (who is on stage) without re-rendering per frame.
   const [room, setRoom] = useState<Room | null>(null);
   // Bumping this tears the connection down and rebuilds it with a freshly
-  // minted token — the gateway mints publish rights per-join, so a speaker
-  // grant/revoke asks the client to reconnect.
+  // minted token — the recovery path for a dead connection, and the
+  // fallback when a permission flip never reached this client live.
   const [epoch, setEpoch] = useState(0);
   const roomRef = useRef<Room | null>(null);
   const audioElsRef = useRef<HTMLAudioElement[]>([]);
@@ -53,7 +59,14 @@ export function useSpaceAudio(spaceId: string | null, live: boolean) {
       const res = await getSpaceTokenAction(spaceId);
       if (cancelled) return;
       if (!res.success || !res.token || !res.url) {
-        setState(res.code === "AUDIO_OFF" ? "unavailable" : "failed");
+        // NOT_LIVE is not a failure: the room ended between the card and
+        // the click, and "it's over" is the honest message.
+        if (res.code === "NOT_LIVE") {
+          setEnded(true);
+          setState("idle");
+        } else {
+          setState(res.code === "AUDIO_OFF" ? "unavailable" : "failed");
+        }
         return;
       }
       setCanSpeak(Boolean(res.canSpeak));
@@ -64,8 +77,19 @@ export function useSpaceAudio(spaceId: string | null, live: boolean) {
           RoomEvent,
           Track,
           DisconnectReason,
+          AudioPresets,
         } = await import("livekit-client");
-        room = new LKRoom({ adaptiveStream: true });
+        room = new LKRoom({
+          // Talk, not music: the speech preset halves listener bandwidth
+          // with no perceptible loss for voice. dtx stops sending during
+          // silence, red rides out lossy mobile networks — both default
+          // on, pinned here so a library default change can't regress us.
+          publishDefaults: {
+            audioPreset: AudioPresets.speech,
+            dtx: true,
+            red: true,
+          },
+        });
         roomRef.current = room;
 
         // Remote audio is attached to detached elements: a room has no video
@@ -81,10 +105,27 @@ export function useSpaceAudio(spaceId: string | null, live: boolean) {
         room.on(RoomEvent.TrackUnsubscribed, (track) => {
           for (const el of track.detach()) el.remove();
         });
+        // The browser refused autoplay (iOS Safari until a gesture). The
+        // tracks are subscribed and silent; surface the tap-to-listen chip.
+        room.on(RoomEvent.AudioPlaybackStatusChanged, () => {
+          if (!cancelled && room) setNeedsUnlock(!room.canPlaybackAudio);
+        });
         room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
           if (!cancelled) {
             setSpeakingIds(speakers.map((s) => s.identity));
           }
+        });
+        // LiveKit resumes dropped connections on its own (ICE restart,
+        // resubscribe). Say so instead of pretending all is well over
+        // dead air, and clear the banner when it lands.
+        room.on(RoomEvent.SignalReconnecting, () => {
+          if (!cancelled) setState("reconnecting");
+        });
+        room.on(RoomEvent.Reconnecting, () => {
+          if (!cancelled) setState("reconnecting");
+        });
+        room.on(RoomEvent.Reconnected, () => {
+          if (!cancelled) setState("listening");
         });
         room.on(RoomEvent.Disconnected, (reason) => {
           if (cancelled) return;
@@ -95,6 +136,15 @@ export function useSpaceAudio(spaceId: string | null, live: boolean) {
             setState("idle");
           } else {
             setState("failed");
+          }
+        });
+        // A host-side mute lands as a server mute of the published track;
+        // reflect it, or the mic button claims live while the server has
+        // the track silenced.
+        room.on(RoomEvent.TrackMuted, (_pub, participant) => {
+          if (cancelled || !room) return;
+          if (participant.identity === room.localParticipant.identity) {
+            setMuted(true);
           }
         });
         // A mic grant/revoke flips the live connection's permission from
@@ -113,13 +163,21 @@ export function useSpaceAudio(spaceId: string | null, live: boolean) {
           },
         );
 
-        // Relay-only ICE, same as the broadcaster dock: direct UDP dies on
-        // some networks and takes the connection with it.
-        await room.connect(res.url, res.token, {
-          rtcConfig: { iceTransportPolicy: "relay" },
-        });
+        // Direct first: most networks take the normal ICE path, and the
+        // relay hop costs latency for everyone. Relay is the retry, not
+        // the default — some corporate/mobile networks kill direct UDP,
+        // which is why the fallback exists at all.
+        try {
+          await room.connect(res.url, res.token);
+        } catch (err) {
+          if (cancelled) throw err;
+          await room.connect(res.url, res.token, {
+            rtcConfig: { iceTransportPolicy: "relay" },
+          });
+        }
         if (cancelled) return;
         setRoom(room);
+        setNeedsUnlock(!room.canPlaybackAudio);
         // Nobody is ever unmuted on arrival — speaking is always deliberate.
         setState("listening");
       } catch {
@@ -138,17 +196,30 @@ export function useSpaceAudio(spaceId: string | null, live: boolean) {
       setCanSpeak(false);
       setMuted(true);
       setSpeakingIds([]);
+      setNeedsUnlock(false);
       setEnded(false);
     };
   }, [spaceId, live, epoch]);
 
   /**
-   * Drop the connection and rejoin with a freshly minted token. Called when
-   * the gateway says our speaker status changed: the live permission flip
-   * (updateParticipant) covers the current session, but the token is the
-   * authority, and rejoining republishes with the rights we now hold.
+   * Drop the connection and rejoin with a freshly minted token. The retry
+   * for a failed connection, and the fallback when the gateway's live
+   * permission flip never reached this client.
    */
   const reconnect = useCallback(() => setEpoch((n) => n + 1), []);
+
+  /** Must be called from a tap/click handler; one success unlocks the
+   *  session and the chip goes away. */
+  const unlockAudio = useCallback(async () => {
+    const room = roomRef.current;
+    if (!room) return;
+    try {
+      await room.startAudio();
+      setNeedsUnlock(!room.canPlaybackAudio);
+    } catch {
+      // Still blocked — the chip stays and the next tap tries again.
+    }
+  }, []);
 
   const toggleMute = useCallback(async () => {
     const room = roomRef.current;
@@ -170,6 +241,8 @@ export function useSpaceAudio(spaceId: string | null, live: boolean) {
     speakingIds,
     toggleMute,
     ended,
+    needsUnlock,
+    unlockAudio,
     room,
     reconnect,
   };

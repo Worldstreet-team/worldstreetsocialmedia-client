@@ -5,17 +5,15 @@ import clsx from "clsx";
 import { motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { useAtomValue } from "jotai";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PersonName } from "@/components/ui/PersonName";
 import { CaretLeft, CaretRight, Waveform } from "@phosphor-icons/react";
 import { SectionHead } from "@/components/layout/SectionHead";
 import { EqBars, spaceBackground } from "@/components/voice/SpaceCard";
-import { useRealtime } from "@/components/providers/RealtimeProvider";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { useAppPathname } from "@/i18n/useAppPathname";
 import { useT } from "@/i18n/client";
-import { getSpacesAction } from "@/lib/space.actions";
-import { voiceRefreshAtom } from "@/store/voice.atom";
+import { spacesLiveAtom, spacesUpcomingAtom } from "@/store/spaces.atom";
 
 interface SpaceHost {
 	_id?: string;
@@ -169,38 +167,25 @@ function SpaceRow({ space, live }: { space: Space; live: boolean }) {
  */
 export function SpacesRail({ delay = 210 }: { delay?: number }) {
 	const t = useT();
-	const { client } = useRealtime();
-	const refreshTick = useAtomValue(voiceRefreshAtom);
-	const [live, setLive] = useState<Space[]>([]);
-	const [upcoming, setUpcoming] = useState<Space[]>([]);
+	// The rail is a pure reader of the shared spaces cache: SpacesLiveSync
+	// (root layout) is the one fetcher, wired to the `spaces` channel and
+	// the refresh tick. The rail fetching for itself was a third identical
+	// listing call on every app load.
+	const liveAll = useAtomValue(spacesLiveAtom);
+	const upcomingAll = useAtomValue(spacesUpcomingAtom);
+	const live = useMemo(
+		() => (liveAll as Space[]).slice(0, MAX_LIVE),
+		[liveAll],
+	);
+	const upcoming = useMemo(
+		() => (upcomingAll as Space[]).slice(0, MAX_UPCOMING),
+		[upcomingAll],
+	);
 	const trackRef = useRef<HTMLDivElement>(null);
 	const [page, setPage] = useState(0);
 	// Smooth paging is motion; honour the reader's setting like everything else.
 	const reduced = useReducedMotion();
 	const onVoice = useAppPathname().startsWith("/voice");
-
-	const load = useCallback(async () => {
-		const res = await getSpacesAction();
-		if (!res.success) return;
-		setLive((res.live ?? []).slice(0, MAX_LIVE));
-		setUpcoming((res.upcoming ?? []).slice(0, MAX_UPCOMING));
-	}, []);
-
-	// This used to fetch once on mount and never again, so cancelling or
-	// starting a room left the rail advertising it until a full reload.
-	// biome-ignore lint/correctness/useExhaustiveDependencies: refreshTick is the signal; its value is unused.
-	useEffect(() => {
-		void load();
-	}, [load, refreshTick]);
-
-	// The gateway announces started/ended/cancelled on `spaces`; no poll needed.
-	useEffect(() => {
-		if (!client) return;
-		const channel = client.channels.get("spaces");
-		const onEvent = () => void load();
-		void channel.subscribe(onEvent);
-		return () => channel.unsubscribe(onEvent);
-	}, [client, load]);
 
 	// A room ending can shorten the list under a reader parked on the last
 	// page, which would leave the counter reading "3/2" and both arrows dead.

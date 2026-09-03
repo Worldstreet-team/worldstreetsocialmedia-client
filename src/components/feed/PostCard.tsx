@@ -53,6 +53,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { userAtom } from "@/store/user.atom";
 import { bookmarksAtom } from "@/store/bookmarks.atom";
+import { liveSpaceByHostAtom, voiceSessionAtom } from "@/store/voice.atom";
 import { updateSinglePostCacheAtom } from "@/store/postCache";
 import {
     deletePostAction,
@@ -404,6 +405,14 @@ export const PostCard = memo(
     const setBookmarks = useSetAtom(bookmarksAtom);
     const seedPostCache = useSetAtom(updateSinglePostCacheAtom);
     const { toast } = useToast();
+
+    // The author is in a live Space Voice room right now: their avatar gets
+    // the live ring, and tapping it drops into the room (X's purple-ring
+    // gesture, in house colours). The map is app-wide and derived from the
+    // one directory fetcher, so this costs no request.
+    const liveSpaceByHost = useAtomValue(liveSpaceByHostAtom);
+    const setVoiceSession = useSetAtom(voiceSessionAtom);
+    const authorLiveSpace = liveSpaceByHost.get(post.author.id);
 
     // Menu State
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -1034,8 +1043,31 @@ export const PostCard = memo(
             <div className="flex gap-3 sm:gap-4 relative z-10 pointer-events-none">
                 <div className="shrink-0 pointer-events-auto mt-1">
                     <Link
-                        href={`/profile/${post.author.username}`}
-                        className="relative block w-12 h-12 sm:w-[52px] sm:h-[52px] rounded-pill overflow-hidden border border-hairline hover:border-brand transition-colors"
+                        href={authorLiveSpace ? "/voice" : `/profile/${post.author.username}`}
+                        onClick={
+                            authorLiveSpace
+                                ? (e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setVoiceSession({
+                                          row: authorLiveSpace,
+                                          minimized: false,
+                                      });
+                                  }
+                                : undefined
+                        }
+                        aria-label={
+                            authorLiveSpace
+                                ? `${post.author.username}: live in a space`
+                                : undefined
+                        }
+                        title={authorLiveSpace ? authorLiveSpace.title : undefined}
+                        className={clsx(
+                            "relative block w-12 h-12 sm:w-[52px] sm:h-[52px] rounded-pill overflow-hidden transition-colors",
+                            authorLiveSpace
+                                ? "border-2 border-danger"
+                                : "border border-hairline hover:border-brand",
+                        )}
                     >
                         <SafeAvatar src={post.author.avatar} className="object-cover" alt={post.author.username} />
                     </Link>

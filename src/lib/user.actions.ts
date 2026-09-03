@@ -287,6 +287,29 @@ export async function resolveHandlesAction(usernames: string[]) {
 }
 
 /**
+ * Resolve profiles by id — the spoof-proof half of the same endpoint.
+ *
+ * Space rooms trust only the Ably clientId (a profile id) and draw the
+ * face this returns; a client-published presence payload can claim any
+ * name and badge, so nothing display-worthy is read from it.
+ */
+export async function resolveProfileIdsAction(ids: string[]) {
+	const { getToken } = await auth();
+	const accessToken = await getToken();
+	if (!accessToken) return { success: false as const, users: [] };
+	try {
+		const res = await axios.post(
+			`${API_URL}/api/users/resolve`,
+			{ ids },
+			{ headers: { Authorization: `Bearer ${accessToken}` } },
+		);
+		return { success: true as const, users: res.data?.users ?? [] };
+	} catch {
+		return { success: false as const, users: [] };
+	}
+}
+
+/**
  * Is this handle free? Answered where it is asked (onboarding step 1) rather
  * than at submit — the profile POST used to be the first time anyone learned
  * a username was taken, two steps later.

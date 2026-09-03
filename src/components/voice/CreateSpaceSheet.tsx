@@ -68,6 +68,43 @@ interface CreateSpaceSheetProps {
 const MAX_COVER_BYTES = 8 * 1024 * 1024;
 
 /**
+ * Downscale a cover before upload. The art paints a 168px card behind a
+ * blur; an 8MB original buys nothing but transfer time and R2 bytes. Falls
+ * back to the original whenever the canvas path fails (odd formats, iOS
+ * quirks) — a full-size upload is a worse outcome than a failed one.
+ */
+async function downscaleCover(file: File): Promise<File> {
+  try {
+    const MAX_EDGE = 1600;
+    const bitmap = await createImageBitmap(file);
+    if (Math.max(bitmap.width, bitmap.height) <= MAX_EDGE) {
+      bitmap.close();
+      return file;
+    }
+    const scale = MAX_EDGE / Math.max(bitmap.width, bitmap.height);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      bitmap.close();
+      return file;
+    }
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", 0.85),
+    );
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.\w+$/, ".jpg"), {
+      type: "image/jpeg",
+    });
+  } catch {
+    return file;
+  }
+}
+
+/**
  * The gateway wants an ISO instant; CalendarField speaks local
  * "YYYY-MM-DDTHH:mm". Converting here keeps both of them honest about
  * timezone instead of passing a naive string through.
@@ -146,7 +183,7 @@ export default function CreateSpaceSheet({
     setUploading(true);
     try {
       const form = new FormData();
-      form.append("cover", file);
+      form.append("cover", await downscaleCover(file));
       const r = await sendFormDirect("/api/spaces/cover", form);
       const res = r.success
         ? { success: true as const, url: (r.data as any)?.url as string }

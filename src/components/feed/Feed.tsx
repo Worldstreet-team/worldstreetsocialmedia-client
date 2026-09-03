@@ -25,6 +25,7 @@ import {
 	PostProps,
 } from "@/components/feed/PostCard";
 import { PostComposer } from "@/components/feed/PostComposer";
+import { SpaceLiveBar } from "@/components/voice/SpaceLiveBar";
 import axios from "axios";
 import { useAuth } from "@clerk/nextjs";
 import { BACKEND_URL } from "@/const";
@@ -1018,6 +1019,13 @@ export default function Feed({
 			</AnimatePresence>
 			</div>
 
+
+			{/* Live audio rooms surface where everyone actually is — the top
+			    of the timeline (X's Spacebar position). Renders nothing when
+			    nothing is live. */}
+			<div className="animate-rise" style={{ animationDelay: "40ms" }}>
+				<SpaceLiveBar />
+			</div>
 
 			{/* A normal feed row, not a card (owner ruling 2026-08-26): the
 			    card-depth gradient + inset margins made the composer the
