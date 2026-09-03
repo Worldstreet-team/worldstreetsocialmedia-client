@@ -219,6 +219,16 @@ html {
   padding-top: var(--ws-safe-top);
 }
 
+/* A scroll container that hides its own bar (the image carousel pages by
+   snap, the dots say where you are - a scrollbar under a photo is noise). */
+@utility scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @utility pb-safe {
   /* Floor at 12px: env(safe-area-inset-bottom) is 0 everywhere except iOS
      Safari, and this utility overrides the caller's own padding utilities —

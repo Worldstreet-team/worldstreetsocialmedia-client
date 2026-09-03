@@ -172,7 +172,7 @@ export function MobileNavigation() {
 						// Same frost ground as every overlay panel.
 						className={clsx(
 							overlayPanelClass,
-							"fixed inset-y-0 left-0 z-modal w-[82%] max-w-[340px] rounded-r-2xl md:hidden",
+							"fixed inset-y-0 left-0 z-modal w-[88%] max-w-[380px] rounded-r-2xl md:hidden",
 						)}
 					>
 						{/* Identity replaces the header title outright — whose menu
@@ -233,7 +233,7 @@ export function MobileNavigation() {
 									clsx(
 										// Same row language as the desktop rail:
 										// pill rows, active = bg/chip + semibold.
-										"flex items-center gap-3 px-4 py-3 rounded-pill transition-colors font-sans relative",
+										"flex items-center gap-3.5 px-4 py-3.5 rounded-pill transition-colors font-sans text-[16.5px] relative",
 										isActive
 											? "bg-chip text-primary font-semibold"
 											: "text-muted hover:text-primary hover:bg-raised",
@@ -316,7 +316,7 @@ export function MobileNavigation() {
 								onClick={() =>
 									withThemeTransition(() => setTheme(isLight ? "dark" : "light"))
 								}
-								className="w-full flex items-center gap-3 px-4 py-3 rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors font-sans font-medium text-sm cursor-pointer"
+								className="w-full flex items-center gap-3 px-4 py-3 rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors font-sans font-medium text-[15px] cursor-pointer"
 							>
 								{mounted && isLight ? <Moon size={20} /> : <Sun size={20} />}
 								{mounted && isLight ? t("nav.darkMode") : t("nav.lightMode")}
@@ -329,7 +329,7 @@ export function MobileNavigation() {
 							</div>
 							<button
 								onClick={() => handleSignOut(signOut)}
-								className="w-full flex items-center gap-3 px-4 py-3 text-danger hover:bg-raised rounded-pill transition-colors font-sans font-bold text-sm cursor-pointer"
+								className="w-full flex items-center gap-3 px-4 py-3 text-danger hover:bg-raised rounded-pill transition-colors font-sans font-bold text-[15px] cursor-pointer"
 							>
 								<SignOut size={20} />
 								{t("nav.logout")}

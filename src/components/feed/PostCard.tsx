@@ -67,6 +67,7 @@ import { useToast } from "@/components/ui/Toast/ToastContext";
 import ImageModal from "@/components/ui/ImageModal";
 import { FeedImage } from "@/components/ui/FeedImage";
 import { PostPoll } from "@/components/feed/PostPoll";
+import { ImageCarousel } from "@/components/feed/ImageCarousel";
 import { ShareMenu, sharePost } from "@/components/feed/ShareMenu";
 import {
     EmbeddedPost,
@@ -854,25 +855,6 @@ export const PostCard = memo(
        roughly 2:1; at 320px it squashed every tile into a letterbox and
        cropped faces out of the frame. Ratios keep the same proportions at
        every width. */
-    const getImageGridClass = useCallback((count: number) => {
-        switch (count) {
-            case 1:
-                return "grid-cols-1 grid-rows-1 h-auto aspect-video";
-            case 2:
-                return "grid-cols-2 grid-rows-1 aspect-[16/9] sm:aspect-[2/1]";
-            case 3:
-            case 4:
-                return "grid-cols-2 grid-rows-2 aspect-square sm:aspect-[16/11]";
-            default:
-                return "grid-cols-1";
-        }
-    }, []);
-
-    const getImageStyle = useCallback((index: number, total: number) => {
-        if (total === 3 && index === 0) return "row-span-2";
-        return "";
-    }, []);
-
     if (isDeleted) return null;
 
     return (
@@ -1708,40 +1690,13 @@ export const PostCard = memo(
                             />
                         </div>
                     )}
+                    {/* Multi-image = the swipeable carousel (owner ruling
+                        2026-09-03), never the collage grid. */}
                     {post.images && post.images.length > 1 && (
-                        <div
-                            className={clsx(
-                                "grid gap-0.5 rounded-xl overflow-hidden mb-3 w-full border border-hairline pointer-events-auto",
-                                getImageGridClass(post.images.length),
-                            )}
-                        >
-                            {post.images
-                                .slice(0, 4)
-                                .map((src: string, i: number) => (
-                                    <FeedImage
-                                        key={i}
-                                        src={src}
-                                        className={clsx(
-                                            "relative z-10 w-full h-full",
-                                            getImageStyle(
-                                                i,
-                                                post.images!.length,
-                                            ),
-                                        )}
-                                        imgClassName="absolute inset-0 h-full w-full object-cover cursor-zoom-in hover:opacity-95"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            e.preventDefault();
-                                            handleImageTap(
-                                                i,
-                                                (
-                                                    e.currentTarget as HTMLElement
-                                                ).getBoundingClientRect(),
-                                            );
-                                        }}
-                                    />
-                                ))}
-                        </div>
+                        <ImageCarousel
+                            images={post.images}
+                            onImageTap={handleImageTap}
+                        />
                     )}
                     {!post.repostOf &&
                         !(post.videos && post.videos.length > 0) &&
