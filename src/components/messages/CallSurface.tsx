@@ -2,18 +2,17 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import {
-	Microphone,
-	MicrophoneSlash,
-	Phone,
-	PhoneDisconnect,
-	VideoCamera,
-	VideoCameraSlash,
-	CameraRotate,
-	CornersIn,
-	CornersOut,
-	WifiSlash,
-	X,
-} from "@phosphor-icons/react";
+	RiMicFill,
+	RiMicOffFill,
+	RiPhoneFill,
+	RiVideoOnFill,
+	RiVideoOffFill,
+	RiCameraSwitchLine,
+	RiFullscreenExitLine,
+	RiFullscreenLine,
+	RiWifiOffLine,
+	RiCloseLine,
+} from "@remixicon/react";
 import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
 import type { LocalVideoTrack, RemoteTrack } from "livekit-client";
@@ -130,7 +129,7 @@ function GridTile({
 				</div>
 			)}
 			<span className="absolute bottom-1.5 left-1.5 flex max-w-[calc(100%-12px)] items-center gap-1 rounded-pill glass-chip-canvas backdrop-blur-md px-2 py-0.5 text-[11px] glass-ink">
-				{micMuted && <MicrophoneSlash size={11} weight="fill" />}
+				{micMuted && <RiMicOffFill size={11} />}
 				<span className="truncate">{isSelf ? "You" : name}</span>
 			</span>
 		</div>
@@ -263,7 +262,7 @@ function WeakChip({ compact }: { compact?: boolean }) {
 			animate={{ opacity: [1, 0.55, 1] }}
 			transition={{ duration: 1.8, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
 		>
-			<WifiSlash size={compact ? 12 : 14} weight="fill" />
+			<RiWifiOffLine size={compact ? 12 : 14} />
 			Weak connection
 		</motion.span>
 	);
@@ -590,7 +589,7 @@ export function CallSurface() {
 									tone="danger"
 									size="sm"
 								>
-									<PhoneDisconnect size={18} weight="fill" />
+									<RiPhoneFill size={18} />
 								</ControlButton>
 								<ControlButton
 									label="Accept call"
@@ -598,7 +597,7 @@ export function CallSurface() {
 									tone="cta"
 									size="sm"
 								>
-									<Phone size={18} weight="fill" />
+									<RiPhoneFill size={18} />
 								</ControlButton>
 							</div>
 						</div>
@@ -665,7 +664,7 @@ export function CallSurface() {
 								{/* Expand affordance: reads as a control, brightens with
 								    the dock so the whole tile is obviously tappable. */}
 								<span className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-pill glass-chip-canvas backdrop-blur-md glass-ink transition-colors group-hover:bg-white/25">
-									<CornersOut size={13} weight="bold" />
+									<RiFullscreenLine size={13} />
 								</span>
 
 								{poorConnection && (
@@ -675,7 +674,7 @@ export function CallSurface() {
 								)}
 								{!micOn && !poorConnection && (
 									<span className="absolute bottom-2 left-2 flex h-6 items-center gap-1 rounded-pill glass-chip-canvas backdrop-blur-md px-2 text-[11px] glass-ink">
-										<MicrophoneSlash size={12} weight="fill" />
+										<RiMicOffFill size={12} />
 										Muted
 									</span>
 								)}
@@ -699,9 +698,9 @@ export function CallSurface() {
 										size="sm"
 									>
 										{micOn ? (
-											<Microphone size={17} weight="fill" />
+											<RiMicFill size={17} />
 										) : (
-											<MicrophoneSlash size={17} weight="fill" />
+											<RiMicOffFill size={17} />
 										)}
 									</ControlButton>
 									<ControlButton
@@ -710,7 +709,7 @@ export function CallSurface() {
 										tone="danger"
 										size="sm"
 									>
-										<PhoneDisconnect size={17} weight="fill" />
+										<RiPhoneFill size={17} />
 									</ControlButton>
 								</div>
 							</div>
@@ -752,7 +751,7 @@ export function CallSurface() {
 											: "glass-chip",
 									)}
 								>
-									<CornersIn size={18} weight="bold" />
+									<RiFullscreenExitLine size={18} />
 								</button>
 							)}
 
@@ -826,7 +825,7 @@ export function CallSurface() {
 										</span>
 										{remoteMuted && (
 											<span className="flex h-7 items-center gap-1.5 rounded-pill glass-chip-canvas backdrop-blur-md px-2.5 text-[12px] glass-ink">
-												<MicrophoneSlash size={13} weight="fill" />
+												<RiMicOffFill size={13} />
 												Muted
 											</span>
 										)}
@@ -857,12 +856,12 @@ export function CallSurface() {
 													aria-label="Switch camera"
 													className="absolute right-1.5 top-1.5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-pill glass-chip-canvas backdrop-blur-md glass-ink transition-opacity disabled:opacity-50"
 												>
-													<CameraRotate size={13} weight="bold" />
+													<RiCameraSwitchLine size={13} />
 												</button>
 											)}
 											{!micOn && (
 												<span className="absolute bottom-1.5 left-1.5 flex h-6 w-6 items-center justify-center rounded-pill glass-chip-canvas backdrop-blur-md glass-ink">
-													<MicrophoneSlash size={12} weight="fill" />
+													<RiMicOffFill size={12} />
 												</span>
 											)}
 										</div>
@@ -933,7 +932,7 @@ export function CallSurface() {
 
 										{remoteMuted && status === "connected" && (
 											<p className="mt-3 flex items-center gap-1.5 rounded-pill glass-chip px-2.5 py-1 text-[12px]">
-												<MicrophoneSlash size={13} weight="fill" />
+												<RiMicOffFill size={13} />
 												{peer.name} is muted
 											</p>
 										)}
@@ -998,10 +997,10 @@ function Controls({
 					onClick={call.declineCall}
 					tone="danger"
 				>
-					<PhoneDisconnect size={24} weight="fill" />
+					<RiPhoneFill size={24} />
 				</ControlButton>
 				<ControlButton label="Accept call" onClick={call.acceptCall} tone="cta">
-					<Phone size={24} weight="fill" />
+					<RiPhoneFill size={24} />
 				</ControlButton>
 			</>
 		);
@@ -1019,9 +1018,9 @@ function Controls({
 				active={micOn}
 			>
 				{micOn ? (
-					<Microphone size={22} weight="fill" />
+					<RiMicFill size={22} />
 				) : (
-					<MicrophoneSlash size={22} weight="fill" />
+					<RiMicOffFill size={22} />
 				)}
 			</ControlButton>
 			<ControlButton
@@ -1030,13 +1029,13 @@ function Controls({
 				active={camOn}
 			>
 				{camOn ? (
-					<VideoCamera size={22} weight="fill" />
+					<RiVideoOnFill size={22} />
 				) : (
-					<VideoCameraSlash size={22} weight="fill" />
+					<RiVideoOffFill size={22} />
 				)}
 			</ControlButton>
 			<ControlButton label="End call" onClick={call.endCall} tone="danger">
-				<PhoneDisconnect size={24} weight="fill" />
+				<RiPhoneFill size={24} />
 			</ControlButton>
 		</>
 	);
@@ -1078,7 +1077,7 @@ function RejoinPill() {
 				onClick={() => callManager.dismissRejoin()}
 				className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill glass-chip transition-colors glass-ink"
 			>
-				<X size={15} weight="bold" />
+				<RiCloseLine size={16} />
 			</button>
 		</motion.div>
 	);

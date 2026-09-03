@@ -4,7 +4,12 @@ import { useCallback, useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { AnimatePresence } from "framer-motion";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
-import { Image as ImageIcon, Smile, Send, X, User } from "lucide-react";
+import {
+	RiImageLine,
+	RiEmotionLine,
+	RiSendPlane2Fill,
+	RiCloseLine,
+} from "@remixicon/react";
 import { useUser } from "@clerk/nextjs";
 import { useAtomValue } from "jotai";
 import { userAtom } from "@/store/user.atom";
@@ -186,7 +191,7 @@ export const CommentComposer = ({
 										aria-label="Remove attachment"
 										className="absolute top-1.5 right-1.5 flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors"
 									>
-										<X className="w-4 h-4" />
+										<RiCloseLine className="w-4 h-4" />
 									</button>
 								</div>
 							))}
@@ -201,7 +206,7 @@ export const CommentComposer = ({
 								aria-label="Attach media"
 								className="group relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-raised hover:text-primary"
 							>
-								<ImageIcon className="h-[18px] w-[18px]" />
+								<RiImageLine className="h-[18px] w-[18px]" />
 								<span className="hidden sm:block absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] bg-raised text-primary px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
 									Media
 								</span>
@@ -227,7 +232,7 @@ export const CommentComposer = ({
 										: "text-muted hover:bg-raised hover:text-primary",
 								)}
 							>
-								<Smile className="h-[18px] w-[18px]" />
+								<RiEmotionLine className="h-[18px] w-[18px]" />
 								<span className="hidden sm:block absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] bg-raised text-primary px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
 									Emoji
 								</span>
@@ -293,7 +298,7 @@ export const CommentComposer = ({
 							) : (
 								<>
 									<span>Reply</span>
-									<Send className="w-3 h-3" />
+									<RiSendPlane2Fill className="w-3 h-3" />
 								</>
 							)}
 						</button>

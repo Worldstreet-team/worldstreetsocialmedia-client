@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Checks, Clock } from "@phosphor-icons/react";
+import { RiCheckLine, RiCheckDoubleLine, RiTimeLine } from "@remixicon/react";
 import clsx from "clsx";
 
 /**
@@ -51,7 +51,12 @@ const LABEL: Record<TickState, string> = {
 };
 
 export function MessageTicks({ state }: { state: TickState }) {
-	const Icon = state === "sending" ? Clock : state === "sent" ? Check : Checks;
+	const Icon =
+		state === "sending"
+			? RiTimeLine
+			: state === "sent"
+				? RiCheckLine
+				: RiCheckDoubleLine;
 	return (
 		<span
 			// Re-keyed per state so each morph crossfades in at the fast tier
@@ -67,7 +72,7 @@ export function MessageTicks({ state }: { state: TickState }) {
 				state === "read" ? "text-gold" : "text-muted",
 			)}
 		>
-			<Icon size={14} weight="bold" />
+			<Icon size={15} />
 		</span>
 	);
 }

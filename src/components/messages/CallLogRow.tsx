@@ -1,11 +1,11 @@
 "use client";
 
 import {
-	ArrowUUpLeft,
-	PhoneCall,
-	PhoneX,
-	VideoCamera,
-} from "@phosphor-icons/react";
+	RiArrowGoBackLine,
+	RiPhoneFill,
+	RiPhoneLine,
+	RiVideoOnFill,
+} from "@remixicon/react";
 import clsx from "clsx";
 import { format } from "date-fns";
 
@@ -32,7 +32,9 @@ export function CallLogRow({
 }) {
 	const missed = /missed|declined|cancelled/i.test(content);
 	const video = /video/i.test(content);
-	const Icon = missed ? PhoneX : video ? VideoCamera : PhoneCall;
+	// No phone-slash in the Remix core set — a missed call reads from the
+	// danger disc plus the outline (vs filled) phone.
+	const Icon = missed ? RiPhoneLine : video ? RiVideoOnFill : RiPhoneFill;
 
 	return (
 		<div className="my-4 flex justify-center">
@@ -43,7 +45,7 @@ export function CallLogRow({
 						missed ? "bg-danger/15 text-danger" : "bg-success/15 text-success",
 					)}
 				>
-					<Icon size={16} weight="fill" />
+					<Icon size={17} />
 				</span>
 				<span className="min-w-0">
 					<span className="block truncate font-sans text-[13px] font-medium text-primary">
@@ -61,7 +63,7 @@ export function CallLogRow({
 						onClick={() => onCallBack(video)}
 						className="ml-1 flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-pill bg-chip px-3 font-sans text-[12px] font-semibold text-primary transition-colors hover:bg-primary hover:text-page"
 					>
-						<ArrowUUpLeft size={13} weight="bold" />
+						<RiArrowGoBackLine size={14} />
 						Call back
 					</button>
 				)}

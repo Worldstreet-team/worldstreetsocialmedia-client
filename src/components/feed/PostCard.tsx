@@ -15,23 +15,27 @@ import {
     Pin,
 } from "lucide-react";
 import { UserBadges } from "@/components/ui/UserBadges";
-// 03-icons: Phosphor is reserved for the Social post-action row + overflow menu.
+// Remix set for the Social post-action row + overflow menu (locked plan of
+// record 2026-09-02): matches the chat surfaces and the mobile app's reskin.
 import {
-    BookmarkSimple,
-    Eye,
-    EyeSlash,
-    LockSimple,
-    Pulse,
-    ChatCircle,
-    Check,
-    CircleNotch,
-    DotsThree,
-    Heart,
-    Export,
-    Repeat,
-    Translate,
-    UsersThree,
-} from "@phosphor-icons/react";
+    RiBookmarkLine,
+    RiBookmarkFill,
+    RiEyeLine,
+    RiEyeOffLine,
+    RiLockFill,
+    RiPulseLine,
+    RiChat3Line,
+    RiCheckLine,
+    RiLoader4Line,
+    RiMoreLine,
+    RiHeartLine,
+    RiHeartFill,
+    RiShareForwardLine,
+    RiRepeatLine,
+    RiRepeatFill,
+    RiTranslate2,
+    RiGroupLine,
+} from "@remixicon/react";
 import clsx from "clsx";
 import {
     memo,
@@ -67,7 +71,11 @@ import { track } from "@/lib/telemetry";
 import { LikersModal } from "@/components/feed/LikersModal";
 import { postJsonDirect } from "@/lib/upload-direct";
 import { AudioCard } from "@/components/feed/AudioCard";
-import { Image as ImageGlyph, VideoCamera, MicrophoneStage } from "@phosphor-icons/react";
+import {
+    RiImageLine,
+    RiVideoOnLine,
+    RiVoiceprintLine,
+} from "@remixicon/react";
 import { renderRichText } from "@/components/ui/RichText";
 import {
     applyStats,
@@ -1005,7 +1013,7 @@ export const PostCard = memo(
                     onClick={(e) => e.stopPropagation()}
                     className="relative z-10 mb-1.5 ml-[54px] sm:ml-[58px] flex w-fit items-center gap-1.5 pointer-events-auto font-sans text-[12.5px] font-semibold text-muted transition-colors hover:text-primary"
                 >
-                    <UsersThree size={13} weight="duotone" className="text-gold" />
+                    <RiGroupLine size={13} className="text-gold" />
                     <span className="truncate">{post.community.name}</span>
                 </Link>
             )}
@@ -1092,7 +1100,7 @@ export const PostCard = memo(
                                         "text-gold bg-brand/10",
                                 )}
                             >
-                                <DotsThree size={20} weight="bold" />
+                                <RiMoreLine size={20} />
                             </button>
 
                             <AnimatePresence>
@@ -1145,7 +1153,7 @@ export const PostCard = memo(
                                                     }}
                                                     className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
                                                 >
-                                                    <Translate size={16} />
+                                                    <RiTranslate2 size={16} />
                                                     {autoTranslate
                                                         ? t("post.autoTranslateOff")
                                                         : t("post.autoTranslateOn")}
@@ -1246,7 +1254,7 @@ export const PostCard = memo(
                                                     }}
                                                     className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
                                                 >
-                                                    <Translate size={16} />
+                                                    <RiTranslate2 size={16} />
                                                     {autoTranslate
                                                         ? t("post.autoTranslateOff")
                                                         : t("post.autoTranslateOn")}
@@ -1290,7 +1298,7 @@ export const PostCard = memo(
                     {/* UI/Body: Public Sans Regular 15 post text size per 02-typography. */}
                     {post.repostOf && !post.content && (
                         <span className="flex items-center gap-1.5 text-subtle text-[12px] font-sans mb-1">
-                            <Repeat size={12} />
+                            <RiRepeatLine size={12} />
                             {t("post.reposted")}
                         </span>
                     )}
@@ -1360,9 +1368,9 @@ export const PostCard = memo(
                                 className="relative z-10 pointer-events-auto flex h-7 items-center gap-1 rounded-pill bg-raised px-2 font-sans text-[11px] font-medium text-muted transition-colors hover:text-primary cursor-pointer"
                             >
                                 {previewAsBuyer ? (
-                                    <EyeSlash size={12} weight="regular" />
+                                    <RiEyeOffLine size={12} />
                                 ) : (
-                                    <Eye size={12} weight="regular" />
+                                    <RiEyeLine size={12} />
                                 )}
                                 {previewAsBuyer
                                     ? t("post.forSale.exitPreview")
@@ -1416,7 +1424,7 @@ export const PostCard = memo(
                                         }}
                                         className="flex items-center gap-1.5 text-[12.5px] font-sans text-subtle hover:text-gold transition-colors cursor-pointer"
                                     >
-                                        <Translate size={13} />
+                                        <RiTranslate2 size={13} />
                                         {showOriginal ? (
                                             t("post.showTranslation")
                                         ) : (
@@ -1436,7 +1444,7 @@ export const PostCard = memo(
                                     </button>
                                 ) : translating ? (
                                     <span className="flex items-center gap-1.5 text-[12.5px] font-sans text-subtle">
-                                        <CircleNotch
+                                        <RiLoader4Line
                                             size={13}
                                             className="animate-spin"
                                         />
@@ -1451,7 +1459,7 @@ export const PostCard = memo(
                                         }}
                                         className="flex items-center gap-1.5 text-[12.5px] font-sans text-subtle hover:text-gold transition-colors cursor-pointer"
                                     >
-                                        <Translate size={13} />
+                                        <RiTranslate2 size={13} />
                                         {t("post.translate")}
                                     </button>
                                 )}
@@ -1708,10 +1716,11 @@ export const PostCard = memo(
                                 )}
                             >
                                 <span className="flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-success/10 transition group-active:scale-[0.98]">
-                                    <Repeat
-                                        size={23}
-                                        weight={reposted ? "fill" : "bold"}
-                                    />
+                                    {reposted ? (
+                                        <RiRepeatFill size={24} />
+                                    ) : (
+                                        <RiRepeatLine size={24} />
+                                    )}
                                 </span>
                                 <span className="text-[13.5px] font-medium font-sans tabular-nums sm:text-[14px]">
                                     {formatCount(
@@ -1753,7 +1762,7 @@ export const PostCard = memo(
                                         }}
                                         className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans cursor-pointer"
                                     >
-                                        <Repeat size={16} weight="bold" />
+                                        <RiRepeatLine size={16} />
                                         {t("post.repost")}
                                     </button>
                                     <button
@@ -1764,7 +1773,7 @@ export const PostCard = memo(
                                         }}
                                         className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans cursor-pointer"
                                     >
-                                        <ChatCircle size={16} weight="bold" />
+                                        <RiChat3Line size={16} />
                                         {t("post.quote")}
                                     </button>
                                 </div>
@@ -1777,7 +1786,7 @@ export const PostCard = memo(
                             className="flex items-center gap-0.5 sm:gap-1 hover:text-primary transition-colors group cursor-pointer"
                         >
                             <span className="flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-primary/10 transition group-active:scale-[0.98]">
-                                <ChatCircle size={23} weight="bold" />
+                                <RiChat3Line size={23} />
                             </span>
                             <span className="text-[13.5px] font-medium font-sans tabular-nums sm:text-[14px]">
                                 {formatCount(shownReplies)}
@@ -1825,10 +1834,11 @@ export const PostCard = memo(
                                     }}
                                     className="flex"
                                 >
-                                    <Heart
-                                        size={23}
-                                        weight={isLiked ? "fill" : "bold"}
-                                    />
+                                    {isLiked ? (
+                                        <RiHeartFill size={24} />
+                                    ) : (
+                                        <RiHeartLine size={24} />
+                                    )}
                                 </motion.span>
                             </span>
                             {/* The number is a door: who liked this is general
@@ -1909,10 +1919,11 @@ export const PostCard = memo(
                                     }}
                                     className="flex"
                                 >
-                                    <BookmarkSimple
-                                        size={23}
-                                        weight={isBookmarked ? "fill" : "bold"}
-                                    />
+                                    {isBookmarked ? (
+                                        <RiBookmarkFill size={24} />
+                                    ) : (
+                                        <RiBookmarkLine size={24} />
+                                    )}
                                 </motion.span>
                             </span>
                             {(post.stats.bookmarks ?? 0) > 0 && (
@@ -1959,7 +1970,7 @@ export const PostCard = memo(
                                             }}
                                             className="flex"
                                         >
-                                            <Check size={16} weight="bold" />
+                                            <RiCheckLine size={16} />
                                         </motion.span>
                                     ) : (
                                         <motion.span
@@ -1976,9 +1987,8 @@ export const PostCard = memo(
                                             }}
                                             className="flex"
                                         >
-                                            <Export
+                                            <RiShareForwardLine
                                                 size={23}
-                                                weight="bold"
                                             />
                                         </motion.span>
                                     )}
@@ -2002,8 +2012,8 @@ export const PostCard = memo(
                             title={t("post.views")}
                             aria-label={t("post.views")}
                         >
-                            <Pulse size={19} weight="bold" className="sm:hidden" />
-                            <Pulse size={20} weight="bold" className="hidden sm:block" />
+                            <RiPulseLine size={19} className="sm:hidden" />
+                            <RiPulseLine size={20} className="hidden sm:block" />
                             <span className="text-[13.5px] font-medium font-sans tabular-nums sm:text-[14px]">
                                 {formatCount(post.stats.views ?? 0) || "0"}
                             </span>
@@ -2100,18 +2110,18 @@ function SaleStorefront({
                 <div className="flex gap-1.5 px-4 pt-2.5">
                     {imageCount > 0 && (
                         <span className="flex items-center gap-1 rounded-pill bg-raised px-2.5 py-1 font-sans text-[11px] text-muted">
-                            <ImageGlyph size={12} /> {imageCount}{" "}
+                            <RiImageLine size={12} /> {imageCount}{" "}
                             {imageCount === 1 ? "image" : "images"}
                         </span>
                     )}
                     {media.hasVideo && (
                         <span className="flex items-center gap-1 rounded-pill bg-raised px-2.5 py-1 font-sans text-[11px] text-muted">
-                            <VideoCamera size={12} /> {vidClock ?? "video"}
+                            <RiVideoOnLine size={12} /> {vidClock ?? "video"}
                         </span>
                     )}
                     {hasAudio && (
                         <span className="flex items-center gap-1 rounded-pill bg-raised px-2.5 py-1 font-sans text-[11px] text-muted">
-                            <MicrophoneStage size={12} />{" "}
+                            <RiVoiceprintLine size={12} />{" "}
                             {Math.floor(((media.audio?.durationSec ?? media.audioDurationSec) ?? 0) / 60)}:
                             {String(((media.audio?.durationSec ?? media.audioDurationSec) ?? 0) % 60).padStart(2, "0")}{" "}
                             voice
@@ -2137,7 +2147,7 @@ function SaleStorefront({
                     <span aria-hidden className="absolute inset-0 bg-page/25" />
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
                         <span className="flex h-11 w-11 items-center justify-center rounded-pill bg-primary text-page">
-                            <LockSimple size={17} weight="fill" />
+                            <RiLockFill size={17} />
                         </span>
                         <span className="font-sans text-[11.5px] font-medium text-white [text-shadow:0_1px_2px_rgba(0,0,0,.6)]">
                             {media.hasVideo
@@ -2179,7 +2189,7 @@ function SaleStorefront({
             ) : hasAudio ? (
                 <div className="px-4 pt-2.5">
                     <span className="flex w-fit items-center gap-1 rounded-pill bg-raised px-2.5 py-1 font-sans text-[11px] text-muted">
-                        <MicrophoneStage size={12} />{" "}
+                        <RiVoiceprintLine size={12} />{" "}
                         {Math.floor((media.audioDurationSec ?? 0) / 60)}:
                         {String((media.audioDurationSec ?? 0) % 60).padStart(2, "0")}{" "}
                         voice inside
@@ -2189,7 +2199,7 @@ function SaleStorefront({
 
             <div className="mt-3 flex items-center justify-between gap-3 border-t border-hairline px-4 py-2.5">
                 <span className="flex items-center gap-1.5 font-sans text-[11.5px] text-subtle tabular-nums">
-                    <LockSimple size={13} weight="fill" className="text-credit" />
+                    <RiLockFill size={13} className="text-credit" />
                     {(sale.salesCount ?? 0) > 0
                         ? `${(sale.salesCount ?? 0).toLocaleString()} unlocked`
                         : "Locked"}

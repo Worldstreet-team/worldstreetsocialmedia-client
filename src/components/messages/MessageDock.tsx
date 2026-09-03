@@ -4,7 +4,7 @@ import clsx from "clsx";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAtom, useAtomValue } from "jotai";
-import { ChatCircleDots, CaretDown } from "@phosphor-icons/react";
+import { RiChat3Fill, RiArrowDownSLine } from "@remixicon/react";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -131,7 +131,7 @@ export function MessageDock() {
 						"transition-[transform,color] hover:translate-x-1 hover:text-primary",
 					)}
 				>
-					<ChatCircleDots size={20} weight="fill" className="-translate-x-[19%]" />
+					<RiChat3Fill size={21} className="-translate-x-[19%]" />
 					{unread > 0 && (
 						<span className="absolute -top-1 left-0 flex h-4 min-w-4 items-center justify-center rounded-pill bg-brand px-1 font-sans text-[10px] font-bold tabular-nums text-brand-on ring-2 ring-page">
 							{unread}
@@ -193,7 +193,7 @@ export function MessageDock() {
 								aria-label={t("common.close")}
 								className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-chip text-muted transition-colors hover:text-primary"
 							>
-								<CaretDown size={14} weight="bold" />
+								<RiArrowDownSLine size={17} />
 							</button>
 						</div>
 

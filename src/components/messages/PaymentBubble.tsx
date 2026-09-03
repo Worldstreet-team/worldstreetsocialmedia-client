@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp } from "@phosphor-icons/react";
+import { RiArrowDownLine, RiArrowUpLine } from "@remixicon/react";
 import clsx from "clsx";
 import { format } from "date-fns";
 
@@ -42,7 +42,7 @@ export function PaymentBubble({
 	// A payment between two OTHER people is thread news, not my money:
 	// neutral header, both names, no received styling.
 	const bystander = !mine && !!toName && !toMe;
-	const Arrow = mine ? ArrowUp : ArrowDown;
+	const Arrow = mine ? RiArrowUpLine : RiArrowDownLine;
 
 	return (
 		<div className={clsx("mt-1.5 flex", mine ? "justify-end" : "justify-start")}>
@@ -59,7 +59,7 @@ export function PaymentBubble({
 							mine ? "bg-brand-on/15" : "bg-success/15 text-success",
 						)}
 					>
-						<Arrow size={14} weight="bold" />
+						<Arrow size={15} />
 					</span>
 					<span className="min-w-0">
 						<span className="block font-sans text-[11px] font-semibold uppercase tracking-[0.12em] opacity-70">

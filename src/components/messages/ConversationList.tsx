@@ -4,13 +4,13 @@ import clsx from "clsx";
 import { useMemo, useState, useRef } from "react";
 import { useAtomValue } from "jotai";
 import {
-	Camera,
-	MicrophoneStage,
-	PaperclipHorizontal,
-	CurrencyDollarSimple,
-	PhoneCall,
-	VideoCamera,
-} from "@phosphor-icons/react";
+	RiImageFill,
+	RiVoiceprintFill,
+	RiFile2Fill,
+	RiMoneyDollarCircleFill,
+	RiPhoneFill,
+	RiVideoOnFill,
+} from "@remixicon/react";
 
 import { Badge } from "@/components/ui/Badge";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
@@ -86,13 +86,14 @@ const displayName = (u: ConversationRowUser) =>
  * it was empty. Icons rather than emoji, per the icon rules.
  */
 const KIND: Record<string, { glyph: any; key: string }> = {
-	audio: { glyph: MicrophoneStage, key: "messages.kind.voice" },
-	image: { glyph: Camera, key: "messages.kind.photo" },
-	video: { glyph: VideoCamera, key: "messages.kind.video" },
-	file: { glyph: PaperclipHorizontal, key: "messages.kind.file" },
-	call: { glyph: PhoneCall, key: "messages.kind.call" },
+	// Voice = the waveform glyph, not a mic (locked style decision 2026-09-02).
+	audio: { glyph: RiVoiceprintFill, key: "messages.kind.voice" },
+	image: { glyph: RiImageFill, key: "messages.kind.photo" },
+	video: { glyph: RiVideoOnFill, key: "messages.kind.video" },
+	file: { glyph: RiFile2Fill, key: "messages.kind.file" },
+	call: { glyph: RiPhoneFill, key: "messages.kind.call" },
 	// A transfer carries no content either when there is no note.
-	payment: { glyph: CurrencyDollarSimple, key: "messages.kind.payment" },
+	payment: { glyph: RiMoneyDollarCircleFill, key: "messages.kind.payment" },
 };
 
 export function ConversationList({
@@ -268,7 +269,7 @@ export function ConversationList({
 									</span>
 								)}
 								{Glyph && conv.lastMessage?.type !== "system" && (
-									<Glyph size={13} weight="fill" className="shrink-0 text-subtle" />
+									<Glyph size={14} className="shrink-0 text-subtle" />
 								)}
 								<span className="truncate">
 									{conv.lastMessage?.type === "system"

@@ -6,14 +6,13 @@ import clsx from "clsx";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useAuth } from "@clerk/nextjs";
 import {
-	ArrowLeft,
-	PaperPlaneTilt,
-	Phone,
-	PhoneCall,
-	PhoneX,
-	Play,
-	VideoCamera,
-} from "@phosphor-icons/react";
+	RiArrowLeftLine,
+	RiSendPlane2Fill,
+	RiPhoneFill,
+	RiPhoneLine,
+	RiPlayFill,
+	RiVideoOnFill,
+} from "@remixicon/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useCall } from "@/providers/CallProvider";
@@ -229,7 +228,7 @@ export function DockChat({
 					aria-label="Back to conversations"
 					className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary"
 				>
-					<ArrowLeft size={16} weight="bold" />
+					<RiArrowLeftLine size={17} />
 				</button>
 				<span className="relative shrink-0">
 					<span className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-pill bg-raised">
@@ -267,7 +266,7 @@ export function DockChat({
 							aria-label="Start voice call"
 							className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary"
 						>
-							<Phone size={16} weight="fill" />
+							<RiPhoneFill size={17} />
 						</button>
 						<button
 							type="button"
@@ -275,7 +274,7 @@ export function DockChat({
 							aria-label="Start video call"
 							className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary"
 						>
-							<VideoCamera size={16} weight="fill" />
+							<RiVideoOnFill size={17} />
 						</button>
 					</>
 				)}
@@ -302,13 +301,12 @@ export function DockChat({
 							m.sender?._id === myProfileId || m._id.startsWith("temp-");
 						if (m.type === "call") {
 							const missed = /missed|declined|cancelled/i.test(m.content);
-							const CallGlyph = missed ? PhoneX : PhoneCall;
+							const CallGlyph = missed ? RiPhoneLine : RiPhoneFill;
 							return (
 								<div key={m._id} className="my-2 flex justify-center">
 									<span className="flex items-center gap-1.5 rounded-pill bg-raised px-2.5 py-1 font-sans text-[11px] text-muted">
 										<CallGlyph
-											size={12}
-											weight="fill"
+											size={13}
 											className={missed ? "text-danger" : "text-success"}
 										/>
 										{m.content}
@@ -359,7 +357,7 @@ export function DockChat({
 											/>
 											<span className="absolute inset-0 flex items-center justify-center">
 												<span className="flex h-9 w-9 items-center justify-center rounded-pill bg-scrim text-primary">
-													<Play size={14} weight="fill" />
+													<RiPlayFill size={15} />
 												</span>
 											</span>
 										</span>
@@ -425,7 +423,7 @@ export function DockChat({
 								: "text-subtle",
 						)}
 					>
-						<PaperPlaneTilt size={14} weight="fill" />
+						<RiSendPlane2Fill size={15} />
 					</button>
 				</div>
 			</div>

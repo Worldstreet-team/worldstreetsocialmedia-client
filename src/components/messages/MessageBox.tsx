@@ -43,14 +43,6 @@ import { format } from "date-fns";
 import { formatLastSeen, formatTimeAgo } from "@/lib/utils";
 import { useRealtime } from "../providers/RealtimeProvider";
 import MediaModal from "../ui/MediaModal";
-import {
-	ArrowBendUpLeft,
-	UserCirclePlus,
-	Tray,
-	CopySimple,
-	ArrowCounterClockwise,
-	X as XIcon,
-} from "@phosphor-icons/react";
 // Loaded on first open, not on page load: the editors are the heaviest
 // client code in the app and they render only when someone opens one. The
 // host renders them conditionally, so next/dynamic defers the chunk until
@@ -93,7 +85,15 @@ import {
 	RiPencilLine,
 	RiPlayFill,
 	RiVoiceprintFill,
+	RiReplyLine,
+	RiUserAddLine,
+	RiFileCopyLine,
+	RiRestartLine,
 } from "@remixicon/react";
+// Tray stays Phosphor: it feeds the shared Tabs component (feed tabs use it
+// too), which is Phosphor-typed and drives its own active weight. The Remix
+// swap is for the chat MESSAGE glyphs, not the tab chrome.
+import { Tray } from "@phosphor-icons/react";
 import { ThreadBackdrop } from "@/components/messages/thread/ThreadBackdrop";
 import { WallpaperSheet } from "@/components/messages/thread/WallpaperSheet";
 import {
@@ -1965,7 +1965,7 @@ export const MessageBox = ({
 								aria-label={t("messages.newChat")}
 								className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill bg-chip text-muted transition-colors hover:text-primary"
 							>
-								<UserCirclePlus size={18} weight="bold" />
+								<RiUserAddLine size={19} />
 							</button>
 						</span>
 					</div>
@@ -2395,7 +2395,7 @@ export const MessageBox = ({
 									aria-label="Cancel reply"
 									className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-pill text-subtle transition-colors hover:bg-raised hover:text-primary"
 								>
-									<XIcon size={14} weight="bold" />
+									<RiCloseLine size={15} />
 								</button>
 							</div>
 						)}
@@ -2887,7 +2887,7 @@ export const MessageBox = ({
 						}}
 						className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[13px] font-medium text-primary transition-colors hover:bg-raised"
 					>
-						<ArrowBendUpLeft size={15} weight="bold" />
+						<RiReplyLine size={16} />
 						Reply
 					</button>
 					{msgMenu.message.content && (
@@ -2903,7 +2903,7 @@ export const MessageBox = ({
 							}}
 							className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[13px] font-medium text-primary transition-colors hover:bg-raised"
 						>
-							<CopySimple size={15} weight="bold" />
+							<RiFileCopyLine size={16} />
 							Copy text
 						</button>
 					)}
@@ -2919,7 +2919,7 @@ export const MessageBox = ({
 							}}
 							className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[13px] font-medium text-danger transition-colors hover:bg-raised"
 						>
-							<ArrowCounterClockwise size={15} weight="bold" />
+							<RiRestartLine size={16} />
 							Unsend
 						</button>
 					)}
