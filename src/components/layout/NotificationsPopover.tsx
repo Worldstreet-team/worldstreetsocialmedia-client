@@ -48,7 +48,12 @@ const PREVIEW_COUNT = 6;
  * sticky tab bar could not draw through it. The panel is still portalled and
  * now sits at `z-modal`, so there is nothing left to draw through it.
  */
-export function NotificationsPopover() {
+export function NotificationsPopover({
+	compact = false,
+}: {
+	/** Mobile top bar: match the 44px cells beside it. */
+	compact?: boolean;
+} = {}) {
 	const t = useT();
 	const [open, setOpen] = useState(false);
 	// Read, never fetched. NotificationCountSync already pulls this list once
@@ -123,7 +128,11 @@ export function NotificationsPopover() {
 				aria-haspopup="dialog"
 				aria-expanded={open}
 				aria-label={t("nav.notifications")}
-				className="relative flex h-12 w-12 items-center justify-center rounded-pill text-muted transition-colors active:bg-raised"
+				className={
+					compact
+						? "relative flex h-11 w-11 items-center justify-center rounded-pill text-muted transition-colors active:bg-raised"
+						: "relative flex h-12 w-12 items-center justify-center rounded-pill text-muted transition-colors active:bg-raised"
+				}
 			>
 				<Bell size={23} weight={open ? "fill" : "duotone"} />
 				{unread > 0 && (

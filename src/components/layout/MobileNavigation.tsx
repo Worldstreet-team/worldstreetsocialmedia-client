@@ -99,56 +99,58 @@ export function MobileNavigation() {
 					    than taken from the icon set: every stock "list" glyph is
 					    two or three FULL-width bars, and the asymmetry is the
 					    whole point of the mark. */}
-					{/* Menu + lockup as ONE left cluster (owner 2026-09-03: the
-					    wordmark rides beside the menu bar, not centred). */}
-					<div className="flex min-w-0 items-center">
-						<button
-							type="button"
-							onClick={() => setIsOpen(true)}
-							aria-label="Open navigation menu"
-							className="flex h-12 w-12 shrink-0 items-center justify-center rounded-pill text-primary active:bg-raised transition-colors"
+					<button
+						type="button"
+						onClick={() => setIsOpen(true)}
+						aria-label="Open navigation menu"
+						className="flex h-12 w-12 shrink-0 items-center justify-center rounded-pill text-primary active:bg-raised transition-colors"
+					>
+						<svg
+							width="24"
+							height="24"
+							viewBox="0 0 20 20"
+							fill="none"
+							aria-hidden="true"
 						>
-							<svg
-								width="24"
-								height="24"
-								viewBox="0 0 20 20"
-								fill="none"
-								aria-hidden="true"
-							>
-								<path
-									d="M3 7h14M3 13h7"
-									stroke="currentColor"
-									strokeWidth="2"
-									strokeLinecap="round"
-								/>
-							</svg>
-						</button>
+							<path
+								d="M3 7h14M3 13h7"
+								stroke="currentColor"
+								strokeWidth="2"
+								strokeLinecap="round"
+							/>
+						</svg>
+					</button>
 
-						{/* The animated lockup: the W draws, floods gold, and the
-						    wordmark walks in — the hub's brand ritual. */}
-						<Link
-							href="/"
-							aria-label="WorldSpace home"
-							className="flex h-12 min-w-0 items-center justify-center rounded-pill px-1 active:bg-raised transition-colors"
-						>
-							<BrandRitual size={36} wordSize={18} />
-						</Link>
-					</div>
+					{/* The animated lockup, centred (owner 2026-09-03: back to the
+					    middle): absolute so it stays centred no matter how wide
+					    the action cluster grows. */}
+					<Link
+						href="/"
+						aria-label="WorldSpace home"
+						className="absolute left-1/2 -translate-x-1/2 flex h-12 items-center justify-center px-2 rounded-pill active:bg-raised transition-colors"
+					>
+						<BrandRitual size={36} wordSize={18} />
+					</Link>
 
-					<div className="flex items-center gap-1 shrink-0">
+					{/* Search, bell, live: three identical 44px cells on one
+					    axis, so the glyphs sit on a shared centreline instead of
+					    three different-sized boxes eyeballing it. */}
+					<div className="flex items-center shrink-0">
 						<button
 							type="button"
 							onClick={() => setSearchOpen(true)}
 							aria-label={t("rail.search")}
-							className="flex h-12 w-12 items-center justify-center rounded-pill text-muted active:bg-raised transition-colors"
+							className="flex h-11 w-11 items-center justify-center rounded-pill text-muted active:bg-raised transition-colors"
 						>
 							<MagnifyingGlass size={23} />
 						</button>
 						{/* Notifications moved UP out of the bottom bar: it is
 						    something you check, not somewhere you navigate, and it
 						    was holding a permanent tab slot for a glance. */}
-						<NotificationsPopover />
-						<FeedHeaderActions compact />
+						<NotificationsPopover compact />
+						<span className="flex h-11 w-11 items-center justify-center">
+							<FeedHeaderActions compact />
+						</span>
 					</div>
 				</div>
 			</header>
