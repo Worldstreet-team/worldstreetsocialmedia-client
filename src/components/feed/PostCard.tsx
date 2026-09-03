@@ -1347,7 +1347,14 @@ export const PostCard = memo(
                             {t("post.reposted")}
                         </span>
                     )}
-                    {post.live && (
+                    {/* Replays are hidden for now (owner call 2026-09-03):
+                        the ended-stream card promised "Replay" but the live
+                        player has no replay playback, so the link was a dead
+                        end dressed as a feature. The attachment renders only
+                        while the broadcast is actually on; the post's text
+                        (the stream title) stays either way. Re-enable by
+                        dropping the isLiveNow gate once replays exist. */}
+                    {post.live && isLiveNow && (
                         <Link
                             href={`/live?tab=live&s=${post.live.streamId}`}
                             onClick={(e) => e.stopPropagation()}
