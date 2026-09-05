@@ -47,7 +47,7 @@ const LABEL: Record<TickState, string> = {
 	sending: "Sending",
 	sent: "Sent",
 	delivered: "Delivered",
-	read: "Read",
+	read: "Seen",
 };
 
 export function MessageTicks({ state }: { state: TickState }) {
@@ -72,7 +72,8 @@ export function MessageTicks({ state }: { state: TickState }) {
 				state === "read" ? "text-gold" : "text-muted",
 			)}
 		>
-			<Icon size={15} />
+			<Icon size={14} />
+			<span className="ml-0.5">{LABEL[state]}</span>
 		</span>
 	);
 }

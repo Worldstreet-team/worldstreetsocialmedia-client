@@ -1920,7 +1920,7 @@ export const MessageBox = ({
 				className={clsx(
 					// Pane swap is a display toggle — width animation is a layout
 					// property, off the opacity/transform motion budget.
-					"w-full md:w-[400px] shrink-0 min-w-0 md:bg-surface/40 flex flex-col",
+					"w-full md:w-[360px] shrink-0 min-w-0 md:bg-surface/40 flex flex-col",
 					activeConversation ||
 						(conversations.length === 0 && !isLoadingConversations)
 						? "hidden md:flex"
@@ -2041,8 +2041,16 @@ export const MessageBox = ({
 
 			{/* Chat Area */}
 			{activeConversation ? (
-				<div className="flex-1 min-w-0 flex flex-col">
-					<div className="flex h-16 shrink-0 items-center justify-between gap-2 bg-page px-2 md:px-6">
+				<motion.div
+					// Each thread enters with a short slide (audit #23) — a pane
+					// that hard-cut into place was the most-felt rigidity.
+					key={activeConversation._id}
+					initial={{ x: 24, opacity: 0 }}
+					animate={{ x: 0, opacity: 1 }}
+					transition={{ duration: 0.26, ease: [0.2, 0, 0, 1] }}
+					className="flex-1 min-w-0 flex flex-col"
+				>
+					<div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-hairline bg-page px-2 md:px-5">
 						<div className="flex items-center gap-2 md:gap-3 min-w-0">
 							<button
 								type="button"
@@ -2070,13 +2078,13 @@ export const MessageBox = ({
 									onClick={() => !iLeftGroup && setGroupSheetOpen(true)}
 									className="flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 text-left transition-colors hover:bg-raised md:gap-3"
 								>
-									<span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-pill bg-raised">
+									<span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-pill bg-raised">
 										{headerIdentity.avatar ? (
 											<SafeAvatar
 												src={headerIdentity.avatar}
-												width={40}
-												height={40}
-												className="h-10 w-10 rounded-pill object-cover"
+												width={36}
+												height={36}
+												className="h-9 w-9 rounded-pill object-cover"
 												alt="group"
 											/>
 										) : (
@@ -2084,7 +2092,7 @@ export const MessageBox = ({
 										)}
 									</span>
 									<div className="min-w-0">
-										<h2 className="truncate font-semibold text-sm">
+										<h2 className="truncate font-semibold text-[15px]">
 											{headerIdentity.title}
 										</h2>
 										{chat.typers.length > 0 ? (
@@ -2106,9 +2114,9 @@ export const MessageBox = ({
 								<span className="relative shrink-0">
 									<SafeAvatar
 										src={activeConversation.otherParticipant?.avatar}
-										width={40}
-										height={40}
-										className="h-10 w-10 rounded-pill object-cover"
+										width={36}
+										height={36}
+										className="h-9 w-9 rounded-pill object-cover"
 										alt="avatar"
 									/>
 									{/* The dot belongs on the face, not in a line of text
@@ -2121,7 +2129,7 @@ export const MessageBox = ({
 									)}
 								</span>
 								<div className="min-w-0">
-									<h2 className="flex items-center gap-1 font-semibold text-sm truncate">
+									<h2 className="flex items-center gap-1 font-semibold text-[15px] truncate">
 										<span className="min-w-0 truncate">
 											{activeConversation.otherParticipant?.firstName}{" "}
 											{activeConversation.otherParticipant?.lastName}
@@ -2367,10 +2375,7 @@ export const MessageBox = ({
 
 					{/* shrink-0 + pb-safe: the composer is the flex row that must never
 					    be squeezed out, and it sits on the iOS home indicator. */}
-					<div className="relative z-10 shrink-0 p-3 pt-1.5 sm:p-4 sm:pt-1.5 bg-page/85 pb-safe">
-						{/* The thumb demarcator: a grabber pill marks where the
-						    composer region begins, instead of a full-width rule. */}
-						<span aria-hidden className="mx-auto mb-2 block h-1 w-9 rounded-pill bg-raised" />
+					<div className="relative z-10 shrink-0 bg-page px-3 pb-safe pt-2 sm:px-4">
 						{/* What you are answering, above the input, with a way out.
 						    Sending clears it; so does Escape, because a reply you
 						    cannot cancel is a trap. */}
@@ -2615,7 +2620,7 @@ export const MessageBox = ({
 						</div>
 						)}
 					</div>
-				</div>
+				</motion.div>
 			) : (
 				<div
 					className={clsx(
@@ -2770,7 +2775,7 @@ export const MessageBox = ({
 						onClick={() => setPendingDeleteConv(null)}
 						className="absolute inset-0 cursor-default bg-scrim"
 					/>
-					<div className="relative w-[320px] rounded-xl bg-surface p-5 shadow-nav animate-rise">
+					<div className="relative w-[320px] rounded-xl bg-surface p-5 shadow-nav animate-pop">
 						<p className="font-sans text-[14.5px] font-semibold text-primary">
 							{pendingDeleteConv.kind === "group"
 								? pendingDeleteConv.myRole === "owner"
@@ -2830,7 +2835,7 @@ export const MessageBox = ({
 						left: Math.min(msgMenu.x, window.innerWidth - 180),
 						top: Math.min(msgMenu.y, window.innerHeight - 120),
 					}}
-					className="fixed z-dropdown w-[190px] overflow-hidden rounded-xl card-depth animate-rise"
+					className="fixed z-dropdown w-[190px] overflow-hidden rounded-xl card-depth animate-pop"
 					onClick={(e) => e.stopPropagation()}
 				>
 					{/* Quick-react row (register 134): the six, then a plus for

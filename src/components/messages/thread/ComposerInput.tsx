@@ -144,12 +144,12 @@ export const ComposerInput = forwardRef<
 	};
 
 	return (
-		<div className="relative flex min-w-0 flex-1 items-end gap-1 rounded-2xl bg-raised/70 py-1.5 pl-1.5 pr-2 transition-colors focus-within:bg-raised sm:gap-2">
+		<div className="relative flex min-w-0 flex-1 items-end gap-1 rounded-pill border border-hairline bg-transparent py-1 pl-1.5 pr-1.5 transition-colors focus-within:border-muted/60 sm:gap-1.5">
 			<button
 				type="button"
 				onClick={onAttach}
 				aria-label="Attach a file"
-				className="mb-0.5 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary"
+				className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary"
 			>
 				<RiAddLine size={20} />
 			</button>
@@ -192,13 +192,13 @@ export const ComposerInput = forwardRef<
 						onFiles(files);
 					}
 				}}
-				placeholder="Type a message..."
-				className="flex-1 min-w-0 bg-transparent border-none outline-none text-base text-primary placeholder:text-subtle resize-none max-h-[100px] py-2.5"
+				placeholder="Message..."
+				className="flex-1 min-w-0 bg-transparent border-none outline-none text-[15px] leading-[1.35] text-primary placeholder:text-subtle resize-none max-h-[100px] py-[9px]"
 				rows={1}
 				style={{ minHeight: "24px" }}
 			/>
 			{mentionQuery && mentionMatches.length > 0 && (
-				<div className="absolute bottom-full left-0 z-dropdown mb-2 w-[min(300px,90vw)] overflow-hidden rounded-xl card-depth py-1 animate-rise">
+				<div className="absolute bottom-full left-0 z-dropdown mb-2 w-[min(300px,90vw)] overflow-hidden rounded-xl card-depth py-1 animate-pop">
 					{mentionMatches.map((c) => (
 						<button
 							key={c.id}
@@ -234,7 +234,7 @@ export const ComposerInput = forwardRef<
 					onClick={onMoney}
 					aria-label="Send money"
 					title="Send money"
-					className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-raised hover:text-primary"
+					className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-raised hover:text-primary"
 				>
 					<RiMoneyDollarCircleLine size={20} />
 				</button>
@@ -243,7 +243,7 @@ export const ComposerInput = forwardRef<
 						type="button"
 						onClick={onGif}
 						aria-label="Send a GIF"
-						className="flex h-10 cursor-pointer items-center justify-center rounded-pill px-1.5 font-sans text-[11px] font-bold tracking-wide text-muted transition-colors hover:bg-chip hover:text-primary"
+						className="flex h-9 cursor-pointer items-center justify-center rounded-pill px-1.5 font-sans text-[11px] font-bold tracking-wide text-muted transition-colors hover:bg-chip hover:text-primary"
 					>
 						GIF
 					</button>
@@ -253,12 +253,12 @@ export const ComposerInput = forwardRef<
 						type="button"
 						onClick={() => setShowEmoji((v) => !v)}
 						aria-label="Insert emoji"
-						className="flex h-10 w-10 items-center justify-center rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors cursor-pointer"
+						className="flex h-9 w-9 items-center justify-center rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors cursor-pointer"
 					>
-						<RiEmotionLine size={22} />
+						<RiEmotionLine size={21} />
 					</button>
 					{showEmoji && (
-						<div className="fixed left-1/2 bottom-24 -translate-x-1/2 sm:absolute sm:left-auto sm:bottom-12 sm:right-0 sm:translate-x-0 w-[min(320px,calc(100vw-1.5rem))] z-dropdown animate-rise ws-emoji-picker">
+						<div className="fixed left-1/2 bottom-24 -translate-x-1/2 sm:absolute sm:left-auto sm:bottom-12 sm:right-0 sm:translate-x-0 w-[min(320px,calc(100vw-1.5rem))] z-dropdown animate-pop ws-emoji-picker">
 							<EmojiPicker
 								theme={resolvedTheme === "light" ? Theme.LIGHT : Theme.DARK}
 								width="100%"
@@ -275,7 +275,7 @@ export const ComposerInput = forwardRef<
 						onClick={() => void send()}
 						disabled={disabled}
 						aria-label="Send message"
-						className="flex h-9 w-9 items-center justify-center bg-brand text-brand-on rounded-pill hover:bg-brand-active transition-colors disabled:opacity-50 cursor-pointer"
+						className="flex h-9 w-9 items-center justify-center bg-brand text-brand-on rounded-pill hover:bg-brand-active transition-colors disabled:opacity-50 cursor-pointer animate-pop"
 					>
 						<RiSendPlane2Fill size={16} />
 					</button>
@@ -294,9 +294,9 @@ export const ComposerInput = forwardRef<
 							});
 						}}
 						aria-label="Record a voice message"
-						className="flex h-10 w-10 touch-none items-center justify-center rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors cursor-pointer"
+						className="flex h-9 w-9 touch-none items-center justify-center rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors cursor-pointer animate-pop"
 					>
-						<RiVoiceprintFill size={22} />
+						<RiVoiceprintFill size={21} />
 					</button>
 				)}
 			</div>

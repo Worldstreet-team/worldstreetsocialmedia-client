@@ -113,24 +113,32 @@ function linkify(text: string) {
 	});
 }
 
+/**
+ * The centred stamp between message groups — Instagram's grammar: a time
+ * today, weekday + time this week, date + time beyond. Shown only across a
+ * real gap (ThreadList decides), so per-message timestamps are gone.
+ */
 export function dayLabel(iso: string) {
 	const d = new Date(iso);
 	const today = new Date();
-	const yday = new Date();
-	yday.setDate(today.getDate() - 1);
-	if (d.toDateString() === today.toDateString()) return "Today";
-	if (d.toDateString() === yday.toDateString()) return "Yesterday";
+	if (d.toDateString() === today.toDateString()) return format(d, "h:mm a");
+	const age = today.getTime() - d.getTime();
+	if (age < 6 * 24 * 3600_000) return format(d, "EEE h:mm a");
 	return format(
 		d,
-		d.getFullYear() === today.getFullYear() ? "MMM d" : "MMM d, yyyy",
+		d.getFullYear() === today.getFullYear()
+			? "MMM d, h:mm a"
+			: "MMM d, yyyy, h:mm a",
 	);
 }
 
 export interface BubbleProps {
 	m: BubbleMessage;
 	isMe: boolean;
-	/** First-in-run inbound messages carry the sender's face. */
+	/** Last-in-run inbound messages carry the sender's face (Instagram). */
 	showAvatar?: boolean;
+	/** Only the newest of MY messages shows delivery state, as text. */
+	showTicks?: boolean;
 	avatarUrl?: string;
 	/** Live arrival — the only bubbles that animate in (register 152). */
 	fresh?: boolean;
@@ -172,6 +180,7 @@ export const MessageBubble = memo(function MessageBubble({
 	m,
 	isMe,
 	showAvatar,
+	showTicks,
 	avatarUrl,
 	fresh,
 	showDay,
@@ -258,8 +267,8 @@ export const MessageBubble = memo(function MessageBubble({
 	return (
 		<>
 			{showDay && (
-				<div className="flex justify-center py-2">
-					<span className="rounded-pill bg-page/70 px-3 py-1 font-sans text-[11px] font-semibold text-muted">
+				<div className="flex justify-center pb-2 pt-5">
+					<span className="font-sans text-[11px] font-medium tabular-nums text-subtle">
 						{dayLabel(m.createdAt)}
 					</span>
 				</div>
@@ -324,7 +333,9 @@ export const MessageBubble = memo(function MessageBubble({
 					// kiss the viewport edge, and a centered max-width on wide
 					// panes — every messenger does this (owner, 2026-09-02).
 					"group/msg mx-auto flex w-full max-w-[52rem] flex-col scroll-mt-24 touch-pan-y px-4 sm:px-6",
-					sameRunAsPrev ? "mt-[2px]" : "mt-4",
+					// Three tiers (audit #5): 2px inside a run, 8px between
+					// runs, the centred stamp carries the big gap.
+					sameRunAsPrev ? "mt-[2px]" : "mt-2",
 					isMe ? "items-end" : "items-start",
 					flashed && "rounded-xl bg-brand/10",
 				)}
@@ -360,13 +371,13 @@ export const MessageBubble = memo(function MessageBubble({
 					{/* Inbound face: only the first message of a run wears it —
 					    ink-and-air density (register 43-44). */}
 					{!isMe && (
-						<span className="order-1 mb-0.5 w-[30px] shrink-0 self-end">
+						<span className="order-1 w-[30px] shrink-0 self-end">
 							{showAvatar && avatarUrl && (
 								// eslint-disable-next-line @next/next/no-img-element
 								<img
 									src={avatarUrl}
 									alt=""
-									className="h-[26px] w-[26px] rounded-pill object-cover"
+									className="h-7 w-7 rounded-pill object-cover"
 								/>
 							)}
 						</span>
@@ -374,30 +385,30 @@ export const MessageBubble = memo(function MessageBubble({
 					<div
 						className={clsx(
 							"order-2 max-w-[85%] sm:max-w-[70%] min-w-0 overflow-hidden",
-							// Real padding (owner 2026-09-03: "the bubbles lack
-							// padding"): 16/10 on phones, 18/11 from sm — the
-							// WhatsApp/Telegram pocket, not a tight chip.
+							// Instagram grammar (owner 2026-09-03, audit B): 18px
+							// radius, 12x7 padding, MINE an opaque brand fill with
+							// contrasting ink, THEIRS one step above the page. The
+							// old 16% yellow wash was a pre-rebrand token and sat at
+							// the same lightness as theirs.
 							(m.type === "image" || m.type === "video") && !m.content
 								? "p-0"
-								: "px-4 py-2.5 sm:px-[18px] sm:py-[11px]",
-							// MINE wears frosted gold glass over the wallpaper;
-							// THEIRS a soft raised bubble. (The bare-ink
-							// experiment died 2026-09-02: no padding read as no
-							// design.) Run corners mirror per side.
-							"rounded-[22px] text-primary",
+								: "px-3 py-[7px]",
+							"rounded-[18px]",
 							(m.type === "image" || m.type === "video") && !m.content
-								? null
+								? "text-primary"
 								: isMe
-									? "bg-[rgba(234,179,8,0.16)]"
-									: "bg-raised/85",
+									? "bg-brand text-brand-on"
+									: "bg-raised text-primary",
+							// The inner corner facing the neighbour drops to 4px so
+							// a run reads as one shape; the outer edge stays round.
 							isMe
 								? [
-										sameRunAsPrev && "rounded-tr-[8px]",
-										!endsRun && "rounded-br-[8px]",
+										sameRunAsPrev && "rounded-tr-[4px]",
+										!endsRun && "rounded-br-[4px]",
 									]
 								: [
-										sameRunAsPrev && "rounded-tl-[8px]",
-										!endsRun && "rounded-bl-[8px]",
+										sameRunAsPrev && "rounded-tl-[4px]",
+										!endsRun && "rounded-bl-[4px]",
 									],
 						)}
 					>
@@ -421,10 +432,10 @@ export const MessageBubble = memo(function MessageBubble({
 								onClick={() => onJump(m.replyTo!._id)}
 								className={clsx(
 									"mb-1.5 flex w-full cursor-pointer flex-col gap-0.5 rounded-[10px] px-2.5 py-1.5 text-left transition-opacity hover:opacity-80",
-									isMe ? "bg-page/25" : "bg-raised/70",
+									isMe ? "bg-black/15" : "bg-page/45",
 								)}
 							>
-								<span className="truncate font-sans text-[11.5px] font-semibold text-gold">
+								<span className={clsx("truncate font-sans text-[11.5px] font-semibold", isMe ? "text-brand-on/90" : "text-gold")}>
 									{m.replyTo.sender?.username
 										? `@${m.replyTo.sender.username}`
 										: "Message"}
@@ -510,7 +521,7 @@ export const MessageBubble = memo(function MessageBubble({
 						{m.content && (
 							<p
 								className={clsx(
-									"text-sm leading-relaxed break-words whitespace-pre-wrap",
+									"text-[15px] leading-[1.35] break-words whitespace-pre-wrap",
 									m.mediaUrl && "mt-2",
 								)}
 							>
@@ -520,10 +531,12 @@ export const MessageBubble = memo(function MessageBubble({
 					</div>
 				</div>
 				{m.reactions && m.reactions.length > 0 && (
+					// Overlapping the bubble's bottom edge (audit #16): the chip
+					// reads as attached to the message and costs ~8px, not a row.
 					<div
 						className={clsx(
-							"mt-1 flex flex-wrap gap-1",
-							!isMe && "pl-[34px]",
+							"relative z-[1] -mt-2.5 mb-1 flex flex-wrap gap-1",
+							isMe ? "justify-end pr-2" : "pl-[42px]",
 						)}
 					>
 						{Object.entries(
@@ -547,10 +560,10 @@ export const MessageBubble = memo(function MessageBubble({
 								onClick={() => onReact?.(m, emoji)}
 								aria-label={`${emoji} reaction${info.count > 1 ? `, ${info.count}` : ""}${info.mine ? ", including yours" : ""}`}
 								className={clsx(
-									"flex cursor-pointer items-center gap-1 rounded-pill px-1.5 py-0.5 font-sans text-[12px] transition-colors",
+									"flex cursor-pointer items-center gap-1 rounded-pill px-1.5 py-0.5 font-sans text-[12px] ring-2 ring-page transition-colors animate-pop",
 									info.mine
-										? "bg-brand/20 ring-1 ring-brand/60"
-										: "bg-raised/90 hover:bg-chip",
+										? "bg-brand/25"
+										: "bg-surface hover:bg-chip",
 								)}
 							>
 								<span>{emoji}</span>
@@ -563,25 +576,20 @@ export const MessageBubble = memo(function MessageBubble({
 						))}
 					</div>
 				)}
-				{endsRun && (
-					<span
-						className={clsx(
-							"mt-1 flex items-center gap-1 font-sans text-[11px] tabular-nums text-subtle",
-							!isMe && "pl-[34px]",
-						)}
-					>
-						{format(new Date(m.createdAt), "h:mm a")}
-						{isMe && (
-							<MessageTicks
-								state={tickStateFor({
-									id: m._id,
-									createdAt: m.createdAt,
-									deliveredAt,
-									readAt,
-									peerReadUpTo,
-								})}
-							/>
-						)}
+				{/* No per-message timestamps (Instagram): the centred stamp
+				    carries time. Delivery state is one quiet word under the
+				    NEWEST of my messages only. */}
+				{isMe && showTicks && (
+					<span className="mt-1 flex items-center gap-1 font-sans text-[11px] text-subtle">
+						<MessageTicks
+							state={tickStateFor({
+								id: m._id,
+								createdAt: m.createdAt,
+								deliveredAt,
+								readAt,
+								peerReadUpTo,
+							})}
+						/>
 					</span>
 				)}
 			</motion.div>

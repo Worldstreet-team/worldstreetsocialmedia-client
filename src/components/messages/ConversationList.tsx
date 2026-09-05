@@ -150,8 +150,8 @@ export function ConversationList({
 		return (
 			<div className="flex flex-col">
 				{[0, 1, 2, 3, 4].map((i) => (
-					<div key={i} className="flex items-center gap-3 px-4 py-3.5">
-						<span className="skeleton h-14 w-14 shrink-0 rounded-pill" />
+					<div key={i} className="flex items-center gap-3 px-4 py-2.5">
+						<span className="skeleton h-12 w-12 shrink-0 rounded-pill" />
 						<span className="flex min-w-0 flex-1 flex-col gap-2">
 							<span className="skeleton h-3.5 w-1/3 rounded-[4px]" />
 							<span className="skeleton h-3 w-2/3 rounded-[4px]" />
@@ -198,12 +198,12 @@ export function ConversationList({
 						onClick={() => onOpen(conv)}
 						aria-current={active ? "true" : undefined}
 						className={clsx(
-							"group relative flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors",
+							"group relative flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left transition-colors",
 							active ? "bg-raised" : "hover:bg-surface",
 						)}
 					>
 						<span className="relative shrink-0">
-							<span className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-pill bg-raised">
+							<span className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-pill bg-raised">
 								{isGroup && !identity.avatar ? (
 									<Users className="h-6 w-6 text-muted" />
 								) : (
@@ -223,7 +223,7 @@ export function ConversationList({
 							<span className="flex items-center gap-1.5">
 								<span
 									className={clsx(
-										"truncate font-sans text-[15px]",
+										"truncate font-sans text-[14.5px]",
 										unread
 											? "font-semibold text-primary"
 											: "font-medium text-primary",
@@ -307,9 +307,6 @@ export function ConversationList({
 						    is part of the signal, not just that. */}
 						{unread && (
 							<span className="ml-2 flex shrink-0 items-center gap-1.5">
-								{unread && (
-									<span className="h-2 w-2 rounded-pill bg-brand" />
-								)}
 								<Badge count={conv.unreadCount} />
 							</span>
 						)}

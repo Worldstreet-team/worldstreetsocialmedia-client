@@ -106,11 +106,13 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 
 		const Footer = useCallback(
 			() => (
-				<div className="flex h-9 items-end px-4 pb-1">
+				<div className="mx-auto flex h-11 w-full max-w-[52rem] items-end px-4 pb-1 sm:px-6">
 					{(peerTyping || peerRecording) && (
-						<TypingIndicator
-							mode={peerRecording ? "recording" : "typing"}
-						/>
+						<div className="pl-[34px] animate-pop">
+							<TypingIndicator
+								mode={peerRecording ? "recording" : "typing"}
+							/>
+						</div>
 					)}
 				</div>
 			),
@@ -130,6 +132,16 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 			return map;
 		}, [messages]);
 
+		// The newest message of mine is the one that wears the delivery word.
+		const lastMineIndex = useMemo(() => {
+			for (let i = messages.length - 1; i >= 0; i--) {
+				const m = messages[i];
+				if (m.sender._id === myProfileId || m._id.startsWith("temp-"))
+					return i;
+			}
+			return -1;
+		}, [messages, myProfileId]);
+
 		const itemContent = useCallback(
 			(index: number, m: BubbleMessage) => {
 				const i = index - firstItemIndex;
@@ -137,10 +149,15 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 				const next = messages[i + 1];
 				const isMe =
 					m.sender._id === myProfileId || m._id.startsWith("temp-");
+				// A centred stamp across a real gap (new day, or > 30 minutes
+				// of silence) — the only time the thread shows, Instagram-style.
 				const showDay =
 					!prev ||
 					new Date(prev.createdAt).toDateString() !==
-						new Date(m.createdAt).toDateString();
+						new Date(m.createdAt).toDateString() ||
+					new Date(m.createdAt).getTime() -
+						new Date(prev.createdAt).getTime() >
+						30 * 60 * 1000;
 				const sameRunAsPrev =
 					!!prev &&
 					prev.type !== "call" &&
@@ -163,7 +180,8 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 					<MessageBubble
 						m={m}
 						isMe={isMe}
-						showAvatar={!isMe && !sameRunAsPrev}
+						showAvatar={!isMe && endsRun}
+						showTicks={isMe && i === lastMineIndex}
 						avatarUrl={(m.sender as { avatar?: string })?.avatar}
 						fresh={new Date(m.createdAt).getTime() > mountTs}
 						showDay={showDay}
@@ -187,6 +205,7 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 				nextAudioId,
 				firstItemIndex,
 				myProfileId,
+				lastMineIndex,
 				flashedId,
 				peerName,
 				deliveredAt,
@@ -253,7 +272,7 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 					<button
 						type="button"
 						onClick={onShowNew}
-						className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 cursor-pointer items-center gap-1.5 rounded-pill bg-raised px-3.5 py-1.5 font-sans text-[12.5px] font-semibold text-primary shadow-nav transition-colors hover:bg-chip"
+						className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 cursor-pointer items-center gap-1.5 rounded-pill bg-raised px-3.5 py-1.5 font-sans text-[12.5px] font-semibold text-primary shadow-nav transition-colors hover:bg-chip animate-pop"
 					>
 						<RiArrowDownLine size={13} />
 						{pendingNew === 1 ? "1 new message" : `${pendingNew} new messages`}
