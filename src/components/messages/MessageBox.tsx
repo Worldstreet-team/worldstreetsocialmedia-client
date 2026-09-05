@@ -36,6 +36,8 @@ import { useTheme } from "next-themes";
 import EmojiPicker, { Theme } from "emoji-picker-react";
 import { useT } from "@/i18n/client";
 import { getUserStoriesAction } from "@/lib/stories.actions";
+import { startConversationAction } from "@/lib/conversation.actions";
+import { getFollowingAction } from "@/lib/user.actions";
 import { StoryViewer, type RailEntry } from "@/components/feed/StoryViewer";
 import { toast } from "sonner";
 import { useToast } from "@/components/ui/Toast/ToastContext";
@@ -54,7 +56,7 @@ const MediaEditor = dynamic(
 import { ConversationList } from "./ConversationList";
 import { StoriesRail } from "@/components/feed/StoriesRail";
 import { GIPHY_KEY, GifPicker } from "./GifPicker";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useCall } from "@/providers/CallProvider";
 import { useChatSignals } from "@/hooks/useChatSignals";
 import { ThreadList } from "@/components/messages/thread/ThreadList";
@@ -648,7 +650,41 @@ export const MessageBox = ({
 	const hdRef = useRef(false);
 	const [dragOver, setDragOver] = useState(false);
 	// Voice recorder overlay; the start descriptor carries the hold gesture.
+	// Unread count at the moment the thread opened — the divider anchors to
+	// it; the list's own count is zeroed by mark-read a beat later.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: captured per open
+	const unreadAtOpen = useMemo(
+		() => activeConversation?.unreadCount ?? 0,
+		[activeConversation?._id],
+	);
 	const [recording, setRecording] = useState<RecorderStart | null>(null);
+	// Phones get the push + parallax (owner pick); desktop keeps the panes.
+	const [isMobile, setIsMobile] = useState(false);
+	useEffect(() => {
+		const mq = window.matchMedia("(max-width: 767px)");
+		const sync = () => setIsMobile(mq.matches);
+		sync();
+		mq.addEventListener("change", sync);
+		return () => mq.removeEventListener("change", sync);
+	}, []);
+	// The send flight (owner pick): the composer's text lifts out of the
+	// field, becomes a bubble and lands at the bottom of the thread.
+	const [flight, setFlight] = useState<{
+		key: string;
+		text: string;
+		from: { left: number; top: number; width: number; height: number };
+		to: { left: number; top: number; width: number };
+	} | null>(null);
+	const threadPaneRef = useRef<HTMLDivElement | null>(null);
+	// Failed TEXT sends keep their bubble (owner pick); this remembers what
+	// to resend when the red mark is tapped.
+	const textRetryRef = useRef(
+		new Map<string, { text: string; convId: string; replyTo: Message | null }>(),
+	);
+	// Empty inbox = people you follow, one tap from a first message (owner
+	// pick: "suggested people" instead of a lone empty note).
+	const [suggested, setSuggested] = useState<any[] | null>(null);
+	const [startingWith, setStartingWith] = useState<string | null>(null);
 	// In-flight upload handles + everything needed to retry a failed send.
 	const uploadAbortRef = useRef(new Map<string, AbortController>());
 	const retryRef = useRef(
@@ -914,6 +950,13 @@ export const MessageBox = ({
 	};
 
 	const retryUpload = useCallback((clientKey: string) => {
+		const t = textRetryRef.current.get(clientKey);
+		if (t) {
+			textRetryRef.current.delete(clientKey);
+			removeByClientKey(t.convId, clientKey);
+			void sendText(t.text, t.convId, t.replyTo);
+			return;
+		}
 		void runAttachmentUpload(clientKey);
 		// biome-ignore lint/correctness/useExhaustiveDependencies: refs + setters only
 	}, []);
@@ -1488,6 +1531,19 @@ export const MessageBox = ({
 	): Promise<boolean> => {
 		const clientKey = newKey();
 		const tempId = `temp-${clientKey}`;
+		// Where the text is now and where the bubble will land — measured
+		// before React moves anything.
+		const fromRect = composerRef.current?.getRect();
+		const paneRect = threadPaneRef.current?.getBoundingClientRect();
+		if (fromRect && paneRect && text && !isGroupThread) {
+			const width = Math.min(fromRect.width, 280);
+			setFlight({
+				key: clientKey,
+				text,
+				from: { left: fromRect.left, top: fromRect.top, width: fromRect.width, height: fromRect.height },
+				to: { left: paneRect.right - width - 24, top: paneRect.bottom - 48, width },
+			});
+		}
 		const optimisticMessage: Message = {
 			_id: tempId,
 			clientKey,
@@ -1574,10 +1630,14 @@ export const MessageBox = ({
 					error?.response?.data?.message || "Failed to send message",
 				);
 			}
-			setMessageCache((prev) => ({
-				...prev,
-				[convId]: (prev[convId] || []).filter((m) => m._id !== tempId),
-			}));
+			// The bubble STAYS (owner pick): red mark + tap to retry, instead of
+			// vanishing into a toast and reappearing in the composer.
+			patchByClientKey(convId, clientKey, { failed: true });
+			textRetryRef.current.set(clientKey, {
+				text,
+				convId,
+				replyTo: currentReply,
+			});
 			// The composer restores the draft when we report failure.
 			return false;
 		}
@@ -1897,7 +1957,7 @@ export const MessageBox = ({
 	return (
 		// 100dvh, not 100vh: on mobile 100vh is the address-bar-expanded height,
 		// so the composer sat below the fold until the bar collapsed.
-		<div className="flex h-[100dvh] bg-page text-primary overflow-hidden">
+		<div className="relative flex h-[100dvh] bg-page text-primary overflow-hidden">
 			{myProfileId && isConnected && (
 				<UserMessageSubscription
 					channelName={`user:${myProfileId}`}
@@ -1915,17 +1975,13 @@ export const MessageBox = ({
 				initialIndex={currentMediaIndex}
 			/>
 
-			{/* Sidebar */}
-			<div
-				className={clsx(
-					// Pane swap is a display toggle — width animation is a layout
-					// property, off the opacity/transform motion budget.
-					"w-full md:w-[360px] shrink-0 min-w-0 md:bg-surface/40 flex flex-col",
-					activeConversation ||
-						(conversations.length === 0 && !isLoadingConversations)
-						? "hidden md:flex"
-						: "flex",
-				)}
+			{/* Sidebar. On a phone it stays mounted UNDER the thread pane and
+			    parallaxes back by 24% as the thread pushes in — the iOS nav
+			    stack (owner pick), reversing exactly on back. */}
+			<motion.div
+				animate={{ x: activeConversation && isMobile ? "-24%" : "0%" }}
+				transition={{ duration: 0.26, ease: [0.2, 0, 0, 1] }}
+				className="relative flex w-full shrink-0 min-w-0 flex-col md:w-[360px] md:bg-surface/40"
 			>
 				<div className="px-4 pb-1 pt-4">
 					<div className="mb-3 flex items-center gap-2">
@@ -1978,7 +2034,7 @@ export const MessageBox = ({
 							onChange={(e) => setSearchQuery(e.target.value)}
 							ref={searchInputRef}
 							// text-base below sm stops iOS zooming the pane on focus.
-							className="w-full rounded-pill bg-sunken py-2.5 pl-10 pr-4 text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised sm:text-sm"
+							className="h-9 w-full rounded-pill bg-raised pl-10 pr-4 text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-chip sm:text-sm"
 						/>
 					</div>
 				</div>
@@ -2011,6 +2067,32 @@ export const MessageBox = ({
 						]}
 						className="px-4"
 					/>
+					{conversations.length === 0 && !isLoadingConversations && (
+						<SuggestedPeople
+							myProfileId={myProfileId ?? ""}
+							people={suggested}
+							onLoad={() => {
+								if (suggested !== null || !myProfileId) return;
+								setSuggested([]);
+								void getFollowingAction(myProfileId).then((r: any) =>
+									setSuggested(Array.isArray(r?.data) ? r.data : []),
+								);
+							}}
+							startingWith={startingWith}
+							onMessage={async (u) => {
+								setStartingWith(u._id);
+								const r: any = await startConversationAction(u._id);
+								setStartingWith(null);
+								const id = r?.data?._id ?? r?.data?.conversation?._id;
+								if (r?.success && id) {
+									router.push(`/messages/${id}`);
+									router.refresh();
+								} else {
+									toast.error(r?.message || "Couldn't start that chat");
+								}
+							}}
+						/>
+					)}
 					<ConversationList
 						conversations={
 							(showRequests
@@ -2037,20 +2119,24 @@ export const MessageBox = ({
 						}}
 					/>
 				</div>
-			</div>
+			</motion.div>
 
 			{/* Chat Area */}
+			<AnimatePresence initial={false}>
 			{activeConversation ? (
 				<motion.div
-					// Each thread enters with a short slide (audit #23) — a pane
-					// that hard-cut into place was the most-felt rigidity.
+					// Push from the right on phones, a short slide on desktop
+					// (owner pick: push with parallax). The wallpaper is painted
+					// at THIS level so it runs edge to edge under glass bars.
 					key={activeConversation._id}
-					initial={{ x: 24, opacity: 0 }}
+					initial={isMobile ? { x: "100%" } : { x: 24, opacity: 0 }}
 					animate={{ x: 0, opacity: 1 }}
+					exit={isMobile ? { x: "100%" } : { opacity: 0 }}
 					transition={{ duration: 0.26, ease: [0.2, 0, 0, 1] }}
-					className="flex-1 min-w-0 flex flex-col"
+					className="absolute inset-0 z-10 flex min-w-0 flex-col bg-page md:static md:flex-1"
 				>
-					<div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-hairline bg-page px-2 md:px-5">
+					<ThreadBackdrop wallpaper={wallpaper} pulse={sendPulse} />
+					<div className="relative z-10 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-hairline/50 glass-frost backdrop-blur-xl px-2 md:px-5">
 						<div className="flex items-center gap-2 md:gap-3 min-w-0">
 							<button
 								type="button"
@@ -2150,7 +2236,11 @@ export const MessageBox = ({
 											size={14}
 										/>
 									</h2>
-									{chat.peerRecording ? (
+									{!isConnected ? (
+										<p className="truncate text-xs text-danger">
+											Waiting for network…
+										</p>
+									) : chat.peerRecording ? (
 										<p className="truncate text-xs text-gold">
 											recording audio…
 										</p>
@@ -2286,6 +2376,7 @@ export const MessageBox = ({
 					</div>
 
 					<div
+						ref={threadPaneRef}
 						className="relative flex-1 min-h-0 flex flex-col"
 						onDragOver={(e) => {
 							if (e.dataTransfer.types.includes("Files")) {
@@ -2302,7 +2393,6 @@ export const MessageBox = ({
 							addFiles(Array.from(e.dataTransfer.files ?? []));
 						}}
 					>
-						<ThreadBackdrop wallpaper={wallpaper} pulse={sendPulse} />
 						{dragOver && (
 							<div className="pointer-events-none absolute inset-2 z-20 flex items-center justify-center rounded-xl border-2 border-dashed border-brand bg-page/60">
 								<span className="rounded-pill bg-raised px-4 py-2 font-sans text-[13px] font-semibold text-primary">
@@ -2311,40 +2401,6 @@ export const MessageBox = ({
 							</div>
 						)}
 						<div className="relative z-10 flex min-h-0 flex-1 flex-col">
-						{activeConversation.isRequestForMe && (
-							<div className="shrink-0 px-4 pt-4">
-								<div className="mx-auto max-w-[420px] rounded-xl bg-surface p-4 text-center">
-									<p className="font-sans text-[13.5px] font-semibold text-primary">
-										{displayNameOf(activeConversation.otherParticipant)}{" "}
-										wants to message you
-									</p>
-									<p className="mt-1 font-sans text-[12px] text-muted">
-										They won't know you've seen this until you accept —
-										replying accepts too.
-									</p>
-									<div className="mt-3 flex justify-center gap-2">
-										<button
-											type="button"
-											onClick={() =>
-												void acceptRequest(activeConversation._id)
-											}
-											className="h-9 cursor-pointer rounded-pill bg-primary px-4 font-sans text-[12.5px] font-semibold text-page transition-colors hover:opacity-90"
-										>
-											Accept
-										</button>
-										<button
-											type="button"
-											onClick={() =>
-												void declineRequest(activeConversation._id)
-											}
-											className="h-9 cursor-pointer rounded-pill bg-raised px-4 font-sans text-[12.5px] font-medium text-danger transition-colors hover:bg-chip"
-										>
-											Delete
-										</button>
-									</div>
-								</div>
-							</div>
-						)}
 						<ThreadList
 							ref={virtuosoRef}
 							threadId={activeConversation._id}
@@ -2365,6 +2421,13 @@ export const MessageBox = ({
 							peerReadUpTo={peerReadUpTo}
 							pendingNew={pendingNew}
 							loading={isLoadingMessages}
+							peerAvatar={activeConversation.otherParticipant?.avatar}
+							peer={{
+								name: headerIdentity.title,
+								username: activeConversation.otherParticipant?.username,
+								avatar: headerIdentity.avatar,
+							}}
+							unreadAtOpen={unreadAtOpen}
 							onLoadOlder={loadOlder}
 							onAtBottomChange={handleAtBottom}
 							onShowNew={() => scrollToBottom()}
@@ -2375,7 +2438,7 @@ export const MessageBox = ({
 
 					{/* shrink-0 + pb-safe: the composer is the flex row that must never
 					    be squeezed out, and it sits on the iOS home indicator. */}
-					<div className="relative z-10 shrink-0 bg-page px-3 pb-safe pt-2 sm:px-4">
+					<div className="relative z-10 shrink-0 glass-frost backdrop-blur-xl px-3 pb-safe pt-2 sm:px-4">
 						{/* What you are answering, above the input, with a way out.
 						    Sending clears it; so does Escape, because a reply you
 						    cannot cancel is a trap. */}
@@ -2561,7 +2624,29 @@ export const MessageBox = ({
 							/>
 						)}
 
-						{iLeftGroup ? (
+						{activeConversation.isRequestForMe ? (
+							// The decision sits where the reply would (owner pick,
+							// Instagram): a slim bar in the composer's place.
+							<div className="flex items-center gap-2 rounded-xl bg-raised/70 px-3 py-2">
+								<span className="min-w-0 flex-1 font-sans text-[12px] text-muted">
+									Accept to reply. They won't know you've seen this.
+								</span>
+								<button
+									type="button"
+									onClick={() => void declineRequest(activeConversation._id)}
+									className="h-8 shrink-0 cursor-pointer rounded-pill px-3 font-sans text-[12px] font-medium text-danger transition-colors hover:bg-chip"
+								>
+									Delete
+								</button>
+								<button
+									type="button"
+									onClick={() => void acceptRequest(activeConversation._id)}
+									className="h-8 shrink-0 cursor-pointer rounded-pill bg-brand px-3.5 font-sans text-[12px] font-semibold text-brand-on transition-colors hover:bg-brand-active"
+								>
+									Accept
+								</button>
+							</div>
+						) : iLeftGroup ? (
 							<div className="flex h-[52px] items-center justify-center rounded-2xl bg-raised/70 px-4">
 								<span className="font-sans text-[13px] text-muted">
 									You left this group
@@ -2623,9 +2708,10 @@ export const MessageBox = ({
 				</motion.div>
 			) : (
 				<div
+					key="empty"
 					className={clsx(
 						"flex-1 flex flex-col items-center justify-center text-muted p-8",
-						conversations.length > 0 ? "hidden md:flex" : "flex",
+						"hidden md:flex",
 					)}
 				>
 					<div className="max-w-md flex flex-col items-center text-center space-y-6">
@@ -2654,6 +2740,39 @@ export const MessageBox = ({
 					</div>
 				</div>
 			)}
+			</AnimatePresence>
+
+			{/* The send flight (owner pick): text lifts from the field, rounds
+			    into a bubble and lands where the optimistic bubble appears. */}
+			<AnimatePresence>
+				{flight && (
+					<motion.div
+						key={flight.key}
+						initial={{
+							left: flight.from.left,
+							top: flight.from.top,
+							width: flight.from.width,
+							borderRadius: 999,
+							backgroundColor: "rgba(34,184,214,0)",
+							opacity: 0.95,
+						}}
+						animate={{
+							left: flight.to.left,
+							top: flight.to.top,
+							width: flight.to.width,
+							borderRadius: 22,
+							backgroundColor: "var(--ws-brand-primary)",
+							opacity: 1,
+						}}
+						exit={{ opacity: 0, transition: { duration: 0.1 } }}
+						transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
+						onAnimationComplete={() => setFlight(null)}
+						className="pointer-events-none fixed z-modal max-h-24 overflow-hidden px-4 py-2.5 font-sans text-sm leading-relaxed text-white"
+					>
+						{flight.text}
+					</motion.div>
+				)}
+			</AnimatePresence>
 
 			{/* New Conversation Modal */}
 			<GifPicker
@@ -2829,19 +2948,20 @@ export const MessageBox = ({
 			)}
 
 			{msgMenu && (
-				<div
-					role="menu"
-					style={{
-						left: Math.min(msgMenu.x, window.innerWidth - 180),
-						top: Math.min(msgMenu.y, window.innerHeight - 120),
-					}}
-					className="fixed z-dropdown w-[190px] overflow-hidden rounded-xl card-depth animate-pop"
-					onClick={(e) => e.stopPropagation()}
-				>
-					{/* Quick-react row (register 134): the six, then a plus for
-					    the full picker. A temp bubble can't be reacted to. */}
+				// Long-press grammar (owner pick, Instagram): the thread dims
+				// and blurs, the reaction bar pops ABOVE the touch point, the
+				// actions below it.
+				<div className="fixed inset-0 z-modal" onClick={() => setMsgMenu(null)}>
+					<div className="absolute inset-0 bg-black/45 backdrop-blur-[2px] animate-pop" />
 					{!msgMenu.message._id.startsWith("temp-") && (
-						<div className="flex items-center gap-0.5 border-b border-hairline px-1.5 py-1.5">
+						<div
+							style={{
+								left: Math.max(8, Math.min(msgMenu.x - 120, window.innerWidth - 300)),
+								top: Math.max(8, msgMenu.y - 62),
+							}}
+							className="absolute flex items-center gap-0.5 rounded-pill card-depth px-1.5 py-1 animate-pop"
+							onClick={(e) => e.stopPropagation()}
+						>
 							{QUICK_REACTIONS.map((emoji) => (
 								<button
 									key={emoji}
@@ -2851,7 +2971,7 @@ export const MessageBox = ({
 										setMsgMenu(null);
 									}}
 									aria-label={`React ${emoji}`}
-									className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-pill text-[17px] transition-colors hover:bg-raised"
+									className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-[20px] transition-transform hover:scale-125"
 								>
 									{emoji}
 								</button>
@@ -2860,12 +2980,21 @@ export const MessageBox = ({
 								type="button"
 								onClick={() => setMenuPicker((v) => !v)}
 								aria-label="More reactions"
-								className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-raised hover:text-primary"
+								className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-raised hover:text-primary"
 							>
 								<Plus className="h-4 w-4" />
 							</button>
 						</div>
 					)}
+				<div
+					role="menu"
+					style={{
+						left: Math.min(msgMenu.x, window.innerWidth - 200),
+						top: Math.min(msgMenu.y + 8, window.innerHeight - 220),
+					}}
+					className="absolute w-[190px] overflow-hidden rounded-xl card-depth animate-pop"
+					onClick={(e) => e.stopPropagation()}
+				>
 					{menuPicker && (
 						<div className="border-b border-hairline p-1 ws-emoji-picker">
 							<EmojiPicker
@@ -2930,6 +3059,7 @@ export const MessageBox = ({
 					)}
 				</div>
 					</div>
+				</div>
 			)}
 
 			<NewConversationModal
@@ -2946,3 +3076,60 @@ export const MessageBox = ({
 };
 
 export default MessageBox;
+
+/**
+ * Empty inbox (owner pick): the people you follow, one tap from a first
+ * message. Loads on first render, renders nothing while there's no one.
+ */
+function SuggestedPeople({
+	myProfileId,
+	people,
+	onLoad,
+	startingWith,
+	onMessage,
+}: {
+	myProfileId: string;
+	people: any[] | null;
+	onLoad: () => void;
+	startingWith: string | null;
+	onMessage: (u: any) => void;
+}) {
+	useEffect(() => {
+		onLoad();
+		// biome-ignore lint/correctness/useExhaustiveDependencies: once
+	}, [myProfileId]);
+	const rows = (people ?? []).filter((u) => u && u._id !== myProfileId).slice(0, 12);
+	if (rows.length === 0) return null;
+	return (
+		<div className="px-2 pb-3 animate-pop">
+			<p className="px-2 pb-1.5 pt-2 font-sans text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle">
+				People you follow
+			</p>
+			{rows.map((u) => (
+				<div key={u._id} className="flex items-center gap-3 rounded-xl px-2 py-2">
+					<span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-pill bg-raised">
+						<SafeAvatar src={u.avatar} eager />
+					</span>
+					<span className="min-w-0 flex-1">
+						<span className="block truncate font-sans text-[14px] font-semibold text-primary">
+							{[u.firstName, u.lastName].filter(Boolean).join(" ") || u.username}
+						</span>
+						{u.username && (
+							<span className="block truncate font-sans text-[12px] text-muted">
+								@{u.username}
+							</span>
+						)}
+					</span>
+					<button
+						type="button"
+						disabled={startingWith === u._id}
+						onClick={() => onMessage(u)}
+						className="h-8 shrink-0 cursor-pointer rounded-pill bg-raised px-3.5 font-sans text-[12px] font-semibold text-primary transition-colors hover:bg-chip disabled:opacity-60"
+					>
+						{startingWith === u._id ? "…" : "Message"}
+					</button>
+				</div>
+			))}
+		</div>
+	);
+}

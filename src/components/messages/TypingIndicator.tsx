@@ -19,7 +19,7 @@ export function TypingIndicator({
 }) {
 	return (
 		<div className="flex flex-col items-start">
-			<div className="flex items-center gap-1 rounded-[18px] rounded-bl-[4px] bg-raised px-3 py-[11px]">
+			<div className="flex items-center gap-1 rounded-[22px] rounded-bl-[8px] bg-raised px-3.5 py-[13px]">
 				{mode === "recording" && (
 					<RiMicFill size={13} className="ws-typing-dot text-danger" />
 				)}

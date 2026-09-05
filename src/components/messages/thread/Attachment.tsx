@@ -23,10 +23,13 @@ export function Attachment({
 	thumbhash,
 	uploadPct,
 	failed,
+	durationSec,
 	onClick,
 	onRetry,
 	onCancelUpload,
 }: {
+	/** Video length, for the corner chip (owner pick: poster + play + duration). */
+	durationSec?: number;
 	src: string;
 	type: "image" | "video";
 	isTemp: boolean;
@@ -45,8 +48,12 @@ export function Attachment({
 		width && height ? Math.min(2.2, Math.max(0.45, width / height)) : 1;
 	const placeholder = useMemo(() => thumbhashToDataURL(thumbhash), [thumbhash]);
 	const uploading = isTemp && !failed && typeof uploadPct === "number";
-	// r=16 ring; the sweep is stroke-dashoffset over the circumference.
-	const C = 2 * Math.PI * 16;
+	// A GIF floats bare (owner pick): no frame radius, no tint — the artwork
+	// is the message.
+	const bare = type === "image" && /\.gif(\?|$)/i.test(src);
+	const clock = durationSec
+		? `${Math.floor(durationSec / 60)}:${String(Math.round(durationSec % 60)).padStart(2, "0")}`
+		: null;
 
 	return (
 		<div
@@ -55,7 +62,8 @@ export function Attachment({
 				// w-[280px], not w-full: the bubble is shrink-to-fit, and 100% of
 				// an auto-width parent is ZERO — the tile collapsed to a bare
 				// timestamp row (found 2026-09-02). max-w-full keeps phones honest.
-				"relative w-[280px] max-w-full overflow-hidden rounded-xl transition-opacity",
+				"relative w-[280px] max-w-full overflow-hidden transition-opacity",
+				bare ? "rounded-md" : "rounded-[inherit]",
 				!uploading && !failed && "cursor-zoom-in hover:opacity-95",
 				isTemp && !uploading && !failed && "opacity-70",
 			)}
@@ -91,52 +99,38 @@ export function Attachment({
 						className="absolute inset-0 h-full w-full object-cover"
 					/>
 					{!uploading && !failed && (
-						<span className="absolute inset-0 flex items-center justify-center">
-							<span className="flex h-12 w-12 items-center justify-center rounded-pill bg-scrim text-primary">
-								<RiPlayFill className="ml-0.5 h-5 w-5" />
+						<>
+							<span className="absolute inset-0 flex items-center justify-center">
+								<span className="flex h-12 w-12 items-center justify-center rounded-pill bg-scrim text-primary">
+									<RiPlayFill className="ml-0.5 h-5 w-5" />
+								</span>
 							</span>
-						</span>
+							{clock && (
+								<span className="absolute bottom-2 right-2 rounded-pill bg-black/55 px-1.5 py-0.5 font-sans text-[11px] font-medium tabular-nums text-white">
+									{clock}
+								</span>
+							)}
+						</>
 					)}
 				</>
 			)}
 			{uploading && (
-				<span className="absolute inset-0 flex items-center justify-center bg-scrim/60">
+				// Telegram grammar (owner pick): a percent chip in the corner, the
+				// image visible underneath, a small cancel opposite it.
+				<>
+					<span className="absolute inset-0 bg-scrim/35" aria-hidden />
+					<span className="absolute left-2 top-2 rounded-pill bg-black/60 px-2 py-0.5 font-sans text-[11px] font-semibold tabular-nums text-white">
+						{Math.round(Math.min(1, uploadPct ?? 0) * 100)}%
+					</span>
 					<button
 						type="button"
 						onClick={onCancelUpload}
 						aria-label="Cancel upload"
-						className="relative flex h-11 w-11 cursor-pointer items-center justify-center rounded-pill text-primary"
+						className="absolute right-2 top-2 flex h-7 w-7 cursor-pointer items-center justify-center rounded-pill bg-black/60 text-white"
 					>
-						<svg
-							viewBox="0 0 40 40"
-							className="absolute inset-0 h-full w-full -rotate-90"
-							aria-hidden
-						>
-							<circle
-								cx="20"
-								cy="20"
-								r="16"
-								fill="none"
-								stroke="currentColor"
-								strokeOpacity="0.25"
-								strokeWidth="3"
-							/>
-							<circle
-								cx="20"
-								cy="20"
-								r="16"
-								fill="none"
-								stroke="var(--ws-brand-primary)"
-								strokeWidth="3"
-								strokeLinecap="round"
-								strokeDasharray={C}
-								strokeDashoffset={C * (1 - Math.min(1, uploadPct ?? 0))}
-								className="transition-[stroke-dashoffset]"
-							/>
-						</svg>
-						<RiCloseLine size={16} />
+						<RiCloseLine size={14} />
 					</button>
-				</span>
+				</>
 			)}
 			{failed && (
 				<span className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-scrim/70">

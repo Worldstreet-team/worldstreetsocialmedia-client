@@ -4,7 +4,12 @@ import clsx from "clsx";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { memo, useRef } from "react";
-import { RiReplyLine } from "@remixicon/react";
+import { RiErrorWarningFill, RiReplyLine } from "@remixicon/react";
+import { haptic } from "@/lib/haptics";
+import {
+	EmbeddedPost,
+	firstPlatformPostId,
+} from "@/components/feed/EmbeddedPost";
 import { MessageTicks, tickStateFor } from "@/components/messages/MessageTicks";
 import { VoiceMessage } from "@/components/messages/VoiceMessage";
 import { PaymentBubble } from "@/components/messages/PaymentBubble";
@@ -34,6 +39,8 @@ export interface BubbleMessage {
 	uploadPct?: number;
 	/** Transient, this tab only: the upload or send failed; offer retry. */
 	failed?: boolean;
+	/** Voice-note transcript, when a speech service produced one. */
+	transcript?: string;
 	reactions?: { profile: string; emoji: string }[];
 	payTo?: string;
 	payToName?: string;
@@ -76,9 +83,11 @@ function quotedPreview(r: {
 
 const URL_RE = /(https?:\/\/[^\s<]+)/;
 const TOKEN_RE = /(https?:\/\/[^\s<]+|@[A-Za-z0-9_.]{2,32})/g;
-function linkify(text: string) {
+function linkify(text: string, mine: boolean) {
 	return text.split(TOKEN_RE).map((part, i) => {
 		if (URL_RE.test(part) && part.startsWith("http")) {
+			// Accent, no underline on theirs (owner pick); on the gradient
+			// bubble the accent is the ground, so mine keeps a white underline.
 			return (
 				<a
 					// biome-ignore lint/suspicious/noArrayIndexKey: static split of one string
@@ -86,7 +95,12 @@ function linkify(text: string) {
 					href={part}
 					target="_blank"
 					rel="noopener noreferrer"
-					className="break-all underline underline-offset-2 opacity-90 hover:opacity-100"
+					className={clsx(
+						"break-all",
+						mine
+							? "underline underline-offset-2 opacity-95 hover:opacity-100"
+							: "font-medium text-brand hover:underline",
+					)}
 					onClick={(e) => e.stopPropagation()}
 				>
 					{part}
@@ -94,15 +108,18 @@ function linkify(text: string) {
 			);
 		}
 		if (part.startsWith("@") && part.length > 2) {
-			// A tag reads gold and opens the profile (register 136). Handles
-			// that resolve to nobody still render — the gateway only ever
-			// NOTIFIES real roster members, styling is just styling.
+			// A mention is a CHIP (owner pick): a tinted pill around the handle
+			// that reads on both fills. Handles that resolve to nobody still
+			// render — the gateway only ever NOTIFIES real roster members.
 			return (
 				<a
 					// biome-ignore lint/suspicious/noArrayIndexKey: static split of one string
 					key={i}
 					href={`/profile/${part.slice(1)}`}
-					className="font-medium text-gold hover:underline"
+					className={clsx(
+						"rounded-md px-1.5 py-[1px] font-semibold",
+						mine ? "bg-black/20 text-white" : "bg-brand/18 text-brand",
+					)}
 					onClick={(e) => e.stopPropagation()}
 				>
 					{part}
@@ -139,6 +156,14 @@ export interface BubbleProps {
 	showAvatar?: boolean;
 	/** Only the newest of MY messages shows delivery state, as text. */
 	showTicks?: boolean;
+	/** The peer's face: a read receipt is their 14px avatar (owner pick). */
+	peerAvatar?: string;
+	/** Consecutive photos sent together render as ONE tight grid (owner
+	 *  pick); the first of the batch carries the whole album. */
+	album?: BubbleMessage[];
+	/** The accent rule + label sits above this row (owner pick). */
+	showUnreadDivider?: boolean;
+	unreadLabel?: number;
 	avatarUrl?: string;
 	/** Live arrival — the only bubbles that animate in (register 152). */
 	fresh?: boolean;
@@ -181,6 +206,10 @@ export const MessageBubble = memo(function MessageBubble({
 	isMe,
 	showAvatar,
 	showTicks,
+	peerAvatar,
+	album,
+	showUnreadDivider,
+	unreadLabel,
 	avatarUrl,
 	fresh,
 	showDay,
@@ -208,6 +237,8 @@ export const MessageBubble = memo(function MessageBubble({
 	const touch = useRef<{ x: number; y: number } | null>(null);
 	const dxRef = useRef(0);
 	const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const hintRef = useRef<HTMLSpanElement | null>(null);
+	const armedRef = useRef(false);
 	const isTemp = m._id.startsWith("temp-");
 
 	const setDx = (dx: number) => {
@@ -221,6 +252,20 @@ export const MessageBubble = memo(function MessageBubble({
 			el.style.transition = "none";
 			el.style.transform = `translateX(${dx}px)`;
 		}
+		// The reply glyph scales in behind the bubble as you drag and fills
+		// at the commit point, with one haptic tick when you cross it (owner
+		// pick: "arrow scales in behind").
+		const hint = hintRef.current;
+		if (hint) {
+			const t = Math.min(1, dx / 56);
+			hint.style.opacity = String(t);
+			hint.style.transform = `translate(${-dx}px, -50%) scale(${0.5 + 0.5 * t})`;
+			hint.style.background = t >= 0.86 ? "var(--ws-brand-primary)" : "";
+			hint.style.color = t >= 0.86 ? "var(--ws-brand-on-primary)" : "";
+		}
+		const armed = dx > 48;
+		if (armed && !armedRef.current) haptic(8);
+		armedRef.current = armed;
 	};
 
 	if (m.type === "system") {
@@ -234,9 +279,16 @@ export const MessageBubble = memo(function MessageBubble({
 				)
 			: m.content;
 		if (!copy) return null;
+		const actorAvatar = (m.sender as { avatar?: string })?.avatar;
 		return (
 			<div className="mx-auto flex w-full max-w-[52rem] justify-center px-4 py-1.5">
-				<span className="rounded-pill bg-page/70 px-3 py-1 text-center font-sans text-[11.5px] font-medium text-muted">
+				<span className="inline-flex items-center gap-1.5 rounded-pill bg-page/70 px-3 py-1 text-center font-sans text-[11.5px] font-medium text-muted">
+					{/* The actor's face inline (owner pick): a busy group reads
+					    as people, not names. */}
+					{actorAvatar && (
+						// eslint-disable-next-line @next/next/no-img-element
+						<img src={actorAvatar} alt="" className="h-4 w-4 rounded-pill object-cover" />
+					)}
 					{copy}
 				</span>
 			</div>
@@ -261,11 +313,30 @@ export const MessageBubble = memo(function MessageBubble({
 		);
 	}
 	if (m.type === "call") {
-		return <CallLogRow content={m.content} at={m.createdAt} onCallBack={onCallBack} />;
+		return (
+			<CallLogRow
+				content={m.content}
+				at={m.createdAt}
+				mine={isMe}
+				onCallBack={onCallBack}
+			/>
+		);
 	}
 
 	return (
 		<>
+			{showUnreadDivider && (
+				// Telegram's rule (owner pick): the thread opens here.
+				<div className="mx-auto flex w-full max-w-[52rem] items-center gap-3 px-4 py-3 sm:px-6">
+					<span className="h-px flex-1 bg-brand/40" />
+					<span className="font-sans text-[11px] font-semibold text-brand">
+						{unreadLabel && unreadLabel > 1
+							? `${unreadLabel} unread messages`
+							: "Unread messages"}
+					</span>
+					<span className="h-px flex-1 bg-brand/40" />
+				</div>
+			)}
 			{showDay && (
 				<div className="flex justify-center pb-2 pt-5">
 					<span className="font-sans text-[11px] font-medium tabular-nums text-subtle">
@@ -332,7 +403,7 @@ export const MessageBubble = memo(function MessageBubble({
 					// A reading column, not a wall: real gutters so bubbles never
 					// kiss the viewport edge, and a centered max-width on wide
 					// panes — every messenger does this (owner, 2026-09-02).
-					"group/msg mx-auto flex w-full max-w-[52rem] flex-col scroll-mt-24 touch-pan-y px-4 sm:px-6",
+					"group/msg relative mx-auto flex w-full max-w-[52rem] flex-col scroll-mt-24 touch-pan-y px-4 sm:px-6",
 					// Three tiers (audit #5): 2px inside a run, 8px between
 					// runs, the centred stamp carries the big gap.
 					sameRunAsPrev ? "mt-[2px]" : "mt-2",
@@ -340,6 +411,24 @@ export const MessageBubble = memo(function MessageBubble({
 					flashed && "rounded-xl bg-brand/10",
 				)}
 			>
+				{/* iMessage grammar (owner pick): every message's time hides off
+				    the right edge and rides in when the thread is dragged left.
+				    --reveal is set by ThreadList's drag handler. */}
+				<span
+					aria-hidden
+					className="pointer-events-none absolute right-[-64px] top-1/2 w-[56px] -translate-y-1/2 text-right font-sans text-[11px] tabular-nums text-subtle"
+					style={{ opacity: "var(--reveal, 0)" }}
+				>
+					{format(new Date(m.createdAt), "h:mm a")}
+				</span>
+				{/* The swipe-to-reply glyph, scaled by setDx. */}
+				<span
+					ref={hintRef}
+					aria-hidden
+					className="pointer-events-none absolute left-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-pill bg-raised text-muted opacity-0"
+				>
+					<RiReplyLine size={14} />
+				</span>
 				<div
 					className={clsx(
 						// w-full, not max-w-full: the row was shrink-to-fit, so the
@@ -384,33 +473,65 @@ export const MessageBubble = memo(function MessageBubble({
 					)}
 					<div
 						className={clsx(
-							"order-2 max-w-[85%] sm:max-w-[70%] min-w-0 overflow-hidden",
-							// Instagram grammar (owner 2026-09-03, audit B): 18px
-							// radius, 12x7 padding, MINE an opaque brand fill with
-							// contrasting ink, THEIRS one step above the page. The
-							// old 16% yellow wash was a pre-rebrand token and sat at
-							// the same lightness as theirs.
+							"order-2 flex min-w-0 max-w-[85%] flex-col sm:max-w-[70%]",
+							isMe ? "items-end" : "items-start",
+						)}
+					>
+						{m.replyTo && (
+							/* Stacked quote (owner pick, Instagram): a label, then the
+							   quoted message peeking out from BEHIND the reply. */
+							<>
+								<span className="mb-1 px-1 font-sans text-[11px] text-subtle">
+									{isMe
+										? `You replied to @${m.replyTo.sender?.username ?? "them"}`
+										: `Replied to @${m.replyTo.sender?.username ?? "you"}`}
+								</span>
+								<button
+									type="button"
+									onClick={() => onJump(m.replyTo!._id)}
+									className={clsx(
+										"-mb-3 max-w-[90%] cursor-pointer truncate rounded-[16px] bg-raised/70 px-3 pb-4 pt-1.5 text-left font-sans text-[12px] text-muted transition-opacity hover:opacity-80",
+										isMe ? "mr-2" : "ml-2",
+									)}
+								>
+									{quotedPreview(m.replyTo)}
+								</button>
+							</>
+						)}
+					<div
+						className={clsx(
+							"relative min-w-0 max-w-full overflow-hidden",
+							// Owner picks 2026-09-03: gradient accent for mine (B),
+							// 22px radius with an 8px inner run corner (D), 14px/1.6
+							// body (C). A GIF/photo-only bubble has no fill of its own.
 							(m.type === "image" || m.type === "video") && !m.content
 								? "p-0"
-								: "px-3 py-[7px]",
-							"rounded-[18px]",
+								: "px-4 py-2.5",
+							"rounded-[22px]",
 							(m.type === "image" || m.type === "video") && !m.content
 								? "text-primary"
 								: isMe
-									? "bg-brand text-brand-on"
+									? "text-white"
 									: "bg-raised text-primary",
-							// The inner corner facing the neighbour drops to 4px so
-							// a run reads as one shape; the outer edge stays round.
 							isMe
 								? [
-										sameRunAsPrev && "rounded-tr-[4px]",
-										!endsRun && "rounded-br-[4px]",
+										sameRunAsPrev && "rounded-tr-[8px]",
+										!endsRun && "rounded-br-[8px]",
 									]
 								: [
-										sameRunAsPrev && "rounded-tl-[4px]",
-										!endsRun && "rounded-bl-[4px]",
+										sameRunAsPrev && "rounded-tl-[8px]",
+										!endsRun && "rounded-bl-[8px]",
 									],
 						)}
+						style={
+							isMe &&
+							!((m.type === "image" || m.type === "video") && !m.content)
+								? {
+										backgroundImage:
+											"linear-gradient(135deg, var(--ws-brand-primary), #6D5BFF)",
+									}
+								: undefined
+						}
 					>
 						{isGroup && !isMe && !sameRunAsPrev && (
 							<span
@@ -422,30 +543,33 @@ export const MessageBubble = memo(function MessageBubble({
 									"Member"}
 							</span>
 						)}
-						{m.replyTo && (
-							/* The quote is a soft inset chip now — no border bar.
-							   The gold NAME carries the "this is a reference"
-							   signal; the wash does the separation (owner ruling
-							   2026-09-02: side borders are dated). */
-							<button
-								type="button"
-								onClick={() => onJump(m.replyTo!._id)}
-								className={clsx(
-									"mb-1.5 flex w-full cursor-pointer flex-col gap-0.5 rounded-[10px] px-2.5 py-1.5 text-left transition-opacity hover:opacity-80",
-									isMe ? "bg-black/15" : "bg-page/45",
-								)}
-							>
-								<span className={clsx("truncate font-sans text-[11.5px] font-semibold", isMe ? "text-brand-on/90" : "text-gold")}>
-									{m.replyTo.sender?.username
-										? `@${m.replyTo.sender.username}`
-										: "Message"}
-								</span>
-								<span className="truncate font-sans text-[12.5px] opacity-70">
-									{quotedPreview(m.replyTo)}
-								</span>
-							</button>
+						{album && album.length > 1 && (
+							/* Tight grid (owner pick): 2px gutters inside one frame,
+							   "+N" on the last tile past four. */
+							<div className="grid w-[280px] max-w-full grid-cols-2 gap-[2px] overflow-hidden rounded-[inherit]">
+								{album.slice(0, 4).map((a, i) => (
+									<button
+										key={a._id}
+										type="button"
+										onClick={() => onMediaClick(a._id)}
+										className="relative aspect-square cursor-zoom-in overflow-hidden bg-sunken"
+									>
+										{/* eslint-disable-next-line @next/next/no-img-element */}
+										<img
+											src={a.mediaUrl}
+											alt=""
+											className="absolute inset-0 h-full w-full object-cover"
+										/>
+										{i === 3 && album.length > 4 && (
+											<span className="absolute inset-0 flex items-center justify-center bg-black/45 font-sans text-[15px] font-semibold text-white">
+												+{album.length - 4}
+											</span>
+										)}
+									</button>
+								))}
+							</div>
 						)}
-						{(m.type === "image" || m.type === "video") && m.mediaUrl && (
+						{!(album && album.length > 1) && (m.type === "image" || m.type === "video") && m.mediaUrl && (
 							<Attachment
 								src={m.mediaUrl}
 								type={m.type}
@@ -455,6 +579,7 @@ export const MessageBubble = memo(function MessageBubble({
 								thumbhash={m.thumbhash}
 								uploadPct={m.uploadPct}
 								failed={m.failed}
+								durationSec={m.type === "video" ? m.durationSec : undefined}
 								onClick={() => onMediaClick(m._id)}
 								onRetry={
 									m.clientKey && onRetryUpload
@@ -498,6 +623,13 @@ export const MessageBubble = memo(function MessageBubble({
 										</button>
 									</span>
 								)}
+								{m.transcript && (
+									// The transcript line (owner pick): what was said,
+									// readable without playing.
+									<p className="mt-1 px-1 font-sans text-[12.5px] leading-snug opacity-75">
+										“{m.transcript}”
+									</p>
+								)}
 							</div>
 						)}
 						{m.storyRef && (
@@ -521,22 +653,51 @@ export const MessageBubble = memo(function MessageBubble({
 						{m.content && (
 							<p
 								className={clsx(
-									"text-[15px] leading-[1.35] break-words whitespace-pre-wrap",
+									"text-sm leading-relaxed break-words whitespace-pre-wrap",
 									m.mediaUrl && "mt-2",
 								)}
 							>
-								{linkify(m.content)}
+								{linkify(m.content, isMe)}
 							</p>
 						)}
+						{/* A WorldSpace post link renders as the post (owner pick),
+						    the same embed the feed uses. */}
+						{m.content && firstPlatformPostId(m.content, "") && (
+							<div className="mt-2 w-[260px] max-w-full">
+								<EmbeddedPost postId={firstPlatformPostId(m.content, "")!} />
+							</div>
+						)}
 					</div>
+					</div>
+					{/* A failed TEXT send stays put with a red mark and a retry
+					    (owner pick) — it used to vanish into a toast. */}
+					{m.failed && m.type === "text" && (
+						<button
+							type="button"
+							onClick={() => m.clientKey && onRetryUpload?.(m.clientKey)}
+							aria-label="Not delivered. Tap to retry"
+							title="Not delivered. Tap to retry"
+							className={clsx(
+								"flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-pill text-danger",
+								isMe ? "order-1" : "order-3",
+							)}
+						>
+							<RiErrorWarningFill size={18} />
+						</button>
+					)}
 				</div>
+				{m.failed && m.type === "text" && (
+					<span className={clsx("mt-0.5 font-sans text-[11px] text-danger", isMe ? "self-end" : "pl-[34px]")}>
+						Not delivered · tap to retry
+					</span>
+				)}
 				{m.reactions && m.reactions.length > 0 && (
 					// Overlapping the bubble's bottom edge (audit #16): the chip
 					// reads as attached to the message and costs ~8px, not a row.
 					<div
 						className={clsx(
-							"relative z-[1] -mt-2.5 mb-1 flex flex-wrap gap-1",
-							isMe ? "justify-end pr-2" : "pl-[42px]",
+							"mt-1 flex flex-wrap gap-1",
+							isMe ? "justify-end" : "pl-[34px]",
 						)}
 					>
 						{Object.entries(
@@ -579,19 +740,27 @@ export const MessageBubble = memo(function MessageBubble({
 				{/* No per-message timestamps (Instagram): the centred stamp
 				    carries time. Delivery state is one quiet word under the
 				    NEWEST of my messages only. */}
-				{isMe && showTicks && (
-					<span className="mt-1 flex items-center gap-1 font-sans text-[11px] text-subtle">
-						<MessageTicks
-							state={tickStateFor({
-								id: m._id,
-								createdAt: m.createdAt,
-								deliveredAt,
-								readAt,
-								peerReadUpTo,
-							})}
-						/>
-					</span>
-				)}
+				{isMe && showTicks && (() => {
+					const state = tickStateFor({
+						id: m._id,
+						createdAt: m.createdAt,
+						deliveredAt,
+						readAt,
+						peerReadUpTo,
+					});
+					// Messenger grammar (owner pick): once seen, the reader's own
+					// 14px face marks how far they've read; before that, a word.
+					return state === "read" && peerAvatar ? (
+						<span className="mt-1 flex items-center justify-end" title="Seen">
+							{/* eslint-disable-next-line @next/next/no-img-element */}
+							<img src={peerAvatar} alt="Seen" className="h-3.5 w-3.5 rounded-pill object-cover" />
+						</span>
+					) : (
+						<span className="mt-1 flex items-center gap-1 font-sans text-[11px] text-subtle">
+							<MessageTicks state={state} />
+						</span>
+					);
+				})()}
 			</motion.div>
 		</>
 	);

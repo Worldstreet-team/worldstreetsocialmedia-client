@@ -24,10 +24,14 @@ import { format } from "date-fns";
 export function CallLogRow({
 	content,
 	at,
+	mine,
 	onCallBack,
 }: {
 	content: string;
 	at?: string;
+	/** The caller logs the call, so the sender IS the caller: the row sits
+	 *  on their shore like any other message (owner pick 2026-09-03). */
+	mine?: boolean;
 	onCallBack?: (video: boolean) => void;
 }) {
 	const missed = /missed|declined|cancelled/i.test(content);
@@ -37,8 +41,8 @@ export function CallLogRow({
 	const Icon = missed ? RiPhoneLine : video ? RiVideoOnFill : RiPhoneFill;
 
 	return (
-		<div className="my-4 flex justify-center">
-			<div className="flex items-center gap-3 rounded-xl bg-raised py-2 pl-2.5 pr-3">
+		<div className={clsx("my-2 flex px-4 sm:px-6", mine ? "justify-end" : "justify-start")}>
+			<div className="flex items-center gap-3 rounded-[22px] bg-raised py-2 pl-2.5 pr-3">
 				<span
 					className={clsx(
 						"flex h-9 w-9 shrink-0 items-center justify-center rounded-pill",

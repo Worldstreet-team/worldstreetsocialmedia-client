@@ -26,6 +26,9 @@ export interface GradientPreset {
 
 /** Gold-family and stone-family gradients only — the palette has no blue. */
 export const GRADIENTS: GradientPreset[] = [
+	// The default (owner pick 2026-09-03: "gradient that shifts on send"):
+	// a brand-family tide so the rotate-on-send beat is felt on every thread.
+	{ id: "tide", label: "Tide", stops: ["#0d2a33", "#0C0A09"] },
 	{ id: "ember", label: "Ember", stops: ["#2a1d06", "#0C0A09"] },
 	{ id: "dusk", label: "Dusk", stops: ["#231d15", "#141210"] },
 	{ id: "moss", label: "Moss", stops: ["#101a14", "#0C0A09"] },
@@ -41,4 +44,8 @@ export function gradientById(id?: string): GradientPreset {
 	return GRADIENTS.find((g) => g.id === id) ?? GRADIENTS[0];
 }
 
-export const DEFAULT_WALLPAPER: WallpaperSetting = { type: "default", dim: 0 };
+export const DEFAULT_WALLPAPER: WallpaperSetting = {
+	type: "gradient",
+	value: "tide",
+	dim: 0,
+};

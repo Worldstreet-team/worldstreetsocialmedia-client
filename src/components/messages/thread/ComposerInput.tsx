@@ -2,11 +2,12 @@
 
 import {
 	RiAddLine,
+	RiArrowUpLine,
 	RiEmotionLine,
 	RiMoneyDollarCircleLine,
-	RiSendPlane2Fill,
 	RiVoiceprintFill,
 } from "@remixicon/react";
+import clsx from "clsx";
 import EmojiPicker, { Theme } from "emoji-picker-react";
 import { useTheme } from "next-themes";
 import {
@@ -35,6 +36,8 @@ function mentionTokenAt(text: string, caret: number) {
 
 export interface ComposerInputHandle {
 	focus: () => void;
+	/** Where the text sits, so a send can animate FROM the field. */
+	getRect: () => DOMRect | null;
 }
 
 /**
@@ -130,6 +133,7 @@ export const ComposerInput = forwardRef<
 
 	useImperativeHandle(ref, () => ({
 		focus: () => inputRef.current?.focus(),
+		getRect: () => inputRef.current?.getBoundingClientRect() ?? null,
 	}));
 
 	const send = async () => {
@@ -144,7 +148,30 @@ export const ComposerInput = forwardRef<
 	};
 
 	return (
-		<div className="relative flex min-w-0 flex-1 items-end gap-1 rounded-pill border border-hairline bg-transparent py-1 pl-1.5 pr-1.5 transition-colors focus-within:border-muted/60 sm:gap-1.5">
+		<div className="flex min-w-0 flex-1 flex-col gap-2">
+		{/* @mention rail (owner pick: horizontal chips, not a dropdown) —
+		    avatar chips above the pill, one tap each. */}
+		{mentionQuery && mentionMatches.length > 0 && (
+			<div className="flex gap-1.5 overflow-x-auto scrollbar-none animate-pop">
+				{mentionMatches.map((c) => (
+					<button
+						key={c.id}
+						type="button"
+						onMouseDown={(e) => {
+							e.preventDefault();
+							insertMention(c);
+						}}
+						className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-pill bg-raised py-1 pl-1 pr-3 font-sans text-[12.5px] font-medium text-primary transition-colors hover:bg-chip"
+					>
+						<span className="relative h-5 w-5 overflow-hidden rounded-pill bg-chip">
+							<SafeAvatar src={c.avatar} eager />
+						</span>
+						{c.name}
+					</button>
+				))}
+			</div>
+		)}
+		<div className="relative flex min-w-0 items-end gap-1 rounded-pill border border-hairline bg-transparent py-1 pl-1.5 pr-1.5 transition-colors focus-within:border-muted/60 sm:gap-1.5">
 			<button
 				type="button"
 				onClick={onAttach}
@@ -197,37 +224,6 @@ export const ComposerInput = forwardRef<
 				rows={1}
 				style={{ minHeight: "24px" }}
 			/>
-			{mentionQuery && mentionMatches.length > 0 && (
-				<div className="absolute bottom-full left-0 z-dropdown mb-2 w-[min(300px,90vw)] overflow-hidden rounded-xl card-depth py-1 animate-pop">
-					{mentionMatches.map((c) => (
-						<button
-							key={c.id}
-							type="button"
-							onMouseDown={(e) => {
-								// mousedown, not click: the textarea must not
-								// blur before the insert reads the caret.
-								e.preventDefault();
-								insertMention(c);
-							}}
-							className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-raised"
-						>
-							<span className="relative h-7 w-7 shrink-0 overflow-hidden rounded-pill bg-raised">
-								<SafeAvatar src={c.avatar} eager />
-							</span>
-							<span className="min-w-0 flex-1">
-								<span className="block truncate font-sans text-[13px] font-medium text-primary">
-									{c.name}
-								</span>
-								{c.username && (
-									<span className="block truncate font-sans text-[11.5px] text-muted">
-										@{c.username}
-									</span>
-								)}
-							</span>
-						</button>
-					))}
-				</div>
-			)}
 			<div className="flex items-center shrink-0">
 				<button
 					type="button"
@@ -248,37 +244,34 @@ export const ComposerInput = forwardRef<
 						GIF
 					</button>
 				)}
-				<div className="relative">
-					<button
-						type="button"
-						onClick={() => setShowEmoji((v) => !v)}
-						aria-label="Insert emoji"
-						className="flex h-9 w-9 items-center justify-center rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors cursor-pointer"
-					>
-						<RiEmotionLine size={21} />
-					</button>
-					{showEmoji && (
-						<div className="fixed left-1/2 bottom-24 -translate-x-1/2 sm:absolute sm:left-auto sm:bottom-12 sm:right-0 sm:translate-x-0 w-[min(320px,calc(100vw-1.5rem))] z-dropdown animate-pop ws-emoji-picker">
-							<EmojiPicker
-								theme={resolvedTheme === "light" ? Theme.LIGHT : Theme.DARK}
-								width="100%"
-								height={360}
-								lazyLoadEmojis={true}
-								onEmojiClick={(e) => setValue((p) => p + e.emoji)}
-							/>
-						</div>
+				<button
+					type="button"
+					onClick={() => setShowEmoji((v) => !v)}
+					aria-label="Insert emoji"
+					aria-expanded={showEmoji}
+					className={clsx(
+						"flex h-9 w-9 items-center justify-center rounded-pill transition-colors cursor-pointer",
+						showEmoji
+							? "bg-raised text-primary"
+							: "text-muted hover:text-primary hover:bg-raised",
 					)}
-				</div>
+				>
+					<RiEmotionLine size={21} />
+				</button>
 				{value.trim() || hasAttachment ? (
-					<button
-						type="button"
-						onClick={() => void send()}
-						disabled={disabled}
-						aria-label="Send message"
-						className="flex h-9 w-9 items-center justify-center bg-brand text-brand-on rounded-pill hover:bg-brand-active transition-colors disabled:opacity-50 cursor-pointer animate-pop"
-					>
-						<RiSendPlane2Fill size={16} />
-					</button>
+					// iMessage grammar (owner pick): the up-arrow lives inside the
+					// pill's right edge, in the mic's cell, so nothing jumps.
+					<span className="flex h-9 w-9 items-center justify-center">
+						<button
+							type="button"
+							onClick={() => void send()}
+							disabled={disabled}
+							aria-label="Send message"
+							className="flex h-7 w-7 items-center justify-center bg-brand text-brand-on rounded-pill hover:bg-brand-active transition-colors disabled:opacity-50 cursor-pointer animate-pop"
+						>
+							<RiArrowUpLine size={17} />
+						</button>
+					</span>
 				) : (
 					<button
 						type="button"
@@ -300,6 +293,20 @@ export const ComposerInput = forwardRef<
 					</button>
 				)}
 			</div>
+		</div>
+		{/* Keyboard-slot emoji panel (owner pick): opens BELOW the pill in the
+		    keyboard's place, native-app style, instead of a floating popover. */}
+		{showEmoji && (
+			<div className="overflow-hidden rounded-xl bg-surface animate-pop ws-emoji-picker">
+				<EmojiPicker
+					theme={resolvedTheme === "light" ? Theme.LIGHT : Theme.DARK}
+					width="100%"
+					height={300}
+					lazyLoadEmojis={true}
+					onEmojiClick={(e) => setValue((p) => p + e.emoji)}
+				/>
+			</div>
+		)}
 		</div>
 	);
 });
