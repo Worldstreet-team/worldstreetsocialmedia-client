@@ -48,18 +48,28 @@ export function PaymentBubble({
 		<div className={clsx("mt-1.5 flex", mine ? "justify-end" : "justify-start")}>
 			<div
 				className={clsx(
-					"min-w-[190px] max-w-[280px] rounded-xl px-3.5 py-3",
-					// One quiet card for both shores (owner 2026-09-03: money
-					// must match the chat, not shout in brand). Direction is
-					// the side + label + arrow, exactly like every messenger.
-					"bg-raised text-primary",
+					// The SAME bubble grammar as a message (owner 2026-09-06):
+					// gradient shore for mine, raised for theirs, 22px radius —
+					// a payment is a message, not a foreign card in the thread.
+					"min-w-[190px] max-w-[280px] rounded-[22px] px-4 py-3",
+					mine ? "text-white" : "bg-raised text-primary",
 				)}
+				style={
+					mine
+						? {
+								backgroundImage:
+									"linear-gradient(135deg, var(--ws-brand-primary), #6D5BFF)",
+							}
+						: undefined
+				}
 			>
 				<span className="flex items-center gap-2">
 					<span
 						className={clsx(
 							"flex h-7 w-7 shrink-0 items-center justify-center rounded-pill",
-							mine ? "bg-chip text-muted" : "bg-success/15 text-success",
+							mine
+								? "bg-white/20 text-white"
+								: "bg-success/15 text-success",
 						)}
 					>
 						<Arrow size={15} />

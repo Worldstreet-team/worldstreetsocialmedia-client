@@ -676,15 +676,6 @@ export const MessageBox = ({
 		[activeConversation?._id],
 	);
 	const [recording, setRecording] = useState<RecorderStart | null>(null);
-	// Phones get the push + parallax (owner pick); desktop keeps the panes.
-	const [isMobile, setIsMobile] = useState(false);
-	useEffect(() => {
-		const mq = window.matchMedia("(max-width: 767px)");
-		const sync = () => setIsMobile(mq.matches);
-		sync();
-		mq.addEventListener("change", sync);
-		return () => mq.removeEventListener("change", sync);
-	}, []);
 	// The send flight (owner pick): the composer's text lifts out of the
 	// field, becomes a bubble and lands at the bottom of the thread.
 	const [flight, setFlight] = useState<{
