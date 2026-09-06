@@ -2010,9 +2010,10 @@ export const MessageBox = ({
 							</span>
 						)}
 						{/* One segmented pill (owner 2026-09-06): the paired controls
-						    share a bordered card on the search's own fill, split by
-						    a hairline — not two floating chips. */}
-						<span className="ml-auto flex items-center overflow-hidden rounded-pill border border-hairline bg-raised">
+						    share a card split by a hairline — not two floating
+						    chips. No outer border; the fill is the same faint
+						    white wash as the active chat chip. */}
+						<span className="ml-auto flex items-center overflow-hidden rounded-pill bg-primary/10">
 							<button
 								type="button"
 								onClick={() => setShowGroupCreate(true)}
@@ -2042,7 +2043,9 @@ export const MessageBox = ({
 							onChange={(e) => setSearchQuery(e.target.value)}
 							ref={searchInputRef}
 							// text-base below sm stops iOS zooming the pane on focus.
-							className="h-9 w-full rounded-pill bg-raised pl-10 pr-4 text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-chip sm:text-sm"
+							// Same faint white wash as the control pills and the
+							// active chat chip — one fill across the header.
+							className="h-9 w-full rounded-pill bg-primary/10 pl-10 pr-4 text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-primary/15 sm:text-sm"
 						/>
 					</div>
 				</div>
@@ -2293,8 +2296,9 @@ export const MessageBox = ({
 							)}
 						</div>
 					{/* Audio | video as ONE segmented pill (owner 2026-09-06):
-						    bordered card on the search fill, hairline between. */}
-						<div className="flex shrink-0 items-center overflow-hidden rounded-pill border border-hairline bg-raised text-muted">
+						    no outer border, the faint white wash as fill, a
+						    hairline between the segments. */}
+						<div className="flex shrink-0 items-center overflow-hidden rounded-pill bg-primary/10 text-muted">
 							{isGroupThread && (
 								<>
 									<button
