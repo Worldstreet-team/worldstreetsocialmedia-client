@@ -339,6 +339,24 @@ export const MessageBox = ({
 			}
 			return null;
 		});
+	// The thread opens/closes with shallow pushStates, so browser
+	// back/forward only change the address bar — this maps the URL back
+	// onto thread state.
+	useEffect(() => {
+		const onPop = () => {
+			const m = window.location.pathname.match(
+				/\/messages\/([a-f0-9]{24})/i,
+			);
+			if (!m) {
+				setActiveConversation(null);
+				return;
+			}
+			const conv = conversationsRef.current.find((c) => c._id === m[1]);
+			if (conv) setActiveConversation(conv);
+		};
+		window.addEventListener("popstate", onPop);
+		return () => window.removeEventListener("popstate", onPop);
+	}, []);
 	const [messageCache, setMessageCache] = useAtom(messageCacheAtom);
 	const setUnreadMessages = useSetAtom(unreadMessagesCountAtom);
 	const setActiveConversationId = useSetAtom(activeConversationIdAtom);
@@ -1978,7 +1996,7 @@ export const MessageBox = ({
 			<motion.div
 				animate={{ x: activeConversation && isMobile ? "-24%" : "0%" }}
 				transition={{ duration: 0.26, ease: [0.2, 0, 0, 1] }}
-				className="relative flex w-full shrink-0 min-w-0 flex-col md:w-[360px] md:bg-surface/40"
+				className="relative flex w-full shrink-0 min-w-0 flex-col md:w-[360px]"
 			>
 				<div className="px-4 pb-1 pt-4">
 					<div className="mb-3 flex items-center gap-2">
@@ -2101,8 +2119,20 @@ export const MessageBox = ({
 						activeId={activeConversation?._id}
 						myProfileId={myProfileId}
 						onOpen={(conv) => {
+							// Shallow open: router.push remounts the root
+							// template (app/template.tsx) and the whole page
+							// skeletons. Swap the URL by hand; Next syncs
+							// usePathname without a navigation.
 							setActiveConversation(conv as any);
-							router.push(`/messages/${conv._id}`);
+							const base = window.location.pathname.replace(
+								/\/messages(\/.*)?$/,
+								"/messages",
+							);
+							window.history.pushState(
+								{ wsChat: conv._id },
+								"",
+								`${base}/${conv._id}`,
+							);
 						}}
 						onDelete={(conv) => {
 							// A request declines instantly — that IS the gesture's
@@ -2135,7 +2165,7 @@ export const MessageBox = ({
 					animate={{ x: 0, opacity: 1 }}
 					exit={isMobile ? { x: "100%" } : { opacity: 0 }}
 					transition={{ duration: 0.26, ease: [0.2, 0, 0, 1] }}
-					className="absolute inset-0 z-10 flex min-w-0 flex-col bg-page md:relative md:inset-auto md:z-auto md:flex-1 md:border-l md:border-hairline md:bg-surface/40"
+					className="absolute inset-0 z-10 flex min-w-0 flex-col bg-page md:relative md:inset-auto md:z-auto md:flex-1 md:border-l md:border-hairline"
 				>
 					{/* Wallpapers are HIDDEN (owner 2026-09-03): the thread keeps
 					    the app's own monochrome ground. ThreadBackdrop and the
