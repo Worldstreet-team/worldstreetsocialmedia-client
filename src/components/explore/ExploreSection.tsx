@@ -24,8 +24,11 @@ type ExploreSectionProps = {
       collapsible: true;
       /** Stable, untranslated key for the localStorage entry and the panel id. */
       sectionId: string;
+      /** Start collapsed until the reader opens it (Kick-style filter
+       *  toggle); their own choice, once made, still wins. */
+      defaultCollapsed?: boolean;
     }
-  | { collapsible?: false; sectionId?: never }
+  | { collapsible?: false; sectionId?: never; defaultCollapsed?: never }
 );
 
 /**
@@ -45,10 +48,11 @@ export function ExploreSection({
   bleed = false,
   collapsible = false,
   sectionId,
+  defaultCollapsed = false,
   children,
 }: ExploreSectionProps) {
   const t = useT();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(collapsible && defaultCollapsed);
   // Transitions stay off for the first painted frame — see the effect below.
   const [animated, setAnimated] = useState(false);
 
@@ -56,11 +60,14 @@ export function ExploreSection({
     if (!collapsible || !sectionId) return;
 
     try {
-      if (window.localStorage.getItem(storageKey(sectionId)) === "1") {
-        setCollapsed(true);
-      }
+      // Three states: "1" collapsed, "0" expanded, absent = the section's
+      // own default. Reading only "1" used to force defaultCollapsed
+      // sections back shut the moment a reader expanded them.
+      const stored = window.localStorage.getItem(storageKey(sectionId));
+      if (stored === "1") setCollapsed(true);
+      else if (stored === "0") setCollapsed(false);
     } catch {
-      // Storage blocked (private mode, hardened browser) — stay expanded.
+      // Storage blocked (private mode, hardened browser) — keep the default.
     }
 
     // Restoring a collapsed section is a *state*, not a gesture: enabling the
