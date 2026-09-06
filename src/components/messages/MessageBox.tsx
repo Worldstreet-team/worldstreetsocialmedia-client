@@ -2127,13 +2127,18 @@ export const MessageBox = ({
 				<motion.div
 					// Push from the right on phones, a short slide on desktop
 					// (owner pick: push with parallax). The wallpaper is painted
-					// at THIS level so it runs edge to edge under glass bars.
+					// at THIS level so it runs edge to edge under glass bars —
+					// which is why the desktop class is md:relative and NOT
+					// md:static: ThreadBackdrop is absolute inset-0 and needs
+					// this pane as its positioned ancestor. Static let it
+					// resolve against the whole MessageBox and paint the
+					// gradient straight over the inbox list.
 					key={activeConversation._id}
 					initial={isMobile ? { x: "100%" } : { x: 24, opacity: 0 }}
 					animate={{ x: 0, opacity: 1 }}
 					exit={isMobile ? { x: "100%" } : { opacity: 0 }}
 					transition={{ duration: 0.26, ease: [0.2, 0, 0, 1] }}
-					className="absolute inset-0 z-10 flex min-w-0 flex-col bg-page md:static md:flex-1"
+					className="absolute inset-0 z-10 flex min-w-0 flex-col bg-page md:relative md:inset-auto md:z-auto md:flex-1"
 				>
 					<ThreadBackdrop wallpaper={wallpaper} pulse={sendPulse} />
 					<div className="relative z-10 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-hairline/50 glass-frost backdrop-blur-xl px-2 md:px-5">

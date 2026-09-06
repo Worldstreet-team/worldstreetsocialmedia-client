@@ -482,9 +482,22 @@ export const MessageBubble = memo(function MessageBubble({
 							   quoted message peeking out from BEHIND the reply. */
 							<>
 								<span className="mb-1 px-1 font-sans text-[11px] text-subtle">
-									{isMe
-										? `You replied to @${m.replyTo.sender?.username ?? "them"}`
-										: `Replied to @${m.replyTo.sender?.username ?? "you"}`}
+									{(() => {
+										// Whose message is being quoted decides the copy:
+										// "replied to you" when it was mine.
+										const quotedIsMine =
+											!!myProfileId &&
+											(m.replyTo as { sender?: { _id?: string } })?.sender
+												?._id === myProfileId;
+										const handle = m.replyTo?.sender?.username;
+										if (isMe)
+											return quotedIsMine
+												? "You replied to yourself"
+												: `You replied to @${handle ?? "them"}`;
+										return quotedIsMine
+											? "Replied to you"
+											: `Replied to @${handle ?? "them"}`;
+									})()}
 								</span>
 								<button
 									type="button"
