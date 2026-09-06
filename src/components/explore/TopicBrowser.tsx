@@ -33,9 +33,6 @@ export function TopicBrowser({
       delay={delay}
       collapsible
       sectionId="topics"
-      // Hidden until toggled (owner 2026-09-03, the Kick grammar): the
-      // browse grid is a filter, and a filter earns its space on demand.
-      defaultCollapsed
     >
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {VERTICALS.map((v) => {
