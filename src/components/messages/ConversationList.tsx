@@ -201,11 +201,10 @@ export function ConversationList({
 							// The selected chat is a contained chip, not a
 							// full-bleed strip (owner 2026-09-06) — the list
 							// wrapper's px-2 gives the radius air on both sides.
-							// Active is INVERTED (owner 2026-09-06): near-white
-							// chip with page-dark ink in dark mode — bg-primary
-							// is the ink token, so the flip holds in both themes.
+							// Its fill is a FADED white (owner): the ink token
+							// at a wash, not raised-grey and not solid white.
 							"group relative flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-1.5 text-left transition-colors",
-							active ? "bg-primary" : "hover:bg-surface",
+							active ? "bg-primary/10" : "hover:bg-surface",
 						)}
 					>
 						<span className="relative shrink-0">
@@ -220,10 +219,7 @@ export function ConversationList({
 							{!isGroup && u && online.has(u._id) && (
 								<span
 									aria-label="Online"
-									className={clsx(
-										"absolute bottom-0 right-0 h-3.5 w-3.5 rounded-pill bg-success ring-2",
-										active ? "ring-primary" : "ring-page",
-									)}
+									className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-pill bg-success ring-2 ring-page"
 								/>
 							)}
 						</span>
@@ -233,19 +229,15 @@ export function ConversationList({
 								<span
 									className={clsx(
 										"truncate font-sans text-[14px]",
-										unread ? "font-semibold" : "font-medium",
-										active ? "text-page" : "text-primary",
+										unread
+											? "font-semibold text-primary"
+											: "font-medium text-primary",
 									)}
 								>
 									{identity.title}
 								</span>
 								{isGroup ? (
-									<span
-										className={clsx(
-											"flex shrink-0 items-center gap-0.5 font-sans text-[12px]",
-											active ? "text-page/60" : "text-subtle",
-										)}
-									>
+									<span className="flex shrink-0 items-center gap-0.5 font-sans text-[12px] text-subtle">
 										<Users className="h-3 w-3" />
 										{identity.memberCount ?? ""}
 									</span>
@@ -261,14 +253,7 @@ export function ConversationList({
 											{(ambiguous.get(identity.title.toLowerCase()) ??
 												0) > 1 &&
 												u.username && (
-													<span
-														className={clsx(
-															"min-w-0 shrink truncate font-sans text-[12px]",
-															active
-																? "text-page/60"
-																: "text-subtle",
-														)}
-													>
+													<span className="min-w-0 shrink truncate font-sans text-[12px] text-subtle">
 														@{u.username}
 													</span>
 												)}
@@ -280,32 +265,16 @@ export function ConversationList({
 							<span
 								className={clsx(
 									"mt-0.5 flex items-center gap-1 font-sans text-[13px]",
-									unread && "font-medium",
-									active
-										? "text-page/70"
-										: unread
-											? "text-primary"
-											: "text-muted",
+									unread ? "font-medium text-primary" : "text-muted",
 								)}
 							>
 								{mine && conv.lastMessage?.type !== "system" && (
-									<span
-										className={clsx(
-											"shrink-0",
-											active ? "text-page/60" : "text-subtle",
-										)}
-									>
+									<span className="shrink-0 text-subtle">
 										{t("messages.you")}
 									</span>
 								)}
 								{Glyph && conv.lastMessage?.type !== "system" && (
-									<Glyph
-										size={14}
-										className={clsx(
-											"shrink-0",
-											active ? "text-page/60" : "text-subtle",
-										)}
-									/>
+									<Glyph size={14} className="shrink-0 text-subtle" />
 								)}
 								<span className="truncate">
 									{conv.lastMessage?.type === "system"
@@ -332,12 +301,7 @@ export function ConversationList({
 								{/* The time rides the preview line ("Heyy · 3d"),
 								    which frees the top line for the name alone. */}
 								{rowTime(conv) && (
-									<span
-										className={clsx(
-											"shrink-0 tabular-nums",
-											active ? "text-page/60" : "text-subtle",
-										)}
-									>
+									<span className="shrink-0 tabular-nums text-subtle">
 										{"\u00b7 "}
 										{formatTimeAgo(rowTime(conv) as string)}
 									</span>
