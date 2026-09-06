@@ -2433,6 +2433,7 @@ export const MessageBox = ({
 							pendingNew={pendingNew}
 							loading={isLoadingMessages}
 							peerAvatar={activeConversation.otherParticipant?.avatar}
+							myAvatar={me?.avatar || user?.imageUrl || undefined}
 							peer={{
 								name: headerIdentity.title,
 								username: activeConversation.otherParticipant?.username,

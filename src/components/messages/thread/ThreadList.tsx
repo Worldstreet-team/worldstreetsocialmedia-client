@@ -51,6 +51,8 @@ export interface ThreadListProps {
 	loading?: boolean;
 	/** The peer's face, for the seen-avatar receipt (owner pick). */
 	peerAvatar?: string;
+	/** The viewer's face — the money card overlaps payer and payee. */
+	myAvatar?: string;
 	/** Who this thread is with — the empty state is their profile card. */
 	peer?: { name: string; username?: string; avatar?: string };
 	/** Unread count when the thread was opened: the accent divider sits
@@ -91,6 +93,7 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 			pendingNew,
 			loading,
 			peerAvatar,
+			myAvatar,
 			peer,
 			unreadAtOpen,
 			onLoadOlder,
@@ -279,6 +282,7 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 						showAvatar={!isMe && endsRun}
 						showTicks={isMe && i === lastMineIndex}
 						peerAvatar={peerAvatar}
+						myAvatar={myAvatar}
 						album={albums.get(m._id)}
 						showUnreadDivider={!!unreadAnchorId && m._id === unreadAnchorId}
 						unreadLabel={unreadAtOpen}
@@ -308,6 +312,7 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 				myProfileId,
 				lastMineIndex,
 				peerAvatar,
+				myAvatar,
 				unreadAnchorId,
 				unreadAtOpen,
 				flashedId,

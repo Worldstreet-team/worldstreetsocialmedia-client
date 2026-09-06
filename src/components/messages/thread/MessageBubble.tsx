@@ -189,6 +189,8 @@ export interface BubbleProps {
 	/** Next voice note downthread — finished notes chain (register 87). */
 	autoplayNextId?: string;
 	myProfileId?: string;
+	/** The viewer's face — the money card overlaps payer and payee. */
+	myAvatar?: string;
 	/** Group threads name their senders and colour them (register 105). */
 	isGroup?: boolean;
 	onReply: (m: BubbleMessage) => void;
@@ -233,6 +235,7 @@ export const MessageBubble = memo(function MessageBubble({
 	peerReadUpTo,
 	autoplayNextId,
 	myProfileId,
+	myAvatar,
 	isGroup,
 	onReply,
 	onMenu,
@@ -324,6 +327,20 @@ export const MessageBubble = memo(function MessageBubble({
 			(m.sender as { firstName?: string })?.firstName ||
 			(m.sender as { username?: string })?.username ||
 			undefined;
+		const paidToMe = !!myProfileId && m.payTo === myProfileId;
+		// The two faces of the transfer. In a DM the pair is always
+		// viewer + peer; a group payment falls back to the initial chip
+		// when the target's face isn't on the message.
+		const fromAvatar = isMe
+			? myAvatar
+			: (m.sender as { avatar?: string })?.avatar || peerAvatar;
+		const toAvatar = paidToMe
+			? myAvatar
+			: isGroup
+				? undefined
+				: isMe
+					? peerAvatar
+					: myAvatar;
 		return (
 			// The same reading column as every bubble — without it the money
 			// card ignored the centred max-width and gutters and sat on the
@@ -336,8 +353,10 @@ export const MessageBubble = memo(function MessageBubble({
 					mine={isMe}
 					peerName={isGroup ? undefined : peerName}
 					toName={m.payToName}
-					toMe={!!myProfileId && m.payTo === myProfileId}
+					toMe={paidToMe}
 					senderName={isGroup ? senderName : peerName}
+					fromAvatar={fromAvatar}
+					toAvatar={toAvatar}
 				/>
 			</div>
 		);
