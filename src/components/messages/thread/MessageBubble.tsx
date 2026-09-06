@@ -327,7 +327,11 @@ export const MessageBubble = memo(function MessageBubble({
 			(m.sender as { firstName?: string })?.firstName ||
 			(m.sender as { username?: string })?.username ||
 			undefined;
-		const paidToMe = !!myProfileId && m.payTo === myProfileId;
+		// In a DM the payee is whoever didn't pay — older payments carry no
+		// payTo, and the footer read "Thy paid them" on money I received.
+		const paidToMe = isGroup
+			? !!myProfileId && m.payTo === myProfileId
+			: !isMe;
 		// The two faces of the transfer. In a DM the pair is always
 		// viewer + peer; a group payment falls back to the initial chip
 		// when the target's face isn't on the message.
