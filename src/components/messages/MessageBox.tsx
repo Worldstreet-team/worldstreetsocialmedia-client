@@ -2146,12 +2146,15 @@ export const MessageBox = ({
 							<button
 								type="button"
 								onClick={() => {
-									// The thread OPEN pushed /messages/<id>;
-									// closing state-only left that URL (and a
-									// ghost entry) behind — refresh reopened
-									// the thread you had just left.
+									// Shallow, like the open: clear the pane and put
+									// the inbox URL back without a navigation, so
+									// the list is exactly as you left it.
 									setActiveConversation(null);
-									goBack("/messages");
+									const base = window.location.pathname.replace(
+										/\/messages(\/.*)?$/,
+										"/messages",
+									);
+									window.history.pushState({}, "", base);
 								}}
 								aria-label="Back to conversations"
 								className="md:hidden h-11 w-11 shrink-0 flex items-center justify-center rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors"
