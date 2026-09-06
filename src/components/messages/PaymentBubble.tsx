@@ -49,14 +49,17 @@ export function PaymentBubble({
 			<div
 				className={clsx(
 					"min-w-[190px] max-w-[280px] rounded-xl px-3.5 py-3",
-					mine ? "bg-brand text-brand-on" : "bg-raised text-primary",
+					// One quiet card for both shores (owner 2026-09-03: money
+					// must match the chat, not shout in brand). Direction is
+					// the side + label + arrow, exactly like every messenger.
+					"bg-raised text-primary",
 				)}
 			>
 				<span className="flex items-center gap-2">
 					<span
 						className={clsx(
 							"flex h-7 w-7 shrink-0 items-center justify-center rounded-pill",
-							mine ? "bg-brand-on/15" : "bg-success/15 text-success",
+							mine ? "bg-chip text-muted" : "bg-success/15 text-success",
 						)}
 					>
 						<Arrow size={15} />

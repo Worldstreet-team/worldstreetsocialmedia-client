@@ -96,8 +96,6 @@ import {
 // too), which is Phosphor-typed and drives its own active weight. The Remix
 // swap is for the chat MESSAGE glyphs, not the tab chrome.
 import { Tray } from "@phosphor-icons/react";
-import { ThreadBackdrop } from "@/components/messages/thread/ThreadBackdrop";
-import { WallpaperSheet } from "@/components/messages/thread/WallpaperSheet";
 import {
 	DEFAULT_WALLPAPER,
 	type WallpaperSetting,
@@ -377,7 +375,6 @@ export const MessageBox = ({
 	const [pendingNew, setPendingNew] = useState(0);
 	// W2 skin: per-thread wallpaper + the send pulse that rotates gradients.
 	const [wallpaper, setWallpaper] = useState<WallpaperSetting>(DEFAULT_WALLPAPER);
-	const [wallpaperOpen, setWallpaperOpen] = useState(false);
 	const [sendPulse, setSendPulse] = useState(0);
 	const hasMoreOlderRef = useRef(true);
 	const loadingOlderRef = useRef(false);
@@ -2138,10 +2135,14 @@ export const MessageBox = ({
 					animate={{ x: 0, opacity: 1 }}
 					exit={isMobile ? { x: "100%" } : { opacity: 0 }}
 					transition={{ duration: 0.26, ease: [0.2, 0, 0, 1] }}
-					className="absolute inset-0 z-10 flex min-w-0 flex-col bg-page md:relative md:inset-auto md:z-auto md:flex-1"
+					className="absolute inset-0 z-10 flex min-w-0 flex-col bg-page md:relative md:inset-auto md:z-auto md:flex-1 md:border-l md:border-hairline md:bg-surface/40"
 				>
-					<ThreadBackdrop wallpaper={wallpaper} pulse={sendPulse} />
-					<div className="relative z-10 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-hairline/50 glass-frost backdrop-blur-xl px-2 md:px-5">
+					{/* Wallpapers are HIDDEN (owner 2026-09-03): the thread keeps
+					    the app's own monochrome ground. ThreadBackdrop and the
+					    appearance sheet stay in the tree for a future return. */}
+					{/* Transparent over the pane's own tint — glass over a flat
+					    colour is just a grey box (house glass rule). */}
+					<div className="relative z-10 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-hairline/60 px-2 md:px-5">
 						<div className="flex items-center gap-2 md:gap-3 min-w-0">
 							<button
 								type="button"
@@ -2371,15 +2372,6 @@ export const MessageBox = ({
 							</button>
 							</>
 							)}
-							<button
-								type="button"
-								aria-label="Chat appearance"
-								title="Chat appearance"
-								onClick={() => setWallpaperOpen(true)}
-								className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary md:h-10 md:w-10"
-							>
-								<Info className="w-5 h-5" />
-							</button>
 						</div>
 					</div>
 
@@ -2446,7 +2438,7 @@ export const MessageBox = ({
 
 					{/* shrink-0 + pb-safe: the composer is the flex row that must never
 					    be squeezed out, and it sits on the iOS home indicator. */}
-					<div className="relative z-10 shrink-0 glass-frost backdrop-blur-xl px-3 pb-safe pt-2 sm:px-4">
+					<div className="relative z-10 shrink-0 px-3 pb-safe pt-2 sm:px-4">
 						{/* What you are answering, above the input, with a way out.
 						    Sending clears it; so does Escape, because a reply you
 						    cannot cancel is a trap. */}
@@ -2788,43 +2780,7 @@ export const MessageBox = ({
 				onClose={() => setShowGifPicker(false)}
 				onPick={(url) => void sendGif(url)}
 			/>
-			{wallpaperOpen && activeConversation && (
-				<WallpaperSheet
-					conversationId={activeConversation._id}
-					current={wallpaper}
-					onClose={() => setWallpaperOpen(false)}
-					onApplied={(w) => {
-						setWallpaper(w);
-						// Write it through to the IN-MEMORY conversation too.
-						// The thread re-derives its wallpaper from
-						// activeConversation.members on every open, and that
-						// copy was stale: close the chat, reopen, and the
-						// wallpaper you just set vanished until a full refetch
-						// (owner, 2026-09-02). The server already has it; this
-						// keeps the session's copy honest.
-						const stamp = (c: Conversation): Conversation =>
-							c._id !== activeConversation._id
-								? c
-								: {
-										...c,
-										members: (c.members ?? []).map((mm) => {
-											const pid =
-												typeof mm.profile === "string"
-													? mm.profile
-													: mm.profile?._id;
-											return String(pid) === String(myProfileId)
-												? { ...mm, wallpaper: { ...w } }
-												: mm;
-										}),
-									};
-						setConversations((prev) => prev.map(stamp));
-						setActiveConversation((prev) =>
-							prev ? stamp(prev) : prev,
-						);
-					}}
-				/>
-			)}
-			{groupSheetOpen && activeConversation && isGroupThread && myProfileId && (
+						{groupSheetOpen && activeConversation && isGroupThread && myProfileId && (
 				<GroupSheet
 					open={groupSheetOpen}
 					onClose={() => setGroupSheetOpen(false)}
