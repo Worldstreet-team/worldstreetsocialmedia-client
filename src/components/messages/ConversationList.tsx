@@ -171,7 +171,7 @@ export function ConversationList({
 	}
 
 	return (
-		<div className="flex flex-col">
+		<div className="flex flex-col px-2">
 			{rows.map((conv) => {
 				const identity = conversationIdentity(conv);
 				const isGroup = identity.kind === "group";
@@ -198,7 +198,10 @@ export function ConversationList({
 						onClick={() => onOpen(conv)}
 						aria-current={active ? "true" : undefined}
 						className={clsx(
-							"group relative flex w-full cursor-pointer items-center gap-3 px-4 py-1.5 text-left transition-colors",
+							// The selected chat is a contained chip, not a
+							// full-bleed strip (owner 2026-09-06) — the list
+							// wrapper's px-2 gives the radius air on both sides.
+							"group relative flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-1.5 text-left transition-colors",
 							active ? "bg-raised" : "hover:bg-surface",
 						)}
 					>
@@ -339,7 +342,7 @@ function SwipeRow({
 	if (!onDelete) return <>{children}</>;
 
 	return (
-		<div className="relative overflow-hidden">
+		<div className="relative overflow-hidden rounded-xl">
 			<div
 				aria-hidden
 				className={clsx(

@@ -60,6 +60,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCall } from "@/providers/CallProvider";
 import { useChatSignals } from "@/hooks/useChatSignals";
 import { ThreadList } from "@/components/messages/thread/ThreadList";
+import type { BubbleLift } from "@/components/messages/thread/MessageBubble";
 import {
 	ComposerInput,
 	type ComposerInputHandle,
@@ -414,6 +415,8 @@ export const MessageBox = ({
 		x: number;
 		y: number;
 		message: Message;
+		/** Sharp copy of the pressed bubble, painted above the scrim. */
+		lift?: BubbleLift;
 	} | null>(null);
 	const msgMenuOpenedAt = useRef(0);
 	const [menuPicker, setMenuPicker] = useState(false);
@@ -1909,8 +1912,8 @@ export const MessageBox = ({
 	const bubbleHandlers = useMemo(
 		() => ({
 			onReply: replyAndFocus,
-			onMenu: (x: number, y: number, m: unknown) =>
-				setMsgMenu({ x, y, message: m as Message }),
+			onMenu: (x: number, y: number, m: unknown, lift?: BubbleLift) =>
+				setMsgMenu({ x, y, message: m as Message, lift }),
 			onJump: jumpToMessage,
 			onMediaClick: handleMediaClick,
 			onRetryUpload: retryUpload,
@@ -2941,17 +2944,50 @@ export const MessageBox = ({
 				</div>
 			)}
 
-			{msgMenu && (
+			{msgMenu && (() => {
 				// Long-press grammar (owner pick, Instagram): the thread dims
-				// and blurs, the reaction bar pops ABOVE the touch point, the
-				// actions below it.
+				// and blurs; the PRESSED bubble is repainted sharp above the
+				// scrim (its live DOM sits under the blur), with the reaction
+				// bar hugging its top edge and the actions its bottom.
+				const vw = window.innerWidth;
+				const vh = window.innerHeight;
+				const r = msgMenu.lift?.rect;
+				const alignRight = msgMenu.lift?.mine ?? false;
+				const barLeft = r
+					? Math.max(8, Math.min(alignRight ? r.left + r.width - 292 : r.left, vw - 300))
+					: Math.max(8, Math.min(msgMenu.x - 120, vw - 300));
+				const barTop = r
+					? Math.max(8, r.top - 54)
+					: Math.max(8, msgMenu.y - 62);
+				const menuLeft = r
+					? Math.max(8, Math.min(alignRight ? r.left + r.width - 190 : r.left, vw - 198))
+					: Math.min(msgMenu.x, vw - 200);
+				const menuTop = r
+					? Math.min(r.top + r.height + 8, vh - 260)
+					: Math.min(msgMenu.y + 8, vh - 220);
+				return (
 				<div className="fixed inset-0 z-modal" onClick={() => setMsgMenu(null)}>
 					<div className="absolute inset-0 bg-black/45 backdrop-blur-[2px] animate-pop" />
+					{msgMenu.lift && (
+						<div
+							aria-hidden
+							className="pointer-events-none absolute animate-pop"
+							style={{
+								left: r!.left,
+								top: r!.top,
+								width: r!.width,
+								height: r!.height,
+							}}
+							// Our own already-rendered markup, captured verbatim —
+							// React escaped the message text on first render.
+							dangerouslySetInnerHTML={{ __html: msgMenu.lift.html }}
+						/>
+					)}
 					{!msgMenu.message._id.startsWith("temp-") && (
 						<div
 							style={{
-								left: Math.max(8, Math.min(msgMenu.x - 120, window.innerWidth - 300)),
-								top: Math.max(8, msgMenu.y - 62),
+								left: barLeft,
+								top: barTop,
 							}}
 							className="absolute flex items-center gap-0.5 rounded-pill card-depth px-1.5 py-1 animate-pop"
 							onClick={(e) => e.stopPropagation()}
@@ -2983,8 +3019,8 @@ export const MessageBox = ({
 				<div
 					role="menu"
 					style={{
-						left: Math.min(msgMenu.x, window.innerWidth - 200),
-						top: Math.min(msgMenu.y + 8, window.innerHeight - 220),
+						left: menuLeft,
+						top: menuTop,
 					}}
 					className="absolute w-[190px] overflow-hidden rounded-xl card-depth animate-pop"
 					onClick={(e) => e.stopPropagation()}
@@ -3054,7 +3090,8 @@ export const MessageBox = ({
 				</div>
 					</div>
 				</div>
-			)}
+				);
+			})()}
 
 			<NewConversationModal
 				isOpen={showNewConversationModal}

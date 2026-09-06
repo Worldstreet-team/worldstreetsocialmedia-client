@@ -149,6 +149,17 @@ export function dayLabel(iso: string) {
 	);
 }
 
+/**
+ * A snapshot of the pressed bubble, captured at long-press so the menu
+ * overlay can repaint it SHARP above the blurred scrim — the bubble the
+ * gesture is about must never be the thing that goes blurry.
+ */
+export interface BubbleLift {
+	rect: { left: number; top: number; width: number; height: number };
+	html: string;
+	mine: boolean;
+}
+
 export interface BubbleProps {
 	m: BubbleMessage;
 	isMe: boolean;
@@ -181,7 +192,7 @@ export interface BubbleProps {
 	/** Group threads name their senders and colour them (register 105). */
 	isGroup?: boolean;
 	onReply: (m: BubbleMessage) => void;
-	onMenu: (x: number, y: number, m: BubbleMessage) => void;
+	onMenu: (x: number, y: number, m: BubbleMessage, lift?: BubbleLift) => void;
 	onJump: (id: string) => void;
 	onMediaClick: (id: string) => void;
 	onStory: (ref: NonNullable<BubbleMessage["storyRef"]>) => void;
@@ -234,6 +245,20 @@ export const MessageBubble = memo(function MessageBubble({
 	onReact,
 }: BubbleProps) {
 	const rowRef = useRef<HTMLDivElement | null>(null);
+	// Snapshot the bubble node itself (not the row — no avatar, no reply
+	// affordance) so the menu overlay can repaint it above the scrim.
+	const liftBubble = (): BubbleLift | undefined => {
+		const el = rowRef.current?.querySelector(
+			"[data-bubble]",
+		) as HTMLElement | null;
+		if (!el) return undefined;
+		const r = el.getBoundingClientRect();
+		return {
+			rect: { left: r.left, top: r.top, width: r.width, height: r.height },
+			html: el.outerHTML,
+			mine: isMe,
+		};
+	};
 	const touch = useRef<{ x: number; y: number } | null>(null);
 	const dxRef = useRef(0);
 	const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -364,14 +389,14 @@ export const MessageBubble = memo(function MessageBubble({
 				onContextMenu={(e) => {
 					if (isTemp) return;
 					e.preventDefault();
-					onMenu(e.clientX, e.clientY, m);
+					onMenu(e.clientX, e.clientY, m, liftBubble());
 				}}
 				onTouchStart={(e) => {
 					if (isTemp) return;
 					const t = e.touches[0];
 					touch.current = { x: t.clientX, y: t.clientY };
 					holdTimer.current = setTimeout(() => {
-						onMenu(t.clientX, t.clientY, m);
+						onMenu(t.clientX, t.clientY, m, liftBubble());
 						holdTimer.current = null;
 					}, 450);
 				}}
@@ -512,6 +537,7 @@ export const MessageBubble = memo(function MessageBubble({
 							</>
 						)}
 					<div
+						data-bubble
 						className={clsx(
 							"relative min-w-0 max-w-full overflow-hidden",
 							// Owner picks 2026-09-03: gradient accent for mine (B),
