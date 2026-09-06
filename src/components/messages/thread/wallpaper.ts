@@ -44,8 +44,8 @@ export function gradientById(id?: string): GradientPreset {
 	return GRADIENTS.find((g) => g.id === id) ?? GRADIENTS[0];
 }
 
-export const DEFAULT_WALLPAPER: WallpaperSetting = {
-	type: "gradient",
-	value: "tide",
-	dim: 0,
-};
+// Flat page colour by default (owner 2026-09-03: the gradient ground read
+// as dirty — the thread keeps the app's normal surface). Gradients stay as
+// opt-in presets in the appearance sheet, where the rotate-on-send beat
+// still plays for whoever picks one.
+export const DEFAULT_WALLPAPER: WallpaperSetting = { type: "default", dim: 0 };
