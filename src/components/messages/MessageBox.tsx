@@ -1993,14 +1993,9 @@ export const MessageBox = ({
 				initialIndex={currentMediaIndex}
 			/>
 
-			{/* Sidebar. On a phone it stays mounted UNDER the thread pane and
-			    parallaxes back by 24% as the thread pushes in — the iOS nav
-			    stack (owner pick), reversing exactly on back. */}
-			<motion.div
-				animate={{ x: activeConversation && isMobile ? "-24%" : "0%" }}
-				transition={{ duration: 0.26, ease: [0.2, 0, 0, 1] }}
-				className="relative flex w-full shrink-0 min-w-0 flex-col md:w-[360px]"
-			>
+			{/* Sidebar. On a phone it stays mounted UNDER the thread pane;
+			    open/close is static (owner 2026-09-06) — no parallax slide. */}
+			<div className="relative flex w-full shrink-0 min-w-0 flex-col md:w-[360px]">
 				<div className="px-4 pb-1 pt-4">
 					<div className="mb-3 flex items-center gap-2">
 						{/* Phones only. On desktop the inbox sits inside the app
@@ -2149,25 +2144,17 @@ export const MessageBox = ({
 						}}
 					/>
 				</div>
-			</motion.div>
+			</div>
 
-			{/* Chat Area */}
-			<AnimatePresence initial={false}>
+			{/* Chat Area. Open and close are STATIC (owner 2026-09-06): the
+			    pane appears and disappears in place — no push, no slide.
+			    The desktop class stays md:relative and NOT md:static:
+			    ThreadBackdrop is absolute inset-0 and needs this pane as its
+			    positioned ancestor; static let it resolve against the whole
+			    MessageBox and paint over the inbox list. */}
 			{activeConversation ? (
-				<motion.div
-					// Push from the right on phones, a short slide on desktop
-					// (owner pick: push with parallax). The wallpaper is painted
-					// at THIS level so it runs edge to edge under glass bars —
-					// which is why the desktop class is md:relative and NOT
-					// md:static: ThreadBackdrop is absolute inset-0 and needs
-					// this pane as its positioned ancestor. Static let it
-					// resolve against the whole MessageBox and paint the
-					// gradient straight over the inbox list.
+				<div
 					key={activeConversation._id}
-					initial={isMobile ? { x: "100%" } : { x: 24, opacity: 0 }}
-					animate={{ x: 0, opacity: 1 }}
-					exit={isMobile ? { x: "100%" } : { opacity: 0 }}
-					transition={{ duration: 0.26, ease: [0.2, 0, 0, 1] }}
 					className="absolute inset-0 z-10 flex min-w-0 flex-col bg-page md:relative md:inset-auto md:z-auto md:flex-1 md:border-l md:border-hairline"
 				>
 					{/* Wallpapers are HIDDEN (owner 2026-09-03): the thread keeps
@@ -2738,7 +2725,7 @@ export const MessageBox = ({
 						</div>
 						)}
 					</div>
-				</motion.div>
+				</div>
 			) : (
 				<div
 					key="empty"
@@ -2773,7 +2760,6 @@ export const MessageBox = ({
 					</div>
 				</div>
 			)}
-			</AnimatePresence>
 
 			{/* The send flight (owner pick): text lifts from the field, rounds
 			    into a bubble and lands where the optimistic bubble appears. */}

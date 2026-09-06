@@ -325,26 +325,33 @@ export const MessageBubble = memo(function MessageBubble({
 			(m.sender as { username?: string })?.username ||
 			undefined;
 		return (
-			<PaymentBubble
-				amountMinor={m.amountMinor ?? 0}
-				note={m.content}
-				at={m.createdAt}
-				mine={isMe}
-				peerName={isGroup ? undefined : peerName}
-				toName={m.payToName}
-				toMe={!!myProfileId && m.payTo === myProfileId}
-				senderName={isGroup ? senderName : peerName}
-			/>
+			// The same reading column as every bubble — without it the money
+			// card ignored the centred max-width and gutters and sat on the
+			// pane's raw edge, visibly outside the bubble grammar.
+			<div className="mx-auto w-full max-w-[52rem] px-4 sm:px-6">
+				<PaymentBubble
+					amountMinor={m.amountMinor ?? 0}
+					note={m.content}
+					at={m.createdAt}
+					mine={isMe}
+					peerName={isGroup ? undefined : peerName}
+					toName={m.payToName}
+					toMe={!!myProfileId && m.payTo === myProfileId}
+					senderName={isGroup ? senderName : peerName}
+				/>
+			</div>
 		);
 	}
 	if (m.type === "call") {
 		return (
-			<CallLogRow
-				content={m.content}
-				at={m.createdAt}
-				mine={isMe}
-				onCallBack={onCallBack}
-			/>
+			<div className="mx-auto w-full max-w-[52rem]">
+				<CallLogRow
+					content={m.content}
+					at={m.createdAt}
+					mine={isMe}
+					onCallBack={onCallBack}
+				/>
+			</div>
 		);
 	}
 
