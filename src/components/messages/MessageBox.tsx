@@ -2009,21 +2009,25 @@ export const MessageBox = ({
 								{totalUnread}
 							</span>
 						)}
-						<span className="ml-auto flex items-center gap-1.5">
+						{/* One segmented pill (owner 2026-09-06): the paired controls
+						    share a bordered card on the search's own fill, split by
+						    a hairline — not two floating chips. */}
+						<span className="ml-auto flex items-center overflow-hidden rounded-pill border border-hairline bg-raised">
 							<button
 								type="button"
 								onClick={() => setShowGroupCreate(true)}
 								aria-label="New group"
 								title="New group"
-								className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill bg-chip text-muted transition-colors hover:text-primary"
+								className="flex h-9 w-11 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-chip hover:text-primary"
 							>
 								<Users className="h-[18px] w-[18px]" />
 							</button>
+							<span aria-hidden className="h-5 w-px bg-hairline" />
 							<button
 								type="button"
 								onClick={() => setShowNewConversationModal(true)}
 								aria-label={t("messages.newChat")}
-								className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill bg-chip text-muted transition-colors hover:text-primary"
+								className="flex h-9 w-11 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-chip hover:text-primary"
 							>
 								<RiUserAddLine size={19} />
 							</button>
@@ -2288,13 +2292,15 @@ export const MessageBox = ({
 								</Link>
 							)}
 						</div>
-						<div className="flex shrink-0 text-muted">
+					{/* Audio | video as ONE segmented pill (owner 2026-09-06):
+						    bordered card on the search fill, hairline between. */}
+						<div className="flex shrink-0 items-center overflow-hidden rounded-pill border border-hairline bg-raised text-muted">
 							{isGroupThread && (
 								<>
 									<button
 										type="button"
 										aria-label="Start group voice call"
-										className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary md:h-10 md:w-10"
+										className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-chip hover:text-primary"
 										onClick={() =>
 											startCall({
 												conversationId: activeConversation._id,
@@ -2311,10 +2317,11 @@ export const MessageBox = ({
 									>
 										<Phone className="w-5 h-5" />
 									</button>
+									<span aria-hidden className="h-5 w-px bg-hairline" />
 									<button
 										type="button"
 										aria-label="Start group video call"
-										className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary md:h-10 md:w-10"
+										className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-chip hover:text-primary"
 										onClick={() =>
 											startCall({
 												conversationId: activeConversation._id,
@@ -2338,7 +2345,7 @@ export const MessageBox = ({
 							<button
 								type="button"
 								aria-label="Start voice call"
-								className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary md:h-10 md:w-10"
+								className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-chip hover:text-primary"
 								onClick={() =>
 									startCall({
 										conversationId: activeConversation._id,
@@ -2358,10 +2365,11 @@ export const MessageBox = ({
 							>
 								<Phone className="w-5 h-5" />
 							</button>
+							<span aria-hidden className="h-5 w-px bg-hairline" />
 							<button
 								type="button"
 								aria-label="Start video call"
-								className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary md:h-10 md:w-10"
+								className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-chip hover:text-primary"
 								onClick={() =>
 									startCall({
 										conversationId: activeConversation._id,
