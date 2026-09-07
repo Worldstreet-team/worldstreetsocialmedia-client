@@ -44,9 +44,6 @@ let activeAudio: HTMLAudioElement | null = null;
 // whole run honors it, the WhatsApp behavior.
 let stickyRate = 1;
 const RATES = [1, 1.5, 2];
-// Where each note was left off (register 86). Session-scoped on purpose:
-// a page away and back resumes; tomorrow starts clean.
-const positionMemory = new Map<string, number>();
 // Autoplay registry: a note that ends looks up the next one and plays it.
 const playRegistry = new Map<string, () => void>();
 
@@ -146,9 +143,7 @@ export const VoiceMessage = ({
 	const hasSentPeaks = !!sentPeaks && sentPeaks.length >= 8;
 	const [isPlaying, setIsPlaying] = useState(false);
 	const [duration, setDuration] = useState(durationSec ?? 0);
-	const [currentTime, setCurrentTime] = useState(
-		() => (messageId && positionMemory.get(messageId)) || 0,
-	);
+	const [currentTime, setCurrentTime] = useState(0);
 	const [rate, setRate] = useState(stickyRate);
 	const [peaks, setPeaks] = useState<number[] | null>(() =>
 		hasSentPeaks ? sentPeaks! : (waveCache.get(src)?.peaks ?? null),
@@ -159,7 +154,6 @@ export const VoiceMessage = ({
 	const barsRef = useRef<HTMLDivElement>(null);
 	const requestRef = useRef<number | undefined>(undefined);
 	const draggingRef = useRef(false);
-	const restoredRef = useRef(false);
 
 	// Decode the waveform — ONLY when the message didn't ship one. Any
 	// failure (CORS, codec) falls back to the progress bar.
@@ -262,16 +256,6 @@ export const VoiceMessage = ({
 	useEffect(() => {
 		const audio = audioRef.current;
 		return () => {
-			if (
-				messageId &&
-				audio &&
-				audio.currentTime > 1 &&
-				!audio.ended &&
-				Number.isFinite(audio.duration) &&
-				audio.currentTime < audio.duration - 1
-			) {
-				positionMemory.set(messageId, audio.currentTime);
-			}
 			if (activeAudio === audio) {
 				activeAudio = null;
 				if (messageId && playbackState.id === messageId)
@@ -287,20 +271,8 @@ export const VoiceMessage = ({
 			if (activeAudio && activeAudio !== audio) activeAudio.pause();
 			activeAudio = audio;
 			audio.playbackRate = stickyRate;
-			// Resume where they left off — restore once per mount, so a
-			// deliberate re-listen from 0:00 isn't yanked forward again.
-			if (!restoredRef.current) {
-				restoredRef.current = true;
-				const remembered = messageId && positionMemory.get(messageId);
-				if (
-					remembered &&
-					remembered > 1 &&
-					(!Number.isFinite(audio.duration) ||
-						remembered < audio.duration - 1)
-				) {
-					audio.currentTime = remembered;
-				}
-			}
+			// Owner 2026-09-07: a note ALWAYS starts at 0:00 — the resume
+			// memory read as "why is it starting from one min".
 			audio.play().catch(() => {});
 		} else {
 			audio.pause();
@@ -335,15 +307,6 @@ export const VoiceMessage = ({
 		const audio = audioRef.current;
 		if (audio) {
 			setCurrentTime(audio.currentTime);
-			if (
-				messageId &&
-				audio.currentTime > 1 &&
-				!audio.ended &&
-				Number.isFinite(audio.duration) &&
-				audio.currentTime < audio.duration - 1
-			) {
-				positionMemory.set(messageId, audio.currentTime);
-			}
 		}
 		if (messageId && playbackState.id === messageId)
 			publishPlayback({ playing: false });
@@ -352,11 +315,8 @@ export const VoiceMessage = ({
 	const handleEnded = () => {
 		if (audioRef.current) audioRef.current.currentTime = 0;
 		setCurrentTime(0);
-		if (messageId) {
-			positionMemory.delete(messageId);
-			if (playbackState.id === messageId)
-				publishPlayback({ playing: false, time: 0 });
-		}
+		if (messageId && playbackState.id === messageId)
+			publishPlayback({ playing: false, time: 0 });
 		// Consecutive notes play through as a run (register 87).
 		if (autoplayNextId) playRegistry.get(autoplayNextId)?.();
 	};
