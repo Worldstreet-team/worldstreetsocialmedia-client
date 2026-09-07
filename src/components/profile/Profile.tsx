@@ -331,14 +331,15 @@ export default function Profile({ username }: { username?: string }) {
 			});
 	});
 
-	// Street and Media split one media fetch: video posts vs everything else.
+	// Street narrows the media fetch to video posts; the media tab (labelled
+	// "Posts" since 2026-09-07) shows ALL visual work, videos included —
+	// excluding them made video posts invisible on the landing tab.
 	const visiblePosts = useMemo(() => {
 		// Drop bodyless rows first, so the empty state below counts what will
 		// actually render — otherwise a tab holding nothing but blank posts
 		// says "no posts yet" underneath a stack of empty cards.
 		const real = feedPosts.filter(hasRenderableBody);
 		if (activeTab === "street") return real.filter((p) => p.videos?.length);
-		if (activeTab === "media") return real.filter((p) => !p.videos?.length);
 		return real;
 	}, [feedPosts, activeTab]);
 

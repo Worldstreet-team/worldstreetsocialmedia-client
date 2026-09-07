@@ -67,7 +67,6 @@ import { useToast } from "@/components/ui/Toast/ToastContext";
 import ImageModal from "@/components/ui/ImageModal";
 import { FeedImage } from "@/components/ui/FeedImage";
 import { PostPoll } from "@/components/feed/PostPoll";
-import { ImageCarousel } from "@/components/feed/ImageCarousel";
 import { ShareMenu, sharePost } from "@/components/feed/ShareMenu";
 import {
     EmbeddedPost,
@@ -466,6 +465,15 @@ export const PostCard = memo(
         at: number;
         timer: ReturnType<typeof setTimeout> | null;
     }>({ at: 0, timer: null });
+    // Mouse drag-to-scroll for the media strip (touch scrolls natively).
+    // `moved` gates the tap handlers so releasing a drag never zooms.
+    const stripDragRef = useRef({
+        down: false,
+        startX: 0,
+        scrollLeft: 0,
+        moved: false,
+        el: null as HTMLElement | null,
+    });
     // useRouter() hands back an app-wide singleton, so a timer that survives
     // its card navigates the whole app exactly as a live component would.
     // React will not cancel it for us.
@@ -1593,7 +1601,11 @@ export const PostCard = memo(
                             isMine={isOwnPost}
                         />
                     )}
-                    {post.videos && post.videos.length > 0 && (
+                    {/* A lone video keeps the full-width player; a video that
+                        shares the post with images rides the strip above. */}
+                    {post.videos &&
+                        post.videos.length > 0 &&
+                        !(post.images && post.images.length > 0) && (
                         <div
                             className="relative z-10 pointer-events-auto mt-1 mb-1.5 rounded-xl overflow-hidden border border-hairline bg-sunken"
                             onClick={(e) => e.stopPropagation()}
@@ -1639,7 +1651,9 @@ export const PostCard = memo(
                     {embeddedPostId && (
                         <EmbeddedPost postId={embeddedPostId} />
                     )}
-                    {post.images && post.images.length === 1 && (
+                    {post.images &&
+                        post.images.length === 1 &&
+                        !(post.videos && post.videos.length > 0) && (
                         // pointer-events-auto: the card body is
                         // pointer-events-none so the card-wide overlay link
                         // catches taps, and every interactive child has to opt
@@ -1668,13 +1682,93 @@ export const PostCard = memo(
                             />
                         </div>
                     )}
-                    {/* Multi-image = the swipeable carousel (owner ruling
-                        2026-09-03), never the collage grid. */}
-                    {post.images && post.images.length > 1 && (
-                        <ImageCarousel
-                            images={post.images}
-                            onImageTap={handleImageTap}
-                        />
+                    {/* Multi-media = ONE draggable row (owner 2026-09-07,
+                        replacing the carousel): images and any video sit side
+                        by side at a shared height and the row scrolls
+                        horizontally — native touch scroll, mouse drag via
+                        stripDragRef. Double-tap on a photo still likes
+                        (handleImageTap owns that grammar). */}
+                    {post.images &&
+                        post.images.length > 0 &&
+                        (post.images.length > 1 ||
+                            (post.videos && post.videos.length > 0)) && (
+                        <div
+                            className="relative z-10 mb-3 flex gap-1.5 overflow-x-auto scrollbar-none snap-x rounded-xl pointer-events-auto cursor-grab active:cursor-grabbing select-none"
+                            onClick={(e) => e.stopPropagation()}
+                            onPointerDown={(e) => {
+                                if (e.pointerType !== "mouse") return;
+                                const d = stripDragRef.current;
+                                d.down = true;
+                                d.moved = false;
+                                d.startX = e.clientX;
+                                d.el = e.currentTarget;
+                                d.scrollLeft = e.currentTarget.scrollLeft;
+                            }}
+                            onPointerMove={(e) => {
+                                const d = stripDragRef.current;
+                                if (!d.down || !d.el) return;
+                                const dx = e.clientX - d.startX;
+                                if (Math.abs(dx) > 5) d.moved = true;
+                                d.el.scrollLeft = d.scrollLeft - dx;
+                            }}
+                            onPointerUp={() => {
+                                const d = stripDragRef.current;
+                                d.down = false;
+                                // Cleared next tick so the click this release
+                                // fires can still see that a drag happened.
+                                setTimeout(() => {
+                                    d.moved = false;
+                                }, 0);
+                            }}
+                            onPointerLeave={() => {
+                                stripDragRef.current.down = false;
+                            }}
+                        >
+                            {post.images.map((image, index) => (
+                                <FeedImage
+                                    key={`${image}-${index}`}
+                                    src={image}
+                                    alt={`Post attachment ${index + 1}`}
+                                    className="h-[280px] shrink-0 snap-start rounded-xl border border-hairline sm:h-[340px]"
+                                    imgClassName="h-full w-auto max-w-[75vw] sm:max-w-[420px] object-cover cursor-zoom-in hover:opacity-95"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        e.preventDefault();
+                                        if (stripDragRef.current.moved) return;
+                                        handleImageTap(
+                                            index,
+                                            (
+                                                e.currentTarget as HTMLElement
+                                            ).getBoundingClientRect(),
+                                        );
+                                    }}
+                                />
+                            ))}
+                            {post.videos?.map((video, index) => (
+                                <div
+                                    key={`${video}-${index}`}
+                                    className="h-[280px] shrink-0 snap-start overflow-hidden rounded-xl border border-hairline bg-sunken sm:h-[340px]"
+                                >
+                                    <VideoPlayer
+                                        src={video}
+                                        plays={
+                                            index === 0
+                                                ? post.videoPlays
+                                                : undefined
+                                        }
+                                        onDoubleTap={() => {
+                                            if (!isLiked) void handleLike();
+                                        }}
+                                        onFirstPlay={() => {
+                                            void recordVideoPlayAction(
+                                                post.id,
+                                            ).catch(() => {});
+                                        }}
+                                        className="h-full w-auto aspect-video"
+                                    />
+                                </div>
+                            ))}
+                        </div>
                     )}
                     {!post.repostOf &&
                         !(post.videos && post.videos.length > 0) &&
