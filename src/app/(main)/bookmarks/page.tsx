@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { PostCard, type PostProps } from "@/components/feed/PostCard";
+import { ImpressionSensor } from "@/components/feed/ImpressionSensor";
 import { PostSkeleton } from "@/components/feed/PostSkeleton";
 import { useGatewayRead } from "@/hooks/useGateway";
 import { useAtom, useAtomValue } from "jotai";
@@ -58,8 +59,10 @@ export default function BookmarksPage() {
 					</div>
 				) : bookmarks.length > 0 ? (
 					<div className="animate-content-in flex flex-col">
-						{bookmarks.map((post) => (
-							<PostCard key={post.id} post={post} />
+						{bookmarks.map((post, i) => (
+							<ImpressionSensor key={post.id} meta={{ post: post.id, author: post.author?.id ?? "", surface: "bookmarks", position: i }}>
+								<PostCard post={post} />
+							</ImpressionSensor>
 						))}
 					</div>
 				) : (

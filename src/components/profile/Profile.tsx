@@ -14,6 +14,7 @@ import {
 	PostCard,
 	type PostProps,
 } from "@/components/feed/PostCard";
+import { ImpressionSensor } from "@/components/feed/ImpressionSensor";
 import { PostSkeleton } from "@/components/feed/PostSkeleton";
 import { ProfileSkeleton } from "@/components/skeletons/ProfileSkeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -675,7 +676,11 @@ export default function Profile({ username }: { username?: string }) {
 				) : activeTab === "media" || activeTab === "street" ? (
 					<ProfileGrid posts={visiblePosts} kind={activeTab} />
 				) : (
-					visiblePosts.map((post) => <PostCard key={post.id} post={post} />)
+					visiblePosts.map((post, i) => (
+						<ImpressionSensor key={post.id} meta={{ post: post.id, author: post.author?.id ?? "", surface: "profile", position: i }}>
+							<PostCard post={post} />
+						</ImpressionSensor>
+					))
 				)}
 			</div>
 		</div>

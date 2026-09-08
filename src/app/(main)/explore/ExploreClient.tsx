@@ -9,6 +9,7 @@ import { searchPostsAction } from "@/lib/post.actions";
 import { joinSpaceAction } from "@/lib/space.actions";
 import { toggleCommunityAction } from "@/lib/community.actions";
 import { PostCard, type PostProps } from "@/components/feed/PostCard";
+import { ImpressionSensor } from "@/components/feed/ImpressionSensor";
 import { PostSkeleton } from "@/components/feed/PostSkeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Tabs } from "@/components/ui/Tabs";
@@ -366,10 +367,10 @@ export default function ExploreClient({
               />
             ) : (
               <div className="animate-content-in">
-                {popularPosts.map((post) => (
-                  <div key={post.id} className="border-b border-hairline">
+                {popularPosts.map((post, i) => (
+                  <ImpressionSensor key={post.id} className="border-b border-hairline" meta={{ post: post.id, author: post.author?.id ?? "", surface: "explore", position: i }}>
                     <PostCard post={post} />
-                  </div>
+                  </ImpressionSensor>
                 ))}
               </div>
             )}

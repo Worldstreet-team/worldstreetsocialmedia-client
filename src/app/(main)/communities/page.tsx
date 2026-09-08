@@ -8,6 +8,7 @@ import { useAtom, useSetAtom } from "jotai";
 import { Compass, UsersRound } from "lucide-react";
 
 import { PostCard, type PostProps } from "@/components/feed/PostCard";
+import { ImpressionSensor } from "@/components/feed/ImpressionSensor";
 import { PostSkeleton } from "@/components/feed/PostSkeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Tabs } from "@/components/ui/Tabs";
@@ -306,8 +307,10 @@ export default function CommunitiesPage() {
 						/>
 					) : (
 						<>
-							{posts.map((post) => (
-								<PostCard key={post.id} post={post} />
+							{posts.map((post, i) => (
+								<ImpressionSensor key={post.id} meta={{ post: post.id, author: post.author?.id ?? "", surface: "community", position: i }}>
+									<PostCard post={post} />
+								</ImpressionSensor>
 							))}
 							<div ref={sentinel} className="h-px" />
 							{loadingMore && <PostSkeleton />}

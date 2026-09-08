@@ -5,6 +5,7 @@ import type { ProfileBadge } from "@/components/ui/UserBadges";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { PostCard, type PostProps } from "@/components/feed/PostCard";
+import { ImpressionSensor } from "@/components/feed/ImpressionSensor";
 import { PostSkeleton } from "@/components/feed/PostSkeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
@@ -122,10 +123,10 @@ export function SearchResults({
 
   const postList = postsLoading
     ? [0, 1, 2].map((i) => <PostSkeleton key={i} />)
-    : posts.map((post) => (
-        <div key={post.id} className="border-b border-hairline">
+    : posts.map((post, i) => (
+        <ImpressionSensor key={post.id} className="border-b border-hairline" meta={{ post: post.id, author: post.author?.id ?? "", surface: "search", position: i }}>
           <PostCard post={post} />
-        </div>
+        </ImpressionSensor>
       ));
 
   if (tab === "users") {

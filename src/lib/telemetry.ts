@@ -51,6 +51,8 @@ export type Surface =
 	| "profile"
 	| "explore"
 	| "bookmarks"
+	| "community"
+	| "search"
 	| "vertical"
 	| "story"
 	| "live_embed"

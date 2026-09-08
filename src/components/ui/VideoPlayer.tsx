@@ -582,14 +582,34 @@ export function VideoPlayer({
 					// muted autoplay glance while scrolling past is not a
 					// play, and counting it was half of how plays outran
 					// impressions on the same card.
+					//
+					// And it must be VIEWABLE when it qualifies. Autoplay starts
+					// 200px before the card enters the viewport (see the
+					// observer above), so three seconds can elapse with the clip
+					// still off-screen — measured live, that is how a play was
+					// recorded for cards the impression sensor never saw meet
+					// 50% visibility. Same bar as an impression: half the clip
+					// on screen. Not there yet? Check again in a second; a
+					// pause cancels the whole thing.
 					if (!firedPlayRef.current && !playTimerRef.current) {
-						playTimerRef.current = setTimeout(() => {
+						const qualify = () => {
 							playTimerRef.current = null;
-							if (!videoRef.current?.paused && !firedPlayRef.current) {
+							const el = videoRef.current;
+							if (!el || el.paused || firedPlayRef.current) return;
+							const r = el.getBoundingClientRect();
+							const vh =
+								window.innerHeight || document.documentElement.clientHeight;
+							const visible =
+								Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0)) /
+								Math.max(1, r.height);
+							if (visible >= 0.5) {
 								firedPlayRef.current = true;
 								onFirstPlay?.();
+							} else {
+								playTimerRef.current = setTimeout(qualify, 1000);
 							}
-						}, 3000);
+						};
+						playTimerRef.current = setTimeout(qualify, 3000);
 					}
 				}}
 				onPause={() => {

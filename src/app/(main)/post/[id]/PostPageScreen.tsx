@@ -268,7 +268,9 @@ export default function PostPageScreen() {
 			    what the reader came for. */}
 			{parent && (
 				<div className="relative">
-					<PostCard post={parent} />
+					<ImpressionSensor meta={{ post: parent.id, author: parent.author?.id ?? "", surface: "post_detail", position: 0 }}>
+						<PostCard post={parent} />
+					</ImpressionSensor>
 					<span
 						aria-hidden
 						className="absolute left-[38px] bottom-0 h-4 w-0.5 translate-y-full bg-hairline"
@@ -276,7 +278,9 @@ export default function PostPageScreen() {
 				</div>
 			)}
 
-			<PostCard post={post} />
+			<ImpressionSensor meta={{ post: post.id, author: post.author?.id ?? "", surface: "post_detail", position: 0 }}>
+				<PostCard post={post} />
+			</ImpressionSensor>
 
 			<div id="comments" className="scroll-mt-16">
 				<CommentComposer
