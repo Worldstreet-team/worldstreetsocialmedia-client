@@ -1607,7 +1607,12 @@ export const PostCard = memo(
                         post.videos.length > 0 &&
                         !(post.images && post.images.length > 0) && (
                         <div
-                            className="relative z-10 pointer-events-auto mt-1 mb-1.5 rounded-xl overflow-hidden border border-hairline bg-sunken"
+                            // No fill, no border and no clip of its own: a
+                            // portrait clip narrows the PLAYER (which brings
+                            // its own black ground and 13px radius), so a
+                            // full-width box here just repainted the bars
+                            // that narrowing removed.
+                            className="relative z-10 pointer-events-auto mt-1 mb-1.5 flex justify-center"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
@@ -1627,7 +1632,7 @@ export const PostCard = memo(
                                         () => {},
                                     );
                                 }}
-                                className="w-full max-h-[600px] aspect-video"
+                                className="w-full max-h-[600px] aspect-video border border-hairline"
                             />
                         </div>
                     )}
@@ -1747,10 +1752,14 @@ export const PostCard = memo(
                             {post.videos?.map((video, index) => (
                                 <div
                                     key={`${video}-${index}`}
-                                    className="h-[280px] shrink-0 snap-start overflow-hidden rounded-xl border border-hairline bg-sunken sm:h-[340px]"
+                                    className="h-[280px] shrink-0 snap-start sm:h-[340px]"
                                 >
                                     <VideoPlayer
                                         src={video}
+                                        // Same rule as a lone clip: the tile
+                                        // takes the video's shape instead of
+                                        // boxing a portrait one in 16:9.
+                                        fitToMedia
                                         plays={
                                             index === 0
                                                 ? post.videoPlays
@@ -1764,7 +1773,7 @@ export const PostCard = memo(
                                                 post.id,
                                             ).catch(() => {});
                                         }}
-                                        className="h-full w-auto aspect-video"
+                                        className="h-full w-auto aspect-video border border-hairline"
                                     />
                                 </div>
                             ))}

@@ -626,7 +626,13 @@ export function VideoPlayer({
 					setDuration(el.duration || 0);
 					if (el.videoWidth > 0 && el.videoHeight > 0) {
 						const r = el.videoWidth / el.videoHeight;
-						setRatio(Math.min(16 / 9, Math.max(4 / 5, r)));
+						// The floor is 9:16, a phone's own portrait shape —
+						// NOT 4:5. Clamping to 4:5 forced every vertical clip
+						// into a squatter box and object-contain then letter-
+						// boxed it, which is the black bars down both sides
+						// the owner reported 2026-09-09. The maxWidth branch
+						// below is what keeps a tall frame from running away.
+						setRatio(Math.min(16 / 9, Math.max(9 / 16, r)));
 					}
 				}}
 				onTimeUpdate={(e) => {
