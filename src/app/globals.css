@@ -550,6 +550,17 @@ html {
   animation: ws-pop 160ms var(--ws-ease) both;
 }
 
+/* The reply box docking to the bottom of a phone once it scrolls past its
+   place in the thread (owner 2026-09-09). Same family as ws-pop and NOT
+   animate-rise, which the intro kill-switch disables for the session. */
+@keyframes ws-dock {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@utility animate-dock {
+  animation: ws-dock var(--ws-motion-base, 200ms) var(--ws-ease) both;
+}
+
 @utility animate-rise {
   animation: ws-rise var(--ws-motion-slow) var(--ws-ease) backwards;
 }

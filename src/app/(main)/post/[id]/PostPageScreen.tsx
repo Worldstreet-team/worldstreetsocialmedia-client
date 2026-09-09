@@ -248,7 +248,11 @@ export default function PostPageScreen() {
 	};
 
 	return (
-		<div className="flex flex-col min-h-dvh pb-20">
+		<div
+			// The tail clears BOTH the tab bar and the reply box that docks on
+			// top of it, or the last comment hides under them.
+			className="flex flex-col min-h-dvh pb-[calc(var(--ws-nav-clearance)+88px)] md:pb-20"
+		>
 			<header className="sticky top-0 z-sticky bg-page border-b border-hairline px-2 sm:px-4 py-2 flex items-center gap-2 sm:gap-6">
 				<button
 					className="rounded-pill h-11 w-11 sm:h-9 sm:w-9 shrink-0 hover:bg-raised flex items-center justify-center transition-colors cursor-pointer text-primary"
@@ -285,6 +289,7 @@ export default function PostPageScreen() {
 			<div id="comments" className="scroll-mt-16">
 				<CommentComposer
 					postId={postId}
+					dockOnScroll
 					onCommentStart={handleCommentStart}
 					onCommentSuccess={handleCommentSuccess}
 				/>

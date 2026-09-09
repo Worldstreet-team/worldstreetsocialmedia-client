@@ -32,6 +32,13 @@ interface CommentComposerProps {
 	replyingTo?: string;
 	onCommentSuccess?: () => void;
 	onCommentStart?: () => void;
+	/**
+	 * Phones only: sit inline where the thread puts it, then dock to the
+	 * bottom of the screen once the reader scrolls past it (owner
+	 * 2026-09-09). Desktop keeps the inline box — there is no bottom bar
+	 * to dock to and the column never runs out of room.
+	 */
+	dockOnScroll?: boolean;
 }
 
 interface MediaItem {
@@ -45,6 +52,7 @@ export const CommentComposer = ({
 	postId,
 	onCommentSuccess,
 	onCommentStart,
+	dockOnScroll = false,
 }: CommentComposerProps) => {
 	const { user } = useUser();
 	// The APP profile's picture, same shared atom as everywhere — Clerk's
@@ -74,6 +82,84 @@ export const CommentComposer = ({
 			textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
 		}
 	}, [content]);
+
+	/* ---- Dock to the bottom once it scrolls past (phones only) ---- */
+	const hostRef = useRef<HTMLDivElement>(null);
+	const barRef = useRef<HTMLDivElement>(null);
+	const [docked, setDocked] = useState(false);
+	// The bar's natural height, held by the host while the bar is fixed, so
+	// the thread does not jump by ~90px at the moment it docks.
+	const [hostH, setHostH] = useState<number | undefined>(undefined);
+	// How much of the screen the on-screen keyboard is covering. A fixed
+	// element sits UNDER the iOS keyboard otherwise, which would hide the
+	// box the moment it is tapped.
+	const [keyboard, setKeyboard] = useState(0);
+
+	useEffect(() => {
+		if (!dockOnScroll) return;
+		const host = hostRef.current;
+		if (!host) return;
+
+		const phone = window.matchMedia("(max-width: 767px)");
+		// The (main) column scrolls inside itself, so the window is NOT the
+		// scroller — observing against the viewport root would never fire.
+		const root = document.getElementById("ws-main-scroll");
+
+		let observer: IntersectionObserver | null = null;
+		const start = () => {
+			observer?.disconnect();
+			if (!phone.matches) {
+				setDocked(false);
+				return;
+			}
+			observer = new IntersectionObserver(
+				([entry]) => {
+					// Only dock when it has left through the TOP. Off the
+					// bottom means the reader has not reached it yet, and a
+					// bar that arrives before its own place in the thread
+					// would just be a second composer.
+					const top = entry.rootBounds?.top ?? 0;
+					const past =
+						!entry.isIntersecting &&
+						entry.boundingClientRect.bottom <= top;
+					if (!past) {
+						const h = barRef.current?.offsetHeight;
+						if (h) setHostH(h);
+					}
+					setDocked(past);
+				},
+				{ root, threshold: 0 },
+			);
+			observer.observe(host);
+		};
+
+		start();
+		phone.addEventListener("change", start);
+		return () => {
+			observer?.disconnect();
+			phone.removeEventListener("change", start);
+		};
+	}, [dockOnScroll]);
+
+	// Ride above the keyboard while docked.
+	useEffect(() => {
+		if (!docked) return;
+		const vv = window.visualViewport;
+		if (!vv) return;
+		const sync = () => {
+			setKeyboard(
+				Math.max(0, window.innerHeight - vv.height - vv.offsetTop),
+			);
+		};
+		sync();
+		vv.addEventListener("resize", sync);
+		vv.addEventListener("scroll", sync);
+		return () => {
+			vv.removeEventListener("resize", sync);
+			vv.removeEventListener("scroll", sync);
+			setKeyboard(0);
+		};
+	}, [docked]);
 
 	const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
 		if (e.target.files) {
@@ -138,7 +224,30 @@ export const CommentComposer = ({
 	};
 
 	return (
-		<div className="relative px-4 py-3.5">
+		// The host holds the bar's place in the thread while it is docked.
+		<div ref={hostRef} style={docked ? { height: hostH } : undefined}>
+		<div
+			ref={barRef}
+			className={clsx(
+				"relative px-4 py-3.5",
+				docked &&
+					// The bar stacks on top of the tab bar, or on the keyboard
+					// when one is open. Solid page ink + a hairline, never a
+					// blur: the tab bar underneath is the one sanctioned glass
+					// down here, and two blurred panes would stack.
+					"fixed inset-x-0 z-sticky border-t border-hairline bg-page animate-dock md:static md:border-0",
+			)}
+			style={
+				docked
+					? {
+							bottom:
+								keyboard > 0
+									? keyboard
+									: "calc(var(--ws-mobile-nav-h) + var(--ws-safe-bottom) + var(--ws-nav-float))",
+						}
+					: undefined
+			}
+		>
 			{replyingTo && (
 				<p className="mb-2 pl-[52px] font-sans text-[12.5px] text-muted">
 					Replying to <span className="font-medium text-gold">@{replyingTo}</span>
@@ -305,6 +414,7 @@ export const CommentComposer = ({
 					</div>
 				</div>
 			</div>
+		</div>
 		</div>
 	);
 };
