@@ -153,8 +153,8 @@ export function ConversationList({
 					<div key={i} className="flex items-center gap-3 px-4 py-1.5">
 						<span className="skeleton h-[52px] w-[52px] shrink-0 rounded-pill" />
 						<span className="flex min-w-0 flex-1 flex-col gap-2">
-							<span className="skeleton h-3.5 w-1/3 rounded-[4px]" />
-							<span className="skeleton h-3 w-2/3 rounded-[4px]" />
+							<span className="skeleton h-[18px] w-1/3 rounded-[4px]" />
+							<span className="skeleton h-[17px] w-2/3 rounded-[4px]" />
 						</span>
 					</div>
 				))}
@@ -164,7 +164,7 @@ export function ConversationList({
 
 	if (rows.length === 0) {
 		return (
-			<p className="px-6 py-10 text-center font-sans text-[13px] text-subtle">
+			<p className="px-6 py-10 text-center font-sans text-[17px] text-subtle">
 				{query.trim() ? t("messages.noMatches") : t("messages.empty")}
 			</p>
 		);
@@ -228,7 +228,7 @@ export function ConversationList({
 							<span className="flex items-center gap-1.5">
 								<span
 									className={clsx(
-										"truncate font-sans text-[14px]",
+										"truncate font-sans text-[18px]",
 										unread
 											? "font-semibold text-primary"
 											: "font-medium text-primary",
@@ -237,7 +237,7 @@ export function ConversationList({
 									{identity.title}
 								</span>
 								{isGroup ? (
-									<span className="flex shrink-0 items-center gap-0.5 font-sans text-[12px] text-subtle">
+									<span className="flex shrink-0 items-center gap-0.5 font-sans text-[16px] text-subtle">
 										<Users className="h-3 w-3" />
 										{identity.memberCount ?? ""}
 									</span>
@@ -248,12 +248,12 @@ export function ConversationList({
 												isVerified={u.isVerified}
 												verification={u.verification}
 												badges={u.badges}
-												size={13}
+												size={17}
 											/>
 											{(ambiguous.get(identity.title.toLowerCase()) ??
 												0) > 1 &&
 												u.username && (
-													<span className="min-w-0 shrink truncate font-sans text-[12px] text-subtle">
+													<span className="min-w-0 shrink truncate font-sans text-[16px] text-subtle">
 														@{u.username}
 													</span>
 												)}
@@ -264,7 +264,7 @@ export function ConversationList({
 
 							<span
 								className={clsx(
-									"mt-0.5 flex items-center gap-1 font-sans text-[13px]",
+									"mt-0.5 flex items-center gap-1 font-sans text-[17px]",
 									unread ? "font-medium text-primary" : "text-muted",
 								)}
 							>
@@ -274,7 +274,7 @@ export function ConversationList({
 									</span>
 								)}
 								{Glyph && conv.lastMessage?.type !== "system" && (
-									<Glyph size={14} className="shrink-0 text-subtle" />
+									<Glyph size={18} className="shrink-0 text-subtle" />
 								)}
 								<span className="truncate">
 									{conv.lastMessage?.type === "system"
