@@ -59,7 +59,7 @@ export function ImageCarousel({
 
 			{/* Where you are: counter chip up top, dots below. Tabular so the
 			    chip never jitters between pages. */}
-			<span className="absolute right-2 top-2 z-20 rounded-pill bg-black/60 px-2 py-0.5 font-sans text-[11.5px] font-semibold tabular-nums text-white">
+			<span className="absolute right-2 top-2 z-20 rounded-pill bg-black/60 px-2 py-0.5 font-sans text-[calc(11.5px*var(--ws-fs))] font-semibold tabular-nums text-white">
 				{page + 1}/{images.length}
 			</span>
 			<span className="pointer-events-none absolute inset-x-0 bottom-2 z-20 flex justify-center gap-1.5">

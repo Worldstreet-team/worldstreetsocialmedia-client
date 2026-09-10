@@ -76,7 +76,7 @@ export function PromoBanners() {
 			mark: (
 				<MarketSquareLockup
 					markClassName="h-[27px] w-auto"
-					wordClassName="font-display text-[22px] font-semibold leading-none"
+					wordClassName="font-display text-[calc(22px*var(--ws-fs))] font-semibold leading-none"
 				/>
 			),
 			cta: t("promo.market.cta"),
@@ -129,22 +129,22 @@ export function PromoBanners() {
 									</span>
 
 									{slide.eyebrow && (
-										<span className="block font-sans text-[9.5px] font-bold uppercase tracking-[0.14em] text-primary/55">
+										<span className="block font-sans text-[calc(9.5px*var(--ws-fs))] font-bold uppercase tracking-[0.14em] text-primary/55">
 											{slide.eyebrow}
 										</span>
 									)}
 									{slide.title && (
-										<span className="mt-1 block font-display text-[15px] font-semibold leading-tight text-primary">
+										<span className="mt-1 block font-display text-[calc(15px*var(--ws-fs))] font-semibold leading-tight text-primary">
 											{slide.title}
 										</span>
 									)}
 									{slide.sub && (
-										<span className="mt-0.5 block font-sans text-[11px] text-primary/55">
+										<span className="mt-0.5 block font-sans text-[calc(11px*var(--ws-fs))] text-primary/55">
 											{slide.sub}
 										</span>
 									)}
 
-									<span className="mt-3 flex h-8 w-full items-center justify-center rounded-pill bg-primary font-sans text-[12px] font-semibold text-page">
+									<span className="mt-3 flex h-8 w-full items-center justify-center rounded-pill bg-primary font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-page">
 										{slide.cta}
 									</span>
 								</span>

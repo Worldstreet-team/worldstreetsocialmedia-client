@@ -133,7 +133,7 @@ export function MessageDock() {
 				>
 					<RiChat3Fill size={21} className="-translate-x-[19%]" />
 					{unread > 0 && (
-						<span className="absolute -top-1 left-0 flex h-4 min-w-4 items-center justify-center rounded-pill bg-brand px-1 font-sans text-[10px] font-bold tabular-nums text-brand-on ring-2 ring-page">
+						<span className="absolute -top-1 left-0 flex h-4 min-w-4 items-center justify-center rounded-pill bg-brand px-1 font-sans text-[calc(10px*var(--ws-fs))] font-bold tabular-nums text-brand-on ring-2 ring-page">
 							{unread}
 						</span>
 					)}
@@ -171,7 +171,7 @@ export function MessageDock() {
 						)}
 					>
 						<div className="flex h-12 shrink-0 items-center gap-2 px-4">
-							<h2 className="flex-1 truncate font-sans text-[14px] font-semibold text-primary">
+							<h2 className="flex-1 truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
 								{t("nav.messages")}
 								{onlineCount > 0 && (
 									<span className="ml-2 inline-flex items-center gap-1 font-normal text-subtle">
@@ -183,7 +183,7 @@ export function MessageDock() {
 							<Link
 								href="/messages"
 								onClick={close}
-								className="rounded-pill px-2 py-1 font-sans text-[12px] font-medium text-muted transition-colors hover:text-primary"
+								className="rounded-pill px-2 py-1 font-sans text-[calc(12px*var(--ws-fs))] font-medium text-muted transition-colors hover:text-primary"
 							>
 								{t("rail.showMore")}
 							</Link>
@@ -213,7 +213,7 @@ export function MessageDock() {
 										onChange={(e) => setQuery(e.target.value)}
 										placeholder={t("messages.searchPlaceholder")}
 										aria-label={t("messages.searchPlaceholder")}
-										className="w-full rounded-pill bg-sunken px-4 py-2 font-sans text-[13px] text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised"
+										className="w-full rounded-pill bg-sunken px-4 py-2 font-sans text-[calc(13px*var(--ws-fs))] text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised"
 									/>
 								</div>
 								<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2">

@@ -214,7 +214,7 @@ export default function NewConversationModal({
 										</div>
 										<div className="flex-1 text-left min-w-0">
 											<div className="flex items-center gap-1">
-												<span className="font-semibold text-[15px] text-primary truncate">
+												<span className="font-semibold text-[calc(15px*var(--ws-fs))] text-primary truncate">
 													{user.firstName}{" "}
 													{user.lastName}
 												</span>
@@ -225,7 +225,7 @@ export default function NewConversationModal({
 													size={16}
 												/>
 											</div>
-											<span className="text-muted text-[13px] truncate block">
+											<span className="text-muted text-[calc(13px*var(--ws-fs))] truncate block">
 												@{user.username}
 											</span>
 										</div>

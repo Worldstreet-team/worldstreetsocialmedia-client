@@ -145,7 +145,7 @@ export function SendMoneySheet({
 					<OverlayScrim onClose={onClose} />
 					<OverlayPanel variant="center" label="Send money">
 						<OverlayHeader onClose={onClose}>
-							<span className="font-sans text-[15px] font-semibold text-primary">
+							<span className="font-sans text-[calc(15px*var(--ws-fs))] font-semibold text-primary">
 								{confirming
 									? "Confirm"
 									: groupMode && !recipient
@@ -169,11 +169,11 @@ export function SendMoneySheet({
 											<SafeAvatar src={m.avatar} eager />
 										</span>
 										<span className="min-w-0 flex-1">
-											<span className="block truncate font-sans text-[14px] font-medium text-primary">
+											<span className="block truncate font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary">
 												{m.name}
 											</span>
 											{m.username && (
-												<span className="block truncate font-sans text-[12px] text-muted">
+												<span className="block truncate font-sans text-[calc(12px*var(--ws-fs))] text-muted">
 													@{m.username}
 												</span>
 											)}
@@ -183,12 +183,12 @@ export function SendMoneySheet({
 							</div>
 						) : confirming ? (
 							<div className="px-5 pb-5">
-								<p className="font-sans text-[15px] leading-relaxed text-primary">
+								<p className="font-sans text-[calc(15px*var(--ws-fs))] leading-relaxed text-primary">
 									Send <span className="font-semibold">{fmt(amountMinor)}</span>{" "}
 									to {targetName}
 									{targetHandle ? ` (@${targetHandle})` : ""}?
 								</p>
-								<p className="mt-1.5 font-sans text-[13px] text-muted">
+								<p className="mt-1.5 font-sans text-[calc(13px*var(--ws-fs))] text-muted">
 									It leaves your wallet straight away. Transfers can&apos;t be
 									reversed.
 								</p>
@@ -197,7 +197,7 @@ export function SendMoneySheet({
 										type="button"
 										onClick={() => setConfirming(false)}
 										disabled={sending}
-										className="h-11 flex-1 cursor-pointer rounded-pill bg-chip font-sans text-[14px] font-semibold text-primary transition-colors hover:bg-raised disabled:opacity-60"
+										className="h-11 flex-1 cursor-pointer rounded-pill bg-chip font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-raised disabled:opacity-60"
 									>
 										Back
 									</button>
@@ -205,7 +205,7 @@ export function SendMoneySheet({
 										type="button"
 										onClick={send}
 										disabled={sending}
-										className="h-11 flex-1 cursor-pointer rounded-pill bg-brand font-sans text-[14px] font-semibold text-brand-on transition-opacity hover:opacity-90 disabled:opacity-60"
+										className="h-11 flex-1 cursor-pointer rounded-pill bg-brand font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-brand-on transition-opacity hover:opacity-90 disabled:opacity-60"
 									>
 										{sending ? "Sending…" : "Proceed with payment"}
 									</button>
@@ -214,7 +214,7 @@ export function SendMoneySheet({
 						) : (
 							<div className="px-5 pb-5">
 								<div className="flex items-baseline justify-center gap-1 py-3">
-									<span className="font-display text-[34px] font-semibold text-subtle">
+									<span className="font-display text-[calc(34px*var(--ws-fs))] font-semibold text-subtle">
 										$
 									</span>
 									<input
@@ -226,7 +226,7 @@ export function SendMoneySheet({
 										}
 										onChange={(e) => setRaw(e.target.value)}
 										aria-label="Amount"
-										className="w-[7ch] bg-transparent text-center font-display text-[34px] font-semibold tabular-nums text-primary outline-none"
+										className="w-[7ch] bg-transparent text-center font-display text-[calc(34px*var(--ws-fs))] font-semibold tabular-nums text-primary outline-none"
 									/>
 								</div>
 
@@ -236,7 +236,7 @@ export function SendMoneySheet({
 											key={q}
 											type="button"
 											onClick={() => setRaw(String(q))}
-											className="h-8 cursor-pointer rounded-pill bg-chip px-3 font-sans text-[12.5px] font-medium text-muted transition-colors hover:text-primary"
+											className="h-8 cursor-pointer rounded-pill bg-chip px-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-muted transition-colors hover:text-primary"
 										>
 											{fmt(q)}
 										</button>
@@ -248,10 +248,10 @@ export function SendMoneySheet({
 									onChange={(e) => setNote(e.target.value)}
 									maxLength={140}
 									placeholder="What's it for? (optional)"
-									className="mt-4 w-full rounded-pill bg-sunken px-4 py-2.5 font-sans text-[13.5px] text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised"
+									className="mt-4 w-full rounded-pill bg-sunken px-4 py-2.5 font-sans text-[calc(13.5px*var(--ws-fs))] text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised"
 								/>
 
-								<p className="mt-3 min-h-[18px] text-center font-sans text-[12.5px]">
+								<p className="mt-3 min-h-[18px] text-center font-sans text-[calc(12.5px*var(--ws-fs))]">
 									{overBalance ? (
 										<span className="text-danger">
 											More than your balance
@@ -279,7 +279,7 @@ export function SendMoneySheet({
 									type="button"
 									onClick={() => setConfirming(true)}
 									disabled={!valid}
-									className="mt-2 h-11 w-full cursor-pointer rounded-pill bg-brand font-sans text-[14px] font-semibold text-brand-on transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+									className="mt-2 h-11 w-full cursor-pointer rounded-pill bg-brand font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-brand-on transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
 								>
 									Review payment
 								</button>

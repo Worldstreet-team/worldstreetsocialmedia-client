@@ -234,7 +234,7 @@ function ChatPane({
         className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-4 py-3"
       >
         {messages.length === 0 ? (
-          <p className="pt-6 text-center font-sans text-[12px] glass-ink-faint">
+          <p className="pt-6 text-center font-sans text-[calc(12px*var(--ws-fs))] glass-ink-faint">
             {emptyLine}
           </p>
         ) : (
@@ -244,7 +244,7 @@ function ChatPane({
                 <span className="relative mt-0.5 h-[18px] w-[18px] shrink-0 overflow-hidden rounded-pill bg-[#1c1917]">
                   <SafeAvatar src={avatarOf(m.from)} />
                 </span>
-                <p className="min-w-0 font-sans text-[12.5px] leading-snug glass-ink [overflow-wrap:anywhere]">
+                <p className="min-w-0 font-sans text-[calc(12.5px*var(--ws-fs))] leading-snug glass-ink [overflow-wrap:anywhere]">
                   <span
                     className={clsx(
                       "mr-1.5 font-semibold",
@@ -273,7 +273,7 @@ function ChatPane({
           maxLength={500}
           placeholder={placeholder}
           aria-label={placeholder}
-          className="h-10 w-full min-w-0 flex-1 rounded-pill glass-chip px-3.5 font-sans text-[13px] glass-ink outline-none placeholder:opacity-50"
+          className="h-10 w-full min-w-0 flex-1 rounded-pill glass-chip px-3.5 font-sans text-[calc(13px*var(--ws-fs))] glass-ink outline-none placeholder:opacity-50"
         />
         <button
           type="submit"
@@ -635,7 +635,7 @@ export default function SpaceRoom({
           </span>
         </span>
         <span className="flex max-w-full items-center gap-0.5">
-          <span className="min-w-0 truncate font-sans text-[10.5px] glass-ink-dim">
+          <span className="min-w-0 truncate font-sans text-[calc(10.5px*var(--ws-fs))] glass-ink-dim">
             {m.username}
           </span>
           {/* Badges only once the gateway confirmed who this id is —
@@ -651,7 +651,7 @@ export default function SpaceRoom({
           )}
         </span>
         {cohostIds.has(m.id) && (
-          <span className="rounded-pill bg-brand/15 px-1.5 py-px font-sans text-[8.5px] font-bold uppercase tracking-[0.1em] text-gold">
+          <span className="rounded-pill bg-brand/15 px-1.5 py-px font-sans text-[calc(8.5px*var(--ws-fs))] font-bold uppercase tracking-[0.1em] text-gold">
             {tf("voice.cohostBadge", "Co-host")}
           </span>
         )}
@@ -703,12 +703,12 @@ export default function SpaceRoom({
             <span className="absolute inset-0 bg-gradient-to-t from-[#16130f] via-[#0c0a09]/35 to-[#0c0a09]/20" />
             <div className="relative flex items-start justify-between gap-3">
               <div className="flex items-center gap-2">
-                <span className="flex items-center gap-1.5 rounded-[4px] bg-danger px-1.5 py-px text-[9px] font-bold tracking-wide text-white font-sans">
+                <span className="flex items-center gap-1.5 rounded-[4px] bg-danger px-1.5 py-px text-[calc(9px*var(--ws-fs))] font-bold tracking-wide text-white font-sans">
                   <span className="h-1 w-1 rounded-pill bg-white animate-pulse" />
                   {t("live.badge")}
                 </span>
                 {elapsed && (
-                  <span className="font-sans text-[11px] font-medium text-[#fafaf9]/70 tabular-nums">
+                  <span className="font-sans text-[calc(11px*var(--ws-fs))] font-medium text-[#fafaf9]/70 tabular-nums">
                     {elapsed}
                   </span>
                 )}
@@ -721,7 +721,7 @@ export default function SpaceRoom({
                     aria-label={t("voice.share")}
                     aria-haspopup="menu"
                     aria-expanded={shareOpen}
-                    className="flex h-9 items-center gap-1.5 rounded-pill glass-chip px-3 font-sans text-[12px] font-semibold transition-colors cursor-pointer"
+                    className="flex h-9 items-center gap-1.5 rounded-pill glass-chip px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors cursor-pointer"
                   >
                     <LinkSimple size={14} weight="bold" />
                     {t("voice.share")}
@@ -738,7 +738,7 @@ export default function SpaceRoom({
                           setShareOpen(false);
                           void copyLink();
                         }}
-                        className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[13px] font-medium text-[#fafaf9] transition-colors hover:bg-[#fafaf9]/8 cursor-pointer"
+                        className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-[#fafaf9] transition-colors hover:bg-[#fafaf9]/8 cursor-pointer"
                       >
                         <LinkSimple size={15} weight="bold" />
                         {tf("voice.copyLink", "Copy link")}
@@ -750,7 +750,7 @@ export default function SpaceRoom({
                           setShareOpen(false);
                           postAbout();
                         }}
-                        className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[13px] font-medium text-[#fafaf9] transition-colors hover:bg-[#fafaf9]/8 cursor-pointer"
+                        className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-[#fafaf9] transition-colors hover:bg-[#fafaf9]/8 cursor-pointer"
                       >
                         <NotePencil size={15} weight="bold" />
                         {tf("voice.postAbout", "Post about it")}
@@ -768,22 +768,22 @@ export default function SpaceRoom({
                 </button>
               </div>
             </div>
-            <h2 className="relative mt-4 font-display text-[21px] font-semibold leading-snug text-[#fafaf9]">
+            <h2 className="relative mt-4 font-display text-[calc(21px*var(--ws-fs))] font-semibold leading-snug text-[#fafaf9]">
               {row.title}
             </h2>
             {row.description && (
-              <p className="relative mt-1.5 font-sans text-[12.5px] leading-relaxed text-[#fafaf9]/70">
+              <p className="relative mt-1.5 font-sans text-[calc(12.5px*var(--ws-fs))] leading-relaxed text-[#fafaf9]/70">
                 {row.description}
               </p>
             )}
-            <div className="relative mt-2 flex items-center gap-2 font-sans text-[12px] text-[#fafaf9]/70">
+            <div className="relative mt-2 flex items-center gap-2 font-sans text-[calc(12px*var(--ws-fs))] text-[#fafaf9]/70">
               <EqBars className="text-gold" />
               <span className="flex items-center gap-1 font-semibold tabular-nums">
                 <Users size={13} weight="bold" />
                 {formatCompact(listenerCount)} {t("voice.listeners")}
               </span>
               {row.community && (
-                <span className="truncate rounded-pill bg-[#fafaf9]/12 px-2 py-px text-[10.5px] font-medium">
+                <span className="truncate rounded-pill bg-[#fafaf9]/12 px-2 py-px text-[calc(10.5px*var(--ws-fs))] font-medium">
                   {row.community.name}
                 </span>
               )}
@@ -809,7 +809,7 @@ export default function SpaceRoom({
                     </span>
                   </span>
                   <span className="flex items-center gap-1">
-                    <span className="font-sans text-[14px] font-semibold glass-ink">
+                    <span className="font-sans text-[calc(14px*var(--ws-fs))] font-semibold glass-ink">
                       {hostName(row.host)}
                     </span>
                     <UserBadges
@@ -819,7 +819,7 @@ export default function SpaceRoom({
                       size={13}
                     />
                   </span>
-                  <span className="rounded-pill bg-brand/15 px-2.5 py-px font-sans text-[10px] font-bold uppercase tracking-[0.1em] text-gold">
+                  <span className="rounded-pill bg-brand/15 px-2.5 py-px font-sans text-[calc(10px*var(--ws-fs))] font-bold uppercase tracking-[0.1em] text-gold">
                     {t("voice.hostBadge")}
                   </span>
                 </div>
@@ -847,13 +847,13 @@ export default function SpaceRoom({
                         {audienceShown.map((m) => memberCell(m, false, false))}
                       </div>
                       {audienceOverflow > 0 && (
-                        <p className="mt-2 font-sans text-[11.5px] glass-ink-faint">
+                        <p className="mt-2 font-sans text-[calc(11.5px*var(--ws-fs))] glass-ink-faint">
                           +{formatCompact(audienceOverflow)}
                         </p>
                       )}
                     </>
                   ) : (
-                    <p className="mt-3 font-sans text-[12.5px] glass-ink-dim">
+                    <p className="mt-3 font-sans text-[calc(12.5px*var(--ws-fs))] glass-ink-dim">
                       {realtime
                         ? t("voice.roomQuiet")
                         : `${formatCompact(listenerCount)} ${t("voice.listeners")}`}
@@ -899,7 +899,7 @@ export default function SpaceRoom({
                             className={def.tint}
                           />
                           {r.from?.name && (
-                            <span className="max-w-[92px] truncate rounded-pill bg-[#0c0a09]/60 px-2 py-px font-sans text-[9.5px] font-semibold text-[#fafaf9]/85">
+                            <span className="max-w-[92px] truncate rounded-pill bg-[#0c0a09]/60 px-2 py-px font-sans text-[calc(9.5px*var(--ws-fs))] font-semibold text-[#fafaf9]/85">
                               {r.from.name}
                             </span>
                           )}
@@ -917,7 +917,7 @@ export default function SpaceRoom({
                   <button
                     type="button"
                     onClick={() => void unlockAudio()}
-                    className="pointer-events-auto flex h-10 items-center gap-2 rounded-pill bg-brand px-4 font-sans text-[13px] font-semibold text-brand-on shadow-nav transition-colors hover:bg-brand-active cursor-pointer"
+                    className="pointer-events-auto flex h-10 items-center gap-2 rounded-pill bg-brand px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on shadow-nav transition-colors hover:bg-brand-active cursor-pointer"
                   >
                     <SpeakerHigh size={15} weight="fill" />
                     {tf("voice.tapToListen", "Tap to listen")}
@@ -941,14 +941,14 @@ export default function SpaceRoom({
                     <span className="relative h-[18px] w-[18px] shrink-0 overflow-hidden rounded-pill bg-[#1c1917]">
                       <SafeAvatar src={avatarOf(lastMsg.from)} />
                     </span>
-                    <span className="min-w-0 flex-1 truncate font-sans text-[12px] glass-ink">
+                    <span className="min-w-0 flex-1 truncate font-sans text-[calc(12px*var(--ws-fs))] glass-ink">
                       <span className="mr-1.5 font-semibold glass-ink-dim">
                         {nameOf(lastMsg.from)}
                       </span>
                       {lastMsg.text}
                     </span>
                     {unread > 1 && (
-                      <span className="shrink-0 rounded-pill bg-brand px-1.5 py-px font-sans text-[10px] font-bold text-brand-on tabular-nums">
+                      <span className="shrink-0 rounded-pill bg-brand px-1.5 py-px font-sans text-[calc(10px*var(--ws-fs))] font-bold text-brand-on tabular-nums">
                         {unread}
                       </span>
                     )}
@@ -993,7 +993,7 @@ export default function SpaceRoom({
                         onClick={toggleHand}
                         aria-pressed={hand}
                         className={clsx(
-                          "flex h-10 items-center gap-1.5 rounded-pill px-3.5 font-sans text-[12px] font-semibold transition-colors cursor-pointer",
+                          "flex h-10 items-center gap-1.5 rounded-pill px-3.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors cursor-pointer",
                           hand ? "glass-chip-active" : "glass-chip",
                         )}
                       >
@@ -1029,7 +1029,7 @@ export default function SpaceRoom({
                     >
                       <ChatCircle size={16} weight={chatOpen ? "fill" : "bold"} />
                       {unread > 0 && !chatOpen && (
-                        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-pill bg-brand px-1 font-sans text-[9px] font-bold text-brand-on tabular-nums">
+                        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-pill bg-brand px-1 font-sans text-[calc(9px*var(--ws-fs))] font-bold text-brand-on tabular-nums">
                           {unread > 9 ? "9+" : unread}
                         </span>
                       )}
@@ -1039,7 +1039,7 @@ export default function SpaceRoom({
                     <button
                       type="button"
                       onClick={() => onEnd(row)}
-                      className="flex items-center gap-1.5 rounded-pill bg-danger/90 px-4 h-10 font-sans text-[12.5px] font-semibold text-white hover:bg-danger transition-colors cursor-pointer"
+                      className="flex items-center gap-1.5 rounded-pill bg-danger/90 px-4 h-10 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-white hover:bg-danger transition-colors cursor-pointer"
                     >
                       {t("voice.end")}
                     </button>
@@ -1047,14 +1047,14 @@ export default function SpaceRoom({
                     <button
                       type="button"
                       onClick={onLeave}
-                      className="flex items-center gap-1.5 rounded-pill glass-chip px-4 h-10 font-sans text-[12.5px] font-semibold transition-colors cursor-pointer"
+                      className="flex items-center gap-1.5 rounded-pill glass-chip px-4 h-10 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold transition-colors cursor-pointer"
                     >
                       <SignOut size={14} weight="bold" />
                       {t("voice.leave")}
                     </button>
                   )}
                 </div>
-                <p className="mt-2 flex items-center justify-center gap-2 text-center font-sans text-[10.5px] glass-ink-faint">
+                <p className="mt-2 flex items-center justify-center gap-2 text-center font-sans text-[calc(10.5px*var(--ws-fs))] glass-ink-faint">
                   {audio === "connecting"
                     ? t("voice.audioConnecting")
                     : audio === "reconnecting"
@@ -1074,7 +1074,7 @@ export default function SpaceRoom({
                     <button
                       type="button"
                       onClick={reconnect}
-                      className="rounded-pill glass-chip px-2.5 py-0.5 font-sans text-[10.5px] font-semibold glass-ink transition-colors cursor-pointer"
+                      className="rounded-pill glass-chip px-2.5 py-0.5 font-sans text-[calc(10.5px*var(--ws-fs))] font-semibold glass-ink transition-colors cursor-pointer"
                     >
                       {tf("voice.rejoin", "Rejoin")}
                     </button>
@@ -1143,7 +1143,7 @@ export default function SpaceRoom({
                     </span>
                     <span className="flex min-w-0 flex-col">
                       <span className="flex items-center gap-1">
-                        <span className="truncate font-sans text-[13.5px] font-semibold text-primary">
+                        <span className="truncate font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-primary">
                           {menuFor.username}
                         </span>
                         {menuFor.resolved && (
@@ -1154,7 +1154,7 @@ export default function SpaceRoom({
                           />
                         )}
                       </span>
-                      <span className="truncate font-sans text-[11px] text-subtle">
+                      <span className="truncate font-sans text-[calc(11px*var(--ws-fs))] text-subtle">
                         {cohostIds.has(menuFor.id)
                           ? tf("voice.cohostBadge", "Co-host")
                           : menuOnStage
@@ -1171,7 +1171,7 @@ export default function SpaceRoom({
                     const m = menuFor;
                     const targetCohost = cohostIds.has(m.id);
                     const item =
-                      "flex h-11 w-full items-center gap-2.5 rounded-lg px-3 text-left font-sans text-[13.5px] font-medium transition-colors hover:bg-chip cursor-pointer";
+                      "flex h-11 w-full items-center gap-2.5 rounded-lg px-3 text-left font-sans text-[calc(13.5px*var(--ws-fs))] font-medium transition-colors hover:bg-chip cursor-pointer";
                     const run = (fn: () => void) => () => {
                       setMenuFor(null);
                       fn();

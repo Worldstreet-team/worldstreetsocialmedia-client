@@ -107,14 +107,14 @@ export default function TextTool({
         <button
           type="button"
           onClick={onCancel}
-          className="h-9 px-3 rounded-pill font-sans text-[13px] font-medium glass-ink-dim hover:glass-ink transition-colors cursor-pointer"
+          className="h-9 px-3 rounded-pill font-sans text-[calc(13px*var(--ws-fs))] font-medium glass-ink-dim hover:glass-ink transition-colors cursor-pointer"
         >
           Cancel
         </button>
         <button
           type="button"
           onClick={() => onDone({ text: text.trim(), style, pill, color })}
-          className="flex items-center gap-2 glass-cta px-5 h-10 rounded-pill font-semibold text-[13px] transition-colors font-sans cursor-pointer active:brightness-95"
+          className="flex items-center gap-2 glass-cta px-5 h-10 rounded-pill font-semibold text-[calc(13px*var(--ws-fs))] transition-colors font-sans cursor-pointer active:brightness-95"
         >
           <Check size={14} weight="bold" />
           Done
@@ -167,7 +167,7 @@ export default function TextTool({
               onClick={() => setTab(t.id)}
               aria-pressed={tab === t.id}
               className={clsx(
-                "relative h-7 px-3 rounded-pill font-sans text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors cursor-pointer",
+                "relative h-7 px-3 rounded-pill font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.08em] transition-colors cursor-pointer",
                 tab === t.id ? "text-[#0c0a09]" : "glass-ink-dim",
               )}
             >
@@ -209,7 +209,7 @@ export default function TextTool({
                   )}
                   <span
                     className={clsx(
-                      "relative text-[19px] leading-none transition-colors",
+                      "relative text-[calc(19px*var(--ws-fs))] leading-none transition-colors",
                       active ? "text-[#0c0a09]" : "text-[#fafaf9]/85",
                     )}
                     style={{
@@ -222,7 +222,7 @@ export default function TextTool({
                   </span>
                   <span
                     className={clsx(
-                      "relative font-sans text-[9px] font-semibold uppercase tracking-[0.08em] transition-colors",
+                      "relative font-sans text-[calc(9px*var(--ws-fs))] font-semibold uppercase tracking-[0.08em] transition-colors",
                       active ? "text-[#0c0a09]/60" : "text-[#fafaf9]/40",
                     )}
                   >
@@ -269,7 +269,7 @@ export default function TextTool({
                   </span>
                   <span
                     className={clsx(
-                      "relative font-sans text-[9px] font-semibold uppercase tracking-[0.08em] transition-colors",
+                      "relative font-sans text-[calc(9px*var(--ws-fs))] font-semibold uppercase tracking-[0.08em] transition-colors",
                       active ? "text-[#0c0a09]/60" : "text-[#fafaf9]/40",
                     )}
                   >
@@ -291,7 +291,7 @@ export default function TextTool({
                   onClick={() => setPaletteId(p.id)}
                   aria-pressed={paletteId === p.id}
                   className={clsx(
-                    "h-7 shrink-0 px-3 rounded-pill font-sans text-[11px] font-medium transition-colors cursor-pointer",
+                    "h-7 shrink-0 px-3 rounded-pill font-sans text-[calc(11px*var(--ws-fs))] font-medium transition-colors cursor-pointer",
                     paletteId === p.id
                       ? "glass-chip-active"
                       : "glass-chip backdrop-blur-md",

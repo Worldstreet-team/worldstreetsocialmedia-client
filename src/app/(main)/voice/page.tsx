@@ -379,13 +379,13 @@ function VoiceDirectory() {
       {/* Header */}
       <div className="mb-6 flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <span className="block font-sans text-[11px] font-bold uppercase tracking-[0.16em] text-gold">
+          <span className="block font-sans text-[calc(11px*var(--ws-fs))] font-bold uppercase tracking-[0.16em] text-gold">
             {t("voice.eyebrow")}
           </span>
-          <h1 className="mt-1 flex items-center gap-2.5 font-display text-[24px] font-semibold leading-none text-primary">
+          <h1 className="mt-1 flex items-center gap-2.5 font-display text-[calc(24px*var(--ws-fs))] font-semibold leading-none text-primary">
             {t("nav.voice")}
             {demo && (
-              <span className="rounded-pill bg-warning-chip px-2 py-0.5 font-sans text-[10px] font-bold uppercase tracking-[0.1em] text-warning">
+              <span className="rounded-pill bg-warning-chip px-2 py-0.5 font-sans text-[calc(10px*var(--ws-fs))] font-bold uppercase tracking-[0.1em] text-warning">
                 {t("voice.demoChip")}
               </span>
             )}
@@ -394,7 +394,7 @@ function VoiceDirectory() {
         <button
           type="button"
           onClick={() => setCreating(true)}
-          className="flex h-10 shrink-0 items-center gap-1.5 rounded-pill bg-brand px-4 font-sans text-[13px] font-semibold text-brand-on transition-colors hover:bg-brand-active cursor-pointer"
+          className="flex h-10 shrink-0 items-center gap-1.5 rounded-pill bg-brand px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active cursor-pointer"
         >
           <Plus size={14} weight="bold" />
           {t("voice.create")}
@@ -424,7 +424,7 @@ function VoiceDirectory() {
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder={tf("voice.searchPlaceholder", "Search spaces")}
                   aria-label={tf("voice.searchPlaceholder", "Search spaces")}
-                  className="h-10 w-full rounded-pill bg-sunken pl-10 pr-4 font-sans text-[13.5px] text-primary placeholder:text-subtle outline-none"
+                  className="h-10 w-full rounded-pill bg-sunken pl-10 pr-4 font-sans text-[calc(13.5px*var(--ws-fs))] text-primary placeholder:text-subtle outline-none"
                 />
               </label>
               {/* Topic rail — the 14 verticals, "All" first. */}
@@ -444,7 +444,7 @@ function VoiceDirectory() {
                       aria-pressed={selected}
                       onClick={() => setVertical(chip.id)}
                       className={clsx(
-                        "h-10 shrink-0 rounded-pill px-3.5 font-sans text-[12.5px] font-semibold transition-colors cursor-pointer",
+                        "h-10 shrink-0 rounded-pill px-3.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold transition-colors cursor-pointer",
                         selected
                           ? "bg-primary text-page"
                           : "bg-chip text-muted hover:text-primary",
@@ -460,7 +460,7 @@ function VoiceDirectory() {
 
           {liveShown.length > 0 && (
             <section className="mb-8">
-              <h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">
+              <h2 className="mb-3 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-subtle">
                 {t("voice.liveNow")}
               </h2>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -484,7 +484,7 @@ function VoiceDirectory() {
 
           {upcomingShown.length > 0 && (
             <section>
-              <h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">
+              <h2 className="mb-3 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-subtle">
                 {t("voice.upcoming")}
               </h2>
               <div className="flex flex-col gap-2.5">
@@ -527,7 +527,7 @@ function VoiceDirectory() {
             filtering &&
             liveShown.length === 0 &&
             upcomingShown.length === 0 && (
-              <p className="py-8 text-center font-sans text-[13px] text-muted">
+              <p className="py-8 text-center font-sans text-[calc(13px*var(--ws-fs))] text-muted">
                 {tf(
                   "voice.noMatches",
                   "Nothing matches — try another search or topic.",

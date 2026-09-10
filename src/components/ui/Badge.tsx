@@ -21,7 +21,7 @@ export interface BadgeProps {
 }
 
 const BASE_COUNT =
-  "pointer-events-none inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-pill font-sans text-[9px] font-bold leading-none tabular-nums";
+  "pointer-events-none inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-pill font-sans text-[calc(9px*var(--ws-fs))] font-bold leading-none tabular-nums";
 
 const BASE_DOT = "pointer-events-none inline-block h-2 w-2 rounded-pill";
 

@@ -327,7 +327,7 @@ export const MessageBubble = memo(function MessageBubble({
 		const actorAvatar = (m.sender as { avatar?: string })?.avatar;
 		return (
 			<div className="mx-auto flex w-full max-w-[52rem] justify-center px-4 py-1.5">
-				<span className="inline-flex items-center gap-1.5 rounded-pill bg-page/70 px-3 py-1 text-center font-sans text-[11.5px] font-medium text-muted">
+				<span className="inline-flex items-center gap-1.5 rounded-pill bg-page/70 px-3 py-1 text-center font-sans text-[calc(11.5px*var(--ws-fs))] font-medium text-muted">
 					{/* The actor's face inline (owner pick): a busy group reads
 					    as people, not names. */}
 					{actorAvatar && (
@@ -401,7 +401,7 @@ export const MessageBubble = memo(function MessageBubble({
 				// Telegram's rule (owner pick): the thread opens here.
 				<div className="mx-auto flex w-full max-w-[52rem] items-center gap-3 px-4 py-3 sm:px-6">
 					<span className="h-px flex-1" style={{ background: "var(--chat-accent-40, rgba(34,184,214,0.4))" }} />
-					<span className="font-sans text-[11px] font-semibold" style={{ color: "var(--chat-accent, var(--ws-brand-primary))" }}>
+					<span className="font-sans text-[calc(11px*var(--ws-fs))] font-semibold" style={{ color: "var(--chat-accent, var(--ws-brand-primary))" }}>
 						{unreadLabel && unreadLabel > 1
 							? `${unreadLabel} unread messages`
 							: "Unread messages"}
@@ -411,7 +411,7 @@ export const MessageBubble = memo(function MessageBubble({
 			)}
 			{showDay && (
 				<div className="flex justify-center pb-2 pt-5">
-					<span className="font-sans text-[11px] font-medium tabular-nums text-subtle">
+					<span className="font-sans text-[calc(11px*var(--ws-fs))] font-medium tabular-nums text-subtle">
 						{dayLabel(m.createdAt)}
 					</span>
 				</div>
@@ -488,7 +488,7 @@ export const MessageBubble = memo(function MessageBubble({
 				    --reveal is set by ThreadList's drag handler. */}
 				<span
 					aria-hidden
-					className="pointer-events-none absolute right-[-64px] top-1/2 w-[56px] -translate-y-1/2 text-right font-sans text-[11px] tabular-nums text-subtle"
+					className="pointer-events-none absolute right-[-64px] top-1/2 w-[56px] -translate-y-1/2 text-right font-sans text-[calc(11px*var(--ws-fs))] tabular-nums text-subtle"
 					style={{ opacity: "var(--reveal, 0)" }}
 				>
 					{format(new Date(m.createdAt), "h:mm a")}
@@ -553,7 +553,7 @@ export const MessageBubble = memo(function MessageBubble({
 							/* Stacked quote (owner pick, Instagram): a label, then the
 							   quoted message peeking out from BEHIND the reply. */
 							<>
-								<span className="mb-1 px-1 font-sans text-[11px] text-subtle">
+								<span className="mb-1 px-1 font-sans text-[calc(11px*var(--ws-fs))] text-subtle">
 									{(() => {
 										// Whose message is being quoted decides the copy:
 										// "replied to you" when it was mine.
@@ -575,7 +575,7 @@ export const MessageBubble = memo(function MessageBubble({
 									type="button"
 									onClick={() => onJump(m.replyTo!._id)}
 									className={clsx(
-										"-mb-3 max-w-[90%] cursor-pointer truncate rounded-[16px] px-3 pb-4 pt-1.5 text-left font-sans text-[12px] opacity-90 transition-opacity hover:opacity-100",
+										"-mb-3 max-w-[90%] cursor-pointer truncate rounded-[16px] px-3 pb-4 pt-1.5 text-left font-sans text-[calc(12px*var(--ws-fs))] opacity-90 transition-opacity hover:opacity-100",
 										isMe ? "mr-2" : "ml-2",
 									)}
 									style={{
@@ -618,7 +618,7 @@ export const MessageBubble = memo(function MessageBubble({
 					>
 						{isGroup && !isMe && !sameRunAsPrev && (
 							<span
-								className="mb-0.5 block truncate font-sans text-[12px] font-semibold"
+								className="mb-0.5 block truncate font-sans text-[calc(12px*var(--ws-fs))] font-semibold"
 								style={{ color: senderColor(String(m.sender._id)) }}
 							>
 								{(m.sender as { firstName?: string })?.firstName ||
@@ -644,7 +644,7 @@ export const MessageBubble = memo(function MessageBubble({
 											className="absolute inset-0 h-full w-full object-cover"
 										/>
 										{i === 3 && album.length > 4 && (
-											<span className="absolute inset-0 flex items-center justify-center bg-black/45 font-sans text-[15px] font-semibold text-white">
+											<span className="absolute inset-0 flex items-center justify-center bg-black/45 font-sans text-[calc(15px*var(--ws-fs))] font-semibold text-white">
 												+{album.length - 4}
 											</span>
 										)}
@@ -693,14 +693,14 @@ export const MessageBubble = memo(function MessageBubble({
 										<button
 											type="button"
 											onClick={() => onRetryUpload?.(m.clientKey!)}
-											className="cursor-pointer rounded-pill bg-raised px-2.5 py-0.5 font-sans text-[11.5px] font-semibold text-danger transition-colors hover:bg-chip"
+											className="cursor-pointer rounded-pill bg-raised px-2.5 py-0.5 font-sans text-[calc(11.5px*var(--ws-fs))] font-semibold text-danger transition-colors hover:bg-chip"
 										>
 											Failed — retry
 										</button>
 										<button
 											type="button"
 											onClick={() => onCancelUpload?.(m.clientKey!)}
-											className="cursor-pointer font-sans text-[11px] text-muted transition-colors hover:text-primary"
+											className="cursor-pointer font-sans text-[calc(11px*var(--ws-fs))] text-muted transition-colors hover:text-primary"
 										>
 											Discard
 										</button>
@@ -709,7 +709,7 @@ export const MessageBubble = memo(function MessageBubble({
 								{m.transcript && (
 									// The transcript line (owner pick): what was said,
 									// readable without playing.
-									<p className="mt-1 px-1 font-sans text-[12.5px] leading-snug opacity-75">
+									<p className="mt-1 px-1 font-sans text-[calc(12.5px*var(--ws-fs))] leading-snug opacity-75">
 										“{m.transcript}”
 									</p>
 								)}
@@ -728,7 +728,7 @@ export const MessageBubble = memo(function MessageBubble({
 									alt=""
 									className="h-full w-full object-cover"
 								/>
-								<span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0c0a09]/85 to-transparent px-2 pb-1.5 pt-5 text-left font-sans text-[10px] font-semibold text-[#fafaf9]/90">
+								<span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0c0a09]/85 to-transparent px-2 pb-1.5 pt-5 text-left font-sans text-[calc(10px*var(--ws-fs))] font-semibold text-[#fafaf9]/90">
 									View story
 								</span>
 							</button>
@@ -770,7 +770,7 @@ export const MessageBubble = memo(function MessageBubble({
 					)}
 				</div>
 				{m.failed && m.type === "text" && (
-					<span className={clsx("mt-0.5 font-sans text-[11px] text-danger", isMe ? "self-end" : "pl-[34px]")}>
+					<span className={clsx("mt-0.5 font-sans text-[calc(11px*var(--ws-fs))] text-danger", isMe ? "self-end" : "pl-[34px]")}>
 						Not delivered · tap to retry
 					</span>
 				)}
@@ -804,7 +804,7 @@ export const MessageBubble = memo(function MessageBubble({
 								onClick={() => onReact?.(m, emoji)}
 								aria-label={`${emoji} reaction${info.count > 1 ? `, ${info.count}` : ""}${info.mine ? ", including yours" : ""}`}
 								className={clsx(
-									"flex cursor-pointer items-center gap-1 rounded-pill px-1.5 py-0.5 font-sans text-[12px] ring-2 ring-page transition-colors animate-pop",
+									"flex cursor-pointer items-center gap-1 rounded-pill px-1.5 py-0.5 font-sans text-[calc(12px*var(--ws-fs))] ring-2 ring-page transition-colors animate-pop",
 									info.mine
 										? "[background:var(--chat-accent-40,rgba(34,184,214,0.4))]"
 										: "bg-surface hover:bg-chip",
@@ -812,7 +812,7 @@ export const MessageBubble = memo(function MessageBubble({
 							>
 								<span>{emoji}</span>
 								{info.count > 1 && (
-									<span className="tabular-nums text-[10.5px] font-semibold text-muted">
+									<span className="tabular-nums text-[calc(10.5px*var(--ws-fs))] font-semibold text-muted">
 										{info.count}
 									</span>
 								)}
@@ -839,7 +839,7 @@ export const MessageBubble = memo(function MessageBubble({
 							<img src={peerAvatar} alt="Seen" className="h-3.5 w-3.5 rounded-pill object-cover" />
 						</span>
 					) : (
-						<span className="mt-1 flex items-center gap-1 font-sans text-[11px] text-subtle">
+						<span className="mt-1 flex items-center gap-1 font-sans text-[calc(11px*var(--ws-fs))] text-subtle">
 							<MessageTicks state={state} />
 						</span>
 					);

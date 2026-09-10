@@ -252,12 +252,12 @@ export function ProfileHoverCard({
 										   bg-primary/text-page pattern the rest of the app
 										   uses for it — gold stays reserved for the one
 										   primary CTA on a surface. */
-										className="h-9 shrink-0 cursor-pointer rounded-pill bg-primary px-4 font-sans text-[13px] font-semibold text-page transition-colors hover:bg-muted disabled:opacity-60"
+										className="h-9 shrink-0 cursor-pointer rounded-pill bg-primary px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-page transition-colors hover:bg-muted disabled:opacity-60"
 									>
 										{t("profile.follow")}
 									</button>
 								) : (
-									<span className="h-9 shrink-0 rounded-pill bg-chip px-4 font-sans text-[13px] font-semibold leading-9 text-primary">
+									<span className="h-9 shrink-0 rounded-pill bg-chip px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold leading-9 text-primary">
 										{t("profile.followingState")}
 									</span>
 								)}
@@ -268,7 +268,7 @@ export function ProfileHoverCard({
 								className="mt-2.5 block min-w-0"
 							>
 								<span className="flex min-w-0 items-center gap-1">
-									<span className="truncate font-sans text-[15px] font-bold text-primary hover:underline">
+									<span className="truncate font-sans text-[calc(15px*var(--ws-fs))] font-bold text-primary hover:underline">
 										{name}
 									</span>
 									<UserBadges
@@ -278,18 +278,18 @@ export function ProfileHoverCard({
 										size={14}
 									/>
 								</span>
-								<span className="block truncate font-sans text-[13px] text-muted">
+								<span className="block truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
 									@{profile.username}
 								</span>
 							</Link>
 
 							{profile.bio && (
-								<p className="mt-2 line-clamp-2 font-sans text-[13px] leading-snug text-primary opacity-90">
+								<p className="mt-2 line-clamp-2 font-sans text-[calc(13px*var(--ws-fs))] leading-snug text-primary opacity-90">
 									{profile.bio}
 								</p>
 							)}
 
-							<div className="mt-3 flex gap-4 border-t border-hairline pt-2.5 font-sans text-[13px]">
+							<div className="mt-3 flex gap-4 border-t border-hairline pt-2.5 font-sans text-[calc(13px*var(--ws-fs))]">
 								<span className="tabular-nums text-muted">
 									<strong className="font-semibold text-primary">
 										{formatCompact(profile.followersCount ?? 0)}

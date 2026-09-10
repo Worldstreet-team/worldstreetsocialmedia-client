@@ -381,7 +381,7 @@ export default function MediaEditor({
                 onClick={() => setTab(id)}
                 aria-pressed={tab === id}
                 className={clsx(
-                  "relative flex-1 h-11 text-[13px] font-semibold font-sans transition-colors cursor-pointer",
+                  "relative flex-1 h-11 text-[calc(13px*var(--ws-fs))] font-semibold font-sans transition-colors cursor-pointer",
                   tab === id ? "glass-ink" : "glass-ink-dim hover:glass-ink",
                 )}
               >
@@ -411,7 +411,7 @@ export default function MediaEditor({
                 <div className="space-y-2">
                   {ADJUSTMENT_SLIDERS.map(({ key, label }) => (
                     <div key={key} className="flex items-center gap-3">
-                      <span className="w-[76px] shrink-0 text-[11px] uppercase tracking-[1px] font-medium glass-ink-dim font-sans">
+                      <span className="w-[76px] shrink-0 text-[calc(11px*var(--ws-fs))] uppercase tracking-[1px] font-medium glass-ink-dim font-sans">
                         {label}
                       </span>
                       <input
@@ -459,7 +459,7 @@ export default function MediaEditor({
                         preset: null,
                       }))
                     }
-                    className="text-[13px] font-medium font-sans glass-ink-dim hover:glass-ink transition-colors cursor-pointer"
+                    className="text-[calc(13px*var(--ws-fs))] font-medium font-sans glass-ink-dim hover:glass-ink transition-colors cursor-pointer"
                   >
                     Reset adjustments
                   </button>
@@ -471,7 +471,7 @@ export default function MediaEditor({
               <div className="shrink-0 px-3 sm:px-4 py-3 border-t glass-divider">
                 <label
                   htmlFor="ws-editor-alt"
-                  className="block text-[11px] uppercase tracking-[1px] font-medium glass-ink-dim mb-1 font-sans"
+                  className="block text-[calc(11px*var(--ws-fs))] uppercase tracking-[1px] font-medium glass-ink-dim mb-1 font-sans"
                 >
                   Alt text
                 </label>
@@ -496,7 +496,7 @@ export default function MediaEditor({
             >
               <div className="flex items-center justify-between gap-2">
                 {lockAspect ? (
-                  <span className="text-[11px] uppercase tracking-[1px] font-medium glass-ink-dim font-sans">
+                  <span className="text-[calc(11px*var(--ws-fs))] uppercase tracking-[1px] font-medium glass-ink-dim font-sans">
                     {round ? "Profile photo" : "Banner"}
                   </span>
                 ) : (
@@ -507,7 +507,7 @@ export default function MediaEditor({
                         type="button"
                         onClick={() => selectAspect(id)}
                         className={clsx(
-                          "h-8 px-3 rounded-pill text-[13px] font-medium font-sans transition-colors whitespace-nowrap cursor-pointer tabular-nums",
+                          "h-8 px-3 rounded-pill text-[calc(13px*var(--ws-fs))] font-medium font-sans transition-colors whitespace-nowrap cursor-pointer tabular-nums",
                           doc.aspectId === id
                             ? "glass-chip-active"
                             : "glass-chip ",

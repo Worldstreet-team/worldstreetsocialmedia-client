@@ -217,7 +217,7 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 						{community?.name ?? slug.replace(/-/g, " ")}
 					</h1>
 					{community && (
-						<span className="font-sans text-[13px] tabular-nums text-muted">
+						<span className="font-sans text-[calc(13px*var(--ws-fs))] tabular-nums text-muted">
 							{formatCompact(community.membersCount)} {t("community.members")}
 						</span>
 					)}
@@ -260,16 +260,16 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 							</div>
 
 							<div className="flex min-w-0 flex-1 flex-col gap-1">
-								<span className="font-sans text-[12px] font-semibold uppercase tracking-[0.14em] text-gold">
+								<span className="font-sans text-[calc(12px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-gold">
 									{resolveCategoryLabel(community.category) || community.category}
 								</span>
-								<h2 className="truncate font-display text-[26px] font-semibold leading-tight text-primary">
+								<h2 className="truncate font-display text-[calc(26px*var(--ws-fs))] font-semibold leading-tight text-primary">
 									{community.name}
 								</h2>
 								{community.owner && (
 									<Link
 										href={`/profile/${community.owner.username}`}
-										className="flex items-center gap-1.5 font-sans text-[14px] text-muted hover:text-primary"
+										className="flex items-center gap-1.5 font-sans text-[calc(14px*var(--ws-fs))] text-muted hover:text-primary"
 									>
 										<span className="relative h-4 w-4 shrink-0 overflow-hidden rounded-pill bg-raised">
 											<SafeAvatar src={community.owner.avatar} />
@@ -291,7 +291,7 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 								onClick={toggleJoin}
 								disabled={joinBusy || community.isOwner}
 								className={clsx(
-									"h-10 shrink-0 self-start rounded-pill px-5 font-sans text-[14px] font-semibold transition-colors",
+									"h-10 shrink-0 self-start rounded-pill px-5 font-sans text-[calc(14px*var(--ws-fs))] font-semibold transition-colors",
 									community.isOwner
 										? "cursor-default bg-raised text-muted"
 										: community.joined
@@ -308,7 +308,7 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 						</div>
 
 						{community.description && (
-							<p className="mt-3.5 break-words font-sans text-[16px] leading-relaxed text-primary">
+							<p className="mt-3.5 break-words font-sans text-[calc(16px*var(--ws-fs))] leading-relaxed text-primary">
 								{community.description}
 							</p>
 						)}
@@ -324,7 +324,7 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 										<SafeAvatar src={m.avatar} />
 									</span>
 								))}
-								<span className="font-sans text-[14px] text-muted">
+								<span className="font-sans text-[calc(14px*var(--ws-fs))] text-muted">
 									<span className="font-semibold tabular-nums text-primary">
 										{formatCompact(community.membersCount)}
 									</span>{" "}
@@ -332,7 +332,7 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 								</span>
 							</span>
 							{community.createdAt && (
-								<span className="font-sans text-[14px] text-subtle">
+								<span className="font-sans text-[calc(14px*var(--ws-fs))] text-subtle">
 									{t("community.created.on")}{" "}
 									{new Date(community.createdAt).toLocaleDateString(t.locale, {
 										month: "long",
@@ -359,7 +359,7 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 						<button
 							type="button"
 							onClick={toggleJoin}
-							className="flex cursor-pointer items-center justify-center gap-2.5 px-4 py-5 font-sans text-[15.5px] font-semibold text-muted transition-colors hover:bg-surface hover:text-primary"
+							className="flex cursor-pointer items-center justify-center gap-2.5 px-4 py-5 font-sans text-[calc(15.5px*var(--ws-fs))] font-semibold text-muted transition-colors hover:bg-surface hover:text-primary"
 						>
 							<UsersThree size={20} weight="duotone" className="text-gold" />
 							{t("community.joinToPost")}

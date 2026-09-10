@@ -57,7 +57,7 @@ export function CommunityStrip({
                   {row.avatar ? (
                     <SafeAvatar src={row.avatar} className="object-cover" />
                   ) : (
-                    <span className="flex h-full w-full items-center justify-center font-display text-[17px] font-semibold text-gold">
+                    <span className="flex h-full w-full items-center justify-center font-display text-[calc(17px*var(--ws-fs))] font-semibold text-gold">
                       {row.name.charAt(0).toUpperCase()}
                     </span>
                   )}
@@ -66,23 +66,23 @@ export function CommunityStrip({
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <Link
                     href={`/communities/${row.slug}`}
-                    className="truncate font-sans text-[15px] font-semibold text-primary hover:underline"
+                    className="truncate font-sans text-[calc(15px*var(--ws-fs))] font-semibold text-primary hover:underline"
                   >
                     {row.name}
                   </Link>
-                  <span className="font-sans text-[11px] font-semibold uppercase tracking-wider text-subtle">
+                  <span className="font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-wider text-subtle">
                     <span className="tabular-nums">{formatCompact(row.membersCount)}</span>{" "}
                     {t("community.members")}
                   </span>
                   {row.description && (
-                    <p className="line-clamp-2 font-sans text-[13px] leading-snug text-muted">
+                    <p className="line-clamp-2 font-sans text-[calc(13px*var(--ws-fs))] leading-snug text-muted">
                       {row.description}
                     </p>
                   )}
                   <button
                     type="button"
                     onClick={() => onJoin(row)}
-                    className="mt-1 h-8 cursor-pointer self-start rounded-pill bg-primary px-3.5 font-sans text-[12px] font-semibold text-page transition-colors hover:bg-muted"
+                    className="mt-1 h-8 cursor-pointer self-start rounded-pill bg-primary px-3.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-page transition-colors hover:bg-muted"
                   >
                     {t("community.join")}
                   </button>

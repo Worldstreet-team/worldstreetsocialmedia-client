@@ -249,7 +249,7 @@ export const CommentComposer = ({
 			}
 		>
 			{replyingTo && (
-				<p className="mb-2 pl-[52px] font-sans text-[12.5px] text-muted">
+				<p className="mb-2 pl-[52px] font-sans text-[calc(12.5px*var(--ws-fs))] text-muted">
 					Replying to <span className="font-medium text-gold">@{replyingTo}</span>
 				</p>
 			)}
@@ -268,7 +268,7 @@ export const CommentComposer = ({
 						value={content}
 						onChange={(e) => setContent(e.target.value)}
 						placeholder="Post your reply"
-						className="w-full resize-none overflow-hidden bg-transparent pt-2 font-sans text-[16px] leading-relaxed text-primary outline-none placeholder:text-subtle"
+						className="w-full resize-none overflow-hidden bg-transparent pt-2 font-sans text-[calc(16px*var(--ws-fs))] leading-relaxed text-primary outline-none placeholder:text-subtle"
 						rows={1}
 					/>
 
@@ -316,7 +316,7 @@ export const CommentComposer = ({
 								className="group relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-raised hover:text-primary"
 							>
 								<RiImageLine className="h-[18px] w-[18px]" />
-								<span className="hidden sm:block absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] bg-raised text-primary px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
+								<span className="hidden sm:block absolute -bottom-8 left-1/2 -translate-x-1/2 text-[calc(10px*var(--ws-fs))] bg-raised text-primary px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
 									Media
 								</span>
 							</button>
@@ -342,7 +342,7 @@ export const CommentComposer = ({
 								)}
 							>
 								<RiEmotionLine className="h-[18px] w-[18px]" />
-								<span className="hidden sm:block absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] bg-raised text-primary px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
+								<span className="hidden sm:block absolute -bottom-8 left-1/2 -translate-x-1/2 text-[calc(10px*var(--ws-fs))] bg-raised text-primary px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
 									Emoji
 								</span>
 							</button>
@@ -396,7 +396,7 @@ export const CommentComposer = ({
 								(!content.trim() && mediaItems.length === 0) || isPosting
 							}
 							className={clsx(
-								"flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-pill px-[18px] font-sans text-[13px] font-semibold transition-colors",
+								"flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-pill px-[18px] font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-colors",
 								(!content.trim() && mediaItems.length === 0) || isPosting
 									? "bg-raised text-subtle cursor-not-allowed opacity-50"
 									: "bg-brand text-brand-on hover:bg-brand-active",

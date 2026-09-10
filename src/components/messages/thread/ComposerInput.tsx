@@ -161,7 +161,7 @@ export const ComposerInput = forwardRef<
 							e.preventDefault();
 							insertMention(c);
 						}}
-						className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-pill bg-raised py-1 pl-1 pr-3 font-sans text-[12.5px] font-medium text-primary transition-colors hover:bg-chip"
+						className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-pill bg-raised py-1 pl-1 pr-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-chip"
 					>
 						<span className="relative h-5 w-5 overflow-hidden rounded-pill bg-chip">
 							<SafeAvatar src={c.avatar} eager />
@@ -220,7 +220,7 @@ export const ComposerInput = forwardRef<
 					}
 				}}
 				placeholder="Message..."
-				className="flex-1 min-w-0 bg-transparent border-none outline-none text-[15px] leading-[1.35] text-primary placeholder:text-subtle resize-none max-h-[100px] py-[9px]"
+				className="flex-1 min-w-0 bg-transparent border-none outline-none text-[calc(15px*var(--ws-fs))] leading-[1.35] text-primary placeholder:text-subtle resize-none max-h-[100px] py-[9px]"
 				rows={1}
 				style={{ minHeight: "24px" }}
 			/>
@@ -239,7 +239,7 @@ export const ComposerInput = forwardRef<
 						type="button"
 						onClick={onGif}
 						aria-label="Send a GIF"
-						className="flex h-9 cursor-pointer items-center justify-center rounded-pill px-1.5 font-sans text-[11px] font-bold tracking-wide text-muted transition-colors hover:bg-chip hover:text-primary"
+						className="flex h-9 cursor-pointer items-center justify-center rounded-pill px-1.5 font-sans text-[calc(11px*var(--ws-fs))] font-bold tracking-wide text-muted transition-colors hover:bg-chip hover:text-primary"
 					>
 						GIF
 					</button>

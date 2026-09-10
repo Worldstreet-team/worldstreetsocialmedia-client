@@ -92,7 +92,7 @@ export function ThemeStudio({
 		input.click();
 	};
 
-	const label = "font-sans text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle";
+	const label = "font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.12em] text-subtle";
 	const tile = "relative aspect-[4/3] cursor-pointer overflow-hidden rounded-[10px] border transition-colors";
 	const chip = "h-9 w-9 shrink-0 cursor-pointer rounded-pill border-2 transition-transform";
 
@@ -119,7 +119,7 @@ export function ThemeStudio({
 									onClick={() => setDevice(d)}
 									aria-pressed={device === d}
 									className={clsx(
-										"h-8 cursor-pointer rounded-pill px-3.5 font-sans text-[12.5px] font-medium capitalize transition-colors",
+										"h-8 cursor-pointer rounded-pill px-3.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium capitalize transition-colors",
 										device === d ? "bg-primary text-page" : "text-muted hover:text-primary",
 									)}
 								>
@@ -168,7 +168,7 @@ export function ThemeStudio({
 												onClick={() => wp({ type: "flat", preset: undefined })}
 												className={clsx(
 													tile,
-													"flex items-center justify-center bg-page font-sans text-[11px] text-muted",
+													"flex items-center justify-center bg-page font-sans text-[calc(11px*var(--ws-fs))] text-muted",
 													draft.wallpaper.type === "flat" ? "border-brand" : "border-hairline",
 												)}
 											>
@@ -198,7 +198,7 @@ export function ThemeStudio({
 												disabled={uploading}
 												className={clsx(
 													tile,
-													"flex items-center justify-center border-dashed font-sans text-[11px] font-medium text-muted hover:text-primary",
+													"flex items-center justify-center border-dashed font-sans text-[calc(11px*var(--ws-fs))] font-medium text-muted hover:text-primary",
 													draft.wallpaper.type === "image" ? "border-brand" : "border-hairline",
 												)}
 											>
@@ -215,7 +215,7 @@ export function ThemeStudio({
 										disabled={draft.wallpaper.type === "flat"}
 									/>
 									<label className="flex cursor-pointer items-center justify-between">
-										<span className="font-sans text-[13.5px] text-primary">Cyan hue</span>
+										<span className="font-sans text-[calc(13.5px*var(--ws-fs))] text-primary">Cyan hue</span>
 										<input
 											type="checkbox"
 											checked={draft.wallpaper.hue === "cyan"}
@@ -275,7 +275,7 @@ export function ThemeStudio({
 													}
 													aria-pressed={mine.kind === k}
 													className={clsx(
-														"h-8 flex-1 cursor-pointer rounded-pill font-sans text-[12.5px] font-medium capitalize transition-colors",
+														"h-8 flex-1 cursor-pointer rounded-pill font-sans text-[calc(12.5px*var(--ws-fs))] font-medium capitalize transition-colors",
 														mine.kind === k ? "bg-primary text-page" : "text-muted hover:text-primary",
 													)}
 												>
@@ -351,7 +351,7 @@ export function ThemeStudio({
 													onClick={() => bb({ shape: s })}
 													aria-pressed={draft.bubbles.shape === s}
 													className={clsx(
-														"h-8 flex-1 cursor-pointer rounded-pill font-sans text-[12.5px] font-medium transition-colors",
+														"h-8 flex-1 cursor-pointer rounded-pill font-sans text-[calc(12.5px*var(--ws-fs))] font-medium transition-colors",
 														draft.bubbles.shape === s ? "bg-primary text-page" : "text-muted hover:text-primary",
 													)}
 												>
@@ -371,7 +371,7 @@ export function ThemeStudio({
 								<button
 									type="button"
 									onClick={() => setDraft(HOUSE_DEFAULT[mode])}
-									className="cursor-pointer font-sans text-[13px] text-muted transition-colors hover:text-primary"
+									className="cursor-pointer font-sans text-[calc(13px*var(--ws-fs))] text-muted transition-colors hover:text-primary"
 								>
 									Reset
 								</button>
@@ -379,7 +379,7 @@ export function ThemeStudio({
 									type="button"
 									disabled={saving || uploading}
 									onClick={() => onSave(draft, scope)}
-									className="h-10 cursor-pointer rounded-pill bg-brand px-5 font-sans text-[13.5px] font-semibold text-brand-on transition-colors hover:bg-brand-active disabled:opacity-50"
+									className="h-10 cursor-pointer rounded-pill bg-brand px-5 font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active disabled:opacity-50"
 								>
 									{saving ? "Saving…" : scope === "all" ? "Save for all chats" : "Save"}
 								</button>
@@ -409,7 +409,7 @@ function Slider({
 }) {
 	return (
 		<div className={clsx(disabled && "opacity-40")}>
-			<p className="mb-1.5 flex items-center justify-between font-sans text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle">
+			<p className="mb-1.5 flex items-center justify-between font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.12em] text-subtle">
 				{label}
 				<span className="tabular-nums text-muted">
 					{value}
@@ -450,9 +450,9 @@ function ColorField({
 					className="absolute -inset-2 h-[calc(100%+16px)] w-[calc(100%+16px)] cursor-pointer border-0 bg-transparent p-0"
 				/>
 			</span>
-			<span className="font-sans text-[12px] text-muted">
+			<span className="font-sans text-[calc(12px*var(--ws-fs))] text-muted">
 				{label}
-				<span className="ml-1 font-mono text-[11px] uppercase text-subtle">{value}</span>
+				<span className="ml-1 font-mono text-[calc(11px*var(--ws-fs))] uppercase text-subtle">{value}</span>
 			</span>
 		</label>
 	);

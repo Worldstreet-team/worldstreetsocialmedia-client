@@ -89,7 +89,7 @@ export default function StickerTray({
               onClick={() => setTab(t.id)}
               aria-pressed={tab === t.id}
               className={clsx(
-                "h-8 px-3 rounded-pill font-sans text-[12px] font-semibold transition-colors cursor-pointer",
+                "h-8 px-3 rounded-pill font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors cursor-pointer",
                 tab === t.id
                   ? "glass-chip-active"
                   : "glass-chip ",
@@ -120,22 +120,22 @@ export default function StickerTray({
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search people"
               aria-label="Search people to tag"
-              className="flex-1 bg-transparent outline-none text-base sm:text-[13px] font-sans glass-ink placeholder:glass-ink-faint"
+              className="flex-1 bg-transparent outline-none text-base sm:text-[calc(13px*var(--ws-fs))] font-sans glass-ink placeholder:glass-ink-faint"
             />
           </div>
           <div className="mt-2 flex-1 min-h-0 overflow-y-auto no-scrollbar">
             {searching && (
-              <p className="py-3 text-center font-sans text-[12px] glass-ink-faint">
+              <p className="py-3 text-center font-sans text-[calc(12px*var(--ws-fs))] glass-ink-faint">
                 Searching…
               </p>
             )}
             {!searching && query.trim() && people.length === 0 && (
-              <p className="py-3 text-center font-sans text-[12px] glass-ink-faint">
+              <p className="py-3 text-center font-sans text-[calc(12px*var(--ws-fs))] glass-ink-faint">
                 No one found for “{query.trim()}”
               </p>
             )}
             {!searching && !query.trim() && (
-              <p className="py-3 text-center font-sans text-[12px] glass-ink-faint">
+              <p className="py-3 text-center font-sans text-[calc(12px*var(--ws-fs))] glass-ink-faint">
                 Search for someone to tag on your story
               </p>
             )}
@@ -151,7 +151,7 @@ export default function StickerTray({
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1">
-                    <span className="truncate font-sans text-[13px] font-semibold glass-ink">
+                    <span className="truncate font-sans text-[calc(13px*var(--ws-fs))] font-semibold glass-ink">
                       {user.firstName || user.lastName
                         ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim()
                         : user.username}
@@ -163,12 +163,12 @@ export default function StickerTray({
                       size={12}
                     />
                   </span>
-                  <span className="block truncate font-sans text-[11px] glass-ink-dim">
+                  <span className="block truncate font-sans text-[calc(11px*var(--ws-fs))] glass-ink-dim">
                     @{user.username}
                   </span>
                 </span>
                 <span
-                  className="shrink-0 rounded-pill px-2 py-0.5 font-sans text-[11px] font-bold"
+                  className="shrink-0 rounded-pill px-2 py-0.5 font-sans text-[calc(11px*var(--ws-fs))] font-bold"
                   style={{
                     color: MENTION_COLORS.text,
                     background: MENTION_COLORS.pill,

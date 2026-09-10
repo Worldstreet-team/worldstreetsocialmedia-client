@@ -106,7 +106,7 @@ export function TranslatePanel({
 					<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-pill bg-brand/10 text-gold">
 						<Translate size={17} />
 					</span>
-					<h2 className="flex-1 truncate font-display text-[16px] font-semibold text-primary">
+					<h2 className="flex-1 truncate font-display text-[calc(16px*var(--ws-fs))] font-semibold text-primary">
 						{t("translate.panel")}
 					</h2>
 				</OverlayHeader>
@@ -119,7 +119,7 @@ export function TranslatePanel({
 							type="button"
 							onClick={() => setTarget(loc)}
 							className={clsx(
-								"h-8 px-3.5 rounded-pill font-sans text-[12.5px] font-semibold uppercase tracking-wide transition-colors cursor-pointer shrink-0",
+								"h-8 px-3.5 rounded-pill font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold uppercase tracking-wide transition-colors cursor-pointer shrink-0",
 								target === loc
 									? "bg-primary text-page"
 									: "bg-raised/60 text-muted hover:text-primary",
@@ -132,15 +132,15 @@ export function TranslatePanel({
 
 				<div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
 					{/* original */}
-					<p className="font-sans text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle mb-1.5">
+					<p className="font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.12em] text-subtle mb-1.5">
 						{t("translate.original")}
 					</p>
-					<p className="font-sans text-[13.5px] text-muted whitespace-pre-wrap leading-relaxed mb-4">
+					<p className="font-sans text-[calc(13.5px*var(--ws-fs))] text-muted whitespace-pre-wrap leading-relaxed mb-4">
 						{content}
 					</p>
 
 					{/* translation */}
-					<p className="font-sans text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle mb-1.5">
+					<p className="font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.12em] text-subtle mb-1.5">
 						{target.toUpperCase()}
 					</p>
 					{loading && !current ? (
@@ -150,22 +150,22 @@ export function TranslatePanel({
 						</div>
 					) : current?.kind === "translated" ? (
 						<div className="mb-4">
-							<p className="font-sans text-[15px] text-primary whitespace-pre-wrap leading-relaxed">
+							<p className="font-sans text-[calc(15px*var(--ws-fs))] text-primary whitespace-pre-wrap leading-relaxed">
 								{current.text}
 							</p>
 							{current.source && (
-								<p className="font-sans text-[12px] text-subtle mt-1.5">
+								<p className="font-sans text-[calc(12px*var(--ws-fs))] text-subtle mt-1.5">
 									{t("post.translatedFrom")}{" "}
 									{sourceLabel(current.source)}
 								</p>
 							)}
 						</div>
 					) : current?.kind === "same" ? (
-						<p className="font-sans text-[13.5px] text-subtle mb-4">
+						<p className="font-sans text-[calc(13.5px*var(--ws-fs))] text-subtle mb-4">
 							{t("translate.same")}
 						</p>
 					) : (
-						<p className="font-sans text-[13.5px] text-subtle mb-4">
+						<p className="font-sans text-[calc(13.5px*var(--ws-fs))] text-subtle mb-4">
 							{t("translate.failed")}
 						</p>
 					)}
@@ -173,14 +173,14 @@ export function TranslatePanel({
 					<div className="border-t border-hairline my-4" />
 
 					{/* decoded */}
-					<p className="flex items-center gap-1.5 font-sans text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle mb-2.5">
+					<p className="flex items-center gap-1.5 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.12em] text-subtle mb-2.5">
 						<Lightbulb size={13} />
 						{t("translate.decoded")}
 					</p>
 
 					{decoded.entities.length === 0 &&
 					decoded.signals.length === 0 ? (
-						<p className="font-sans text-[13px] text-subtle">
+						<p className="font-sans text-[calc(13px*var(--ws-fs))] text-subtle">
 							{t("translate.empty")}
 						</p>
 					) : (
@@ -194,7 +194,7 @@ export function TranslatePanel({
 										>
 											<span
 												className={clsx(
-													"shrink-0 rounded-[6px] px-2 py-0.5 text-[12px] font-semibold font-sans",
+													"shrink-0 rounded-[6px] px-2 py-0.5 text-[calc(12px*var(--ws-fs))] font-semibold font-sans",
 													e.kind === "ticker" &&
 														"bg-convert/10 text-gold font-mono",
 													e.kind === "slang" &&
@@ -212,7 +212,7 @@ export function TranslatePanel({
 													e.term
 												)}
 											</span>
-											<span className="font-sans text-[13px] text-muted leading-snug">
+											<span className="font-sans text-[calc(13px*var(--ws-fs))] text-muted leading-snug">
 												{e.explanation}
 											</span>
 										</div>
@@ -224,7 +224,7 @@ export function TranslatePanel({
 							<div className="flex items-center gap-1.5 flex-wrap">
 								<span
 									className={clsx(
-										"flex items-center gap-1.5 h-7 px-3 rounded-pill text-[12px] font-semibold font-sans",
+										"flex items-center gap-1.5 h-7 px-3 rounded-pill text-[calc(12px*var(--ws-fs))] font-semibold font-sans",
 										decoded.tone === "bullish" &&
 											"bg-success/10 text-success",
 										decoded.tone === "bearish" &&
@@ -239,7 +239,7 @@ export function TranslatePanel({
 								{decoded.signals.map((sig) => (
 									<span
 										key={sig}
-										className="flex items-center gap-1 h-7 px-3 rounded-pill bg-raised text-primary text-[12px] font-semibold font-sans tabular-nums"
+										className="flex items-center gap-1 h-7 px-3 rounded-pill bg-raised text-primary text-[calc(12px*var(--ws-fs))] font-semibold font-sans tabular-nums"
 									>
 										<CurrencyCircleDollar
 											size={13}

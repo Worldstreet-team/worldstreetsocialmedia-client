@@ -246,7 +246,7 @@ export function DockChat({
 					)}
 				</span>
 				<span className="min-w-0 flex-1">
-					<span className="flex items-center gap-1 truncate font-sans text-[13.5px] font-semibold text-primary">
+					<span className="flex items-center gap-1 truncate font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-primary">
 						<span className="min-w-0 truncate">{peerName}</span>
 						{!isGroup && other && (
 							<UserBadges
@@ -304,7 +304,7 @@ export function DockChat({
 							const CallGlyph = missed ? RiPhoneLine : RiPhoneFill;
 							return (
 								<div key={m._id} className="my-2 flex justify-center">
-									<span className="flex items-center gap-1.5 rounded-pill bg-raised px-2.5 py-1 font-sans text-[11px] text-muted">
+									<span className="flex items-center gap-1.5 rounded-pill bg-raised px-2.5 py-1 font-sans text-[calc(11px*var(--ws-fs))] text-muted">
 										<CallGlyph
 											size={13}
 											className={missed ? "text-danger" : "text-success"}
@@ -381,7 +381,7 @@ export function DockChat({
 										</span>
 									)}
 									{m.content && (
-										<p className="break-words font-sans text-[13px] leading-relaxed whitespace-pre-wrap">
+										<p className="break-words font-sans text-[calc(13px*var(--ws-fs))] leading-relaxed whitespace-pre-wrap">
 											{linkify(m.content)}
 										</p>
 									)}
@@ -391,7 +391,7 @@ export function DockChat({
 					})
 				)}
 				{!loading && messages.length === 0 && (
-					<p className="pt-8 text-center font-sans text-[12.5px] text-subtle">
+					<p className="pt-8 text-center font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle">
 						Say something — it lands here.
 					</p>
 				)}
@@ -411,7 +411,7 @@ export function DockChat({
 						}
 						placeholder="Message…"
 						rows={1}
-						className="max-h-[80px] min-w-0 flex-1 resize-none bg-transparent py-1.5 font-sans text-base text-primary outline-none placeholder:text-subtle sm:text-[13.5px]"
+						className="max-h-[80px] min-w-0 flex-1 resize-none bg-transparent py-1.5 font-sans text-base text-primary outline-none placeholder:text-subtle sm:text-[calc(13.5px*var(--ws-fs))]"
 					/>
 					<button
 						type="button"

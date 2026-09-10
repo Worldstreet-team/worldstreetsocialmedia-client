@@ -251,7 +251,7 @@ export default function DrawLayer({
               <button
                 type="button"
                 onClick={onDone}
-                className="flex items-center gap-2 glass-cta px-4 h-9 rounded-pill font-semibold text-[13px] transition-colors font-sans cursor-pointer"
+                className="flex items-center gap-2 glass-cta px-4 h-9 rounded-pill font-semibold text-[calc(13px*var(--ws-fs))] transition-colors font-sans cursor-pointer"
               >
                 <Check size={15} weight="bold" />
                 Done

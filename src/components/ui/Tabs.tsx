@@ -66,8 +66,8 @@ export function Tabs<K extends string>({
 						onClick={() => onChange(key)}
 						className={clsx(
 							size === "lg"
-								? "relative flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-pill px-4 font-sans text-[15px] transition-colors"
-								: "relative flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-pill px-3.5 font-sans text-[13.5px] transition-colors",
+								? "relative flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-pill px-4 font-sans text-[calc(15px*var(--ws-fs))] transition-colors"
+								: "relative flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-pill px-3.5 font-sans text-[calc(13.5px*var(--ws-fs))] transition-colors",
 							active
 								? "bg-raised font-semibold text-primary"
 								: "cursor-pointer font-medium text-muted hover:bg-raised/50 hover:text-primary",

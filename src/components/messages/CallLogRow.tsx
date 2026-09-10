@@ -52,11 +52,11 @@ export function CallLogRow({
 					<Icon size={17} />
 				</span>
 				<span className="min-w-0">
-					<span className="block truncate font-sans text-[13px] font-medium text-primary">
+					<span className="block truncate font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary">
 						{content}
 					</span>
 					{at && (
-						<span className="block font-sans text-[11px] tabular-nums text-subtle">
+						<span className="block font-sans text-[calc(11px*var(--ws-fs))] tabular-nums text-subtle">
 							{format(new Date(at), "h:mm a")}
 						</span>
 					)}
@@ -65,7 +65,7 @@ export function CallLogRow({
 					<button
 						type="button"
 						onClick={() => onCallBack(video)}
-						className="ml-1 flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-pill bg-chip px-3 font-sans text-[12px] font-semibold text-primary transition-colors hover:bg-primary hover:text-page"
+						className="ml-1 flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-pill bg-chip px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-primary hover:text-page"
 					>
 						<RiArrowGoBackLine size={14} />
 						Call back

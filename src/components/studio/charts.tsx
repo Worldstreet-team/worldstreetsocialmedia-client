@@ -252,14 +252,14 @@ export function TrendChart({
 					className="pointer-events-none absolute top-1 -translate-x-1/2 rounded-lg bg-[#232120] px-3 py-2 font-sans whitespace-nowrap shadow-nav"
 					style={{ left: tipLeft }}
 				>
-					<p className="text-[11px] glass-ink-faint mb-0.5">
+					<p className="text-[calc(11px*var(--ws-fs))] glass-ink-faint mb-0.5">
 						{dateLabel(hovered.date)}
 					</p>
-					<p className="text-[12px] glass-ink tabular-nums">
+					<p className="text-[calc(12px*var(--ws-fs))] glass-ink tabular-nums">
 						<span className="mr-1.5 inline-block h-2 w-2 rounded-[2px] bg-[var(--ws-brand-primary)]" />
 						{fmt(hovered.impressions)} {impressionsLabel.toLowerCase()}
 					</p>
-					<p className="text-[12px] glass-ink tabular-nums">
+					<p className="text-[calc(12px*var(--ws-fs))] glass-ink tabular-nums">
 						<span className="mr-1.5 inline-block h-2 w-2 rounded-[2px] bg-[#fafaf9]/40" />
 						{fmt(hovered.engagements)} {engagementsLabel.toLowerCase()}
 					</p>
@@ -267,11 +267,11 @@ export function TrendChart({
 			)}
 
 			<div className="mt-2 flex items-center gap-4">
-				<span className="flex items-center gap-1.5 font-sans text-[12px] glass-ink-dim">
+				<span className="flex items-center gap-1.5 font-sans text-[calc(12px*var(--ws-fs))] glass-ink-dim">
 					<span className="h-2 w-2 rounded-pill bg-[var(--ws-brand-primary)]" />
 					{impressionsLabel}
 				</span>
-				<span className="flex items-center gap-1.5 font-sans text-[12px] glass-ink-dim">
+				<span className="flex items-center gap-1.5 font-sans text-[calc(12px*var(--ws-fs))] glass-ink-dim">
 					<span className="h-2 w-2 rounded-pill bg-[#fafaf9]/40" />
 					{engagementsLabel}
 				</span>
@@ -407,10 +407,10 @@ export function DonutChart({
 					})}
 				</svg>
 				<div className="absolute inset-0 flex flex-col items-center justify-center">
-					<span className="font-display text-[24px] font-semibold leading-none glass-ink tabular-nums">
+					<span className="font-display text-[calc(24px*var(--ws-fs))] font-semibold leading-none glass-ink tabular-nums">
 						{fmt(total)}
 					</span>
-					<span className="mt-1 font-sans text-[10px] uppercase tracking-[0.1em] glass-ink-faint">
+					<span className="mt-1 font-sans text-[calc(10px*var(--ws-fs))] uppercase tracking-[0.1em] glass-ink-faint">
 						{centerLabel}
 					</span>
 				</div>
@@ -420,14 +420,14 @@ export function DonutChart({
 				{slices.map((s, i) => (
 					<div
 						key={s.key}
-						className="flex items-center gap-2 font-sans text-[12.5px]"
+						className="flex items-center gap-2 font-sans text-[calc(12.5px*var(--ws-fs))]"
 					>
 						<span
 							className="h-2 w-2 shrink-0 rounded-pill"
 							style={{ background: SLICE_COLORS[i % SLICE_COLORS.length] }}
 						/>
 						{s.glyph && (
-							<span className="shrink-0 text-[13px] leading-none">
+							<span className="shrink-0 text-[calc(13px*var(--ws-fs))] leading-none">
 								{s.glyph}
 							</span>
 						)}
@@ -462,7 +462,7 @@ export function BarList({
 				const pct = (item.value / total) * 100;
 				return (
 					<div key={item.key}>
-						<div className="mb-1 flex items-center justify-between font-sans text-[13px]">
+						<div className="mb-1 flex items-center justify-between font-sans text-[calc(13px*var(--ws-fs))]">
 							<span className="flex min-w-0 items-center gap-1.5 font-medium glass-ink">
 								{item.glyph && (
 									<span className="shrink-0 leading-none">{item.glyph}</span>

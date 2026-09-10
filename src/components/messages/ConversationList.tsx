@@ -164,7 +164,7 @@ export function ConversationList({
 
 	if (rows.length === 0) {
 		return (
-			<p className="px-6 py-10 text-center font-sans text-[17px] text-subtle">
+			<p className="px-6 py-10 text-center font-sans text-[calc(17px*var(--ws-fs))] text-subtle">
 				{query.trim() ? t("messages.noMatches") : t("messages.empty")}
 			</p>
 		);
@@ -228,7 +228,7 @@ export function ConversationList({
 							<span className="flex items-center gap-1.5">
 								<span
 									className={clsx(
-										"truncate font-sans text-[18px]",
+										"truncate font-sans text-[calc(18px*var(--ws-fs))]",
 										unread
 											? "font-semibold text-primary"
 											: "font-medium text-primary",
@@ -237,7 +237,7 @@ export function ConversationList({
 									{identity.title}
 								</span>
 								{isGroup ? (
-									<span className="flex shrink-0 items-center gap-0.5 font-sans text-[16px] text-subtle">
+									<span className="flex shrink-0 items-center gap-0.5 font-sans text-[calc(16px*var(--ws-fs))] text-subtle">
 										<Users className="h-3 w-3" />
 										{identity.memberCount ?? ""}
 									</span>
@@ -253,7 +253,7 @@ export function ConversationList({
 											{(ambiguous.get(identity.title.toLowerCase()) ??
 												0) > 1 &&
 												u.username && (
-													<span className="min-w-0 shrink truncate font-sans text-[16px] text-subtle">
+													<span className="min-w-0 shrink truncate font-sans text-[calc(16px*var(--ws-fs))] text-subtle">
 														@{u.username}
 													</span>
 												)}
@@ -264,7 +264,7 @@ export function ConversationList({
 
 							<span
 								className={clsx(
-									"mt-0.5 flex items-center gap-1 font-sans text-[17px]",
+									"mt-0.5 flex items-center gap-1 font-sans text-[calc(17px*var(--ws-fs))]",
 									unread ? "font-medium text-primary" : "text-muted",
 								)}
 							>
@@ -352,7 +352,7 @@ function SwipeRow({
 					dx < -10 ? "opacity-100" : "opacity-0",
 				)}
 			>
-				<span className="font-sans text-[12.5px] font-semibold text-white">
+				<span className="font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-white">
 					Delete
 				</span>
 			</div>

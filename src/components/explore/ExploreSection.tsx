@@ -117,7 +117,7 @@ export function ExploreSection({
             className="group -my-3 flex min-h-10 min-w-0 flex-1 cursor-pointer items-center gap-2 text-left"
           >
             {dot}
-            <h2 className="min-w-0 truncate font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle transition-colors group-hover:text-muted">
+            <h2 className="min-w-0 truncate font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-subtle transition-colors group-hover:text-muted">
               {label}
             </h2>
             <CaretDown
@@ -132,7 +132,7 @@ export function ExploreSection({
         ) : (
           <>
             {dot}
-            <h2 className="min-w-0 flex-1 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">
+            <h2 className="min-w-0 flex-1 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-subtle">
               {label}
             </h2>
           </>
@@ -183,7 +183,7 @@ export function SectionLink({ href, children }: { href: string; children: React.
       href={href}
       // Stops a click from ever bubbling into a collapsible section's header.
       onClick={(e) => e.stopPropagation()}
-      className="shrink-0 font-sans text-[11px] font-semibold text-gold hover:underline"
+      className="shrink-0 font-sans text-[calc(11px*var(--ws-fs))] font-semibold text-gold hover:underline"
     >
       {children}
     </a>

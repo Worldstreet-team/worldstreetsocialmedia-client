@@ -337,23 +337,23 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 						<span className="relative mb-2 h-16 w-16 overflow-hidden rounded-pill bg-raised">
 							<SafeAvatar src={peer?.avatar} eager />
 						</span>
-						<span className="font-sans text-[16px] font-semibold text-primary">
+						<span className="font-sans text-[calc(16px*var(--ws-fs))] font-semibold text-primary">
 							{peer?.name || peerName}
 						</span>
 						{peer?.username && (
-							<span className="font-sans text-[12.5px] text-muted">
+							<span className="font-sans text-[calc(12.5px*var(--ws-fs))] text-muted">
 								@{peer.username}
 							</span>
 						)}
 						{peer?.username && !isGroup && (
 							<Link
 								href={`/profile/${peer.username}`}
-								className="mt-3 rounded-pill bg-raised px-4 py-1.5 font-sans text-[12.5px] font-semibold text-primary transition-colors hover:bg-chip"
+								className="mt-3 rounded-pill bg-raised px-4 py-1.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-chip"
 							>
 								View profile
 							</Link>
 						)}
-						<span className="mt-6 font-sans text-[12.5px] text-subtle">
+						<span className="mt-6 font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle">
 							Say the first thing.
 						</span>
 					</div>
@@ -421,7 +421,7 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 					>
 						<RiArrowDownLine size={17} />
 						{pendingNew > 0 && (
-							<span className="absolute -right-1 -top-1 rounded-pill bg-brand px-1.5 font-sans text-[10px] font-bold tabular-nums text-brand-on">
+							<span className="absolute -right-1 -top-1 rounded-pill bg-brand px-1.5 font-sans text-[calc(10px*var(--ws-fs))] font-bold tabular-nums text-brand-on">
 								{pendingNew}
 							</span>
 						)}

@@ -167,7 +167,7 @@ export function MentionAutocomplete({
 			className="absolute left-0 top-full mt-1 z-dropdown w-[300px] max-w-full overflow-hidden py-1 glass-panel backdrop-blur-2xl backdrop-saturate-150"
 		>
 			{loading && users.length === 0 ? (
-				<p className="px-3 py-2 font-sans text-[12.5px] glass-ink-faint">
+				<p className="px-3 py-2 font-sans text-[calc(12.5px*var(--ws-fs))] glass-ink-faint">
 					Searching
 				</p>
 			) : (
@@ -195,7 +195,7 @@ export function MentionAutocomplete({
 							</span>
 							<span className="min-w-0 flex-1">
 								<span className="flex items-center gap-1 min-w-0">
-									<span className="font-sans text-[13px] font-semibold glass-ink truncate">
+									<span className="font-sans text-[calc(13px*var(--ws-fs))] font-semibold glass-ink truncate">
 										{name}
 									</span>
 									<span className="shrink-0 flex">
@@ -207,12 +207,12 @@ export function MentionAutocomplete({
 										/>
 									</span>
 								</span>
-								<span className="block font-sans text-[11.5px] glass-ink-dim truncate">
+								<span className="block font-sans text-[calc(11.5px*var(--ws-fs))] glass-ink-dim truncate">
 									@{u.username}
 								</span>
 							</span>
 							{isLocked(u) && (
-								<span className="ml-auto flex shrink-0 items-center gap-1 rounded-pill bg-white/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide glass-ink-dim">
+								<span className="ml-auto flex shrink-0 items-center gap-1 rounded-pill bg-white/10 px-2 py-1 text-[calc(10px*var(--ws-fs))] font-semibold uppercase tracking-wide glass-ink-dim">
 									<Lock className="h-3 w-3" />
 									Premium
 								</span>

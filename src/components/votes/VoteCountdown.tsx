@@ -90,7 +90,7 @@ export function VoteCountdown({
 								className={
 									lg
 										? "-mt-4 font-display text-xl font-semibold text-subtle"
-										: "-mt-3 font-display text-[13px] font-semibold text-subtle"
+										: "-mt-3 font-display text-[calc(13px*var(--ws-fs))] font-semibold text-subtle"
 								}
 							>
 								:
@@ -100,8 +100,8 @@ export function VoteCountdown({
 							<span
 								className={
 									lg
-										? "flex min-w-[62px] items-center justify-center rounded-[10px] bg-raised px-2.5 py-2.5 font-display text-[32px] font-semibold leading-none tabular-nums text-gold"
-										: "flex min-w-[36px] items-center justify-center rounded-[7px] bg-raised px-1.5 py-1.5 font-display text-[16px] font-semibold leading-none tabular-nums text-gold"
+										? "flex min-w-[62px] items-center justify-center rounded-[10px] bg-raised px-2.5 py-2.5 font-display text-[calc(32px*var(--ws-fs))] font-semibold leading-none tabular-nums text-gold"
+										: "flex min-w-[36px] items-center justify-center rounded-[7px] bg-raised px-1.5 py-1.5 font-display text-[calc(16px*var(--ws-fs))] font-semibold leading-none tabular-nums text-gold"
 								}
 							>
 								{v}
@@ -109,8 +109,8 @@ export function VoteCountdown({
 							<span
 								className={
 									lg
-										? "font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-subtle"
-										: "font-sans text-[8.5px] font-semibold uppercase tracking-[0.16em] text-subtle"
+										? "font-sans text-[calc(10px*var(--ws-fs))] font-semibold uppercase tracking-[0.18em] text-subtle"
+										: "font-sans text-[calc(8.5px*var(--ws-fs))] font-semibold uppercase tracking-[0.16em] text-subtle"
 								}
 							>
 								{l}

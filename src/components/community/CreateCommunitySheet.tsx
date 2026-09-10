@@ -102,11 +102,11 @@ export default function CreateCommunitySheet({
   };
 
   const field =
-    "block font-sans text-[11px] font-bold uppercase tracking-[0.14em] text-subtle";
+    "block font-sans text-[calc(11px*var(--ws-fs))] font-bold uppercase tracking-[0.14em] text-subtle";
   // The panel follows the theme, so the field fills come from tokens — a
   // fixed-white glass-input is a white block on the light frost.
   const input =
-    "w-full rounded-xl bg-sunken px-3.5 py-3 font-sans text-[15px] text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised";
+    "w-full rounded-xl bg-sunken px-3.5 py-3 font-sans text-[calc(15px*var(--ws-fs))] text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised";
 
   return (
     <ConfirmModalPortal>
@@ -114,10 +114,10 @@ export default function CreateCommunitySheet({
       <OverlayPanel dragClose={onClose} variant="sheet" label={t("community.new.title")}>
         <OverlayHeader onClose={onClose} closeLabel={t("common.cancel")}>
           <div className="min-w-0 flex-1">
-            <h2 className="truncate font-sans text-[14px] font-semibold text-primary">
+            <h2 className="truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
               {t("community.new.title")}
             </h2>
-            <p className="truncate font-sans text-[11.5px] text-subtle">
+            <p className="truncate font-sans text-[calc(11.5px*var(--ws-fs))] text-subtle">
               {t("community.new.subtitle")}
             </p>
           </div>
@@ -147,7 +147,7 @@ export default function CreateCommunitySheet({
                   <button
                     type="button"
                     onClick={() => fileRef.current?.click()}
-                    className="h-7 cursor-pointer rounded-pill bg-chip px-3 font-sans text-[12px] font-semibold text-primary transition-colors hover:bg-raised"
+                    className="h-7 cursor-pointer rounded-pill bg-chip px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-raised"
                   >
                     {avatarUrl
                       ? t("community.field.avatarChange")
@@ -161,7 +161,7 @@ export default function CreateCommunitySheet({
                         setAvatar(null);
                         setAvatarUrl(null);
                       }}
-                      className="h-7 cursor-pointer rounded-pill px-3 font-sans text-[12px] font-semibold text-muted transition-colors hover:text-primary"
+                      className="h-7 cursor-pointer rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-muted transition-colors hover:text-primary"
                     >
                       {t("community.field.avatarRemove")}
                     </button>
@@ -188,10 +188,10 @@ export default function CreateCommunitySheet({
                 onChange={(e) => setName(e.target.value.slice(0, MAX_NAME))}
                 placeholder={t("community.field.namePlaceholder")}
                 // text-base on mobile or iOS Safari zooms the page on focus.
-                className={clsx(input, "mt-1.5 text-base sm:text-[15px]")}
+                className={clsx(input, "mt-1.5 text-base sm:text-[calc(15px*var(--ws-fs))]")}
                 autoFocus
               />
-              <p className="mt-1.5 min-h-[18px] font-sans text-[12px] text-subtle">
+              <p className="mt-1.5 min-h-[18px] font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
                 {!nameValid ? (
                   t("community.field.nameHint")
                 ) : slug?.slug ? (
@@ -216,9 +216,9 @@ export default function CreateCommunitySheet({
                 onChange={(e) => setDescription(e.target.value.slice(0, MAX_DESC))}
                 placeholder={t("community.field.descriptionPlaceholder")}
                 rows={3}
-                className={clsx(input, "mt-1.5 resize-none text-base sm:text-[15px]")}
+                className={clsx(input, "mt-1.5 resize-none text-base sm:text-[calc(15px*var(--ws-fs))]")}
               />
-              <p className="mt-1 text-right font-sans text-[11px] tabular-nums text-subtle">
+              <p className="mt-1 text-right font-sans text-[calc(11px*var(--ws-fs))] tabular-nums text-subtle">
                 {description.length}/{MAX_DESC}
               </p>
             </div>
@@ -246,7 +246,7 @@ export default function CreateCommunitySheet({
                       onClick={() => setCategory(on ? "" : c.id)}
                       aria-pressed={on}
                       className={clsx(
-                        "flex h-8 cursor-pointer items-center gap-1 rounded-pill px-3 font-sans text-[12px] font-medium transition-colors",
+                        "flex h-8 cursor-pointer items-center gap-1 rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-medium transition-colors",
                         on
                           ? "bg-primary text-page"
                           : "bg-chip text-muted hover:text-primary",
@@ -258,7 +258,7 @@ export default function CreateCommunitySheet({
                   );
                 })}
               </div>
-              <p className="mt-1.5 font-sans text-[12px] text-subtle">
+              <p className="mt-1.5 font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
                 {t("community.field.topicHint")}
               </p>
             </div>
@@ -269,7 +269,7 @@ export default function CreateCommunitySheet({
           <button
             type="button"
             onClick={onClose}
-            className="h-10 cursor-pointer rounded-pill px-4 font-sans text-[13px] font-semibold text-muted transition-colors hover:text-primary"
+            className="h-10 cursor-pointer rounded-pill px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-muted transition-colors hover:text-primary"
           >
             {t("common.cancel")}
           </button>
@@ -285,7 +285,7 @@ export default function CreateCommunitySheet({
               })
             }
             className={clsx(
-              "flex h-10 items-center gap-2 rounded-pill px-5 font-sans text-[13px] font-semibold transition-colors",
+              "flex h-10 items-center gap-2 rounded-pill px-5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-colors",
               valid
                 ? "cursor-pointer bg-brand text-brand-on hover:bg-brand-active"
                 : "cursor-not-allowed bg-chip text-muted opacity-60",

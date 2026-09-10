@@ -333,17 +333,17 @@ export function LiveDock() {
 					onPointerUp={onDragEnd}
 					className="flex items-center gap-2 px-3 h-9 cursor-grab active:cursor-grabbing touch-none bg-black/45 backdrop-blur-xl backdrop-saturate-150"
 				>
-					<span className="flex items-center gap-1.5 rounded-pill bg-danger px-2 h-5 text-[10px] font-bold tracking-wide text-white font-sans">
+					<span className="flex items-center gap-1.5 rounded-pill bg-danger px-2 h-5 text-[calc(10px*var(--ws-fs))] font-bold tracking-wide text-white font-sans">
 						<span className="relative flex h-1.5 w-1.5">
 							<span className="absolute inline-flex h-full w-full rounded-pill bg-white opacity-70 animate-ping" />
 							<span className="relative inline-flex h-1.5 w-1.5 rounded-pill bg-white" />
 						</span>
 						LIVE
 					</span>
-					<span className="glass-ink-dim font-sans text-[11.5px] tabular-nums">
+					<span className="glass-ink-dim font-sans text-[calc(11.5px*var(--ws-fs))] tabular-nums">
 						{clockLabel}
 					</span>
-					<span className="glass-ink-dim font-sans text-[11.5px] tabular-nums">
+					<span className="glass-ink-dim font-sans text-[calc(11.5px*var(--ws-fs))] tabular-nums">
 						· {formatCompact(viewers)} {t("dock.watching")}
 					</span>
 					<button
@@ -381,17 +381,17 @@ export function LiveDock() {
 						)}
 					/>
 					{connecting && !publishError && (
-						<div className="absolute inset-0 flex items-center justify-center gap-2 glass-ink-dim font-sans text-[12px]">
+						<div className="absolute inset-0 flex items-center justify-center gap-2 glass-ink-dim font-sans text-[calc(12px*var(--ws-fs))]">
 							<span className="h-3 w-3 rounded-pill border-2 border-white/25 border-t-white/80 animate-spin" />
 							{t("dock.connecting")}
 						</div>
 					)}
 					{publishError && (
 						<div className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-4 text-center">
-							<span className="font-sans text-[12px] font-semibold text-danger">
+							<span className="font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-danger">
 								{t("dock.connectFailed")}
 							</span>
-							<span className="font-sans text-[10.5px] glass-ink-faint">
+							<span className="font-sans text-[calc(10.5px*var(--ws-fs))] glass-ink-faint">
 								{publishError}
 							</span>
 						</div>
@@ -406,10 +406,10 @@ export function LiveDock() {
 				{/* expanded details */}
 				{expanded && (
 					<div className="px-3.5 pt-3 pb-1">
-						<p className="glass-ink font-sans text-[13.5px] font-semibold truncate">
+						<p className="glass-ink font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold truncate">
 							{session.title}
 						</p>
-						<p className="glass-ink-faint font-sans text-[11.5px] truncate">
+						<p className="glass-ink-faint font-sans text-[calc(11.5px*var(--ws-fs))] truncate">
 							{session.category}
 						</p>
 					</div>
@@ -466,7 +466,7 @@ export function LiveDock() {
 						type="button"
 						onClick={endStream}
 						disabled={ending}
-						className="ml-auto flex items-center gap-1.5 h-9 px-4 rounded-pill bg-danger text-white font-sans text-[12.5px] font-semibold hover:brightness-110 transition-[filter] cursor-pointer disabled:opacity-50 shadow-[0_4px_14px_-4px_rgb(239_68_68/0.8)]"
+						className="ml-auto flex items-center gap-1.5 h-9 px-4 rounded-pill bg-danger text-white font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold hover:brightness-110 transition-[filter] cursor-pointer disabled:opacity-50 shadow-[0_4px_14px_-4px_rgb(239_68_68/0.8)]"
 					>
 						<StopCircle size={15} weight="fill" />
 						{ending ? t("golive.starting") : t("dock.end")}

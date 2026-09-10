@@ -143,24 +143,24 @@ export function StoryPaywall({
 
 				{/* the price */}
 				<div className="absolute inset-0 flex items-center justify-center">
-					<span className="font-display text-[44px] font-semibold leading-none tabular-nums">
+					<span className="font-display text-[calc(44px*var(--ws-fs))] font-semibold leading-none tabular-nums">
 						$1
 					</span>
 				</div>
 			</div>
 
 			<div className="px-6 pb-6 pt-4 text-center">
-				<h3 className="font-display text-[17px] font-semibold leading-tight">
+				<h3 className="font-display text-[calc(17px*var(--ws-fs))] font-semibold leading-tight">
 					{t("story.unlock.title")}
 				</h3>
-				<p className="mx-auto mt-1.5 max-w-[32ch] font-sans text-[12.5px] leading-relaxed glass-ink-dim">
+				<p className="mx-auto mt-1.5 max-w-[32ch] font-sans text-[calc(12.5px*var(--ws-fs))] leading-relaxed glass-ink-dim">
 					{fromScreenshot
 						? t("story.unlock.screenshotSub")
 						: t("story.unlock.sub")}
 				</p>
 
 				{error && (
-					<p className="mt-2.5 font-sans text-[12px] leading-relaxed text-danger">
+					<p className="mt-2.5 font-sans text-[calc(12px*var(--ws-fs))] leading-relaxed text-danger">
 						{error}
 					</p>
 				)}
@@ -170,7 +170,7 @@ export function StoryPaywall({
 					onClick={unlock}
 					disabled={busy}
 					className={clsx(
-						"mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-pill font-sans text-[14px] font-semibold transition-colors",
+						"mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-pill font-sans text-[calc(14px*var(--ws-fs))] font-semibold transition-colors",
 						busy ? "cursor-not-allowed glass-chip opacity-60" : "cursor-pointer glass-cta",
 					)}
 				>

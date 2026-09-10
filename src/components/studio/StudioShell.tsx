@@ -79,7 +79,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 						className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 glass-ink-faint transition-colors hover:glass-ink hover:bg-[#fafaf9]/[0.05]"
 					>
 						<ArrowLeft size={14} />
-						<span className="font-sans text-[12.5px] font-medium">
+						<span className="font-sans text-[calc(12.5px*var(--ws-fs))] font-medium">
 							{t("studio.backShort")}
 						</span>
 					</Link>
@@ -88,7 +88,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 						<span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[var(--ws-brand-primary)] text-[#0c0a09]">
 							<Faders size={16} weight="bold" />
 						</span>
-						<span className="font-display text-[15px] font-semibold tracking-tight">
+						<span className="font-display text-[calc(15px*var(--ws-fs))] font-semibold tracking-tight">
 							{t("studio.title")}
 						</span>
 					</div>
@@ -110,7 +110,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 												key={href}
 												href={href}
 												className={clsx(
-													"flex h-10 items-center gap-3 rounded-xl px-3 font-sans text-[13.5px] transition-colors",
+													"flex h-10 items-center gap-3 rounded-xl px-3 font-sans text-[calc(13.5px*var(--ws-fs))] transition-colors",
 													active
 														? "bg-[var(--ws-brand-primary)] font-semibold text-[#0c0a09]"
 														: "glass-ink-dim font-medium hover:glass-ink hover:bg-[#fafaf9]/[0.05]",
@@ -124,7 +124,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 												{badgeKey && (
 													<span
 														className={clsx(
-															"ml-auto shrink-0 rounded-pill px-1.5 py-0.5 font-sans text-[9.5px] font-bold uppercase tracking-[0.06em]",
+															"ml-auto shrink-0 rounded-pill px-1.5 py-0.5 font-sans text-[calc(9.5px*var(--ws-fs))] font-bold uppercase tracking-[0.06em]",
 															active
 																? "bg-[#0c0a09]/15 text-[#0c0a09]"
 																: "bg-[#fafaf9]/[0.08] glass-ink-faint",
@@ -151,13 +151,13 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 								<SafeAvatar src={user.avatar} className="object-cover" eager />
 							</span>
 							<span className="min-w-0 flex-1">
-								<span className="block truncate font-sans text-[13px] font-semibold glass-ink">
+								<span className="block truncate font-sans text-[calc(13px*var(--ws-fs))] font-semibold glass-ink">
 									{[user?.firstName, user?.lastName]
 										.filter(Boolean)
 										.join(" ") ||
 										(user?.username ? `@${user.username}` : "")}
 								</span>
-								<span className="mt-0.5 inline-flex rounded-pill bg-[var(--ws-brand-primary)]/12 px-1.5 py-px font-sans text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--ws-brand-primary)]">
+								<span className="mt-0.5 inline-flex rounded-pill bg-[var(--ws-brand-primary)]/12 px-1.5 py-px font-sans text-[calc(10px*var(--ws-fs))] font-bold uppercase tracking-[0.08em] text-[var(--ws-brand-primary)]">
 									{t("studio.creatorBadge")}
 								</span>
 							</span>
@@ -179,7 +179,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 							>
 								<ArrowLeft size={15} weight="bold" />
 							</Link>
-							<h1 className="flex-1 truncate font-display text-[16px] font-semibold">
+							<h1 className="flex-1 truncate font-display text-[calc(16px*var(--ws-fs))] font-semibold">
 								{t(current.key)}
 							</h1>
 						</div>
@@ -189,7 +189,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 									key={href}
 									href={href}
 									className={clsx(
-										"flex h-8 shrink-0 items-center gap-1.5 rounded-pill px-3 font-sans text-[12px] font-semibold transition-colors",
+										"flex h-8 shrink-0 items-center gap-1.5 rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
 										isActive(href)
 											? "bg-[var(--ws-brand-primary)] text-[#0c0a09]"
 											: "bg-[#fafaf9]/[0.06] glass-ink-dim",

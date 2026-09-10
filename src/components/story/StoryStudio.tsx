@@ -913,7 +913,7 @@ export default function StoryStudio({
           type="button"
           onClick={() => (kind === "voice" ? setFile(null) : setTrimOpen(true))}
           aria-label={kind === "voice" ? "Record again" : "Trim video"}
-          className="absolute top-3 right-3 flex items-center gap-2 h-10 px-4 rounded-pill glass-chip-canvas backdrop-blur-md backdrop-saturate-150 transition-colors cursor-pointer font-sans text-[13px] font-semibold"
+          className="absolute top-3 right-3 flex items-center gap-2 h-10 px-4 rounded-pill glass-chip-canvas backdrop-blur-md backdrop-saturate-150 transition-colors cursor-pointer font-sans text-[calc(13px*var(--ws-fs))] font-semibold"
         >
           {kind === "voice" ? (
             <Microphone size={15} weight="bold" />
@@ -946,7 +946,7 @@ export default function StoryStudio({
         >
           <span
             className={clsx(
-              "font-editorial text-[34px] leading-none",
+              "font-editorial text-[calc(34px*var(--ws-fs))] leading-none",
               bg.ink === "dark" ? "text-[#0c0a09]/45" : "text-[#fafaf9]/45",
             )}
           >
@@ -954,7 +954,7 @@ export default function StoryStudio({
           </span>
           <span
             className={clsx(
-              "font-sans text-[11px]",
+              "font-sans text-[calc(11px*var(--ws-fs))]",
               bg.ink === "dark" ? "text-[#0c0a09]/35" : "text-[#fafaf9]/35",
             )}
           >
@@ -981,10 +981,10 @@ export default function StoryStudio({
       <span className="relative flex h-16 w-16 items-center justify-center rounded-pill glass-chip transition-colors">
         <Images size={26} weight="light" />
       </span>
-      <span className="relative font-display text-[17px] font-semibold tracking-tight">
+      <span className="relative font-display text-[calc(17px*var(--ws-fs))] font-semibold tracking-tight">
         Add photos and videos
       </span>
-      <span className="relative font-sans text-[12px] glass-ink-faint">
+      <span className="relative font-sans text-[calc(12px*var(--ws-fs))] glass-ink-faint">
         Select several to build a multi-slide story
       </span>
     </button>
@@ -1115,7 +1115,7 @@ export default function StoryStudio({
                     />
                     <span
                       className={clsx(
-                        "absolute bottom-1 left-1 flex h-4 min-w-4 items-center justify-center rounded-pill px-1 font-sans text-[9px] font-bold tabular-nums",
+                        "absolute bottom-1 left-1 flex h-4 min-w-4 items-center justify-center rounded-pill px-1 font-sans text-[calc(9px*var(--ws-fs))] font-bold tabular-nums",
                         active
                           ? "bg-[#fafaf9] text-[#0c0a09]"
                           : "bg-[#0c0a09]/60 text-[#fafaf9]/80",
@@ -1142,7 +1142,7 @@ export default function StoryStudio({
               className="flex aspect-[9/16] flex-col items-center justify-center gap-1 rounded-[10px] glass-card cursor-pointer"
             >
               <Plus size={16} weight="bold" className="glass-ink-dim" />
-              <span className="font-sans text-[10px] glass-ink-dim">Add</span>
+              <span className="font-sans text-[calc(10px*var(--ws-fs))] glass-ink-dim">Add</span>
             </button>
           </div>
         </DockSection>
@@ -1165,12 +1165,12 @@ export default function StoryStudio({
               maxLength={CAPTION_MAX}
               rows={2}
               placeholder="Say something about it…"
-              className="w-full bg-transparent outline-none resize-none font-sans text-[13px] leading-relaxed placeholder:text-[#fafaf9]/32"
+              className="w-full bg-transparent outline-none resize-none font-sans text-[calc(13px*var(--ws-fs))] leading-relaxed placeholder:text-[#fafaf9]/32"
             />
             <div className="flex justify-end">
               <span
                 className={clsx(
-                  "font-sans text-[11px] tabular-nums",
+                  "font-sans text-[calc(11px*var(--ws-fs))] tabular-nums",
                   caption.length >= CAPTION_MAX
                     ? "text-danger"
                     : "glass-ink-faint",
@@ -1203,10 +1203,10 @@ export default function StoryStudio({
               />
             </span>
             <span className="min-w-0">
-              <span className="block font-sans text-[12.5px] font-semibold">
+              <span className="block font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold">
                 Allow saves
               </span>
-              <span className="block font-sans text-[11px] glass-ink-faint">
+              <span className="block font-sans text-[calc(11px*var(--ws-fs))] glass-ink-faint">
                 People can download this story for $1.
               </span>
             </span>
@@ -1234,10 +1234,10 @@ export default function StoryStudio({
               />
             </span>
             <span className="min-w-0">
-              <span className="block font-sans text-[12.5px] font-semibold">
+              <span className="block font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold">
                 Watermark
               </span>
-              <span className="block font-sans text-[11px] glass-ink-faint">
+              <span className="block font-sans text-[calc(11px*var(--ws-fs))] glass-ink-faint">
                 Your handle tiles the frame so screenshots stay credited.
               </span>
             </span>
@@ -1247,7 +1247,7 @@ export default function StoryStudio({
               value={watermarkText}
               onChange={(e) => setWatermarkText(e.target.value.slice(0, 40))}
               placeholder="Watermark text (default: your @handle)"
-              className="mt-2 h-10 w-full rounded-xl glass-input px-3 font-sans text-[12.5px] outline-none placeholder:glass-ink-faint"
+              className="mt-2 h-10 w-full rounded-xl glass-input px-3 font-sans text-[calc(12.5px*var(--ws-fs))] outline-none placeholder:glass-ink-faint"
             />
           )}
         </DockSection>
@@ -1258,7 +1258,7 @@ export default function StoryStudio({
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            className="flex w-full h-12 items-center justify-center gap-2 rounded-pill glass-cta font-sans font-semibold text-[14px] transition-colors cursor-pointer active:brightness-95"
+            className="flex w-full h-12 items-center justify-center gap-2 rounded-pill glass-cta font-sans font-semibold text-[calc(14px*var(--ws-fs))] transition-colors cursor-pointer active:brightness-95"
           >
             <Images size={16} weight="bold" />
             Choose media
@@ -1268,7 +1268,7 @@ export default function StoryStudio({
             type="button"
             onClick={handleShare}
             disabled={posting || !canShare}
-            className="flex w-full h-12 items-center justify-center gap-2 rounded-pill glass-cta font-sans font-semibold text-[14px] transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer active:brightness-95"
+            className="flex w-full h-12 items-center justify-center gap-2 rounded-pill glass-cta font-sans font-semibold text-[calc(14px*var(--ws-fs))] transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer active:brightness-95"
           >
             {posting ? (
               <span className="w-4 h-4 border-2 border-[#0c0a09]/25 border-t-[#0c0a09] rounded-pill animate-spin" />
@@ -1284,7 +1284,7 @@ export default function StoryStudio({
                   : "Share to your story"}
           </button>
         )}
-        <p className="text-center font-sans text-[11px] glass-ink-faint">
+        <p className="text-center font-sans text-[calc(11px*var(--ws-fs))] glass-ink-faint">
           {kind === "voice" && !take
             ? "Record a note to continue"
             : kind === "voice" && posting
@@ -1320,7 +1320,7 @@ export default function StoryStudio({
             <span className="glass-eyebrow font-sans block leading-none">
               Story
             </span>
-            <h2 className="font-display text-[15px] sm:text-[17px] font-semibold tracking-tight truncate mt-1 leading-none">
+            <h2 className="font-display text-[calc(15px*var(--ws-fs))] sm:text-[calc(17px*var(--ws-fs))] font-semibold tracking-tight truncate mt-1 leading-none">
               {TITLES[kind]}
             </h2>
           </div>

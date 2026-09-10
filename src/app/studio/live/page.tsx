@@ -167,7 +167,7 @@ export default function StudioLive() {
 								onClick={() => setSource(id)}
 								aria-pressed={source === id}
 								className={clsx(
-									"flex h-8 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[12px] font-semibold transition-colors",
+									"flex h-8 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
 									source === id
 										? "bg-[#fafaf9] text-[#0c0a09]"
 										: "glass-ink-faint hover:glass-ink",
@@ -185,7 +185,7 @@ export default function StudioLive() {
 						onClick={() => setNotify((v) => !v)}
 						aria-pressed={notify}
 						className={clsx(
-							"flex h-8 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[12px] font-semibold transition-colors",
+							"flex h-8 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
 							notify
 								? "bg-[var(--ws-brand-primary)]/15 text-[var(--ws-brand-primary)]"
 								: "bg-[#fafaf9]/[0.05] glass-ink-faint hover:glass-ink",
@@ -203,7 +203,7 @@ export default function StudioLive() {
 						type="button"
 						onClick={create}
 						disabled={!name.trim() || saving}
-						className="ml-auto h-9 cursor-pointer rounded-pill bg-[#fafaf9] px-4 font-sans text-[13px] font-semibold text-[#0c0a09] transition-colors hover:bg-white disabled:opacity-40"
+						className="ml-auto h-9 cursor-pointer rounded-pill bg-[#fafaf9] px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-[#0c0a09] transition-colors hover:bg-white disabled:opacity-40"
 					>
 						{t("studio.live.save")}
 					</button>
@@ -252,16 +252,16 @@ export default function StudioLive() {
 							</span>
 
 							<div className="min-w-0 flex-1">
-								<p className="flex items-center gap-2 font-sans text-[14.5px] font-semibold glass-ink">
+								<p className="flex items-center gap-2 font-sans text-[calc(14.5px*var(--ws-fs))] font-semibold glass-ink">
 									<span className="truncate">{p.name}</span>
 									{p.isDefault && (
-										<span className="shrink-0 rounded-pill bg-[var(--ws-brand-primary)]/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--ws-brand-primary)]">
+										<span className="shrink-0 rounded-pill bg-[var(--ws-brand-primary)]/15 px-2 py-0.5 text-[calc(10px*var(--ws-fs))] font-bold uppercase tracking-[0.06em] text-[var(--ws-brand-primary)]">
 											{t("studio.live.default")}
 										</span>
 									)}
 								</p>
 								{/* Every attribute the preset will hand the sheet. */}
-								<p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 font-sans text-[12px] glass-ink-faint">
+								<p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 font-sans text-[calc(12px*var(--ws-fs))] glass-ink-faint">
 									<span>{categoryLabel(p.category)}</span>
 									<span aria-hidden>·</span>
 									<span>

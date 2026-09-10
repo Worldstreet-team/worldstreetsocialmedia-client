@@ -26,7 +26,7 @@ export function SectionHead({
 					<span className="relative inline-flex h-2 w-2 rounded-pill bg-danger" />
 				</span>
 			)}
-			<h3 className="font-sans font-semibold text-[11px] uppercase tracking-[0.14em] text-subtle flex-1">
+			<h3 className="font-sans font-semibold text-[calc(11px*var(--ws-fs))] uppercase tracking-[0.14em] text-subtle flex-1">
 				{label}
 			</h3>
 			{trailing}

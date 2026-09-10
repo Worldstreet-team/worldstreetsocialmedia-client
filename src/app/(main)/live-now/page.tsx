@@ -48,7 +48,7 @@ export default function LiveNowPage() {
 		// pb-nav: clear the fixed bottom tab bar, like every (main) sibling.
 		<div className="pb-nav md:pb-10">
 			<header className="sticky top-0 z-sticky h-14 border-b border-hairline bg-page flex items-center px-4">
-				<h1 className="font-display text-[17px] font-semibold tracking-tight">
+				<h1 className="font-display text-[calc(17px*var(--ws-fs))] font-semibold tracking-tight">
 					{t("liveNow.title")}
 				</h1>
 			</header>
@@ -79,19 +79,19 @@ export default function LiveNowPage() {
 								</span>
 							</span>
 							<span className="min-w-0 flex-1">
-								<span className="block font-sans text-[14.5px] font-semibold text-primary truncate">
+								<span className="block font-sans text-[calc(14.5px*var(--ws-fs))] font-semibold text-primary truncate">
 									{row.title}
 								</span>
-								<span className="block font-sans text-[12.5px] text-subtle truncate">
+								<span className="block font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle truncate">
 									@{row.username}
 									{row.category ? ` · ${row.category}` : ""}
 								</span>
 							</span>
-							<span className="flex items-center gap-1.5 font-sans text-[12.5px] text-muted tabular-nums shrink-0">
+							<span className="flex items-center gap-1.5 font-sans text-[calc(12.5px*var(--ws-fs))] text-muted tabular-nums shrink-0">
 								<Eye size={14} />
 								{formatCompact(row.viewers)}
 							</span>
-							<span className="shrink-0 flex items-center gap-1 rounded-[4px] bg-danger px-1.5 py-px text-[10px] font-bold tracking-wide text-white font-sans">
+							<span className="shrink-0 flex items-center gap-1 rounded-[4px] bg-danger px-1.5 py-px text-[calc(10px*var(--ws-fs))] font-bold tracking-wide text-white font-sans">
 								{t("live.badge")}
 							</span>
 						</Link>

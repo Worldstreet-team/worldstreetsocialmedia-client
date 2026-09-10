@@ -133,7 +133,7 @@ function Toggle({
 				<span className="block font-sans text-sm font-medium text-primary">
 					{label}
 				</span>
-				<span className="mt-0.5 block font-sans text-[13px] leading-relaxed text-muted">
+				<span className="mt-0.5 block font-sans text-[calc(13px*var(--ws-fs))] leading-relaxed text-muted">
 					{caption}
 				</span>
 			</span>

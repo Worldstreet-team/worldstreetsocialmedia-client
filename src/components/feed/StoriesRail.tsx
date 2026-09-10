@@ -330,7 +330,7 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 						</span>
 
 						{/* Card-only: name over the cover. */}
-						<span className={clsx("absolute inset-x-2 bottom-2 hidden truncate text-left font-sans text-[12px] font-semibold text-white", !circlesOnly && "sm:block")}>
+						<span className={clsx("absolute inset-x-2 bottom-2 hidden truncate text-left font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-white", !circlesOnly && "sm:block")}>
 							{t("story.yours")}
 						</span>
 					</span>
@@ -352,7 +352,7 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 				</span>
 
 				{/* Circle-only: name beneath. */}
-				<span className={clsx("w-full truncate text-center font-sans text-[12px] font-medium text-muted sm:hidden", circlesOnly ? "hidden" : "block")}>
+				<span className={clsx("w-full truncate text-center font-sans text-[calc(12px*var(--ws-fs))] font-medium text-muted sm:hidden", circlesOnly ? "hidden" : "block")}>
 					{t("story.yours")}
 				</span>
 			</button>
@@ -431,7 +431,7 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 								</span>
 
 								{/* Card-only: name over the cover. */}
-								<span className={clsx("absolute inset-x-2 bottom-2 hidden items-center gap-1 text-left font-sans text-[12px] font-semibold text-white", !circlesOnly && "sm:flex")}>
+								<span className={clsx("absolute inset-x-2 bottom-2 hidden items-center gap-1 text-left font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-white", !circlesOnly && "sm:flex")}>
 									<span className="min-w-0 truncate">@{name}</span>
 									<UserBadges
 										isVerified={entry.author.isVerified}
@@ -443,14 +443,14 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 							</span>
 
 							{entry.isLive && (
-								<span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-[4px] bg-danger px-1.5 py-px font-sans text-[9px] font-bold tracking-wide text-white sm:bottom-auto sm:left-auto sm:right-2 sm:top-2 sm:translate-x-0">
+								<span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-[4px] bg-danger px-1.5 py-px font-sans text-[calc(9px*var(--ws-fs))] font-bold tracking-wide text-white sm:bottom-auto sm:left-auto sm:right-2 sm:top-2 sm:translate-x-0">
 									{t("live.badge")}
 								</span>
 							)}
 						</span>
 
 						{/* Circle-only: name beneath. */}
-						<span className={clsx("w-full truncate text-center font-sans text-[12px] font-medium text-muted sm:hidden", circlesOnly ? "hidden" : "block")}>
+						<span className={clsx("w-full truncate text-center font-sans text-[calc(12px*var(--ws-fs))] font-medium text-muted sm:hidden", circlesOnly ? "hidden" : "block")}>
 							@{name}
 						</span>
 					</button>

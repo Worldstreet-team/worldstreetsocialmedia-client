@@ -69,7 +69,7 @@ import { SafeAvatar } from "@/components/ui/SafeAvatar";
 /* Section eyebrow — the landing page's uppercase-tracking micro-label. */
 function Eyebrow({ children }: { children: React.ReactNode }) {
 	return (
-		<p className="px-4 pt-5 pb-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.14em] text-subtle select-none">
+		<p className="px-4 pt-5 pb-1.5 font-sans text-[calc(10px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-subtle select-none">
 			{children}
 		</p>
 	);
@@ -183,7 +183,7 @@ export function LeftSidebar() {
 				<BadgedIcon count={badgeCount} label={t(item.labelKey)}>
 					<item.icon isActive={isActive} />
 				</BadgedIcon>
-				<span className="font-sans text-[16.5px]">{t(item.labelKey)}</span>
+				<span className="font-sans text-[calc(16.5px*var(--ws-fs))]">{t(item.labelKey)}</span>
 				{item.labelKey === "nav.voice" && liveSpaces > 0 && (
 					// A broadcast dot, not a count: rooms are happening now, they
 					// aren't a backlog. The title carries the actual number for
@@ -229,7 +229,7 @@ export function LeftSidebar() {
 					)}
 				>
 					<VoteBox open={pathname.startsWith("/votes")} size={24} />
-					<span className="font-sans text-[16.5px]">Votes</span>
+					<span className="font-sans text-[calc(16.5px*var(--ws-fs))]">Votes</span>
 					<span className="ml-auto flex items-center gap-1.5">
 						<Flame
 							size={17}
@@ -280,7 +280,7 @@ export function LeftSidebar() {
 					<span className="inline-flex w-[22px] h-[22px] items-center justify-center">
 						<VerifiedIcon size={{ width: "22", height: "22" }} />
 					</span>
-					<span className="font-sans text-[16.5px]">{t("nav.premium")}</span>
+					<span className="font-sans text-[calc(16.5px*var(--ws-fs))]">{t("nav.premium")}</span>
 				</button>
 
 				{/* Products expands inline so the ecosystem is one glance away. */}
@@ -299,7 +299,7 @@ export function LeftSidebar() {
 						<span className="inline-flex w-[22px] h-[22px] items-center justify-center">
 							<moreItem.icon isActive={productsOpen} />
 						</span>
-						<span className="flex-1 font-sans text-[16.5px]">
+						<span className="flex-1 font-sans text-[calc(16.5px*var(--ws-fs))]">
 							{t("nav.products")}
 						</span>
 						<CaretDown
@@ -339,7 +339,7 @@ export function LeftSidebar() {
 											aria-hidden
 											className="h-[15px] w-[15px] object-contain shrink-0 opacity-70 group-hover/app:opacity-100 transition-opacity"
 										/>
-										<span className="font-sans text-[13.5px] flex-1 min-w-0 truncate">
+										<span className="font-sans text-[calc(13.5px*var(--ws-fs))] flex-1 min-w-0 truncate">
 											{app.title}
 										</span>
 										<ArrowUpRight
@@ -368,7 +368,7 @@ export function LeftSidebar() {
 							console.log("[compose] sidebar Post clicked");
 							setComposeOpen(true);
 						}}
-						className="w-full h-12 shine bg-brand hover:bg-brand-active text-brand-on font-semibold text-[15px] rounded-pill font-sans transition-colors cursor-pointer"
+						className="w-full h-12 shine bg-brand hover:bg-brand-active text-brand-on font-semibold text-[calc(15px*var(--ws-fs))] rounded-pill font-sans transition-colors cursor-pointer"
 					>
 						{t("composer.post")}
 					</button>
@@ -497,7 +497,7 @@ export function LeftSidebar() {
 									size={13}
 								/>
 							</span>
-							<span className="text-subtle text-[12px] truncate font-sans">
+							<span className="text-subtle text-[calc(12px*var(--ws-fs))] truncate font-sans">
 								@{user.username}
 							</span>
 						</div>

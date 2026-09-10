@@ -63,7 +63,7 @@ export function AudiencePicker({
         aria-expanded={locked ? undefined : open}
         aria-label={t("community.audience.label")}
         className={clsx(
-          "flex h-7 max-w-[220px] items-center gap-1.5 rounded-pill px-2.5 font-sans text-[12.5px] font-semibold transition-colors",
+          "flex h-7 max-w-[220px] items-center gap-1.5 rounded-pill px-2.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold transition-colors",
           value ? "bg-brand/15 text-gold" : "bg-raised text-muted",
           !locked && "cursor-pointer hover:text-primary",
         )}
@@ -73,7 +73,7 @@ export function AudiencePicker({
             {value.avatar ? (
               <SafeAvatar src={value.avatar} className="object-cover" sizes="16px" />
             ) : (
-              <span className="flex h-full w-full items-center justify-center text-[9px] font-bold text-gold">
+              <span className="flex h-full w-full items-center justify-center text-[calc(9px*var(--ws-fs))] font-bold text-gold">
                 {value.name.charAt(0).toUpperCase()}
               </span>
             )}
@@ -132,7 +132,7 @@ export function AudiencePicker({
                           {c.avatar ? (
                             <SafeAvatar src={c.avatar} className="object-cover" sizes="28px" />
                           ) : (
-                            <span className="flex h-full w-full items-center justify-center font-display text-[12px] font-semibold text-gold">
+                            <span className="flex h-full w-full items-center justify-center font-display text-[calc(12px*var(--ws-fs))] font-semibold text-gold">
                               {c.name.charAt(0).toUpperCase()}
                             </span>
                           )}
@@ -171,7 +171,7 @@ function Option({
       className="flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-left transition-colors hover:bg-raised"
     >
       {icon}
-      <span className="min-w-0 flex-1 truncate font-sans text-[13.5px] text-primary">
+      <span className="min-w-0 flex-1 truncate font-sans text-[calc(13.5px*var(--ws-fs))] text-primary">
         {label}
       </span>
       {selected && <Check size={14} weight="bold" className="shrink-0 text-gold" />}
@@ -183,7 +183,7 @@ function Option({
 export function AudienceLock({ community }: { community: AudienceCommunity }) {
   const t = useT();
   return (
-    <span className="flex items-center gap-1.5 font-sans text-[12.5px] text-muted">
+    <span className="flex items-center gap-1.5 font-sans text-[calc(12.5px*var(--ws-fs))] text-muted">
       <UsersThree size={13} weight="duotone" className="text-gold" />
       {t("community.postingIn")}{" "}
       <span className="font-semibold text-primary">{community.name}</span>

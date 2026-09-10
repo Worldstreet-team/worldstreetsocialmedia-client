@@ -169,13 +169,13 @@ export function AccountLifecycle() {
 								closeLabel={t("common.cancel")}
 							/>
 							<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-[calc(20px+var(--ws-safe-bottom))]">
-								<p className="font-sans text-[13.5px] leading-relaxed text-muted">
+								<p className="font-sans text-[calc(13.5px*var(--ws-fs))] leading-relaxed text-muted">
 									{t("settings.delete.confirm")}
 								</p>
 
 								<label
 									htmlFor="delete-confirm"
-									className="mt-4 block font-sans text-[11px] font-bold uppercase tracking-[0.14em] text-subtle"
+									className="mt-4 block font-sans text-[calc(11px*var(--ws-fs))] font-bold uppercase tracking-[0.14em] text-subtle"
 								>
 									{t("settings.delete.typeLabel").replace(
 										"{username}",
@@ -187,7 +187,7 @@ export function AccountLifecycle() {
 									value={confirmText}
 									onChange={(e) => setConfirmText(e.target.value)}
 									autoComplete="off"
-									className="mt-1.5 w-full rounded-xl bg-sunken px-3.5 py-3 font-sans text-[15px] text-primary outline-none placeholder:text-subtle"
+									className="mt-1.5 w-full rounded-xl bg-sunken px-3.5 py-3 font-sans text-[calc(15px*var(--ws-fs))] text-primary outline-none placeholder:text-subtle"
 									placeholder={user?.username ?? ""}
 								/>
 
@@ -195,7 +195,7 @@ export function AccountLifecycle() {
 									<button
 										type="button"
 										onClick={closeDelete}
-										className="h-10 flex-1 cursor-pointer rounded-pill bg-chip font-sans text-[13px] font-semibold text-primary transition-colors hover:bg-raised"
+										className="h-10 flex-1 cursor-pointer rounded-pill bg-chip font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-raised"
 									>
 										{t("common.cancel")}
 									</button>
@@ -203,7 +203,7 @@ export function AccountLifecycle() {
 										type="button"
 										onClick={remove}
 										disabled={!confirmMatches || deleting}
-										className="h-10 flex-1 cursor-pointer rounded-pill bg-danger font-sans text-[13px] font-semibold text-page transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+										className="h-10 flex-1 cursor-pointer rounded-pill bg-danger font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-page transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
 									>
 										{deleting
 											? t("settings.delete.deleting")
@@ -253,7 +253,7 @@ function Action({
 					>
 						{title}
 					</span>
-					<span className="mt-0.5 block font-sans text-[13px] leading-relaxed text-muted">
+					<span className="mt-0.5 block font-sans text-[calc(13px*var(--ws-fs))] leading-relaxed text-muted">
 						{caption}
 					</span>
 				</div>
@@ -262,7 +262,7 @@ function Action({
 				type="button"
 				onClick={onClick}
 				disabled={disabled}
-				className={`h-9 shrink-0 cursor-pointer rounded-pill px-4 font-sans text-[13px] font-semibold transition-opacity hover:opacity-90 disabled:opacity-50 ${
+				className={`h-9 shrink-0 cursor-pointer rounded-pill px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-opacity hover:opacity-90 disabled:opacity-50 ${
 					destructive
 						? "bg-danger/12 text-danger"
 						: "bg-raised text-primary"

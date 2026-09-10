@@ -340,7 +340,7 @@ export function OverlayHeader({
 	return (
 		<div className="flex h-12 shrink-0 items-center gap-2 px-4">
 			{children ?? (
-				<h2 className="flex-1 truncate font-sans text-[14px] font-semibold text-primary">
+				<h2 className="flex-1 truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
 					{title}
 					{count != null && (
 						<span className="ml-1.5 font-normal tabular-nums text-subtle">

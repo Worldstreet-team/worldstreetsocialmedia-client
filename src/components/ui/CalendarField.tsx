@@ -99,7 +99,7 @@ export default function CalendarField({ value, onChange }: CalendarFieldProps) {
           >
             <CaretLeft size={12} weight="bold" />
           </button>
-          <span className="font-sans text-[12.5px] font-semibold glass-ink">
+          <span className="font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold glass-ink">
             {monthLabel}
           </span>
           <button
@@ -121,7 +121,7 @@ export default function CalendarField({ value, onChange }: CalendarFieldProps) {
             <span
               // biome-ignore lint/suspicious/noArrayIndexKey: weekday initials repeat by design.
               key={`${d}-${i}`}
-              className="text-center font-sans text-[9.5px] font-bold uppercase tracking-[0.08em] text-[#fafaf9]/35"
+              className="text-center font-sans text-[calc(9.5px*var(--ws-fs))] font-bold uppercase tracking-[0.08em] text-[#fafaf9]/35"
             >
               {d}
             </span>
@@ -147,7 +147,7 @@ export default function CalendarField({ value, onChange }: CalendarFieldProps) {
                 aria-label={d.toDateString()}
                 aria-pressed={isSelected}
                 className={clsx(
-                  "mx-auto flex h-8 w-8 items-center justify-center rounded-pill font-sans text-[12.5px] tabular-nums transition-colors",
+                  "mx-auto flex h-8 w-8 items-center justify-center rounded-pill font-sans text-[calc(12.5px*var(--ws-fs))] tabular-nums transition-colors",
                   past && "opacity-25 cursor-default",
                   !past &&
                     !isSelected &&

@@ -127,10 +127,10 @@ export default function ReportSheet({
 						</button>
 					)}
 					<div className="min-w-0 flex-1">
-						<h2 className="truncate font-sans text-[14px] font-semibold text-primary">
+						<h2 className="truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
 							{heading}
 						</h2>
-						<p className="truncate font-sans text-[11.5px] text-subtle">
+						<p className="truncate font-sans text-[calc(11.5px*var(--ws-fs))] text-subtle">
 							{subheading}
 						</p>
 					</div>
@@ -162,16 +162,16 @@ export default function ReportSheet({
 										className="cursor-pointer rounded-xl bg-chip px-3.5 py-3 text-left transition-colors hover:bg-raised"
 									>
 										<span className="flex items-center gap-2">
-											<span className="font-sans text-[14.5px] font-semibold text-primary">
+											<span className="font-sans text-[calc(14.5px*var(--ws-fs))] font-semibold text-primary">
 												{t(r.labelKey)}
 											</span>
 											{r.priority && (
-												<span className="rounded-pill bg-raised px-2 py-0.5 font-sans text-[10px] font-bold uppercase tracking-[0.1em] text-muted">
+												<span className="rounded-pill bg-raised px-2 py-0.5 font-sans text-[calc(10px*var(--ws-fs))] font-bold uppercase tracking-[0.1em] text-muted">
 													{t("report.reason.urgent")}
 												</span>
 											)}
 										</span>
-										<span className="mt-0.5 block font-sans text-[12.5px] text-muted">
+										<span className="mt-0.5 block font-sans text-[calc(12.5px*var(--ws-fs))] text-muted">
 											{t(r.descKey)}
 										</span>
 									</button>
@@ -190,13 +190,13 @@ export default function ReportSheet({
 							>
 								{chosen && (
 									<div className="rounded-xl bg-chip px-3.5 py-3">
-										<span className="block font-sans text-[11px] font-bold uppercase tracking-[0.14em] text-subtle">
+										<span className="block font-sans text-[calc(11px*var(--ws-fs))] font-bold uppercase tracking-[0.14em] text-subtle">
 											{t("report.detail.reasonLabel")}
 										</span>
-										<span className="mt-1 block font-sans text-[14.5px] font-semibold text-primary">
+										<span className="mt-1 block font-sans text-[calc(14.5px*var(--ws-fs))] font-semibold text-primary">
 											{t(chosen.labelKey)}
 										</span>
-										<span className="mt-0.5 block font-sans text-[12.5px] text-muted">
+										<span className="mt-0.5 block font-sans text-[calc(12.5px*var(--ws-fs))] text-muted">
 											{t(chosen.descKey)}
 										</span>
 									</div>
@@ -205,7 +205,7 @@ export default function ReportSheet({
 								<div>
 									<label
 										htmlFor="report-details"
-										className="block font-sans text-[11px] font-bold uppercase tracking-[0.14em] text-subtle"
+										className="block font-sans text-[calc(11px*var(--ws-fs))] font-bold uppercase tracking-[0.14em] text-subtle"
 									>
 										{t("report.detail.label")}
 									</label>
@@ -219,12 +219,12 @@ export default function ReportSheet({
 										}
 										rows={4}
 										placeholder={t("report.detail.placeholder")}
-										className="mt-1.5 w-full resize-none rounded-xl bg-sunken px-3.5 py-3 font-sans text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised sm:text-[15px]"
+										className="mt-1.5 w-full resize-none rounded-xl bg-sunken px-3.5 py-3 font-sans text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised sm:text-[calc(15px*var(--ws-fs))]"
 									/>
 									<div className="mt-1 flex justify-end">
 										<span
 											className={clsx(
-												"font-sans text-[11px] tabular-nums",
+												"font-sans text-[calc(11px*var(--ws-fs))] tabular-nums",
 												details.length > REPORT_DETAILS_MAX - 60
 													? "text-primary"
 													: "text-subtle",
@@ -239,12 +239,12 @@ export default function ReportSheet({
 									type="button"
 									onClick={submit}
 									disabled={busy}
-									className="h-11 w-full cursor-pointer rounded-pill bg-brand font-sans text-[14px] font-semibold text-brand-on transition-colors hover:bg-brand-active disabled:cursor-not-allowed disabled:opacity-60"
+									className="h-11 w-full cursor-pointer rounded-pill bg-brand font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active disabled:cursor-not-allowed disabled:opacity-60"
 								>
 									{busy ? t("report.sending") : t("report.submit")}
 								</button>
 
-								<p className="text-center font-sans text-[12px] text-subtle">
+								<p className="text-center font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
 									{t("report.anonymous")}
 								</p>
 							</motion.div>
@@ -262,7 +262,7 @@ export default function ReportSheet({
 									<span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-raised text-gold">
 										<ShieldCheck size={16} weight="duotone" />
 									</span>
-									<p className="font-sans text-[13.5px] text-muted">
+									<p className="font-sans text-[calc(13.5px*var(--ws-fs))] text-muted">
 										{t("report.done.body")}
 									</p>
 								</div>
@@ -273,7 +273,7 @@ export default function ReportSheet({
 										onClick={blockNow}
 										disabled={blocking || blocked}
 										className={clsx(
-											"flex h-11 w-full items-center justify-center gap-2 rounded-pill font-sans text-[14px] font-semibold transition-colors",
+											"flex h-11 w-full items-center justify-center gap-2 rounded-pill font-sans text-[calc(14px*var(--ws-fs))] font-semibold transition-colors",
 											blocked
 												? "cursor-default bg-chip text-muted"
 												: "cursor-pointer bg-chip text-primary hover:bg-raised",
@@ -300,7 +300,7 @@ export default function ReportSheet({
 								<button
 									type="button"
 									onClick={onClose}
-									className="h-11 w-full cursor-pointer rounded-pill bg-brand font-sans text-[14px] font-semibold text-brand-on transition-colors hover:bg-brand-active"
+									className="h-11 w-full cursor-pointer rounded-pill bg-brand font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active"
 								>
 									{t("common.done")}
 								</button>

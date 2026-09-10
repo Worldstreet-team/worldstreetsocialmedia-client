@@ -44,7 +44,7 @@ export function StageAvatar({
 				</span>
 			)}
 			{extra > 0 && (
-				<span className="absolute -left-1 -top-1 rounded-pill border border-page bg-raised px-1 font-sans text-[8px] font-bold leading-[13px] text-primary tabular-nums">
+				<span className="absolute -left-1 -top-1 rounded-pill border border-page bg-raised px-1 font-sans text-[calc(8px*var(--ws-fs))] font-bold leading-[calc(13px*var(--ws-fs))] text-primary tabular-nums">
 					+{extra}
 				</span>
 			)}

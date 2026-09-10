@@ -49,12 +49,12 @@ export function LiveStrip({ delay }: { delay: number }) {
                   {/* The badge doubles as the live dot — a red ring alone
                       reads as "unseen" on a surface that also has story
                       rings, so the word stays. */}
-                  <span className="absolute -bottom-1 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-[4px] bg-danger px-1.5 py-px font-sans text-[9px] font-bold tracking-wide text-white">
+                  <span className="absolute -bottom-1 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-[4px] bg-danger px-1.5 py-px font-sans text-[calc(9px*var(--ws-fs))] font-bold tracking-wide text-white">
                     <span className="h-1 w-1 animate-pulse rounded-pill bg-white" />
                     {t("live.badge")}
                   </span>
                 </span>
-                <span className="block w-full truncate text-center font-sans text-[12px] font-medium text-muted">
+                <span className="block w-full truncate text-center font-sans text-[calc(12px*var(--ws-fs))] font-medium text-muted">
                   @{row.username}
                 </span>
               </Link>

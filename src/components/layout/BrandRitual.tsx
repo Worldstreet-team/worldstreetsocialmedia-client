@@ -114,7 +114,7 @@ export function BrandRitual({
 					>
 						{word}
 					</span>
-					<span className="font-sans text-[10px] font-semibold uppercase tracking-[2px] text-gold">
+					<span className="font-sans text-[calc(10px*var(--ws-fs))] font-semibold uppercase tracking-[2px] text-gold">
 						{eyebrow}
 					</span>
 				</span>

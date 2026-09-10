@@ -44,7 +44,7 @@ export default function BookmarksPage() {
 					<h1 className="font-display text-lg font-semibold text-primary">
 						{t("nav.bookmarks")}
 					</h1>
-					<div className="text-muted text-[13px] font-sans">
+					<div className="text-muted text-[calc(13px*var(--ws-fs))] font-sans">
 						@{user?.username}
 					</div>
 				</div>

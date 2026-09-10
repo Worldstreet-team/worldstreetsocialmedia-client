@@ -240,10 +240,10 @@ export default function ExploreClient({
   return (
     <div className="w-full min-w-0 pb-nav md:pb-10">
       <div className="animate-rise px-4 pt-6" style={{ animationDelay: "40ms" }}>
-        <span className="block font-sans text-[11px] font-bold uppercase tracking-[0.16em] text-gold">
+        <span className="block font-sans text-[calc(11px*var(--ws-fs))] font-bold uppercase tracking-[0.16em] text-gold">
           {t("explore.eyebrow")}
         </span>
-        <h1 className="mt-1 font-display text-[24px] font-semibold leading-none text-primary">
+        <h1 className="mt-1 font-display text-[calc(24px*var(--ws-fs))] font-semibold leading-none text-primary">
           {t("nav.explore")}
         </h1>
       </div>
@@ -261,7 +261,7 @@ export default function ExploreClient({
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t("explore.placeholder")}
               // text-base on mobile or iOS Safari zooms the page on focus.
-              className="h-10 w-full rounded-pill bg-chip pl-10 pr-11 font-sans text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised sm:text-[14px]"
+              className="h-10 w-full rounded-pill bg-chip pl-10 pr-11 font-sans text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised sm:text-[calc(14px*var(--ws-fs))]"
             />
             {query && (
               <button
@@ -354,7 +354,7 @@ export default function ExploreClient({
             className="animate-rise mt-8 border-t border-hairline"
             style={{ animationDelay: "520ms" }}
           >
-            <h2 className="px-4 py-3 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">
+            <h2 className="px-4 py-3 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-subtle">
               {t("explore.section.popular")}
             </h2>
             {loading.trends ? (

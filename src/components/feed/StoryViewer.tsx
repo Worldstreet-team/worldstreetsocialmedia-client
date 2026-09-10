@@ -347,7 +347,7 @@ export function StoryViewer({
 						</div>
 						<span className="flex min-w-0 flex-col leading-tight">
 							<span className="flex min-w-0 items-center gap-1">
-								<span className="min-w-0 truncate font-sans text-[14px] font-semibold text-white">
+								<span className="min-w-0 truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-white">
 									{name}
 								</span>
 								<UserBadges
@@ -357,7 +357,7 @@ export function StoryViewer({
 									size={13}
 								/>
 							</span>
-							<span className="font-sans text-[11.5px] text-white/65">
+							<span className="font-sans text-[calc(11.5px*var(--ws-fs))] text-white/65">
 								@{entry.author.username}
 							</span>
 						</span>
@@ -454,7 +454,7 @@ export function StoryViewer({
 								{[0, 1, 2, 3, 4, 5].map((row) => (
 									<div
 										key={row}
-										className="flex gap-10 whitespace-nowrap font-sans text-[13px] font-semibold text-white"
+										className="flex gap-10 whitespace-nowrap font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-white"
 										style={{
 											marginLeft: row % 2 ? "-60px" : "0",
 											textShadow: "0 1px 2px rgba(0,0,0,0.55)",
@@ -505,7 +505,7 @@ export function StoryViewer({
 								onClick={() => viewsCount > 0 && setViewersOpen(true)}
 								disabled={viewsCount === 0}
 								className={clsx(
-									"flex h-11 w-full items-center justify-center gap-2 rounded-pill font-sans text-[14px] font-medium transition-colors",
+									"flex h-11 w-full items-center justify-center gap-2 rounded-pill font-sans text-[calc(14px*var(--ws-fs))] font-medium transition-colors",
 									viewsCount > 0
 										? "cursor-pointer bg-page/60 text-primary hover:bg-raised"
 										: "text-subtle",
@@ -580,7 +580,7 @@ export function StoryViewer({
 								>
 									<div className="glass-frost sticky top-0 flex items-center gap-2 px-4 pb-2 pt-4">
 										<Eye className="h-4 w-4 text-muted" />
-										<span className="font-sans text-[14px] font-semibold text-primary">
+										<span className="font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
 											<span className="tabular-nums">{formatCompact(viewsCount)}</span>{" "}
 											{viewsCount === 1 ? t("story.viewer") : t("story.viewers")}
 										</span>
@@ -596,7 +596,7 @@ export function StoryViewer({
 											</span>
 											<span className="min-w-0 flex-1">
 												<span className="flex items-center gap-1">
-													<span className="truncate font-sans text-[14px] font-semibold text-primary">
+													<span className="truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
 														{v.name || v.username}
 													</span>
 													<UserBadges
@@ -605,7 +605,7 @@ export function StoryViewer({
 														size={13}
 													/>
 												</span>
-												<span className="block truncate font-sans text-[12.5px] text-muted">
+												<span className="block truncate font-sans text-[calc(12.5px*var(--ws-fs))] text-muted">
 													@{v.username}
 												</span>
 											</span>
@@ -615,7 +615,7 @@ export function StoryViewer({
 									    populate, and an account deleted since watching leaves
 									    a view with nobody to show. */}
 									{viewers.length === 0 && (
-										<p className="px-4 py-6 text-center font-sans text-[13px] text-subtle">
+										<p className="px-4 py-6 text-center font-sans text-[calc(13px*var(--ws-fs))] text-subtle">
 											{t("story.viewersEmpty")}
 										</p>
 									)}
@@ -637,7 +637,7 @@ export function StoryViewer({
 									e.stopPropagation();
 								}}
 								placeholder={t("story.replyPlaceholder").replace("{name}", name)}
-								className="h-11 min-w-0 flex-1 rounded-pill bg-[#fafaf9]/12 px-4 font-sans text-base text-[#fafaf9] outline-none backdrop-blur-md transition-colors placeholder:text-[#fafaf9]/45 focus:bg-[#fafaf9]/20 sm:text-[14px]"
+								className="h-11 min-w-0 flex-1 rounded-pill bg-[#fafaf9]/12 px-4 font-sans text-base text-[#fafaf9] outline-none backdrop-blur-md transition-colors placeholder:text-[#fafaf9]/45 focus:bg-[#fafaf9]/20 sm:text-[calc(14px*var(--ws-fs))]"
 							/>
 							<button
 								type="button"

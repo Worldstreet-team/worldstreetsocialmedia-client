@@ -238,7 +238,7 @@ export function SearchWindow() {
 								onChange={(e) => setQuery(e.target.value)}
 								placeholder={t("search.placeholder")}
 								aria-label={t("search.title")}
-								className="min-w-0 flex-1 bg-transparent font-sans text-[15px] text-primary outline-none placeholder:text-subtle"
+								className="min-w-0 flex-1 bg-transparent font-sans text-[calc(15px*var(--ws-fs))] text-primary outline-none placeholder:text-subtle"
 							/>
 							<button
 								type="button"
@@ -262,7 +262,7 @@ export function SearchWindow() {
 										onClick={() => setFilter(f.id)}
 										aria-pressed={active}
 										className={clsx(
-											"flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[13px] font-medium transition-colors",
+											"flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors",
 											active
 												? "bg-primary text-page"
 												: "bg-chip text-muted hover:text-primary",
@@ -279,7 +279,7 @@ export function SearchWindow() {
 
 						<div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
 							{!term && (
-								<p className="px-2 py-8 text-center font-sans text-[13px] text-subtle">
+								<p className="px-2 py-8 text-center font-sans text-[calc(13px*var(--ws-fs))] text-subtle">
 									{t("search.hint")}
 								</p>
 							)}
@@ -289,17 +289,17 @@ export function SearchWindow() {
 							    "Searching…" line sitting above them reads as if those
 							    results were still pending too. */}
 							{!!term && loading && !anyResults && (
-								<p className="px-2 py-8 text-center font-sans text-[13px] text-subtle">
+								<p className="px-2 py-8 text-center font-sans text-[calc(13px*var(--ws-fs))] text-subtle">
 									{t("search.searching")}
 								</p>
 							)}
 
 							{nothing && (
 								<div className="px-2 py-8 text-center">
-									<p className="font-sans text-[14px] text-primary">
+									<p className="font-sans text-[calc(14px*var(--ws-fs))] text-primary">
 										{t("search.empty").replace("{q}", term)}
 									</p>
-									<p className="mt-1 font-sans text-[13px] text-subtle">
+									<p className="mt-1 font-sans text-[calc(13px*var(--ws-fs))] text-subtle">
 										{t("search.emptyHint")}
 									</p>
 								</div>
@@ -329,7 +329,7 @@ export function SearchWindow() {
 													className="min-w-0 flex-1"
 												>
 													<span className="flex items-center gap-1">
-														<span className="truncate font-sans text-[14px] font-semibold text-primary">
+														<span className="truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
 															{displayName(u)}
 														</span>
 														<UserBadges
@@ -339,7 +339,7 @@ export function SearchWindow() {
 															size={13}
 														/>
 													</span>
-													<span className="block truncate font-sans text-[13px] text-muted">
+													<span className="block truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
 														@{u.username}
 													</span>
 												</Link>
@@ -347,7 +347,7 @@ export function SearchWindow() {
 													<button
 														type="button"
 														onClick={() => follow(u._id)}
-														className="h-8 shrink-0 cursor-pointer rounded-pill bg-primary px-3.5 font-sans text-[12.5px] font-bold text-page transition-opacity hover:opacity-90"
+														className="h-8 shrink-0 cursor-pointer rounded-pill bg-primary px-3.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-bold text-page transition-opacity hover:opacity-90"
 													>
 														{t("rail.follow")}
 													</button>
@@ -372,7 +372,7 @@ export function SearchWindow() {
 												<span className="relative h-5 w-5 shrink-0 overflow-hidden rounded-pill bg-raised">
 													<SafeAvatar src={p.author?.avatar} />
 												</span>
-												<span className="truncate font-sans text-[13px] font-semibold text-primary">
+												<span className="truncate font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
 													{p.author?.firstName && p.author?.lastName
 														? `${p.author.firstName} ${p.author.lastName}`
 														: (p.author?.username ?? "")}
@@ -383,11 +383,11 @@ export function SearchWindow() {
 													badges={p.author?.badges}
 													size={12}
 												/>
-												<span className="shrink-0 font-sans text-[12px] text-subtle">
+												<span className="shrink-0 font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
 													· {formatTimeAgo(p.createdAt)}
 												</span>
 											</span>
-											<span className="mt-1 block line-clamp-2 font-sans text-[13.5px] text-muted">
+											<span className="mt-1 block line-clamp-2 font-sans text-[calc(13.5px*var(--ws-fs))] text-muted">
 												{p.content}
 											</span>
 										</Link>
@@ -409,10 +409,10 @@ export function SearchWindow() {
 												<SafeAvatar src={c.avatar} />
 											</span>
 											<span className="min-w-0 flex-1">
-												<span className="block truncate font-sans text-[14px] font-semibold text-primary">
+												<span className="block truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
 													{c.name}
 												</span>
-												<span className="block truncate font-sans text-[13px] text-muted">
+												<span className="block truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
 													<span className="tabular-nums">
 														{formatCompact(Number(c.membersCount ?? 0))}
 													</span>{" "}
@@ -433,10 +433,10 @@ export function SearchWindow() {
 												key={c.id}
 												href={`/explore?q=${encodeURIComponent(c.label)}`}
 												onClick={close}
-												className="flex h-8 items-center gap-1.5 rounded-pill bg-chip px-3 font-sans text-[13px] text-primary transition-colors hover:bg-raised"
+												className="flex h-8 items-center gap-1.5 rounded-pill bg-chip px-3 font-sans text-[calc(13px*var(--ws-fs))] text-primary transition-colors hover:bg-raised"
 											>
 												{c.label}
-												<span className="text-[12px] text-subtle">
+												<span className="text-[calc(12px*var(--ws-fs))] text-subtle">
 													{VERTICAL_LABEL.get(c.vertical)}
 												</span>
 											</Link>
@@ -450,7 +450,7 @@ export function SearchWindow() {
 								<Link
 									href={`/explore?q=${encodeURIComponent(term)}`}
 									onClick={close}
-									className="mt-1 block rounded-xl px-4 py-3 text-center font-sans text-[13px] font-medium text-muted transition-colors hover:bg-chip hover:text-primary"
+									className="mt-1 block rounded-xl px-4 py-3 text-center font-sans text-[calc(13px*var(--ws-fs))] font-medium text-muted transition-colors hover:bg-chip hover:text-primary"
 								>
 									{t("search.seeAll")}
 								</Link>
@@ -472,7 +472,7 @@ function Section({
 }) {
 	return (
 		<section className="pt-1">
-			<h2 className="px-4 pb-1 pt-2 font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-subtle">
+			<h2 className="px-4 pb-1 pt-2 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.08em] text-subtle">
 				{label}
 			</h2>
 			{children}

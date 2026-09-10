@@ -86,24 +86,24 @@ export default function StudioPosts() {
 							className="grid w-full grid-cols-[1fr_28px] sm:grid-cols-[1fr_repeat(4,72px)_28px] items-center gap-2 px-4 py-3 border-b border-[#fafaf9]/[0.05] last:border-0 hover:bg-[#fafaf9]/[0.06] transition-colors text-left cursor-pointer"
 						>
 							<span className="min-w-0">
-								<span className="block font-sans text-[14px] glass-ink truncate">
+								<span className="block font-sans text-[calc(14px*var(--ws-fs))] glass-ink truncate">
  {row.content || (row.hasMedia ? t("studio.mediaPost") : "")}
 								</span>
-								<span className="block font-sans text-[12px] glass-ink-faint tabular-nums">
+								<span className="block font-sans text-[calc(12px*var(--ws-fs))] glass-ink-faint tabular-nums">
 									{formatTimeAgo(row.createdAt)}
 									{row.type === "live" ? ` · ${t("live.badge")}` : ""}
 								</span>
 							</span>
-							<span className="hidden sm:block text-right font-sans text-[13px] glass-ink-dim tabular-nums">
+							<span className="hidden sm:block text-right font-sans text-[calc(13px*var(--ws-fs))] glass-ink-dim tabular-nums">
 								{fmt(row.stats.views ?? 0)}
 							</span>
-							<span className="hidden sm:block text-right font-sans text-[13px] glass-ink-dim tabular-nums">
+							<span className="hidden sm:block text-right font-sans text-[calc(13px*var(--ws-fs))] glass-ink-dim tabular-nums">
 								{fmt(row.stats.likes)}
 							</span>
-							<span className="hidden sm:block text-right font-sans text-[13px] glass-ink-dim tabular-nums">
+							<span className="hidden sm:block text-right font-sans text-[calc(13px*var(--ws-fs))] glass-ink-dim tabular-nums">
 								{fmt(row.stats.replies)}
 							</span>
-							<span className="hidden sm:block text-right font-sans text-[13px] glass-ink-dim tabular-nums">
+							<span className="hidden sm:block text-right font-sans text-[calc(13px*var(--ws-fs))] glass-ink-dim tabular-nums">
 								{fmt(row.stats.reposts)}
 							</span>
 							<CaretRight size={14} className="glass-ink-faint justify-self-end" />
@@ -161,7 +161,7 @@ export default function StudioPosts() {
 				<button
 					type="button"
 					onClick={() => load(cursor)}
-					className="mt-4 h-9 px-4 rounded-pill bg-[#fafaf9]/[0.06] glass-ink-dim hover:glass-ink hover:bg-[#fafaf9]/[0.1] font-sans text-[13px] font-medium transition-colors cursor-pointer"
+					className="mt-4 h-9 px-4 rounded-pill bg-[#fafaf9]/[0.06] glass-ink-dim hover:glass-ink hover:bg-[#fafaf9]/[0.1] font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors cursor-pointer"
 				>
 					{t("rail.showMore")}
 				</button>

@@ -294,7 +294,7 @@ export function CommandPalette() {
                 // text-base below sm so focusing it doesn't zoom iOS Safari.
                 className="min-w-0 flex-1 bg-transparent font-sans text-base text-primary outline-none placeholder:text-subtle sm:text-sm"
               />
-              <kbd className="hidden h-5 items-center rounded-sm bg-chip px-1.5 font-sans text-[10px] text-muted sm:flex">
+              <kbd className="hidden h-5 items-center rounded-sm bg-chip px-1.5 font-sans text-[calc(10px*var(--ws-fs))] text-muted sm:flex">
                 esc
               </kbd>
             </div>
@@ -359,7 +359,7 @@ export function CommandPalette() {
 
             {/* Keyboard legend is meaningless on a touch device and it's the
                 first thing to cost vertical room there. */}
-            <div className="hidden h-9 shrink-0 items-center gap-4 border-t border-hairline px-4 font-sans text-[11px] text-subtle sm:flex">
+            <div className="hidden h-9 shrink-0 items-center gap-4 border-t border-hairline px-4 font-sans text-[calc(11px*var(--ws-fs))] text-subtle sm:flex">
               <span>↑↓ navigate</span>
               <span>↵ open</span>
               <span>esc close</span>

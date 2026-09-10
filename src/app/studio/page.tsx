@@ -196,17 +196,17 @@ export default function StudioOverview() {
 					<span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-pill bg-[var(--ws-brand-primary)] text-[#0c0a09]">
 						<Faders size={24} weight="bold" />
 					</span>
-					<h2 className="mb-2 font-display text-[20px] font-semibold glass-ink">
+					<h2 className="mb-2 font-display text-[calc(20px*var(--ws-fs))] font-semibold glass-ink">
 						{t("studio.become.title")}
 					</h2>
-					<p className="mb-6 font-sans text-[13.5px] leading-relaxed glass-ink-dim">
+					<p className="mb-6 font-sans text-[calc(13.5px*var(--ws-fs))] leading-relaxed glass-ink-dim">
 						{t("studio.become.caption")}
 					</p>
 					<button
 						type="button"
 						onClick={activate}
 						disabled={busy}
-						className="h-11 cursor-pointer rounded-pill bg-[#fafaf9] px-6 font-sans text-[14px] font-semibold text-[#0c0a09] transition-colors hover:bg-white disabled:opacity-50"
+						className="h-11 cursor-pointer rounded-pill bg-[#fafaf9] px-6 font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-[#0c0a09] transition-colors hover:bg-white disabled:opacity-50"
 					>
 						{t("studio.become.cta")}
 					</button>
@@ -244,13 +244,13 @@ export default function StudioOverview() {
 			{/* header */}
 			<div className="mb-5 flex flex-wrap items-end justify-between gap-3">
 				<div className="min-w-0">
-					<h1 className="font-display text-[22px] font-semibold tracking-tight glass-ink">
+					<h1 className="font-display text-[calc(22px*var(--ws-fs))] font-semibold tracking-tight glass-ink">
 						{t("studio.welcome").replace(
 							"{name}",
 							user?.firstName || user?.username || "",
 						)}
 					</h1>
-					<p className="mt-1 font-sans text-[13px] glass-ink-dim">
+					<p className="mt-1 font-sans text-[calc(13px*var(--ws-fs))] glass-ink-dim">
 						{t("studio.welcomeSub").replace("{d}", String(days))}
 					</p>
 				</div>
@@ -343,7 +343,7 @@ export default function StudioOverview() {
 								rel="noreferrer"
 								className="group flex items-center gap-2.5 rounded-xl px-3 py-2 transition-colors hover:bg-[#fafaf9]/[0.05]"
 							>
-								<span className="font-sans text-[13px] font-medium glass-ink-dim group-hover:glass-ink">
+								<span className="font-sans text-[calc(13px*var(--ws-fs))] font-medium glass-ink-dim group-hover:glass-ink">
 									{app.name}
 								</span>
 								<ArrowUpRight
@@ -361,7 +361,7 @@ export default function StudioOverview() {
 						action={
 							<Link
 								href="/studio/posts"
-								className="flex items-center gap-1 font-sans text-[12px] font-semibold text-[var(--ws-brand-primary)] hover:underline"
+								className="flex items-center gap-1 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-[var(--ws-brand-primary)] hover:underline"
 							>
 								{t("rail.seeAll")}
 								<CaretRight size={11} weight="bold" />
@@ -405,24 +405,24 @@ export default function StudioOverview() {
 									href={`/studio/posts/${p.id}`}
 									className="grid grid-cols-[24px_1fr_64px_56px_56px] items-center gap-2 rounded-xl px-3 py-2.5 transition-colors hover:bg-[#fafaf9]/[0.05]"
 								>
-									<span className="text-center font-display text-[13px] font-semibold glass-ink-faint tabular-nums">
+									<span className="text-center font-display text-[calc(13px*var(--ws-fs))] font-semibold glass-ink-faint tabular-nums">
 										{i + 1}
 									</span>
 									<span className="min-w-0">
-										<span className="block truncate font-sans text-[13.5px] glass-ink">
+										<span className="block truncate font-sans text-[calc(13.5px*var(--ws-fs))] glass-ink">
 											{p.content || t("studio.mediaPost")}
 										</span>
-										<span className="block font-sans text-[11.5px] glass-ink-faint tabular-nums">
+										<span className="block font-sans text-[calc(11.5px*var(--ws-fs))] glass-ink-faint tabular-nums">
 											{formatTimeAgo(p.createdAt)}
 										</span>
 									</span>
-									<span className="text-right font-sans text-[13px] font-semibold glass-ink tabular-nums">
+									<span className="text-right font-sans text-[calc(13px*var(--ws-fs))] font-semibold glass-ink tabular-nums">
 										{fmt(p.stats.views ?? 0)}
 									</span>
-									<span className="text-right font-sans text-[13px] glass-ink-dim tabular-nums">
+									<span className="text-right font-sans text-[calc(13px*var(--ws-fs))] glass-ink-dim tabular-nums">
 										{fmt(p.stats.likes)}
 									</span>
-									<span className="text-right font-sans text-[13px] glass-ink-dim tabular-nums">
+									<span className="text-right font-sans text-[calc(13px*var(--ws-fs))] glass-ink-dim tabular-nums">
 										{fmt(p.stats.replies)}
 									</span>
 								</Link>

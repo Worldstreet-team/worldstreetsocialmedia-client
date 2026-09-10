@@ -465,7 +465,7 @@ export function VoiceRecorder({
 						/>
 					))}
 				</div>
-				<span className="shrink-0 font-sans text-[12px] tabular-nums text-muted">
+				<span className="shrink-0 font-sans text-[calc(12px*var(--ws-fs))] tabular-nums text-muted">
 					{fmt(review.durationSec)}
 				</span>
 				<button
@@ -498,7 +498,7 @@ export function VoiceRecorder({
 					!paused && "animate-pulse",
 				)}
 			/>
-			<span className="shrink-0 font-sans text-[13px] font-semibold tabular-nums text-primary">
+			<span className="shrink-0 font-sans text-[calc(13px*var(--ws-fs))] font-semibold tabular-nums text-primary">
 				{fmt(elapsed)}
 			</span>
 			<canvas
@@ -546,7 +546,7 @@ export function VoiceRecorder({
 					ref={hintRef}
 					className="flex shrink-0 items-center gap-2 text-muted"
 				>
-					<span className="font-sans text-[12px]">‹ slide to cancel</span>
+					<span className="font-sans text-[calc(12px*var(--ws-fs))]">‹ slide to cancel</span>
 					<span className="flex h-7 w-7 items-center justify-center rounded-pill bg-chip">
 						<RiLock2Line size={14} />
 					</span>

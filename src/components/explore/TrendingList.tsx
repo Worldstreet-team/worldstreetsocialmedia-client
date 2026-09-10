@@ -43,7 +43,7 @@ export function TrendingList({
       collapsible
       sectionId="trending"
       trailing={
-        <span className="shrink-0 font-sans text-[10px] font-semibold uppercase tracking-wider text-gold">
+        <span className="shrink-0 font-sans text-[calc(10px*var(--ws-fs))] font-semibold uppercase tracking-wider text-gold">
           {t("rail.scope")}
         </span>
       }
@@ -84,14 +84,14 @@ export function TrendingList({
                 onClick={() => onPick(title)}
                 className="flex w-full cursor-pointer items-start gap-3.5 rounded-xl px-2 py-2.5 text-left transition-colors hover:bg-surface"
               >
-                <span className="select-none pt-0.5 font-mono text-[13px] tabular-nums text-gold">
+                <span className="select-none pt-0.5 font-mono text-[calc(13px*var(--ws-fs))] tabular-nums text-gold">
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate font-sans text-[15px] font-semibold leading-snug text-primary">
+                  <span className="truncate font-sans text-[calc(15px*var(--ws-fs))] font-semibold leading-snug text-primary">
                     {title}
                   </span>
-                  <span className="font-sans text-[12px] tabular-nums text-subtle">
+                  <span className="font-sans text-[calc(12px*var(--ws-fs))] tabular-nums text-subtle">
                     {trend.category ? `${resolveCategoryLabel(trend.category)} · ` : ""}
                     {compactTrendPosts(trend)}
                   </span>
@@ -112,7 +112,7 @@ export function TrendingList({
                       </span>
                     ))}
                     {(trend.peopleCount ?? 0) > 5 && (
-                      <span className="relative -ml-2 flex h-6 shrink-0 items-center rounded-pill bg-raised px-1.5 font-sans text-[10px] font-bold tabular-nums text-muted ring-2 ring-page">
+                      <span className="relative -ml-2 flex h-6 shrink-0 items-center rounded-pill bg-raised px-1.5 font-sans text-[calc(10px*var(--ws-fs))] font-bold tabular-nums text-muted ring-2 ring-page">
                         +{(trend.peopleCount ?? 0) - 5}
                       </span>
                     )}

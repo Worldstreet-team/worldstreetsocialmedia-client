@@ -63,7 +63,7 @@ export function SidebarWallet() {
 			<span className="relative block px-4 py-3.5">
 				<span className="flex items-center gap-1.5">
 					<Vault size={15} weight="duotone" className="text-gold" />
-					<span className="flex-1 font-sans text-[10.5px] font-bold uppercase tracking-[0.14em] text-primary/60">
+					<span className="flex-1 font-sans text-[calc(10.5px*var(--ws-fs))] font-bold uppercase tracking-[0.14em] text-primary/60">
 						{t("wallet.title")}
 					</span>
 					<ArrowUpRight
@@ -73,7 +73,7 @@ export function SidebarWallet() {
 					/>
 				</span>
 
-				<span className="mt-2 block font-display text-[24px] font-semibold leading-none tabular-nums text-primary">
+				<span className="mt-2 block font-display text-[calc(24px*var(--ws-fs))] font-semibold leading-none tabular-nums text-primary">
 					{money(balances.USD.availableMinor)}
 				</span>
 

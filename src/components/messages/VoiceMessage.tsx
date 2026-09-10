@@ -445,7 +445,7 @@ export const VoiceMessage = ({
 					type="button"
 					onClick={cycleRate}
 					aria-label={`Playback speed ${rate}x`}
-					className="shrink-0 cursor-pointer rounded-pill bg-chip px-2 py-0.5 font-sans text-[11px] font-bold tabular-nums text-primary transition-colors hover:bg-raised"
+					className="shrink-0 cursor-pointer rounded-pill bg-chip px-2 py-0.5 font-sans text-[calc(11px*var(--ws-fs))] font-bold tabular-nums text-primary transition-colors hover:bg-raised"
 				>
 					{rate}×
 				</button>

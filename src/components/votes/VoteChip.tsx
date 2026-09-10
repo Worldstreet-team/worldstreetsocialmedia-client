@@ -86,7 +86,7 @@ export function VoteChip({
 			>
 				<VoteBox open={boxOpen} ballotKey={ballotKey} size={23} />
 				{count > 0 && (
-					<span className="relative overflow-hidden font-sans text-[13.5px] font-medium tabular-nums sm:text-[14px]">
+					<span className="relative overflow-hidden font-sans text-[calc(13.5px*var(--ws-fs))] font-medium tabular-nums sm:text-[calc(14px*var(--ws-fs))]">
 						<AnimatePresence mode="wait" initial={false}>
 							<motion.span
 								key={count}

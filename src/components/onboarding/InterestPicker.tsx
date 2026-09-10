@@ -71,7 +71,7 @@ export function InterestPicker({
 				{groups.map(({ vertical, items }) => (
 					<section key={vertical.id} className="space-y-2">
 						<div className="px-0.5">
-							<h3 className="font-sans text-[10px] font-semibold uppercase tracking-[0.14em] text-subtle">
+							<h3 className="font-sans text-[calc(10px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-subtle">
 								{vertical.label}
 							</h3>
 						</div>
@@ -89,7 +89,7 @@ export function InterestPicker({
 										aria-pressed={on}
 										disabled={locked}
 										className={clsx(
-											"inline-flex items-center gap-1.5 min-h-9 px-3 rounded-pill font-sans text-[13px] font-medium transition-colors",
+											"inline-flex items-center gap-1.5 min-h-9 px-3 rounded-pill font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors",
 											on
 												? "glass-tile glass-tile-on text-primary"
 												: "glass-tile text-muted hover:text-primary",

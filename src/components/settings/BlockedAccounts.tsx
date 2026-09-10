@@ -113,7 +113,7 @@ export function BlockedAccounts() {
 								<span className="truncate font-sans text-sm font-semibold text-primary">
 									{name}
 								</span>
-								<span className="truncate font-sans text-[13px] text-muted">
+								<span className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
 									@{user.username}
 								</span>
 							</span>
@@ -122,7 +122,7 @@ export function BlockedAccounts() {
 							type="button"
 							onClick={() => unblock(user)}
 							disabled={busyId === user._id}
-							className="h-9 shrink-0 cursor-pointer rounded-pill bg-primary px-4 font-sans text-[13px] font-semibold text-page transition-opacity hover:opacity-90 disabled:opacity-50"
+							className="h-9 shrink-0 cursor-pointer rounded-pill bg-primary px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-page transition-opacity hover:opacity-90 disabled:opacity-50"
 						>
 							{busyId === user._id
 								? t("settings.blocked.unblocking")

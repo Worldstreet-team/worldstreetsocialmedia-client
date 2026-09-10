@@ -203,7 +203,7 @@ export function RightSidebar() {
 				{/* `/` opens search; Ctrl+K is the command palette, a different
 				    surface. Naming the wrong one here is how people learn the
 				    wrong shortcut. */}
-				<kbd className="flex h-5 items-center gap-1 rounded-sm bg-raised px-1.5 text-[10px] text-subtle">
+				<kbd className="flex h-5 items-center gap-1 rounded-sm bg-raised px-1.5 text-[calc(10px*var(--ws-fs))] text-subtle">
 					/
 				</kbd>
 			</button>
@@ -231,14 +231,14 @@ export function RightSidebar() {
 					href="/votes"
 					className="group block rounded-xl px-1 py-1 transition-opacity hover:opacity-90"
 				>
-					<span className="flex items-center gap-1.5 font-sans text-[11px] font-semibold uppercase tracking-widest text-gold">
+					<span className="flex items-center gap-1.5 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-widest text-gold">
 						<Lightning size={13} weight="fill" />
 						The Weekly Vote
 					</span>
 					<div className="mt-2.5">
 						<VoteCountdown />
 					</div>
-					<p className="shine-pill mt-2.5 inline-block rounded-pill px-3 py-1.5 font-sans text-[12px] font-semibold text-gold">
+					<p className="shine-pill mt-2.5 inline-block rounded-pill px-3 py-1.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-gold">
 						Most-voted post wins up to $200 Friday night
 					</p>
 				</Link>
@@ -255,7 +255,7 @@ export function RightSidebar() {
 						trailing={
 							<Link
 								href="/live-now"
-								className="font-sans text-[11px] font-semibold text-gold hover:underline"
+								className="font-sans text-[calc(11px*var(--ws-fs))] font-semibold text-gold hover:underline"
 							>
 								{t("rail.seeAll")}
 							</Link>
@@ -274,14 +274,14 @@ export function RightSidebar() {
 										stage={entry.stage}
 										innerClassName="border-2 border-page bg-raised"
 									/>
-									<span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-[4px] bg-danger px-1 py-px text-[8px] font-bold tracking-wide text-white font-sans">
+									<span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-[4px] bg-danger px-1 py-px text-[calc(8px*var(--ws-fs))] font-bold tracking-wide text-white font-sans">
 										{t("live.badge")}
 									</span>
 								</span>
 								<PersonName
 									person={entry}
 									size={10}
-									className="max-w-14 text-[11px] text-muted font-sans"
+									className="max-w-14 text-[calc(11px*var(--ws-fs))] text-muted font-sans"
 								/>
 							</Link>
 						))}
@@ -302,7 +302,7 @@ export function RightSidebar() {
 					icon={<Fire size={13} weight="fill" />}
 					label={t("rail.happening")}
 					trailing={
-						<span className="text-[10px] font-semibold uppercase tracking-wider text-gold font-sans">
+						<span className="text-[calc(10px*var(--ws-fs))] font-semibold uppercase tracking-wider text-gold font-sans">
 							{t("rail.scope")}
 						</span>
 					}
@@ -315,7 +315,7 @@ export function RightSidebar() {
 								type="button"
 								onClick={() => setCategory(c)}
 								className={clsx(
-									"px-2.5 h-6 rounded-pill text-[11px] font-medium font-sans transition-colors cursor-pointer",
+									"px-2.5 h-6 rounded-pill text-[calc(11px*var(--ws-fs))] font-medium font-sans transition-colors cursor-pointer",
 									category === c
 										? "bg-primary text-page"
 										: "bg-raised text-muted hover:text-primary",
@@ -345,14 +345,14 @@ export function RightSidebar() {
 									key={trend.title}
 									className="flex items-start gap-3.5 px-3 py-2.5 rounded-xl hover:bg-surface transition-colors"
 								>
-									<span className="pt-0.5 font-mono text-[13px] text-gold tabular-nums select-none">
+									<span className="pt-0.5 font-mono text-[calc(13px*var(--ws-fs))] text-gold tabular-nums select-none">
 										{String(i + 1).padStart(2, "0")}
 									</span>
 									<span className="flex flex-col min-w-0 flex-1">
-										<span className="font-semibold text-primary text-[15px] truncate leading-snug">
+										<span className="font-semibold text-primary text-[calc(15px*var(--ws-fs))] truncate leading-snug">
 											{trend.title.replace(/^#/, "")}
 										</span>
-										<span className="text-[12px] text-subtle font-sans tabular-nums">
+										<span className="text-[calc(12px*var(--ws-fs))] text-subtle font-sans tabular-nums">
 											{trend.category ? `${resolveCategoryLabel(trend.category)} · ` : ""}
 											{compactTrendPosts(trend)}
 										</span>
@@ -380,7 +380,7 @@ export function RightSidebar() {
 													</span>
 												))}
 											{(trend.peopleCount ?? 0) > 5 && (
-												<span className="relative -ml-2 flex h-6 shrink-0 items-center rounded-pill bg-raised px-1.5 font-sans text-[10px] font-bold tabular-nums text-muted ring-2 ring-page">
+												<span className="relative -ml-2 flex h-6 shrink-0 items-center rounded-pill bg-raised px-1.5 font-sans text-[calc(10px*var(--ws-fs))] font-bold tabular-nums text-muted ring-2 ring-page">
 													+{trend.peopleCount - 5}
 												</span>
 											)}
@@ -412,7 +412,7 @@ export function RightSidebar() {
 						<button
 							type="button"
 							onClick={() => setTrendsExpanded((v) => !v)}
-							className="px-3 py-2.5 text-left text-gold text-[13px] font-medium font-sans hover:underline cursor-pointer"
+							className="px-3 py-2.5 text-left text-gold text-[calc(13px*var(--ws-fs))] font-medium font-sans hover:underline cursor-pointer"
 						>
 							{trendsExpanded ? t("rail.showLess") : t("rail.showMore")}
 						</button>
@@ -479,7 +479,7 @@ export function RightSidebar() {
 													/>
 												</span>
 												{showHandle && (
-													<span className="text-subtle text-[12px] truncate font-sans">
+													<span className="text-subtle text-[calc(12px*var(--ws-fs))] truncate font-sans">
 														@{user.username}
 													</span>
 												)}
@@ -487,7 +487,7 @@ export function RightSidebar() {
 										</Link>
 										<button
 											onClick={() => handleFollow(user._id)}
-											className="px-4 h-8 bg-primary text-page text-[13px] font-semibold rounded-pill font-sans hover:bg-muted transition-colors shrink-0 cursor-pointer"
+											className="px-4 h-8 bg-primary text-page text-[calc(13px*var(--ws-fs))] font-semibold rounded-pill font-sans hover:bg-muted transition-colors shrink-0 cursor-pointer"
 											type="button"
 										>
 											{t("rail.follow")}
@@ -501,7 +501,7 @@ export function RightSidebar() {
 						<button
 							type="button"
 							onClick={() => setSuggestionsExpanded((v) => !v)}
-							className="px-3 py-2.5 text-left text-gold text-[13px] font-medium font-sans hover:underline cursor-pointer"
+							className="px-3 py-2.5 text-left text-gold text-[calc(13px*var(--ws-fs))] font-medium font-sans hover:underline cursor-pointer"
 						>
 							{suggestionsExpanded
 								? t("rail.showLess")
@@ -513,7 +513,7 @@ export function RightSidebar() {
 			)}
 
 			<footer className="px-3 mt-auto pb-2">
-				<p className="text-[10px] text-subtle font-sans">
+				<p className="text-[calc(10px*var(--ws-fs))] text-subtle font-sans">
 					© 2026 WorldStreet Group
 				</p>
 			</footer>

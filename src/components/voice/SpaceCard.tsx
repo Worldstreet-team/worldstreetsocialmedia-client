@@ -144,13 +144,13 @@ export function LiveSpaceCard({
       <span className="absolute inset-0 bg-gradient-to-t from-[#0c0a09]/85 via-[#0c0a09]/25 to-[#0c0a09]/30 transition-colors group-hover:via-[#0c0a09]/15" />
 
       <span className="relative flex items-center justify-between gap-2">
-        <span className="flex items-center gap-1.5 rounded-[4px] bg-danger px-1.5 py-px text-[9px] font-bold tracking-wide text-white font-sans">
+        <span className="flex items-center gap-1.5 rounded-[4px] bg-danger px-1.5 py-px text-[calc(9px*var(--ws-fs))] font-bold tracking-wide text-white font-sans">
           <span className="h-1 w-1 rounded-pill bg-white animate-pulse" />
           {t("live.badge")}
         </span>
         <span className="flex items-center gap-1.5 text-[#fafaf9]/85">
           <EqBars className="text-gold" />
-          <span className="flex items-center gap-1 font-sans text-[12px] font-semibold tabular-nums">
+          <span className="flex items-center gap-1 font-sans text-[calc(12px*var(--ws-fs))] font-semibold tabular-nums">
             <Users size={13} weight="bold" />
             {formatCompact(spaceListenerCount(row))}
           </span>
@@ -158,11 +158,11 @@ export function LiveSpaceCard({
       </span>
 
       <span className="relative mt-6 block">
-        <span className="block font-display text-[17px] font-semibold leading-snug text-[#fafaf9] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden">
+        <span className="block font-display text-[calc(17px*var(--ws-fs))] font-semibold leading-snug text-[#fafaf9] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden">
           {row.title}
         </span>
         {row.description && (
-          <span className="mt-1 block font-sans text-[12px] leading-snug text-[#fafaf9]/65 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden">
+          <span className="mt-1 block font-sans text-[calc(12px*var(--ws-fs))] leading-snug text-[#fafaf9]/65 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden">
             {row.description}
           </span>
         )}
@@ -172,7 +172,7 @@ export function LiveSpaceCard({
               <SafeAvatar src={row.host.avatar} />
             </span>
             <span className="flex min-w-0 items-center gap-1">
-              <span className="truncate font-sans text-[12.5px] font-semibold text-[#fafaf9]/90">
+              <span className="truncate font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-[#fafaf9]/90">
                 {hostName(row.host)}
               </span>
               <UserBadges
@@ -182,7 +182,7 @@ export function LiveSpaceCard({
                 size={12}
               />
               {row.community && (
-                <span className="ml-1 hidden truncate rounded-pill bg-[#fafaf9]/12 px-2 py-px font-sans text-[10.5px] font-medium text-[#fafaf9]/75 sm:block">
+                <span className="ml-1 hidden truncate rounded-pill bg-[#fafaf9]/12 px-2 py-px font-sans text-[calc(10.5px*var(--ws-fs))] font-medium text-[#fafaf9]/75 sm:block">
                   {row.community.name}
                 </span>
               )}
@@ -190,7 +190,7 @@ export function LiveSpaceCard({
           </span>
           <span
             className={clsx(
-              "shrink-0 rounded-pill px-3.5 py-1.5 font-sans text-[12px] font-semibold transition-colors",
+              "shrink-0 rounded-pill px-3.5 py-1.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
               row.joined || row.isHost
                 ? "bg-[#fafaf9]/14 text-[#fafaf9]"
                 : "bg-[#fafaf9] text-[#0c0a09] group-hover:bg-white",
@@ -239,14 +239,14 @@ export function NextUpCard({
       />
       <span className="absolute inset-0 bg-gradient-to-t from-[#0c0a09]/88 via-[#0c0a09]/40 to-[#0c0a09]/30" />
       <div className="relative">
-        <span className="font-sans text-[10px] font-bold uppercase tracking-[0.16em] text-gold">
+        <span className="font-sans text-[calc(10px*var(--ws-fs))] font-bold uppercase tracking-[0.16em] text-gold">
           {t("voice.nextUp")}
         </span>
-        <h3 className="mt-2 max-w-[26rem] font-display text-[20px] font-semibold leading-snug text-[#fafaf9]">
+        <h3 className="mt-2 max-w-[26rem] font-display text-[calc(20px*var(--ws-fs))] font-semibold leading-snug text-[#fafaf9]">
           {row.title}
         </h3>
         {row.description && (
-          <p className="mt-1.5 max-w-[28rem] font-sans text-[12.5px] leading-relaxed text-[#fafaf9]/70 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden">
+          <p className="mt-1.5 max-w-[28rem] font-sans text-[calc(12.5px*var(--ws-fs))] leading-relaxed text-[#fafaf9]/70 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden">
             {row.description}
           </p>
         )}
@@ -254,7 +254,7 @@ export function NextUpCard({
           <span className="relative h-6 w-6 overflow-hidden rounded-pill bg-[#1c1917]">
             <SafeAvatar src={row.host.avatar} />
           </span>
-          <span className="font-sans text-[12px] font-semibold text-[#fafaf9]/85">
+          <span className="font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-[#fafaf9]/85">
             {hostName(row.host)}
           </span>
           <UserBadges
@@ -264,7 +264,7 @@ export function NextUpCard({
             size={12}
           />
           {row.community && (
-            <span className="rounded-pill bg-[#fafaf9]/12 px-2 py-px font-sans text-[10.5px] font-medium text-[#fafaf9]/75">
+            <span className="rounded-pill bg-[#fafaf9]/12 px-2 py-px font-sans text-[calc(10.5px*var(--ws-fs))] font-medium text-[#fafaf9]/75">
               {row.community.name}
             </span>
           )}
@@ -279,7 +279,7 @@ export function NextUpCard({
               <button
                 type="button"
                 onClick={() => onStart(row)}
-                className="rounded-pill bg-danger px-4 h-10 font-sans text-[13px] font-semibold text-white hover:opacity-90 transition-opacity cursor-pointer"
+                className="rounded-pill bg-danger px-4 h-10 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-white hover:opacity-90 transition-opacity cursor-pointer"
               >
                 {t("voice.start")}
               </button>
@@ -290,7 +290,7 @@ export function NextUpCard({
               disabled={row.joined}
               onClick={() => onRemind(row)}
               className={clsx(
-                "flex items-center gap-1.5 rounded-pill px-4 h-10 font-sans text-[13px] font-semibold transition-colors",
+                "flex items-center gap-1.5 rounded-pill px-4 h-10 font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-colors",
                 row.joined
                   ? "bg-[#fafaf9]/14 text-[#fafaf9]/70 cursor-default"
                   : "bg-[#fafaf9] text-[#0c0a09] hover:bg-white cursor-pointer",
@@ -331,10 +331,10 @@ export function UpcomingSpaceRow({
       <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-lg bg-raised">
         {when ? (
           <>
-            <span className="font-sans text-[9px] font-bold uppercase tracking-[0.1em] text-gold">
+            <span className="font-sans text-[calc(9px*var(--ws-fs))] font-bold uppercase tracking-[0.1em] text-gold">
               {when.toLocaleString([], { month: "short" })}
             </span>
-            <span className="font-display text-[17px] font-semibold leading-none text-primary tabular-nums">
+            <span className="font-display text-[calc(17px*var(--ws-fs))] font-semibold leading-none text-primary tabular-nums">
               {when.getDate()}
             </span>
           </>
@@ -343,10 +343,10 @@ export function UpcomingSpaceRow({
         )}
       </div>
       <div className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate font-sans text-[14.5px] font-semibold text-primary">
+        <span className="truncate font-sans text-[calc(14.5px*var(--ws-fs))] font-semibold text-primary">
           {row.title}
         </span>
-        <span className="flex min-w-0 items-center gap-1 truncate font-sans text-[12px] text-subtle">
+        <span className="flex min-w-0 items-center gap-1 truncate font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
           {hostName(row.host)}
           <UserBadges
             isVerified={row.host.isVerified}
@@ -379,7 +379,7 @@ export function UpcomingSpaceRow({
           <button
             type="button"
             onClick={() => onStart(row)}
-            className="shrink-0 rounded-pill bg-danger px-3.5 h-8 font-sans text-[12px] font-semibold text-white hover:opacity-90 transition-opacity cursor-pointer"
+            className="shrink-0 rounded-pill bg-danger px-3.5 h-8 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-white hover:opacity-90 transition-opacity cursor-pointer"
           >
             {t("voice.start")}
           </button>
@@ -390,7 +390,7 @@ export function UpcomingSpaceRow({
           disabled={row.joined}
           onClick={() => onRemind(row)}
           className={clsx(
-            "shrink-0 rounded-pill px-3.5 h-8 font-sans text-[12px] font-semibold transition-colors",
+            "shrink-0 rounded-pill px-3.5 h-8 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
             row.joined
               ? "bg-raised text-muted cursor-default"
               : "bg-primary text-page hover:bg-muted cursor-pointer",

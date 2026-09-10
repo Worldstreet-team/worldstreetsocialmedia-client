@@ -48,7 +48,7 @@ export function FeedHeaderActions({ compact = false }: { compact?: boolean }) {
 			<div className={wrap}>
 				<span
 					className={clsx(
-						"flex items-center gap-1.5 h-8 rounded-pill text-[12px] font-bold font-sans text-danger border border-danger/40 bg-danger/10 select-none",
+						"flex items-center gap-1.5 h-8 rounded-pill text-[calc(12px*var(--ws-fs))] font-bold font-sans text-danger border border-danger/40 bg-danger/10 select-none",
 						compact ? "px-2.5" : "px-3.5",
 					)}
 				>
@@ -69,7 +69,7 @@ export function FeedHeaderActions({ compact = false }: { compact?: boolean }) {
 				onClick={() => setShowGoLive(true)}
 				aria-label={t("golive.entry")}
 				className={clsx(
-					"shine flex items-center justify-center gap-1.5 rounded-pill text-[12px] font-semibold font-sans text-white bg-gradient-to-b from-danger to-[#C22D2D] hover:opacity-90 transition-opacity cursor-pointer",
+					"shine flex items-center justify-center gap-1.5 rounded-pill text-[calc(12px*var(--ws-fs))] font-semibold font-sans text-white bg-gradient-to-b from-danger to-[#C22D2D] hover:opacity-90 transition-opacity cursor-pointer",
 					compact ? "h-9 w-9" : "h-8 px-3.5",
 				)}
 			>

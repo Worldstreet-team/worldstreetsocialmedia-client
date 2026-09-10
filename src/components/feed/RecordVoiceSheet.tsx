@@ -244,12 +244,12 @@ export function RecordVoiceSheet({
 							{phase !== "review" && (
 								<div className="flex h-16 w-full items-center justify-center gap-[3px] rounded-xl bg-sunken px-4">
 									{phase === "denied" ? (
-										<p className="font-sans text-[13px] text-muted">
+										<p className="font-sans text-[calc(13px*var(--ws-fs))] text-muted">
 											Microphone access was refused — allow it in the
 											browser and try again.
 										</p>
 									) : bars.length === 0 ? (
-										<p className="font-sans text-[13px] text-subtle">
+										<p className="font-sans text-[calc(13px*var(--ws-fs))] text-subtle">
 											Your voice draws here.
 										</p>
 									) : (
@@ -268,13 +268,13 @@ export function RecordVoiceSheet({
 							<div className="flex items-baseline gap-2 font-sans tabular-nums">
 								<span
 									className={clsx(
-										"text-[26px] font-semibold",
+										"text-[calc(26px*var(--ws-fs))] font-semibold",
 										nearCap ? "text-danger" : "text-primary",
 									)}
 								>
 									{clock(elapsed)}
 								</span>
-								<span className="text-[13px] text-subtle">
+								<span className="text-[calc(13px*var(--ws-fs))] text-subtle">
 									/ {clock(maxSeconds)}
 								</span>
 							</div>
@@ -304,7 +304,7 @@ export function RecordVoiceSheet({
 									    where the choice is visible — not on a chip in
 									    the composer after the sheet is gone. */}
 									<div className="-mt-1 flex w-full items-center justify-between">
-										<span className="font-sans text-[12.5px] text-muted">
+										<span className="font-sans text-[calc(12.5px*var(--ws-fs))] text-muted">
 											Background
 										</span>
 										<div className="flex gap-1.5">
@@ -312,7 +312,7 @@ export function RecordVoiceSheet({
 												type="button"
 												onClick={() => setBlurBg(true)}
 												className={clsx(
-													"cursor-pointer rounded-pill px-3.5 py-1.5 font-sans text-[12px] font-semibold transition-colors",
+													"cursor-pointer rounded-pill px-3.5 py-1.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
 													blurBg
 														? "bg-brand text-brand-on"
 														: "bg-raised text-muted hover:bg-chip",
@@ -324,7 +324,7 @@ export function RecordVoiceSheet({
 												type="button"
 												onClick={() => setBlurBg(false)}
 												className={clsx(
-													"cursor-pointer rounded-pill px-3.5 py-1.5 font-sans text-[12px] font-semibold transition-colors",
+													"cursor-pointer rounded-pill px-3.5 py-1.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
 													!blurBg
 														? "bg-brand text-brand-on"
 														: "bg-raised text-muted hover:bg-chip",
@@ -339,7 +339,7 @@ export function RecordVoiceSheet({
 										<button
 											type="button"
 											onClick={use}
-											className="h-12 cursor-pointer rounded-pill bg-brand px-7 font-sans text-[14px] font-semibold text-brand-on transition-colors hover:opacity-90"
+											className="h-12 cursor-pointer rounded-pill bg-brand px-7 font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:opacity-90"
 										>
 											Use voice note
 										</button>
@@ -368,7 +368,7 @@ export function RecordVoiceSheet({
 										<button
 											type="button"
 											onClick={start}
-											className="flex h-14 cursor-pointer items-center gap-2.5 rounded-pill bg-danger px-7 font-sans text-[14.5px] font-semibold text-white transition-colors hover:opacity-90"
+											className="flex h-14 cursor-pointer items-center gap-2.5 rounded-pill bg-danger px-7 font-sans text-[calc(14.5px*var(--ws-fs))] font-semibold text-white transition-colors hover:opacity-90"
 										>
 											<Microphone size={20} weight="fill" />
 											{phase === "denied" ? "Try again" : "Record"}
@@ -393,7 +393,7 @@ export function RecordVoiceSheet({
 												type="button"
 												aria-label="Finish recording"
 												onClick={() => recRef.current?.stop()}
-												className="flex h-14 cursor-pointer items-center gap-2.5 rounded-pill bg-danger px-7 font-sans text-[14.5px] font-semibold text-white transition-colors hover:opacity-90"
+												className="flex h-14 cursor-pointer items-center gap-2.5 rounded-pill bg-danger px-7 font-sans text-[calc(14.5px*var(--ws-fs))] font-semibold text-white transition-colors hover:opacity-90"
 											>
 												<Stop size={18} weight="fill" />
 												Finish
@@ -404,7 +404,7 @@ export function RecordVoiceSheet({
 							)}
 
 							{phase === "paused" && (
-								<p className="font-sans text-[12px] text-subtle">
+								<p className="font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
 									Paused — the gap won't be in the note.
 								</p>
 							)}

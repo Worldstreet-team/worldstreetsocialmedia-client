@@ -974,7 +974,7 @@ export default function Feed({
 						onClick={showNewPosts}
 						disabled={refreshing}
 						aria-busy={refreshing}
-						className="mt-2 flex items-center gap-2 h-10 pl-2.5 pr-4 rounded-pill bg-brand text-brand-on shadow-nav font-sans text-[13px] font-semibold hover:bg-brand-active transition-colors cursor-pointer disabled:cursor-default"
+						className="mt-2 flex items-center gap-2 h-10 pl-2.5 pr-4 rounded-pill bg-brand text-brand-on shadow-nav font-sans text-[calc(13px*var(--ws-fs))] font-semibold hover:bg-brand-active transition-colors cursor-pointer disabled:cursor-default"
 					>
 						{refreshing ? (
 							<span
@@ -998,7 +998,7 @@ export default function Feed({
 								{/* min-w, not a fixed w, so "+12" cannot spill out of
 								    its circle. */}
 								{faces.length > MAX_FACES && (
-									<span className="relative flex h-6 min-w-6 shrink-0 items-center justify-center rounded-pill bg-raised px-1.5 text-primary text-[11px] font-semibold tabular-nums ring-2 ring-page -ml-2">
+									<span className="relative flex h-6 min-w-6 shrink-0 items-center justify-center rounded-pill bg-raised px-1.5 text-primary text-[calc(11px*var(--ws-fs))] font-semibold tabular-nums ring-2 ring-page -ml-2">
 										+{faces.length - MAX_FACES}
 									</span>
 								)}
@@ -1109,7 +1109,7 @@ export default function Feed({
 				{feedState.hasMore && !loading && tab === "foryou" && feedState.posts.length > 0 && (
 					<div ref={loadMoreRef} className="flex justify-center py-8">
 						{isFetchingMore ? (
-							<span className="h-9 flex items-center gap-2 font-sans text-[13px] text-muted">
+							<span className="h-9 flex items-center gap-2 font-sans text-[calc(13px*var(--ws-fs))] text-muted">
 								<span className="w-4 h-4 rounded-full border-2 border-raised border-t-brand animate-spin" />
 								{t("feed.loading")}
 							</span>
@@ -1117,7 +1117,7 @@ export default function Feed({
 							<button
 								type="button"
 								onClick={loadMore}
-								className="h-9 px-4 rounded-pill border border-hairline bg-surface hover:bg-raised font-sans text-[13px] font-medium text-primary transition-colors cursor-pointer"
+								className="h-9 px-4 rounded-pill border border-hairline bg-surface hover:bg-raised font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors cursor-pointer"
 							>
 								{t("feed.loadmore")}
 							</button>

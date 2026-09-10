@@ -290,13 +290,13 @@ export default function VoiceRoomHost() {
                   >
                     <Waveform size={18} weight="fill" className="text-[#fafaf9]" />
                   </span>
-                  <h2 className="mt-3 font-display text-[17px] font-semibold leading-snug text-primary">
+                  <h2 className="mt-3 font-display text-[calc(17px*var(--ws-fs))] font-semibold leading-snug text-primary">
                     {tf("voice.endedTitle", "This space has ended")}
                   </h2>
-                  <p className="mt-1 max-w-[30ch] font-sans text-[13px] leading-relaxed text-muted">
+                  <p className="mt-1 max-w-[30ch] font-sans text-[calc(13px*var(--ws-fs))] leading-relaxed text-muted">
                     {endedRow.title}
                   </p>
-                  <p className="mt-2 font-sans text-[12px] text-subtle tabular-nums">
+                  <p className="mt-2 font-sans text-[calc(12px*var(--ws-fs))] text-subtle tabular-nums">
                     {formatCompact(spaceListenerCount(endedRow))}{" "}
                     {tf("voice.wereHere", "people were in the room")}
                   </p>
@@ -305,7 +305,7 @@ export default function VoiceRoomHost() {
                       <SafeAvatar src={endedRow.host.avatar} />
                     </span>
                     <span className="flex min-w-0 items-center gap-1">
-                      <span className="truncate font-sans text-[13.5px] font-semibold text-primary">
+                      <span className="truncate font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-primary">
                         {hostName(endedRow.host)}
                       </span>
                       <UserBadges
@@ -320,8 +320,8 @@ export default function VoiceRoomHost() {
                       onClick={() => void followHost()}
                       className={
                         alreadyFollowing
-                          ? "flex h-8 shrink-0 items-center gap-1 rounded-pill bg-raised px-3 font-sans text-[12px] font-semibold text-muted cursor-default"
-                          : "flex h-8 shrink-0 items-center rounded-pill bg-primary px-3 font-sans text-[12px] font-semibold text-page transition-colors hover:bg-muted cursor-pointer disabled:opacity-60"
+                          ? "flex h-8 shrink-0 items-center gap-1 rounded-pill bg-raised px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-muted cursor-default"
+                          : "flex h-8 shrink-0 items-center rounded-pill bg-primary px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-page transition-colors hover:bg-muted cursor-pointer disabled:opacity-60"
                       }
                     >
                       {alreadyFollowing ? (
@@ -337,7 +337,7 @@ export default function VoiceRoomHost() {
                   <button
                     type="button"
                     onClick={() => setEndedRow(null)}
-                    className="mt-5 h-10 w-full rounded-pill bg-chip font-sans text-[13px] font-semibold text-primary transition-colors hover:bg-raised cursor-pointer"
+                    className="mt-5 h-10 w-full rounded-pill bg-chip font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-raised cursor-pointer"
                   >
                     {t("common.close")}
                   </button>
@@ -419,10 +419,10 @@ export default function VoiceRoomHost() {
                 />
               </span>
               <span className="hidden min-w-0 max-w-[168px] flex-col items-start sm:flex">
-                <span className="w-full truncate font-sans text-[12.5px] font-semibold glass-ink">
+                <span className="w-full truncate font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold glass-ink">
                   {row.title}
                 </span>
-                <span className="flex items-center gap-1.5 font-sans text-[10.5px] glass-ink-dim">
+                <span className="flex items-center gap-1.5 font-sans text-[calc(10.5px*var(--ws-fs))] glass-ink-dim">
                   <EqBars className="h-2.5 text-gold" />
                   {t("voice.inRoomNow")}
                 </span>

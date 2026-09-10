@@ -114,7 +114,7 @@ export default function GlassSelect({
         {icon && <span className="shrink-0 opacity-75">{icon}</span>}
         <span
           className={clsx(
-            "min-w-0 flex-1 truncate font-sans text-[13px] font-medium",
+            "min-w-0 flex-1 truncate font-sans text-[calc(13px*var(--ws-fs))] font-medium",
             current ? "text-primary" : "text-subtle",
           )}
         >
@@ -171,11 +171,11 @@ export default function GlassSelect({
                   )}
                 >
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-sans text-[13px] font-medium text-primary">
+                    <span className="block truncate font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary">
                       {option.label}
                     </span>
                     {option.hint && (
-                      <span className="block truncate font-sans text-[11px] text-muted">
+                      <span className="block truncate font-sans text-[calc(11px*var(--ws-fs))] text-muted">
                         {option.hint}
                       </span>
                     )}

@@ -87,7 +87,7 @@ export function ProfileAbout({
     <div className="mt-6 flex flex-col gap-3 px-4">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="flex min-w-0 items-center gap-1.5 font-display text-[26px] font-semibold leading-8 text-primary">
+          <h2 className="flex min-w-0 items-center gap-1.5 font-display text-[calc(26px*var(--ws-fs))] font-semibold leading-8 text-primary">
             <span className="truncate">{fullName}</span>
             {/* This was declared as a prop and never rendered, so the one
                 place a person's marks matter most showed none of them. */}
@@ -99,7 +99,7 @@ export function ProfileAbout({
             />
           </h2>
           {followsYou && (
-            <span className="shrink-0 rounded-[4px] bg-raised px-1.5 py-px font-sans text-[10px] font-semibold uppercase tracking-wide text-muted">
+            <span className="shrink-0 rounded-[4px] bg-raised px-1.5 py-px font-sans text-[calc(10px*var(--ws-fs))] font-semibold uppercase tracking-wide text-muted">
               {t("profile.followsYou")}
             </span>
           )}
@@ -109,19 +109,19 @@ export function ProfileAbout({
             <button
               type="button"
               onClick={() => setPremiumOpen(true)}
-              className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-pill border border-hairline px-3 py-1 font-sans text-[13px] font-semibold text-primary transition-colors hover:bg-raised"
+              className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-pill border border-hairline px-3 py-1 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-raised"
             >
               <VerifiedIcon size={{ width: "15", height: "15" }} />
               Get verified
             </button>
           )}
         </div>
-        <div className="truncate font-sans text-[17px] text-muted">@{username}</div>
+        <div className="truncate font-sans text-[calc(17px*var(--ws-fs))] text-muted">@{username}</div>
       </div>
 
       {/* break-words: one long unbroken token (a URL, a wallet address) used to
           push the whole column past the viewport. */}
-      <div className="break-words font-sans text-[19px] leading-relaxed text-primary">
+      <div className="break-words font-sans text-[calc(19px*var(--ws-fs))] leading-relaxed text-primary">
         {bio ? (
           <>
             {renderRichText(
@@ -144,7 +144,7 @@ export function ProfileAbout({
         )}
       </div>
 
-      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-2 font-sans text-[17px] text-muted">
+      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-2 font-sans text-[calc(17px*var(--ws-fs))] text-muted">
         {location && (
           <span className="flex items-center gap-1">
             <MapPin className="h-[18px] w-[18px]" />
@@ -174,13 +174,13 @@ export function ProfileAbout({
           opens its tabs in this same order — a profile that reads
           Allies-then-Aligned while the modal reads the reverse makes the
           reader re-find their place every time. */}
-      <div className="mt-1 flex gap-6 font-sans text-[18px]">
+      <div className="mt-1 flex gap-6 font-sans text-[calc(18px*var(--ws-fs))]">
         <button
           type="button"
           onClick={() => onOpenFollows("followers")}
           className="flex cursor-pointer items-baseline gap-1 border-none bg-transparent p-0 hover:underline"
         >
-          <span className="text-[21px] font-bold tabular-nums text-primary">
+          <span className="text-[calc(21px*var(--ws-fs))] font-bold tabular-nums text-primary">
             {formatCompact(followersCount)}
           </span>
           <span className="text-muted">{t("profile.followers")}</span>
@@ -190,7 +190,7 @@ export function ProfileAbout({
           onClick={() => onOpenFollows("following")}
           className="flex cursor-pointer items-baseline gap-1 border-none bg-transparent p-0 hover:underline"
         >
-          <span className="text-[21px] font-bold tabular-nums text-primary">
+          <span className="text-[calc(21px*var(--ws-fs))] font-bold tabular-nums text-primary">
             {formatCompact(followingCount)}
           </span>
           <span className="text-muted">{t("profile.following")}</span>
@@ -209,7 +209,7 @@ export function ProfileAbout({
           editable in Edit profile → Topics — only the public chip list went. */}
       {communities.length > 0 && (
         <div className="mt-2">
-          <h3 className="mb-2 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">
+          <h3 className="mb-2 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-subtle">
             {t("profile.communities")}
           </h3>
           <div className="flex flex-wrap gap-2">
@@ -217,13 +217,13 @@ export function ProfileAbout({
               <Link
                 key={c.id}
                 href={`/communities/${c.slug}`}
-                className="flex h-8 items-center gap-1.5 rounded-pill bg-raised pl-1 pr-3 font-sans text-[12.5px] font-medium text-muted transition-colors hover:bg-chip hover:text-primary"
+                className="flex h-8 items-center gap-1.5 rounded-pill bg-raised pl-1 pr-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-muted transition-colors hover:bg-chip hover:text-primary"
               >
                 <span className="relative h-6 w-6 shrink-0 overflow-hidden rounded-pill bg-page">
                   {c.avatar ? (
                     <SafeAvatar src={c.avatar} className="object-cover" sizes="24px" />
                   ) : (
-                    <span className="flex h-full w-full items-center justify-center font-display text-[11px] font-semibold text-gold">
+                    <span className="flex h-full w-full items-center justify-center font-display text-[calc(11px*var(--ws-fs))] font-semibold text-gold">
                       {c.name.charAt(0).toUpperCase()}
                     </span>
                   )}

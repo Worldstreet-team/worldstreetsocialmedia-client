@@ -340,16 +340,16 @@ export function PremiumSheet() {
                 <VerifiedIcon size={{ width: "44", height: "44" }} tier={tier} />
               </motion.span>
               <span
-                className="mt-4 font-sans text-[11px] font-bold uppercase tracking-[0.16em]"
+                className="mt-4 font-sans text-[calc(11px*var(--ws-fs))] font-bold uppercase tracking-[0.16em]"
                 style={{ color: metal.hex }}
               >
                 {t("premium.eyebrow")}
               </span>
-              <h2 className="mt-2 font-display text-[28px] font-semibold leading-[1.1] tracking-[-0.02em]">
+              <h2 className="mt-2 font-display text-[calc(28px*var(--ws-fs))] font-semibold leading-[1.1] tracking-[-0.02em]">
                 {live ? t("premium.manageTitle") : t("premium.title")}
               </h2>
               {!live && (
-                <p className="mt-2.5 max-w-[34ch] font-sans text-[14px] leading-relaxed text-muted">
+                <p className="mt-2.5 max-w-[34ch] font-sans text-[calc(14px*var(--ws-fs))] leading-relaxed text-muted">
                   {t("premium.pitch")}
                 </p>
               )}
@@ -370,7 +370,7 @@ export function PremiumSheet() {
                   <div className="flex items-center justify-between gap-3">
                     <span
                       className={clsx(
-                        "flex h-6 items-center gap-1.5 rounded-pill px-2.5 font-sans text-[11px] font-bold uppercase tracking-wide",
+                        "flex h-6 items-center gap-1.5 rounded-pill px-2.5 font-sans text-[calc(11px*var(--ws-fs))] font-bold uppercase tracking-wide",
                         sub!.status === "past_due"
                           ? "bg-danger/15 text-danger"
                           : "",
@@ -388,7 +388,7 @@ export function PremiumSheet() {
                         ? t("premium.pastDue")
                         : t("premium.active")}
                     </span>
-                    <span className="font-sans text-[12.5px] tabular-nums text-muted">
+                    <span className="font-sans text-[calc(12.5px*var(--ws-fs))] tabular-nums text-muted">
                       {(sub!.cancelAtPeriodEnd
                         ? t("premium.keeps")
                         : t("premium.renews")
@@ -396,12 +396,12 @@ export function PremiumSheet() {
                     </span>
                   </div>
                   {sub!.cancelAtPeriodEnd && (
-                    <p className="mt-2.5 font-sans text-[12.5px] leading-relaxed text-subtle">
+                    <p className="mt-2.5 font-sans text-[calc(12.5px*var(--ws-fs))] leading-relaxed text-subtle">
                       {t("premium.canceledNote")}
                     </p>
                   )}
                   {sub!.status === "past_due" && (
-                    <p className="mt-2.5 font-sans text-[12.5px] leading-relaxed text-subtle">
+                    <p className="mt-2.5 font-sans text-[calc(12.5px*var(--ws-fs))] leading-relaxed text-subtle">
                       {t("premium.pastDueNote")}
                     </p>
                   )}
@@ -418,10 +418,10 @@ export function PremiumSheet() {
                       {perk.icon}
                     </span>
                     <span className="min-w-0">
-                      <span className="block font-sans text-[14px] font-semibold leading-snug">
+                      <span className="block font-sans text-[calc(14px*var(--ws-fs))] font-semibold leading-snug">
                         {perk.title}
                       </span>
-                      <span className="block font-sans text-[12.5px] leading-snug text-muted">
+                      <span className="block font-sans text-[calc(12.5px*var(--ws-fs))] leading-snug text-muted">
                         {perk.sub}
                       </span>
                     </span>
@@ -460,7 +460,7 @@ export function PremiumSheet() {
                           {/* The summit rung carries the crowd's pick. */}
                           {rung.id === "gold" && (
                             <span
-                              className="absolute -top-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-pill px-2 py-0.5 font-sans text-[9px] font-bold uppercase tracking-[0.08em] text-[#0c0a09]"
+                              className="absolute -top-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-pill px-2 py-0.5 font-sans text-[calc(9px*var(--ws-fs))] font-bold uppercase tracking-[0.08em] text-[#0c0a09]"
                               style={{ background: METALS.gold.hex }}
                             >
                               {t("premium.tier.popular")}
@@ -471,11 +471,11 @@ export function PremiumSheet() {
                               size={{ width: "13", height: "13" }}
                               tier={rung.id}
                             />
-                            <span className="font-sans text-[12.5px] font-semibold text-primary">
+                            <span className="font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-primary">
                               {t(`premium.tier.${rung.id}`)}
                             </span>
                           </span>
-                          <span className="mt-1 block font-sans text-[12.5px] tabular-nums text-muted">
+                          <span className="mt-1 block font-sans text-[calc(12.5px*var(--ws-fs))] tabular-nums text-muted">
                             ${(rung.priceUsdMinor / 100).toFixed(0)}
                           </span>
                         </button>
@@ -493,24 +493,24 @@ export function PremiumSheet() {
                         animate={{ y: 0, opacity: 1 }}
                         exit={reduce ? { opacity: 0 } : { y: -26, opacity: 0 }}
                         transition={{ duration: 0.4, ease: ORBIT_EASE }}
-                        className="font-display text-[52px] font-semibold leading-none tracking-[-0.03em] tabular-nums text-primary"
+                        className="font-display text-[calc(52px*var(--ws-fs))] font-semibold leading-none tracking-[-0.03em] tabular-nums text-primary"
                       >
                         ${price}
                       </motion.span>
                     </AnimatePresence>
-                    <span className="font-sans text-[14px] text-muted">
+                    <span className="font-sans text-[calc(14px*var(--ws-fs))] text-muted">
                       {t("premium.perMonth")}
                     </span>
                   </div>
                 )}
 
                 {error && (
-                  <p className="mb-3 text-center font-sans text-[12.5px] leading-relaxed text-danger">
+                  <p className="mb-3 text-center font-sans text-[calc(12.5px*var(--ws-fs))] leading-relaxed text-danger">
                     {error}
                   </p>
                 )}
                 {!live && state && !state.available && !error && (
-                  <p className="mb-3 text-center font-sans text-[12.5px] leading-relaxed text-subtle">
+                  <p className="mb-3 text-center font-sans text-[calc(12.5px*var(--ws-fs))] leading-relaxed text-subtle">
                     {t("premium.unavailable")}
                   </p>
                 )}
@@ -522,7 +522,7 @@ export function PremiumSheet() {
                         type="button"
                         onClick={subscribe}
                         disabled={busy}
-                        className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-pill bg-brand font-sans text-[14px] font-semibold text-brand-on transition-opacity hover:opacity-90 disabled:opacity-50"
+                        className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-pill bg-brand font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-brand-on transition-opacity hover:opacity-90 disabled:opacity-50"
                       >
                         {busy && (
                           <span className="h-3.5 w-3.5 animate-spin rounded-pill border-2 border-current/30 border-t-current" />
@@ -537,7 +537,7 @@ export function PremiumSheet() {
                         type="button"
                         onClick={cancel}
                         disabled={busy}
-                        className="h-10 w-full cursor-pointer rounded-pill font-sans text-[13px] font-semibold text-muted transition-colors hover:bg-raised hover:text-primary disabled:opacity-50"
+                        className="h-10 w-full cursor-pointer rounded-pill font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-muted transition-colors hover:bg-raised hover:text-primary disabled:opacity-50"
                       >
                         {t("premium.cancel")}
                       </button>
@@ -549,7 +549,7 @@ export function PremiumSheet() {
                     onClick={subscribe}
                     disabled={busy || !state?.available}
                     className={clsx(
-                      "flex h-11 w-full items-center justify-center gap-2 rounded-pill font-sans text-[14px] font-semibold transition-colors",
+                      "flex h-11 w-full items-center justify-center gap-2 rounded-pill font-sans text-[calc(14px*var(--ws-fs))] font-semibold transition-colors",
                       busy || !state?.available
                         ? "cursor-not-allowed bg-raised text-subtle"
                         : "cursor-pointer bg-brand text-brand-on hover:opacity-90",
@@ -562,7 +562,7 @@ export function PremiumSheet() {
                   </button>
                 )}
 
-                <p className="mt-3 text-center font-sans text-[11.5px] text-subtle">
+                <p className="mt-3 text-center font-sans text-[calc(11.5px*var(--ws-fs))] text-subtle">
                   {t("premium.billedFromWallet")}
                 </p>
               </div>

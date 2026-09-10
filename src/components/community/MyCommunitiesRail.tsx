@@ -58,7 +58,7 @@ export function MyCommunitiesRail({
               </span>
             )}
           </span>
-          <span className="truncate font-sans text-[12.5px] font-semibold text-primary">
+          <span className="truncate font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-primary">
             {c.name}
           </span>
         </Link>
@@ -74,7 +74,7 @@ export function MyCommunitiesRail({
         <span className="flex aspect-[4/3] w-full items-center justify-center rounded-xl border border-dashed border-hairline bg-surface text-muted transition-colors hover:border-gold hover:text-gold">
           <Plus size={20} weight="bold" />
         </span>
-        <span className="truncate text-left font-sans text-[12.5px] font-medium text-muted">
+        <span className="truncate text-left font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-muted">
           {t("community.create")}
         </span>
       </button>

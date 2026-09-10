@@ -40,7 +40,7 @@ function StatTileCell({ label, value }: { label: string; value: string }) {
 	return (
 		<div className="rounded-2xl bg-[#171614] px-5 py-4">
 			<span className="glass-eyebrow font-sans">{label}</span>
-			<span className="mt-2 block font-display text-[26px] font-semibold leading-none tracking-tight glass-ink tabular-nums">
+			<span className="mt-2 block font-display text-[calc(26px*var(--ws-fs))] font-semibold leading-none tracking-tight glass-ink tabular-nums">
 				{value}
 			</span>
 		</div>
@@ -147,7 +147,7 @@ export function PostStats({
 									{ACTION_ORDER.map((a) => (
 										<div
 											key={a}
-											className="flex items-center justify-between font-sans text-[13.5px]"
+											className="flex items-center justify-between font-sans text-[calc(13.5px*var(--ws-fs))]"
 										>
 											<span className="glass-ink-dim capitalize">
 												{t(`post.${a}` as string) !== `post.${a}`

@@ -69,7 +69,7 @@ function PresetCarousel({ thumbUrl, active, onSelect }: PresetCarouselProps) {
         </span>
         <span
           className={clsx(
-            "text-[11px] font-sans transition-colors",
+            "text-[calc(11px*var(--ws-fs))] font-sans transition-colors",
             isActive ? "glass-ink font-semibold" : "glass-ink-dim",
           )}
         >

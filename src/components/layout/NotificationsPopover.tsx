@@ -163,13 +163,13 @@ export function NotificationsPopover({
 								label={t("nav.notifications")}
 							>
 								<OverlayHeader onClose={close}>
-									<span className="flex-1 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">
+									<span className="flex-1 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-subtle">
 										{t("nav.notifications")}
 									</span>
 									<Link
 										href="/notifications"
 										onClick={close}
-										className="font-sans text-[12px] font-semibold text-gold hover:underline"
+										className="font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-gold hover:underline"
 									>
 										{t("rail.seeAll")}
 									</Link>
@@ -192,7 +192,7 @@ export function NotificationsPopover({
 											</div>
 										))
 									) : groups.length === 0 ? (
-										<p className="px-3 py-6 text-center font-sans text-[13px] text-subtle">
+										<p className="px-3 py-6 text-center font-sans text-[calc(13px*var(--ws-fs))] text-subtle">
 											{t("notif.empty.all.title")}
 										</p>
 									) : (

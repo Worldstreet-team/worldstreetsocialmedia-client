@@ -50,10 +50,10 @@ const MAX_WEBSITE = 100;
 /* The panel follows the theme now, so fields and labels come from tokens —
    a fixed-white `glass-input` is a white block on the light frost. */
 const INPUT =
-	"w-full rounded-xl bg-sunken px-3.5 py-3 font-sans text-[15px] text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised";
+	"w-full rounded-xl bg-sunken px-3.5 py-3 font-sans text-[calc(15px*var(--ws-fs))] text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised";
 
 const EYEBROW =
-	"block font-sans text-[11px] font-bold uppercase tracking-[0.14em] text-subtle";
+	"block font-sans text-[calc(11px*var(--ws-fs))] font-bold uppercase tracking-[0.14em] text-subtle";
 
 /** Label + optional counter above a borderless control. */
 function Field({
@@ -74,7 +74,7 @@ function Field({
 				{counter && (
 					<span
 						className={clsx(
-							"font-sans text-[11px] tabular-nums",
+							"font-sans text-[calc(11px*var(--ws-fs))] tabular-nums",
 							counterWarn ? "text-primary" : "text-subtle",
 						)}
 					>
@@ -269,10 +269,10 @@ export default function EditProfileModal({
 				    without scrolling the form to its end. */}
 				<OverlayHeader onClose={onClose}>
 					<div className="min-w-0 flex-1">
-						<h2 className="truncate font-sans text-[14px] font-semibold text-primary">
+						<h2 className="truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
 							Edit profile
 						</h2>
-						<p className="truncate font-sans text-[11.5px] text-subtle">
+						<p className="truncate font-sans text-[calc(11.5px*var(--ws-fs))] text-subtle">
 							How you appear across WorldStreet.
 						</p>
 					</div>
@@ -280,7 +280,7 @@ export default function EditProfileModal({
 						type="button"
 						onClick={handleSave}
 						disabled={isLoading}
-						className="h-8 shrink-0 cursor-pointer rounded-pill bg-brand px-4 font-sans text-[13px] font-semibold text-brand-on transition-colors hover:bg-brand-active disabled:cursor-not-allowed disabled:opacity-60"
+						className="h-8 shrink-0 cursor-pointer rounded-pill bg-brand px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active disabled:cursor-not-allowed disabled:opacity-60"
 					>
 						{isLoading ? "Saving…" : "Save"}
 					</button>
@@ -416,7 +416,7 @@ export default function EditProfileModal({
 									value={formData.location}
 									onChange={handleInputChange}
 									maxLength={MAX_LOCATION}
-									className="w-full bg-transparent py-3 font-sans text-[15px] text-primary outline-none placeholder:text-subtle"
+									className="w-full bg-transparent py-3 font-sans text-[calc(15px*var(--ws-fs))] text-primary outline-none placeholder:text-subtle"
 									placeholder="Where you're based"
 								/>
 							</div>
@@ -431,7 +431,7 @@ export default function EditProfileModal({
 									value={formData.website}
 									onChange={handleInputChange}
 									maxLength={MAX_WEBSITE}
-									className="w-full bg-transparent py-3 font-sans text-[15px] text-primary outline-none placeholder:text-subtle"
+									className="w-full bg-transparent py-3 font-sans text-[calc(15px*var(--ws-fs))] text-primary outline-none placeholder:text-subtle"
 									placeholder="yoursite.com"
 								/>
 							</div>
@@ -450,14 +450,14 @@ export default function EditProfileModal({
 							>
 								<span className="min-w-0">
 									<span className={EYEBROW}>Topics</span>
-									<span className="mt-1 block truncate font-sans text-[13.5px] text-primary">
+									<span className="mt-1 block truncate font-sans text-[calc(13.5px*var(--ws-fs))] text-primary">
 										{topicSummary}
 									</span>
 								</span>
 								<span className="flex shrink-0 items-center gap-2">
 									<span
 										className={clsx(
-											"font-sans text-[11px] tabular-nums",
+											"font-sans text-[calc(11px*var(--ws-fs))] tabular-nums",
 											interests.length >= MAX_INTERESTS
 												? "text-primary"
 												: "text-subtle",

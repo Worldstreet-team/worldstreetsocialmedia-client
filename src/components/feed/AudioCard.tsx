@@ -184,7 +184,7 @@ export function AudioCard({
 					))}
 				</div>
 
-				<span className="shrink-0 font-sans text-[12.5px] font-medium tabular-nums text-primary">
+				<span className="shrink-0 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium tabular-nums text-primary">
 					{clock(shown)}
 				</span>
 			</div>

@@ -149,7 +149,7 @@ export function QuoteModal({
 						placeholder={t("quote.placeholder")}
 						autoFocus
 						rows={3}
-						className="w-full resize-none rounded-xl bg-sunken px-3.5 py-3 font-sans text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised sm:text-[15px]"
+						className="w-full resize-none rounded-xl bg-sunken px-3.5 py-3 font-sans text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised sm:text-[calc(15px*var(--ws-fs))]"
 					/>
 
 					{attachments.length > 0 && (
@@ -200,7 +200,7 @@ export function QuoteModal({
 							<span className="relative h-5 w-5 shrink-0 overflow-hidden rounded-pill">
 								<SafeAvatar src={target.avatar} className="object-cover" />
 							</span>
-							<span className="flex min-w-0 items-center gap-1 truncate font-sans text-[13px] font-semibold text-primary">
+							<span className="flex min-w-0 items-center gap-1 truncate font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
 								<span className="min-w-0 truncate">
 									{target.authorName}
 								</span>
@@ -210,11 +210,11 @@ export function QuoteModal({
 									size={13}
 								/>
 							</span>
-							<span className="truncate font-sans text-[12px] text-subtle">
+							<span className="truncate font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
 								@{target.username} · {target.timestamp}
 							</span>
 						</div>
-						<p className="line-clamp-3 whitespace-pre-wrap font-sans text-[14px] text-muted">
+						<p className="line-clamp-3 whitespace-pre-wrap font-sans text-[calc(14px*var(--ws-fs))] text-muted">
 							{target.content}
 						</p>
 					</div>
@@ -242,7 +242,7 @@ export function QuoteModal({
 						</button>
 						<span
 							className={clsx(
-								"ml-1.5 font-sans text-[12px] tabular-nums",
+								"ml-1.5 font-sans text-[calc(12px*var(--ws-fs))] tabular-nums",
 								remaining <= 28 ? "text-primary" : "text-subtle",
 							)}
 						>
@@ -254,7 +254,7 @@ export function QuoteModal({
 						type="button"
 						disabled={!canPost}
 						onClick={submit}
-						className="h-10 cursor-pointer rounded-pill bg-brand px-6 font-sans text-[14px] font-semibold text-brand-on transition-colors hover:bg-brand-active disabled:cursor-not-allowed disabled:opacity-40"
+						className="h-10 cursor-pointer rounded-pill bg-brand px-6 font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active disabled:cursor-not-allowed disabled:opacity-40"
 					>
 						{busy ? t("quote.posting") : t("composer.post")}
 					</button>

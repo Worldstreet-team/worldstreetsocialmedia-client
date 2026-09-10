@@ -281,7 +281,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 	const fieldShell =
 		"w-full rounded-xl bg-primary/[0.06] px-4 font-sans text-base text-primary outline-none transition-[background-color,box-shadow] placeholder:text-subtle hover:bg-primary/[0.09] focus:bg-primary/[0.09] focus:ring-2 focus:ring-brand/50";
 	const fieldLabel =
-		"block text-left font-sans text-[11px] font-semibold uppercase tracking-[0.12em] text-muted";
+		"block text-left font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.12em] text-muted";
 
 	const primaryBtn =
 		"group w-full bg-brand text-brand-on h-14 cursor-pointer py-3.5 px-6 rounded-pill flex items-center justify-center gap-2 hover:bg-brand-active transition-colors active:scale-[0.98] font-sans text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed";
@@ -324,7 +324,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 					{error && (
 						<p
 							role="alert"
-							className="w-full rounded-lg bg-danger/10 px-4 py-3 text-left font-sans text-[13px] text-danger"
+							className="w-full rounded-lg bg-danger/10 px-4 py-3 text-left font-sans text-[calc(13px*var(--ws-fs))] text-danger"
 						>
 							{error}
 						</p>
@@ -377,7 +377,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 										id="username-status"
 										aria-live="polite"
 										className={clsx(
-											"min-h-4 pl-4 font-sans text-[12px]",
+											"min-h-4 pl-4 font-sans text-[calc(12px*var(--ws-fs))]",
 											handleState === "taken" || handleState === "invalid"
 												? "text-danger"
 												: handleState === "ok"
@@ -403,7 +403,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 										    — a proportional counter jitters as it counts. */}
 										<span
 											className={clsx(
-												"font-sans text-[11px] font-medium tabular-nums tracking-normal normal-case",
+												"font-sans text-[calc(11px*var(--ws-fs))] font-medium tabular-nums tracking-normal normal-case",
 												bio.length >= BIO_MAX ? "text-danger" : "text-subtle",
 											)}
 										>
@@ -464,7 +464,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 											}
 											aria-pressed={on}
 											className={clsx(
-												"min-h-12 px-3 rounded-lg font-sans text-[13px] font-semibold transition-colors cursor-pointer",
+												"min-h-12 px-3 rounded-lg font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-colors cursor-pointer",
 												on
 													? "glass-tile glass-tile-on text-primary"
 													: "glass-tile text-muted hover:text-primary",
@@ -514,7 +514,7 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 								onToggle={toggleInterest}
 							/>
 
-							<p className="font-sans text-[12px] text-subtle tabular-nums">
+							<p className="font-sans text-[calc(12px*var(--ws-fs))] text-subtle tabular-nums">
 								{formData.interests.length} / {MAX_INTERESTS} selected
 							</p>
 
@@ -568,10 +568,10 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 											<f.icon size={18} weight="duotone" />
 										</span>
 										<div className="min-w-0">
-											<p className="font-sans text-[14px] font-semibold text-primary">
+											<p className="font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
 												{f.title}
 											</p>
-											<p className="font-sans text-[12.5px] text-muted leading-snug">
+											<p className="font-sans text-[calc(12.5px*var(--ws-fs))] text-muted leading-snug">
 												{f.blurb}
 											</p>
 										</div>

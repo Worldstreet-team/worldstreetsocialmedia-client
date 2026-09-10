@@ -95,7 +95,7 @@ export function DeltaChip({
 		<span className="flex items-center gap-1.5">
 			<span
 				className={clsx(
-					"inline-flex items-center gap-0.5 rounded-pill px-1.5 py-0.5 font-sans text-[11px] font-semibold tabular-nums",
+					"inline-flex items-center gap-0.5 rounded-pill px-1.5 py-0.5 font-sans text-[calc(11px*var(--ws-fs))] font-semibold tabular-nums",
 					up ? "bg-success/10 text-success" : "bg-danger/10 text-danger",
 				)}
 			>
@@ -108,7 +108,7 @@ export function DeltaChip({
 				{suffix}
 			</span>
 			{caption && (
-				<span className="font-sans text-[11px] glass-ink-faint">{caption}</span>
+				<span className="font-sans text-[calc(11px*var(--ws-fs))] glass-ink-faint">{caption}</span>
 			)}
 		</span>
 	);
@@ -146,7 +146,7 @@ export function StatCard({
 				<span className="glass-eyebrow font-sans">{label}</span>
 			</div>
 			<div className="mt-3 flex items-end justify-between gap-3">
-				<span className="font-display text-[30px] font-semibold leading-none tracking-tight glass-ink tabular-nums">
+				<span className="font-display text-[calc(30px*var(--ws-fs))] font-semibold leading-none tracking-tight glass-ink tabular-nums">
 					{value}
 				</span>
 				{chart}
@@ -159,7 +159,7 @@ export function StatCard({
 						caption={deltaCaption}
 					/>
 				) : sub ? (
-					<span className="font-sans text-[11px] glass-ink-faint">{sub}</span>
+					<span className="font-sans text-[calc(11px*var(--ws-fs))] glass-ink-faint">{sub}</span>
 				) : null}
 			</div>
 		</div>
@@ -180,16 +180,16 @@ export function MetricRow({
 	return (
 		<div className="flex items-baseline justify-between gap-3 border-b border-[#fafaf9]/[0.05] py-2.5 last:border-0">
 			<span className="min-w-0">
-				<span className="block font-sans text-[13px] glass-ink-dim">
+				<span className="block font-sans text-[calc(13px*var(--ws-fs))] glass-ink-dim">
 					{label}
 				</span>
 				{hint && (
-					<span className="mt-0.5 block font-sans text-[11px] glass-ink-faint">
+					<span className="mt-0.5 block font-sans text-[calc(11px*var(--ws-fs))] glass-ink-faint">
 						{hint}
 					</span>
 				)}
 			</span>
-			<span className="shrink-0 font-sans text-[15px] font-semibold glass-ink tabular-nums">
+			<span className="shrink-0 font-sans text-[calc(15px*var(--ws-fs))] font-semibold glass-ink tabular-nums">
 				{value}
 			</span>
 		</div>
@@ -213,7 +213,7 @@ export function WindowSwitch({
 					onClick={() => onChange(d)}
 					aria-pressed={value === d}
 					className={clsx(
-						"h-7 rounded-pill px-3 font-sans text-[11.5px] font-semibold tabular-nums transition-colors cursor-pointer",
+						"h-7 rounded-pill px-3 font-sans text-[calc(11.5px*var(--ws-fs))] font-semibold tabular-nums transition-colors cursor-pointer",
 						value === d
 							? "bg-[#fafaf9] text-[#0c0a09]"
 							: "glass-ink-faint hover:glass-ink",
@@ -229,7 +229,7 @@ export function WindowSwitch({
 /** Empty note inside a card — quiet, centred. */
 export function CellEmpty({ children }: { children: React.ReactNode }) {
 	return (
-		<p className="px-5 py-10 text-center font-sans text-[13px] glass-ink-faint">
+		<p className="px-5 py-10 text-center font-sans text-[calc(13px*var(--ws-fs))] glass-ink-faint">
 			{children}
 		</p>
 	);
@@ -251,11 +251,11 @@ export function PageHead({
 	return (
 		<div className="mb-4 flex flex-wrap items-end justify-between gap-3">
 			<div className="min-w-0">
-				<h1 className="font-display text-[22px] font-semibold tracking-tight glass-ink">
+				<h1 className="font-display text-[calc(22px*var(--ws-fs))] font-semibold tracking-tight glass-ink">
 					{title}
 				</h1>
 				{caption && (
-					<p className="mt-1 max-w-[68ch] font-sans text-[13px] glass-ink-dim">
+					<p className="mt-1 max-w-[68ch] font-sans text-[calc(13px*var(--ws-fs))] glass-ink-dim">
 						{caption}
 					</p>
 				)}

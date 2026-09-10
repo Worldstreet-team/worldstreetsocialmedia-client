@@ -66,7 +66,7 @@ export function LanguageMenu({
 			>
 				<Globe size={16} />
 				<span className="flex-1">{t("nav.language")}</span>
-				<span className="text-muted text-[13px]">
+				<span className="text-muted text-[calc(13px*var(--ws-fs))]">
 					{LANGUAGE_NAMES[current]}
 				</span>
 			</button>

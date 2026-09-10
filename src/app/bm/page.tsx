@@ -464,13 +464,13 @@ export default function BmPage() {
 				)}
 			>
 				<header className="flex h-16 shrink-0 items-center justify-between px-5">
-					<h1 className="font-display text-[20px] font-semibold tracking-[-0.01em]">
+					<h1 className="font-display text-[calc(20px*var(--ws-fs))] font-semibold tracking-[-0.01em]">
 						Business
 					</h1>
 					<button
 						type="button"
 						onClick={() => setComposerOpen(true)}
-						className="flex h-9 items-center gap-1.5 rounded-pill bg-brand px-3.5 font-sans text-[13px] font-semibold text-brand-on transition-colors hover:opacity-90 cursor-pointer"
+						className="flex h-9 items-center gap-1.5 rounded-pill bg-brand px-3.5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:opacity-90 cursor-pointer"
 					>
 						<Plus size={14} weight="bold" />
 						New booking
@@ -569,13 +569,13 @@ export default function BmPage() {
 										<span className="flex items-baseline justify-between gap-2">
 											<span
 												className={clsx(
-													"truncate font-sans text-[14.5px] text-primary",
+													"truncate font-sans text-[calc(14.5px*var(--ws-fs))] text-primary",
 													t.unread ? "font-bold" : "font-semibold",
 												)}
 											>
 												{other?.firstName || other?.username}
 											</span>
-											<span className="shrink-0 font-sans text-[11.5px] text-subtle tabular-nums">
+											<span className="shrink-0 font-sans text-[calc(11.5px*var(--ws-fs))] text-subtle tabular-nums">
 												{formatTimeAgo(t.lastMessageAt)}
 											</span>
 										</span>
@@ -591,7 +591,7 @@ export default function BmPage() {
 											) : null}
 											<span
 												className={clsx(
-													"truncate font-sans text-[13px]",
+													"truncate font-sans text-[calc(13px*var(--ws-fs))]",
 													myMove || t.unread
 														? "font-medium text-primary"
 														: "text-muted",
@@ -606,7 +606,7 @@ export default function BmPage() {
 									{b && (
 										<span
 											className={clsx(
-												"shrink-0 rounded-pill px-2 py-0.5 font-sans text-[10.5px] font-semibold uppercase tracking-wide",
+												"shrink-0 rounded-pill px-2 py-0.5 font-sans text-[calc(10.5px*var(--ws-fs))] font-semibold uppercase tracking-wide",
 												STATUS_CHIP[b.status],
 											)}
 										>
@@ -695,7 +695,7 @@ function RequestQueue({
 	const [visible, setVisible] = useState(60);
 	if (requests.length === 0) {
 		return (
-			<div className="px-6 py-10 text-center font-sans text-[13px] text-subtle">
+			<div className="px-6 py-10 text-center font-sans text-[calc(13px*var(--ws-fs))] text-subtle">
 				No pending requests — offers land here, biggest first.
 			</div>
 		);
@@ -728,7 +728,7 @@ function RequestQueue({
 			{/* The aggregate is the celebrity's signal: what is this queue
 			    WORTH, before reading a single row. */}
 			<div className="flex items-center justify-between px-4 pb-2 pt-1">
-				<span className="font-sans text-[12px] text-subtle tabular-nums">
+				<span className="font-sans text-[calc(12px*var(--ws-fs))] text-subtle tabular-nums">
 					{requests.length} request{requests.length === 1 ? "" : "s"} ·{" "}
 					<span className="font-semibold text-gold">
 						{usd(totalOffered)} offered
@@ -739,7 +739,7 @@ function RequestQueue({
 						type="button"
 						disabled={busy}
 						onClick={onDeclineAll}
-						className="cursor-pointer font-sans text-[12px] font-medium text-muted transition-colors hover:text-danger disabled:opacity-50"
+						className="cursor-pointer font-sans text-[calc(12px*var(--ws-fs))] font-medium text-muted transition-colors hover:text-danger disabled:opacity-50"
 					>
 						Decline all
 					</button>
@@ -762,14 +762,14 @@ function RequestQueue({
 							</span>
 							<span className="min-w-0 flex-1">
 								<span className="flex items-baseline justify-between gap-2">
-									<span className="truncate font-sans text-[14px] font-semibold text-primary">
+									<span className="truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
 										{adv.firstName || adv.username}
 									</span>
-									<span className="shrink-0 font-display text-[15px] font-semibold text-primary tabular-nums">
+									<span className="shrink-0 font-display text-[calc(15px*var(--ws-fs))] font-semibold text-primary tabular-nums">
 										{usd(r.agreedUsdMinor)}
 									</span>
 								</span>
-								<span className="mt-0.5 block truncate font-sans text-[12.5px] text-muted tabular-nums">
+								<span className="mt-0.5 block truncate font-sans text-[calc(12.5px*var(--ws-fs))] text-muted tabular-nums">
 									{r.format} · {r.durationDays}d ·{" "}
 									{new Date(r.startAt).toLocaleDateString(undefined, {
 										month: "short",
@@ -794,7 +794,7 @@ function RequestQueue({
 								type="button"
 								disabled={busy}
 								onClick={() => onAct(r._id, "accept")}
-								className="h-8 cursor-pointer rounded-pill bg-brand px-3 font-sans text-[12px] font-semibold text-brand-on transition-colors hover:bg-brand-active disabled:opacity-50"
+								className="h-8 cursor-pointer rounded-pill bg-brand px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active disabled:opacity-50"
 							>
 								Accept
 							</button>
@@ -815,7 +815,7 @@ function RequestQueue({
 				<button
 					type="button"
 					onClick={() => setVisible((v) => v + 60)}
-					className="mx-4 my-3 h-10 w-[calc(100%-2rem)] cursor-pointer rounded-pill bg-raised font-sans text-[13px] font-medium text-muted transition-colors hover:bg-chip hover:text-primary"
+					className="mx-4 my-3 h-10 w-[calc(100%-2rem)] cursor-pointer rounded-pill bg-raised font-sans text-[calc(13px*var(--ws-fs))] font-medium text-muted transition-colors hover:bg-chip hover:text-primary"
 				>
 					Show {Math.min(60, requests.length - visible)} more of{" "}
 					{requests.length - visible}
@@ -879,16 +879,16 @@ function CampaignStatsSheet({
 								key={label}
 								className="rounded-[10px] bg-sunken px-3 py-2.5"
 							>
-								<p className="font-display text-[18px] font-semibold text-primary tabular-nums">
+								<p className="font-display text-[calc(18px*var(--ws-fs))] font-semibold text-primary tabular-nums">
 									{value}
 								</p>
-								<p className="font-sans text-[11px] text-subtle">{label}</p>
+								<p className="font-sans text-[calc(11px*var(--ws-fs))] text-subtle">{label}</p>
 							</div>
 						))}
 					</div>
 
 					<div className="mt-3 rounded-[10px] bg-sunken px-3 py-2.5">
-						<div className="flex items-baseline justify-between font-sans text-[12px]">
+						<div className="flex items-baseline justify-between font-sans text-[calc(12px*var(--ws-fs))]">
 							<span className="text-muted tabular-nums">
 								{b.daysServed}/{b.durationDays} days served
 							</span>
@@ -944,7 +944,7 @@ function StatRow({
 	tone?: "success";
 }) {
 	return (
-		<div className="flex items-center justify-between border-b border-hairline/60 px-3.5 py-2 font-sans text-[12.5px] last:border-b-0">
+		<div className="flex items-center justify-between border-b border-hairline/60 px-3.5 py-2 font-sans text-[calc(12.5px*var(--ws-fs))] last:border-b-0">
 			<span className="text-muted">{label}</span>
 			<span
 				className={clsx(
@@ -1051,7 +1051,7 @@ function ThreadView({
 				</div>
 				<span
 					className={clsx(
-						"mr-1 shrink-0 rounded-pill px-2.5 py-1 font-sans text-[11px] font-semibold uppercase tracking-wide",
+						"mr-1 shrink-0 rounded-pill px-2.5 py-1 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-wide",
 						STATUS_CHIP[b.status],
 					)}
 				>
@@ -1074,10 +1074,10 @@ function ThreadView({
 						)}
 					</span>
 					<div className="min-w-0 flex-1">
-						<p className="font-sans text-[14px] font-semibold capitalize text-primary">
+						<p className="font-sans text-[calc(14px*var(--ws-fs))] font-semibold capitalize text-primary">
 							{b.format} campaign
 						</p>
-						<p className="font-sans text-[12.5px] text-muted tabular-nums">
+						<p className="font-sans text-[calc(12.5px*var(--ws-fs))] text-muted tabular-nums">
 							{b.durationDays} day{b.durationDays === 1 ? "" : "s"} · starts{" "}
 							{new Date(b.startAt).toLocaleDateString(undefined, {
 								month: "short",
@@ -1085,7 +1085,7 @@ function ThreadView({
 							})}
 						</p>
 					</div>
-					<span className="shrink-0 font-display text-[20px] font-semibold text-primary tabular-nums">
+					<span className="shrink-0 font-display text-[calc(20px*var(--ws-fs))] font-semibold text-primary tabular-nums">
 						{usd(b.agreedUsdMinor)}
 					</span>
 					{hasStats && (
@@ -1116,7 +1116,7 @@ function ThreadView({
 
 				{/* money state: where the dollars are, as quiet chips */}
 				{(b.settledUsdMinor > 0 || cancellable) && (
-					<div className="mt-2.5 flex flex-wrap items-center gap-1.5 font-sans text-[11.5px] tabular-nums">
+					<div className="mt-2.5 flex flex-wrap items-center gap-1.5 font-sans text-[calc(11.5px*var(--ws-fs))] tabular-nums">
 						<span className="rounded-pill bg-raised px-2 py-0.5 text-muted">
 							{b.daysServed}/{b.durationDays} days
 						</span>
@@ -1148,7 +1148,7 @@ function ThreadView({
 									type="button"
 									disabled={busy}
 									onClick={() => onAct(b._id, "accept")}
-									className="h-9 rounded-pill bg-brand px-4 font-sans text-[13px] font-semibold text-brand-on transition-colors hover:opacity-90 disabled:opacity-50 cursor-pointer"
+									className="h-9 rounded-pill bg-brand px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:opacity-90 disabled:opacity-50 cursor-pointer"
 								>
 									Accept · {usd(b.agreedUsdMinor)}
 								</button>
@@ -1156,7 +1156,7 @@ function ThreadView({
 									type="button"
 									disabled={busy}
 									onClick={() => onAct(b._id, "decline")}
-									className="h-9 rounded-pill bg-raised px-4 font-sans text-[13px] font-medium text-primary transition-colors hover:bg-chip disabled:opacity-50 cursor-pointer"
+									className="h-9 rounded-pill bg-raised px-4 font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-chip disabled:opacity-50 cursor-pointer"
 								>
 									Decline
 								</button>
@@ -1167,13 +1167,13 @@ function ThreadView({
 								type="button"
 								disabled={busy}
 								onClick={() => setCounterOpen((v) => !v)}
-								className="h-9 rounded-pill bg-raised px-4 font-sans text-[13px] font-medium text-primary transition-colors hover:bg-chip disabled:opacity-50 cursor-pointer"
+								className="h-9 rounded-pill bg-raised px-4 font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-chip disabled:opacity-50 cursor-pointer"
 							>
 								Counter
 							</button>
 						)}
 						{!myTurn && b.status === "requested" && (
-							<span className="font-sans text-[12.5px] text-subtle">
+							<span className="font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle">
 								Waiting on the {b.awaitingActionFrom} to respond
 							</span>
 						)}
@@ -1182,7 +1182,7 @@ function ThreadView({
 								type="button"
 								disabled={busy}
 								onClick={() => onAct(b._id, "cancel")}
-								className="ml-auto h-9 rounded-pill px-3.5 font-sans text-[12.5px] font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-50 cursor-pointer"
+								className="ml-auto h-9 rounded-pill px-3.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-50 cursor-pointer"
 							>
 								End campaign
 							</button>
@@ -1201,10 +1201,10 @@ function ThreadView({
 				{counterOpen && b.status === "requested" && (
 					<div className="mt-2.5 flex items-end gap-2 rounded-xl bg-sunken p-3">
 						<label className="flex-1">
-							<span className="mb-1 block font-sans text-[10.5px] font-semibold uppercase tracking-wide text-subtle">
+							<span className="mb-1 block font-sans text-[calc(10.5px*var(--ws-fs))] font-semibold uppercase tracking-wide text-subtle">
 								Total price
 							</span>
-							<span className="flex h-10 items-center rounded-lg bg-page/60 pl-3 font-sans text-[14px] text-subtle transition-colors focus-within:bg-page">
+							<span className="flex h-10 items-center rounded-lg bg-page/60 pl-3 font-sans text-[calc(14px*var(--ws-fs))] text-subtle transition-colors focus-within:bg-page">
 								$
 								<input
 									type="text"
@@ -1217,12 +1217,12 @@ function ThreadView({
 												.replace(/(\..*)\./g, "$1"),
 										)
 									}
-									className="h-10 w-full bg-transparent px-2 font-sans text-[14px] text-primary outline-none tabular-nums"
+									className="h-10 w-full bg-transparent px-2 font-sans text-[calc(14px*var(--ws-fs))] text-primary outline-none tabular-nums"
 								/>
 							</span>
 						</label>
 						<label className="w-24">
-							<span className="mb-1 block font-sans text-[10.5px] font-semibold uppercase tracking-wide text-subtle">
+							<span className="mb-1 block font-sans text-[calc(10.5px*var(--ws-fs))] font-semibold uppercase tracking-wide text-subtle">
 								Days
 							</span>
 							<input
@@ -1232,7 +1232,7 @@ function ThreadView({
 								onChange={(e) =>
 									setCDays(e.target.value.replace(/[^0-9]/g, ""))
 								}
-								className="h-10 w-full rounded-lg bg-page/60 px-3 font-sans text-[14px] text-primary outline-none tabular-nums transition-colors focus:bg-page"
+								className="h-10 w-full rounded-lg bg-page/60 px-3 font-sans text-[calc(14px*var(--ws-fs))] text-primary outline-none tabular-nums transition-colors focus:bg-page"
 							/>
 						</label>
 						<button
@@ -1245,7 +1245,7 @@ function ThreadView({
 								setCounterOpen(false);
 								onCounter(b._id, { priceUsdMinor: price, days });
 							}}
-							className="h-10 shrink-0 rounded-pill bg-primary px-4 font-sans text-[13px] font-semibold text-page transition-colors hover:opacity-90 disabled:opacity-50 cursor-pointer"
+							className="h-10 shrink-0 rounded-pill bg-primary px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-page transition-colors hover:opacity-90 disabled:opacity-50 cursor-pointer"
 						>
 							Send offer
 						</button>
@@ -1260,7 +1260,7 @@ function ThreadView({
 						{settledPeriods.map((per) => (
 							<div
 								key={per.index}
-								className="flex items-center justify-between gap-3 border-b border-hairline/60 px-3.5 py-2 font-sans text-[12.5px] last:border-b-0"
+								className="flex items-center justify-between gap-3 border-b border-hairline/60 px-3.5 py-2 font-sans text-[calc(12.5px*var(--ws-fs))] last:border-b-0"
 							>
 								<span className="text-muted">
 									{new Date(per.startAt).toISOString().slice(5, 10)} –{" "}
@@ -1283,7 +1283,7 @@ function ThreadView({
 					</div>
 				)}
 				{heldPeriod && (
-					<p className="mt-2 font-sans text-[12px] text-subtle tabular-nums">
+					<p className="mt-2 font-sans text-[calc(12px*var(--ws-fs))] text-subtle tabular-nums">
 						{usd(heldPeriod.amountUsdMinor)} held in escrow for the current
 						period
 					</p>
@@ -1301,7 +1301,7 @@ function ThreadView({
 							new Date(m.createdAt).toDateString();
 					const divider = newDay ? (
 						<div className="flex justify-center py-2">
-							<span className="rounded-pill bg-raised px-3 py-1 font-sans text-[11px] font-semibold text-muted">
+							<span className="rounded-pill bg-raised px-3 py-1 font-sans text-[calc(11px*var(--ws-fs))] font-semibold text-muted">
 								{dayLabel(m.createdAt)}
 							</span>
 						</div>
@@ -1312,7 +1312,7 @@ function ThreadView({
 							<div key={m._id}>
 								{divider}
 								<div className="my-2 flex justify-center">
-									<span className="max-w-[85%] rounded-lg bg-raised px-3.5 py-2 text-center font-sans text-[12px] leading-relaxed text-muted">
+									<span className="max-w-[85%] rounded-lg bg-raised px-3.5 py-2 text-center font-sans text-[calc(12px*var(--ws-fs))] leading-relaxed text-muted">
 										{m.content}
 									</span>
 								</div>
@@ -1336,7 +1336,7 @@ function ThreadView({
 							>
 								<span
 									className={clsx(
-										"max-w-[78%] rounded-xl px-3.5 py-2 font-sans text-[14px] leading-relaxed",
+										"max-w-[78%] rounded-xl px-3.5 py-2 font-sans text-[calc(14px*var(--ws-fs))] leading-relaxed",
 										mine
 											? "bg-brand text-brand-on"
 											: "bg-raised text-primary",
@@ -1394,7 +1394,7 @@ function ThreadView({
  *  bordered version read as a form in an app whose own composer says it has
  *  no bordered cards anywhere. */
 const FIELD =
-	"h-11 w-full rounded-lg bg-sunken px-3.5 font-sans text-[14px] text-primary placeholder:text-subtle outline-none transition-colors focus:bg-raised";
+	"h-11 w-full rounded-lg bg-sunken px-3.5 font-sans text-[calc(14px*var(--ws-fs))] text-primary placeholder:text-subtle outline-none transition-colors focus:bg-raised";
 
 const ACCEPT: Record<"image" | "video" | "audio", string> = {
 	image: "image/*",
@@ -1542,7 +1542,7 @@ function NewBookingSheet({
 	};
 
 	const label = (text: string) => (
-		<span className="mb-1.5 block font-sans text-[11px] font-semibold uppercase tracking-[0.1em] text-subtle">
+		<span className="mb-1.5 block font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.1em] text-subtle">
 			{text}
 		</span>
 	);
@@ -1570,7 +1570,7 @@ function NewBookingSheet({
 							}}
 						/>
 						{!mediaUrl && (
-							<p className="rounded-lg bg-sunken px-3.5 py-2.5 font-sans text-[12.5px] text-muted">
+							<p className="rounded-lg bg-sunken px-3.5 py-2.5 font-sans text-[calc(12.5px*var(--ws-fs))] text-muted">
 								No creative attached — the creator will see the request
 								without a preview and the slot will say "creative
 								pending" until one is agreed in the thread.
@@ -1590,7 +1590,7 @@ function NewBookingSheet({
 							].map(([k, v]) => (
 								<div
 									key={k}
-									className="flex items-center justify-between border-b border-hairline/60 px-3.5 py-2.5 font-sans text-[13px] last:border-b-0"
+									className="flex items-center justify-between border-b border-hairline/60 px-3.5 py-2.5 font-sans text-[calc(13px*var(--ws-fs))] last:border-b-0"
 								>
 									<span className="text-subtle">{k}</span>
 									<span className="font-medium capitalize text-primary tabular-nums">
@@ -1603,7 +1603,7 @@ function NewBookingSheet({
 							<button
 								type="button"
 								onClick={() => setStep("form")}
-								className="h-12 flex-1 cursor-pointer rounded-pill bg-raised font-sans text-[14px] font-medium text-primary transition-colors hover:bg-chip"
+								className="h-12 flex-1 cursor-pointer rounded-pill bg-raised font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-chip"
 							>
 								Back
 							</button>
@@ -1611,7 +1611,7 @@ function NewBookingSheet({
 								type="button"
 								disabled={sending}
 								onClick={submit}
-								className="h-12 flex-[2] cursor-pointer rounded-pill bg-brand font-sans text-[14.5px] font-semibold text-brand-on transition-colors hover:opacity-90 disabled:opacity-50"
+								className="h-12 flex-[2] cursor-pointer rounded-pill bg-brand font-sans text-[calc(14.5px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:opacity-90 disabled:opacity-50"
 							>
 								{sending
 									? "Sending…"
@@ -1642,7 +1642,7 @@ function NewBookingSheet({
 									type="button"
 									onClick={() => setFormat(f)}
 									className={clsx(
-										"h-10 flex-1 rounded-pill font-sans text-[13px] font-medium capitalize transition-colors cursor-pointer",
+										"h-10 flex-1 rounded-pill font-sans text-[calc(13px*var(--ws-fs))] font-medium capitalize transition-colors cursor-pointer",
 										format === f
 											? "bg-primary text-page"
 											: "bg-sunken text-muted hover:bg-raised hover:text-primary",
@@ -1700,12 +1700,12 @@ function NewBookingSheet({
 								className="flex h-28 w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl bg-sunken transition-colors hover:bg-raised disabled:opacity-60"
 							>
 								<UploadSimple size={20} className="text-muted" />
-								<span className="font-sans text-[13px] font-medium text-muted tabular-nums">
+								<span className="font-sans text-[calc(13px*var(--ws-fs))] font-medium text-muted tabular-nums">
 									{uploading === "media"
 										? `Uploading… ${uploadPct}%`
 										: `Upload ${format === "audio" ? "audio" : format}`}
 								</span>
-								<span className="font-sans text-[11px] text-subtle">
+								<span className="font-sans text-[calc(11px*var(--ws-fs))] text-subtle">
 									up to 50MB
 								</span>
 							</button>
@@ -1748,7 +1748,7 @@ function NewBookingSheet({
 									type="button"
 									onClick={() => coverInputRef.current?.click()}
 									disabled={uploading === "cover"}
-									className="flex h-16 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-sunken font-sans text-[13px] font-medium text-muted transition-colors hover:bg-raised disabled:opacity-60"
+									className="flex h-16 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-sunken font-sans text-[calc(13px*var(--ws-fs))] font-medium text-muted transition-colors hover:bg-raised disabled:opacity-60"
 								>
 									<UploadSimple size={16} />
 									{uploading === "cover"
@@ -1773,7 +1773,7 @@ function NewBookingSheet({
 					<div>
 						{label("Click-through link")}
 						<div className="flex items-center overflow-hidden rounded-lg bg-sunken transition-colors focus-within:bg-raised">
-							<span className="shrink-0 select-none pl-3.5 font-sans text-[14px] text-subtle">
+							<span className="shrink-0 select-none pl-3.5 font-sans text-[calc(14px*var(--ws-fs))] text-subtle">
 								https://
 							</span>
 							<input
@@ -1783,7 +1783,7 @@ function NewBookingSheet({
 								}
 								placeholder="your-site.com"
 								inputMode="url"
-								className="h-11 w-full bg-transparent pr-3.5 pl-0.5 font-sans text-[14px] text-primary outline-none placeholder:text-subtle"
+								className="h-11 w-full bg-transparent pr-3.5 pl-0.5 font-sans text-[calc(14px*var(--ws-fs))] text-primary outline-none placeholder:text-subtle"
 							/>
 						</div>
 					</div>
@@ -1827,12 +1827,12 @@ function NewBookingSheet({
 							!handle || uploading !== null || !(Number(days) >= 1)
 						}
 						onClick={() => setStep("preview")}
-						className="h-12 shrink-0 cursor-pointer rounded-pill bg-brand font-sans text-[14.5px] font-semibold text-brand-on transition-colors hover:opacity-90 disabled:opacity-50"
+						className="h-12 shrink-0 cursor-pointer rounded-pill bg-brand font-sans text-[calc(14.5px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:opacity-90 disabled:opacity-50"
 					>
 						Preview request
 					</button>
 					{rate === null && handle && (
-						<p className="text-center font-sans text-[12px] text-subtle">
+						<p className="text-center font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
 							No {format} rate published for @{handle} — the request may be
 							refused.
 						</p>

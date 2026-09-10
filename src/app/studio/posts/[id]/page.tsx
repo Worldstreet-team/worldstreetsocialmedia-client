@@ -27,7 +27,7 @@ export default function StudioPostDrilldown({
 				>
 					<ArrowLeft size={16} />
 				</Link>
-				<h1 className="max-w-[48ch] truncate font-sans text-[15px] font-semibold glass-ink">
+				<h1 className="max-w-[48ch] truncate font-sans text-[calc(15px*var(--ws-fs))] font-semibold glass-ink">
 					{title || t("studio.mediaPost")}
 				</h1>
 			</div>

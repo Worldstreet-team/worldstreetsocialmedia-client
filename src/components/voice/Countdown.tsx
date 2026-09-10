@@ -37,7 +37,7 @@ export default function Countdown({
   if (now.live) {
     return (
       <span className={className}>
-        <span className="font-mono text-[15px] font-bold tracking-[0.08em] text-gold">
+        <span className="font-mono text-[calc(15px*var(--ws-fs))] font-bold tracking-[0.08em] text-gold">
           STARTING…
         </span>
       </span>
@@ -63,15 +63,15 @@ export default function Countdown({
         {cells.map((cell, i) => (
           <span key={cell.label} className="flex items-start gap-1.5">
             {i > 0 && (
-              <span className="pt-0.5 font-mono text-[22px] font-bold leading-none text-[#fafaf9]/35">
+              <span className="pt-0.5 font-mono text-[calc(22px*var(--ws-fs))] font-bold leading-none text-[#fafaf9]/35">
                 :
               </span>
             )}
             <span className="flex flex-col items-center">
-              <span className="rounded-lg bg-[#0c0a09]/55 px-2 py-1 font-mono text-[24px] font-bold leading-none tracking-tight text-[#fafaf9] tabular-nums">
+              <span className="rounded-lg bg-[#0c0a09]/55 px-2 py-1 font-mono text-[calc(24px*var(--ws-fs))] font-bold leading-none tracking-tight text-[#fafaf9] tabular-nums">
                 {String(cell.v).padStart(2, "0")}
               </span>
-              <span className="mt-1 font-sans text-[8.5px] font-bold uppercase tracking-[0.14em] text-[#fafaf9]/55">
+              <span className="mt-1 font-sans text-[calc(8.5px*var(--ws-fs))] font-bold uppercase tracking-[0.14em] text-[#fafaf9]/55">
                 {cell.label}
               </span>
             </span>

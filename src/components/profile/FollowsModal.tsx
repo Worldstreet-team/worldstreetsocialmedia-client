@@ -222,7 +222,7 @@ export default function FollowsModal({
 									onChange={(e) => setQuery(e.target.value)}
 									placeholder={t("search.placeholder.people")}
 									aria-label={t("search.placeholder.people")}
-									className="w-full rounded-pill bg-sunken px-4 py-2 font-sans text-[13.5px] text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised"
+									className="w-full rounded-pill bg-sunken px-4 py-2 font-sans text-[calc(13.5px*var(--ws-fs))] text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised"
 								/>
 							</div>
 
@@ -265,7 +265,7 @@ export default function FollowsModal({
 												<div className="flex flex-col flex-1 min-w-0">
 													<Link
 														href={`/profile/${user.username}`}
-														className="font-semibold text-[15px] truncate flex items-center gap-1 hover:underline font-sans text-primary"
+														className="font-semibold text-[calc(15px*var(--ws-fs))] truncate flex items-center gap-1 hover:underline font-sans text-primary"
 													>
 														{user.firstName} {user.lastName}
 														<UserBadges
@@ -277,12 +277,12 @@ export default function FollowsModal({
 													</Link>
 													<Link
 														href={`/profile/${user.username}`}
-														className="text-muted text-[14px] truncate font-sans"
+														className="text-muted text-[calc(14px*var(--ws-fs))] truncate font-sans"
 													>
 														@{user.username}
 													</Link>
 													{user.bio && (
-														<p className="text-[13px] text-muted truncate mt-0.5 font-sans">
+														<p className="text-[calc(13px*var(--ws-fs))] text-muted truncate mt-0.5 font-sans">
 															{user.bio}
 														</p>
 													)}
@@ -295,7 +295,7 @@ export default function FollowsModal({
 															handleFollowToggle(user);
 														}}
 														className={clsx(
-															"rounded-pill px-4 py-1.5 font-semibold text-[13px] transition-colors min-w-[90px] border font-sans",
+															"rounded-pill px-4 py-1.5 font-semibold text-[calc(13px*var(--ws-fs))] transition-colors min-w-[90px] border font-sans",
 															effectiveFollowing(user._id, user.isFollowing)
 																? "border-hairline bg-transparent text-primary hover:border-danger hover:text-danger"
 																: "bg-primary text-page border-transparent hover:bg-muted",
@@ -322,7 +322,7 @@ export default function FollowsModal({
 												type="button"
 												onClick={loadMore}
 												disabled={loadingMore}
-												className="mx-auto my-3 flex h-9 cursor-pointer items-center rounded-pill bg-raised px-4 font-sans text-[13px] font-medium text-primary transition-colors hover:bg-chip disabled:opacity-60"
+												className="mx-auto my-3 flex h-9 cursor-pointer items-center rounded-pill bg-raised px-4 font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-chip disabled:opacity-60"
 											>
 												{loadingMore ? "Loading…" : "Show more"}
 											</button>

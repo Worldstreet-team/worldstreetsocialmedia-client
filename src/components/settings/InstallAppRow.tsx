@@ -30,10 +30,10 @@ export function InstallAppRow() {
 				<span className="flex items-center gap-3">
 					<MonitorDown className="h-[18px] w-[18px] text-gold" />
 					<span className="flex flex-col">
-						<span className="font-sans text-[14.5px] font-medium text-primary">
+						<span className="font-sans text-[calc(14.5px*var(--ws-fs))] font-medium text-primary">
 							Install the app
 						</span>
-						<span className="font-sans text-[12.5px] text-muted">
+						<span className="font-sans text-[calc(12.5px*var(--ws-fs))] text-muted">
 							WorldSpace on your home screen, with its own icon and badge
 						</span>
 					</span>
@@ -42,11 +42,11 @@ export function InstallAppRow() {
 
 			{showIOSSteps && (
 				<div className="animate-rise mx-4 mb-3 flex flex-col gap-2 rounded-[10px] bg-raised px-4 py-3">
-					<span className="flex items-center gap-2 font-sans text-[13.5px] text-primary">
+					<span className="flex items-center gap-2 font-sans text-[calc(13.5px*var(--ws-fs))] text-primary">
 						<Share className="h-4 w-4 shrink-0 text-muted" />
 						1. Tap the Share button in Safari
 					</span>
-					<span className="flex items-center gap-2 font-sans text-[13.5px] text-primary">
+					<span className="flex items-center gap-2 font-sans text-[calc(13.5px*var(--ws-fs))] text-primary">
 						<SquarePlus className="h-4 w-4 shrink-0 text-muted" />
 						2. Choose "Add to Home Screen"
 					</span>

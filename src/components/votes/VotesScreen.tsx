@@ -77,7 +77,7 @@ export function VotesScreen() {
 					<h1 className="font-display text-lg font-semibold leading-5 text-primary">
 						The Weekly Vote
 					</h1>
-					<p className="font-sans text-[12px] text-subtle">
+					<p className="font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
 						Most-voted post wins · paid every Friday night
 					</p>
 				</div>
@@ -85,7 +85,7 @@ export function VotesScreen() {
 
 			<div className="animate-rise flex flex-col items-center gap-2 px-4 pb-6 pt-4 text-center">
 				<VoteCountdown size="lg" />
-				<p className="shine-pill inline-block rounded-pill px-4 py-2 font-sans text-[13px] font-semibold text-gold">
+				<p className="shine-pill inline-block rounded-pill px-4 py-2 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-gold">
 					Ends Friday 11:59 PM · winner paid by tick — Bronze $50 · Silver
 					$100 · Gold $200
 				</p>
@@ -98,7 +98,7 @@ export function VotesScreen() {
 					))}
 				</div>
 			) : board.length === 0 ? (
-				<p className="px-6 py-14 text-center font-sans text-[14px] text-muted">
+				<p className="px-6 py-14 text-center font-sans text-[calc(14px*var(--ws-fs))] text-muted">
 					No votes yet this week — the first free vote starts the race.
 				</p>
 			) : (
@@ -108,7 +108,7 @@ export function VotesScreen() {
 							href={`/post/${leader.post.id}`}
 							className="animate-rise relative overflow-hidden rounded-xl bg-surface p-5 transition-colors hover:bg-raised"
 						>
-							<div className="flex items-center gap-2 font-sans text-[11px] font-semibold uppercase tracking-widest text-gold">
+							<div className="flex items-center gap-2 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-widest text-gold">
 								<Crown size={15} weight="fill" />
 								Leading this week
 							</div>
@@ -118,7 +118,7 @@ export function VotesScreen() {
 								</span>
 								<div className="min-w-0 flex-1">
 									<span className="flex items-center gap-1.5">
-										<span className="truncate font-display text-[17px] font-semibold text-primary">
+										<span className="truncate font-display text-[calc(17px*var(--ws-fs))] font-semibold text-primary">
 											{leader.author.name}
 										</span>
 										<UserBadges
@@ -128,16 +128,16 @@ export function VotesScreen() {
 											size={15}
 										/>
 									</span>
-									<span className="font-sans text-[13px] text-muted">
+									<span className="font-sans text-[calc(13px*var(--ws-fs))] text-muted">
 										@{leader.author.username}
 									</span>
 								</div>
 								<div className="flex flex-col items-end">
-									<span className="flex items-center gap-1.5 font-display text-[30px] font-semibold leading-none tabular-nums text-gold">
+									<span className="flex items-center gap-1.5 font-display text-[calc(30px*var(--ws-fs))] font-semibold leading-none tabular-nums text-gold">
 										<Lightning size={20} weight="fill" />
 										{formatCompact(leader.votes)}
 									</span>
-									<span className="font-sans text-[11px] uppercase tracking-widest text-subtle">
+									<span className="font-sans text-[calc(11px*var(--ws-fs))] uppercase tracking-widest text-subtle">
 										votes
 									</span>
 								</div>
@@ -154,7 +154,7 @@ export function VotesScreen() {
 											/>
 										</span>
 									)}
-									<p className="line-clamp-2 font-sans text-[14px] text-muted">
+									<p className="line-clamp-2 font-sans text-[calc(14px*var(--ws-fs))] text-muted">
 										{leader.post.content ||
 											(leader.post.video
 												? "Video post"
@@ -174,7 +174,7 @@ export function VotesScreen() {
 							className="animate-rise flex items-center gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-surface"
 							style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
 						>
-							<span className="w-7 shrink-0 text-center font-display text-[15px] font-semibold tabular-nums text-subtle">
+							<span className="w-7 shrink-0 text-center font-display text-[calc(15px*var(--ws-fs))] font-semibold tabular-nums text-subtle">
 								{i + 2}
 							</span>
 							<span className="relative block h-11 w-11 shrink-0 overflow-hidden rounded-pill bg-raised">
@@ -182,7 +182,7 @@ export function VotesScreen() {
 							</span>
 							<div className="min-w-0 flex-1">
 								<span className="flex items-center gap-1.5">
-									<span className="truncate font-sans text-[14.5px] font-semibold text-primary">
+									<span className="truncate font-sans text-[calc(14.5px*var(--ws-fs))] font-semibold text-primary">
 										{row.author.name}
 									</span>
 									<UserBadges
@@ -191,11 +191,11 @@ export function VotesScreen() {
 							badges={(row.author as any)?.badges}
 										size={13}
 									/>
-									<span className="min-w-0 truncate font-sans text-[12.5px] text-subtle">
+									<span className="min-w-0 truncate font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle">
 										@{row.author.username}
 									</span>
 								</span>
-								<p className="truncate font-sans text-[13px] text-muted">
+								<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
 									{row.post.content ||
 										(row.post.video
 											? "Video post"
@@ -204,7 +204,7 @@ export function VotesScreen() {
 												: "")}
 								</p>
 							</div>
-							<span className="flex shrink-0 items-center gap-1 font-display text-[16px] font-semibold tabular-nums text-gold">
+							<span className="flex shrink-0 items-center gap-1 font-display text-[calc(16px*var(--ws-fs))] font-semibold tabular-nums text-gold">
 								<Lightning size={13} weight="fill" />
 								{formatCompact(row.votes)}
 							</span>
@@ -215,7 +215,7 @@ export function VotesScreen() {
 
 			{history.length > 0 && (
 				<div className="mt-10 px-4">
-					<h2 className="font-sans text-[12px] font-semibold uppercase tracking-widest text-subtle">
+					<h2 className="font-sans text-[calc(12px*var(--ws-fs))] font-semibold uppercase tracking-widest text-subtle">
 						Past winners
 					</h2>
 					<div className="mt-2 flex flex-col">
@@ -228,7 +228,7 @@ export function VotesScreen() {
 									<SafeAvatar src={h.winnerAuthor?.avatar} />
 								</span>
 								<div className="min-w-0 flex-1">
-									<span className="flex items-center gap-1.5 font-sans text-[13.5px] font-semibold text-primary">
+									<span className="flex items-center gap-1.5 font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-primary">
 										{h.winnerAuthor
 											? [
 													h.winnerAuthor.firstName,
@@ -246,21 +246,21 @@ export function VotesScreen() {
 											/>
 										)}
 									</span>
-									<span className="font-sans text-[12px] text-subtle">
+									<span className="font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
 										Week of {h.cycle}
 										{h.passedDown ? " · highest verified" : ""}
 									</span>
 								</div>
 								<div className="flex flex-col items-end">
 									{h.prizeMinor ? (
-										<span className="font-display text-[15px] font-semibold tabular-nums text-credit">
+										<span className="font-display text-[calc(15px*var(--ws-fs))] font-semibold tabular-nums text-credit">
 											${(h.prizeMinor / 100).toFixed(0)}
 										</span>
 									) : null}
 									{h.winnerVotes ? (
 										<span
 											className={clsx(
-												"font-sans text-[11.5px] tabular-nums text-subtle",
+												"font-sans text-[calc(11.5px*var(--ws-fs))] tabular-nums text-subtle",
 											)}
 										>
 											{formatCompact(h.winnerVotes)} votes

@@ -206,10 +206,10 @@ export default function CreateSpaceSheet({
       >
         <OverlayHeader onClose={onClose} closeLabel={t("common.close")}>
           <div className="min-w-0 flex-1">
-            <span className="block font-sans text-[10px] font-bold uppercase tracking-[0.14em] text-subtle">
+            <span className="block font-sans text-[calc(10px*var(--ws-fs))] font-bold uppercase tracking-[0.14em] text-subtle">
               {t("voice.eyebrow")}
             </span>
-            <h2 className="truncate font-sans text-[14px] font-semibold leading-tight text-primary">
+            <h2 className="truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold leading-tight text-primary">
               {isEdit ? t("voice.editSpace") : t("voice.create")}
             </h2>
           </div>
@@ -220,7 +220,7 @@ export default function CreateSpaceSheet({
             <div>
               <label
                 htmlFor="space-title"
-                className="block font-sans text-[10px] font-bold uppercase tracking-[0.14em] text-subtle"
+                className="block font-sans text-[calc(10px*var(--ws-fs))] font-bold uppercase tracking-[0.14em] text-subtle"
               >
                 {t("voice.titleLabel")}
               </label>
@@ -231,7 +231,7 @@ export default function CreateSpaceSheet({
                   onChange={(e) => setTitle(e.target.value)}
                   maxLength={96}
                   placeholder={t("voice.placeholder")}
-                  className="w-full bg-transparent font-sans text-base font-medium text-primary outline-none placeholder:text-subtle sm:text-[15px]"
+                  className="w-full bg-transparent font-sans text-base font-medium text-primary outline-none placeholder:text-subtle sm:text-[calc(15px*var(--ws-fs))]"
                 />
               </div>
             </div>
@@ -239,7 +239,7 @@ export default function CreateSpaceSheet({
             <div>
               <label
                 htmlFor="space-description"
-                className="block font-sans text-[10px] font-bold uppercase tracking-[0.14em] text-subtle"
+                className="block font-sans text-[calc(10px*var(--ws-fs))] font-bold uppercase tracking-[0.14em] text-subtle"
               >
                 {t("voice.descriptionLabel")}
               </label>
@@ -251,13 +251,13 @@ export default function CreateSpaceSheet({
                   maxLength={280}
                   rows={2}
                   placeholder={t("voice.descriptionPlaceholder")}
-                  className="w-full resize-none bg-transparent font-sans text-base leading-relaxed text-primary outline-none placeholder:text-subtle sm:text-[13px]"
+                  className="w-full resize-none bg-transparent font-sans text-base leading-relaxed text-primary outline-none placeholder:text-subtle sm:text-[calc(13px*var(--ws-fs))]"
                 />
               </div>
             </div>
 
             <div>
-              <span className="block font-sans text-[10px] font-bold uppercase tracking-[0.14em] text-subtle">
+              <span className="block font-sans text-[calc(10px*var(--ws-fs))] font-bold uppercase tracking-[0.14em] text-subtle">
                 {t("voice.coverLabel")}
               </span>
               <div className="mt-2 grid grid-cols-7 gap-2">
@@ -356,20 +356,20 @@ export default function CreateSpaceSheet({
                     setCoverImage("");
                     setCoverError("");
                   }}
-                  className="mt-2 cursor-pointer font-sans text-[12px] text-muted underline underline-offset-2 transition-colors hover:text-primary"
+                  className="mt-2 cursor-pointer font-sans text-[calc(12px*var(--ws-fs))] text-muted underline underline-offset-2 transition-colors hover:text-primary"
                 >
                   {t("voice.removeCover")}
                 </button>
               )}
               {coverError && (
-                <p className="mt-2 font-sans text-[12px] text-danger">
+                <p className="mt-2 font-sans text-[calc(12px*var(--ws-fs))] text-danger">
                   {coverError}
                 </p>
               )}
             </div>
 
             <div>
-              <span className="block font-sans text-[10px] font-bold uppercase tracking-[0.14em] text-subtle">
+              <span className="block font-sans text-[calc(10px*var(--ws-fs))] font-bold uppercase tracking-[0.14em] text-subtle">
                 {isEdit ? t("voice.reschedule") : t("voice.when")}
               </span>
               {/* Editing never converts a scheduled space into a live one —
@@ -391,7 +391,7 @@ export default function CreateSpaceSheet({
                     onClick={() => setMode(id)}
                     aria-pressed={mode === id}
                     className={clsx(
-                      "flex items-center justify-center gap-2 rounded-xl px-3 py-3 font-sans text-[13px] font-semibold transition-colors cursor-pointer",
+                      "flex items-center justify-center gap-2 rounded-xl px-3 py-3 font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-colors cursor-pointer",
                       mode === id
                         ? "bg-primary text-page"
                         : "bg-chip text-muted hover:text-primary",
@@ -411,7 +411,7 @@ export default function CreateSpaceSheet({
 
             {!isEdit && (
               <div>
-                <span className="block font-sans text-[10px] font-bold uppercase tracking-[0.14em] text-subtle">
+                <span className="block font-sans text-[calc(10px*var(--ws-fs))] font-bold uppercase tracking-[0.14em] text-subtle">
                   Topic
                 </span>
                 {/* A vertical, not the 100-item taxonomy: a room is broader
@@ -432,7 +432,7 @@ export default function CreateSpaceSheet({
 
             {communities.length > 0 && !isEdit && (
               <div>
-                <span className="block font-sans text-[10px] font-bold uppercase tracking-[0.14em] text-subtle">
+                <span className="block font-sans text-[calc(10px*var(--ws-fs))] font-bold uppercase tracking-[0.14em] text-subtle">
                   {t("voice.communityLabel")}
                 </span>
                 <GlassSelect
@@ -487,7 +487,7 @@ export default function CreateSpaceSheet({
                 category || undefined,
               );
             }}
-            className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-pill bg-brand font-sans text-[14px] font-semibold text-brand-on transition-colors hover:bg-brand-active active:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-pill bg-brand font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active active:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {busy ? (
               <span className="h-4 w-4 animate-spin rounded-pill border-2 border-current/30 border-t-current" />

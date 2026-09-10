@@ -45,7 +45,7 @@ export function TopicBrowser({
               onClick={() => setVertical(v.id)}
               aria-pressed={on}
               className={clsx(
-                "flex h-10 shrink-0 cursor-pointer items-center gap-1.5 rounded-pill px-3.5 font-sans text-[13px] transition-colors",
+                "flex h-10 shrink-0 cursor-pointer items-center gap-1.5 rounded-pill px-3.5 font-sans text-[calc(13px*var(--ws-fs))] transition-colors",
                 on
                   ? "bg-primary font-semibold text-page"
                   : "bg-raised font-medium text-muted hover:text-primary",
@@ -59,7 +59,7 @@ export function TopicBrowser({
       </div>
 
       {active && (
-        <p className="mt-2.5 font-sans text-[12.5px] leading-relaxed text-muted">
+        <p className="mt-2.5 font-sans text-[calc(12.5px*var(--ws-fs))] leading-relaxed text-muted">
           {active.blurb}
         </p>
       )}
@@ -80,7 +80,7 @@ export function TopicBrowser({
             // display label ("Stocks & Equities") appears in no post, so a
             // click searches the category's strongest keyword instead.
             onClick={() => onPick(c.keywords[0] ?? c.label)}
-            className="flex h-10 shrink-0 cursor-pointer snap-start items-center rounded-pill bg-raised px-3.5 font-sans text-[12.5px] font-medium text-muted transition-colors hover:bg-chip hover:text-primary"
+            className="flex h-10 shrink-0 cursor-pointer snap-start items-center rounded-pill bg-raised px-3.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-muted transition-colors hover:bg-chip hover:text-primary"
           >
             {c.label}
           </button>

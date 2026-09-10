@@ -146,7 +146,7 @@ export function GroupCreateModal({
 											key={u._id}
 											type="button"
 											onClick={() => toggle(u)}
-											className="flex cursor-pointer items-center gap-1.5 rounded-pill bg-chip py-1 pl-1 pr-2.5 font-sans text-[12.5px] text-primary transition-colors hover:bg-raised"
+											className="flex cursor-pointer items-center gap-1.5 rounded-pill bg-chip py-1 pl-1 pr-2.5 font-sans text-[calc(12.5px*var(--ws-fs))] text-primary transition-colors hover:bg-raised"
 										>
 											<span className="relative h-6 w-6 overflow-hidden rounded-pill bg-raised">
 												<SafeAvatar src={u.avatar} eager />
@@ -196,7 +196,7 @@ export function GroupCreateModal({
 											</span>
 											<span className="min-w-0 flex-1">
 												<span className="flex items-center gap-1">
-													<span className="truncate font-semibold text-[15px] text-primary">
+													<span className="truncate font-semibold text-[calc(15px*var(--ws-fs))] text-primary">
 														{u.firstName} {u.lastName}
 													</span>
 													<UserBadges
@@ -206,7 +206,7 @@ export function GroupCreateModal({
 														size={15}
 													/>
 												</span>
-												<span className="block truncate text-[13px] text-muted">
+												<span className="block truncate text-[calc(13px*var(--ws-fs))] text-muted">
 													@{u.username}
 												</span>
 											</span>
@@ -230,7 +230,7 @@ export function GroupCreateModal({
 								type="button"
 								onClick={create}
 								disabled={!canCreate || creating}
-								className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-pill bg-brand font-sans text-[14px] font-semibold text-brand-on transition-colors hover:bg-brand-active disabled:opacity-50"
+								className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-pill bg-brand font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active disabled:opacity-50"
 							>
 								{creating && <Loader2 className="h-4 w-4 animate-spin" />}
 								{selectedList.length > 0

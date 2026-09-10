@@ -250,7 +250,7 @@ export function AdSlot({
 							weight="fill"
 							className="shrink-0 text-gold"
 						/>
-						<span className="min-w-0 truncate font-sans text-[11.5px] text-muted">
+						<span className="min-w-0 truncate font-sans text-[calc(11.5px*var(--ws-fs))] text-muted">
 							{isMe
 								? `@${u.advertiser?.username ?? "advertiser"}'s ${u.format} campaign`
 								: "Your campaign here"}{" "}
@@ -358,14 +358,14 @@ export function AdSlot({
 						<Megaphone size={16} weight="fill" />
 					</span>
 					<span className="relative min-w-0 flex-1">
-						<span className="block font-sans text-[13.5px] font-semibold text-primary">
+						<span className="block font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-primary">
 							Your ad space
 						</span>
-						<span className="block font-sans text-[12px] text-muted">
+						<span className="block font-sans text-[calc(12px*var(--ws-fs))] text-muted">
 							Set your rates and let advertisers book this spot
 						</span>
 					</span>
-					<span className="relative shrink-0 rounded-pill bg-gold/15 px-3 py-1.5 font-sans text-[12px] font-semibold text-gold">
+					<span className="relative shrink-0 rounded-pill bg-gold/15 px-3 py-1.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-gold">
 						Set rates
 					</span>
 				</button>
@@ -406,15 +406,15 @@ export function AdSlot({
 					<Megaphone size={16} weight="fill" />
 				</span>
 				<span className="relative min-w-0 flex-1">
-					<span className="block font-sans text-[13.5px] font-semibold text-primary">
+					<span className="block font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-primary">
 						Ad space available
 					</span>
-					<span className="block font-sans text-[12px] text-muted tabular-nums">
+					<span className="block font-sans text-[calc(12px*var(--ws-fs))] text-muted tabular-nums">
 						from ${(from / 100).toFixed(0)}/day ·{" "}
 						{publicRates.map((r) => r.format).join(" · ")}
 					</span>
 				</span>
-				<span className="relative shrink-0 rounded-pill bg-primary px-3.5 py-1.5 font-sans text-[12.5px] font-semibold text-page">
+				<span className="relative shrink-0 rounded-pill bg-primary px-3.5 py-1.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-page">
 					Book
 				</span>
 			</Link>
@@ -457,7 +457,7 @@ function SponsoredCard({
 			<div className="mb-2 flex items-center gap-2">
 				{/* The label is part of the slot, not the creative — it cannot be
 				    designed away, which is the entire point of it. */}
-				<h3 className="flex-1 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">
+				<h3 className="flex-1 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-subtle">
 					Sponsored
 					{slot.advertiser?.username && (
 						<>
@@ -478,7 +478,7 @@ function SponsoredCard({
 						    stats sheet already open (/bm?deal=). */}
 						<Link
 							href={`/bm?deal=${slot._id}`}
-							className="shrink-0 font-sans text-[11px] text-subtle tabular-nums transition-colors hover:text-primary hover:underline"
+							className="shrink-0 font-sans text-[calc(11px*var(--ws-fs))] text-subtle tabular-nums transition-colors hover:text-primary hover:underline"
 						>
 							{(slot.impressions ?? 0).toLocaleString()} views ·{" "}
 							{(slot.clicks ?? 0).toLocaleString()} clicks
@@ -486,7 +486,7 @@ function SponsoredCard({
 						<button
 							type="button"
 							onClick={onEnd}
-							className="shrink-0 cursor-pointer font-sans text-[11px] font-semibold text-danger hover:underline"
+							className="shrink-0 cursor-pointer font-sans text-[calc(11px*var(--ws-fs))] font-semibold text-danger hover:underline"
 						>
 							End
 						</button>
@@ -498,7 +498,7 @@ function SponsoredCard({
 				<CreativeMedia slot={slot} />
 				{slot.creative.linkUrl && (
 					<div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
-						<span className="min-w-0 truncate font-sans text-[12.5px] text-muted">
+						<span className="min-w-0 truncate font-sans text-[calc(12.5px*var(--ws-fs))] text-muted">
 							{who} ·{" "}
 							<span className="text-subtle">
 								{safeHost(slot.creative.linkUrl)}
@@ -511,7 +511,7 @@ function SponsoredCard({
 							// `sponsored` is the honest rel for paid placement; noopener
 							// because the destination is someone else's site.
 							rel="sponsored noopener noreferrer"
-							className="flex h-8 shrink-0 items-center gap-1 rounded-pill bg-primary px-3.5 font-sans text-[12.5px] font-semibold text-page transition-colors hover:opacity-90"
+							className="flex h-8 shrink-0 items-center gap-1 rounded-pill bg-primary px-3.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-page transition-colors hover:opacity-90"
 						>
 							Visit
 							<ArrowUpRight size={13} weight="bold" />
@@ -541,7 +541,7 @@ export function AdSlotPreview({
 	return (
 		<div>
 			<div className="mb-2 flex items-center gap-2">
-				<h3 className="flex-1 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">
+				<h3 className="flex-1 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-subtle">
 					Sponsored
 					{advertiserUsername && (
 						<span className="normal-case tracking-normal text-muted">
@@ -557,10 +557,10 @@ export function AdSlotPreview({
 				/>
 				{creative.linkUrl && (
 					<div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
-						<span className="min-w-0 truncate font-sans text-[12.5px] text-subtle">
+						<span className="min-w-0 truncate font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle">
 							{safeHost(creative.linkUrl)}
 						</span>
-						<span className="flex h-8 shrink-0 items-center gap-1 rounded-pill bg-primary px-3.5 font-sans text-[12.5px] font-semibold text-page">
+						<span className="flex h-8 shrink-0 items-center gap-1 rounded-pill bg-primary px-3.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-page">
 							Visit
 							<ArrowUpRight size={13} weight="bold" />
 						</span>
@@ -637,7 +637,7 @@ function CreativeMedia({ slot }: { slot: SlotCampaign }) {
 
 	// A live booking with no creative yet: hold the label, show nothing loud.
 	return (
-		<div className="flex h-20 items-center justify-center font-sans text-[12.5px] text-subtle">
+		<div className="flex h-20 items-center justify-center font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle">
 			Creative pending
 		</div>
 	);
@@ -858,7 +858,7 @@ function RatesSheet({
 			<OverlayPanel dragClose={onClose} variant="sheet" label="Your ad rates">
 				<OverlayHeader title="Your ad space" onClose={onClose} />
 				<div className="flex flex-col gap-3 overflow-y-auto px-5 pb-5">
-					<p className="font-sans text-[13px] leading-relaxed text-muted">
+					<p className="font-sans text-[calc(13px*var(--ws-fs))] leading-relaxed text-muted">
 						Advertisers book by the day at your price. Money sits in escrow
 						and you're paid every few days as the campaign runs — 60% of every
 						settlement is yours.
@@ -887,10 +887,10 @@ function RatesSheet({
 										<Icon size={18} weight={row.enabled ? "fill" : "regular"} />
 									</span>
 									<div className="min-w-0 flex-1">
-										<p className="font-sans text-[14px] font-semibold text-primary">
+										<p className="font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
 											{meta.label}
 										</p>
-										<p className="truncate font-sans text-[12px] text-subtle">
+										<p className="truncate font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
 											{meta.hint}
 										</p>
 									</div>
@@ -905,7 +905,7 @@ function RatesSheet({
 								{row.enabled && (
 									<div className="flex items-center justify-between gap-3 border-t border-hairline/60 bg-sunken/60 px-4 py-2.5">
 										<label className="flex items-baseline gap-1.5">
-											<span className="font-display text-[20px] font-semibold text-primary tabular-nums">
+											<span className="font-display text-[calc(20px*var(--ws-fs))] font-semibold text-primary tabular-nums">
 												$
 												<input
 													type="text"
@@ -932,15 +932,15 @@ function RatesSheet({
 															});
 														}
 													}}
-													className="w-20 bg-transparent font-display text-[20px] font-semibold text-primary outline-none tabular-nums placeholder:text-subtle"
+													className="w-20 bg-transparent font-display text-[calc(20px*var(--ws-fs))] font-semibold text-primary outline-none tabular-nums placeholder:text-subtle"
 												/>
 											</span>
-											<span className="font-sans text-[12px] text-muted">
+											<span className="font-sans text-[calc(12px*var(--ws-fs))] text-muted">
 												/ day
 											</span>
 										</label>
 										{/* the volume valve: nobody can book below this */}
-										<label className="flex items-center gap-1.5 font-sans text-[11.5px] text-subtle">
+										<label className="flex items-center gap-1.5 font-sans text-[calc(11.5px*var(--ws-fs))] text-subtle">
 											min run
 											<input
 												type="text"
@@ -958,11 +958,11 @@ function RatesSheet({
 														minDays: Math.min(30, n),
 													});
 												}}
-												className="h-8 w-10 rounded-lg bg-page/60 text-center font-sans text-[13px] text-primary outline-none tabular-nums transition-colors focus:bg-page"
+												className="h-8 w-10 rounded-lg bg-page/60 text-center font-sans text-[calc(13px*var(--ws-fs))] text-primary outline-none tabular-nums transition-colors focus:bg-page"
 											/>
 											d
 										</label>
-										<span className="text-right font-sans text-[11.5px] leading-tight text-subtle tabular-nums">
+										<span className="text-right font-sans text-[calc(11.5px*var(--ws-fs))] leading-tight text-subtle tabular-nums">
 											floor $
 											{(
 												(row.priceUsdMinor * Math.max(1, row.minDays)) /
@@ -989,7 +989,7 @@ function RatesSheet({
 						type="button"
 						disabled={saving || rows.every((r) => !r.enabled)}
 						onClick={save}
-						className="mt-1 h-11 shrink-0 cursor-pointer rounded-pill bg-brand font-sans text-[14px] font-semibold text-brand-on transition-colors hover:opacity-90 disabled:opacity-50"
+						className="mt-1 h-11 shrink-0 cursor-pointer rounded-pill bg-brand font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:opacity-90 disabled:opacity-50"
 					>
 						{saving ? "Publishing…" : "Publish rates"}
 					</button>

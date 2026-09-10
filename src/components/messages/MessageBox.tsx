@@ -2145,7 +2145,7 @@ export const MessageBox = ({
 							{t("nav.messages")}
 						</h1>
 						{totalUnread > 0 && (
-							<span className="flex h-5 min-w-5 items-center justify-center rounded-pill bg-brand px-1.5 font-sans text-[11px] font-bold tabular-nums text-brand-on">
+							<span className="flex h-5 min-w-5 items-center justify-center rounded-pill bg-brand px-1.5 font-sans text-[calc(11px*var(--ws-fs))] font-bold tabular-nums text-brand-on">
 								{totalUnread}
 							</span>
 						)}
@@ -2346,7 +2346,7 @@ export const MessageBox = ({
 										)}
 									</span>
 									<div className="min-w-0">
-										<h2 className="truncate font-semibold text-[15px]">
+										<h2 className="truncate font-semibold text-[calc(15px*var(--ws-fs))]">
 											{headerIdentity.title}
 										</h2>
 										{chat.typers.length > 0 ? (
@@ -2383,7 +2383,7 @@ export const MessageBox = ({
 									)}
 								</span>
 								<div className="min-w-0">
-									<h2 className="flex items-center gap-1 font-semibold text-[15px] truncate">
+									<h2 className="flex items-center gap-1 font-semibold text-[calc(15px*var(--ws-fs))] truncate">
 										<span className="min-w-0 truncate">
 											{activeConversation.otherParticipant?.firstName}{" "}
 											{activeConversation.otherParticipant?.lastName}
@@ -2568,7 +2568,7 @@ export const MessageBox = ({
 					>
 						{dragOver && (
 							<div className="pointer-events-none absolute inset-2 z-20 flex items-center justify-center rounded-xl border-2 border-dashed border-brand bg-page/60">
-								<span className="rounded-pill bg-raised px-4 py-2 font-sans text-[13px] font-semibold text-primary">
+								<span className="rounded-pill bg-raised px-4 py-2 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
 									Drop to send
 								</span>
 							</div>
@@ -2621,13 +2621,13 @@ export const MessageBox = ({
 							   chip, gold name, no border bar. */
 							<div className="mb-2 flex items-center gap-2 rounded-[10px] bg-sunken px-3 py-2">
 								<span className="flex min-w-0 flex-1 flex-col gap-0.5">
-									<span className="truncate font-sans text-[11.5px] font-semibold text-gold">
+									<span className="truncate font-sans text-[calc(11.5px*var(--ws-fs))] font-semibold text-gold">
 										Replying to{" "}
 										{replyTarget.sender?._id === myProfileId
 											? "yourself"
 											: `@${replyTarget.sender?.username ?? ""}`}
 									</span>
-									<span className="truncate font-sans text-[12.5px] text-subtle">
+									<span className="truncate font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle">
 										{quotedPreview(replyTarget)}
 									</span>
 								</span>
@@ -2651,7 +2651,7 @@ export const MessageBox = ({
 									onClick={() => voiceBar.id && jumpToMessage(voiceBar.id)}
 									className="min-w-0 flex-1 cursor-pointer text-left"
 								>
-									<span className="block truncate font-sans text-[12px] font-semibold text-primary">
+									<span className="block truncate font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-primary">
 										Voice note
 									</span>
 									<span className="mt-1 block h-[3px] w-full overflow-hidden rounded-pill bg-chip">
@@ -2663,7 +2663,7 @@ export const MessageBox = ({
 										/>
 									</span>
 								</button>
-								<span className="shrink-0 font-sans text-[11px] tabular-nums text-muted">
+								<span className="shrink-0 font-sans text-[calc(11px*var(--ws-fs))] tabular-nums text-muted">
 									{Math.floor(voiceBar.time / 60)}:
 									{String(Math.floor(voiceBar.time % 60)).padStart(2, "0")}
 								</span>
@@ -2781,7 +2781,7 @@ export const MessageBox = ({
 												? `Caption for item ${attachments.findIndex((a) => a.id === selectedAtt.id) + 1} of ${attachments.length}`
 												: "Add a caption…"
 										}
-										className="mt-2 w-full rounded-[7px] bg-transparent px-1.5 py-1 font-sans text-[13px] text-primary outline-none placeholder:text-subtle"
+										className="mt-2 w-full rounded-[7px] bg-transparent px-1.5 py-1 font-sans text-[calc(13px*var(--ws-fs))] text-primary outline-none placeholder:text-subtle"
 									/>
 								)}
 							</div>
@@ -2802,27 +2802,27 @@ export const MessageBox = ({
 							// The decision sits where the reply would (owner pick,
 							// Instagram): a slim bar in the composer's place.
 							<div className="flex items-center gap-2 rounded-xl bg-raised/70 px-3 py-2">
-								<span className="min-w-0 flex-1 font-sans text-[12px] text-muted">
+								<span className="min-w-0 flex-1 font-sans text-[calc(12px*var(--ws-fs))] text-muted">
 									Accept to reply. They won't know you've seen this.
 								</span>
 								<button
 									type="button"
 									onClick={() => void declineRequest(activeConversation._id)}
-									className="h-8 shrink-0 cursor-pointer rounded-pill px-3 font-sans text-[12px] font-medium text-danger transition-colors hover:bg-chip"
+									className="h-8 shrink-0 cursor-pointer rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-medium text-danger transition-colors hover:bg-chip"
 								>
 									Delete
 								</button>
 								<button
 									type="button"
 									onClick={() => void acceptRequest(activeConversation._id)}
-									className="h-8 shrink-0 cursor-pointer rounded-pill bg-brand px-3.5 font-sans text-[12px] font-semibold text-brand-on transition-colors hover:bg-brand-active"
+									className="h-8 shrink-0 cursor-pointer rounded-pill bg-brand px-3.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active"
 								>
 									Accept
 								</button>
 							</div>
 						) : iLeftGroup ? (
 							<div className="flex h-[52px] items-center justify-center rounded-2xl bg-raised/70 px-4">
-								<span className="font-sans text-[13px] text-muted">
+								<span className="font-sans text-[calc(13px*var(--ws-fs))] text-muted">
 									You left this group
 								</span>
 							</div>
@@ -2830,7 +2830,7 @@ export const MessageBox = ({
 						activeConversation.adminsOnly &&
 						activeConversation.myRole === "member" ? (
 							<div className="flex h-[52px] items-center justify-center rounded-2xl bg-raised/70 px-4">
-								<span className="font-sans text-[13px] text-muted">
+								<span className="font-sans text-[calc(13px*var(--ws-fs))] text-muted">
 									Only admins can send messages in this group
 								</span>
 							</div>
@@ -3032,14 +3032,14 @@ export const MessageBox = ({
 						className="absolute inset-0 cursor-default bg-scrim"
 					/>
 					<div className="relative w-[320px] rounded-xl bg-surface p-5 shadow-nav animate-pop">
-						<p className="font-sans text-[14.5px] font-semibold text-primary">
+						<p className="font-sans text-[calc(14.5px*var(--ws-fs))] font-semibold text-primary">
 							{pendingDeleteConv.kind === "group"
 								? pendingDeleteConv.myRole === "owner"
 									? "Delete this group?"
 									: "Leave this group?"
 								: "Delete this conversation?"}
 						</p>
-						<p className="mt-1 font-sans text-[12.5px] text-muted">
+						<p className="mt-1 font-sans text-[calc(12.5px*var(--ws-fs))] text-muted">
 							{pendingDeleteConv.kind === "group"
 								? pendingDeleteConv.myRole === "owner"
 									? "The group and its messages are removed for everyone. This can't be undone."
@@ -3050,7 +3050,7 @@ export const MessageBox = ({
 							<button
 								type="button"
 								onClick={() => setPendingDeleteConv(null)}
-								className="h-9 cursor-pointer rounded-pill bg-raised px-4 font-sans text-[13px] font-medium text-primary transition-colors hover:bg-chip"
+								className="h-9 cursor-pointer rounded-pill bg-raised px-4 font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-chip"
 							>
 								Keep
 							</button>
@@ -3072,7 +3072,7 @@ export const MessageBox = ({
 									}
 									setPendingDeleteConv(null);
 								}}
-								className="h-9 cursor-pointer rounded-pill bg-danger px-4 font-sans text-[13px] font-semibold text-white transition-colors hover:opacity-90"
+								className="h-9 cursor-pointer rounded-pill bg-danger px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-white transition-colors hover:opacity-90"
 							>
 								{pendingDeleteConv.kind === "group" &&
 								pendingDeleteConv.myRole !== "owner"
@@ -3141,7 +3141,7 @@ export const MessageBox = ({
 										setMsgMenu(null);
 									}}
 									aria-label={`React ${emoji}`}
-									className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-[20px] transition-transform hover:scale-125"
+									className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-[calc(20px*var(--ws-fs))] transition-transform hover:scale-125"
 								>
 									{emoji}
 								</button>
@@ -3189,7 +3189,7 @@ export const MessageBox = ({
 							setReplyTarget(msgMenu.message);
 							setMsgMenu(null);
 						}}
-						className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[13px] font-medium text-primary transition-colors hover:bg-raised"
+						className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-raised"
 					>
 						<RiReplyLine size={16} />
 						Reply
@@ -3205,7 +3205,7 @@ export const MessageBox = ({
 								setMsgMenu(null);
 								toast.success("Copied");
 							}}
-							className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[13px] font-medium text-primary transition-colors hover:bg-raised"
+							className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-raised"
 						>
 							<RiFileCopyLine size={16} />
 							Copy text
@@ -3221,7 +3221,7 @@ export const MessageBox = ({
 								void unsendMessage(msgMenu.message);
 								setMsgMenu(null);
 							}}
-							className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[13px] font-medium text-danger transition-colors hover:bg-raised"
+							className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-danger transition-colors hover:bg-raised"
 						>
 							<RiRestartLine size={16} />
 							Unsend
@@ -3297,7 +3297,7 @@ function SuggestedPeople({
 	if (rows.length === 0) return null;
 	return (
 		<div className="px-2 pb-3 animate-pop">
-			<p className="px-2 pb-1.5 pt-2 font-sans text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle">
+			<p className="px-2 pb-1.5 pt-2 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.12em] text-subtle">
 				People you follow
 			</p>
 			{rows.map((u) => (
@@ -3306,11 +3306,11 @@ function SuggestedPeople({
 						<SafeAvatar src={u.avatar} eager />
 					</span>
 					<span className="min-w-0 flex-1">
-						<span className="block truncate font-sans text-[14px] font-semibold text-primary">
+						<span className="block truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
 							{[u.firstName, u.lastName].filter(Boolean).join(" ") || u.username}
 						</span>
 						{u.username && (
-							<span className="block truncate font-sans text-[12px] text-muted">
+							<span className="block truncate font-sans text-[calc(12px*var(--ws-fs))] text-muted">
 								@{u.username}
 							</span>
 						)}
@@ -3319,7 +3319,7 @@ function SuggestedPeople({
 						type="button"
 						disabled={startingWith === u._id}
 						onClick={() => onMessage(u)}
-						className="h-8 shrink-0 cursor-pointer rounded-pill bg-raised px-3.5 font-sans text-[12px] font-semibold text-primary transition-colors hover:bg-chip disabled:opacity-60"
+						className="h-8 shrink-0 cursor-pointer rounded-pill bg-raised px-3.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-chip disabled:opacity-60"
 					>
 						{startingWith === u._id ? "…" : "Message"}
 					</button>

@@ -106,7 +106,7 @@ export function Attachment({
 								</span>
 							</span>
 							{clock && (
-								<span className="absolute bottom-2 right-2 rounded-pill bg-black/55 px-1.5 py-0.5 font-sans text-[11px] font-medium tabular-nums text-white">
+								<span className="absolute bottom-2 right-2 rounded-pill bg-black/55 px-1.5 py-0.5 font-sans text-[calc(11px*var(--ws-fs))] font-medium tabular-nums text-white">
 									{clock}
 								</span>
 							)}
@@ -119,7 +119,7 @@ export function Attachment({
 				// image visible underneath, a small cancel opposite it.
 				<>
 					<span className="absolute inset-0 bg-scrim/35" aria-hidden />
-					<span className="absolute left-2 top-2 rounded-pill bg-black/60 px-2 py-0.5 font-sans text-[11px] font-semibold tabular-nums text-white">
+					<span className="absolute left-2 top-2 rounded-pill bg-black/60 px-2 py-0.5 font-sans text-[calc(11px*var(--ws-fs))] font-semibold tabular-nums text-white">
 						{Math.round(Math.min(1, uploadPct ?? 0) * 100)}%
 					</span>
 					<button
@@ -137,7 +137,7 @@ export function Attachment({
 					<button
 						type="button"
 						onClick={onRetry}
-						className="flex cursor-pointer items-center gap-1.5 rounded-pill bg-raised px-3.5 py-1.5 font-sans text-[12.5px] font-semibold text-primary transition-colors hover:bg-chip"
+						className="flex cursor-pointer items-center gap-1.5 rounded-pill bg-raised px-3.5 py-1.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-chip"
 					>
 						<RiRestartLine size={14} />
 						Retry
@@ -145,7 +145,7 @@ export function Attachment({
 					<button
 						type="button"
 						onClick={onCancelUpload}
-						className="cursor-pointer font-sans text-[11.5px] text-muted transition-colors hover:text-primary"
+						className="cursor-pointer font-sans text-[calc(11.5px*var(--ws-fs))] text-muted transition-colors hover:text-primary"
 					>
 						Remove
 					</button>

@@ -218,10 +218,10 @@ export default function NotificationsPage() {
       <header className="sticky top-0 z-sticky border-b border-hairline bg-page md:top-0">
         <div className="flex items-end justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
-            <span className="block font-sans text-[11px] font-bold uppercase tracking-[0.16em] text-gold">
+            <span className="block font-sans text-[calc(11px*var(--ws-fs))] font-bold uppercase tracking-[0.16em] text-gold">
               {t("notif.eyebrow")}
             </span>
-            <h1 className="mt-1 font-display text-[24px] font-semibold leading-none text-primary">
+            <h1 className="mt-1 font-display text-[calc(24px*var(--ws-fs))] font-semibold leading-none text-primary">
               {t("nav.notifications")}
             </h1>
           </div>
@@ -229,7 +229,7 @@ export default function NotificationsPage() {
             <button
               type="button"
               onClick={markAllRead}
-              className="flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-pill border border-hairline bg-raised px-3.5 font-sans text-[12.5px] font-medium text-muted transition-colors hover:text-primary"
+              className="flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-pill border border-hairline bg-raised px-3.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-muted transition-colors hover:text-primary"
             >
               <Check size={13} weight="bold" />
               {t("notif.markAllRead")}
@@ -258,7 +258,7 @@ export default function NotificationsPage() {
             animate={{ opacity: 1, y: 0, x: "-50%" }}
             exit={{ opacity: 0, x: "-50%", transition: { duration: 0.12 } }}
             transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-            className="fixed left-1/2 top-[72px] z-sticky flex h-9 cursor-pointer items-center gap-1.5 rounded-pill bg-brand pl-3.5 pr-4 font-sans text-[13px] font-semibold text-brand-on shadow-nav transition-colors hover:bg-brand-active md:top-16"
+            className="fixed left-1/2 top-[72px] z-sticky flex h-9 cursor-pointer items-center gap-1.5 rounded-pill bg-brand pl-3.5 pr-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on shadow-nav transition-colors hover:bg-brand-active md:top-16"
           >
             <span className="tabular-nums">{pending}</span> {t("notif.new")}
           </motion.button>

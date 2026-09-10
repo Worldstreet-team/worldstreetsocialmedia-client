@@ -123,12 +123,12 @@ function GridTile({
 				<VideoTile track={videoTrack} mirrored={mirrored} />
 			) : (
 				<div className="flex h-full w-full items-center justify-center">
-					<span className="flex h-14 w-14 items-center justify-center rounded-pill glass-chip text-[20px] font-semibold glass-ink">
+					<span className="flex h-14 w-14 items-center justify-center rounded-pill glass-chip text-[calc(20px*var(--ws-fs))] font-semibold glass-ink">
 						{(name || "?").slice(0, 1).toUpperCase()}
 					</span>
 				</div>
 			)}
-			<span className="absolute bottom-1.5 left-1.5 flex max-w-[calc(100%-12px)] items-center gap-1 rounded-pill glass-chip-canvas backdrop-blur-md px-2 py-0.5 text-[11px] glass-ink">
+			<span className="absolute bottom-1.5 left-1.5 flex max-w-[calc(100%-12px)] items-center gap-1 rounded-pill glass-chip-canvas backdrop-blur-md px-2 py-0.5 text-[calc(11px*var(--ws-fs))] glass-ink">
 				{micMuted && <RiMicOffFill size={11} />}
 				<span className="truncate">{isSelf ? "You" : name}</span>
 			</span>
@@ -257,7 +257,7 @@ function WeakChip({ compact }: { compact?: boolean }) {
 		<motion.span
 			className={clsx(
 				"flex items-center gap-1.5 rounded-pill glass-chip-canvas backdrop-blur-md glass-ink",
-				compact ? "h-6 px-2 text-[11px]" : "h-7 px-2.5 text-[12px] font-medium",
+				compact ? "h-6 px-2 text-[calc(11px*var(--ws-fs))]" : "h-7 px-2.5 text-[calc(12px*var(--ws-fs))] font-medium",
 			)}
 			animate={{ opacity: [1, 0.55, 1] }}
 			transition={{ duration: 1.8, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
@@ -570,10 +570,10 @@ export function CallSurface() {
 								className="h-11 w-11 shrink-0 rounded-pill object-cover"
 							/>
 							<div className="min-w-0 flex-1">
-								<p className="truncate text-[13.5px] font-semibold glass-ink">
+								<p className="truncate text-[calc(13.5px*var(--ws-fs))] font-semibold glass-ink">
 									{peer.name}
 								</p>
-								<p className="flex items-center gap-1.5 text-[12px] glass-ink-dim">
+								<p className="flex items-center gap-1.5 text-[calc(12px*var(--ws-fs))] glass-ink-dim">
 									<span className="truncate">
 										{isGroup && groupCaller
 											? `${groupCaller.name} · ${line}`
@@ -643,10 +643,10 @@ export function CallSurface() {
 									<VideoTile track={remoteVideo} />
 								) : isGroup ? (
 									<div className="flex h-full w-full flex-col items-center justify-center gap-1">
-										<span className="flex h-[44px] w-[44px] items-center justify-center rounded-pill glass-chip text-[16px] font-semibold glass-ink">
+										<span className="flex h-[44px] w-[44px] items-center justify-center rounded-pill glass-chip text-[calc(16px*var(--ws-fs))] font-semibold glass-ink">
 											{(peer.name || "G").slice(0, 1).toUpperCase()}
 										</span>
-										<span className="text-[10.5px] glass-ink-dim">
+										<span className="text-[calc(10.5px*var(--ws-fs))] glass-ink-dim">
 											{participantCount + 1} in call
 										</span>
 									</div>
@@ -673,7 +673,7 @@ export function CallSurface() {
 									</span>
 								)}
 								{!micOn && !poorConnection && (
-									<span className="absolute bottom-2 left-2 flex h-6 items-center gap-1 rounded-pill glass-chip-canvas backdrop-blur-md px-2 text-[11px] glass-ink">
+									<span className="absolute bottom-2 left-2 flex h-6 items-center gap-1 rounded-pill glass-chip-canvas backdrop-blur-md px-2 text-[calc(11px*var(--ws-fs))] glass-ink">
 										<RiMicOffFill size={12} />
 										Muted
 									</span>
@@ -682,10 +682,10 @@ export function CallSurface() {
 
 							<div className="flex items-center gap-1.5 px-2.5 py-2">
 								<div className="min-w-0 flex-1">
-									<p className="truncate text-[12.5px] font-semibold glass-ink">
+									<p className="truncate text-[calc(12.5px*var(--ws-fs))] font-semibold glass-ink">
 										{peer.name}
 									</p>
-									<p className="flex items-center gap-1.5 text-[11px] tabular-nums glass-ink-dim">
+									<p className="flex items-center gap-1.5 text-[calc(11px*var(--ws-fs))] tabular-nums glass-ink-dim">
 										<span className="truncate">{line}</span>
 										{pending && <PendingDots />}
 									</p>
@@ -765,7 +765,7 @@ export function CallSurface() {
 									/>
 									{/* Identity + state over the grid, same chip. */}
 									<div className="absolute left-3 top-3 z-10 flex max-w-[calc(100%-72px)] flex-wrap items-center gap-1.5">
-										<span className="flex h-8 items-center gap-2 rounded-pill glass-chip-canvas backdrop-blur-md px-3 text-[12.5px] font-semibold glass-ink">
+										<span className="flex h-8 items-center gap-2 rounded-pill glass-chip-canvas backdrop-blur-md px-3 text-[calc(12.5px*var(--ws-fs))] font-semibold glass-ink">
 											<span className="truncate">{peer.name}</span>
 											<span className="font-medium tabular-nums glass-ink-dim">
 												{line}
@@ -775,7 +775,7 @@ export function CallSurface() {
 									</div>
 									{error && (
 										<div className="absolute inset-x-0 bottom-[86px] z-10 flex justify-center px-4">
-											<span className="rounded-pill bg-danger px-3 py-1.5 text-[12.5px] font-medium text-white">
+											<span className="rounded-pill bg-danger px-3 py-1.5 text-[calc(12.5px*var(--ws-fs))] font-medium text-white">
 												{error}
 											</span>
 										</div>
@@ -805,7 +805,7 @@ export function CallSurface() {
 												height={104}
 												className="h-[104px] w-[104px] rounded-pill object-cover"
 											/>
-											<p className="flex items-center gap-2 text-[14px] glass-ink-dim">
+											<p className="flex items-center gap-2 text-[calc(14px*var(--ws-fs))] glass-ink-dim">
 												{status === "connected"
 													? `${peer.name}'s camera is off`
 													: line}
@@ -816,7 +816,7 @@ export function CallSurface() {
 
 									{/* Identity and state, top-left, over the picture. */}
 									<div className="absolute left-3 top-3 z-10 flex max-w-[calc(100%-72px)] flex-wrap items-center gap-1.5">
-										<span className="flex h-8 items-center gap-2 rounded-pill glass-chip-canvas backdrop-blur-md px-3 text-[12.5px] font-semibold glass-ink">
+										<span className="flex h-8 items-center gap-2 rounded-pill glass-chip-canvas backdrop-blur-md px-3 text-[calc(12.5px*var(--ws-fs))] font-semibold glass-ink">
 											<span className="truncate">{peer.name}</span>
 											<span className="font-medium tabular-nums glass-ink-dim">
 												{line}
@@ -824,7 +824,7 @@ export function CallSurface() {
 											{pending && <PendingDots className="glass-ink-dim" />}
 										</span>
 										{remoteMuted && (
-											<span className="flex h-7 items-center gap-1.5 rounded-pill glass-chip-canvas backdrop-blur-md px-2.5 text-[12px] glass-ink">
+											<span className="flex h-7 items-center gap-1.5 rounded-pill glass-chip-canvas backdrop-blur-md px-2.5 text-[calc(12px*var(--ws-fs))] glass-ink">
 												<RiMicOffFill size={13} />
 												Muted
 											</span>
@@ -869,7 +869,7 @@ export function CallSurface() {
 
 									{error && (
 										<div className="absolute inset-x-0 bottom-[86px] z-10 flex justify-center px-4">
-											<span className="rounded-pill bg-danger px-3 py-1.5 text-[12.5px] font-medium text-white">
+											<span className="rounded-pill bg-danger px-3 py-1.5 text-[calc(12.5px*var(--ws-fs))] font-medium text-white">
 												{error}
 											</span>
 										</div>
@@ -925,13 +925,13 @@ export function CallSurface() {
 											{pending && <PendingDots />}
 										</p>
 										{peer.username && (
-											<p className="mt-0.5 text-[13px] glass-ink-faint">
+											<p className="mt-0.5 text-[calc(13px*var(--ws-fs))] glass-ink-faint">
 												@{peer.username}
 											</p>
 										)}
 
 										{remoteMuted && status === "connected" && (
-											<p className="mt-3 flex items-center gap-1.5 rounded-pill glass-chip px-2.5 py-1 text-[12px]">
+											<p className="mt-3 flex items-center gap-1.5 rounded-pill glass-chip px-2.5 py-1 text-[calc(12px*var(--ws-fs))]">
 												<RiMicOffFill size={13} />
 												{peer.name} is muted
 											</p>
@@ -942,7 +942,7 @@ export function CallSurface() {
 											</span>
 										)}
 										{error && (
-											<p className="mt-3 rounded-pill bg-danger px-3 py-1.5 text-[12.5px] font-medium text-white">
+											<p className="mt-3 rounded-pill bg-danger px-3 py-1.5 text-[calc(12.5px*var(--ws-fs))] font-medium text-white">
 												{error}
 											</p>
 										)}
@@ -1060,13 +1060,13 @@ function RejoinPill() {
 			transition={{ duration: 0.26, ease: EASE }}
 			className="fixed bottom-4 right-4 z-modal flex items-center gap-2 rounded-pill glass-dock backdrop-blur-2xl backdrop-saturate-150 py-1.5 pl-4 pr-1.5"
 		>
-			<span className="text-[12.5px] font-medium glass-ink">
+			<span className="text-[calc(12.5px*var(--ws-fs))] font-medium glass-ink">
 				Call interrupted
 			</span>
 			<button
 				type="button"
 				onClick={() => void callManager.rejoin()}
-				className="flex h-10 cursor-pointer items-center rounded-pill glass-cta px-3.5 text-[12.5px] font-semibold transition-colors"
+				className="flex h-10 cursor-pointer items-center rounded-pill glass-cta px-3.5 text-[calc(12.5px*var(--ws-fs))] font-semibold transition-colors"
 			>
 				Rejoin
 			</button>

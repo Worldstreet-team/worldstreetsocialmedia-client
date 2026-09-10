@@ -58,7 +58,7 @@ function LanePreview({ kind }: { kind: StoryKind }) {
         className="flex h-full w-full items-center justify-center"
         style={{ background: storyCanvasCss(STORY_BACKGROUNDS[1]) }}
       >
-        <span className="font-editorial text-[19px] leading-none text-[#fafaf9]">
+        <span className="font-editorial text-[calc(19px*var(--ws-fs))] leading-none text-[#fafaf9]">
           Aa
         </span>
       </span>
@@ -109,10 +109,10 @@ export default function StoryCreateSheet({
       <OverlayPanel dragClose={onClose} variant="sheet" label="Create a story">
         <OverlayHeader onClose={onClose}>
           <div className="min-w-0 flex-1">
-            <span className="block font-sans text-[10px] font-bold uppercase tracking-[0.14em] text-subtle">
+            <span className="block font-sans text-[calc(10px*var(--ws-fs))] font-bold uppercase tracking-[0.14em] text-subtle">
               New
             </span>
-            <h2 className="truncate font-sans text-[14px] font-semibold leading-tight text-primary">
+            <h2 className="truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold leading-tight text-primary">
               Create a story
             </h2>
           </div>
@@ -140,18 +140,18 @@ export default function StoryCreateSheet({
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Icon size={13} weight="bold" className="text-muted" />
-                  <span className="font-sans text-[13px] font-semibold text-primary">
+                  <span className="font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
                     {label}
                   </span>
                 </span>
-                <span className="block font-sans text-[11px] leading-snug text-muted">
+                <span className="block font-sans text-[calc(11px*var(--ws-fs))] leading-snug text-muted">
                   {hint}
                 </span>
               </motion.button>
             ))}
           </div>
 
-          <p className="mt-4 text-center font-sans text-[11px] text-subtle">
+          <p className="mt-4 text-center font-sans text-[calc(11px*var(--ws-fs))] text-subtle">
             Stories disappear after 24 hours
           </p>
         </div>

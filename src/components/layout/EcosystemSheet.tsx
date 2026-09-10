@@ -62,10 +62,10 @@ export function EcosystemSheet({
 							className="h-[22px] w-[22px] shrink-0 object-contain"
 						/>
 						<div className="min-w-0 flex-1">
-							<p className="font-display text-[15px] font-semibold leading-tight text-primary">
+							<p className="font-display text-[calc(15px*var(--ws-fs))] font-semibold leading-tight text-primary">
 								More from WorldStreet
 							</p>
-							<p className="font-sans text-[12px] text-muted">
+							<p className="font-sans text-[calc(12px*var(--ws-fs))] text-muted">
 								One account, every platform
 							</p>
 						</div>
@@ -94,10 +94,10 @@ export function EcosystemSheet({
 									/>
 								</span>
 								<span className="min-w-0 flex-1">
-									<span className="block truncate font-sans text-[14px] font-medium text-primary">
+									<span className="block truncate font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary">
 										{app.title}
 									</span>
-									<span className="block truncate font-sans text-[12px] text-muted">
+									<span className="block truncate font-sans text-[calc(12px*var(--ws-fs))] text-muted">
 										{app.description}
 									</span>
 								</span>

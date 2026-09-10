@@ -32,7 +32,7 @@ export function EmptyState({
 				{title}
 			</h2>
 
-			<p className="max-w-[36ch] font-sans text-[13px] leading-relaxed text-muted">
+			<p className="max-w-[36ch] font-sans text-[calc(13px*var(--ws-fs))] leading-relaxed text-muted">
 				{caption}
 			</p>
 
@@ -40,7 +40,7 @@ export function EmptyState({
 				<button
 					type="button"
 					onClick={action.onClick}
-					className="mt-1 h-9 rounded-pill bg-brand px-[18px] font-sans text-[13px] font-semibold text-brand-on transition-colors hover:bg-brand-active cursor-pointer"
+					className="mt-1 h-9 rounded-pill bg-brand px-[18px] font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active cursor-pointer"
 				>
 					{action.label}
 				</button>

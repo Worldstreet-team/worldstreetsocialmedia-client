@@ -9,6 +9,8 @@ import {
 
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { PreferencesProvider } from "@/components/providers/PreferencesProvider";
+import { PREPAINT_PREFS } from "@/lib/preferences";
 import { ToastProvider } from "@/components/ui/Toast/ToastContext";
 import NextTopLoader from "nextjs-toploader";
 import JotaiHydrator from "./JotaiHydrator";
@@ -216,13 +218,13 @@ export default async function RootLayout({
                         render settled (globals.css: html.ws-intro-done). */}
                     <script
                         dangerouslySetInnerHTML={{
-                            __html: `try{var k="ws-intro-played",h=document.documentElement;if(sessionStorage.getItem(k)){h.classList.add("ws-intro-done")}else{setTimeout(function(){try{sessionStorage.setItem(k,"1")}catch(e){}h.classList.add("ws-intro-done")},1600)}}catch(e){}`,
+                            __html: PREPAINT_PREFS + `try{var k="ws-intro-played",h=document.documentElement;if(sessionStorage.getItem(k)){h.classList.add("ws-intro-done")}else{setTimeout(function(){try{sessionStorage.setItem(k,"1")}catch(e){}h.classList.add("ws-intro-done")},1600)}}catch(e){}`,
                         }}
                     />
                     {/* Keyboard users jump the nav rails straight to the timeline. */}
                     <a
                         href="#main-content"
-                        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-toast focus:rounded-pill focus:bg-surface focus:border focus:border-hairline focus:px-4 focus:py-2 focus:font-sans focus:text-[13px] focus:text-primary"
+                        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-toast focus:rounded-pill focus:bg-surface focus:border focus:border-hairline focus:px-4 focus:py-2 focus:font-sans focus:text-[calc(13px*var(--ws-fs))] focus:text-primary"
                     >
                         Skip to content
                     </a>
@@ -247,6 +249,7 @@ export default async function RootLayout({
                         <LocaleProvider locale={locale}>
                         <JotaiHydrator user={parsedUser}>
                             <RealtimeProvider>
+                                <PreferencesProvider>
                                 <CallProvider>
                                     <ToastProvider>
                                     <Suspense fallback={null}>
@@ -277,6 +280,7 @@ export default async function RootLayout({
                                         <MobileBottomNav />
                                     </ToastProvider>
                                 </CallProvider>
+                                </PreferencesProvider>
                             </RealtimeProvider>
                         </JotaiHydrator>
                         </LocaleProvider>

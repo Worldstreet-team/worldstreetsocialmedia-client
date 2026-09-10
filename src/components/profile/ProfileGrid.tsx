@@ -56,7 +56,7 @@ export function ProfileGrid({
             )}
 
             <span className="absolute inset-0 flex items-end bg-gradient-to-t from-[#0c0a09]/70 to-transparent px-2 pb-1.5 pt-6 opacity-0 transition-opacity group-hover:opacity-100">
-              <span className="flex items-center gap-1 font-sans text-[11px] font-semibold tabular-nums text-[#fafaf9]">
+              <span className="flex items-center gap-1 font-sans text-[calc(11px*var(--ws-fs))] font-semibold tabular-nums text-[#fafaf9]">
                 <Heart size={11} weight="fill" />
                 {formatCompact(post.stats?.likes ?? 0)}
               </span>

@@ -37,7 +37,7 @@ function UserRow({ user }: { user: UserResult }) {
       </span>
       <span className="flex min-w-0 flex-col">
         <span className="flex min-w-0 items-center gap-1">
-          <span className="truncate font-sans text-[15px] font-semibold text-primary hover:underline">
+          <span className="truncate font-sans text-[calc(15px*var(--ws-fs))] font-semibold text-primary hover:underline">
             {`${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.username}
           </span>
           {/* Not gated on isVerified: UserBadges already returns null when
@@ -52,7 +52,7 @@ function UserRow({ user }: { user: UserResult }) {
             />
           </span>
         </span>
-        <span className="truncate font-sans text-[13.5px] text-muted">
+        <span className="truncate font-sans text-[calc(13.5px*var(--ws-fs))] text-muted">
           @{user.username}
         </span>
       </span>
@@ -109,7 +109,7 @@ export function SearchResults({
           key={c.id}
           type="button"
           onClick={() => onPickTopic(c.label)}
-          className="flex h-9 cursor-pointer items-center rounded-pill bg-raised px-3.5 font-sans text-[12.5px] font-medium text-muted transition-colors hover:bg-chip hover:text-primary"
+          className="flex h-9 cursor-pointer items-center rounded-pill bg-raised px-3.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-muted transition-colors hover:bg-chip hover:text-primary"
         >
           {c.label}
         </button>
@@ -182,7 +182,7 @@ export function SearchResults({
         <>
           {(usersLoading || users.length > 0) && (
             <>
-              <h2 className="px-4 pb-2 pt-4 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">
+              <h2 className="px-4 pb-2 pt-4 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-subtle">
                 {t("explore.tab.users")}
               </h2>
               {topPeople}
@@ -190,7 +190,7 @@ export function SearchResults({
           )}
           {(postsLoading || posts.length > 0) && (
             <>
-              <h2 className="px-4 pb-2 pt-4 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">
+              <h2 className="px-4 pb-2 pt-4 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-subtle">
                 {t("explore.tab.posts")}
               </h2>
               {postList}

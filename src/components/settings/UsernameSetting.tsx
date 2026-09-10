@@ -113,14 +113,14 @@ export function UsernameSetting() {
 					type="button"
 					onClick={save}
 					disabled={!canSave}
-					className="h-9 shrink-0 cursor-pointer rounded-pill bg-brand px-4 font-sans text-[13px] font-semibold text-brand-on transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+					className="h-9 shrink-0 cursor-pointer rounded-pill bg-brand px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
 				>
 					{saving ? "Saving…" : "Save"}
 				</button>
 			</div>
 
 			<div className="mt-2 flex items-center gap-2 rounded-xl bg-sunken px-3.5">
-				<span className="font-sans text-[15px] text-subtle">@</span>
+				<span className="font-sans text-[calc(15px*var(--ws-fs))] text-subtle">@</span>
 				<input
 					value={trimmed}
 					onChange={(e) => setValue(e.target.value)}
@@ -132,7 +132,7 @@ export function UsernameSetting() {
 					autoCorrect="off"
 					maxLength={20}
 					aria-label="Username"
-					className="min-w-0 flex-1 bg-transparent py-3 font-sans text-[15px] text-primary outline-none placeholder:text-subtle"
+					className="min-w-0 flex-1 bg-transparent py-3 font-sans text-[calc(15px*var(--ws-fs))] text-primary outline-none placeholder:text-subtle"
 				/>
 				{state === "checking" && (
 					<LoaderCircle className="h-4 w-4 shrink-0 animate-spin text-subtle" />
@@ -145,7 +145,7 @@ export function UsernameSetting() {
 
 			{hint.text && (
 				<p
-					className={`mt-1.5 font-sans text-[12px] ${
+					className={`mt-1.5 font-sans text-[calc(12px*var(--ws-fs))] ${
 						hint.tone === "danger"
 							? "text-danger"
 							: hint.tone === "success"
@@ -156,7 +156,7 @@ export function UsernameSetting() {
 					{hint.text}
 				</p>
 			)}
-			<p className="mt-1 font-sans text-[12px] text-subtle">
+			<p className="mt-1 font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
 				You can change this again 30 days after a change. Your old handle
 				becomes free for someone else to take.
 			</p>

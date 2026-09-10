@@ -662,7 +662,7 @@ export function VideoPlayer({
 					type="button"
 					onClick={resetZoom}
 					aria-label="Reset zoom"
-					className="absolute left-3 top-3 z-10 flex h-8 cursor-pointer items-center gap-1.5 rounded-pill glass-chip px-3 font-sans text-[12px] font-semibold tabular-nums"
+					className="absolute left-3 top-3 z-10 flex h-8 cursor-pointer items-center gap-1.5 rounded-pill glass-chip px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold tabular-nums"
 				>
 					{zoom.toFixed(1)}x
 					<span className="glass-ink-faint font-normal">Reset</span>
@@ -670,7 +670,7 @@ export function VideoPlayer({
 			)}
 
 			{plays !== undefined && plays > 0 && (
-				<span className="pointer-events-none absolute left-2 top-2 flex items-center gap-1 rounded-pill bg-black/55 px-2 py-0.5 font-sans text-[11px] font-medium text-white tabular-nums">
+				<span className="pointer-events-none absolute left-2 top-2 flex items-center gap-1 rounded-pill bg-black/55 px-2 py-0.5 font-sans text-[calc(11px*var(--ws-fs))] font-medium text-white tabular-nums">
 					<Play size={10} weight="fill" />
 					{formatCompact(plays)}{" "}
 					plays
@@ -682,7 +682,7 @@ export function VideoPlayer({
 			    invitation rather than a passive glyph. */}
 			{!playing && autoplayBlocked && (
 				<span className="pointer-events-none absolute inset-x-0 bottom-14 z-10 flex justify-center">
-					<span className="rounded-pill bg-black/65 px-3 py-1 font-sans text-[12px] font-semibold text-white">
+					<span className="rounded-pill bg-black/65 px-3 py-1 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-white">
 						Tap to play
 					</span>
 				</span>
@@ -810,7 +810,7 @@ export function VideoPlayer({
 
 					{/* One readout, not two flanking the track. Elapsed is the
 					    number people actually read; the total rides with it. */}
-					<span className="shrink-0 px-0.5 font-sans text-[11.5px] tabular-nums glass-ink-dim">
+					<span className="shrink-0 px-0.5 font-sans text-[calc(11.5px*var(--ws-fs))] tabular-nums glass-ink-dim">
 						{clock(current)}
 						<span className="glass-ink-faint"> / {clock(duration)}</span>
 					</span>

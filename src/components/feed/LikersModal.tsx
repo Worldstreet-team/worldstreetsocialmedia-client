@@ -88,7 +88,7 @@ export function LikersModal({
 							))}
 						</div>
 					) : rows.length === 0 ? (
-						<p className="px-6 py-8 text-center font-sans text-[13px] text-subtle">
+						<p className="px-6 py-8 text-center font-sans text-[calc(13px*var(--ws-fs))] text-subtle">
 							No likes yet.
 						</p>
 					) : (
@@ -104,7 +104,7 @@ export function LikersModal({
 								</span>
 								<span className="min-w-0 flex-1">
 									<span className="flex items-center gap-1.5">
-										<span className="truncate font-sans text-[14px] font-semibold text-primary">
+										<span className="truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
 											{[u.firstName, u.lastName]
 												.filter(Boolean)
 												.join(" ") || u.username}
@@ -116,7 +116,7 @@ export function LikersModal({
 											size={13}
 										/>
 									</span>
-									<span className="block truncate font-sans text-[12.5px] text-subtle">
+									<span className="block truncate font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle">
 										@{u.username}
 									</span>
 								</span>
@@ -127,7 +127,7 @@ export function LikersModal({
 						<button
 							type="button"
 							onClick={() => void load(rows.length)}
-							className="mx-auto my-2 flex h-9 cursor-pointer items-center rounded-pill bg-raised px-4 font-sans text-[13px] font-medium text-primary transition-colors hover:bg-chip"
+							className="mx-auto my-2 flex h-9 cursor-pointer items-center rounded-pill bg-raised px-4 font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-chip"
 						>
 							Show more
 						</button>

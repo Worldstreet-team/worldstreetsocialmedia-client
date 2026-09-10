@@ -168,17 +168,17 @@ export function LiveSlidePlayer({
 			{(state === "connecting" || state === "waiting") && (
 				<div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
 					<span className="h-7 w-7 rounded-pill border-2 border-white/20 border-t-white/75 animate-spin" />
-					<p className="font-sans text-[13px] text-white/55">
+					<p className="font-sans text-[calc(13px*var(--ws-fs))] text-white/55">
 						{state === "waiting" ? t("watch.waiting") : ""}
 					</p>
 				</div>
 			)}
 			{state === "ended" && (
 				<div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
-					<p className="font-sans text-[15px] font-semibold text-white/75">
+					<p className="font-sans text-[calc(15px*var(--ws-fs))] font-semibold text-white/75">
 						{t("watch.ended")}
 					</p>
-					<p className="font-sans text-[12.5px] text-white/45">
+					<p className="font-sans text-[calc(12.5px*var(--ws-fs))] text-white/45">
 						{t("watch.keepScrolling")}
 					</p>
 				</div>

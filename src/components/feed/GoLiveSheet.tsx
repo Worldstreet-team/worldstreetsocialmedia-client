@@ -112,7 +112,7 @@ function GlassSelect({
 				className="w-full flex items-center gap-1.5 rounded-pill glass-chip px-3 h-8 cursor-pointer"
 			>
 				<span className="shrink-0 opacity-80">{icon}</span>
-				<span className="flex-1 min-w-0 truncate text-left text-[12px] font-sans">
+				<span className="flex-1 min-w-0 truncate text-left text-[calc(12px*var(--ws-fs))] font-sans">
  {current?.label ?? ""}
 				</span>
 				<CaretDown
@@ -139,7 +139,7 @@ function GlassSelect({
 									onChange(o.id);
 									setOpen(false);
 								}}
-								className="w-full flex items-center gap-2 px-3 py-2 text-left font-sans text-[12px] glass-ink-dim hover:glass-ink hover:bg-white/10 transition-colors cursor-pointer"
+								className="w-full flex items-center gap-2 px-3 py-2 text-left font-sans text-[calc(12px*var(--ws-fs))] glass-ink-dim hover:glass-ink hover:bg-white/10 transition-colors cursor-pointer"
 							>
 								<span className="flex-1 truncate">{o.label}</span>
 								{o.id === value && (
@@ -397,10 +397,10 @@ export function GoLiveSheet({
 								<Plugs size={16} weight="fill" />
 							</span>
 							<div className="min-w-0 flex-1">
-								<p className="truncate font-display text-[15px] font-semibold leading-tight text-primary">
+								<p className="truncate font-display text-[calc(15px*var(--ws-fs))] font-semibold leading-tight text-primary">
 									{t("golive.obs.title")}
 								</p>
-								<p className="truncate font-sans text-[12px] text-muted">
+								<p className="truncate font-sans text-[calc(12px*var(--ws-fs))] text-muted">
 									{t("golive.obs.note")}
 								</p>
 							</div>
@@ -422,11 +422,11 @@ export function GoLiveSheet({
 							]
 						).map((row) => (
 							<div key={row.kind}>
-								<p className="font-sans text-[10.5px] font-semibold uppercase tracking-[0.12em] text-subtle mb-1.5">
+								<p className="font-sans text-[calc(10.5px*var(--ws-fs))] font-semibold uppercase tracking-[0.12em] text-subtle mb-1.5">
 									{row.label}
 								</p>
 								<div className="flex items-center gap-2">
-									<code className="flex-1 min-w-0 truncate rounded-lg bg-sunken text-primary px-3 h-10 leading-10 font-mono text-[12.5px]">
+									<code className="flex-1 min-w-0 truncate rounded-lg bg-sunken text-primary px-3 h-10 leading-10 font-mono text-[calc(12.5px*var(--ws-fs))]">
 										{row.kind === "key"
 											? "•".repeat(Math.min(24, row.value.length || 12))
  : row.value || ""}
@@ -457,7 +457,7 @@ export function GoLiveSheet({
 									href={`${XSTREAM_WEB_URL}/stream/${obsInfo.streamId}`}
 									target="_blank"
 									rel="noopener noreferrer"
-									className="flex-1 h-11 flex items-center justify-center gap-2 rounded-pill bg-chip text-primary transition-colors hover:bg-raised font-sans text-[13px] font-semibold"
+									className="flex-1 h-11 flex items-center justify-center gap-2 rounded-pill bg-chip text-primary transition-colors hover:bg-raised font-sans text-[calc(13px*var(--ws-fs))] font-semibold"
 								>
 									<ArrowSquareOut size={15} />
 									{t("golive.obs.open")}
@@ -466,7 +466,7 @@ export function GoLiveSheet({
 							<button
 								type="button"
 								onClick={close}
-								className="flex-1 h-11 rounded-pill bg-brand text-brand-on font-sans text-[13px] font-semibold transition-colors hover:bg-brand-active cursor-pointer"
+								className="flex-1 h-11 rounded-pill bg-brand text-brand-on font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-colors hover:bg-brand-active cursor-pointer"
 							>
 								{t("golive.obs.done")}
 							</button>
@@ -504,7 +504,7 @@ export function GoLiveSheet({
 											muted
 											className="absolute inset-0 w-full h-full object-cover [transform:scaleX(-1)]"
 										/>
-										<span className="absolute top-3 left-3 flex items-center gap-1.5 rounded-pill glass-chip px-2.5 h-6 text-[10.5px] font-bold tracking-wide font-sans">
+										<span className="absolute top-3 left-3 flex items-center gap-1.5 rounded-pill glass-chip px-2.5 h-6 text-[calc(10.5px*var(--ws-fs))] font-bold tracking-wide font-sans">
 											<span className="relative flex h-1.5 w-1.5">
 												<span className="absolute inline-flex h-full w-full rounded-pill bg-danger opacity-70 animate-ping" />
 												<span className="relative inline-flex h-1.5 w-1.5 rounded-pill bg-danger" />
@@ -550,7 +550,7 @@ export function GoLiveSheet({
 											<Plugs size={22} />
 										)}
 									</span>
-									<p className="text-[13px] glass-ink-dim font-sans max-w-[300px] leading-relaxed">
+									<p className="text-[calc(13px*var(--ws-fs))] glass-ink-dim font-sans max-w-[300px] leading-relaxed">
 										{source === "screen"
 											? nativeMode
 												? t("golive.screenNativeHint")
@@ -572,7 +572,7 @@ export function GoLiveSheet({
 								<X size={15} />
 							</button>
 							{/* Link status: quiet chip, a touch of green. */}
-							<div className="flex items-center gap-2.5 font-sans text-[12px] pr-10">
+							<div className="flex items-center gap-2.5 font-sans text-[calc(12px*var(--ws-fs))] pr-10">
 								{link.kind === "linked" ? (
 									<span className="relative shrink-0">
 										<span className="block h-7 w-7 rounded-pill overflow-hidden bg-chip">
@@ -625,7 +625,7 @@ export function GoLiveSheet({
 										type="button"
 										onClick={() => setSource(value)}
 										className={clsx(
-											"flex items-center justify-center gap-1.5 rounded-pill h-9 font-sans text-[12px] font-semibold transition-colors cursor-pointer",
+											"flex items-center justify-center gap-1.5 rounded-pill h-9 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors cursor-pointer",
 											source === value
 												? "bg-primary text-page"
 												: "bg-chip text-muted transition-colors hover:text-primary",
@@ -649,7 +649,7 @@ export function GoLiveSheet({
 									onChange={(e) => setTitle(e.target.value)}
 									maxLength={100}
 									placeholder={t("golive.placeholder")}
-									className="w-full bg-transparent border-0 outline-none px-3.5 h-12 text-[15px] font-semibold font-sans text-primary placeholder:text-subtle"
+									className="w-full bg-transparent border-0 outline-none px-3.5 h-12 text-[calc(15px*var(--ws-fs))] font-semibold font-sans text-primary placeholder:text-subtle"
 								/>
 
 								<div className="h-px bg-hairline" />
@@ -659,16 +659,16 @@ export function GoLiveSheet({
 									onClick={() => setPickerOpen((v) => !v)}
 									className="w-full flex items-center gap-2 px-3.5 h-11 cursor-pointer text-left hover:bg-raised transition-colors"
 								>
-									<span className="font-sans text-[10.5px] font-semibold uppercase tracking-[0.1em] text-subtle shrink-0">
+									<span className="font-sans text-[calc(10.5px*var(--ws-fs))] font-semibold uppercase tracking-[0.1em] text-subtle shrink-0">
 										{t("golive.category")}
 									</span>
-									<span className="shrink-0 text-[13px] leading-none">
+									<span className="shrink-0 text-[calc(13px*var(--ws-fs))] leading-none">
 										{VERTICAL_ICON[
 											TAXONOMY.find((c) => c.label === category)
 												?.vertical ?? ""
 										] ?? ""}
 									</span>
-									<span className="flex-1 min-w-0 truncate font-sans text-[13px] font-semibold text-primary">
+									<span className="flex-1 min-w-0 truncate font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
 										{category}
 									</span>
 									<CaretDown
@@ -689,10 +689,10 @@ export function GoLiveSheet({
 											className="w-full flex items-center gap-3 px-3.5 py-2.5 cursor-pointer text-left hover:bg-raised transition-colors"
 										>
 											<span className="flex-1 min-w-0">
-												<span className="block font-sans text-[13px] font-semibold text-primary">
+												<span className="block font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
 													{t("golive.native.title")}
 												</span>
-												<span className="block font-sans text-[11.5px] text-subtle truncate">
+												<span className="block font-sans text-[calc(11.5px*var(--ws-fs))] text-subtle truncate">
 													{nativeMode
 														? t("golive.native.on")
 														: t("golive.native.off")}
@@ -721,7 +721,7 @@ export function GoLiveSheet({
 									onClick={() => setNotifyFollowers((v) => !v)}
 									className="w-full flex items-center gap-3 px-3.5 py-2.5 cursor-pointer text-left hover:bg-raised transition-colors"
 								>
-									<span className="flex-1 min-w-0 font-sans text-[13px] font-semibold text-primary">
+									<span className="flex-1 min-w-0 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
 										{t("golive.notify")}
 									</span>
 									<span
@@ -753,7 +753,7 @@ export function GoLiveSheet({
 												value={search}
 												onChange={(e) => setSearch(e.target.value)}
 												placeholder={t("golive.categorySearch")}
-												className="w-full rounded-pill bg-sunken border-0 outline-none pl-8 pr-3 h-8 text-[12px] font-sans text-primary placeholder:text-subtle"
+												className="w-full rounded-pill bg-sunken border-0 outline-none pl-8 pr-3 h-8 text-[calc(12px*var(--ws-fs))] font-sans text-primary placeholder:text-subtle"
 											/>
 										</div>
 										<div className="max-h-52 overflow-y-auto flex flex-col gap-0.5 pr-0.5">
@@ -769,7 +769,7 @@ export function GoLiveSheet({
 																setSearch("");
 															}}
 															className={clsx(
-																"flex items-center gap-1.5 px-2.5 h-7 rounded-pill text-[11.5px] font-medium font-sans cursor-pointer",
+																"flex items-center gap-1.5 px-2.5 h-7 rounded-pill text-[calc(11.5px*var(--ws-fs))] font-medium font-sans cursor-pointer",
 																category === c.label
 																	? "bg-primary text-page"
 																	: "bg-chip text-muted transition-colors hover:text-primary",
@@ -796,13 +796,13 @@ export function GoLiveSheet({
 																}
 																className="w-full flex items-center gap-2 px-2 h-8 rounded-lg hover:bg-raised cursor-pointer transition-colors"
 															>
-																<span className="shrink-0 text-[13px] leading-none">
+																<span className="shrink-0 text-[calc(13px*var(--ws-fs))] leading-none">
 																	{VERTICAL_ICON[v.id] ?? ""}
 																</span>
-																<span className="flex-1 text-left font-sans text-[12px] font-semibold text-muted">
+																<span className="flex-1 text-left font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-muted">
 																	{v.label}
 																</span>
-																<span className="font-sans text-[10.5px] text-subtle tabular-nums">
+																<span className="font-sans text-[calc(10.5px*var(--ws-fs))] text-subtle tabular-nums">
 																	{cats.length}
 																</span>
 																<CaretDown
@@ -824,7 +824,7 @@ export function GoLiveSheet({
 																				setPickerOpen(false);
 																			}}
 																			className={clsx(
-																				"flex items-center gap-1.5 px-2.5 h-7 rounded-pill text-[11.5px] font-medium font-sans cursor-pointer",
+																				"flex items-center gap-1.5 px-2.5 h-7 rounded-pill text-[calc(11.5px*var(--ws-fs))] font-medium font-sans cursor-pointer",
 																				category === c.label
 																					? "bg-primary text-page"
 																					: "bg-chip text-muted transition-colors hover:text-primary",
@@ -852,7 +852,7 @@ export function GoLiveSheet({
 								type="button"
 								disabled={!canStart}
 								onClick={start}
-								className="w-full h-12 shine flex items-center justify-center gap-2 rounded-pill font-sans font-semibold text-[15px] text-white bg-gradient-to-b from-danger to-[#C22D2D] hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+								className="w-full h-12 shine flex items-center justify-center gap-2 rounded-pill font-sans font-semibold text-[calc(15px*var(--ws-fs))] text-white bg-gradient-to-b from-danger to-[#C22D2D] hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
 							>
 								<Broadcast size={17} weight="fill" />
 								{starting

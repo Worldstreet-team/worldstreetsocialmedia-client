@@ -55,7 +55,7 @@ export default function ConfirmModal({
 							<h3 className="font-display font-semibold text-xl text-primary mb-2">
 								{title}
 							</h3>
-							<p className="font-sans text-[15px] leading-relaxed text-muted">
+							<p className="font-sans text-[calc(15px*var(--ws-fs))] leading-relaxed text-muted">
 								{message}
 							</p>
 						</div>
@@ -63,7 +63,7 @@ export default function ConfirmModal({
 							<button
 								type="button"
 								onClick={onClose}
-								className="flex-1 h-11 rounded-pill font-sans font-semibold text-[15px] border border-hairline text-primary hover:bg-raised transition-colors cursor-pointer"
+								className="flex-1 h-11 rounded-pill font-sans font-semibold text-[calc(15px*var(--ws-fs))] border border-hairline text-primary hover:bg-raised transition-colors cursor-pointer"
 							>
 								{cancelText}
 							</button>
@@ -73,7 +73,7 @@ export default function ConfirmModal({
 									onConfirm();
 									onClose();
 								}}
-								className={`flex-1 h-11 rounded-pill font-sans font-semibold text-[15px] transition-colors cursor-pointer ${
+								className={`flex-1 h-11 rounded-pill font-sans font-semibold text-[calc(15px*var(--ws-fs))] transition-colors cursor-pointer ${
 									isDestructive
 										? "bg-danger text-primary hover:opacity-90"
 										: "bg-primary text-page hover:bg-muted"

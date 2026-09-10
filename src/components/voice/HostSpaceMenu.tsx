@@ -106,7 +106,7 @@ export default function HostSpaceMenu({
                 item.run();
               }}
               className={clsx(
-                "flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[13px] font-medium transition-colors cursor-pointer",
+                "flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors cursor-pointer",
                 item.danger
                   ? "text-danger hover:bg-raised"
                   : "text-primary hover:bg-raised",

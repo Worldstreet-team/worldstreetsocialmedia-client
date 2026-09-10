@@ -154,7 +154,7 @@ export default function SettingsPage() {
 					<h1 className="font-display text-lg font-semibold text-primary">
 						{t("settings.title")}
 					</h1>
-					<div className="font-sans text-[13px] text-muted">
+					<div className="font-sans text-[calc(13px*var(--ws-fs))] text-muted">
 						@{user?.username}
 					</div>
 				</div>
@@ -178,7 +178,7 @@ export default function SettingsPage() {
 						</span>
 						<div className="min-w-0">
 							<div className="flex items-center gap-1.5">
-								<span className="truncate font-display text-[17px] font-semibold text-primary">
+								<span className="truncate font-display text-[calc(17px*var(--ws-fs))] font-semibold text-primary">
 									{[user?.firstName, user?.lastName]
 										.filter(Boolean)
 										.join(" ") || user?.username}
@@ -190,7 +190,7 @@ export default function SettingsPage() {
 									size={16}
 								/>
 							</div>
-							<span className="block truncate font-sans text-[13px] text-muted">
+							<span className="block truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
 								@{user?.username}
 							</span>
 						</div>
@@ -257,7 +257,7 @@ export default function SettingsPage() {
 						<button
 							type="button"
 							onClick={() => setPremiumOpen(true)}
-							className="h-9 cursor-pointer rounded-pill bg-brand px-5 font-sans text-[13px] font-semibold text-brand-on transition-opacity hover:opacity-90"
+							className="h-9 cursor-pointer rounded-pill bg-brand px-5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-opacity hover:opacity-90"
 						>
 							{subState?.subscription
 								? t("premium.manageTitle")
@@ -277,7 +277,7 @@ export default function SettingsPage() {
 						<InterestPicker selected={interests} onToggle={toggleInterest} />
 					</div>
 					<div className="flex items-center justify-between gap-3 px-4 py-3">
-						<span className="font-sans text-[13px] tabular-nums text-muted">
+						<span className="font-sans text-[calc(13px*var(--ws-fs))] tabular-nums text-muted">
 							{t("settings.topics.count")
 								.replace("{n}", String(interests.length))
 								.replace("{max}", String(MAX_INTERESTS))}
@@ -286,7 +286,7 @@ export default function SettingsPage() {
 							type="button"
 							onClick={saveTopics}
 							disabled={!dirty || savingTopics}
-							className="h-9 cursor-pointer rounded-pill bg-brand px-5 font-sans text-[13px] font-semibold text-brand-on transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+							className="h-9 cursor-pointer rounded-pill bg-brand px-5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
 						>
 							{savingTopics ? t("settings.topics.saving") : t("common.save")}
 						</button>
@@ -342,7 +342,7 @@ export default function SettingsPage() {
 											withThemeTransition(() => setTheme(value))
 										}
 										className={clsx(
-											"flex h-9 cursor-pointer items-center gap-1.5 rounded-pill px-3.5 font-sans text-[13px] font-semibold transition-colors",
+											"flex h-9 cursor-pointer items-center gap-1.5 rounded-pill px-3.5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-colors",
 											active
 												? "bg-primary text-page"
 												: "bg-raised text-muted hover:text-primary",
@@ -370,7 +370,7 @@ export default function SettingsPage() {
 										aria-pressed={active}
 										onClick={() => pickLocale(code)}
 										className={clsx(
-											"flex h-9 cursor-pointer items-center gap-1.5 rounded-pill px-3.5 font-sans text-[13px] font-semibold transition-colors",
+											"flex h-9 cursor-pointer items-center gap-1.5 rounded-pill px-3.5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-colors",
 											active
 												? "bg-primary text-page"
 												: "bg-raised text-muted hover:text-primary",
@@ -419,7 +419,7 @@ function Section({
 		<section>
 			<h2
 				className={clsx(
-					"flex items-center gap-1.5 px-1 pb-2 font-sans text-[11px] font-bold uppercase tracking-[0.14em]",
+					"flex items-center gap-1.5 px-1 pb-2 font-sans text-[calc(11px*var(--ws-fs))] font-bold uppercase tracking-[0.14em]",
 					tone === "danger" ? "text-danger" : "text-subtle",
 				)}
 			>
@@ -438,7 +438,7 @@ function Section({
 			</div>
 
 			{caption && (
-				<p className="px-1 pt-2 font-sans text-[12.5px] leading-relaxed text-muted">
+				<p className="px-1 pt-2 font-sans text-[calc(12.5px*var(--ws-fs))] leading-relaxed text-muted">
 					{caption}
 				</p>
 			)}
@@ -452,7 +452,7 @@ function Row({ label, value }: { label: string; value: string }) {
 			<span className="shrink-0 font-sans text-sm font-medium text-primary">
 				{label}
 			</span>
-			<span className="truncate font-sans text-[13px] tabular-nums text-muted">
+			<span className="truncate font-sans text-[calc(13px*var(--ws-fs))] tabular-nums text-muted">
 				{value}
 			</span>
 		</div>

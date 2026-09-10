@@ -52,17 +52,17 @@ export function DiscoverRow({
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <Link
           href={`/communities/${row.slug}`}
-          className="truncate font-sans text-[15px] font-semibold text-primary hover:underline"
+          className="truncate font-sans text-[calc(15px*var(--ws-fs))] font-semibold text-primary hover:underline"
         >
           {row.name}
         </Link>
-        <span className="font-sans text-[13px] text-muted">
+        <span className="font-sans text-[calc(13px*var(--ws-fs))] text-muted">
           <span className="font-semibold tabular-nums text-primary">
             {fmt(row.membersCount)}
           </span>{" "}
           {t("community.members")}
         </span>
-        <span className="truncate font-sans text-[12.5px] text-subtle">
+        <span className="truncate font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle">
           {resolveCategoryLabel(row.category) || row.category}
         </span>
 
@@ -86,7 +86,7 @@ export function DiscoverRow({
         type="button"
         onClick={() => onToggle(row)}
         className={clsx(
-          "h-8 shrink-0 cursor-pointer self-center rounded-pill px-3.5 font-sans text-[12px] font-semibold transition-colors",
+          "h-8 shrink-0 cursor-pointer self-center rounded-pill px-3.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
           row.joined
             ? "bg-raised text-muted hover:text-danger"
             : "bg-primary text-page hover:bg-muted",

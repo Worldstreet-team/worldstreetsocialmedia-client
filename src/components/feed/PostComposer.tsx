@@ -142,7 +142,7 @@ const CharacterRing = ({
 			{remaining <= 28 && (
 				<span
 					className={clsx(
-						"font-sans text-[13px] font-medium tabular-nums",
+						"font-sans text-[calc(13px*var(--ws-fs))] font-medium tabular-nums",
 						tone,
 					)}
 					aria-live="polite"
@@ -1015,14 +1015,14 @@ export const PostComposer = ({
 													/>
 												))}
 											</span>
-											<span className="shrink-0 font-sans text-[11px] tabular-nums text-muted">
+											<span className="shrink-0 font-sans text-[calc(11px*var(--ws-fs))] tabular-nums text-muted">
 												{audioMeta
 													? `${Math.floor(audioMeta.durationSec / 60)}:${String(audioMeta.durationSec % 60).padStart(2, "0")}`
 													: ""}
 											</span>
 											<span
 												className={clsx(
-													"shrink-0 rounded-pill px-2 py-0.5 font-sans text-[10.5px] font-semibold",
+													"shrink-0 rounded-pill px-2 py-0.5 font-sans text-[calc(10.5px*var(--ws-fs))] font-semibold",
 													audioBlurBg
 														? "bg-brand/15 text-gold"
 														: "bg-raised text-muted",
@@ -1088,7 +1088,7 @@ export const PostComposer = ({
 										className="relative aspect-square border border-dashed border-hairline bg-sunken/30 hover:bg-raised/50 flex flex-col items-center justify-center gap-1.5 text-muted hover:text-primary transition-colors cursor-pointer"
 									>
 										<RiAddLine className="w-6 h-6" />
-										<span className="text-[12px] font-sans font-medium tabular-nums">
+										<span className="text-[calc(12px*var(--ws-fs))] font-sans font-medium tabular-nums">
 											Add photos · {4 - mediaItems.length}{" "}
 											left
 										</span>
@@ -1126,10 +1126,10 @@ export const PostComposer = ({
 								<h3 className="text-sm font-bold text-primary line-clamp-1 font-sans mb-0.5">
 									{linkPreview.title}
 								</h3>
-								<p className="text-[13px] text-muted line-clamp-2 font-sans mb-1">
+								<p className="text-[calc(13px*var(--ws-fs))] text-muted line-clamp-2 font-sans mb-1">
 									{linkPreview.description}
 								</p>
-								<div className="flex items-center gap-1 text-[11px] text-muted font-sans">
+								<div className="flex items-center gap-1 text-[calc(11px*var(--ws-fs))] text-muted font-sans">
 									<RiLinkM className="w-3 h-3" />
 									<span>{linkPreview.domain}</span>
 								</div>
@@ -1138,7 +1138,7 @@ export const PostComposer = ({
 					)}
 
 					{isFetchingPreview && (
-						<div className="mt-3 mb-2 p-4 rounded-xl border border-hairline bg-surface/10 flex items-center justify-center gap-2 text-muted font-sans text-[13px]">
+						<div className="mt-3 mb-2 p-4 rounded-xl border border-hairline bg-surface/10 flex items-center justify-center gap-2 text-muted font-sans text-[calc(13px*var(--ws-fs))]">
 							<div className="w-3 h-3 border-2 border-subtle/30 border-t-subtle rounded-full animate-spin" />
 							Fetching preview...
 						</div>
@@ -1164,13 +1164,13 @@ export const PostComposer = ({
 					    reader's interests. */}
 					{suggestedTopics.length > 0 && (
 						<div className="mt-2 flex flex-wrap items-center gap-1.5">
-							<span className="font-sans text-[12px] text-subtle">
+							<span className="font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
 								Topics
 							</span>
 							{suggestedTopics.map((topic) => (
 								<span
 									key={topic.id}
-									className="inline-flex h-7 items-center gap-1 rounded-pill bg-raised/60 pl-2.5 pr-1 font-sans text-[12px] text-muted"
+									className="inline-flex h-7 items-center gap-1 rounded-pill bg-raised/60 pl-2.5 pr-1 font-sans text-[calc(12px*var(--ws-fs))] text-muted"
 								>
 									{topic.label}
 									<button
@@ -1200,7 +1200,7 @@ export const PostComposer = ({
 							className={clsx(
 								// Bigger on phones (owner: the sell entry was easy to miss on
 								// mobile); desktop keeps the quieter row.
-								"flex h-10 items-center gap-2 rounded-pill px-4 font-sans text-[13.5px] font-semibold transition-colors cursor-pointer sm:h-9 sm:gap-1.5 sm:px-3 sm:text-[12.5px]",
+								"flex h-10 items-center gap-2 rounded-pill px-4 font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold transition-colors cursor-pointer sm:h-9 sm:gap-1.5 sm:px-3 sm:text-[calc(12.5px*var(--ws-fs))]",
 								// Money wears money/credit green, never the brand
 								// accent (owner ruling 2026-08-31).
 								selling
@@ -1220,13 +1220,13 @@ export const PostComposer = ({
 									placeholder="Title buyers will see"
 									aria-label="Paid post title"
 									className={clsx(
-										"h-9 w-full min-w-0 flex-1 basis-full rounded-pill border bg-sunken px-3.5 font-sans text-[13px] text-primary outline-none transition-colors placeholder:text-subtle sm:basis-auto",
+										"h-9 w-full min-w-0 flex-1 basis-full rounded-pill border bg-sunken px-3.5 font-sans text-[calc(13px*var(--ws-fs))] text-primary outline-none transition-colors placeholder:text-subtle sm:basis-auto",
 										saleTitleMissing && salePrice
 											? "border-danger/50"
 											: "border-hairline focus:border-credit/60",
 									)}
 								/>
-								<label className="flex h-9 items-center gap-1 rounded-pill bg-sunken border border-hairline px-3 font-sans text-[13px] text-primary focus-within:border-credit/60 transition-colors">
+								<label className="flex h-9 items-center gap-1 rounded-pill bg-sunken border border-hairline px-3 font-sans text-[calc(13px*var(--ws-fs))] text-primary focus-within:border-credit/60 transition-colors">
 									<span className="text-muted">$</span>
 									<input
 										type="text"
@@ -1244,7 +1244,7 @@ export const PostComposer = ({
 								</label>
 								<span
 									className={clsx(
-										"font-sans text-[11.5px]",
+										"font-sans text-[calc(11.5px*var(--ws-fs))]",
 										saleInvalid && salePrice ? "text-danger" : "text-subtle",
 									)}
 								>
@@ -1259,7 +1259,7 @@ export const PostComposer = ({
 									onClick={() => setSaleHidePreview((v) => !v)}
 									aria-pressed={saleHidePreview}
 									className={clsx(
-										"flex h-9 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[12px] font-medium transition-colors",
+										"flex h-9 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-medium transition-colors",
 										saleHidePreview
 											? "bg-credit/[0.14] text-credit"
 											: "bg-sunken text-muted hover:bg-raised",
@@ -1303,7 +1303,7 @@ export const PostComposer = ({
 												)
 											}
 											placeholder={`${t("poll.option")} ${i + 1}${i >= 2 ? ` (${t("poll.optional")})` : ""}`}
-											className="h-10 min-w-0 flex-1 rounded-pill border border-hairline bg-transparent px-4 font-sans text-[14px] text-primary outline-none transition-colors placeholder:text-subtle focus:border-primary/40"
+											className="h-10 min-w-0 flex-1 rounded-pill border border-hairline bg-transparent px-4 font-sans text-[calc(14px*var(--ws-fs))] text-primary outline-none transition-colors placeholder:text-subtle focus:border-primary/40"
 										/>
 										{i >= 2 && (
 											<button
@@ -1340,7 +1340,7 @@ export const PostComposer = ({
 													: p,
 											)
 										}
-										className="flex h-8 cursor-pointer items-center gap-1 rounded-pill px-3 font-sans text-[12.5px] font-medium text-gold transition-colors hover:bg-raised"
+										className="flex h-8 cursor-pointer items-center gap-1 rounded-pill px-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-gold transition-colors hover:bg-raised"
 									>
 										<RiAddLine size={15} />
 										{t("poll.addOption")}
@@ -1360,7 +1360,7 @@ export const PostComposer = ({
 											aria-expanded={pollDurOpen}
 											aria-haspopup="listbox"
 											className={clsx(
-												"flex h-8 cursor-pointer items-center gap-1 rounded-pill px-3 font-sans text-[12.5px] font-medium transition-colors",
+												"flex h-8 cursor-pointer items-center gap-1 rounded-pill px-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium transition-colors",
 												pollDurOpen
 													? "bg-raised text-primary"
 													: "bg-raised/70 text-primary hover:bg-raised",
@@ -1415,7 +1415,7 @@ export const PostComposer = ({
 																setPollDurOpen(false);
 															}}
 															className={clsx(
-																"flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left font-sans text-[13px] transition-colors hover:bg-raised",
+																"flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left font-sans text-[calc(13px*var(--ws-fs))] transition-colors hover:bg-raised",
 																poll.durationHours ===
 																	d.hours
 																	? "font-semibold text-primary"
@@ -1439,7 +1439,7 @@ export const PostComposer = ({
 									<button
 										type="button"
 										onClick={() => setPoll(null)}
-										className="h-8 cursor-pointer rounded-pill px-3 font-sans text-[12.5px] font-medium text-danger transition-colors hover:bg-danger/10"
+										className="h-8 cursor-pointer rounded-pill px-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-danger transition-colors hover:bg-danger/10"
 									>
 										{t("poll.remove")}
 									</button>
@@ -1527,7 +1527,7 @@ export const PostComposer = ({
 								aria-label={t("composer.emoji")}
 								title={t("composer.emoji")}
 								className={clsx(
-									"flex h-10 w-10 justify-center sm:h-9 sm:w-auto sm:justify-start sm:px-3.5 items-center gap-2 rounded-pill font-sans text-[13px] font-medium transition-colors cursor-pointer",
+									"flex h-10 w-10 justify-center sm:h-9 sm:w-auto sm:justify-start sm:px-3.5 items-center gap-2 rounded-pill font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors cursor-pointer",
 									showEmojiPicker
 										? "bg-raised text-primary"
 										: "bg-raised/50 text-muted hover:bg-raised hover:text-primary",
@@ -1555,7 +1555,7 @@ export const PostComposer = ({
 									type="button"
 									onClick={() => setDraftsOpen(true)}
 									aria-label={t("drafts.title")}
-									className="flex h-10 items-center gap-1.5 rounded-pill px-3 bg-raised/50 text-muted hover:bg-raised hover:text-primary font-sans text-[12.5px] font-medium transition-colors cursor-pointer"
+									className="flex h-10 items-center gap-1.5 rounded-pill px-3 bg-raised/50 text-muted hover:bg-raised hover:text-primary font-sans text-[calc(12.5px*var(--ws-fs))] font-medium transition-colors cursor-pointer"
 								>
 									<RiFileTextLine className="h-[18px] w-[18px] shrink-0" />
 									<span className="tabular-nums">{drafts.length}</span>
@@ -1600,7 +1600,7 @@ export const PostComposer = ({
 							type="button"
 							className={clsx(
 								// h-11 on touch (44px target), the DS's 36px pill from sm up.
-								"px-4 sm:px-[18px] h-10 sm:h-9 shrink-0 rounded-pill font-semibold text-[13px] font-sans transition-colors flex items-center gap-2 cursor-pointer",
+								"px-4 sm:px-[18px] h-10 sm:h-9 shrink-0 rounded-pill font-semibold text-[calc(13px*var(--ws-fs))] font-sans transition-colors flex items-center gap-2 cursor-pointer",
 								(!content.trim() && mediaItems.length === 0 && !pollReady) ||
 									isPosting ||
 									isOverLimit ||

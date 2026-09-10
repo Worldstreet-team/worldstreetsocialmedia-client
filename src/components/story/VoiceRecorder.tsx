@@ -401,7 +401,7 @@ export default function VoiceRecorder({
                 <Play size={20} weight="fill" />
               )}
             </button>
-            <span className="flex h-10 min-w-10 items-center justify-center rounded-pill glass-chip-canvas backdrop-blur-md px-3 font-sans text-[11px] font-semibold tabular-nums">
+            <span className="flex h-10 min-w-10 items-center justify-center rounded-pill glass-chip-canvas backdrop-blur-md px-3 font-sans text-[calc(11px*var(--ws-fs))] font-semibold tabular-nums">
               {formatClock(take.duration)}
             </span>
           </div>

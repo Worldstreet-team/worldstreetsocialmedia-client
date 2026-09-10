@@ -13,29 +13,29 @@ export default function NotFound() {
           width={28}
           height={28}
         />
-        <span className="font-display font-bold text-[17px] text-primary">
+        <span className="font-display font-bold text-[calc(17px*var(--ws-fs))] text-primary">
           WorldStreet
         </span>
-        <span className="text-[10px] font-semibold uppercase tracking-[2px] text-gold">
+        <span className="text-[calc(10px*var(--ws-fs))] font-semibold uppercase tracking-[2px] text-gold">
           Socials
         </span>
       </div>
 
-      <p className="font-display text-[64px] font-semibold leading-none text-raised select-none tabular-nums">
+      <p className="font-display text-[calc(64px*var(--ws-fs))] font-semibold leading-none text-raised select-none tabular-nums">
         404
       </p>
 
       <h1 className="mt-4 font-display text-lg font-semibold text-primary">
         This page doesn&apos;t exist
       </h1>
-      <p className="mt-2 max-w-[38ch] font-sans text-[13px] leading-relaxed text-muted">
+      <p className="mt-2 max-w-[38ch] font-sans text-[calc(13px*var(--ws-fs))] leading-relaxed text-muted">
         The link may be broken, or the page may have been removed. Check the
         address, or head back to your feed.
       </p>
 
       <Link
         href="/"
-        className="mt-6 h-10 inline-flex items-center rounded-pill bg-brand px-5 font-sans text-[13px] font-semibold text-brand-on transition-colors hover:bg-brand-active"
+        className="mt-6 h-10 inline-flex items-center rounded-pill bg-brand px-5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active"
       >
         Back to your feed
       </Link>

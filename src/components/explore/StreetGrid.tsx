@@ -61,7 +61,7 @@ export function StreetGrid({
                   <Play size={22} weight="fill" className="text-[#fafaf9] drop-shadow" />
                 </span>
                 <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0c0a09]/85 to-transparent px-2 pb-1.5 pt-6">
-                  <span className="flex items-center gap-1 font-sans text-[11px] font-semibold tabular-nums text-[#fafaf9]">
+                  <span className="flex items-center gap-1 font-sans text-[calc(11px*var(--ws-fs))] font-semibold tabular-nums text-[#fafaf9]">
                     <Heart size={11} weight="fill" />
                     {formatCompact(p.stats?.likes ?? 0)}
                   </span>

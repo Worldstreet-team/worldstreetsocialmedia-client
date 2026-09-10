@@ -786,7 +786,7 @@ function VerticalSurface() {
 								type="button"
 								onClick={() => setTab(key)}
 								className={clsx(
-									"relative h-8 px-4 rounded-pill font-sans text-[13px] font-semibold transition-colors cursor-pointer",
+									"relative h-8 px-4 rounded-pill font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-colors cursor-pointer",
 									tab === key ? "text-black" : "text-white/70 hover:text-white",
 								)}
 							>
@@ -820,7 +820,7 @@ function VerticalSurface() {
 				</div>
 
 				{demo && (
-					<span className="pointer-events-none mr-2 rounded-pill bg-warning-chip px-2 py-1 font-sans text-[9px] font-bold uppercase tracking-[0.1em] text-warning">
+					<span className="pointer-events-none mr-2 rounded-pill bg-warning-chip px-2 py-1 font-sans text-[calc(9px*var(--ws-fs))] font-bold uppercase tracking-[0.1em] text-warning">
 						Demo
 					</span>
 				)}
@@ -849,15 +849,15 @@ function VerticalSurface() {
 					<span className="flex h-16 w-16 items-center justify-center rounded-pill bg-white/[0.07] text-white/60">
 						<Broadcast size={26} weight="light" />
 					</span>
-					<p className="text-center text-white font-display text-[17px] font-semibold">
+					<p className="text-center text-white font-display text-[calc(17px*var(--ws-fs))] font-semibold">
 						{tab === "live" ? t("liveNow.emptyTitle") : t("vertical.empty")}
 					</p>
-					<p className="max-w-[300px] text-center text-white/50 font-sans text-[13px] leading-relaxed">
+					<p className="max-w-[300px] text-center text-white/50 font-sans text-[calc(13px*var(--ws-fs))] leading-relaxed">
 						{t("liveNow.emptyCaption")}
 					</p>
 					<Link
 						href="/"
-						className="mt-2 flex h-10 items-center rounded-pill bg-white px-5 font-sans text-[13px] font-semibold text-black hover:bg-white/90 transition-colors"
+						className="mt-2 flex h-10 items-center rounded-pill bg-white px-5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-black hover:bg-white/90 transition-colors"
 					>
 						{t("watch.browse")}
 					</Link>
@@ -969,7 +969,7 @@ function VerticalSurface() {
 							{/* live status row */}
 							{slide.streamId && (
 								<div className="absolute top-20 left-4 z-10 flex items-center gap-2">
-									<span className="flex items-center gap-1.5 rounded-[4px] bg-danger px-2 h-6 text-[10.5px] font-bold tracking-wide text-white font-sans">
+									<span className="flex items-center gap-1.5 rounded-[4px] bg-danger px-2 h-6 text-[calc(10.5px*var(--ws-fs))] font-bold tracking-wide text-white font-sans">
 										<span className="relative flex h-1.5 w-1.5">
 											<span className="absolute inline-flex h-full w-full rounded-pill bg-white opacity-70 animate-ping" />
 											<span className="relative inline-flex h-1.5 w-1.5 rounded-pill bg-white" />
@@ -977,13 +977,13 @@ function VerticalSurface() {
 										{t("live.badge")}
 									</span>
 									{isActive && (
-										<span className="flex items-center gap-1.5 rounded-[4px] bg-black/50 backdrop-blur-md px-2 h-6 text-[11px] font-semibold text-white/85 font-sans tabular-nums">
+										<span className="flex items-center gap-1.5 rounded-[4px] bg-black/50 backdrop-blur-md px-2 h-6 text-[calc(11px*var(--ws-fs))] font-semibold text-white/85 font-sans tabular-nums">
 											<Eye size={12} />
 											{formatCompact(viewers)}
 										</span>
 									)}
 									{slide.category && (
-										<span className="rounded-[4px] bg-black/50 backdrop-blur-md px-2 h-6 flex items-center text-[11px] font-medium text-white/75 font-sans">
+										<span className="rounded-[4px] bg-black/50 backdrop-blur-md px-2 h-6 flex items-center text-[calc(11px*var(--ws-fs))] font-medium text-white/75 font-sans">
 											{slide.category}
 										</span>
 									)}
@@ -1012,7 +1012,7 @@ function VerticalSurface() {
 										</Link>
 										<Link
 											href={`/profile/${slide.username}`}
-											className="text-[15px] font-semibold text-white font-sans truncate hover:underline"
+											className="text-[calc(15px*var(--ws-fs))] font-semibold text-white font-sans truncate hover:underline"
 										>
 											@{slide.username}
 										</Link>
@@ -1020,18 +1020,18 @@ function VerticalSurface() {
 											<button
 												type="button"
 												onClick={() => follow(slide)}
-												className="h-7 px-3 rounded-pill bg-white text-black font-sans text-[12px] font-bold hover:bg-white/85 transition-colors cursor-pointer shrink-0"
+												className="h-7 px-3 rounded-pill bg-white text-black font-sans text-[calc(12px*var(--ws-fs))] font-bold hover:bg-white/85 transition-colors cursor-pointer shrink-0"
 											>
 												{t("rail.follow")}
 											</button>
 										)}
 									</div>
 									{slide.streamId && slide.liveTitle ? (
-										<p className="text-[16px] font-semibold text-white font-sans leading-snug line-clamp-2">
+										<p className="text-[calc(16px*var(--ws-fs))] font-semibold text-white font-sans leading-snug line-clamp-2">
 											{slide.liveTitle}
 										</p>
 									) : (
-										<p className="text-[13.5px] text-white/85 font-sans leading-snug line-clamp-2">
+										<p className="text-[calc(13.5px*var(--ws-fs))] text-white/85 font-sans leading-snug line-clamp-2">
 											{slide.content}
 										</p>
 									)}
@@ -1059,7 +1059,7 @@ function VerticalSurface() {
 								>
 									<Heart size={22} weight={slide.isLiked ? "fill" : "regular"} />
 								</motion.span>
-								<span className="text-[11.5px] font-semibold font-sans tabular-nums text-white/85">
+								<span className="text-[calc(11.5px*var(--ws-fs))] font-semibold font-sans tabular-nums text-white/85">
 									{fmt(slide.likes)}
 								</span>
 							</button>
@@ -1075,7 +1075,7 @@ function VerticalSurface() {
 										<span className={railBtn}>
 											<ChatCircle size={22} />
 										</span>
-										<span className="text-[11.5px] font-semibold font-sans tabular-nums text-white/85">
+										<span className="text-[calc(11.5px*var(--ws-fs))] font-semibold font-sans tabular-nums text-white/85">
 											{fmt(slide.replies)}
 										</span>
 									</button>
@@ -1166,7 +1166,7 @@ function VerticalSurface() {
 							/>
 
 							<div className="flex h-12 shrink-0 items-center gap-2 px-4">
-								<h2 className="flex-1 truncate font-sans text-[14px] font-semibold glass-ink">
+								<h2 className="flex-1 truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold glass-ink">
 									{chatFor.liveTitle || chatFor.username}
 								</h2>
 								<button
@@ -1241,7 +1241,7 @@ function VerticalSurface() {
 							/>
 
 							<div className="flex h-12 shrink-0 items-center gap-2 px-4">
-								<h2 className="flex-1 font-sans text-[14px] font-semibold glass-ink">
+								<h2 className="flex-1 font-sans text-[calc(14px*var(--ws-fs))] font-semibold glass-ink">
 									{t("vertical.comments")}
 									<span className="ml-1.5 font-normal tabular-nums glass-ink-faint">
 										{fmt(commentsFor.replies)}
@@ -1275,7 +1275,7 @@ function VerticalSurface() {
 										<span className="flex h-11 w-11 items-center justify-center rounded-pill bg-white/[0.08]">
 											<ChatCircle size={19} className="glass-ink-faint" />
 										</span>
-										<p className="font-sans text-[13px] glass-ink-dim">
+										<p className="font-sans text-[calc(13px*var(--ws-fs))] glass-ink-dim">
 											{t("vertical.noComments")}
 										</p>
 									</div>
@@ -1295,17 +1295,17 @@ function VerticalSurface() {
 												<span className="flex items-baseline gap-2">
 													<Link
 														href={`/profile/${c.username}`}
-														className="truncate font-sans text-[12.5px] font-semibold glass-ink hover:underline"
+														className="truncate font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold glass-ink hover:underline"
 													>
 														@{c.username}
 													</Link>
 													{c.timestamp && (
-														<span className="shrink-0 font-sans text-[11px] glass-ink-faint">
+														<span className="shrink-0 font-sans text-[calc(11px*var(--ws-fs))] glass-ink-faint">
 															{c.timestamp}
 														</span>
 													)}
 												</span>
-												<p className="break-words font-sans text-[13.5px] leading-snug glass-ink-dim">
+												<p className="break-words font-sans text-[calc(13.5px*var(--ws-fs))] leading-snug glass-ink-dim">
 													{c.content}
 												</p>
 											</div>
@@ -1327,7 +1327,7 @@ function VerticalSurface() {
 										}}
 										placeholder={t("vertical.addComment")}
 										maxLength={280}
-										className="h-11 w-full rounded-pill bg-white/[0.09] pl-4 pr-12 font-sans text-[13.5px] glass-ink outline-none transition-colors placeholder:text-white/40 focus:bg-white/[0.14]"
+										className="h-11 w-full rounded-pill bg-white/[0.09] pl-4 pr-12 font-sans text-[calc(13.5px*var(--ws-fs))] glass-ink outline-none transition-colors placeholder:text-white/40 focus:bg-white/[0.14]"
 									/>
 									<button
 										type="button"

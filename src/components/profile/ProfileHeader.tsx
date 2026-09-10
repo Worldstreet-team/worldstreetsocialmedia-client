@@ -197,7 +197,7 @@ export function ProfileHeader({
             <SafeAvatar src={avatar} />
           </button>
           {isLive && (
-            <span className="absolute -bottom-1 left-1/2 flex h-5 -translate-x-1/2 items-center gap-1 rounded-pill bg-danger px-2 font-sans text-[9px] font-bold tracking-wide text-white">
+            <span className="absolute -bottom-1 left-1/2 flex h-5 -translate-x-1/2 items-center gap-1 rounded-pill bg-danger px-2 font-sans text-[calc(9px*var(--ws-fs))] font-bold tracking-wide text-white">
               <span className="h-1 w-1 animate-pulse rounded-pill bg-white" />
               {t("live.badge")}
             </span>

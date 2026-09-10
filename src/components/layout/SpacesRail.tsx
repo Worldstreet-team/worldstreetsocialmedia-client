@@ -119,18 +119,18 @@ function SpaceRow({ space, live }: { space: Space; live: boolean }) {
 
 			<span className="relative flex items-center justify-between gap-2">
 				{live ? (
-					<span className="flex items-center gap-1.5 rounded-[4px] bg-danger px-1.5 py-px font-sans text-[9px] font-bold tracking-wide text-white">
+					<span className="flex items-center gap-1.5 rounded-[4px] bg-danger px-1.5 py-px font-sans text-[calc(9px*var(--ws-fs))] font-bold tracking-wide text-white">
 						{t("live.badge")}
 					</span>
 				) : (
-					<span className="rounded-[4px] bg-[#fafaf9]/15 px-1.5 py-px font-sans text-[9px] font-bold uppercase tracking-wide text-[#fafaf9]/85">
+					<span className="rounded-[4px] bg-[#fafaf9]/15 px-1.5 py-px font-sans text-[calc(9px*var(--ws-fs))] font-bold uppercase tracking-wide text-[#fafaf9]/85">
 						{when}
 					</span>
 				)}
 				{live && <EqBars className="text-[#fafaf9]" />}
 			</span>
 
-			<span className="relative mt-2 block truncate font-display text-[14px] font-semibold leading-snug text-[#fafaf9]">
+			<span className="relative mt-2 block truncate font-display text-[calc(14px*var(--ws-fs))] font-semibold leading-snug text-[#fafaf9]">
 				{space.title}
 			</span>
 
@@ -141,9 +141,9 @@ function SpaceRow({ space, live }: { space: Space; live: boolean }) {
 				<PersonName
 					person={space.host as any}
 					size={11}
-					className="min-w-0 font-sans text-[11.5px] text-[#fafaf9]/80"
+					className="min-w-0 font-sans text-[calc(11.5px*var(--ws-fs))] text-[#fafaf9]/80"
 				/>
-				<span className="ml-auto shrink-0 font-sans text-[11px] font-semibold tabular-nums text-[#fafaf9]/85">
+				<span className="ml-auto shrink-0 font-sans text-[calc(11px*var(--ws-fs))] font-semibold tabular-nums text-[#fafaf9]/85">
 					{formatCompact(count)} {live ? t("rail.spaces.listening") : t("rail.spaces.going")}
 				</span>
 			</span>
@@ -289,7 +289,7 @@ export function SpacesRail({ delay = 210 }: { delay?: number }) {
 								>
 									<CaretLeft size={13} weight="bold" />
 								</button>
-								<span className="font-sans text-[11px] tabular-nums text-subtle">
+								<span className="font-sans text-[calc(11px*var(--ws-fs))] tabular-nums text-subtle">
 									{page + 1}/{slides.length}
 								</span>
 								<button
@@ -309,7 +309,7 @@ export function SpacesRail({ delay = 210 }: { delay?: number }) {
 						{!onVoice && (
 							<Link
 								href="/voice"
-								className="ml-1 font-sans text-[11px] font-semibold text-gold hover:underline"
+								className="ml-1 font-sans text-[calc(11px*var(--ws-fs))] font-semibold text-gold hover:underline"
 							>
 								{t("rail.seeAll")}
 							</Link>

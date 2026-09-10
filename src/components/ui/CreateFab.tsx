@@ -228,7 +228,7 @@ export function CreateFab() {
                 }}
                 className="flex items-center gap-3 cursor-pointer group"
               >
-                <span className="rounded-pill glass-chip px-4 h-10 flex items-center font-sans text-[15px] font-bold whitespace-nowrap">
+                <span className="rounded-pill glass-chip px-4 h-10 flex items-center font-sans text-[calc(15px*var(--ws-fs))] font-bold whitespace-nowrap">
                   {action.label}
                   {action.badge ? (
                     <span className="ml-1.5 glass-ink-faint tabular-nums font-medium">

@@ -25,12 +25,12 @@ export default function ErrorBoundary({
       <h1 className="mt-4 font-display text-lg font-semibold text-primary">
         Something went wrong
       </h1>
-      <p className="mt-2 max-w-[38ch] font-sans text-[13px] leading-relaxed text-muted">
+      <p className="mt-2 max-w-[38ch] font-sans text-[calc(13px*var(--ws-fs))] leading-relaxed text-muted">
         The page hit an unexpected error. Your data is fine try loading it
         again.
       </p>
       {error.digest && (
-        <p className="mt-2 font-sans text-[11px] uppercase tracking-[1px] text-subtle tabular-nums">
+        <p className="mt-2 font-sans text-[calc(11px*var(--ws-fs))] uppercase tracking-[1px] text-subtle tabular-nums">
           Error {error.digest}
         </p>
       )}
@@ -38,7 +38,7 @@ export default function ErrorBoundary({
       <button
         type="button"
         onClick={reset}
-        className="mt-6 h-10 inline-flex items-center gap-2 rounded-pill bg-brand px-5 font-sans text-[13px] font-semibold text-brand-on transition-colors hover:bg-brand-active cursor-pointer"
+        className="mt-6 h-10 inline-flex items-center gap-2 rounded-pill bg-brand px-5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active cursor-pointer"
       >
         <RefreshCw className="h-4 w-4" strokeWidth={2.5} />
         Try again

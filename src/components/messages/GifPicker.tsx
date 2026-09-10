@@ -96,7 +96,7 @@ export function GifPicker({
 								value={query}
 								onChange={(e) => setQuery(e.target.value)}
 								placeholder="Search GIPHY"
-								className="min-w-0 flex-1 bg-transparent font-sans text-[14px] text-primary outline-none placeholder:text-subtle"
+								className="min-w-0 flex-1 bg-transparent font-sans text-[calc(14px*var(--ws-fs))] text-primary outline-none placeholder:text-subtle"
 							/>
 						</OverlayHeader>
 						<div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">

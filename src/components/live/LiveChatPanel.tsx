@@ -353,7 +353,7 @@ export function LiveChatPanel({
 				className="flex-1 min-h-0 overflow-y-auto px-3 py-2 flex flex-col gap-1.5"
 			>
 				{messages.length === 0 && (
-					<p className={clsx("m-auto font-sans text-[12.5px]", inkFaint)}>
+					<p className={clsx("m-auto font-sans text-[calc(12.5px*var(--ws-fs))]", inkFaint)}>
 						{t("chat.empty")}
 					</p>
 				)}
@@ -375,7 +375,7 @@ export function LiveChatPanel({
 								/>
 							)}
 							<span
-								className={clsx("font-sans text-[11.5px] truncate", inkFaint)}
+								className={clsx("font-sans text-[calc(11.5px*var(--ws-fs))] truncate", inkFaint)}
 							>
 								<span className={clsx("font-semibold", inkDim)}>
 									{msg.username}
@@ -391,24 +391,24 @@ export function LiveChatPanel({
 							className="flex items-center gap-2 rounded-lg bg-gold/10 px-2.5 py-2"
 						>
 							<Gift size={15} weight="fill" className="text-gold shrink-0" />
-							<span className="font-sans text-[12.5px] font-semibold text-gold truncate">
+							<span className="font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-gold truncate">
 								{msg.username}
 							</span>
-							<span className="font-sans text-[12.5px] text-gold/80 truncate">
+							<span className="font-sans text-[calc(12.5px*var(--ws-fs))] text-gold/80 truncate">
 								{msg.content || t("chat.gifted")}
 							</span>
 							{msg.tipAmount && (
-								<span className="ml-auto font-sans text-[12.5px] font-bold text-gold tabular-nums shrink-0">
+								<span className="ml-auto font-sans text-[calc(12.5px*var(--ws-fs))] font-bold text-gold tabular-nums shrink-0">
 									{msg.tipAmount}
 								</span>
 							)}
 						</div>
 					) : msg.type === "reaction" ? (
 						<div key={msg.id} className="flex items-center gap-2 px-1">
-							<span className={clsx("font-sans text-[12px]", inkDim)}>
+							<span className={clsx("font-sans text-[calc(12px*var(--ws-fs))]", inkDim)}>
 								{msg.username}
 							</span>
-							<span className="text-[15px] leading-none">{msg.emoji}</span>
+							<span className="text-[calc(15px*var(--ws-fs))] leading-none">{msg.emoji}</span>
 						</div>
 					) : (
 						<div key={msg.id} className="flex gap-2 px-1 py-0.5">
@@ -419,24 +419,24 @@ export function LiveChatPanel({
 								<span className="flex items-center gap-1.5 min-w-0">
 									<span
 										className={clsx(
-											"font-sans text-[12px] font-semibold truncate",
+											"font-sans text-[calc(12px*var(--ws-fs))] font-semibold truncate",
 											msg.isMod ? "text-success" : inkDim,
 										)}
 									>
 										{msg.username}
 									</span>
 									{msg.platform !== "worldspace" && (
-										<span className="shrink-0 rounded-[4px] bg-danger/15 px-1 py-px text-[9px] font-bold uppercase tracking-wide text-danger">
+										<span className="shrink-0 rounded-[4px] bg-danger/15 px-1 py-px text-[calc(9px*var(--ws-fs))] font-bold uppercase tracking-wide text-danger">
 											Xstream
 										</span>
 									)}
-									<span className={clsx("text-[10px] shrink-0", inkFaint)}>
+									<span className={clsx("text-[calc(10px*var(--ws-fs))] shrink-0", inkFaint)}>
 										{msg.timestamp}
 									</span>
 								</span>
 								<p
 									className={clsx(
-										"font-sans text-[13px] leading-snug break-words",
+										"font-sans text-[calc(13px*var(--ws-fs))] leading-snug break-words",
 										ink,
 									)}
 								>
@@ -449,7 +449,7 @@ export function LiveChatPanel({
 			</div>
 
 			{error && (
-				<p className="px-3 pb-1 font-sans text-[11.5px] text-danger truncate">
+				<p className="px-3 pb-1 font-sans text-[calc(11.5px*var(--ws-fs))] text-danger truncate">
 					{error}
 				</p>
 			)}
@@ -464,7 +464,7 @@ export function LiveChatPanel({
 					<div className="mb-2 flex items-center justify-between">
 						<span
 							className={clsx(
-								"font-sans text-[11px] font-semibold uppercase tracking-[0.1em]",
+								"font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.1em]",
 								glass ? "glass-ink-faint" : "text-subtle",
 							)}
 						>
@@ -473,14 +473,14 @@ export function LiveChatPanel({
 						{wallet !== null ? (
 							<span
 								className={clsx(
-									"font-sans text-[11px] tabular-nums",
+									"font-sans text-[calc(11px*var(--ws-fs))] tabular-nums",
 									glass ? "glass-ink-dim" : "text-muted",
 								)}
 							>
 								{t("chat.wallet")} {centsToDollars(wallet)}
 							</span>
 						) : walletError ? (
-							<span className="font-sans text-[11px] text-danger">
+							<span className="font-sans text-[calc(11px*var(--ws-fs))] text-danger">
 								{walletError}
 							</span>
 						) : null}
@@ -493,13 +493,13 @@ export function LiveChatPanel({
 								disabled={giftBusy || !me}
 								onClick={() => void sendGift(g)}
 								className={clsx(
-									"flex items-center gap-1.5 rounded-pill px-3 py-1.5 font-sans text-[12px] font-semibold transition-colors cursor-pointer disabled:opacity-40",
+									"flex items-center gap-1.5 rounded-pill px-3 py-1.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors cursor-pointer disabled:opacity-40",
 									glass
 										? "bg-white/[0.08] glass-ink hover:bg-white/[0.14]"
 										: "bg-raised text-primary hover:bg-hairline",
 								)}
 							>
-								<span className="text-[14px] leading-none">{g.emoji}</span>
+								<span className="text-[calc(14px*var(--ws-fs))] leading-none">{g.emoji}</span>
 								{g.name}
 								<span
 									className={clsx(
@@ -548,7 +548,7 @@ export function LiveChatPanel({
 					disabled={!me}
 					maxLength={500}
 					className={clsx(
-						"flex-1 min-w-0 h-9 rounded-pill px-3.5 font-sans text-[13px] outline-none border-0",
+						"flex-1 min-w-0 h-9 rounded-pill px-3.5 font-sans text-[calc(13px*var(--ws-fs))] outline-none border-0",
 						glass
 							? "bg-white/[0.08] glass-ink placeholder:text-white/35"
 							: "bg-raised text-primary placeholder:text-subtle",

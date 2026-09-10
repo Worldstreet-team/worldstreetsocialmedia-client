@@ -66,7 +66,7 @@ export function DraftsSheet() {
                 <p className="font-sans text-sm text-muted">
                   {t("drafts.empty")}
                 </p>
-                <p className="font-sans text-[12px] text-subtle">
+                <p className="font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
                   {t("drafts.emptyHint")}
                 </p>
               </div>
@@ -82,10 +82,10 @@ export function DraftsSheet() {
                       onClick={() => resume(draft.id, draft.content)}
                       className="flex-1 min-w-0 text-left cursor-pointer"
                     >
-                      <p className="font-sans text-[14px] text-primary line-clamp-2 whitespace-pre-wrap">
+                      <p className="font-sans text-[calc(14px*var(--ws-fs))] text-primary line-clamp-2 whitespace-pre-wrap">
                         {draft.content}
                       </p>
-                      <span className="font-sans text-[12px] text-subtle tabular-nums">
+                      <span className="font-sans text-[calc(12px*var(--ws-fs))] text-subtle tabular-nums">
                         {formatTimeAgo(new Date(draft.updatedAt).toISOString())}
                         {" · "}
                         {draft.content.length}

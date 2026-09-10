@@ -73,10 +73,10 @@ export default function StudioPromotions() {
 					<Megaphone size={16} weight="bold" />
 				</span>
 				<div className="min-w-0">
-					<p className="font-sans text-[13.5px] font-semibold glass-ink">
+					<p className="font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold glass-ink">
 						{t("studio.promo.soonTitle")}
 					</p>
-					<p className="mt-0.5 max-w-[70ch] font-sans text-[12.5px] leading-relaxed glass-ink-dim">
+					<p className="mt-0.5 max-w-[70ch] font-sans text-[calc(12.5px*var(--ws-fs))] leading-relaxed glass-ink-dim">
 						{t("studio.promo.soonBody")}
 					</p>
 				</div>
@@ -96,7 +96,7 @@ export default function StudioPromotions() {
 					<p className="font-sans text-sm glass-ink-dim">
 						{t("studio.promo.empty")}
 					</p>
-					<p className="font-sans text-[12.5px] glass-ink-faint mt-1">
+					<p className="font-sans text-[calc(12.5px*var(--ws-fs))] glass-ink-faint mt-1">
 						{t("studio.promo.emptyHint")}
 					</p>
 				</div>
@@ -114,12 +114,12 @@ export default function StudioPromotions() {
 						return (
 							<div key={c._id} className="rounded-2xl bg-[#171614] p-4">
 								<div className="flex items-start justify-between gap-3">
-									<p className="font-sans text-[14px] glass-ink line-clamp-1 min-w-0">
+									<p className="font-sans text-[calc(14px*var(--ws-fs))] glass-ink line-clamp-1 min-w-0">
 										{c.post?.content || t("studio.mediaPost")}
 									</p>
 									<span
 										className={clsx(
-											"shrink-0 rounded-pill px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide font-sans",
+											"shrink-0 rounded-pill px-2.5 py-0.5 text-[calc(11px*var(--ws-fs))] font-bold uppercase tracking-wide font-sans",
 											c.status === "active" &&
 												"bg-success/10 text-success",
 											c.status === "paused" &&
@@ -133,7 +133,7 @@ export default function StudioPromotions() {
 								</div>
 
 								<div className="mt-3">
-									<div className="flex items-center justify-between font-sans text-[12.5px] glass-ink-dim mb-1 tabular-nums">
+									<div className="flex items-center justify-between font-sans text-[calc(12.5px*var(--ws-fs))] glass-ink-dim mb-1 tabular-nums">
 										<span>
 											{usd(c.spentUsdMinor)} / {usd(c.budgetUsdMinor)}
 										</span>
@@ -155,7 +155,7 @@ export default function StudioPromotions() {
 								</div>
 
 								<div className="flex items-center justify-between gap-3 mt-3 flex-wrap">
-									<div className="flex items-center gap-4 font-sans text-[12.5px] glass-ink-dim tabular-nums">
+									<div className="flex items-center gap-4 font-sans text-[calc(12.5px*var(--ws-fs))] glass-ink-dim tabular-nums">
 										<span>
 											{fmt(c.stats.impressions)}{" "}
 											{t("studio.impressions").toLowerCase()}
@@ -181,7 +181,7 @@ export default function StudioPromotions() {
 																: "active",
 													})
 												}
-												className="h-8 px-3.5 rounded-pill bg-[#fafaf9]/[0.06] glass-ink-dim hover:glass-ink hover:bg-[#fafaf9]/[0.1] font-sans text-[12.5px] font-semibold transition-colors cursor-pointer disabled:opacity-50"
+												className="h-8 px-3.5 rounded-pill bg-[#fafaf9]/[0.06] glass-ink-dim hover:glass-ink hover:bg-[#fafaf9]/[0.1] font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold transition-colors cursor-pointer disabled:opacity-50"
 											>
 												{c.status === "active"
 													? t("studio.promo.pause")
@@ -197,7 +197,7 @@ export default function StudioPromotions() {
 													confirmCharge: true,
 												})
 											}
-											className="h-8 px-3.5 rounded-pill bg-[#fafaf9] text-[#0c0a09] hover:bg-white font-sans text-[12.5px] font-semibold transition-colors cursor-pointer disabled:opacity-50 active:brightness-95"
+											className="h-8 px-3.5 rounded-pill bg-[#fafaf9] text-[#0c0a09] hover:bg-white font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold transition-colors cursor-pointer disabled:opacity-50 active:brightness-95"
 										>
 											{t("studio.promo.topUp")}
 										</button>

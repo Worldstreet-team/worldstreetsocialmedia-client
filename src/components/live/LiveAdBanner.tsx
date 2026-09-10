@@ -102,10 +102,10 @@ export function LiveAdBanner({
 				/>
 			)}
 			<span className="min-w-0 flex-1">
-				<span className="block font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-white/50">
+				<span className="block font-sans text-[calc(10px*var(--ws-fs))] font-semibold uppercase tracking-[0.12em] text-white/50">
 					Sponsored
 				</span>
-				<span className="block truncate font-sans text-[12.5px] font-medium text-white/90">
+				<span className="block truncate font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-white/90">
 					@{slot.advertiser?.username ?? "advertiser"}
 				</span>
 			</span>
@@ -115,7 +115,7 @@ export function LiveAdBanner({
 					onClick={visit}
 					target="_blank"
 					rel="sponsored noopener noreferrer"
-					className="flex h-8 shrink-0 items-center gap-1 rounded-pill bg-white px-3 font-sans text-[12px] font-semibold text-black transition-colors hover:bg-white/85"
+					className="flex h-8 shrink-0 items-center gap-1 rounded-pill bg-white px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-black transition-colors hover:bg-white/85"
 				>
 					Visit
 					<ArrowUpRight size={12} weight="bold" />

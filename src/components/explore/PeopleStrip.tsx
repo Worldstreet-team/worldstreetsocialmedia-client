@@ -67,7 +67,7 @@ export function PeopleStrip({
                   </Link>
                   <Link href={`/profile/${u.username}`} className="min-w-0 flex-1">
                     <span className="flex items-center gap-1">
-                      <span className="truncate font-sans text-[14px] font-semibold text-primary hover:underline">
+                      <span className="truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary hover:underline">
                         {name}
                       </span>
                       <UserBadges
@@ -77,14 +77,14 @@ export function PeopleStrip({
                         size={13}
                       />
                     </span>
-                    <span className="block truncate font-sans text-[12.5px] text-subtle">
+                    <span className="block truncate font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle">
                       @{u.username}
                     </span>
                   </Link>
                   <button
                     type="button"
                     onClick={() => onFollow(u._id)}
-                    className="h-8 shrink-0 cursor-pointer rounded-pill bg-primary px-4 font-sans text-[13px] font-semibold text-page transition-colors hover:bg-muted"
+                    className="h-8 shrink-0 cursor-pointer rounded-pill bg-primary px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-page transition-colors hover:bg-muted"
                   >
                     {t("rail.follow")}
                   </button>

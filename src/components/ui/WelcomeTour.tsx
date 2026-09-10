@@ -37,7 +37,7 @@ const ECOSYSTEM_CHIPS = [
 ];
 
 const Kbd = ({ children }: { children: React.ReactNode }) => (
-  <kbd className="inline-flex h-7 items-center rounded-md bg-primary/10 px-2 font-sans text-[11px] font-semibold text-primary">
+  <kbd className="inline-flex h-7 items-center rounded-md bg-primary/10 px-2 font-sans text-[calc(11px*var(--ws-fs))] font-semibold text-primary">
     {children}
   </kbd>
 );
@@ -82,7 +82,7 @@ const ALL_STEPS = [
       // The entities themselves, at the size you would actually read them —
       // a chart glyph in a gold-era `bg-convert` tile said nothing the copy
       // did not. `text-gold` IS the brand ink token, so this follows the cyan.
-      <span className="flex items-center gap-2 font-sans text-[15px] font-semibold">
+      <span className="flex items-center gap-2 font-sans text-[calc(15px*var(--ws-fs))] font-semibold">
         <span className="rounded-md bg-brand/15 px-2.5 py-1 text-gold">
           $WST
         </span>
@@ -105,7 +105,7 @@ const ALL_STEPS = [
             <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
               <Icon className="h-5 w-5 text-primary" strokeWidth={2} />
             </span>
-            <span className="font-sans text-[10px] text-muted">{label}</span>
+            <span className="font-sans text-[calc(10px*var(--ws-fs))] text-muted">{label}</span>
           </div>
         ))}
       </div>
@@ -116,7 +116,7 @@ const ALL_STEPS = [
     title: "Move like a pro",
     body: "The command palette reaches every page and action. Start a post or search without touching the mouse.",
     hero: (
-      <div className="flex flex-col items-center gap-2.5 font-sans text-[13px] text-muted">
+      <div className="flex flex-col items-center gap-2.5 font-sans text-[calc(13px*var(--ws-fs))] text-muted">
         <span className="flex items-center gap-2">
           <Kbd>Ctrl</Kbd>
           <Kbd>K</Kbd>
@@ -268,7 +268,7 @@ export function WelcomeTour() {
               <h2 className="font-display font-semibold text-xl text-primary mb-2">
                 {current.title}
               </h2>
-              <p className="font-sans text-[15px] leading-relaxed text-muted">
+              <p className="font-sans text-[calc(15px*var(--ws-fs))] leading-relaxed text-muted">
                 {current.body}
               </p>
             </motion.div>
@@ -313,7 +313,7 @@ export function WelcomeTour() {
                 <button
                   type="button"
                   onClick={() => setStep((s) => s - 1)}
-                  className="h-11 sm:h-9 cursor-pointer rounded-pill bg-primary/10 px-4 font-sans text-[13px] font-semibold text-primary transition-colors hover:bg-primary/[0.16]"
+                  className="h-11 sm:h-9 cursor-pointer rounded-pill bg-primary/10 px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-primary/[0.16]"
                 >
                   Back
                 </button>
@@ -323,7 +323,7 @@ export function WelcomeTour() {
                 onClick={() =>
                   isLast ? finish(true) : setStep((s) => s + 1)
                 }
-                className="h-11 sm:h-9 px-[18px] rounded-pill font-sans text-[13px] font-semibold bg-brand text-brand-on hover:bg-brand-active transition-colors cursor-pointer whitespace-nowrap"
+                className="h-11 sm:h-9 px-[18px] rounded-pill font-sans text-[calc(13px*var(--ws-fs))] font-semibold bg-brand text-brand-on hover:bg-brand-active transition-colors cursor-pointer whitespace-nowrap"
             >
                 {isLast ? "Start posting" : "Next"}
               </button>

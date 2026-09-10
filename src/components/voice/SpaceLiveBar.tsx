@@ -52,18 +52,18 @@ export function SpaceLiveBar() {
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="flex min-w-0 items-center gap-1.5">
           <EqBars className="h-3 shrink-0 text-danger" />
-          <span className="min-w-0 truncate font-sans text-[13.5px] font-semibold text-primary">
+          <span className="min-w-0 truncate font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-primary">
             {row.title}
           </span>
         </span>
-        <span className="truncate font-sans text-[11.5px] text-muted tabular-nums">
+        <span className="truncate font-sans text-[calc(11.5px*var(--ws-fs))] text-muted tabular-nums">
           {hostName(row.host)} · {formatCompact(spaceListenerCount(row))}{" "}
           {t("voice.listeners")}
           {others > 0 &&
             ` · +${others} ${tf("voice.moreRooms", "more live")}`}
         </span>
       </span>
-      <span className="shrink-0 rounded-pill bg-primary px-3.5 py-1.5 font-sans text-[12px] font-semibold text-page">
+      <span className="shrink-0 rounded-pill bg-primary px-3.5 py-1.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-page">
         {t("voice.join")}
       </span>
     </button>

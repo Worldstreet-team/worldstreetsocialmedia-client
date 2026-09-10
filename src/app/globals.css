@@ -1309,3 +1309,124 @@ video,
 .animate-tick-in {
 	animation: ws-tick-in 120ms var(--ws-ease) backwards;
 }
+
+/* ------------------------------------------------------------------
+   Accessibility preferences (settings audit 2026-09-10).
+
+   The provider stamps <html> before first paint; these rules are what
+   the stamps mean. Everything keys off data attributes and two custom
+   properties, so nothing here costs a re-render.
+   ------------------------------------------------------------------ */
+
+:root {
+  /* Text-size multipliers. --ws-fs scales every text-[Npx] in the app;
+     --ws-fs-chat multiplies again inside the messages surface, because
+     chat is read one-handed at arm's length. */
+  --ws-fs: 1;
+  --ws-fs-chat: 1;
+  /* What "auto" reads: the browser's own root size, which is the thing a
+     phone's display-size setting actually moves. */
+  --ws-root-fs: 1rem;
+}
+
+/* Chat compounds on top of the app scale rather than replacing it. */
+[data-ws-theme] .ws-chat-scale,
+#ws-main-scroll .ws-chat-scale {
+  --ws-fs: calc(var(--ws-fs) * var(--ws-fs-chat));
+}
+
+/* Bold text: one step heavier everywhere, size and layout untouched.
+   Weight beats size on cheap LCDs in daylight, and both phone platforms
+   ship this switch, so people look for it by name. */
+html[data-ws-bold] {
+  --font-weight-normal: 500;
+  --font-weight-medium: 600;
+  --font-weight-semibold: 700;
+  --font-weight-bold: 800;
+}
+
+/* Contrast: text-subtle is 3.16:1 on raised and carries every timestamp,
+   count and placeholder, so High promotes it to muted and firms up the
+   hairlines rather than inventing a new palette. */
+html[data-ws-contrast="more"] {
+  --ws-text-subtle: var(--ws-text-muted);
+  --ws-border-hairline: color-mix(in srgb, var(--ws-text-muted) 45%, transparent);
+}
+html[data-ws-contrast="more"] :focus-visible {
+  outline: 3px solid var(--ws-text-primary);
+  outline-offset: 2px;
+}
+
+/* Reduce transparency: blur smears text for low-vision readers and costs
+   real frames on the budget Androids most of these users carry. */
+html[data-ws-flat] *,
+html[data-ws-flat] *::before,
+html[data-ws-flat] *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Underline links: in-body links are set apart from prose by hue alone,
+   and hue is the one channel a colour-blind reader does not have. */
+html[data-ws-underline] .ws-link,
+html[data-ws-underline] a[href^="http"] {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Motion, chosen in the app rather than only by the OS. The global
+   prefers-reduced-motion block above missed animation-delay, so staggered
+   content stayed blank for up to 760ms before it ever animated. */
+html[data-ws-motion="reduce"] *,
+html[data-ws-motion="reduce"] *::before,
+html[data-ws-motion="reduce"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-delay: 0ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  transition-delay: 0ms !important;
+  scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-delay: 0ms !important;
+    transition-delay: 0ms !important;
+  }
+}
+
+/* Colour vision. Gain and loss are a pure green/red pair in both themes -
+   exactly the hues deuteranopia and protanopia collapse together - and the
+   same pair carries success/danger, presence and chart slices. Each mode
+   moves the failing axis onto one the viewer can still separate, keeping
+   luminance apart so the pair survives even in achromatopsia. */
+html[data-ws-cv="deuteran"],
+html[data-ws-cv="protan"] {
+  --ws-money-credit: #3B82F6;   /* gain  -> blue,   light and cool */
+  --ws-money-debit: #F59E0B;    /* loss  -> amber,  dark and warm */
+  --ws-status-success: #3B82F6;
+  --ws-status-danger: #B45309;
+}
+html[data-ws-cv="tritan"] {
+  --ws-money-credit: #0EA5A5;   /* blue/yellow fails, so hold the red-green */
+  --ws-money-debit: #DC2626;
+  --ws-status-success: #0EA5A5;
+  --ws-status-danger: #DC2626;
+}
+html[data-ws-cv="achroma"] {
+  /* No hue at all: separate by luminance only. */
+  --ws-money-credit: #F5F5F5;
+  --ws-money-debit: #6B6B6B;
+  --ws-status-success: #F5F5F5;
+  --ws-status-danger: #6B6B6B;
+}
+
+/* Symbols, not just colour. Redundant encoding is what actually fixes a
+   hue-only signal; forced on by any colour-vision mode. */
+html[data-ws-cues] .ws-cue-up::before { content: "▲ "; }
+html[data-ws-cues] .ws-cue-down::before { content: "▼ "; }
+html[data-ws-cues] .ws-cue-online { box-shadow: 0 0 0 2px var(--ws-bg-page), 0 0 0 3.5px var(--ws-text-primary); }
+
+/* Data saver: no autoplay, no decorative motion, cheaper media. */
+html[data-ws-saver] video[autoplay] { animation: none; }

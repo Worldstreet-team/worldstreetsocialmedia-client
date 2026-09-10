@@ -155,7 +155,7 @@ export function ManageCommunity({
                       item.run();
                     }}
                     className={clsx(
-                      "flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-left font-sans text-[13px] font-medium transition-colors hover:bg-raised",
+                      "flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors hover:bg-raised",
                       item.danger ? "text-danger" : "text-primary",
                     )}
                   >
@@ -289,10 +289,10 @@ function EditCommunitySheet({
               </span>
             </button>
             <div className="min-w-0">
-              <p className="truncate font-sans text-[15px] font-semibold text-primary">
+              <p className="truncate font-sans text-[calc(15px*var(--ws-fs))] font-semibold text-primary">
                 {community.name}
               </p>
-              <p className="font-sans text-[12px] text-subtle">
+              <p className="font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
                 {t("community.nameLocked")}
               </p>
             </div>
@@ -311,7 +311,7 @@ function EditCommunitySheet({
           </div>
 
           <label className="mt-4 block">
-            <span className="font-sans text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle">
+            <span className="font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.12em] text-subtle">
               {t("community.descriptionLabel")}
             </span>
             <textarea
@@ -323,7 +323,7 @@ function EditCommunitySheet({
             />
           </label>
 
-          <span className="mt-3 block font-sans text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle">
+          <span className="mt-3 block font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.12em] text-subtle">
             {t("community.categoryLabel")}
           </span>
           <div className="mt-1.5 flex max-h-32 flex-wrap gap-1.5 overflow-y-auto">
@@ -334,7 +334,7 @@ function EditCommunitySheet({
                 onClick={() => setCategory(c.id)}
                 aria-pressed={category === c.id}
                 className={clsx(
-                  "h-7 cursor-pointer rounded-pill px-2.5 font-sans text-[12px] font-medium transition-colors",
+                  "h-7 cursor-pointer rounded-pill px-2.5 font-sans text-[calc(12px*var(--ws-fs))] font-medium transition-colors",
                   category === c.id
                     ? "bg-primary text-page font-semibold"
                     : "bg-chip text-muted hover:text-primary",
@@ -349,7 +349,7 @@ function EditCommunitySheet({
             type="button"
             onClick={save}
             disabled={saving}
-            className="mt-5 flex h-11 w-full cursor-pointer items-center justify-center rounded-pill bg-primary font-sans text-[14px] font-semibold text-page transition-colors hover:bg-muted disabled:opacity-50"
+            className="mt-5 flex h-11 w-full cursor-pointer items-center justify-center rounded-pill bg-primary font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-page transition-colors hover:bg-muted disabled:opacity-50"
           >
             {t("voice.saveChanges")}
           </button>
@@ -437,11 +437,11 @@ function MembersSheet({
                   <SafeAvatar src={m.avatar} />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-sans text-[13.5px] font-semibold text-primary">
+                  <span className="block truncate font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-primary">
                     {[m.firstName, m.lastName].filter(Boolean).join(" ") ||
                       `@${m.username}`}
                   </span>
-                  <span className="block truncate font-sans text-[12px] text-subtle">
+                  <span className="block truncate font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
                     @{m.username}
                     {m.isOwner ? ` · ${t("community.owner")}` : ""}
                   </span>
@@ -465,7 +465,7 @@ function MembersSheet({
             <button
               type="button"
               onClick={() => void load(nextOffset)}
-              className="mx-auto my-2 block h-9 cursor-pointer rounded-pill bg-raised px-4 font-sans text-[13px] font-medium text-muted transition-colors hover:text-primary"
+              className="mx-auto my-2 block h-9 cursor-pointer rounded-pill bg-raised px-4 font-sans text-[calc(13px*var(--ws-fs))] font-medium text-muted transition-colors hover:text-primary"
             >
               {t("rail.showMore")}
             </button>

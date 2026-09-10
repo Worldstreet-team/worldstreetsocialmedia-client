@@ -103,7 +103,7 @@ export function PostPoll({
 							type="button"
 							disabled={busy}
 							onClick={() => void vote(i)}
-							className="flex h-10 w-full cursor-pointer items-center justify-center rounded-pill border border-gold/60 px-4 font-sans text-[14px] font-semibold text-gold transition-colors hover:bg-gold/10"
+							className="flex h-10 w-full cursor-pointer items-center justify-center rounded-pill border border-gold/60 px-4 font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-gold transition-colors hover:bg-gold/10"
 						>
 							<span className="truncate">{o.text}</span>
 						</button>
@@ -134,7 +134,7 @@ export function PostPoll({
 						<span className="relative z-10 flex h-full items-center justify-between gap-2 px-3.5">
 							<span
 								className={clsx(
-									"flex min-w-0 items-center gap-1.5 font-sans text-[14px]",
+									"flex min-w-0 items-center gap-1.5 font-sans text-[calc(14px*var(--ws-fs))]",
 									winning
 										? "font-semibold text-primary"
 										: "text-primary",
@@ -148,14 +148,14 @@ export function PostPoll({
 									/>
 								)}
 							</span>
-							<span className="shrink-0 font-sans text-[13px] font-medium tabular-nums text-muted">
+							<span className="shrink-0 font-sans text-[calc(13px*var(--ws-fs))] font-medium tabular-nums text-muted">
 								{pct}%
 							</span>
 						</span>
 					</button>
 				);
 			})}
-			<span className="font-sans text-[12.5px] text-subtle">
+			<span className="font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle">
 				{formatCompact(poll.totalVotes)}{" "}
 				{poll.totalVotes === 1 ? t("poll.vote") : t("poll.votes")}
 				{poll.ended

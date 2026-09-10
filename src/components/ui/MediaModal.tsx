@@ -233,7 +233,7 @@ export default function MediaModal({
 
 						{/* Counter */}
 						{media.length > 1 && (
-							<div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-raised text-primary px-3 py-1 rounded-pill text-[13px] font-medium border border-hairline font-sans tabular-nums">
+							<div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-raised text-primary px-3 py-1 rounded-pill text-[calc(13px*var(--ws-fs))] font-medium border border-hairline font-sans tabular-nums">
 								{currentIndex + 1} / {media.length}
 							</div>
 						)}

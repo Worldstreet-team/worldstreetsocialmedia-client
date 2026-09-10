@@ -68,7 +68,7 @@ export function PaymentBubble({
 			<span
 				style={ring}
 				className={clsx(
-					"flex h-9 w-9 items-center justify-center rounded-pill font-sans text-[13px] font-semibold",
+					"flex h-9 w-9 items-center justify-center rounded-pill font-sans text-[calc(13px*var(--ws-fs))] font-semibold",
 					mine ? "bg-white/25 text-white" : "bg-chip text-muted",
 				)}
 			>
@@ -101,22 +101,22 @@ export function PaymentBubble({
 						</span>
 					</span>
 					<span className="min-w-0">
-						<span className="block font-sans text-[10.5px] font-semibold uppercase tracking-[0.14em] opacity-70">
+						<span className="block font-sans text-[calc(10.5px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] opacity-70">
 							{mine ? "Sent" : bystander ? "Payment" : "Received"}
 						</span>
-						<span className="block font-display text-[20px] font-semibold tabular-nums leading-tight">
+						<span className="block font-display text-[calc(20px*var(--ws-fs))] font-semibold tabular-nums leading-tight">
 							{amount}
 						</span>
 					</span>
 				</span>
 
 				{note ? (
-					<p className="mt-2 break-words font-sans text-[13px] leading-relaxed opacity-90">
+					<p className="mt-2 break-words font-sans text-[calc(13px*var(--ws-fs))] leading-relaxed opacity-90">
 						{note}
 					</p>
 				) : null}
 
-				<span className="mt-2.5 flex items-center justify-between gap-2 font-sans text-[11px] opacity-70">
+				<span className="mt-2.5 flex items-center justify-between gap-2 font-sans text-[calc(11px*var(--ws-fs))] opacity-70">
 					<span className="truncate">
 						{bystander
 							? `${fromName || "Someone"} → ${toName}`

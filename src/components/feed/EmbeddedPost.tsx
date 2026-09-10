@@ -111,7 +111,7 @@ export function EmbeddedPost({ postId }: { postId: string }) {
 		>
 			<div className="flex gap-3 p-3">
 				<div className="min-w-0 flex-1">
-					<span className="flex items-center gap-1 font-sans text-[13.5px] leading-snug">
+					<span className="flex items-center gap-1 font-sans text-[calc(13.5px*var(--ws-fs))] leading-snug">
 						<span className="relative h-5 w-5 shrink-0 overflow-hidden rounded-pill bg-raised">
 							<SafeAvatar src={data.avatar} />
 						</span>
@@ -135,7 +135,7 @@ export function EmbeddedPost({ postId }: { postId: string }) {
 							</span>
 						)}
 					</span>
-					<p className="mt-1 font-sans text-[13.5px] leading-snug text-primary [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3] overflow-hidden whitespace-pre-line">
+					<p className="mt-1 font-sans text-[calc(13.5px*var(--ws-fs))] leading-snug text-primary [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3] overflow-hidden whitespace-pre-line">
 						{data.locked && !data.content
 							? "Paid post"
 							: data.content || (data.image ? "" : "View post")}

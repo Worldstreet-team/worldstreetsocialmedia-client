@@ -330,7 +330,7 @@ export default function ImageModal({
 
 						{/* Image Counter */}
 						{images.length > 1 && (
-							<div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-raised/90 text-primary px-3 py-1 rounded-pill text-[13px] font-medium font-sans tabular-nums border border-hairline">
+							<div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-raised/90 text-primary px-3 py-1 rounded-pill text-[calc(13px*var(--ws-fs))] font-medium font-sans tabular-nums border border-hairline">
 								{currentIndex + 1} / {images.length}
 							</div>
 						)}

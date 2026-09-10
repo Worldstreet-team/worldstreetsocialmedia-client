@@ -48,7 +48,7 @@ export function Mention({ handle }: { handle: string }) {
 			<Link
 				href={`/profile/${profile.username}`}
 				onClick={stop}
-				className="relative z-10 pointer-events-auto inline-flex items-center gap-1 rounded-pill bg-brand/[0.10] py-px pl-0.5 pr-1.5 align-baseline text-[13px] font-semibold tracking-tight text-gold transition-colors hover:bg-brand/20"
+				className="relative z-10 pointer-events-auto inline-flex items-center gap-1 rounded-pill bg-brand/[0.10] py-px pl-0.5 pr-1.5 align-baseline text-[calc(13px*var(--ws-fs))] font-semibold tracking-tight text-gold transition-colors hover:bg-brand/20"
 			>
 				<span className="relative inline-block h-[15px] w-[15px] shrink-0 overflow-hidden rounded-pill bg-raised align-text-bottom">
 					<SafeAvatar src={profile.avatar} />

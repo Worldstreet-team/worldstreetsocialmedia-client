@@ -245,10 +245,10 @@ export default function CommunitiesPage() {
 			<header className="sticky top-0 z-sticky border-b border-hairline bg-page md:top-0">
 				<div className="flex items-end justify-between gap-3 px-4 pb-3 pt-5">
 					<div className="min-w-0">
-						<span className="block font-sans text-[11px] font-bold uppercase tracking-[0.16em] text-gold">
+						<span className="block font-sans text-[calc(11px*var(--ws-fs))] font-bold uppercase tracking-[0.16em] text-gold">
 							{t("community.eyebrow")}
 						</span>
-						<h1 className="mt-1 font-display text-[24px] font-semibold leading-none text-primary">
+						<h1 className="mt-1 font-display text-[calc(24px*var(--ws-fs))] font-semibold leading-none text-primary">
 							{t("nav.communities")}
 						</h1>
 					</div>
@@ -277,7 +277,7 @@ export default function CommunitiesPage() {
 							className="animate-rise border-b border-hairline px-4 py-4"
 							style={{ animationDelay: "60ms" }}
 						>
-							<h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">
+							<h2 className="mb-3 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-subtle">
 								{t("community.yours")}
 							</h2>
 							<MyCommunitiesRail
@@ -330,12 +330,12 @@ export default function CommunitiesPage() {
 								onChange={(e) => setQuery(e.target.value)}
 								placeholder={t("community.browse")}
 								// text-base on mobile or iOS Safari zooms on focus.
-								className="h-10 w-full rounded-pill bg-chip pl-10 pr-4 font-sans text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised sm:text-[14px]"
+								className="h-10 w-full rounded-pill bg-chip pl-10 pr-4 font-sans text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised sm:text-[calc(14px*var(--ws-fs))]"
 							/>
 						</div>
 					</div>
 
-					<h2 className="px-4 pb-1 pt-4 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">
+					<h2 className="px-4 pb-1 pt-4 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-subtle">
 						{t("community.discover")}
 					</h2>
 

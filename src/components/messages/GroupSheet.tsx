@@ -316,7 +316,7 @@ export function GroupSheet({
 										<Users className="h-8 w-8 text-muted" />
 									)}
 									{iAmAdmin && (
-										<span className="absolute inset-x-0 bottom-0 bg-scrim py-0.5 text-center font-sans text-[9px] font-semibold uppercase tracking-wide text-primary opacity-0 transition-opacity group-hover/photo:opacity-100">
+										<span className="absolute inset-x-0 bottom-0 bg-scrim py-0.5 text-center font-sans text-[calc(9px*var(--ws-fs))] font-semibold uppercase tracking-wide text-primary opacity-0 transition-opacity group-hover/photo:opacity-100">
 											Change
 										</span>
 									)}
@@ -339,7 +339,7 @@ export function GroupSheet({
 											onChange={(e) => setDraftName(e.target.value)}
 											maxLength={80}
 											autoFocus
-											className="min-w-0 flex-1 rounded-[10px] bg-sunken px-3 py-2 text-center font-sans text-[16px] font-semibold text-primary outline-none focus:bg-raised"
+											className="min-w-0 flex-1 rounded-[10px] bg-sunken px-3 py-2 text-center font-sans text-[calc(16px*var(--ws-fs))] font-semibold text-primary outline-none focus:bg-raised"
 										/>
 										<button
 											type="button"
@@ -357,8 +357,8 @@ export function GroupSheet({
 										onClick={() => iAmAdmin && setRenaming(true)}
 										className={
 											iAmAdmin
-												? "flex cursor-pointer items-center gap-1.5 font-display text-[18px] font-semibold text-primary"
-												: "font-display text-[18px] font-semibold text-primary"
+												? "flex cursor-pointer items-center gap-1.5 font-display text-[calc(18px*var(--ws-fs))] font-semibold text-primary"
+												: "font-display text-[calc(18px*var(--ws-fs))] font-semibold text-primary"
 										}
 									>
 										{name}
@@ -367,7 +367,7 @@ export function GroupSheet({
 										)}
 									</button>
 								)}
-								<span className="text-[13px] text-muted">
+								<span className="text-[calc(13px*var(--ws-fs))] text-muted">
 									{active.length} members
 								</span>
 							</div>
@@ -382,10 +382,10 @@ export function GroupSheet({
 										className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-[10px] px-1 py-2 text-left transition-colors hover:bg-raised disabled:opacity-60"
 									>
 										<span className="min-w-0">
-											<span className="block font-sans text-[14px] font-medium text-primary">
+											<span className="block font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary">
 												Only admins can send
 											</span>
-											<span className="block font-sans text-[12px] text-muted">
+											<span className="block font-sans text-[calc(12px*var(--ws-fs))] text-muted">
 												Members can read but not post
 											</span>
 										</span>
@@ -408,7 +408,7 @@ export function GroupSheet({
 									<button
 										type="button"
 										onClick={() => void openAdd()}
-										className="flex w-full cursor-pointer items-center gap-2.5 rounded-[10px] px-1 py-2.5 text-left font-sans text-[14px] font-medium text-primary transition-colors hover:bg-raised"
+										className="flex w-full cursor-pointer items-center gap-2.5 rounded-[10px] px-1 py-2.5 text-left font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-raised"
 									>
 										<UserPlus className="h-4 w-4 text-muted" />
 										Add people
@@ -421,7 +421,7 @@ export function GroupSheet({
 													value={addQuery}
 													onChange={(e) => setAddQuery(e.target.value)}
 													placeholder="Search people you follow"
-													className="w-full rounded-pill bg-sunken py-2 pl-9 pr-3 font-sans text-[13px] text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised"
+													className="w-full rounded-pill bg-sunken py-2 pl-9 pr-3 font-sans text-[calc(13px*var(--ws-fs))] text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised"
 												/>
 											</div>
 											{candidates
@@ -445,7 +445,7 @@ export function GroupSheet({
 														<span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-pill bg-raised">
 															<SafeAvatar src={c.avatar} eager />
 														</span>
-														<span className="min-w-0 flex-1 truncate font-sans text-[13px] text-primary">
+														<span className="min-w-0 flex-1 truncate font-sans text-[calc(13px*var(--ws-fs))] text-primary">
 															{`${c.firstName ?? ""} ${c.lastName ?? ""}`.trim() || c.username}
 														</span>
 														<UserPlus className="h-3.5 w-3.5 shrink-0 text-muted" />
@@ -481,13 +481,13 @@ export function GroupSheet({
 											</span>
 											<span className="min-w-0 flex-1">
 												<span
-													className="block truncate font-sans text-[14px] font-medium"
+													className="block truncate font-sans text-[calc(14px*var(--ws-fs))] font-medium"
 													style={{ color: senderColor(a.id) }}
 												>
 													{nm} {isMe && "(you)"}
 												</span>
 												{a.role !== "member" && (
-													<span className="flex items-center gap-1 text-[11.5px] text-subtle">
+													<span className="flex items-center gap-1 text-[calc(11.5px*var(--ws-fs))] text-subtle">
 														{a.role === "owner" ? (
 															<Crown className="h-3 w-3" />
 														) : (
@@ -549,7 +549,7 @@ export function GroupSheet({
 								type="button"
 								onClick={() => remove(myProfileId)}
 								disabled={busy === myProfileId}
-								className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-pill bg-raised font-sans text-[14px] font-semibold text-danger transition-colors hover:bg-chip disabled:opacity-50"
+								className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-pill bg-raised font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-danger transition-colors hover:bg-chip disabled:opacity-50"
 							>
 								<LogOut className="h-4 w-4" />
 								Leave group

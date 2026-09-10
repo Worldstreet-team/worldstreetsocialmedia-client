@@ -86,7 +86,7 @@ export function ThemeGallery({
 									/>
 									<span
 										className={clsx(
-											"px-1 font-sans text-[12.5px] font-medium",
+											"px-1 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium",
 											on ? "text-brand" : "text-primary",
 										)}
 									>
@@ -101,14 +101,14 @@ export function ThemeGallery({
 							type="button"
 							onClick={() => onReset(scope)}
 							disabled={saving}
-							className="cursor-pointer font-sans text-[13px] text-muted transition-colors hover:text-primary"
+							className="cursor-pointer font-sans text-[calc(13px*var(--ws-fs))] text-muted transition-colors hover:text-primary"
 						>
 							Reset to default
 						</button>
 						<button
 							type="button"
 							onClick={() => onAdvanced(scope)}
-							className="h-10 cursor-pointer rounded-pill border border-hairline px-4 font-sans text-[13px] font-semibold text-primary transition-colors hover:bg-raised"
+							className="h-10 cursor-pointer rounded-pill border border-hairline px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-raised"
 						>
 							Advanced
 						</button>
@@ -135,7 +135,7 @@ export function ScopeSwitch({
 			onClick={() => onChange(k)}
 			aria-pressed={scope === k}
 			className={clsx(
-				"h-9 flex-1 cursor-pointer rounded-pill font-sans text-[13px] font-medium transition-colors",
+				"h-9 flex-1 cursor-pointer rounded-pill font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors",
 				scope === k ? "bg-primary text-page" : "text-muted hover:text-primary",
 			)}
 		>

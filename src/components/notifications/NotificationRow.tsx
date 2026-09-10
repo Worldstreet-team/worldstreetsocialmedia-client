@@ -177,7 +177,7 @@ export function NotificationRow({
       </span>
 
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="font-sans text-[14.5px] leading-snug text-primary">
+        <span className="font-sans text-[calc(14.5px*var(--ws-fs))] leading-snug text-primary">
           <span className="font-semibold">{senderName(lead)}</span>
           {/* No isVerified guard: UserBadges already returns null when there
               is nothing to show, so the guard only ever hid Wolf and
@@ -211,7 +211,7 @@ export function NotificationRow({
         </span>
 
         {type === "announcement" && group.title && (
-          <span className="font-sans text-[14px] font-semibold leading-snug text-primary">
+          <span className="font-sans text-[calc(14px*var(--ws-fs))] font-semibold leading-snug text-primary">
             {group.title}
           </span>
         )}
@@ -219,7 +219,7 @@ export function NotificationRow({
           type === "message" ||
           type === "announcement") &&
           group.body && (
-          <span className="font-sans text-[13.5px] leading-snug text-primary whitespace-pre-line">
+          <span className="font-sans text-[calc(13.5px*var(--ws-fs))] leading-snug text-primary whitespace-pre-line">
             {group.body}
           </span>
         )}
@@ -229,8 +229,8 @@ export function NotificationRow({
             className={clsx(
               "font-sans leading-snug text-muted",
               type === "like" || type === "repost"
-                ? `text-[13px] ${CLAMP_1}`
-                : `text-[13.5px] ${CLAMP_2}`,
+                ? `text-[calc(13px*var(--ws-fs))] ${CLAMP_1}`
+                : `text-[calc(13.5px*var(--ws-fs))] ${CLAMP_2}`,
             )}
           >
             {type === "mention" ? renderRichText(excerpt) : excerpt}
@@ -238,7 +238,7 @@ export function NotificationRow({
         )}
 
         {type === "live" && isLive && (
-          <span className="mt-1 flex h-5 w-fit items-center gap-1 rounded-pill bg-danger px-2 font-sans text-[10px] font-bold tracking-wide text-white">
+          <span className="mt-1 flex h-5 w-fit items-center gap-1 rounded-pill bg-danger px-2 font-sans text-[calc(10px*var(--ws-fs))] font-bold tracking-wide text-white">
             <span className="h-1 w-1 animate-pulse rounded-pill bg-white" />
             {t("live.badge")}
           </span>
@@ -257,7 +257,7 @@ export function NotificationRow({
             }}
             disabled={alreadyFollowing}
             className={clsx(
-              "mt-1.5 h-8 w-fit shrink-0 rounded-pill px-3.5 font-sans text-[12px] font-semibold transition-colors",
+              "mt-1.5 h-8 w-fit shrink-0 rounded-pill px-3.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
               alreadyFollowing
                 ? "cursor-default bg-raised text-muted"
                 : "cursor-pointer bg-primary text-page hover:bg-muted",

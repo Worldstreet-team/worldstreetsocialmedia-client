@@ -239,7 +239,7 @@ export function MobileNavigation() {
 									clsx(
 										// Same row language as the desktop rail:
 										// pill rows, active = bg/chip + semibold.
-										"flex items-center gap-3.5 px-4 py-3.5 rounded-pill transition-colors font-sans text-[16.5px] relative",
+										"flex items-center gap-3.5 px-4 py-3.5 rounded-pill transition-colors font-sans text-[calc(16.5px*var(--ws-fs))] relative",
 										isActive
 											? "bg-chip text-primary font-semibold"
 											: "text-muted hover:text-primary hover:bg-raised",
@@ -336,10 +336,10 @@ export function MobileNavigation() {
 									/>
 								</div>
 								<div className="flex min-w-0 flex-col">
-									<span className="truncate font-sans text-[15px] font-bold leading-tight text-primary">
+									<span className="truncate font-sans text-[calc(15px*var(--ws-fs))] font-bold leading-tight text-primary">
 										{fullName}
 									</span>
-									<span className="truncate font-sans text-[12.5px] leading-tight text-subtle">
+									<span className="truncate font-sans text-[calc(12.5px*var(--ws-fs))] leading-tight text-subtle">
 										@{user.username}
 									</span>
 								</div>
@@ -349,7 +349,7 @@ export function MobileNavigation() {
 								onClick={() =>
 									withThemeTransition(() => setTheme(isLight ? "dark" : "light"))
 								}
-								className="w-full flex items-center gap-3 px-4 py-3 rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors font-sans font-medium text-[15px] cursor-pointer"
+								className="w-full flex items-center gap-3 px-4 py-3 rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors font-sans font-medium text-[calc(15px*var(--ws-fs))] cursor-pointer"
 							>
 								{mounted && isLight ? <Moon size={20} /> : <Sun size={20} />}
 								{mounted && isLight ? t("nav.darkMode") : t("nav.lightMode")}
@@ -362,7 +362,7 @@ export function MobileNavigation() {
 							</div>
 							<button
 								onClick={() => handleSignOut(signOut)}
-								className="w-full flex items-center gap-3 px-4 py-3 text-danger hover:bg-raised rounded-pill transition-colors font-sans font-bold text-[15px] cursor-pointer"
+								className="w-full flex items-center gap-3 px-4 py-3 text-danger hover:bg-raised rounded-pill transition-colors font-sans font-bold text-[calc(15px*var(--ws-fs))] cursor-pointer"
 							>
 								<SignOut size={20} />
 								{t("nav.logout")}
