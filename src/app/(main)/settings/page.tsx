@@ -6,8 +6,10 @@ import { useTheme } from "next-themes";
 import {
 	BadgeCheck,
 	Bell,
+	BellRing,
 	Eye,
 	Gauge,
+	Lock,
 	MessageSquare,
 	Palette,
 	Rss,
@@ -22,6 +24,7 @@ import { Tabs, type TabItem } from "@/components/ui/Tabs";
 import { AccessibilitySettings } from "@/components/settings/AccessibilitySettings";
 import { ContentSettings, DataSettings } from "@/components/settings/DataSettings";
 import { MessagingSettings } from "@/components/settings/MessagingSettings";
+import { NotificationBehaviour, PrivacySettings } from "@/components/settings/PrivacySettings";
 import { InstallAppRow } from "@/components/settings/InstallAppRow";
 import { InterestPicker } from "@/components/onboarding/InterestPicker";
 import { BlockedAccounts } from "@/components/settings/BlockedAccounts";
@@ -303,6 +306,7 @@ export default function SettingsPage() {
 			)}
 
 			{section === "notifications" && (
+				<>
 				<Section
 					icon={Bell}
 					title={t("settings.notify.title")}
@@ -310,9 +314,27 @@ export default function SettingsPage() {
 				>
 					<NotificationPrefs />
 				</Section>
+
+				<Section
+					icon={BellRing}
+					title="Notification behaviour"
+					caption="How notifications reach you inside the app."
+				>
+					<NotificationBehaviour />
+				</Section>
+				</>
 			)}
 
 			{section === "safety" && (
+				<>
+				<Section
+					icon={Lock}
+					title="Privacy"
+					caption="Who sees what about you. Each of these is enforced on the server, not just hidden in the app."
+				>
+					<PrivacySettings />
+				</Section>
+
 				<Section
 					icon={ShieldCheck}
 					title={t("settings.blocked.title")}
@@ -320,6 +342,7 @@ export default function SettingsPage() {
 				>
 					<BlockedAccounts />
 				</Section>
+				</>
 			)}
 
 			{section === "data" && (

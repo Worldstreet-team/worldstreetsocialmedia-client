@@ -70,6 +70,20 @@ export interface Preferences {
 		inboxStories: boolean;
 		openAtFirstUnread: boolean;
 	};
+	privacy: {
+		/** The green dot and the last-seen line, both ways. */
+		showActivity: boolean;
+		/** "typing…" and "recording audio…", both ways. */
+		typingIndicators: boolean;
+		/** The Seen mark, both ways. */
+		readReceipts: boolean;
+		dmFrom: "everyone" | "allies";
+		showLikes: boolean;
+	};
+	notifications: {
+		messageAlerts: boolean;
+		defaultTab: "all" | "mentions" | "follows" | "verified";
+	};
 	content: {
 		defaultFeed: FeedTab;
 		showStories: boolean;
@@ -113,6 +127,16 @@ export const DEFAULTS: Preferences = {
 		inboxStories: true,
 		openAtFirstUnread: true,
 	},
+	privacy: {
+		// Every one of these is reciprocal on purpose: the app does not sell
+		// you other people's presence while hiding your own.
+		showActivity: true,
+		typingIndicators: true,
+		readReceipts: true,
+		dmFrom: "everyone",
+		showLikes: true,
+	},
+	notifications: { messageAlerts: true, defaultTab: "all" },
 	content: {
 		defaultFeed: "foryou",
 		showStories: true,
@@ -156,6 +180,8 @@ export function normalizePrefs(raw: unknown): Preferences {
 	const d = (p.data ?? {}) as Partial<Preferences["data"]>;
 	const m = (p.messaging ?? {}) as Partial<Preferences["messaging"]>;
 	const c = (p.content ?? {}) as Partial<Preferences["content"]>;
+	const pv = (p.privacy ?? {}) as Partial<Preferences["privacy"]>;
+	const nt = (p.notifications ?? {}) as Partial<Preferences["notifications"]>;
 	return {
 		a11y: {
 			textScale: oneOf(SCALES, a.textScale, DEFAULTS.a11y.textScale),
@@ -189,6 +215,21 @@ export function normalizePrefs(raw: unknown): Preferences {
 			mediaAutoLoad: bool(m.mediaAutoLoad, DEFAULTS.messaging.mediaAutoLoad),
 			inboxStories: bool(m.inboxStories, DEFAULTS.messaging.inboxStories),
 			openAtFirstUnread: bool(m.openAtFirstUnread, DEFAULTS.messaging.openAtFirstUnread),
+		},
+		privacy: {
+			showActivity: bool(pv.showActivity, DEFAULTS.privacy.showActivity),
+			typingIndicators: bool(pv.typingIndicators, DEFAULTS.privacy.typingIndicators),
+			readReceipts: bool(pv.readReceipts, DEFAULTS.privacy.readReceipts),
+			dmFrom: oneOf(["everyone", "allies"] as const, pv.dmFrom, DEFAULTS.privacy.dmFrom),
+			showLikes: bool(pv.showLikes, DEFAULTS.privacy.showLikes),
+		},
+		notifications: {
+			messageAlerts: bool(nt.messageAlerts, DEFAULTS.notifications.messageAlerts),
+			defaultTab: oneOf(
+				["all", "mentions", "follows", "verified"] as const,
+				nt.defaultTab,
+				DEFAULTS.notifications.defaultTab,
+			),
 		},
 		content: {
 			defaultFeed: oneOf(["foryou", "following", "newest"] as const, c.defaultFeed, DEFAULTS.content.defaultFeed),

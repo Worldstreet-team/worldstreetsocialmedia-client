@@ -1,5 +1,6 @@
 "use client";
 
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 import { useEffect } from "react";
 import { useAtom, useAtomValue } from "jotai";
 import { useToast } from "@/components/ui/Toast/ToastContext";
@@ -16,6 +17,7 @@ export default function GlobalMessageListener() {
 	const activeConversationId = useAtomValue(activeConversationIdAtom);
 	const [, setUnreadCount] = useAtom(unreadMessagesCountAtom);
 	const { toast } = useToast();
+	const { prefs } = usePreferences();
 
 	useEffect(() => {
 		if (!client || !isConnected || !user) return;
@@ -57,12 +59,23 @@ export default function GlobalMessageListener() {
 				? `${newMessage.sender.firstName} ${newMessage.sender.lastName}`
 				: (newMessage?.sender?.username ?? "");
 
+			// Off means quiet, never unread-blind: the badge above still
+			// counted this message.
+			if (!prefs.notifications.messageAlerts) return;
 			toast(`New message from ${senderName}`, { duration: 4000 });
 		};
 
 		channel.subscribe(handleMessage);
 		return () => channel.unsubscribe(handleMessage);
-	}, [client, isConnected, user, activeConversationId, setUnreadCount, toast]);
+	}, [
+		client,
+		isConnected,
+		user,
+		activeConversationId,
+		setUnreadCount,
+		toast,
+		prefs.notifications.messageAlerts,
+	]);
 
 	return null;
 }

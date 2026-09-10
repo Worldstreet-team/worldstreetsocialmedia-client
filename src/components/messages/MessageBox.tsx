@@ -2594,8 +2594,16 @@ export const MessageBox = ({
 							peerRecording={chat.peerRecording}
 							isGroup={isGroupThread}
 							deliveredAt={isGroupThread ? null : chat.deliveredAt}
-							readAt={isGroupThread ? null : chat.readAt}
-							peerReadUpTo={peerReadUpTo}
+							// Reciprocal: with receipts off you stop seeing theirs
+							// too, so the newest bubble stops at Delivered.
+							readAt={
+								isGroupThread || !prefs.privacy.readReceipts
+									? null
+									: chat.readAt
+							}
+							peerReadUpTo={
+								prefs.privacy.readReceipts ? peerReadUpTo : null
+							}
 							pendingNew={pendingNew}
 							loading={isLoadingMessages}
 							peerAvatar={activeConversation.otherParticipant?.avatar}

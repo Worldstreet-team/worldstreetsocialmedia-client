@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useSetAtom } from "jotai";
 import { usePathname } from "next/navigation";
-import { unreadNotificationsCountAtom } from "@/store/ui.atom";
+import {
+  notificationFilterAtom,
+  unreadNotificationsCountAtom,
+} from "@/store/ui.atom";
 import {
   notificationsAtom,
   notificationsLoadedAtom,
 } from "@/store/notifications.atom";
 import { useGatewayRead } from "@/hooks/useGateway";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 import { cacheKeys, fetchCached, invalidate } from "@/lib/cache";
 
 /** Notifications arrive as realtime events, so a minute of reuse costs nothing
@@ -31,6 +35,18 @@ export function NotificationCountSync() {
   const setLoaded = useSetAtom(notificationsLoadedAtom);
   const pathname = usePathname();
   const read = useGatewayRead();
+  // The notifications screen starts on the saved tab. Seeded ONCE per app
+  // load, here rather than on the page, so a switch made mid-session is not
+  // undone every time the person navigates back - which is the whole reason
+  // that atom outlives the page.
+  const { prefs, synced } = usePreferences();
+  const setFilter = useSetAtom(notificationFilterAtom);
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (seededRef.current || !synced) return;
+    seededRef.current = true;
+    setFilter(prefs.notifications.defaultTab);
+  }, [synced, prefs.notifications.defaultTab, setFilter]);
 
   useEffect(() => {
     let cancelled = false;

@@ -1,5 +1,6 @@
 "use client";
 
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useRealtime } from "@/components/providers/RealtimeProvider";
@@ -76,6 +77,12 @@ export function useChatSignals({
 	}) => void;
 }): ChatSignals {
 	const { client } = useRealtime();
+	// A ref, not the value: these signals are published from callbacks and
+	// subscriptions that must not be torn down and re-bound every time a
+	// preference changes.
+	const { prefs } = usePreferences();
+	const prefsRef = useRef(prefs);
+	prefsRef.current = prefs;
 
 	const [peerOnline, setPeerOnline] = useState(false);
 	const [typers, setTypers] = useState<
@@ -157,6 +164,7 @@ export function useChatSignals({
 
 			switch (message.name) {
 				case "typing":
+					if (!prefsRef.current.privacy.typingIndicators) break;
 					markTyper(String(from), "typing");
 					break;
 				case "typing:stop":
@@ -173,6 +181,7 @@ export function useChatSignals({
 						});
 					break;
 				case "recording":
+					if (!prefsRef.current.privacy.typingIndicators) break;
 					markTyper(String(from), "recording");
 					break;
 				case "delivered":
@@ -224,6 +233,7 @@ export function useChatSignals({
 	const notifyStoppedTyping = useCallback(() => {
 		if (idleRef.current) clearTimeout(idleRef.current);
 		lastTypingSentRef.current = 0;
+		if (!prefsRef.current.privacy.typingIndicators) return;
 		publish("typing:stop");
 	}, [publish]);
 
@@ -231,6 +241,7 @@ export function useChatSignals({
 		const now = Date.now();
 		if (now - lastTypingSentRef.current > TYPING_THROTTLE_MS) {
 			lastTypingSentRef.current = now;
+			if (!prefsRef.current.privacy.typingIndicators) return;
 			publish("typing");
 		}
 		// Stopping is inferred from silence, so it needs its own timer.
@@ -242,6 +253,7 @@ export function useChatSignals({
 		const now = Date.now();
 		if (now - lastTypingSentRef.current > TYPING_THROTTLE_MS) {
 			lastTypingSentRef.current = now;
+			if (!prefsRef.current.privacy.typingIndicators) return;
 			publish("recording");
 		}
 		if (idleRef.current) clearTimeout(idleRef.current);
@@ -263,6 +275,9 @@ export function useChatSignals({
 	}, [publish]);
 
 	const notifyRead = useCallback(() => {
+		// Reciprocal: silencing your receipt also stops you reading theirs
+		// (the render side drops them in MessageBox).
+		if (!prefsRef.current.privacy.readReceipts) return;
 		publish("read");
 	}, [publish]);
 

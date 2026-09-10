@@ -1,5 +1,6 @@
 "use client";
 
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 import { useAtom } from "jotai";
 import { useEffect } from "react";
 
@@ -26,9 +27,17 @@ import { onlineIdsAtom } from "@/store/ui.atom";
 export function PresenceSync() {
 	const { client } = useRealtime();
 	const [, setOnline] = useAtom(onlineIdsAtom);
+	const { prefs } = usePreferences();
 
 	useEffect(() => {
 		if (!client) return;
+		// Reciprocal by design: hiding your own activity also stops you
+		// reading everyone else's. Not entering the channel is what makes it
+		// true rather than cosmetic - there is nothing of yours to read.
+		if (!prefs.privacy.showActivity) {
+			setOnline(new Set());
+			return;
+		}
 		let disposed = false;
 		const channel = client.channels.get("presence");
 
@@ -64,7 +73,7 @@ export function PresenceSync() {
 				/* already detached */
 			}
 		};
-	}, [client, setOnline]);
+	}, [client, setOnline, prefs.privacy.showActivity]);
 
 	return null;
 }
