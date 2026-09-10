@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { type ThemeWallpaper, wallpaperSrc } from "./chatTheme";
+import { groundCss, type ThemeWallpaper, wallpaperSrc } from "./chatTheme";
 
 /**
  * The picture behind a chat. Absolute under the transparent header, list
@@ -18,7 +18,16 @@ export const ThemeBackdrop = memo(function ThemeBackdrop({
 	wallpaper: ThemeWallpaper;
 }) {
 	const src = wallpaperSrc(wallpaper);
-	if (!src) return null;
+	const painted = groundCss(wallpaper);
+	// A painted ground needs no image, no blur and no dim - it IS the colour.
+	if (!src)
+		return painted ? (
+			<div
+				aria-hidden
+				className="pointer-events-none absolute inset-0"
+				style={{ background: painted }}
+			/>
+		) : null;
 	const blur = Math.round((wallpaper.frost / 100) * 24);
 	const cyan = wallpaper.hue === "cyan";
 	return (

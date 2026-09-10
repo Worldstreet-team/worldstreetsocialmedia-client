@@ -528,6 +528,14 @@ export const MessageBox = ({
 		[myMemberTheme, globalTheme, themeMode],
 	);
 	const hasPicture = chatTheme.wallpaper.type !== "flat";
+	// The inbox wears the PROFILE-wide theme, never one chat's: a per-chat
+	// picture belongs to that chat. Flat by default, so the section stays
+	// the app's own colour until someone chooses otherwise.
+	const sectionTheme = useMemo(
+		() => resolveTheme(undefined, globalTheme, themeMode),
+		[globalTheme, themeMode],
+	);
+	const sectionHasPicture = sectionTheme.wallpaper.type !== "flat";
 	useEffect(() => {
 		let gone = false;
 		void fetchGlobalTheme(getToken)
@@ -2088,7 +2096,12 @@ export const MessageBox = ({
 	return (
 		// 100dvh, not 100vh: on mobile 100vh is the address-bar-expanded height,
 		// so the composer sat below the fold until the bar collapsed.
-		<div className="relative flex h-[100dvh] bg-page text-primary overflow-hidden">
+		<div
+			style={themeVars(sectionTheme)}
+			className="relative flex h-[100dvh] bg-page text-primary overflow-hidden"
+		>
+			{/* The section's own ground, when the profile theme has one. */}
+			<ThemeBackdrop wallpaper={sectionTheme.wallpaper} />
 			{myProfileId && isConnected && (
 				<UserMessageSubscription
 					channelName={`user:${myProfileId}`}
@@ -2108,7 +2121,12 @@ export const MessageBox = ({
 
 			{/* Sidebar. On a phone it stays mounted UNDER the thread pane;
 			    open/close is static (owner 2026-09-06) — no parallax slide. */}
-			<div className="relative flex w-full shrink-0 min-w-0 flex-col md:w-[360px]">
+			<div
+				className={clsx(
+					"relative z-10 flex w-full shrink-0 min-w-0 flex-col md:w-[360px]",
+					sectionHasPicture && "bg-page/70",
+				)}
+			>
 				<div className="px-4 pb-1 pt-4">
 					<div className="mb-3 flex items-center gap-2">
 						{/* Phones only. On desktop the inbox sits inside the app

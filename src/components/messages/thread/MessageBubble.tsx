@@ -99,8 +99,13 @@ function linkify(text: string, mine: boolean) {
 						"break-all",
 						mine
 							? "underline underline-offset-2 opacity-95 hover:opacity-100"
-							: "font-medium text-brand hover:underline",
+							: "font-medium hover:underline",
 					)}
+					style={
+						mine
+							? undefined
+							: { color: "var(--chat-accent, var(--ws-brand-primary))" }
+					}
 					onClick={(e) => e.stopPropagation()}
 				>
 					{part}
@@ -116,10 +121,15 @@ function linkify(text: string, mine: boolean) {
 					// biome-ignore lint/suspicious/noArrayIndexKey: static split of one string
 					key={i}
 					href={`/profile/${part.slice(1)}`}
-					className={clsx(
-						"rounded-md px-1.5 py-[1px] font-semibold",
-						mine ? "bg-black/20 text-white" : "bg-brand/18 text-brand",
-					)}
+					className="rounded-md px-1.5 py-[1px] font-semibold"
+					style={
+						mine
+							? { background: "var(--chat-on-mine, rgba(0,0,0,0.22))" }
+							: {
+								background: "var(--chat-accent-18, rgba(34,184,214,0.18))",
+								color: "var(--chat-accent, var(--ws-brand-primary))",
+							}
+					}
 					onClick={(e) => e.stopPropagation()}
 				>
 					{part}
@@ -390,13 +400,13 @@ export const MessageBubble = memo(function MessageBubble({
 			{showUnreadDivider && (
 				// Telegram's rule (owner pick): the thread opens here.
 				<div className="mx-auto flex w-full max-w-[52rem] items-center gap-3 px-4 py-3 sm:px-6">
-					<span className="h-px flex-1 bg-brand/40" />
-					<span className="font-sans text-[11px] font-semibold text-brand">
+					<span className="h-px flex-1" style={{ background: "var(--chat-accent-40, rgba(34,184,214,0.4))" }} />
+					<span className="font-sans text-[11px] font-semibold" style={{ color: "var(--chat-accent, var(--ws-brand-primary))" }}>
 						{unreadLabel && unreadLabel > 1
 							? `${unreadLabel} unread messages`
 							: "Unread messages"}
 					</span>
-					<span className="h-px flex-1 bg-brand/40" />
+					<span className="h-px flex-1" style={{ background: "var(--chat-accent-40, rgba(34,184,214,0.4))" }} />
 				</div>
 			)}
 			{showDay && (
@@ -470,7 +480,7 @@ export const MessageBubble = memo(function MessageBubble({
 					// runs, the centred stamp carries the big gap.
 					sameRunAsPrev ? "mt-[2px]" : "mt-2",
 					isMe ? "items-end" : "items-start",
-					flashed && "rounded-xl bg-brand/10",
+					flashed && "rounded-xl [background:var(--chat-accent-12,rgba(34,184,214,0.12))]",
 				)}
 			>
 				{/* iMessage grammar (owner pick): every message's time hides off
@@ -565,9 +575,17 @@ export const MessageBubble = memo(function MessageBubble({
 									type="button"
 									onClick={() => onJump(m.replyTo!._id)}
 									className={clsx(
-										"-mb-3 max-w-[90%] cursor-pointer truncate rounded-[16px] bg-raised/70 px-3 pb-4 pt-1.5 text-left font-sans text-[12px] text-muted transition-opacity hover:opacity-80",
+										"-mb-3 max-w-[90%] cursor-pointer truncate rounded-[16px] px-3 pb-4 pt-1.5 text-left font-sans text-[12px] opacity-90 transition-opacity hover:opacity-100",
 										isMe ? "mr-2" : "ml-2",
 									)}
+									style={{
+										background: isMe
+											? "var(--chat-quote-mine, rgba(255,255,255,0.16))"
+											: "var(--chat-quote-theirs, var(--ws-bg-raised))",
+										color: isMe
+											? "var(--chat-mine-ink, #FFFFFF)"
+											: "var(--chat-theirs-ink, var(--ws-text-muted))",
+									}}
 								>
 									{quotedPreview(m.replyTo)}
 								</button>
@@ -788,7 +806,7 @@ export const MessageBubble = memo(function MessageBubble({
 								className={clsx(
 									"flex cursor-pointer items-center gap-1 rounded-pill px-1.5 py-0.5 font-sans text-[12px] ring-2 ring-page transition-colors animate-pop",
 									info.mine
-										? "bg-brand/25"
+										? "[background:var(--chat-accent-40,rgba(34,184,214,0.4))]"
 										: "bg-surface hover:bg-chip",
 								)}
 							>

@@ -17,7 +17,12 @@ import type { CSSProperties } from "react";
 export type ThemeMode = "dark" | "light";
 
 export interface ThemeWallpaper {
-	type: "flat" | "preset" | "image";
+	type: "flat" | "solid" | "gradient" | "preset" | "image";
+	/** solid ground. */
+	color?: string;
+	/** gradient ground. */
+	stops?: [string, string];
+	angle?: number;
 	/** One of WALLPAPERS[].id. */
 	preset?: string;
 	/** Own photo: the private media key; the gateway presigns imageUrl. */
@@ -67,6 +72,14 @@ export const WALLPAPERS: {
 	{ id: "lonetree", label: "Lone tree", src: "/wallpapers/lonetree.jpg", tone: "light" },
 	{ id: "pier", label: "Pier", src: "/wallpapers/pier.jpg", tone: "light" },
 ];
+
+/** The painted (non-photographic) ground, or null when there is none. */
+export function groundCss(w: ThemeWallpaper): string | null {
+	if (w.type === "solid" && w.color) return w.color;
+	if (w.type === "gradient" && w.stops)
+		return `linear-gradient(${w.angle ?? 160}deg, ${w.stops[0]}, ${w.stops[1]})`;
+	return null;
+}
 
 export function wallpaperSrc(w: ThemeWallpaper): string | null {
 	if (w.type === "preset")
@@ -237,13 +250,23 @@ export function normalizeTheme(x: unknown, mode: ThemeMode): ChatTheme {
 						angle: clamp(mineIn.angle, 0, 360, 135),
 					}
 				: d.bubbles.mine;
-	const type: ThemeWallpaper["type"] =
-		w.type === "flat" || w.type === "preset" || w.type === "image"
-			? w.type
-			: d.wallpaper.type;
+	const type: ThemeWallpaper["type"] = (
+		["flat", "solid", "gradient", "preset", "image"] as const
+	).includes(w.type as never)
+		? (w.type as ThemeWallpaper["type"])
+		: d.wallpaper.type;
 	return {
 		wallpaper: {
 			type,
+			color: type === "solid" ? okColor(w.color, "#0C0A09") : undefined,
+			stops:
+				type === "gradient"
+					? [
+							okColor(w.stops?.[0], "#0C0A09"),
+							okColor(w.stops?.[1], "#1C1917"),
+						]
+					: undefined,
+			angle: type === "gradient" ? clamp(w.angle, 0, 360, 160) : undefined,
 			preset:
 				type === "preset"
 					? WALLPAPERS.some((p) => p.id === w.preset)
@@ -312,15 +335,36 @@ export function inkFor(fillOrColor: MineFill | string): string {
 	return l > 0.42 ? "#1C1917" : "#FFFFFF";
 }
 
-/** The variables the thread and every bubble read. */
+/**
+ * The variables the whole messages surface reads.
+ *
+ * Everything that used to be a hardcoded brand colour inside a thread —
+ * the link, the mention chip, the unread rule, the reaction pill, the jump
+ * badge, the inbox's unread dot — resolves through these, so picking a
+ * theme retints the section instead of leaving cyan islands in it.
+ */
 export function themeVars(t: ChatTheme): CSSProperties {
 	const s = SHAPES[t.bubbles.shape];
+	const accent = accentOf(t.bubbles.mine);
+	const mix = (pct: number) =>
+		`color-mix(in srgb, ${accent} ${pct}%, transparent)`;
 	return {
 		"--chat-mine": mineCss(t.bubbles.mine),
 		"--chat-mine-ink": inkFor(t.bubbles.mine),
-		"--chat-accent": accentOf(t.bubbles.mine),
+		"--chat-accent": accent,
+		"--chat-accent-ink": inkFor(accent),
+		// Washes of the accent, for chips and rules that sit on the ground.
+		"--chat-accent-12": mix(12),
+		"--chat-accent-18": mix(18),
+		"--chat-accent-40": mix(40),
+		// A chip sitting ON my own bubble: a wash of that bubble's own ink,
+		// so it reads on any fill instead of a fixed black at 20%.
+		"--chat-on-mine": `color-mix(in srgb, ${inkFor(t.bubbles.mine)} 22%, transparent)`,
 		"--chat-theirs": t.bubbles.theirs.color,
 		"--chat-theirs-ink": inkFor(t.bubbles.theirs.color),
+		// A quoted reply inside a bubble: a wash of the bubble it sits in.
+		"--chat-quote-mine": `color-mix(in srgb, ${inkFor(t.bubbles.mine)} 16%, transparent)`,
+		"--chat-quote-theirs": `color-mix(in srgb, ${inkFor(t.bubbles.theirs.color)} 12%, transparent)`,
 		"--chat-r": `${s.r}px`,
 		"--chat-r-in": `${s.rin}px`,
 	} as CSSProperties;
