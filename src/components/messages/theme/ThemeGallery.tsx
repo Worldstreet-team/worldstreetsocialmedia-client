@@ -54,13 +54,15 @@ export function ThemeGallery({
 				// Sheet, not anchored: six cards need the width, and the
 				// right-corner popover ran off the edge of the pane.
 				variant="sheet"
+				ground="none"
+				className="bg-surface sm:w-[min(720px,94vw)] sm:max-h-[82vh]"
 				label="Chat theme"
 				dragClose={onClose}
 			>
 				<OverlayHeader title="Chat theme" onClose={onClose} />
 				<div className="flex flex-col gap-4 overflow-y-auto px-4 pb-[calc(16px+var(--ws-safe-bottom))]">
 					<ScopeSwitch scope={scope} onChange={setScope} isGroup={isGroup} />
-					<div className="grid grid-cols-3 gap-2.5">
+					<div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
 						{THEME_CARDS.map((card) => {
 							const t = card[mode];
 							const on = sameTheme(t, current);
@@ -69,6 +71,7 @@ export function ThemeGallery({
 									key={card.id}
 									type="button"
 									disabled={saving}
+									title={card.blurb}
 									onClick={() => onApply(t, scope)}
 									className={clsx(
 										"group flex cursor-pointer flex-col gap-1.5 rounded-xl p-1 text-left transition-colors",

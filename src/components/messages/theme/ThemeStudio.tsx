@@ -104,7 +104,8 @@ export function ThemeStudio({
 				variant="sheet"
 				label="Theme studio"
 				dragClose={onClose}
-				className="md:w-[min(960px,94vw)]"
+				ground="none"
+				className="bg-surface md:w-[min(960px,94vw)]"
 			>
 				<OverlayHeader title="Theme studio" onClose={onClose} />
 				<div className="grid min-h-0 flex-1 grid-rows-[auto_1fr] overflow-hidden md:grid-cols-[1fr_340px] md:grid-rows-1">
