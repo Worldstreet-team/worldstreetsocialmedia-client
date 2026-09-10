@@ -50,7 +50,7 @@ export function ThemePreview({
 				className,
 			)}
 		>
-			<ThemeBackdrop wallpaper={theme.wallpaper} />
+			<ThemeBackdrop wallpaper={theme.wallpaper} resolution={compact ? 320 : 640} />
 			<div
 				className={clsx(
 					"relative flex flex-1 flex-col justify-end gap-1",

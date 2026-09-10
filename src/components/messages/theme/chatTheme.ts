@@ -118,7 +118,11 @@ export const THEIRS_PRESETS: { id: string; label: string; color: string }[] = [
 	{ id: "cloud", label: "Cloud", color: "#DCE4E7" },
 ];
 
-/** Outer radius and the inner run corner, per shape (owner's 22/8 is Rounded). */
+/**
+ * Outer radius and the inner run corner, per shape. Rounded is the owner's
+ * 22/8, locked 2026-09-03, and it is what every gallery card ships: shape
+ * is an Advanced control only, never part of a theme.
+ */
 export const SHAPES: Record<BubbleShape, { label: string; r: number; rin: number }> = {
 	rounded: { label: "Rounded", r: 22, rin: 8 },
 	soft: { label: "Soft", r: 16, rin: 6 },
@@ -145,25 +149,38 @@ export const HOUSE_DEFAULT: Record<ThemeMode, ChatTheme> = {
 	light: { wallpaper: { ...FLAT }, bubbles: HOUSE_BUBBLES },
 };
 
-const fill = (id: string): MineFill =>
-	MINE_PRESETS.find((p) => p.id === id)?.fill ?? TIDE;
-
 /**
- * The gallery: 31 finished themes, each a matched dark and light pair.
- * Designed by a twelve-family panel and contrast-checked twice - once by a
- * validator agent, once here in the build - so every fill clears 4.5:1
- * against the ink it will be given, separates from the bubble opposite it
- * and from the ground behind it. Five that could not be repaired without
- * losing their identity were dropped rather than shipped illegible.
- * Worldspace leads: it is the default and the owner has ruled repeatedly
- * that the plain surface is the right one.
+ * The gallery: twelve finished themes, each a matched dark and light pair,
+ * chosen by hand from the thirty-one an agent panel generated (owner review
+ * 2026-09-10: "the ui wasn't curated properly"). The rules that cut it down:
+ *
+ * - One idea per card. Four rust themes, five fogwood photographs and three
+ *   black-and-white pairs were the same card wearing different names.
+ * - A photograph appears on ONE card per mode, so two tiles in the grid
+ *   never show the same picture side by side.
+ * - No card changes the bubble geometry. The owner locked 22/8 on
+ *   2026-09-03 and a theme is colour and ground, never shape; shape lives
+ *   in Advanced for the person who goes looking for it. The stamp at the
+ *   bottom of this block is what enforces that, so a card cannot even
+ *   express a shape.
+ * - Ordered as a set, not a list: the house look first, then the painted
+ *   grounds from neutral through warm to cool to dramatic, then the four
+ *   photographs last, where a picture reads as the deliberate choice it is.
+ *
+ * Every fill was contrast-checked against the ink it will be given, its
+ * opposite bubble and the ground behind it, and the values are unchanged
+ * from the validated set; only the shape and one light variant moved.
  */
-export const THEME_CARDS: {
+type CardTheme = {
+	wallpaper: ThemeWallpaper;
+	bubbles: Omit<ThemeBubbles, "shape">;
+};
+const CARDS: {
 	id: string;
 	label: string;
 	blurb: string;
-	dark: ChatTheme;
-	light: ChatTheme;
+	dark: CardTheme;
+	light: CardTheme;
 }[] = [
 	{
 		id: "worldspace",
@@ -171,37 +188,24 @@ export const THEME_CARDS: {
 		blurb: "The house look. Cyan into indigo on the app's own ground.",
 		dark: {
 			wallpaper: { type: "flat", frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#22B8D6", "#6D5BFF"], angle: 135 }, theirs: { color: HOUSE_THEIRS }, shape: "rounded" },
+			bubbles: { mine: { kind: "gradient", stops: ["#22B8D6", "#6D5BFF"], angle: 135 }, theirs: { color: HOUSE_THEIRS } },
 		},
 		light: {
 			wallpaper: { type: "flat", frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#22B8D6", "#6D5BFF"], angle: 135 }, theirs: { color: HOUSE_THEIRS }, shape: "rounded" },
+			bubbles: { mine: { kind: "gradient", stops: ["#22B8D6", "#6D5BFF"], angle: 135 }, theirs: { color: HOUSE_THEIRS } },
 		},
 	},
 	{
 		id: "obsidian",
 		label: "Obsidian",
-		blurb: "Pure black, pure white, nothing in between.",
+		blurb: "Pure black, pure white, nothing in between. The high-contrast one.",
 		dark: {
 			wallpaper: { type: "solid", color: "#000000", frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "solid", color: "#FAFAFA" }, theirs: { color: "#33333A" }, shape: "square" },
+			bubbles: { mine: { kind: "solid", color: "#FAFAFA" }, theirs: { color: "#33333A" } },
 		},
 		light: {
 			wallpaper: { type: "solid", color: "#FFFFFF", frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "solid", color: "#18181B" }, theirs: { color: "#CFCFD4" }, shape: "square" },
-		},
-	},
-	{
-		id: "old-growth",
-		label: "Old Growth",
-		blurb: "Deep pine and low light under standing timber.",
-		dark: {
-			wallpaper: { type: "preset", preset: "forest", frost: 20, hue: "none", dim: 34 },
-			bubbles: { mine: { kind: "gradient", stops: ["#2F7D55", "#1B5539"], angle: 155 }, theirs: { color: "#DEE6D5" }, shape: "soft" },
-		},
-		light: {
-			wallpaper: { type: "preset", preset: "mist", frost: 18, hue: "none", dim: 6 },
-			bubbles: { mine: { kind: "gradient", stops: ["#2C6E4C", "#1E5238"], angle: 155 }, theirs: { color: "#B7CBAC" }, shape: "soft" },
+			bubbles: { mine: { kind: "solid", color: "#18181B" }, theirs: { color: "#CFCFD4" } },
 		},
 	},
 	{
@@ -210,89 +214,11 @@ export const THEME_CARDS: {
 		blurb: "Warm charcoal, one lamp of gold on your side.",
 		dark: {
 			wallpaper: { type: "gradient", stops: ["#1E1A16", "#0B0908"], angle: 180, frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#F7D65C", "#EFC02A"], angle: 150 }, theirs: { color: "#423B36" }, shape: "rounded" },
+			bubbles: { mine: { kind: "gradient", stops: ["#F7D65C", "#EFC02A"], angle: 150 }, theirs: { color: "#423B36" } },
 		},
 		light: {
 			wallpaper: { type: "solid", color: "#FFFCF5", frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#F2C845", "#DDA512"], angle: 150 }, theirs: { color: "#2A2422" }, shape: "rounded" },
-		},
-	},
-	{
-		id: "nebula",
-		label: "Nebula",
-		blurb: "Plum dark with a violet-to-magenta flare. The dramatic one.",
-		dark: {
-			wallpaper: { type: "gradient", stops: ["#1B0B33", "#06040F"], angle: 155, frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#7A2BC4", "#C42A8E"], angle: 135 }, theirs: { color: "#3E2C5C" }, shape: "square" },
-		},
-		light: {
-			wallpaper: { type: "gradient", stops: ["#FDFAFF", "#EDE3FA"], angle: 155, frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#7A2BC4", "#C42A8E"], angle: 135 }, theirs: { color: "#D3C6EE" }, shape: "square" },
-		},
-	},
-	{
-		id: "snowfall",
-		label: "Snowfall",
-		blurb: "Blue hour over the ridge, with snowlight in the bubbles.",
-		dark: {
-			wallpaper: { type: "preset", preset: "dusk", frost: 22, hue: "none", dim: 36 },
-			bubbles: { mine: { kind: "solid", color: "#E4EBF7" }, theirs: { color: "#394961" }, shape: "soft" },
-		},
-		light: {
-			wallpaper: { type: "gradient", stops: ["#F4F8FD", "#DDE7F4"], angle: 165, frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "solid", color: "#16202E" }, theirs: { color: "#B8C7DD" }, shape: "soft" },
-		},
-	},
-	{
-		id: "lonetree",
-		label: "Lone Tree",
-		blurb: "Bare trees in fog. Paper and charcoal, nothing else.",
-		dark: {
-			wallpaper: { type: "preset", preset: "fogwood", frost: 22, hue: "none", dim: 36 },
-			bubbles: { mine: { kind: "solid", color: "#F2EFE9" }, theirs: { color: "#4F4A44" }, shape: "square" },
-		},
-		light: {
-			wallpaper: { type: "gradient", stops: ["#FAF7F1", "#EBE5D9"], angle: 165, frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "solid", color: "#23201D" }, theirs: { color: "#CCC5B8" }, shape: "square" },
-		},
-	},
-	{
-		id: "deep-current",
-		label: "Deep Current",
-		blurb: "Far below the surface. Ink, deep teal, nothing loud.",
-		dark: {
-			wallpaper: { type: "solid", color: "#05131B", frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#0C7796", "#0A5878"], angle: 160 }, theirs: { color: "#1A3E4F" }, shape: "soft" },
-		},
-		light: {
-			wallpaper: { type: "solid", color: "#F1F7F9", frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#0C7796", "#0A5878"], angle: 160 }, theirs: { color: "#BFDAE6" }, shape: "soft" },
-		},
-	},
-	{
-		id: "ink-chalk",
-		label: "Ink & Chalk",
-		blurb: "Pure black on white, white on black. For low vision.",
-		dark: {
-			wallpaper: { type: "solid", color: "#000000", frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "solid", color: "#FFFFFF" }, theirs: { color: "#635E59" }, shape: "square" },
-		},
-		light: {
-			wallpaper: { type: "solid", color: "#FFFFFF", frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "solid", color: "#000000" }, theirs: { color: "#C0BBB6" }, shape: "square" },
-		},
-	},
-	{
-		id: "beacon",
-		label: "Beacon",
-		blurb: "One deep marine slab, squared off. Nothing to distract.",
-		dark: {
-			wallpaper: { type: "flat", frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "solid", color: "#0A657E" }, theirs: { color: "#35322E" }, shape: "square" },
-		},
-		light: {
-			wallpaper: { type: "flat", frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "solid", color: "#0A657E" }, theirs: { color: "#DDD7CB" }, shape: "square" },
+			bubbles: { mine: { kind: "gradient", stops: ["#F2C845", "#DDA512"], angle: 150 }, theirs: { color: "#2A2422" } },
 		},
 	},
 	{
@@ -301,63 +227,11 @@ export const THEME_CARDS: {
 		blurb: "Warm flax paper and sepia ink, soft as a handwritten letter.",
 		dark: {
 			wallpaper: { type: "gradient", stops: ["#1F1810", "#0E0A07"], angle: 165, frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#8B683C", "#6E522F"], angle: 160 }, theirs: { color: "#3C3229" }, shape: "soft" },
+			bubbles: { mine: { kind: "gradient", stops: ["#8B683C", "#6E522F"], angle: 160 }, theirs: { color: "#3C3229" } },
 		},
 		light: {
 			wallpaper: { type: "gradient", stops: ["#FDFAF3", "#EFE5CF"], angle: 165, frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#54402B", "#3B2C1D"], angle: 160 }, theirs: { color: "#D3C3A0" }, shape: "soft" },
-		},
-	},
-	{
-		id: "semaphore",
-		label: "Semaphore",
-		blurb: "Navy and honey, never red or green. Built for deuteranopia.",
-		dark: {
-			wallpaper: { type: "solid", color: "#0D1117", frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#22439F", "#2563EB"], angle: 160 }, theirs: { color: "#F7E3A1" }, shape: "rounded" },
-		},
-		light: {
-			wallpaper: { type: "solid", color: "#EEF1F7", frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#17358F", "#3059D6"], angle: 160 }, theirs: { color: "#DCBA5C" }, shape: "rounded" },
-		},
-	},
-	{
-		id: "indigohour",
-		label: "Indigo Hour",
-		blurb: "Stone shifted a whisper toward indigo. Quiet and cool.",
-		dark: {
-			wallpaper: { type: "solid", color: "#0E0D14", frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "solid", color: "#5D4CE6" }, theirs: { color: "#37324A" }, shape: "soft" },
-		},
-		light: {
-			wallpaper: { type: "solid", color: "#F5F4FB", frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "solid", color: "#5D4CE6" }, theirs: { color: "#D2CFE6" }, shape: "soft" },
-		},
-	},
-	{
-		id: "open-sky",
-		label: "Open Sky",
-		blurb: "Teal and bone, no red at all. Built for protanopia.",
-		dark: {
-			wallpaper: { type: "preset", preset: "milkyway", frost: 12, hue: "none", dim: 24 },
-			bubbles: { mine: { kind: "gradient", stops: ["#0C5570", "#12768C"], angle: 165 }, theirs: { color: "#E8E2D6" }, shape: "soft" },
-		},
-		light: {
-			wallpaper: { type: "gradient", stops: ["#E7EEF1", "#F7F6F2"], angle: 165, frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#083D4C", "#0C6377"], angle: 165 }, theirs: { color: "#C5BEAD" }, shape: "soft" },
-		},
-	},
-	{
-		id: "blue-hour",
-		label: "Blue Hour",
-		blurb: "Still water at the edge of the day, photographed.",
-		dark: {
-			wallpaper: { type: "preset", preset: "dusk", frost: 8, hue: "cyan", dim: 32 },
-			bubbles: { mine: { kind: "gradient", stops: ["#1D7099", "#14547C"], angle: 165 }, theirs: { color: "#203748" }, shape: "square" },
-		},
-		light: {
-			wallpaper: { type: "preset", preset: "pier", frost: 10, hue: "cyan", dim: 10 },
-			bubbles: { mine: { kind: "gradient", stops: ["#1D7099", "#14547C"], angle: 165 }, theirs: { color: "#F2F7FB" }, shape: "square" },
+			bubbles: { mine: { kind: "gradient", stops: ["#54402B", "#3B2C1D"], angle: 160 }, theirs: { color: "#D3C3A0" } },
 		},
 	},
 	{
@@ -366,102 +240,91 @@ export const THEME_CARDS: {
 		blurb: "Low coals in a dark room. Warm, quiet, nearly burnt down.",
 		dark: {
 			wallpaper: { type: "gradient", stops: ["#231813", "#0C0A09"], angle: 160, frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#C2410C", "#8F300E"], angle: 135 }, theirs: { color: "#3F332B" }, shape: "square" },
+			bubbles: { mine: { kind: "gradient", stops: ["#C2410C", "#8F300E"], angle: 135 }, theirs: { color: "#3F332B" } },
 		},
 		light: {
 			wallpaper: { type: "gradient", stops: ["#FFF9F4", "#F7E5D3"], angle: 160, frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#B4400F", "#87290A"], angle: 135 }, theirs: { color: "#F6C29E" }, shape: "square" },
+			bubbles: { mine: { kind: "gradient", stops: ["#B4400F", "#87290A"], angle: 135 }, theirs: { color: "#F6C29E" } },
 		},
 	},
 	{
-		id: "newsprint",
-		label: "Newsprint",
-		blurb: "Bare trees in fog, printed grey on cheap paper.",
+		id: "deep-current",
+		label: "Deep Current",
+		blurb: "Far below the surface. Ink, deep teal, nothing loud.",
 		dark: {
-			wallpaper: { type: "preset", preset: "fogwood", frost: 20, hue: "none", dim: 36 },
-			bubbles: { mine: { kind: "solid", color: "#D7D3C8" }, theirs: { color: "#302F2A" }, shape: "square" },
+			wallpaper: { type: "solid", color: "#05131B", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#0C7796", "#0A5878"], angle: 160 }, theirs: { color: "#1A3E4F" } },
 		},
 		light: {
-			wallpaper: { type: "preset", preset: "lonetree", frost: 14, hue: "none", dim: 10 },
-			bubbles: { mine: { kind: "solid", color: "#242320" }, theirs: { color: "#C6C2B7" }, shape: "square" },
+			wallpaper: { type: "solid", color: "#F1F7F9", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#0C7796", "#0A5878"], angle: 160 }, theirs: { color: "#BFDAE6" } },
 		},
 	},
 	{
-		id: "afterglow",
-		label: "Afterglow",
-		blurb: "The rose light that hangs on ten minutes after the sun.",
+		id: "nebula",
+		label: "Nebula",
+		blurb: "Plum dark with a violet-to-magenta flare. The dramatic one.",
 		dark: {
-			wallpaper: { type: "gradient", stops: ["#261A22", "#0D0A0C"], angle: 200, frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#B8455C", "#8C2F46"], angle: 140 }, theirs: { color: "#402C37" }, shape: "soft" },
+			wallpaper: { type: "gradient", stops: ["#1B0B33", "#06040F"], angle: 155, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#7A2BC4", "#C42A8E"], angle: 135 }, theirs: { color: "#3E2C5C" } },
 		},
 		light: {
-			wallpaper: { type: "gradient", stops: ["#FFF7F5", "#FAE5E1"], angle: 200, frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#B4425E", "#882C45"], angle: 140 }, theirs: { color: "#EEC3BD" }, shape: "soft" },
+			wallpaper: { type: "gradient", stops: ["#FDFAFF", "#EDE3FA"], angle: 155, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#7A2BC4", "#C42A8E"], angle: 135 }, theirs: { color: "#D3C6EE" } },
 		},
 	},
 	{
-		id: "fernlight",
-		label: "Fernlight",
-		blurb: "Sunlit fern green on a quiet forest floor.",
+		id: "semaphore",
+		label: "Semaphore",
+		blurb: "Navy and honey, never red or green. Built for colour-blind readers.",
 		dark: {
-			wallpaper: { type: "solid", color: "#0E1512", frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#3E7B39", "#265C34"], angle: 150 }, theirs: { color: "#2E3F36" }, shape: "rounded" },
+			wallpaper: { type: "solid", color: "#0D1117", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#22439F", "#2563EB"], angle: 160 }, theirs: { color: "#F7E3A1" } },
 		},
 		light: {
-			wallpaper: { type: "gradient", stops: ["#EDF3E4", "#DCE8D0"], angle: 180, frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#3C7539", "#22562F"], angle: 150 }, theirs: { color: "#B5CBA7" }, shape: "rounded" },
+			wallpaper: { type: "solid", color: "#EEF1F7", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#17358F", "#3059D6"], angle: 160 }, theirs: { color: "#DCBA5C" } },
 		},
 	},
 	{
-		id: "sandstone",
-		label: "Sandstone",
-		blurb: "Warm stone and a low gold light. Muted, mineral, grown up.",
+		id: "old-growth",
+		label: "Old Growth",
+		blurb: "Deep pine and low light under standing timber.",
 		dark: {
-			wallpaper: { type: "solid", color: "#161413", frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#91670E", "#764B09"], angle: 150 }, theirs: { color: "#39342F" }, shape: "square" },
+			wallpaper: { type: "preset", preset: "forest", frost: 20, hue: "none", dim: 34 },
+			bubbles: { mine: { kind: "gradient", stops: ["#2F7D55", "#1B5539"], angle: 155 }, theirs: { color: "#DEE6D5" } },
 		},
 		light: {
-			wallpaper: { type: "solid", color: "#FCF8F0", frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#91670E", "#764B09"], angle: 150 }, theirs: { color: "#E3D3B1" }, shape: "square" },
+			wallpaper: { type: "preset", preset: "mist", frost: 18, hue: "none", dim: 6 },
+			bubbles: { mine: { kind: "gradient", stops: ["#2C6E4C", "#1E5238"], angle: 155 }, theirs: { color: "#B7CBAC" } },
 		},
 	},
 	{
-		id: "lagoon",
-		label: "Lagoon",
-		blurb: "Clear shallow water. A turquoise you can see through.",
+		id: "blue-hour",
+		label: "Blue Hour",
+		blurb: "Still water at the edge of the day, photographed.",
 		dark: {
-			wallpaper: { type: "gradient", stops: ["#04151C", "#072932"], angle: 200, frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#6FE0D0", "#4ACFDE"], angle: 200 }, theirs: { color: "#18505F" }, shape: "rounded" },
+			wallpaper: { type: "preset", preset: "dusk", frost: 8, hue: "cyan", dim: 32 },
+			bubbles: { mine: { kind: "gradient", stops: ["#1D7099", "#14547C"], angle: 165 }, theirs: { color: "#203748" } },
 		},
 		light: {
-			wallpaper: { type: "gradient", stops: ["#E4F0EE", "#D2E6E7"], angle: 200, frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#6FE0D0", "#4ACFDE"], angle: 200 }, theirs: { color: "#6E6E6E" }, shape: "rounded" },
+			wallpaper: { type: "preset", preset: "pier", frost: 10, hue: "cyan", dim: 10 },
+			bubbles: { mine: { kind: "gradient", stops: ["#1D7099", "#14547C"], angle: 165 }, theirs: { color: "#F2F7FB" } },
 		},
 	},
 	{
-		id: "kiln",
-		label: "Kiln",
-		blurb: "Fired clay and warm ash. Rust that knows how to stay quiet.",
+		id: "milky-way",
+		label: "Milky Way",
+		blurb: "The galaxy overhead at night. A pale, starless morning by day.",
 		dark: {
-			wallpaper: { type: "gradient", stops: ["#0F0B09", "#201A16"], angle: 165, frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#AE541F", "#8D3414"], angle: 145 }, theirs: { color: "#372F2A" }, shape: "rounded" },
+			wallpaper: { type: "preset", preset: "milkyway", frost: 6, hue: "none", dim: 30 },
+			bubbles: { mine: { kind: "gradient", stops: ["#4B3A9E", "#7454D6"], angle: 145 }, theirs: { color: "#57639E" } },
 		},
+		// Painted, not the pier: that picture is Blue Hour's by day, and a
+		// galaxy has no daytime photograph anyway.
 		light: {
-			wallpaper: { type: "solid", color: "#FBF6EE", frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#AE541F", "#8D3414"], angle: 145 }, theirs: { color: "#E7D0B4" }, shape: "rounded" },
-		},
-	},
-	{
-		id: "olivegrove",
-		label: "Olive Grove",
-		blurb: "Misty woods behind the words. Olive bubbles, nothing shouting.",
-		dark: {
-			wallpaper: { type: "preset", preset: "fogwood", frost: 20, hue: "none", dim: 36 },
-			bubbles: { mine: { kind: "gradient", stops: ["#3D5218", "#263F0F"], angle: 150 }, theirs: { color: "#696E61" }, shape: "soft" },
-		},
-		light: {
-			wallpaper: { type: "preset", preset: "mist", frost: 20, hue: "none", dim: 4 },
-			bubbles: { mine: { kind: "gradient", stops: ["#3D5218", "#263F0F"], angle: 150 }, theirs: { color: "#FAFAF4" }, shape: "soft" },
+			wallpaper: { type: "gradient", stops: ["#F3F4FA", "#E1E4F2"], angle: 165, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#4B3A9E", "#7454D6"], angle: 145 }, theirs: { color: "#D3D6EA" } },
 		},
 	},
 	{
@@ -470,105 +333,27 @@ export const THEME_CARDS: {
 		blurb: "Bare trees in fog. Silver your side, ink theirs.",
 		dark: {
 			wallpaper: { type: "preset", preset: "fogwood", frost: 18, hue: "none", dim: 36 },
-			bubbles: { mine: { kind: "solid", color: "#C3C8CC" }, theirs: { color: "#191C1E" }, shape: "soft" },
+			bubbles: { mine: { kind: "solid", color: "#C3C8CC" }, theirs: { color: "#191C1E" } },
 		},
 		light: {
 			wallpaper: { type: "preset", preset: "lonetree", frost: 16, hue: "none", dim: 10 },
-			bubbles: { mine: { kind: "solid", color: "#F0F2F3" }, theirs: { color: "#191C1E" }, shape: "soft" },
-		},
-	},
-	{
-		id: "hot-wire",
-		label: "Hot Wire",
-		blurb: "Magenta bleeding into violet on near black. Nightclub energy.",
-		dark: {
-			wallpaper: { type: "gradient", stops: ["#0A0410", "#20081A"], angle: 165, frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#D6007A", "#9B1BC7"], angle: 150 }, theirs: { color: "#4A2A43" }, shape: "rounded" },
-		},
-		light: {
-			wallpaper: { type: "gradient", stops: ["#FFF7FC", "#F9EAF4"], angle: 165, frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#D9007B", "#A312CF"], angle: 150 }, theirs: { color: "#E6C3D9" }, shape: "rounded" },
-		},
-	},
-	{
-		id: "lastlight",
-		label: "Last Light",
-		blurb: "Dusk over the ridge, with the last warmth in the bubbles.",
-		dark: {
-			wallpaper: { type: "preset", preset: "dusk", frost: 12, hue: "none", dim: 30 },
-			bubbles: { mine: { kind: "gradient", stops: ["#FFDCA0", "#FDB967"], angle: 145 }, theirs: { color: "#3B302A" }, shape: "rounded" },
-		},
-		light: {
-			wallpaper: { type: "preset", preset: "mist", frost: 16, hue: "none", dim: 12 },
-			bubbles: { mine: { kind: "gradient", stops: ["#FFD290", "#FBB863"], angle: 145 }, theirs: { color: "#BAB8B3" }, shape: "rounded" },
-		},
-	},
-	{
-		id: "milky-way",
-		label: "Milky Way",
-		blurb: "The galaxy overhead at night, a pale lake at first light.",
-		dark: {
-			wallpaper: { type: "preset", preset: "milkyway", frost: 6, hue: "none", dim: 30 },
-			bubbles: { mine: { kind: "gradient", stops: ["#4B3A9E", "#7454D6"], angle: 145 }, theirs: { color: "#57639E" }, shape: "rounded" },
-		},
-		light: {
-			wallpaper: { type: "preset", preset: "pier", frost: 8, hue: "none", dim: 12 },
-			bubbles: { mine: { kind: "gradient", stops: ["#4B3A9E", "#7454D6"], angle: 145 }, theirs: { color: "#FFFFFF" }, shape: "rounded" },
-		},
-	},
-	{
-		id: "sour-apple",
-		label: "Sour Apple",
-		blurb: "Lime bubbles, grape replies, quiet green paper",
-		dark: {
-			wallpaper: { type: "gradient", stops: ["#1A2314", "#080A07"], angle: 165, frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#D8FA5C", "#A6E92B"], angle: 135 }, theirs: { color: "#4A2F91" }, shape: "soft" },
-		},
-		light: {
-			wallpaper: { type: "solid", color: "#F2F9E9", frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#B9EF3E", "#8AD117"], angle: 135 }, theirs: { color: "#6A4BC0" }, shape: "soft" },
-		},
-	},
-	{
-		id: "voltage",
-		label: "Voltage",
-		blurb: "Electric cyan on the bare page. The neon you can read all day.",
-		dark: {
-			wallpaper: { type: "flat", frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "solid", color: "#22D3EE" }, theirs: { color: "#2A363B" }, shape: "soft" },
-		},
-		light: {
-			wallpaper: { type: "flat", frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "solid", color: "#2ACEE8" }, theirs: { color: "#6D7376" }, shape: "soft" },
-		},
-	},
-	{
-		id: "lichen",
-		label: "Lichen",
-		blurb: "Grey-green lichen on bark, bare trees in fog.",
-		dark: {
-			wallpaper: { type: "preset", preset: "fogwood", frost: 24, hue: "none", dim: 32 },
-			bubbles: { mine: { kind: "solid", color: "#C6D2C2" }, theirs: { color: "#1E2622" }, shape: "square" },
-		},
-		light: {
-			wallpaper: { type: "preset", preset: "lonetree", frost: 16, hue: "none", dim: 8 },
-			bubbles: { mine: { kind: "solid", color: "#B3C3AB" }, theirs: { color: "#2A3730" }, shape: "square" },
-		},
-	},
-	{
-		id: "vellum",
-		label: "Vellum",
-		blurb: "Tea-stained parchment, gold leaf and walnut ink.",
-		dark: {
-			wallpaper: { type: "gradient", stops: ["#1C160D", "#0C0906"], angle: 160, frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#F5C93F", "#E5AE20"], angle: 155 }, theirs: { color: "#423723" }, shape: "rounded" },
-		},
-		light: {
-			wallpaper: { type: "gradient", stops: ["#F7F1E2", "#EADEC1"], angle: 160, frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#F4CC50", "#E2AB22"], angle: 155 }, theirs: { color: "#4A3B26" }, shape: "rounded" },
+			bubbles: { mine: { kind: "solid", color: "#F0F2F3" }, theirs: { color: "#191C1E" } },
 		},
 	},
 ];
+
+/** The owner's 22/8, stamped on every card: a theme never re-cuts the bubbles. */
+const stamp = (t: CardTheme): ChatTheme => ({
+	wallpaper: t.wallpaper,
+	bubbles: { ...t.bubbles, shape: "rounded" },
+});
+export const THEME_CARDS: {
+	id: string;
+	label: string;
+	blurb: string;
+	dark: ChatTheme;
+	light: ChatTheme;
+}[] = CARDS.map((c) => ({ ...c, dark: stamp(c.dark), light: stamp(c.light) }));
 
 /* ------------------------------------------------------------------ */
 /* Resolution and CSS. */
