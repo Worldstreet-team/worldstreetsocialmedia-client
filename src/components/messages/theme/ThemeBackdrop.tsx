@@ -34,7 +34,20 @@ export const ThemeBackdrop = memo(function ThemeBackdrop({
 		<div
 			aria-hidden
 			className="pointer-events-none absolute inset-0 overflow-hidden"
-			style={{ isolation: "isolate" }}
+			style={{
+				isolation: "isolate",
+				// The thread above this is virtualised: every scroll mounts and
+				// unmounts rows, and without its own compositor layer the
+				// browser re-ran a 24px blur and a colour blend for the whole
+				// repainted region each time - the glitching the owner saw
+				// scrolling a chat with a picture (2026-09-10). translateZ
+				// promotes it, contain stops the scroller's paint from
+				// invalidating it, and will-change keeps the raster around.
+				transform: "translateZ(0)",
+				backfaceVisibility: "hidden",
+				willChange: "transform",
+				contain: "paint",
+			}}
 		>
 			{/* eslint-disable-next-line @next/next/no-img-element */}
 			<img
@@ -55,6 +68,7 @@ export const ThemeBackdrop = memo(function ThemeBackdrop({
 						background: "var(--ws-brand-primary)",
 						mixBlendMode: "color",
 						opacity: 0.92,
+						transform: "translateZ(0)",
 					}}
 				/>
 			)}

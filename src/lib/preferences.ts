@@ -15,7 +15,10 @@
  * a layout jump in the face of exactly the person who can least afford it.
  */
 
-export const PREFS_CACHE_KEY = "ws-prefs-v1";
+// The cache key and the pre-paint script live in a NON-client module, so
+// the server component that renders the inline <script> can import them.
+export { PREFS_CACHE_KEY, PREPAINT_PREFS } from "./preferences-prepaint";
+import { PREFS_CACHE_KEY } from "./preferences-prepaint";
 
 /* ------------------------------------------------------------------ */
 /* Schema */
@@ -164,21 +167,3 @@ export function applyPrefsToDocument(p: Preferences) {
 		if (k.startsWith("ws") && h.dataset[k] === "") delete h.dataset[k];
 	}
 }
-
-/**
- * The same stamp, minified, for the inline <script> in the root layout.
- * It runs before first paint off the localStorage cache, so a person who
- * needs 150% type never sees a frame of 100%.
- */
-export const PREPAINT_PREFS = `try{var c=JSON.parse(localStorage.getItem("${PREFS_CACHE_KEY}")||"{}"),a=c.a11y||{},h=document.documentElement,m=function(q){return window.matchMedia&&window.matchMedia(q).matches};
-var s=a.textScale;s=(s==null||s==="auto")?1:Math.max(.9,Math.min(1.75,s/100));h.style.setProperty("--ws-fs",String(s));
-var ct=a.chatTextScale;h.style.setProperty("--ws-fs-chat",(ct==null||ct==="match")?"1":String(ct/100));
-var t=function(v,q){return v==="on"||((v==null||v==="auto")&&m(q))};
-if(t(a.contrast,"(prefers-contrast: more)"))h.dataset.wsContrast="more";
-if(t(a.reduceMotion,"(prefers-reduced-motion: reduce)"))h.dataset.wsMotion="reduce";
-if(a.colorVision&&a.colorVision!=="off")h.dataset.wsCv=a.colorVision;
-if(a.nonColorCues||(a.colorVision&&a.colorVision!=="off"))h.dataset.wsCues="1";
-if(a.boldText)h.dataset.wsBold="1";
-if(a.reduceTransparency)h.dataset.wsFlat="1";
-if(a.underlineLinks||(a.colorVision&&a.colorVision!=="off"))h.dataset.wsUnderline="1";
-if((c.data||{}).saver)h.dataset.wsSaver="1";}catch(e){}`;

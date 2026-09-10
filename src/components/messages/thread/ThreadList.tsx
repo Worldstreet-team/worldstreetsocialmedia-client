@@ -111,10 +111,26 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 		// biome-ignore lint/correctness/useExhaustiveDependencies: per-thread reset
 		useEffect(() => {
 			setSettled(false);
-			const raf = requestAnimationFrame(() =>
-				requestAnimationFrame(() => setSettled(true)),
-			);
-			return () => cancelAnimationFrame(raf);
+			// Two frames cover virtuoso's correction - but requestAnimationFrame
+			// NEVER FIRES in a background tab, and this class is what makes the
+			// list visible. A thread opened in a tab the person has not looked
+			// at yet stayed blank at opacity 0 until something re-ran this
+			// effect. The timer is the floor, and visibilitychange catches the
+			// moment the tab is actually shown (found 2026-09-10).
+			let done = false;
+			const settle = () => {
+				if (done) return;
+				done = true;
+				setSettled(true);
+			};
+			const raf = requestAnimationFrame(() => requestAnimationFrame(settle));
+			const timer = setTimeout(settle, 250);
+			document.addEventListener("visibilitychange", settle);
+			return () => {
+				cancelAnimationFrame(raf);
+				clearTimeout(timer);
+				document.removeEventListener("visibilitychange", settle);
+			};
 		}, [threadId, messages.length > 0]);
 		// Live-arrival gate: only messages born after this mount animate in.
 		// biome-ignore lint/correctness/useExhaustiveDependencies: per-thread stamp

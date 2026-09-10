@@ -2,6 +2,7 @@
 
 import clsx from "clsx";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
+import { Switch } from "@/components/ui/Switch";
 import type { Preferences } from "@/lib/preferences";
 
 /**
@@ -142,7 +143,7 @@ function Preview() {
 			</p>
 			<div className="rounded-xl bg-raised px-3.5 py-3">
 				<p className="font-sans text-[calc(15px*var(--ws-fs))] font-semibold text-primary">
-					Sheribright Enowtah
+					John Doe
 				</p>
 				<p className="mt-0.5 font-sans text-[calc(14px*var(--ws-fs))] leading-relaxed text-primary">
 					Good morning. This is what a message and a post will look like at
@@ -218,10 +219,10 @@ function Toggle({
 	onChange: (v: boolean) => void;
 }) {
 	return (
-		<label
+		<div
 			className={clsx(
-				"flex items-start justify-between gap-4 border-t border-hairline px-4 py-3",
-				disabled ? "cursor-default opacity-60" : "cursor-pointer",
+				"flex items-center justify-between gap-4 border-t border-hairline px-4 py-2.5",
+				disabled && "opacity-60",
 			)}
 		>
 			<span className="min-w-0">
@@ -234,13 +235,13 @@ function Toggle({
 					</span>
 				)}
 			</span>
-			<input
-				type="checkbox"
+			<Switch
 				checked={checked}
 				disabled={disabled}
-				onChange={(e) => onChange(e.target.checked)}
-				className="mt-1 h-4 w-4 shrink-0 accent-[var(--ws-brand-primary)]"
+				onChange={onChange}
+				label={label}
+				className="-mr-2"
 			/>
-		</label>
+		</div>
 	);
 }

@@ -10,7 +10,7 @@ import {
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PreferencesProvider } from "@/components/providers/PreferencesProvider";
-import { PREPAINT_PREFS } from "@/lib/preferences";
+import { PREPAINT_PREFS } from "@/lib/preferences-prepaint";
 import { ToastProvider } from "@/components/ui/Toast/ToastContext";
 import NextTopLoader from "nextjs-toploader";
 import JotaiHydrator from "./JotaiHydrator";
