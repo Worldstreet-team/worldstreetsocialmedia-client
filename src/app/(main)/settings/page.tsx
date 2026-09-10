@@ -6,6 +6,7 @@ import { useTheme } from "next-themes";
 import {
 	BadgeCheck,
 	Bell,
+	Eye,
 	Palette,
 	ShieldAlert,
 	ShieldCheck,
@@ -15,6 +16,7 @@ import {
 import { Check, Moon, Sun } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { Tabs, type TabItem } from "@/components/ui/Tabs";
+import { AccessibilitySettings } from "@/components/settings/AccessibilitySettings";
 import { InstallAppRow } from "@/components/settings/InstallAppRow";
 import { InterestPicker } from "@/components/onboarding/InterestPicker";
 import { BlockedAccounts } from "@/components/settings/BlockedAccounts";
@@ -315,6 +317,15 @@ export default function SettingsPage() {
 			)}
 
 			{section === "display" && (
+				<>
+				<Section
+					icon={Eye}
+					title="Accessibility"
+					caption="Size, colour and motion. Saved to your account, so it follows you to every device you sign in on."
+				>
+					<AccessibilitySettings />
+				</Section>
+
 				<Section
 					icon={Palette}
 					title={t("settings.display.title")}
@@ -384,6 +395,7 @@ export default function SettingsPage() {
 						</div>
 					</div>
 				</Section>
+				</>
 			)}
 			</div>
 		</div>
