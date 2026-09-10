@@ -1,5 +1,7 @@
 "use client";
 
+import { usePreferences } from "@/components/providers/PreferencesProvider";
+
 import { UserBadges } from "@/components/ui/UserBadges";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
@@ -243,7 +245,12 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 	const selfCover =
 		(self?.stories.find((s) => !s.seen) ?? self?.stories[0])?.media;
 	const others = rail.filter((r) => !r.isSelf);
-	const collapsed = useCollapseOnScrollDown();
+	const collapsedByScroll = useCollapseOnScrollDown();
+	// Owner setting: the whole rail can be put away. It must COLLAPSE, never
+	// unmount - the ref'd element below is how the composer's story action
+	// finds it, and an early return makes that silently do nothing.
+	const { prefs: wsPrefs } = usePreferences();
+	const collapsed = collapsedByScroll || !wsPrefs.content.showStories;
 
 	return (
 		<>

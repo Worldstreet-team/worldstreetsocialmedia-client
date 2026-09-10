@@ -1,3 +1,4 @@
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 import { formatCompact } from "@/lib/utils";
 import Link from "next/link";
 import { haptic } from "@/lib/haptics";
@@ -756,9 +757,15 @@ export const PostCard = memo(
     }, [post.author.id, toast, t]);
 
     const MAX_LENGTH = 280;
+    // Owner setting: a reader can ask for long posts open in the timeline
+    // rather than stopping at See more.
+    const { prefs: wsPrefs } = usePreferences();
     const shouldTruncate = useMemo(
-        () => !post.isDetail && post.content.length > MAX_LENGTH,
-        [post.isDetail, post.content.length],
+        () =>
+            !post.isDetail &&
+            !wsPrefs.content.expandLongPosts &&
+            post.content.length > MAX_LENGTH,
+        [post.isDetail, post.content.length, wsPrefs.content.expandLongPosts],
     );
 
     // Paid post plumbing. `locked` drives the glass layer; the handler swaps

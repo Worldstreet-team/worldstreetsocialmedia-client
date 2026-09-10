@@ -1,5 +1,7 @@
 "use client";
 
+import { usePreferences } from "@/components/providers/PreferencesProvider";
+import { saverOn } from "@/lib/preferences";
 import { useGatewayRead } from "@/hooks/useGateway";
 
 import { mainScrollTop, mainScroller } from "@/lib/utils";
@@ -140,6 +142,13 @@ export default function Feed({
 	initialData?: FeedSeed | null;
 }) {
 	const t = useT();
+	// Data settings: how far ahead the timeline fetches, and how deep it
+	// buffers. "Fewer" is one screen and one page instead of three and two.
+	const { prefs: wsPrefs } = usePreferences();
+	const wsLight =
+		wsPrefs.data.preloadPosts === "light" ||
+		(wsPrefs.data.preloadPosts === "auto" && saverOn(wsPrefs));
+	const wsBufferTarget = wsLight ? 10 : BUFFER_TARGET;
 	const [feedState, setFeedState] = useAtom(feedAtom);
 	// Held in a ref so it can be retired (tab switch) without a re-render.
 	// Never repopulated: the seed describes one page load, not a subscription.
@@ -254,8 +263,9 @@ export default function Feed({
 	const toppedUpForRef = useRef<string | null>(null);
 	useEffect(() => {
 		if (loading || feedState.posts.length === 0) return;
+		if (!wsPrefs.content.autoLoadMore) return;
 		if (toppedUpForRef.current === feedState.mode) return;
-		if (feedState.posts.length >= BUFFER_TARGET || !feedState.hasMore) return;
+		if (feedState.posts.length >= wsBufferTarget || !feedState.hasMore) return;
 		toppedUpForRef.current = feedState.mode;
 		const timer = setTimeout(() => void fillBuffer(false), 600);
 		return () => clearTimeout(timer);
@@ -295,8 +305,8 @@ export default function Feed({
 			let pages = 0;
 			while (
 				hasMoreRef.current &&
-				postCountRef.current < BUFFER_TARGET &&
-				pages < MAX_CHAINED_PAGES
+				postCountRef.current < wsBufferTarget &&
+				pages < (wsLight ? 1 : MAX_CHAINED_PAGES)
 			) {
 				await fetchFeed();
 				pages++;
@@ -315,7 +325,9 @@ export default function Feed({
 
 	useEffect(() => {
 		const node = loadMoreRef.current;
-		if (!node) return;
+		// Owner setting: endless scroll can be turned off, and then the
+		// Show more button below is the only way on.
+		if (!node || !wsPrefs.content.autoLoadMore) return;
 		const observer = new IntersectionObserver(
 			(entries) => {
 				if (entries[0].isIntersecting) loadMore();
@@ -327,7 +339,9 @@ export default function Feed({
 			// costs one extra page of posts and hides the seam completely.
 			// Three screens out on a tall phone. Paired with BUFFER_TARGET the
 			// request is normally already answered by the time this fires.
-			{ rootMargin: "3600px 0px" },
+			// How far ahead we fetch is the data setting: Fewer pulls one
+			// screen ahead instead of three.
+			{ rootMargin: wsLight ? "1200px 0px" : "3600px 0px" },
 		);
 		observer.observe(node);
 		return () => observer.disconnect();
@@ -418,7 +432,14 @@ export default function Feed({
 		feedState.posts.length === 0 && initialRef.current && tab === "foryou"
 			? initialRef.current.posts
 			: feedState.posts;
-	const visiblePosts = basePosts.filter(hasRenderableBody);
+	// Owner setting: hide plain reshares but keep quotes, which carry the
+	// resharer's own words (a plain repost is repostOf with empty content).
+	const visiblePosts = basePosts.filter(
+		(p) =>
+			hasRenderableBody(p) &&
+			(wsPrefs.content.showReposts ||
+				!(p.repostOf && !p.content?.trim())),
+	);
 
 	useEffect(() => {
 		// Disable browser's automatic scroll restoration to handle it manually

@@ -1,5 +1,8 @@
 "use client";
 
+import { usePreferences } from "@/components/providers/PreferencesProvider";
+import { saverOn } from "@/lib/preferences";
+
 import { formatCompact } from "@/lib/utils";
 import {
 	useCallback,
@@ -99,6 +102,12 @@ export function VideoPlayer({
 	 *  for portrait clips so nothing is letterboxed. */
 	const MAX_MEDIA_H = 600;
 	const [ratio, setRatio] = useState<number | null>(null);
+	const { prefs } = usePreferences();
+	const autoplayAllowed =
+		prefs.data.autoplay === "always" ||
+		(prefs.data.autoplay === "saver" && !saverOn(prefs));
+	const autoplayAllowedRef = useRef(autoplayAllowed);
+	autoplayAllowedRef.current = autoplayAllowed;
 	const [current, setCurrent] = useState(0);
 	const [buffered, setBuffered] = useState(0);
 	const [chromeOn, setChromeOn] = useState(true);
@@ -350,7 +359,10 @@ export function VideoPlayer({
 		const io = new IntersectionObserver(
 			([e]) => {
 				if (e.isIntersecting) {
-					if (v.paused) {
+					// The owner's autoplay setting: never, or not while data
+					// saver is on. A stopped clip still paints its first frame
+					// (preload="metadata") and keeps its play glyph.
+					if (v.paused && autoplayAllowedRef.current) {
 						v.muted = true;
 						setMuted(true);
 						void v
@@ -505,7 +517,7 @@ export function VideoPlayer({
 				// `content-visibility: auto` subtree whose descendants have no
 				// layout boxes while skipped, so the observer could never fire on
 				// iOS until the browser un-skipped it (audit 2026-09-01).
-				autoPlay
+				autoPlay={autoplayAllowed}
 				// Feed clips run continuously (owner 2026-09-10) - a short
 				// vertical that stops on its last frame reads as broken.
 				loop={fitToMedia}

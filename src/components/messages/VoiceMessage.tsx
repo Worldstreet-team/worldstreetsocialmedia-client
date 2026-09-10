@@ -1,5 +1,7 @@
 "use client";
 
+import { usePreferences } from "@/components/providers/PreferencesProvider";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { RiPauseFill, RiPlayFill } from "@remixicon/react";
 import clsx from "clsx";
@@ -43,6 +45,14 @@ let activeAudio: HTMLAudioElement | null = null;
 // Playback speed is sticky ACROSS notes (register 85): set 1.5× once and the
 // whole run honors it, the WhatsApp behavior.
 let stickyRate = 1;
+/**
+ * The saved defaults, mirrored at module scope because the playback
+ * registry and the ended-handler both run outside React. `prefApplied`
+ * keeps a person's per-run speed change (cycleRate) from being stomped on
+ * every render - only an actual preference change rewrites stickyRate.
+ */
+let prefApplied: number | null = null;
+let chainOn = true;
 const RATES = [1, 1.5, 2];
 // Autoplay registry: a note that ends looks up the next one and plays it.
 const playRegistry = new Map<string, () => void>();
@@ -144,7 +154,19 @@ export const VoiceMessage = ({
 	const [isPlaying, setIsPlaying] = useState(false);
 	const [duration, setDuration] = useState(durationSec ?? 0);
 	const [currentTime, setCurrentTime] = useState(0);
+	const { prefs } = usePreferences();
 	const [rate, setRate] = useState(stickyRate);
+	// The saved speed and chaining become the module defaults. Only a real
+	// preference change writes stickyRate, so the speed button stays a
+	// per-run override.
+	useEffect(() => {
+		chainOn = prefs.messaging.voiceAutoplayNext;
+		if (prefApplied !== prefs.messaging.voiceSpeed) {
+			prefApplied = prefs.messaging.voiceSpeed;
+			stickyRate = prefs.messaging.voiceSpeed;
+			setRate(prefs.messaging.voiceSpeed);
+		}
+	}, [prefs.messaging.voiceSpeed, prefs.messaging.voiceAutoplayNext]);
 	const [peaks, setPeaks] = useState<number[] | null>(() =>
 		hasSentPeaks ? sentPeaks! : (waveCache.get(src)?.peaks ?? null),
 	);
@@ -318,7 +340,7 @@ export const VoiceMessage = ({
 		if (messageId && playbackState.id === messageId)
 			publishPlayback({ playing: false, time: 0 });
 		// Consecutive notes play through as a run (register 87).
-		if (autoplayNextId) playRegistry.get(autoplayNextId)?.();
+		if (chainOn && autoplayNextId) playRegistry.get(autoplayNextId)?.();
 	};
 
 	const handleLoadedMetadata = () => {

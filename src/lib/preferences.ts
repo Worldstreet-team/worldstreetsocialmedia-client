@@ -28,6 +28,12 @@ export type ColorVision = "off" | "deuteran" | "protan" | "tritan" | "achroma";
 export type TriState = "auto" | "on" | "off";
 export type Appearance = "dark" | "light" | "system";
 export type Autoplay = "always" | "saver" | "never";
+export type AutoTri = "auto" | "on" | "off";
+export type MediaLoad = "auto" | "always" | "tap";
+export type Preload = "auto" | "full" | "light";
+export type Quality = "auto" | "high" | "low";
+export type EnterKey = "send" | "newline";
+export type FeedTab = "foryou" | "following" | "newest";
 
 export interface Preferences {
 	a11y: {
@@ -49,8 +55,27 @@ export interface Preferences {
 		mode: Appearance;
 	};
 	data: {
-		saver: boolean;
+		/** Tri-state: "auto" follows the device's own data-saver signal. */
+		saver: AutoTri;
 		autoplay: Autoplay;
+		chatMedia: MediaLoad;
+		preloadPosts: Preload;
+		uploadQuality: Quality;
+	};
+	messaging: {
+		enterToSend: EnterKey;
+		voiceSpeed: 1 | 1.5 | 2;
+		voiceAutoplayNext: boolean;
+		mediaAutoLoad: boolean;
+		inboxStories: boolean;
+		openAtFirstUnread: boolean;
+	};
+	content: {
+		defaultFeed: FeedTab;
+		showStories: boolean;
+		expandLongPosts: boolean;
+		showReposts: boolean;
+		autoLoadMore: boolean;
 	};
 }
 
@@ -69,8 +94,50 @@ export const DEFAULTS: Preferences = {
 		chatTextScale: "match",
 	},
 	appearance: { mode: "dark" },
-	data: { saver: false, autoplay: "always" },
+	data: {
+		// Automatic, not off: a phone that has asked the web to save data has
+		// already told us what this person wants.
+		saver: "auto",
+		// Autoplay is the biggest line on a metered bill, so it yields to
+		// data saver by default rather than always running.
+		autoplay: "saver",
+		chatMedia: "auto",
+		preloadPosts: "auto",
+		uploadQuality: "auto",
+	},
+	messaging: {
+		enterToSend: "send",
+		voiceSpeed: 1,
+		voiceAutoplayNext: true,
+		mediaAutoLoad: true,
+		inboxStories: true,
+		openAtFirstUnread: true,
+	},
+	content: {
+		defaultFeed: "foryou",
+		showStories: true,
+		// Off: the See more link is what keeps a timeline scannable.
+		expandLongPosts: false,
+		showReposts: true,
+		autoLoadMore: true,
+	},
 };
+
+/**
+ * Is data saver actually on right now?
+ *
+ * "auto" reads the browser's own signal — the same test the video buffer
+ * already runs — so a phone in data-saver mode gets the lighter app without
+ * anybody opening settings.
+ */
+export function saverOn(p: Preferences): boolean {
+	if (p.data.saver === "on") return true;
+	if (p.data.saver === "off") return false;
+	if (typeof navigator === "undefined") return false;
+	const c = (navigator as unknown as { connection?: { saveData?: boolean; effectiveType?: string } })
+		.connection;
+	return Boolean(c?.saveData) || /(^|-)2g$/.test(c?.effectiveType ?? "");
+}
 
 /* ------------------------------------------------------------------ */
 /* Normalising */
@@ -87,6 +154,8 @@ export function normalizePrefs(raw: unknown): Preferences {
 	const a = (p.a11y ?? {}) as Partial<Preferences["a11y"]>;
 	const ap = (p.appearance ?? {}) as Partial<Preferences["appearance"]>;
 	const d = (p.data ?? {}) as Partial<Preferences["data"]>;
+	const m = (p.messaging ?? {}) as Partial<Preferences["messaging"]>;
+	const c = (p.content ?? {}) as Partial<Preferences["content"]>;
 	return {
 		a11y: {
 			textScale: oneOf(SCALES, a.textScale, DEFAULTS.a11y.textScale),
@@ -107,8 +176,26 @@ export function normalizePrefs(raw: unknown): Preferences {
 			mode: oneOf(["dark", "light", "system"] as const, ap.mode, DEFAULTS.appearance.mode),
 		},
 		data: {
-			saver: bool(d.saver, DEFAULTS.data.saver),
+			saver: oneOf(["auto", "on", "off"] as const, d.saver, DEFAULTS.data.saver),
 			autoplay: oneOf(["always", "saver", "never"] as const, d.autoplay, DEFAULTS.data.autoplay),
+			chatMedia: oneOf(["auto", "always", "tap"] as const, d.chatMedia, DEFAULTS.data.chatMedia),
+			preloadPosts: oneOf(["auto", "full", "light"] as const, d.preloadPosts, DEFAULTS.data.preloadPosts),
+			uploadQuality: oneOf(["auto", "high", "low"] as const, d.uploadQuality, DEFAULTS.data.uploadQuality),
+		},
+		messaging: {
+			enterToSend: oneOf(["send", "newline"] as const, m.enterToSend, DEFAULTS.messaging.enterToSend),
+			voiceSpeed: oneOf([1, 1.5, 2] as const, m.voiceSpeed, DEFAULTS.messaging.voiceSpeed),
+			voiceAutoplayNext: bool(m.voiceAutoplayNext, DEFAULTS.messaging.voiceAutoplayNext),
+			mediaAutoLoad: bool(m.mediaAutoLoad, DEFAULTS.messaging.mediaAutoLoad),
+			inboxStories: bool(m.inboxStories, DEFAULTS.messaging.inboxStories),
+			openAtFirstUnread: bool(m.openAtFirstUnread, DEFAULTS.messaging.openAtFirstUnread),
+		},
+		content: {
+			defaultFeed: oneOf(["foryou", "following", "newest"] as const, c.defaultFeed, DEFAULTS.content.defaultFeed),
+			showStories: bool(c.showStories, DEFAULTS.content.showStories),
+			expandLongPosts: bool(c.expandLongPosts, DEFAULTS.content.expandLongPosts),
+			showReposts: bool(c.showReposts, DEFAULTS.content.showReposts),
+			autoLoadMore: bool(c.autoLoadMore, DEFAULTS.content.autoLoadMore),
 		},
 	};
 }
@@ -161,7 +248,7 @@ export function applyPrefsToDocument(p: Preferences) {
 	h.dataset.wsFlat = p.a11y.reduceTransparency ? "1" : "";
 	h.dataset.wsUnderline =
 		p.a11y.underlineLinks || p.a11y.colorVision !== "off" ? "1" : "";
-	h.dataset.wsSaver = p.data.saver ? "1" : "";
+	h.dataset.wsSaver = saverOn(p) ? "1" : "";
 
 	for (const k of Object.keys(h.dataset)) {
 		if (k.startsWith("ws") && h.dataset[k] === "") delete h.dataset[k];

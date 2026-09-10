@@ -8,6 +8,7 @@ import {
 	RiVoiceprintFill,
 } from "@remixicon/react";
 import clsx from "clsx";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 import EmojiPicker, { Theme } from "emoji-picker-react";
 import { useTheme } from "next-themes";
 import {
@@ -90,6 +91,7 @@ export const ComposerInput = forwardRef<
 	},
 	ref,
 ) {
+	const { prefs } = usePreferences();
 	const [value, setValue] = useState("");
 	const [showEmoji, setShowEmoji] = useState(false);
 	const [mentionQuery, setMentionQuery] = useState<{
@@ -207,7 +209,15 @@ export const ComposerInput = forwardRef<
 							return;
 						}
 					}
-					if (e.key === "Enter" && !e.shiftKey) {
+					// Owner setting: Enter can start a new line instead of
+					// sending, in which case Ctrl/Cmd+Enter is the send.
+					const enterSends = prefs.messaging.enterToSend === "send";
+					const metaSend =
+						e.key === "Enter" && (e.metaKey || e.ctrlKey);
+					if (
+						(e.key === "Enter" && !e.shiftKey && enterSends && !metaSend) ||
+						(metaSend && !enterSends)
+					) {
 						e.preventDefault();
 						void send();
 					}

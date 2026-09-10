@@ -7,7 +7,10 @@ import {
 	BadgeCheck,
 	Bell,
 	Eye,
+	Gauge,
+	MessageSquare,
 	Palette,
+	Rss,
 	ShieldAlert,
 	ShieldCheck,
 	SlidersHorizontal,
@@ -17,6 +20,8 @@ import { Check, Moon, Sun } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { Tabs, type TabItem } from "@/components/ui/Tabs";
 import { AccessibilitySettings } from "@/components/settings/AccessibilitySettings";
+import { ContentSettings, DataSettings } from "@/components/settings/DataSettings";
+import { MessagingSettings } from "@/components/settings/MessagingSettings";
 import { InstallAppRow } from "@/components/settings/InstallAppRow";
 import { InterestPicker } from "@/components/onboarding/InterestPicker";
 import { BlockedAccounts } from "@/components/settings/BlockedAccounts";
@@ -39,7 +44,7 @@ import { MAX_INTERESTS, MIN_INTERESTS } from "@/data/categories";
 import { normalizeCategoryIds } from "@/lib/categories";
 import { useT } from "@/i18n/client";
 
-type Section = "account" | "premium" | "topics" | "notifications" | "safety" | "display";
+type Section = "account" | "premium" | "topics" | "notifications" | "safety" | "display" | "data";
 
 const LANGUAGE_NAMES: Record<Locale, string> = {
 	en: "English",
@@ -147,6 +152,7 @@ export default function SettingsPage() {
 		{ key: "notifications", label: t("settings.tab.notifications") },
 		{ key: "safety", label: t("settings.tab.safety") },
 		{ key: "display", label: t("settings.tab.display") },
+		{ key: "data", label: "Data & feed" },
 	];
 
 	return (
@@ -314,6 +320,32 @@ export default function SettingsPage() {
 				>
 					<BlockedAccounts />
 				</Section>
+			)}
+
+			{section === "data" && (
+				<>
+				<Section
+					icon={Gauge}
+					title="Data usage"
+					caption="What the app downloads on its own. Most of these follow one switch, so a phone already saving data gets the lighter app."
+				>
+					<DataSettings />
+				</Section>
+				<Section
+					icon={Rss}
+					title="Timeline"
+					caption="What shows up when you open Home, and how much of it loads at once."
+				>
+					<ContentSettings />
+				</Section>
+				<Section
+					icon={MessageSquare}
+					title="Messaging"
+					caption="How chat behaves for you. None of it changes what the other person sees."
+				>
+					<MessagingSettings />
+				</Section>
+				</>
 			)}
 
 			{section === "display" && (

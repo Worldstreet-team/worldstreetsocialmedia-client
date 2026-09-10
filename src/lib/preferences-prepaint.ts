@@ -31,4 +31,5 @@ if(a.nonColorCues||(a.colorVision&&a.colorVision!=="off"))h.dataset.wsCues="1";
 if(a.boldText)h.dataset.wsBold="1";
 if(a.reduceTransparency)h.dataset.wsFlat="1";
 if(a.underlineLinks||(a.colorVision&&a.colorVision!=="off"))h.dataset.wsUnderline="1";
-if((c.data||{}).saver)h.dataset.wsSaver="1";}catch(e){}`;
+var dv=(c.data||{}).saver;var nc=navigator.connection||{};
+if(dv==="on"||((dv==null||dv==="auto")&&(nc.saveData||/(^|-)2g$/.test(nc.effectiveType||""))))h.dataset.wsSaver="1";}catch(e){}`;

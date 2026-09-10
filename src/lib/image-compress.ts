@@ -13,9 +13,26 @@
  * an optimisation, never a gate.
  */
 
+import { PREFS_CACHE_KEY, normalizePrefs, saverOn } from "@/lib/preferences";
 const MAX_EDGE = 2048;
 const QUALITY = 0.82;
 const SKIP_UNDER_BYTES = 300 * 1024;
+
+/** Smaller files, either because it was chosen or because data saver is on. */
+function lightUploads(): boolean {
+	if (typeof window === "undefined") return false;
+	try {
+		const p = normalizePrefs(
+			JSON.parse(localStorage.getItem(PREFS_CACHE_KEY) || "{}"),
+		);
+		return (
+			p.data.uploadQuality === "low" ||
+			(p.data.uploadQuality === "auto" && saverOn(p))
+		);
+	} catch {
+		return false;
+	}
+}
 
 export interface CompressOptions {
 	/** Longest-edge cap. The HD send tier passes 4096 (register 66). */
@@ -28,9 +45,15 @@ export async function compressImage(
 	file: File,
 	opts: CompressOptions = {},
 ): Promise<File> {
-	const maxEdge = opts.maxEdge ?? MAX_EDGE;
-	const quality = opts.quality ?? QUALITY;
-	const skipUnder = opts.skipUnderBytes ?? SKIP_UNDER_BYTES;
+	// The owner's upload-quality setting. Read from the preference cache
+	// rather than a hook: this runs from plain functions with no React
+	// context above them. An explicit opts value always wins - the HD path
+	// and the group avatar pass their own and must not be shrunk further.
+	const light = lightUploads();
+	const maxEdge = opts.maxEdge ?? (light ? 1280 : MAX_EDGE);
+	const quality = opts.quality ?? (light ? 0.7 : QUALITY);
+	const skipUnder =
+		opts.skipUnderBytes ?? (light ? 100 * 1024 : SKIP_UNDER_BYTES);
 	try {
 		if (!file.type.startsWith("image/")) return file;
 		if (file.type === "image/gif" || file.type === "image/svg+xml")
