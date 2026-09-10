@@ -33,6 +33,7 @@ import axios from "axios";
 import { useUser, useAuth } from "@clerk/nextjs";
 import { useChannel, ChannelProvider } from "ably/react";
 import { useTheme } from "next-themes";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 import EmojiPicker, { Theme } from "emoji-picker-react";
 import { useT } from "@/i18n/client";
 import { getUserStoriesAction } from "@/lib/stories.actions";
@@ -515,6 +516,7 @@ export const MessageBox = ({
 	const [showSendMoney, setShowSendMoney] = useState(false);
 	// Picker follows the app theme instead of hardcoding dark.
 	const { resolvedTheme } = useTheme();
+	const { prefs } = usePreferences();
 	const themeMode = resolvedTheme === "light" ? "light" : "dark";
 	const myMemberTheme = useMemo(() => {
 		const mine = activeConversation?.members?.find((mm) => {
@@ -2195,9 +2197,11 @@ export const MessageBox = ({
 				<div className="flex-1 overflow-y-auto overscroll-contain pb-nav md:pb-0">
 					{/* Stories of the people you're aligned with — messaging is
 					    where you already are when you want to reply to one. */}
-					<div className="px-2 pt-1">
-						<StoriesRail />
-					</div>
+					{prefs.messaging.inboxStories && (
+						<div className="px-2 pt-1">
+							<StoriesRail />
+						</div>
+					)}
 					{/* Primary / Requests as pill tabs (the one tab grammar).
 					    Requests stay quiet — the badge lives HERE, inside
 					    messages, never on the nav. The tab shows even when

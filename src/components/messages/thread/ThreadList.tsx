@@ -1,6 +1,7 @@
 "use client";
 
 import clsx from "clsx";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 import {
 	forwardRef,
 	useCallback,
@@ -103,6 +104,7 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 		},
 		ref,
 	) {
+		const { prefs: wsPrefs } = usePreferences();
 		const [atBottom, setAtBottom] = useState(true);
 		// One beat of invisibility per thread: virtuoso paints at estimated
 		// heights, measures, then snaps to the true bottom — visible as a
@@ -406,8 +408,11 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 					// assumes data starts at index 0; combined with
 					// firstItemIndex=100000 it built a window past the array
 					// and threw before first paint.
+					// Owner setting: a chat can open at the newest message
+					// instead of the first unread. The anchor and the divider
+					// stay either way - the line still marks where you stopped.
 					initialTopMostItemIndex={
-						unreadAnchorIndex >= 0
+						unreadAnchorIndex >= 0 && wsPrefs.messaging.openAtFirstUnread
 							? { index: firstItemIndex + unreadAnchorIndex, align: "start" }
 							: firstItemIndex + rows.length - 1
 					}
