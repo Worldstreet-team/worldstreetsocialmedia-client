@@ -219,7 +219,7 @@ export function ConversationList({
 							{!isGroup && u && online.has(u._id) && (
 								<span
 									aria-label="Online"
-									className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-pill bg-success ring-2 ring-page"
+									className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-pill bg-success ring-2 ring-page ws-cue-online"
 								/>
 							)}
 						</span>

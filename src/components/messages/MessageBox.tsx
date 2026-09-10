@@ -2382,7 +2382,7 @@ export const MessageBox = ({
 									{peerOnline && (
 										<span
 											aria-hidden
-											className="absolute bottom-0 right-0 h-3 w-3 rounded-pill bg-success ring-2 ring-page"
+											className="absolute bottom-0 right-0 h-3 w-3 rounded-pill bg-success ring-2 ring-page ws-cue-online"
 										/>
 									)}
 								</span>

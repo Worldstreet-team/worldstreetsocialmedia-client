@@ -241,7 +241,8 @@ export function DockChat({
 					{!isGroup && other && online.has(other._id) && (
 						<span
 							aria-hidden
-							className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-pill bg-success ring-2 ring-page"
+							aria-label="Online"
+									className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-pill bg-success ring-2 ring-page ws-cue-online"
 						/>
 					)}
 				</span>

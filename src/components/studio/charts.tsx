@@ -340,13 +340,21 @@ export function MiniBars({ values }: { values: number[] }) {
 
 /** Fixed accent set for categorical slices. Brand leads; the rest are set
  *  apart in hue so five countries never read as five blues. */
-export const SLICE_COLORS = [
-	"var(--ws-brand-primary, #EAB308)",
-	"#34D399",
-	"#FBBF24",
-	"#F472B6",
-	"#A78BFA",
-	"#64748B",
+export /**
+ * Categorical slice colours.
+ *
+ * Through tokens, not literals, so the colour-vision modes reach them: under
+ * deuteranopia the old #34D399 and #FBBF24 collapsed into each other, and so
+ * did #F472B6 and #A78BFA. The token ladder is stepped by luminance as well
+ * as hue, so the six stay distinct even with no hue at all (globals.css).
+ */
+const SLICE_COLORS = [
+	"var(--ws-chart-1)",
+	"var(--ws-chart-2)",
+	"var(--ws-chart-3)",
+	"var(--ws-chart-4)",
+	"var(--ws-chart-5)",
+	"var(--ws-chart-6)",
 ];
 
 /**

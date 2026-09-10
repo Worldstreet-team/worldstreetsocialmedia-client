@@ -589,7 +589,12 @@ export function CallSurface() {
 									tone="danger"
 									size="sm"
 								>
-									<RiPhoneFill size={18} />
+									{/* Rotated, not just red: accept and decline were the
+									    SAME upright handset and differed by hue alone, so
+									    a colour-blind person could hang up on a call they
+									    meant to take. 135deg is the hang-up glyph both
+									    phone platforms use. */}
+									<RiPhoneFill size={18} className="rotate-[135deg]" />
 								</ControlButton>
 								<ControlButton
 									label="Accept call"
@@ -997,7 +1002,8 @@ function Controls({
 					onClick={call.declineCall}
 					tone="danger"
 				>
-					<RiPhoneFill size={24} />
+					{/* See the banner above: shape carries decline, not colour. */}
+					<RiPhoneFill size={24} className="rotate-[135deg]" />
 				</ControlButton>
 				<ControlButton label="Accept call" onClick={call.acceptCall} tone="cta">
 					<RiPhoneFill size={24} />

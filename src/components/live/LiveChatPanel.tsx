@@ -425,6 +425,16 @@ export function LiveChatPanel({
 									>
 										{msg.username}
 									</span>
+									{/* A green username was the ONLY thing marking a
+									    moderator, and hue is the one channel a
+									    colour-blind reader does not have. The chip is
+									    the sibling Xstream one with danger swapped
+									    for success. */}
+									{msg.isMod && (
+										<span className="shrink-0 rounded-[4px] bg-success/15 px-1 py-px text-[calc(9px*var(--ws-fs))] font-bold uppercase tracking-wide text-success">
+											Mod
+										</span>
+									)}
 									{msg.platform !== "worldspace" && (
 										<span className="shrink-0 rounded-[4px] bg-danger/15 px-1 py-px text-[calc(9px*var(--ws-fs))] font-bold uppercase tracking-wide text-danger">
 											Xstream

@@ -175,7 +175,7 @@ export function MessageDock() {
 								{t("nav.messages")}
 								{onlineCount > 0 && (
 									<span className="ml-2 inline-flex items-center gap-1 font-normal text-subtle">
-										<span className="h-1.5 w-1.5 rounded-pill bg-success" />
+										<span className="h-1.5 w-1.5 rounded-pill bg-success ws-cue-online" />
 										<span className="tabular-nums">{onlineCount}</span>
 									</span>
 								)}

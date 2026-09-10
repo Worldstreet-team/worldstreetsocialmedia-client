@@ -1422,6 +1422,34 @@ html[data-ws-cv="achroma"] {
   --ws-status-danger: #6B6B6B;
 }
 
+/* Categorical chart colours.
+   Six slices is past any hue ramp a colour-blind reader can separate, so the
+   ladder is stepped by LUMINANCE as well as hue: it still reads as six
+   distinct greys with no hue at all. Charts pair it with per-slice patterns,
+   because a legend that matches by colour alone is unreadable either way. */
+:root {
+  --ws-chart-1: #7DD3FC;
+  --ws-chart-2: #34D399;
+  --ws-chart-3: #FBBF24;
+  --ws-chart-4: #A78BFA;
+  --ws-chart-5: #64748B;
+  --ws-chart-6: #3F3F46;
+}
+html[data-ws-cv="deuteran"] :root,
+html[data-ws-cv="deuteran"],
+html[data-ws-cv="protan"],
+html[data-ws-cv="tritan"],
+html[data-ws-cv="achroma"] {
+  /* One luminance staircase, .88 down to .16, so the order is legible even
+     when every hue collapses. */
+  --ws-chart-1: #E8EDF2;
+  --ws-chart-2: #B9C4CF;
+  --ws-chart-3: #8C9AA8;
+  --ws-chart-4: #64717E;
+  --ws-chart-5: #414B55;
+  --ws-chart-6: #232A31;
+}
+
 /* Symbols, not just colour. Redundant encoding is what actually fixes a
    hue-only signal; forced on by any colour-vision mode. */
 html[data-ws-cues] .ws-cue-up::before { content: "▲ "; }
