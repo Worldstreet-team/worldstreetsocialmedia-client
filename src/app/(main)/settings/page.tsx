@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { Check, Moon, Sun } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { Tabs, type TabItem } from "@/components/ui/Tabs";
+import GlassSelect, { type GlassOption } from "@/components/ui/GlassSelect";
 import { AccessibilitySettings } from "@/components/settings/AccessibilitySettings";
 import { ContentSettings, DataSettings } from "@/components/settings/DataSettings";
 import { MessagingSettings } from "@/components/settings/MessagingSettings";
@@ -148,7 +148,10 @@ export default function SettingsPage() {
 
 	const isLight = resolvedTheme === "light";
 
-	const tabs: TabItem<Section>[] = [
+	// A select, not a tab row (owner 2026-09-11). Seven sections is past what
+	// a strip can hold without scrolling on a phone, and the settings surface
+	// is still growing - a select carries twenty as easily as seven.
+	const sections: GlassOption[] = [
 		{ key: "account", label: t("settings.tab.account") },
 		{ key: "premium", label: t("settings.tab.premium") },
 		{ key: "topics", label: t("settings.tab.topics") },
@@ -156,26 +159,31 @@ export default function SettingsPage() {
 		{ key: "safety", label: t("settings.tab.safety") },
 		{ key: "display", label: t("settings.tab.display") },
 		{ key: "data", label: "Data & feed" },
-	];
+	].map(({ key, label }) => ({ id: key, label }));
 
 	return (
 		<div className="flex min-h-dvh flex-col pb-nav md:pb-20">
 			<header className="sticky top-0 z-sticky border-b border-hairline bg-page md:top-0">
-				<div className="px-4 py-3">
-					<h1 className="font-display text-lg font-semibold text-primary">
-						{t("settings.title")}
-					</h1>
-					<div className="font-sans text-[calc(13px*var(--ws-fs))] text-muted">
-						@{user?.username}
+				<div className="flex items-center justify-between gap-3 px-4 py-3">
+					<div className="min-w-0">
+						<h1 className="font-display text-lg font-semibold text-primary">
+							{t("settings.title")}
+						</h1>
+						<div className="font-sans text-[calc(13px*var(--ws-fs))] text-muted">
+							@{user?.username}
+						</div>
 					</div>
+					{/* The section picker rides the right of the title, so the
+					    header is one line instead of a title plus a strip that
+					    scrolls sideways once there are more than five sections. */}
+					<GlassSelect
+						value={section}
+						options={sections}
+						onChange={(id) => setSection(id as Section)}
+						label={t("settings.title")}
+						className="w-[168px] shrink-0 sm:w-[190px]"
+					/>
 				</div>
-				<Tabs
-					items={tabs}
-					value={section}
-					onChange={setSection}
-					ariaLabel={t("settings.title")}
-					className="px-2 pb-2"
-				/>
 			</header>
 
 			<div className="flex flex-col gap-6 px-4 py-4">
