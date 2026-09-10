@@ -160,6 +160,13 @@ export interface BubbleLift {
 	mine: boolean;
 }
 
+const R = "var(--chat-r, 22px)";
+const RIN = "var(--chat-r-in, 8px)";
+const MINE_FILL = "var(--chat-mine, linear-gradient(135deg, var(--ws-brand-primary), #6D5BFF))";
+const MINE_INK = "var(--chat-mine-ink, #FFFFFF)";
+const THEIRS_FILL = "var(--chat-theirs, var(--ws-bg-raised))";
+const THEIRS_INK = "var(--chat-theirs-ink, var(--ws-text-primary))";
+
 export interface BubbleProps {
 	m: BubbleMessage;
 	isMe: boolean;
@@ -570,37 +577,26 @@ export const MessageBubble = memo(function MessageBubble({
 						data-bubble
 						className={clsx(
 							"relative min-w-0 max-w-full overflow-hidden",
-							// Owner picks 2026-09-03: gradient accent for mine (B),
-							// 22px radius with an 8px inner run corner (D), 14px/1.6
-							// body (C). A GIF/photo-only bubble has no fill of its own.
+							// A GIF/photo-only bubble has no fill of its own.
 							(m.type === "image" || m.type === "video") && !m.content
-								? "p-0"
+								? "p-0 text-primary"
 								: "px-4 py-2.5",
-							"rounded-[22px]",
-							(m.type === "image" || m.type === "video") && !m.content
-								? "text-primary"
-								: isMe
-									? "text-white"
-									: "bg-raised text-primary",
-							isMe
-								? [
-										sameRunAsPrev && "rounded-tr-[8px]",
-										!endsRun && "rounded-br-[8px]",
-									]
-								: [
-										sameRunAsPrev && "rounded-tl-[8px]",
-										!endsRun && "rounded-bl-[8px]",
-									],
 						)}
-						style={
-							isMe &&
-							!((m.type === "image" || m.type === "video") && !m.content)
-								? {
-										backgroundImage:
-											"linear-gradient(135deg, var(--ws-brand-primary), #6D5BFF)",
-									}
-								: undefined
-						}
+						// Fill, ink and corners come from the thread's theme
+						// variables (theme pack 2026-09-10); the fallbacks are
+						// the owner's 2026-09-03 picks - gradient mine, raised
+						// theirs, 22px with an 8px inner run corner - so a
+						// bubble outside a themed pane (the dock) looks as before.
+						style={{
+							borderRadius: isMe
+								? `${R} ${sameRunAsPrev ? RIN : R} ${!endsRun ? RIN : R} ${R}`
+								: `${sameRunAsPrev ? RIN : R} ${R} ${R} ${!endsRun ? RIN : R}`,
+							...((m.type === "image" || m.type === "video") && !m.content
+								? {}
+								: isMe
+									? { background: MINE_FILL, color: MINE_INK }
+									: { background: THEIRS_FILL, color: THEIRS_INK }),
+						}}
 					>
 						{isGroup && !isMe && !sameRunAsPrev && (
 							<span

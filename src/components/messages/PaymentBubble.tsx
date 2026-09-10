@@ -81,14 +81,11 @@ export function PaymentBubble({
 			<div
 				className={clsx(
 					"min-w-[200px] max-w-[280px] rounded-[22px] px-4 py-3",
-					mine ? "text-white" : "bg-raised text-primary",
+					mine ? "" : "bg-raised text-primary",
 				)}
 				style={
 					mine
-						? {
-								backgroundImage:
-									"linear-gradient(135deg, var(--ws-brand-primary), #6D5BFF)",
-							}
+						? { background: "var(--chat-mine, linear-gradient(135deg, var(--ws-brand-primary), #6D5BFF))", color: "var(--chat-mine-ink, #FFFFFF)" }
 						: undefined
 				}
 			>

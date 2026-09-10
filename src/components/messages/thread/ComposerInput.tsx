@@ -267,7 +267,8 @@ export const ComposerInput = forwardRef<
 							onClick={() => void send()}
 							disabled={disabled}
 							aria-label="Send message"
-							className="flex h-7 w-7 items-center justify-center bg-brand text-brand-on rounded-pill hover:bg-brand-active transition-colors disabled:opacity-50 cursor-pointer animate-pop"
+							style={{ background: "var(--chat-mine, linear-gradient(135deg, var(--ws-brand-primary), #6D5BFF))", color: "var(--chat-mine-ink, #FFFFFF)" }}
+							className="flex h-7 w-7 items-center justify-center rounded-pill transition-opacity hover:opacity-90 disabled:opacity-50 cursor-pointer animate-pop"
 						>
 							<RiArrowUpLine size={17} />
 						</button>

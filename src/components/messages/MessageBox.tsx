@@ -60,6 +60,22 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCall } from "@/providers/CallProvider";
 import { useChatSignals } from "@/hooks/useChatSignals";
 import { ThreadList } from "@/components/messages/thread/ThreadList";
+import {
+	type ChatTheme,
+	type ThemeByMode,
+	type ThemeScope,
+	resolveTheme,
+	themeVars,
+} from "@/components/messages/theme/chatTheme";
+import { ThemeBackdrop } from "@/components/messages/theme/ThemeBackdrop";
+import { ThemeGallery } from "@/components/messages/theme/ThemeGallery";
+import { ThemeStudio } from "@/components/messages/theme/ThemeStudio";
+import {
+	fetchGlobalTheme,
+	saveChatTheme,
+	saveGlobalTheme,
+} from "@/components/messages/theme/themeApi";
+import { RiPaletteLine } from "@remixicon/react";
 import type { BubbleLift } from "@/components/messages/thread/MessageBubble";
 import {
 	ComposerInput,
@@ -97,10 +113,6 @@ import {
 // too), which is Phosphor-typed and drives its own active weight. The Remix
 // swap is for the chat MESSAGE glyphs, not the tab chrome.
 import { Tray } from "@phosphor-icons/react";
-import {
-	DEFAULT_WALLPAPER,
-	type WallpaperSetting,
-} from "@/components/messages/thread/wallpaper";
 import { SendMoneySheet } from "@/components/messages/SendMoneySheet";
 import { GroupSheet } from "@/components/messages/GroupSheet";
 import { GroupCreateModal } from "@/components/messages/GroupCreateModal";
@@ -307,7 +319,8 @@ interface Conversation {
 		profile: string | { _id: string };
 		readUpTo?: string;
 		readUpToAt?: string;
-		wallpaper?: WallpaperSetting;
+		/** My chat theme for THIS thread, per mode (theme pack 2026-09-10). */
+		theme?: ThemeByMode;
 	}[];
 }
 
@@ -392,8 +405,13 @@ export const MessageBox = ({
 	// Virtuoso backwards-pagination plumbing (register items 24-25).
 	const [firstItemIndex, setFirstItemIndex] = useState(100000);
 	const [pendingNew, setPendingNew] = useState(0);
-	// W2 skin: per-thread wallpaper + the send pulse that rotates gradients.
-	const [wallpaper, setWallpaper] = useState<WallpaperSetting>(DEFAULT_WALLPAPER);
+	// The chat theme pack (owner 2026-09-10). Global (profile) + per-chat
+	// (member record); per-chat wins; both per mode. Painted as CSS
+	// variables on the thread pane, so a theme change re-paints without
+	// re-rendering a single memoised bubble.
+	const [globalTheme, setGlobalTheme] = useState<ThemeByMode>({});
+	const [themeSheet, setThemeSheet] = useState<null | "gallery" | { studio: ThemeScope }>(null);
+	const [themeSaving, setThemeSaving] = useState(false);
 	const [sendPulse, setSendPulse] = useState(0);
 	const hasMoreOlderRef = useRef(true);
 	const loadingOlderRef = useRef(false);
@@ -497,6 +515,65 @@ export const MessageBox = ({
 	const [showSendMoney, setShowSendMoney] = useState(false);
 	// Picker follows the app theme instead of hardcoding dark.
 	const { resolvedTheme } = useTheme();
+	const themeMode = resolvedTheme === "light" ? "light" : "dark";
+	const myMemberTheme = useMemo(() => {
+		const mine = activeConversation?.members?.find((mm) => {
+			const pid = typeof mm.profile === "string" ? mm.profile : mm.profile?._id;
+			return String(pid) === String(myProfileId);
+		});
+		return mine?.theme;
+	}, [activeConversation, myProfileId]);
+	const chatTheme = useMemo(
+		() => resolveTheme(myMemberTheme, globalTheme, themeMode),
+		[myMemberTheme, globalTheme, themeMode],
+	);
+	const inboxTheme = useMemo(
+		() => resolveTheme(undefined, globalTheme, themeMode),
+		[globalTheme, themeMode],
+	);
+	useEffect(() => {
+		let gone = false;
+		void fetchGlobalTheme(getToken)
+			.then((t) => {
+				if (!gone) setGlobalTheme(t);
+			})
+			.catch(() => {});
+		return () => {
+			gone = true;
+		};
+	}, [getToken]);
+	/** Save to this chat or everywhere; null = back to the house default. */
+	const applyTheme = async (theme: ChatTheme | null, scope: ThemeScope) => {
+		setThemeSaving(true);
+		try {
+			if (scope === "all") {
+				setGlobalTheme(await saveGlobalTheme(getToken, themeMode, theme));
+			} else if (activeConversation) {
+				const convId = activeConversation._id;
+				const next = await saveChatTheme(getToken, convId, themeMode, theme);
+				const patchMembers = (c: Conversation): Conversation =>
+					c._id !== convId
+						? c
+						: {
+								...c,
+								members: (c.members ?? []).map((mm) => {
+									const pid =
+										typeof mm.profile === "string" ? mm.profile : mm.profile?._id;
+									return String(pid) === String(myProfileId)
+										? { ...mm, theme: next }
+										: mm;
+								}),
+							};
+				setConversations((prev) => prev.map(patchMembers));
+				setActiveConversation((prev) => (prev ? patchMembers(prev) : prev));
+			}
+			setThemeSheet(null);
+		} catch {
+			toast.error("Couldn't save the theme");
+		} finally {
+			setThemeSaving(false);
+		}
+	};
 	const [showNewConversationModal, setShowNewConversationModal] = useState(false);
 	// The header count is the sum of the rows, derived — never its own state.
 	// A second copy of a number that is already on screen is a number that
@@ -1407,6 +1484,11 @@ export const MessageBox = ({
 	}, [getToken]);
 
 	const onMessage = useCallback((ablyMessage: any) => {
+		if (ablyMessage?.data?.type === "theme:updated") {
+			// Another tab or device saved the profile theme.
+			void fetchGlobalTheme(getToken).then(setGlobalTheme).catch(() => {});
+			return;
+		}
 		if (
 			ablyMessage.name === "event" &&
 			(ablyMessage.data.type === "conversation:deleted" ||
@@ -2005,19 +2087,14 @@ export const MessageBox = ({
 		if (activeConversation) fetchMessages(activeConversation._id);
 	}, [activeConversation?._id]); // Only trigger when ID changes
 
-	useEffect(() => {
-		const mine = activeConversation?.members?.find((mm) => {
-			const pid = typeof mm.profile === "string" ? mm.profile : mm.profile?._id;
-			return String(pid) === String(myProfileId);
-		}) as { wallpaper?: WallpaperSetting } | undefined;
-		setWallpaper(mine?.wallpaper ? { ...mine.wallpaper } : DEFAULT_WALLPAPER);
-		// biome-ignore lint/correctness/useExhaustiveDependencies: identity by thread
-	}, [activeConversation?._id, myProfileId]);
 
 	return (
 		// 100dvh, not 100vh: on mobile 100vh is the address-bar-expanded height,
 		// so the composer sat below the fold until the bar collapsed.
 		<div className="relative flex h-[100dvh] bg-page text-primary overflow-hidden">
+			{/* The profile theme's picture sits behind the whole surface; the
+			    inbox rail is transparent over it, the thread paints its own. */}
+			<ThemeBackdrop wallpaper={inboxTheme.wallpaper} />
 			{myProfileId && isConnected && (
 				<UserMessageSubscription
 					channelName={`user:${myProfileId}`}
@@ -2198,19 +2275,18 @@ export const MessageBox = ({
 			{/* Chat Area. Open and close are STATIC (owner 2026-09-06): the
 			    pane appears and disappears in place — no push, no slide.
 			    The desktop class stays md:relative and NOT md:static:
-			    ThreadBackdrop is absolute inset-0 and needs this pane as its
+			    ThemeBackdrop is absolute inset-0 and needs this pane as its
 			    positioned ancestor; static let it resolve against the whole
 			    MessageBox and paint over the inbox list. */}
 			{activeConversation ? (
 				<div
 					key={activeConversation._id}
+					style={themeVars(chatTheme)}
 					className="absolute inset-0 z-10 flex min-w-0 flex-col bg-page md:relative md:inset-auto md:z-auto md:flex-1 md:border-l md:border-hairline"
 				>
-					{/* Wallpapers are HIDDEN (owner 2026-09-03): the thread keeps
-					    the app's own monochrome ground. ThreadBackdrop and the
-					    appearance sheet stay in the tree for a future return. */}
-					{/* Transparent over the pane's own tint — glass over a flat
-					    colour is just a grey box (house glass rule). */}
+					{/* This chat's picture (per-chat theme, else the profile's).
+					    Header, list and composer are transparent over it. */}
+					<ThemeBackdrop wallpaper={chatTheme.wallpaper} />
 					<div className="relative z-10 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-hairline/60 px-2 md:px-5">
 						<div className="flex items-center gap-2 md:gap-3 min-w-0">
 							<button
@@ -2346,6 +2422,15 @@ export const MessageBox = ({
 								</Link>
 							)}
 						</div>
+					<button
+							type="button"
+							onClick={() => setThemeSheet("gallery")}
+							aria-label="Chat theme"
+							title="Chat theme"
+							className="mr-1.5 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/10 hover:text-primary"
+						>
+							<RiPaletteLine size={20} />
+						</button>
 					{/* Audio | video as ONE segmented pill (owner 2026-09-06):
 						    no outer border, the faint white wash as fill, a
 						    hairline between the segments. */}
@@ -2835,7 +2920,7 @@ export const MessageBox = ({
 							top: flight.to.top,
 							width: flight.to.width,
 							borderRadius: 22,
-							backgroundColor: "var(--ws-brand-primary)",
+							backgroundColor: "var(--chat-accent, var(--ws-brand-primary))",
 							opacity: 1,
 						}}
 						exit={{ opacity: 0, transition: { duration: 0.1 } }}
@@ -3134,6 +3219,30 @@ export const MessageBox = ({
 				);
 			})()}
 
+			{themeSheet === "gallery" && activeConversation && (
+				<ThemeGallery
+					mode={themeMode}
+					current={chatTheme}
+					isGroup={isGroupThread}
+					saving={themeSaving}
+					onClose={() => setThemeSheet(null)}
+					onApply={(t, scope) => void applyTheme(t, scope)}
+					onReset={(scope) => void applyTheme(null, scope)}
+					onAdvanced={(scope) => setThemeSheet({ studio: scope })}
+				/>
+			)}
+			{themeSheet && themeSheet !== "gallery" && activeConversation && (
+				<ThemeStudio
+					mode={themeMode}
+					initial={chatTheme}
+					scope={themeSheet.studio}
+					conversationId={activeConversation._id}
+					isGroup={isGroupThread}
+					saving={themeSaving}
+					onClose={() => setThemeSheet(null)}
+					onSave={(t, scope) => void applyTheme(t, scope)}
+				/>
+			)}
 			<NewConversationModal
 				isOpen={showNewConversationModal}
 				onClose={() => setShowNewConversationModal(false)}
