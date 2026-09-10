@@ -853,6 +853,15 @@ class CallManager {
 					error: null,
 					startedAt: null,
 				});
+				// Phones stop ringing on their own. In a DM the caller's
+				// cancel did that for us; in a GROUP the first accept clears
+				// the caller's timer and a later hang-up sends nothing, so
+				// members who never answered rang forever (audit 2026-09-10).
+				this.ringTimer = setTimeout(() => {
+					if (this.state.status === "ringing" && this.state.isIncoming) {
+						this.finish("unanswered");
+					}
+				}, RING_TIMEOUT_MS);
 				break;
 			}
 			case "call:accept":
@@ -874,7 +883,10 @@ class CallManager {
 				this.finish("busy");
 				break;
 			case "call:cancel":
-				if (this.state.isIncoming) this.finish("cancelled");
+				// Only a phone still RINGING is cancelled - a member already
+				// in the room must not be dropped by the caller giving up.
+				if (this.state.isIncoming && this.state.status === "ringing")
+					this.finish("cancelled");
 				break;
 			case "call:end":
 				// A group leg ends by LEAVING THE ROOM; the disconnect event

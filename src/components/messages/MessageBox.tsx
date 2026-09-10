@@ -657,6 +657,8 @@ export const MessageBox = ({
 
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const activeIdRef = useRef<string | null>(null);
+	/** True once any thread has been opened this mount (see fetchConversations). */
+	const openedOnceRef = useRef(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const searchInputRef = useRef<HTMLInputElement>(null);
 	// ── The composer tray: up to 8 files queued before a send ──
@@ -1106,6 +1108,7 @@ export const MessageBox = ({
 	// Sync ref with state so real-time listener stays updated
 	useEffect(() => {
 		activeIdRef.current = activeConversation?._id || null;
+		if (activeConversation?._id) openedOnceRef.current = true;
 		if (activeConversation?._id) {
 			markAsRead(activeConversation._id);
 			chatRef.current.notifyRead();
@@ -1287,9 +1290,17 @@ export const MessageBox = ({
 				);
 			})();
 
-			if (initialConversationId) {
+			// Re-sync the thread that is actually OPEN. Opens are shallow
+			// pushStates, so the mount-time route param goes stale; keying
+			// on it flipped the pane back to the URL's thread on every
+			// refetch (group rename, add, lock...). The prop only picks the
+			// first thread when nothing has been opened yet.
+			const wantId =
+				activeIdRef.current ??
+				(openedOnceRef.current ? null : initialConversationId);
+			if (wantId) {
 				const target = response.data.find(
-					(c: Conversation) => c._id === initialConversationId,
+					(c: Conversation) => c._id === wantId,
 				);
 				if (target) setActiveConversation(target);
 			}
@@ -1509,7 +1520,12 @@ export const MessageBox = ({
 			const known = conversationsRef.current.some(
 				(c) => c._id === conversationId,
 			);
-			if (!known) void fetchConversations();
+			// A system row IS a group change (rename, add, remove, lock,
+			// role). Refetch so the header, roster, mention candidates and
+			// the composer lock reflect it for every member, not only the
+			// actor whose sheet refetched (audit 2026-09-10).
+			if (!known || newMessage?.type === "system")
+				void fetchConversations();
 
 			setConversations((prev) => {
 				const index = prev.findIndex((c) => c._id === conversationId);
@@ -1763,6 +1779,24 @@ export const MessageBox = ({
 		onReaction: (e) => {
 			const convId = activeIdRef.current;
 			if (!convId) return;
+			// The conversation channel is publish-open to any signed-in
+			// client, so only a sender who is actually in this thread may
+			// paint a reaction (audit 2026-09-10).
+			const conv = conversationsRef.current.find((c) => c._id === convId);
+			if (conv && e.from) {
+				const allowed =
+					(conv as any).kind === "group"
+						? new Set(
+								((conv as any).members ?? [])
+									.filter((m: any) => !m.leftAt)
+									.map((m: any) => String(m.profile?._id ?? m.profile)),
+							)
+						: new Set([
+								String(conv.otherParticipant?._id ?? ""),
+								String(myProfileId ?? ""),
+							]);
+				if (!allowed.has(e.from)) return;
+			}
 			setMessageCache((prev) => ({
 				...prev,
 				[convId]: (prev[convId] || []).map((m) =>
@@ -1914,6 +1948,23 @@ export const MessageBox = ({
 				void openStoryRef(ref),
 			onCallBack: (video: boolean) => {
 				if (!activeConversation) return;
+				// Same branch as the header buttons: a group call-back was
+				// placing a DM-shaped call into the room, so the first
+				// member to decline ended it for everyone (audit 2026-09-10).
+				if ((activeConversation as any).kind === "group") {
+					startCall({
+						conversationId: activeConversation._id,
+						peer: {
+							id: activeConversation._id,
+							name: headerIdentity.title,
+							avatar: headerIdentity.avatar,
+							username: "",
+						},
+						isVideo: video,
+						isGroup: true,
+					});
+					return;
+				}
 				startCall({
 					conversationId: activeConversation._id,
 					peer: {

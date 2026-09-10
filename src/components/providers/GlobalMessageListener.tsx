@@ -29,6 +29,10 @@ export default function GlobalMessageListener() {
 
 			const { message: newMessage, conversationId } = message.data;
 
+			// A rename, a lock or a join is thread news, not a message from
+			// someone - no badge, no "New message from" toast (audit 2026-09-10).
+			if (newMessage?.type === "system") return;
+
 			// Own echo from another device/tab (W1 multi-device fanout): the
 			// badge and toast are for the RECIPIENT, not the author.
 			if (String(newMessage?.sender?._id) === String(user._id)) return;

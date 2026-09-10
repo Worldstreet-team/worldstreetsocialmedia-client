@@ -71,6 +71,8 @@ export function useChatSignals({
 	onReaction?: (e: {
 		messageId: string;
 		reactions: { profile: string; emoji: string }[];
+		/** Who published it - the reader checks this against the roster. */
+		from?: string;
 	}) => void;
 }): ChatSignals {
 	const { client } = useRealtime();
@@ -167,6 +169,7 @@ export function useChatSignals({
 							reactions: Array.isArray(message.data.reactions)
 								? message.data.reactions
 								: [],
+							from: String(from),
 						});
 					break;
 				case "recording":
