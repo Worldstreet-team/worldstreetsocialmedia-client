@@ -506,6 +506,9 @@ export function VideoPlayer({
 				// layout boxes while skipped, so the observer could never fire on
 				// iOS until the browser un-skipped it (audit 2026-09-01).
 				autoPlay
+				// Feed clips run continuously (owner 2026-09-10) - a short
+				// vertical that stops on its last frame reads as broken.
+				loop={fitToMedia}
 				preload="metadata"
 				muted={muted}
 				className="h-full w-full object-contain"
@@ -684,6 +687,9 @@ export function VideoPlayer({
 					</span>
 				</span>
 			)}
+			{/* A plain glyph (owner 2026-09-10: "simple icons"), not a glass
+			    disc. The shadow is what keeps it legible over a bright frame;
+			    the hit target is the whole frame. */}
 			{!playing && (
 				<button
 					type="button"
@@ -691,9 +697,11 @@ export function VideoPlayer({
 					aria-label="Play"
 					className="absolute inset-0 flex cursor-pointer items-center justify-center"
 				>
-					<span className="flex h-16 w-16 items-center justify-center rounded-pill glass-dock backdrop-blur-xl backdrop-saturate-150 glass-ink">
-						<Play size={26} weight="fill" className="translate-x-[2px]" />
-					</span>
+					<Play
+						size={44}
+						weight="fill"
+						className="translate-x-[2px] text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.55)]"
+					/>
 				</button>
 			)}
 
@@ -703,7 +711,44 @@ export function VideoPlayer({
 				</span>
 			)}
 
-			{/* control bar */}
+			{/* Feed chrome (owner 2026-09-10): two bare glyphs, mute and
+			    expand, and nothing else - no track, no clock, no bar. The
+			    seek bar is a full-screen thing; a card in a feed is watched,
+			    not scrubbed. */}
+			{fitToMedia && !full && (
+				<div
+					className={clsx(
+						"absolute bottom-2 right-2 flex items-center transition-opacity duration-200",
+						chromeOn || pinned
+							? "opacity-100"
+							: "pointer-events-none opacity-0",
+					)}
+				>
+					<button
+						type="button"
+						onClick={() => setMuted((m) => !m)}
+						aria-label={muted ? "Unmute" : "Mute"}
+						className="flex h-10 w-10 cursor-pointer items-center justify-center text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)]"
+					>
+						{muted ? (
+							<SpeakerSimpleX size={18} weight="fill" />
+						) : (
+							<SpeakerSimpleHigh size={18} weight="fill" />
+						)}
+					</button>
+					<button
+						type="button"
+						onClick={toggleFull}
+						aria-label="Full screen"
+						className="flex h-10 w-10 cursor-pointer items-center justify-center text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)]"
+					>
+						<ArrowsOut size={18} weight="bold" />
+					</button>
+				</div>
+			)}
+
+			{/* control bar - full screen, and every non-feed player */}
+			{!(fitToMedia && !full) && (
 			<div
 				onPointerEnter={() => setOverBar(true)}
 				onPointerLeave={() => setOverBar(false)}
@@ -797,6 +842,7 @@ export function VideoPlayer({
 					</button>
 				</div>
 			</div>
+			)}
 		</div>
 	);
 }
