@@ -67,7 +67,7 @@ export function MarketMark({ className }: { className?: string }) {
  */
 export function MarketSquareLockup({
 	markClassName = "h-[20px] w-auto",
-	wordClassName = "font-display text-[18px] font-semibold leading-none",
+	wordClassName = "font-display text-[calc(18px*var(--ws-fs))] font-semibold leading-none",
 }: {
 	markClassName?: string;
 	wordClassName?: string;

@@ -22,12 +22,16 @@ const TIER_STOPS: Record<VerifiedTier, [string, string][]> = {
 		["82%", "#C88A06"],
 		["100%", "#A16207"],
 	],
+	// Stepped a notch darker than it was, so silver sits BELOW gold and
+	// above bronze on luminance as well as hue. The old mid (#B8BCC4, Y
+	// .502) was within .005 of gold's (#EAB308, Y .497): to anyone who
+	// cannot separate the hues, the two tiers were one grey.
 	silver: [
-		["0%", "#FFFFFF"],
-		["30%", "#E5E7EB"],
-		["58%", "#B8BCC4"],
-		["82%", "#8B919C"],
-		["100%", "#6B7280"],
+		["0%", "#EDEFF2"],
+		["30%", "#C9CDD4"],
+		["58%", "#9AA0AA"],
+		["82%", "#767C86"],
+		["100%", "#565C66"],
 	],
 	bronze: [
 		["0%", "#F5CFA0"],

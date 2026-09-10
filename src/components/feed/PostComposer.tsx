@@ -1,5 +1,7 @@
 "use client";
 
+import { AlertTriangle } from "lucide-react";
+
 import dynamic from "next/dynamic";
 
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
@@ -135,10 +137,22 @@ const CharacterRing = ({
 				? "text-warning"
 				: "text-gold";
 
+	// pct clamps at 1, so at-limit and over-limit draw an identical full arc
+	// and only the hue separated them - and deuteranopia renders warning and
+	// danger as one brown. Over-limit gets a glyph.
+	const over = remaining < 0;
+
 	if (length === 0) return null;
 
 	return (
 		<div className="flex items-center gap-2">
+			{over && (
+				<AlertTriangle
+					size={14}
+					aria-hidden
+					className={clsx("shrink-0", tone)}
+				/>
+			)}
 			{remaining <= 28 && (
 				<span
 					className={clsx(
@@ -1219,6 +1233,11 @@ export const PostComposer = ({
 									onChange={(e) => setSaleTitle(e.target.value.slice(0, 80))}
 									placeholder="Title buyers will see"
 									aria-label="Paid post title"
+									// A 50%-opacity red border was the only sign the
+									// title was required, and in achromatopsia it is
+									// within a hair of border-hairline. The invalid
+									// state is announced, and the hint below says so.
+									aria-invalid={Boolean(saleTitleMissing && salePrice)}
 									className={clsx(
 										"h-9 w-full min-w-0 flex-1 basis-full rounded-pill border bg-sunken px-3.5 font-sans text-[calc(13px*var(--ws-fs))] text-primary outline-none transition-colors placeholder:text-subtle sm:basis-auto",
 										saleTitleMissing && salePrice
@@ -1245,12 +1264,16 @@ export const PostComposer = ({
 								<span
 									className={clsx(
 										"font-sans text-[calc(11.5px*var(--ws-fs))]",
-										saleInvalid && salePrice ? "text-danger" : "text-subtle",
+										(saleInvalid || saleTitleMissing) && salePrice
+											? "text-danger"
+											: "text-subtle",
 									)}
 								>
-									{saleInvalid && salePrice
-										? t("composer.sellBounds")
-										: t("composer.sellSplit")}
+									{saleTitleMissing && salePrice
+										? "Add a title buyers will see"
+										: saleInvalid && salePrice
+											? t("composer.sellBounds")
+											: t("composer.sellSplit")}
 								</span>
 								{/* Some sellers don't want a taste out there at all
 								    (owner ask): title + honest counts only. */}

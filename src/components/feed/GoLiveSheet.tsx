@@ -701,7 +701,9 @@ export function GoLiveSheet({
 											<span
 												className={clsx(
 													"relative h-5 w-9 shrink-0 rounded-pill transition-colors",
-													nativeMode ? "bg-success/80" : "bg-track",
+													// bg-brand, not success: no colour-vision mode retints brand,
+													// so the near-white thumb never merges into its track.
+													nativeMode ? "bg-brand" : "bg-track",
 												)}
 											>
 												<span
@@ -727,7 +729,7 @@ export function GoLiveSheet({
 									<span
 										className={clsx(
 											"relative h-5 w-9 shrink-0 rounded-pill transition-colors",
-											notifyFollowers ? "bg-success/80" : "bg-track",
+											notifyFollowers ? "bg-brand" : "bg-track",
 										)}
 									>
 										<span

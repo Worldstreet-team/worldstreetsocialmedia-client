@@ -1,5 +1,7 @@
 "use client";
 
+import { RiErrorWarningFill } from "@remixicon/react";
+
 import {
   Broadcast,
   CalendarPlus,
@@ -362,7 +364,14 @@ export default function CreateSpaceSheet({
                 </button>
               )}
               {coverError && (
-                <p className="mt-2 font-sans text-[calc(12px*var(--ws-fs))] text-danger">
+                <p
+                  role="alert"
+                  className="mt-2 flex items-center gap-1 font-sans text-[calc(12px*var(--ws-fs))] text-danger"
+                >
+                  {/* A glyph, not just the hue: under achromatopsia danger
+                      resolves darker than text-subtle, so this line read
+                      quieter than the placeholder sitting above it. */}
+                  <RiErrorWarningFill size={13} className="shrink-0" />
                   {coverError}
                 </p>
               )}

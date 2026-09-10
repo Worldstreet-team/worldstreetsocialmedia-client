@@ -20,8 +20,18 @@ export function WolfIcon({
   tier?: "champion" | "finalist" | "contender";
   title?: string;
 }) {
-  // Champion is the full gold pelt; the lower tiers desaturate toward stone so
-  // the standings are readable at a glance without a second glyph.
+  // Champion is the full gold pelt; the lower tiers desaturate toward stone.
+  //
+  // NOT readable without a second glyph, despite what this comment used to
+  // claim: champion and finalist sit 2.5:1 apart in luminance and finalist
+  // and contender 1.6:1, both under the 3:1 floor for non-text, and all
+  // three are one hue family. Three tiers cannot all separate by luminance
+  // in a range that stays visible on the dark ground, so the real fix is
+  // 1/2/3 pips under the mark, revealed by html[data-ws-cues] - which
+  // changes the mark's footprint everywhere it is used and so is a layout
+  // decision, not a colour one. Until then a leaderboard row must name the
+  // standing in text beside this mark; the <title> below is assistive-only
+  // and a sighted colour-blind reader gets nothing from it.
   const light =
     tier === "contender" ? "#A8A29E" : tier === "finalist" ? "#D6B76B" : "#F5CE4E";
   const mid =
