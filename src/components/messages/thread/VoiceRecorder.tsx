@@ -122,7 +122,14 @@ export function VoiceRecorder({
 	const levelsRef = useRef<number[]>([]);
 	const lastSampleRef = useRef(0);
 	const elapsedMsRef = useRef(0);
-	const lastTickRef = useRef(0);
+	// null until the MediaRecorder is actually running. The rAF loop below
+	// mounts with phase "live" BEFORE getUserMedia resolves, and it used to
+	// accumulate `now - 0` on its first frame - performance.now() is time
+	// since the page loaded, so opening the recorder on a tab that had been
+	// up for four minutes started the clock at 4:00 and wrote that into the
+	// note's durationSec (owner 2026-09-10).
+	const lastTickRef = useRef<number | null>(null);
+	const recordingRef = useRef(false);
 	const rafRef = useRef<number | undefined>(undefined);
 	const canvasRef = useRef<HTMLCanvasElement | null>(null);
 	const hintRef = useRef<HTMLDivElement | null>(null);
@@ -151,6 +158,9 @@ export function VoiceRecorder({
 		(mode: "discard" | "review" | "send") => {
 			const rec = recorderRef.current;
 			onStopModeRef.current = mode;
+			// Freeze the clock the moment we ask it to stop, so the tail of
+			// frames between stop() and onstop cannot inflate the duration.
+			recordingRef.current = false;
 			if (!rec || rec.state === "inactive") {
 				if (mode === "discard") onClose();
 				return;
@@ -247,7 +257,11 @@ export function VoiceRecorder({
 					analyserRef.current = analyser;
 				}
 				rec.start(250);
+				// The clock starts HERE, not at mount: everything before this
+				// (the permission prompt especially) is not recorded audio.
+				elapsedMsRef.current = 0;
 				lastTickRef.current = performance.now();
+				recordingRef.current = true;
 			} catch {
 				onError("Microphone access denied");
 				onClose();
@@ -267,6 +281,10 @@ export function VoiceRecorder({
 		const data = new Uint8Array(1024);
 		const step = (now: number) => {
 			rafRef.current = requestAnimationFrame(step);
+			if (!recordingRef.current || lastTickRef.current === null) {
+				// Waiting on the mic. Draw nothing, count nothing.
+				return;
+			}
 			if (pausedRef.current) {
 				lastTickRef.current = now;
 				return;
