@@ -121,16 +121,15 @@ const HOUSE_BUBBLES: ThemeBubbles = {
 	shape: "rounded",
 };
 
-/** What a chat looks like before anyone opens the editor. */
+/**
+ * What a chat looks like before anyone opens the editor: the app's own
+ * flat ground, the same colour as the sidebar (owner, repeatedly). A
+ * picture is something a person CHOOSES, never something we impose.
+ */
+const FLAT: ThemeWallpaper = { type: "flat", frost: 0, hue: "none", dim: 0 };
 export const HOUSE_DEFAULT: Record<ThemeMode, ChatTheme> = {
-	dark: {
-		wallpaper: { type: "preset", preset: "forest", frost: 60, hue: "cyan", dim: 25 },
-		bubbles: HOUSE_BUBBLES,
-	},
-	light: {
-		wallpaper: { type: "preset", preset: "mist", frost: 50, hue: "none", dim: 0 },
-		bubbles: HOUSE_BUBBLES,
-	},
+	dark: { wallpaper: { ...FLAT }, bubbles: HOUSE_BUBBLES },
+	light: { wallpaper: { ...FLAT }, bubbles: HOUSE_BUBBLES },
 };
 
 const fill = (id: string): MineFill =>
@@ -143,16 +142,29 @@ export const THEME_CARDS: {
 	dark: ChatTheme;
 	light: ChatTheme;
 }[] = [
-	{ id: "tide", label: "Tide", dark: HOUSE_DEFAULT.dark, light: HOUSE_DEFAULT.light },
+	// Flat first: it is the default and the one most people should keep.
+	{ id: "flat", label: "Flat", dark: HOUSE_DEFAULT.dark, light: HOUSE_DEFAULT.light },
+	{
+		id: "tide",
+		label: "Tide",
+		dark: {
+			wallpaper: { type: "preset", preset: "forest", frost: 22, hue: "cyan", dim: 30 },
+			bubbles: HOUSE_BUBBLES,
+		},
+		light: {
+			wallpaper: { type: "preset", preset: "mist", frost: 18, hue: "none", dim: 8 },
+			bubbles: HOUSE_BUBBLES,
+		},
+	},
 	{
 		id: "forest",
 		label: "Forest",
 		dark: {
-			wallpaper: { type: "preset", preset: "fogwood", frost: 40, hue: "cyan", dim: 30 },
+			wallpaper: { type: "preset", preset: "fogwood", frost: 18, hue: "none", dim: 32 },
 			bubbles: { mine: fill("moss"), theirs: { color: "#1B2A30" }, shape: "rounded" },
 		},
 		light: {
-			wallpaper: { type: "preset", preset: "lonetree", frost: 40, hue: "none", dim: 0 },
+			wallpaper: { type: "preset", preset: "lonetree", frost: 16, hue: "none", dim: 6 },
 			bubbles: { mine: fill("moss"), theirs: { color: "#DCE4E7" }, shape: "rounded" },
 		},
 	},
@@ -160,11 +172,11 @@ export const THEME_CARDS: {
 		id: "night",
 		label: "Night",
 		dark: {
-			wallpaper: { type: "preset", preset: "milkyway", frost: 30, hue: "none", dim: 20 },
+			wallpaper: { type: "preset", preset: "milkyway", frost: 10, hue: "none", dim: 26 },
 			bubbles: { mine: fill("nebula"), theirs: { color: "#2B2B2B" }, shape: "soft" },
 		},
 		light: {
-			wallpaper: { type: "preset", preset: "pier", frost: 40, hue: "none", dim: 0 },
+			wallpaper: { type: "preset", preset: "pier", frost: 16, hue: "none", dim: 6 },
 			bubbles: { mine: fill("nebula"), theirs: { color: "#E9E6E1" }, shape: "soft" },
 		},
 	},
@@ -172,31 +184,25 @@ export const THEME_CARDS: {
 		id: "ember",
 		label: "Ember",
 		dark: {
-			wallpaper: { type: "preset", preset: "dusk", frost: 50, hue: "none", dim: 30 },
+			wallpaper: { type: "preset", preset: "dusk", frost: 20, hue: "none", dim: 30 },
 			bubbles: { mine: fill("ember"), theirs: { color: HOUSE_THEIRS }, shape: "rounded" },
 		},
 		light: {
-			wallpaper: { type: "preset", preset: "mist", frost: 60, hue: "none", dim: 0 },
+			wallpaper: { type: "preset", preset: "mist", frost: 22, hue: "none", dim: 8 },
 			bubbles: { mine: fill("ember"), theirs: { color: HOUSE_THEIRS }, shape: "rounded" },
 		},
 	},
 	{
-		id: "paper",
-		label: "Paper",
+		id: "ink",
+		label: "Ink",
 		dark: {
-			wallpaper: { type: "flat", frost: 0, hue: "none", dim: 0 },
+			wallpaper: { ...FLAT },
 			bubbles: { mine: fill("cyan"), theirs: { color: HOUSE_THEIRS }, shape: "square" },
 		},
 		light: {
-			wallpaper: { type: "flat", frost: 0, hue: "none", dim: 0 },
+			wallpaper: { ...FLAT },
 			bubbles: { mine: fill("cyan"), theirs: { color: HOUSE_THEIRS }, shape: "square" },
 		},
-	},
-	{
-		id: "flat",
-		label: "Flat",
-		dark: { wallpaper: { type: "flat", frost: 0, hue: "none", dim: 0 }, bubbles: HOUSE_BUBBLES },
-		light: { wallpaper: { type: "flat", frost: 0, hue: "none", dim: 0 }, bubbles: HOUSE_BUBBLES },
 	},
 ];
 

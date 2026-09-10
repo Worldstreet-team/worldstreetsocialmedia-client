@@ -174,16 +174,26 @@ export function OverlayScrim({
 
 export type OverlayVariant = "center" | "anchored" | "sheet";
 
+/**
+ * Centring is `inset-x-0` + `mx-auto`, never `left-1/2` + `-translate-x-1/2`.
+ * Framer writes its enter/exit animation to the element's INLINE transform,
+ * which clobbers a Tailwind translate class outright — so a translate-centred
+ * panel opens at the 50% mark with no correction and only snaps into place
+ * if and when framer clears the transform. Every `sheet` in the app was
+ * landing half a panel to the right (found 2026-09-10 measuring the chat
+ * theme panel: left 1163px on a 2327px window, inline transform carrying
+ * only translateY + scale). Auto margins do not fight the animation.
+ */
 const VARIANT: Record<OverlayVariant, string> = {
 	// Search, command palette, pickers: a plate that drops from the top.
 	center:
-		"fixed left-1/2 top-[7vh] z-modal w-[min(680px,94vw)] -translate-x-1/2 max-h-[78vh] rounded-2xl",
+		"fixed inset-x-0 top-[7vh] z-modal mx-auto w-[min(680px,94vw)] max-h-[78vh] rounded-2xl",
 	// Comments, chat, menus: bottom sheet on a phone, floating card on desktop.
 	anchored:
 		"fixed z-modal inset-x-0 bottom-0 max-h-[74vh] rounded-t-2xl sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-[380px] sm:max-h-[min(600px,72vh)] sm:rounded-2xl",
 	// Forms and flows that want the width: full sheet up from the bottom.
 	sheet:
-		"fixed z-modal inset-x-0 bottom-0 max-h-[88vh] rounded-t-2xl sm:inset-x-auto sm:left-1/2 sm:bottom-auto sm:top-[7vh] sm:w-[min(560px,94vw)] sm:-translate-x-1/2 sm:rounded-2xl",
+		"fixed z-modal inset-x-0 bottom-0 max-h-[88vh] rounded-t-2xl sm:bottom-auto sm:top-[7vh] sm:mx-auto sm:w-[min(560px,94vw)] sm:rounded-2xl",
 };
 
 export function OverlayPanel({

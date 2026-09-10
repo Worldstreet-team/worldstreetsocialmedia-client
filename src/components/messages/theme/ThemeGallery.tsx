@@ -51,7 +51,9 @@ export function ThemeGallery({
 			<OverlayScrim key="theme-scrim" onClose={onClose} label="Close" />
 			<OverlayPanel
 				key="theme-panel"
-				variant="anchored"
+				// Sheet, not anchored: six cards need the width, and the
+				// right-corner popover ran off the edge of the pane.
+				variant="sheet"
 				label="Chat theme"
 				dragClose={onClose}
 			>

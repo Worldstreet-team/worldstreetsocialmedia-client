@@ -527,10 +527,7 @@ export const MessageBox = ({
 		() => resolveTheme(myMemberTheme, globalTheme, themeMode),
 		[myMemberTheme, globalTheme, themeMode],
 	);
-	const inboxTheme = useMemo(
-		() => resolveTheme(undefined, globalTheme, themeMode),
-		[globalTheme, themeMode],
-	);
+	const hasPicture = chatTheme.wallpaper.type !== "flat";
 	useEffect(() => {
 		let gone = false;
 		void fetchGlobalTheme(getToken)
@@ -2092,9 +2089,6 @@ export const MessageBox = ({
 		// 100dvh, not 100vh: on mobile 100vh is the address-bar-expanded height,
 		// so the composer sat below the fold until the bar collapsed.
 		<div className="relative flex h-[100dvh] bg-page text-primary overflow-hidden">
-			{/* The profile theme's picture sits behind the whole surface; the
-			    inbox rail is transparent over it, the thread paints its own. */}
-			<ThemeBackdrop wallpaper={inboxTheme.wallpaper} />
 			{myProfileId && isConnected && (
 				<UserMessageSubscription
 					channelName={`user:${myProfileId}`}
@@ -2285,9 +2279,11 @@ export const MessageBox = ({
 					className="absolute inset-0 z-10 flex min-w-0 flex-col bg-page md:relative md:inset-auto md:z-auto md:flex-1 md:border-l md:border-hairline"
 				>
 					{/* This chat's picture (per-chat theme, else the profile's).
-					    Header, list and composer are transparent over it. */}
+					    Only the message list floats on it: the header and the
+					    composer keep a band of the page colour, or the chrome
+					    reads as mush over the photograph. */}
 					<ThemeBackdrop wallpaper={chatTheme.wallpaper} />
-					<div className="relative z-10 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-hairline/60 px-2 md:px-5">
+					<div className={clsx("relative z-10 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-hairline/60 px-2 md:px-5", hasPicture && "bg-page/80")}>
 						<div className="flex items-center gap-2 md:gap-3 min-w-0">
 							<button
 								type="button"
@@ -2598,7 +2594,7 @@ export const MessageBox = ({
 
 					{/* shrink-0 + pb-safe: the composer is the flex row that must never
 					    be squeezed out, and it sits on the iOS home indicator. */}
-					<div className="relative z-10 shrink-0 px-3 pb-safe pt-2 sm:px-4">
+					<div className={clsx("relative z-10 shrink-0 px-3 pb-safe pt-2 sm:px-4", hasPicture && "bg-page/80")}>
 						{/* What you are answering, above the input, with a way out.
 						    Sending clears it; so does Escape, because a reply you
 						    cannot cancel is a trap. */}
