@@ -812,6 +812,24 @@ html.ws-intro-done .animate-rise {
   }
 }
 
+/* The app's own Reduce motion setting (Settings > Accessibility writes
+   html[data-ws-motion="reduce"], whatever the OS says) flattens every
+   animation to 0.01ms in the block near the end of this file. That ENDS
+   both of these on their hidden keyframe: the name beside the logo sat at
+   opacity 0 and the W never drew, for anyone with the setting on (found
+   2026-09-11). Same resolved end state as the OS query above. */
+html[data-ws-motion="reduce"] .ws-brand-mark polygon {
+  animation: none;
+  stroke-dashoffset: 0;
+  fill-opacity: 1;
+  opacity: 1;
+}
+html[data-ws-motion="reduce"] .ws-brand-word {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
 /* shine: a glass pass sweeping across every 5 seconds. The sweep occupies
    the last ~1.2s of the cycle; the rest is rest. Off under reduced motion. */
 .shine {
