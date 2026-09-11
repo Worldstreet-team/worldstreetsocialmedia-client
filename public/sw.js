@@ -20,7 +20,10 @@
  * every "ws-" cache and calls registration.unregister(). The browser re-checks
  * this file on every navigation, so the kill lands within one page load.
  */
-const VERSION = "ws-v1";
+// Bump on any change to PRECACHE contents: the offline mark changed
+// from the cloud to the helmet (2026-09-11), and a same-URL precache
+// entry is never refetched until the cache name moves.
+const VERSION = "ws-v2";
 const STATIC_CACHE = `${VERSION}-static`;
 const MEDIA_CACHE = `${VERSION}-media`;
 const OFFLINE_URL = "/offline.html";

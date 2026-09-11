@@ -35,17 +35,18 @@ export function BrandMark({
 }
 
 /**
- * The WorldSpace lockup: the cloud mark plus the wordmark walking in beside it
- * (`.ws-brand-word`, still on the 5.2s track from globals.css).
+ * The WorldSpace lockup: the helmet mark plus the wordmark walking in beside
+ * it (`.ws-brand-word`, still on the 5.2s track from globals.css).
  *
- * The mark is the CLOUD, not the ecosystem W. They are two different brands:
- * this app is WorldSpace and the cloud is its logo, while the W belongs to
- * WorldStreet, the parent — which is why the mobile bar's WorldStreet tab
- * still renders `BrandMark` and this does not. Mixing them made the app look
- * like it was called WorldStreet.
+ * The mark is the HELMET (2026-09-11; it replaced the cloud), not the bare
+ * ecosystem W. They are two different brands: this app is WorldSpace and the
+ * helmet is its logo (the W sits on its visor as a nod to the parent), while
+ * the bare W belongs to WorldStreet — which is why the mobile bar's
+ * WorldStreet tab still renders `BrandMark` and this does not. Mixing them
+ * made the app look like it was called WorldStreet.
  *
- * The cloud does not draw itself the way the W does: it is raster artwork, and
- * there is nothing to stroke. The wordmark keeps its entrance.
+ * The helmet does not draw itself the way the W does: it is raster artwork,
+ * and there is nothing to stroke. The wordmark keeps its entrance.
  */
 export function BrandRitual({
 	size = 22,
@@ -70,15 +71,18 @@ export function BrandRitual({
 		<span
 			className={clsx("inline-flex items-center gap-2 min-w-0", className)}
 		>
-			{/* TWO cuts, swapped by CSS rather than by JS. The difference is the
-			    glow under the cloud: the dark cut carries a WHITE glow and the
-			    light cut a BLACK shadow, so each is invisible on the other's
-			    ground. Reading the theme in JS would need the theme before first
-			    paint, which is a hydration mismatch waiting to happen; a CSS
-			    swap just works, including during SSR.
+			{/* TWO slots, swapped by CSS rather than by JS. The helmet reads on
+			    both grounds (white dome on dark, black ink on light), so both
+			    files carry the same art today; the slots stay because the cloud
+			    needed a cut per ground and a future mark may too. Reading the
+			    theme in JS would need the theme before first paint, which is a
+			    hydration mismatch waiting to happen; a CSS swap just works,
+			    including during SSR.
 
-			    `unoptimized`: ~13KB drawn at ~34px, so the responsive pipeline
-			    has nothing to optimise — and it previously BROKE the mark, which
+			    `unoptimized`: ~11KB (a 256-colour palette PNG; the full-colour
+			    encode was 56KB, and the hidden slot downloads too, so keep it
+			    small) drawn at ~34px, so the responsive pipeline has nothing to
+			    optimise — and it previously BROKE the mark, which
 			    sat in the DOM with a valid srcset and `currentSrc === ""`, so the
 			    logo never appeared at all. */}
 			<Image

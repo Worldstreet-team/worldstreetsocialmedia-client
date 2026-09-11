@@ -48,7 +48,8 @@ const ALL_STEPS = [
     title: "Welcome to WorldSpace",
     body:
       "This is the social side of the WorldStreet ecosystem. Share ideas, follow traders and creators, and talk markets with the people trading them.",
-    // The cloud, in both cuts. This was /images/logo.png — the retired gold W —
+    // The WorldSpace mark, in both slots (see BrandRitual). This was
+    // /images/logo.png — the retired gold W —
     // under a "Socials" eyebrow, so the first thing a new account ever saw was
     // the OLD brand and the OLD product name.
     hero: (

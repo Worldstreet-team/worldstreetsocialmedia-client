@@ -1,25 +1,14 @@
 import Link from "next/link";
-import Image from "next/image";
+import { BrandRitual } from "@/components/layout/BrandRitual";
 
 /* Branded 404 — the app-router default is unstyled. Same visual language as
    EmptyState (raised icon circle, title/caption, one primary action). */
 export default function NotFound() {
   return (
     <div className="min-h-dvh bg-page flex flex-col items-center justify-center p-6 text-center animate-rise">
-      <div className="flex items-center gap-2 mb-8">
-        <Image
-          src="/images/logo.png"
-          alt="WorldStreet"
-          width={28}
-          height={28}
-        />
-        <span className="font-display font-bold text-[calc(17px*var(--ws-fs))] text-primary">
-          WorldStreet
-        </span>
-        <span className="text-[calc(10px*var(--ws-fs))] font-semibold uppercase tracking-[2px] text-gold">
-          Socials
-        </span>
-      </div>
+      {/* The product lockup, not the retired gold W under a "Socials"
+          eyebrow: a lost visitor should still see which app they are in. */}
+      <BrandRitual size={28} wordSize={17} className="mb-8" />
 
       <p className="font-display text-[calc(64px*var(--ws-fs))] font-semibold leading-none text-raised select-none tabular-nums">
         404
