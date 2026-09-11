@@ -59,8 +59,46 @@ export function ThemePreview({
 			>
 				{!compact && bubble(false, "Good morning, Highly Esteemed!")}
 				{bubble(false, compact ? "Hey, you around?" : "I don't even know what to say or how to say it.")}
+				{!compact && (
+					/* A quoted reply and a voice note are in the sample on purpose:
+					   they are the two parts of a thread a theme most often broke,
+					   and a person should see them survive before saving. */
+					<span
+						className="-mb-3 mr-2 max-w-[70%] self-end truncate rounded-[14px] px-2.5 pb-4 pt-1 font-sans text-[10.5px] opacity-90"
+						style={{
+							background: "var(--chat-quote-mine)",
+							color: "var(--chat-quote-mine-ink)",
+						}}
+					>
+						I don't even know what to say
+					</span>
+				)}
 				{bubble(true, compact ? "What country is this" : "What country is this")}
-				{!compact && bubble(false, "Thank you, Sir, for texting.", true)}
+				{!compact && (
+					<span
+						className="flex max-w-[78%] items-center gap-1.5 self-start px-3 py-2"
+						style={{
+							background: "var(--chat-theirs)",
+							color: "var(--chat-theirs-ink)",
+							borderRadius: "var(--chat-r) var(--chat-r) var(--chat-r) var(--chat-r-in)",
+						}}
+					>
+						<span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-pill bg-current/15">
+							<span className="ml-[1px] border-y-[4px] border-l-[7px] border-y-transparent border-l-current" />
+						</span>
+						<span className="flex h-6 items-center gap-[2px]" aria-hidden>
+							{[6, 12, 18, 10, 22, 14, 8, 20, 12, 16, 6, 18, 10, 14, 8, 20, 12, 6].map((h, i) => (
+								<span
+									// biome-ignore lint/suspicious/noArrayIndexKey: static sample
+									key={i}
+									className="w-[2px] rounded-full bg-current"
+									style={{ height: h, opacity: i < 7 ? 1 : 0.35 }}
+								/>
+							))}
+						</span>
+						<span className="font-sans text-[10px] tabular-nums opacity-80">0:12</span>
+					</span>
+				)}
 			</div>
 			{!compact && (
 				<div className="relative m-2 mt-0 flex h-8 items-center justify-between rounded-pill border border-hairline bg-page/60 px-3">

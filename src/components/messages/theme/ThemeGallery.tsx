@@ -3,6 +3,7 @@
 import clsx from "clsx";
 import { AnimatePresence } from "framer-motion";
 import { useState } from "react";
+import { Tabs } from "@/components/ui/Tabs";
 import {
 	OverlayHeader,
 	OverlayPanel,
@@ -119,7 +120,7 @@ export function ThemeGallery({
 	);
 }
 
-/** This chat / All chats. A group has no "this chat" ambiguity, same control. */
+/** This chat / All chats, on the house Tabs. A group has no "this chat" ambiguity, same control. */
 export function ScopeSwitch({
 	scope,
 	onChange,
@@ -129,23 +130,16 @@ export function ScopeSwitch({
 	onChange: (s: ThemeScope) => void;
 	isGroup: boolean;
 }) {
-	const opt = (k: ThemeScope, label: string) => (
-		<button
-			type="button"
-			onClick={() => onChange(k)}
-			aria-pressed={scope === k}
-			className={clsx(
-				"h-9 flex-1 cursor-pointer rounded-pill font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors",
-				scope === k ? "bg-primary text-page" : "text-muted hover:text-primary",
-			)}
-		>
-			{label}
-		</button>
-	);
 	return (
-		<div className="flex rounded-pill bg-primary/10 p-1">
-			{opt("chat", isGroup ? "This group" : "This chat")}
-			{opt("all", "All chats")}
-		</div>
+		<Tabs<ThemeScope>
+			ariaLabel="Apply to"
+			value={scope}
+			onChange={onChange}
+			className="px-0 py-0"
+			items={[
+				{ key: "chat", label: isGroup ? "This group" : "This chat" },
+				{ key: "all", label: "All chats" },
+			]}
+		/>
 	);
 }

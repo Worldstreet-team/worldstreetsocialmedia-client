@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import { AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import {
 	OverlayHeader,
@@ -10,11 +10,14 @@ import {
 	OverlayScrim,
 	useOverlayDismiss,
 } from "@/components/ui/Overlay";
+import GlassSelect from "@/components/ui/GlassSelect";
+import { Switch } from "@/components/ui/Switch";
 import { Tabs } from "@/components/ui/Tabs";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import {
 	type BubbleShape,
 	type ChatTheme,
+	GROUND_PRESETS,
 	HOUSE_DEFAULT,
 	HOUSE_THEIRS,
 	MINE_PRESETS,
@@ -23,7 +26,9 @@ import {
 	THEIRS_PRESETS,
 	type ThemeMode,
 	type ThemeScope,
+	type ThemeWallpaper,
 	WALLPAPERS,
+	groundCss,
 	mineCss,
 } from "./chatTheme";
 import { ScopeSwitch } from "./ThemeGallery";
@@ -31,11 +36,32 @@ import { ThemePreview } from "./ThemePreview";
 import { uploadWallpaperImage } from "./themeApi";
 
 type Device = "phone" | "desktop" | "both";
+type Panel = "wallpaper" | "bubbles";
+
+/** True below the md breakpoint, false on the server and on a desktop. */
+function usePhone(): boolean {
+	const [phone, setPhone] = useState(false);
+	useEffect(() => {
+		const mq = window.matchMedia("(max-width: 767px)");
+		const sync = () => setPhone(mq.matches);
+		sync();
+		mq.addEventListener("change", sync);
+		return () => mq.removeEventListener("change", sync);
+	}, []);
+	return phone;
+}
 
 /**
- * Advanced (owner 2026-09-10): the studio behind the gallery. A stage with
- * the sample thread on a phone, a desktop pane or both, and every control
- * in the pack. Nothing here touches the real chat until Save.
+ * Advanced (owner 2026-09-10, second pass 2026-09-11): the studio behind the
+ * gallery. The sample thread on a stage, every control in the pack under it,
+ * nothing touching the real chat until Save.
+ *
+ * The stage shows the device you are on. A phone gets the phone frame and no
+ * device picker (you are holding the answer); a desktop defaults to the pane
+ * it will paint and can flip to the phone or both. The controls are the house
+ * ones (Tabs, Switch, GlassSelect), not native inputs, and they are grouped
+ * by what a person is deciding: the ground, then the picture and its
+ * treatment, then my bubbles, theirs, and last the geometry.
  */
 export function ThemeStudio({
 	mode,
@@ -58,19 +84,28 @@ export function ThemeStudio({
 }) {
 	const { getToken } = useAuth();
 	const { toast } = useToast();
+	const phone = usePhone();
 	const [draft, setDraft] = useState<ChatTheme>(initial);
 	const [scope, setScope] = useState<ThemeScope>(scopeIn);
-	const [device, setDevice] = useState<Device>("phone");
-	const [tab, setTab] = useState<"wallpaper" | "bubbles">("wallpaper");
+	const [device, setDevice] = useState<Device | null>(null);
+	const [panel, setPanel] = useState<Panel>("wallpaper");
 	const [uploading, setUploading] = useState(false);
 	useOverlayDismiss(true, onClose);
+	// Until the person picks, the stage follows the viewport.
+	const shown: Device = device ?? (phone ? "phone" : "desktop");
 
-	const wp = (patch: Partial<ChatTheme["wallpaper"]>) =>
+	const wp = (patch: Partial<ThemeWallpaper>) =>
 		setDraft((d) => ({ ...d, wallpaper: { ...d.wallpaper, ...patch } }));
 	const bb = (patch: Partial<ChatTheme["bubbles"]>) =>
 		setDraft((d) => ({ ...d, bubbles: { ...d.bubbles, ...patch } }));
 	const mine = draft.bubbles.mine;
 	const setMine = (m: MineFill) => bb({ mine: m });
+	const w = draft.wallpaper;
+	const hasPicture = w.type === "preset" || w.type === "image";
+	const groundId =
+		w.type === "flat"
+			? "flat"
+			: (GROUND_PRESETS.find((g) => sameGround(g[mode], w))?.id ?? (hasPicture ? "" : "custom"));
 
 	const pickPhoto = () => {
 		const input = document.createElement("input");
@@ -92,7 +127,7 @@ export function ThemeStudio({
 		input.click();
 	};
 
-	const label = "font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.12em] text-subtle";
+	const heading = "font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.12em] text-subtle";
 	const tile = "relative aspect-[4/3] cursor-pointer overflow-hidden rounded-[10px] border transition-colors";
 	const chip = "h-9 w-9 shrink-0 cursor-pointer rounded-pill border-2 transition-transform";
 
@@ -108,88 +143,104 @@ export function ThemeStudio({
 				className="bg-surface md:w-[min(960px,94vw)]"
 			>
 				<OverlayHeader title="Theme studio" onClose={onClose} />
-				<div className="grid min-h-0 flex-1 grid-rows-[auto_1fr] overflow-hidden md:grid-cols-[1fr_340px] md:grid-rows-1">
+				<div className="grid min-h-0 flex-1 grid-rows-[auto_1fr] overflow-hidden md:grid-cols-[1fr_360px] md:grid-rows-1">
 					{/* Stage */}
-					<div className="flex flex-col items-center gap-3 bg-sunken px-4 py-4 md:py-6">
-						<div className="flex rounded-pill bg-primary/10 p-1">
-							{(["phone", "desktop", "both"] as Device[]).map((d) => (
-								<button
-									key={d}
-									type="button"
-									onClick={() => setDevice(d)}
-									aria-pressed={device === d}
-									className={clsx(
-										"h-8 cursor-pointer rounded-pill px-3.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium capitalize transition-colors",
-										device === d ? "bg-primary text-page" : "text-muted hover:text-primary",
-									)}
-								>
-									{d}
-								</button>
-							))}
-						</div>
+					<div className="flex flex-col items-center gap-3 bg-sunken px-4 py-3 md:py-6">
+						{!phone && (
+							<Tabs<Device>
+								ariaLabel="Preview device"
+								value={shown}
+								onChange={setDevice}
+								className="px-0 py-0"
+								items={[
+									{ key: "desktop", label: "Desktop" },
+									{ key: "phone", label: "Phone" },
+									{ key: "both", label: "Both" },
+								]}
+							/>
+						)}
 						<div
 							className={clsx(
 								"flex w-full items-end justify-center gap-4",
-								device === "both" ? "flex-col md:flex-row" : "",
+								shown === "both" ? "flex-col md:flex-row" : "",
 							)}
 						>
-							{device !== "desktop" && <ThemePreview theme={draft} frame="phone" />}
-							{device !== "phone" && (
+							{shown !== "desktop" && (
 								<ThemePreview
 									theme={draft}
-									frame="desktop"
-									className="max-w-[520px]"
+									frame="phone"
+									// On a phone the stage is a strip above the controls;
+									// a full-height frame would push them off the screen.
+									className={clsx(phone && "!aspect-[9/11] w-[150px]")}
 								/>
+							)}
+							{shown !== "phone" && (
+								<ThemePreview theme={draft} frame="desktop" className="max-w-[520px]" />
 							)}
 						</div>
 					</div>
 
 					{/* Controls */}
 					<div className="flex min-h-0 flex-col md:border-l md:border-hairline">
-						<Tabs
+						<Tabs<Panel>
 							ariaLabel="Theme controls"
-							value={tab}
-							onChange={setTab}
+							value={panel}
+							onChange={setPanel}
 							items={[
 								{ key: "wallpaper", label: "Wallpaper" },
 								{ key: "bubbles", label: "Bubbles" },
 							]}
 							className="px-4 pt-3"
 						/>
-						<div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-4 py-4">
-							{tab === "wallpaper" ? (
+						<div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 py-4">
+							{panel === "wallpaper" ? (
 								<>
-									<div>
-										<p className={clsx(label, "mb-2")}>Picture</p>
-										<div className="grid grid-cols-4 gap-2">
+									<section>
+										<p className={clsx(heading, "mb-2")}>Ground</p>
+										<div className="flex flex-wrap items-center gap-2">
 											<button
 												type="button"
 												aria-label="Flat"
-												onClick={() => wp({ type: "flat", preset: undefined })}
-												className={clsx(
-													tile,
-													"flex items-center justify-center bg-page font-sans text-[calc(11px*var(--ws-fs))] text-muted",
-													draft.wallpaper.type === "flat" ? "border-brand" : "border-hairline",
-												)}
-											>
-												Flat
-											</button>
-											{WALLPAPERS.map((w) => (
+												title="Flat, the app's own ground"
+												onClick={() => wp({ type: "flat", color: undefined, stops: undefined, preset: undefined, imageKey: undefined, imageUrl: undefined })}
+												className={clsx(chip, "bg-page", groundId === "flat" ? "scale-110 border-primary" : "border-hairline")}
+											/>
+											{GROUND_PRESETS.map((g) => (
 												<button
-													key={w.id}
+													key={g.id}
 													type="button"
-													aria-label={w.label}
-													title={w.label}
-													onClick={() => wp({ type: "preset", preset: w.id })}
+													aria-label={g.label}
+													title={g.label}
+													onClick={() => wp({ ...g[mode], preset: undefined, imageKey: undefined, imageUrl: undefined })}
+													className={clsx(chip, groundId === g.id ? "scale-110 border-primary" : "border-hairline")}
+													style={{ background: groundCss(g[mode]) ?? undefined }}
+												/>
+											))}
+											<ColorField
+												label="Own colour"
+												value={w.type === "solid" && w.color ? w.color : mode === "dark" ? "#0C0A09" : "#FAFAF9"}
+												onChange={(c) => wp({ type: "solid", color: c, stops: undefined, preset: undefined, imageKey: undefined, imageUrl: undefined })}
+											/>
+										</div>
+									</section>
+
+									<section>
+										<p className={clsx(heading, "mb-2")}>Picture</p>
+										<div className="grid grid-cols-4 gap-2">
+											{WALLPAPERS.map((p) => (
+												<button
+													key={p.id}
+													type="button"
+													aria-label={p.label}
+													title={p.label}
+													onClick={() => wp({ type: "preset", preset: p.id, color: undefined, stops: undefined })}
 													className={clsx(
 														tile,
-														draft.wallpaper.type === "preset" && draft.wallpaper.preset === w.id
-															? "border-brand"
-															: "border-hairline",
+														w.type === "preset" && w.preset === p.id ? "border-brand" : "border-hairline",
 													)}
 												>
 													{/* eslint-disable-next-line @next/next/no-img-element */}
-													<img src={w.src} alt="" className="h-full w-full object-cover" />
+													<img src={p.src} alt="" loading="lazy" className="h-full w-full object-cover" />
 												</button>
 											))}
 											<button
@@ -199,43 +250,50 @@ export function ThemeStudio({
 												className={clsx(
 													tile,
 													"flex items-center justify-center border-dashed font-sans text-[calc(11px*var(--ws-fs))] font-medium text-muted hover:text-primary",
-													draft.wallpaper.type === "image" ? "border-brand" : "border-hairline",
+													w.type === "image" ? "border-brand" : "border-hairline",
 												)}
 											>
-												{uploading ? "…" : draft.wallpaper.type === "image" ? "Your photo" : "Upload"}
+												{uploading ? "…" : w.type === "image" ? "Your photo" : "Upload"}
 											</button>
 										</div>
-									</div>
+										{hasPicture && (
+											<button
+												type="button"
+												onClick={() => wp({ type: "flat", preset: undefined, imageKey: undefined, imageUrl: undefined })}
+												className="mt-2 cursor-pointer font-sans text-[calc(12px*var(--ws-fs))] text-muted transition-colors hover:text-primary"
+											>
+												Remove picture
+											</button>
+										)}
+									</section>
 
-									<Slider
-										label="Frost"
-										value={draft.wallpaper.frost}
-										max={100}
-										onChange={(v) => wp({ frost: v })}
-										disabled={draft.wallpaper.type === "flat"}
-									/>
-									<label className="flex cursor-pointer items-center justify-between">
-										<span className="font-sans text-[calc(13.5px*var(--ws-fs))] text-primary">Cyan hue</span>
-										<input
-											type="checkbox"
-											checked={draft.wallpaper.hue === "cyan"}
-											disabled={draft.wallpaper.type === "flat"}
-											onChange={(e) => wp({ hue: e.target.checked ? "cyan" : "none" })}
-											className="h-4 w-4 accent-[var(--ws-brand-primary)]"
-										/>
-									</label>
-									<Slider
-										label="Dim"
-										value={draft.wallpaper.dim}
-										max={60}
-										onChange={(v) => wp({ dim: v })}
-										disabled={draft.wallpaper.type === "flat"}
-									/>
+									{/* Treatments exist only for a picture: a painted ground has
+									    nothing to frost or dim, so the rows are gone, not greyed. */}
+									{hasPicture && (
+										<section className="flex flex-col gap-4">
+											<p className={heading}>Treatment</p>
+											<Slider label="Frost" value={w.frost} max={100} onChange={(v) => wp({ frost: v })} />
+											<div className="flex items-center justify-between">
+												<span className="font-sans text-[calc(13.5px*var(--ws-fs))] text-primary">
+													Brand tint
+													<span className="block font-sans text-[calc(11.5px*var(--ws-fs))] text-muted">
+														Grayscale, washed in the brand colour
+													</span>
+												</span>
+												<Switch
+													checked={w.hue === "cyan"}
+													onChange={(on) => wp({ hue: on ? "cyan" : "none" })}
+													label="Brand tint"
+												/>
+											</div>
+											<Slider label="Dim" value={w.dim} max={60} onChange={(v) => wp({ dim: v })} />
+										</section>
+									)}
 								</>
 							) : (
 								<>
-									<div>
-										<p className={clsx(label, "mb-2")}>My bubbles</p>
+									<section>
+										<p className={clsx(heading, "mb-2")}>My bubbles</p>
 										<div className="flex flex-wrap gap-2">
 											{MINE_PRESETS.map((p) => (
 												<button
@@ -254,69 +312,47 @@ export function ThemeStudio({
 												/>
 											))}
 										</div>
-									</div>
-									<div>
-										<p className={clsx(label, "mb-2")}>Custom</p>
-										<div className="flex rounded-pill bg-primary/10 p-1">
-											{(["solid", "gradient"] as const).map((k) => (
-												<button
-													key={k}
-													type="button"
-													onClick={() =>
-														setMine(
-															k === "solid"
-																? { kind: "solid", color: mine.kind === "solid" ? mine.color : mine.stops[0] }
-																: {
-																		kind: "gradient",
-																		stops: mine.kind === "gradient" ? mine.stops : [mine.color, "#6D5BFF"],
-																		angle: mine.kind === "gradient" ? mine.angle : 135,
-																	},
-														)
-													}
-													aria-pressed={mine.kind === k}
-													className={clsx(
-														"h-8 flex-1 cursor-pointer rounded-pill font-sans text-[calc(12.5px*var(--ws-fs))] font-medium capitalize transition-colors",
-														mine.kind === k ? "bg-primary text-page" : "text-muted hover:text-primary",
-													)}
-												>
-													{k}
-												</button>
-											))}
-										</div>
-										<div className="mt-3 flex items-center gap-3">
-											{mine.kind === "solid" ? (
-												<ColorField
-													label="Colour"
-													value={mine.color}
-													onChange={(c) => setMine({ kind: "solid", color: c })}
-												/>
-											) : (
-												<>
-													<ColorField
-														label="From"
-														value={mine.stops[0]}
-														onChange={(c) => setMine({ ...mine, stops: [c, mine.stops[1]] })}
-													/>
-													<ColorField
-														label="To"
-														value={mine.stops[1]}
-														onChange={(c) => setMine({ ...mine, stops: [mine.stops[0], c] })}
-													/>
-												</>
+										<div className="mt-3">
+											<Tabs<MineFill["kind"]>
+												ariaLabel="Fill"
+												value={mine.kind}
+												className="px-0 py-0"
+												onChange={(k) =>
+													setMine(
+														k === "solid"
+															? { kind: "solid", color: mine.kind === "solid" ? mine.color : mine.stops[0] }
+															: {
+																	kind: "gradient",
+																	stops: mine.kind === "gradient" ? mine.stops : [mine.color, "#6D5BFF"],
+																	angle: mine.kind === "gradient" ? mine.angle : 135,
+																},
+													)
+												}
+												items={[
+													{ key: "solid", label: "Solid" },
+													{ key: "gradient", label: "Gradient" },
+												]}
+											/>
+											<div className="mt-3 flex flex-wrap items-center gap-3">
+												{mine.kind === "solid" ? (
+													<ColorField label="Colour" value={mine.color} onChange={(c) => setMine({ kind: "solid", color: c })} />
+												) : (
+													<>
+														<ColorField label="From" value={mine.stops[0]} onChange={(c) => setMine({ ...mine, stops: [c, mine.stops[1]] })} />
+														<ColorField label="To" value={mine.stops[1]} onChange={(c) => setMine({ ...mine, stops: [mine.stops[0], c] })} />
+													</>
+												)}
+											</div>
+											{mine.kind === "gradient" && (
+												<div className="mt-3">
+													<Slider label="Angle" value={mine.angle} max={360} unit="°" onChange={(v) => setMine({ ...mine, angle: v })} />
+												</div>
 											)}
 										</div>
-										{mine.kind === "gradient" && (
-											<Slider
-												label="Angle"
-												value={mine.angle}
-												max={360}
-												unit="°"
-												onChange={(v) => setMine({ ...mine, angle: v })}
-											/>
-										)}
-									</div>
-									<div>
-										<p className={clsx(label, "mb-2")}>Their bubbles</p>
+									</section>
+
+									<section>
+										<p className={clsx(heading, "mb-2")}>Their bubbles</p>
 										<div className="flex flex-wrap items-center gap-2">
 											{THEIRS_PRESETS.map((p) => (
 												<button
@@ -327,39 +363,35 @@ export function ThemeStudio({
 													onClick={() => bb({ theirs: { color: p.color } })}
 													className={clsx(
 														chip,
-														draft.bubbles.theirs.color === p.color
-															? "scale-110 border-primary"
-															: "border-hairline",
+														draft.bubbles.theirs.color === p.color ? "scale-110 border-primary" : "border-hairline",
 													)}
 													style={{ background: p.color }}
 												/>
 											))}
 											<ColorField
-												label="Custom"
+												label="Own colour"
 												value={draft.bubbles.theirs.color === HOUSE_THEIRS ? "#26262E" : draft.bubbles.theirs.color}
 												onChange={(c) => bb({ theirs: { color: c } })}
 											/>
 										</div>
-									</div>
-									<div>
-										<p className={clsx(label, "mb-2")}>Shape</p>
-										<div className="flex rounded-pill bg-primary/10 p-1">
-											{(Object.keys(SHAPES) as BubbleShape[]).map((s) => (
-												<button
-													key={s}
-													type="button"
-													onClick={() => bb({ shape: s })}
-													aria-pressed={draft.bubbles.shape === s}
-													className={clsx(
-														"h-8 flex-1 cursor-pointer rounded-pill font-sans text-[calc(12.5px*var(--ws-fs))] font-medium transition-colors",
-														draft.bubbles.shape === s ? "bg-primary text-page" : "text-muted hover:text-primary",
-													)}
-												>
-													{SHAPES[s].label}
-												</button>
-											))}
-										</div>
-									</div>
+									</section>
+
+									<section>
+										<p className={clsx(heading, "mb-2")}>Shape</p>
+										{/* The one control the gallery never touches: every card
+										    ships Rounded (owner, 2026-09-03 / 2026-09-10). Here it is
+										    a deliberate act, with the geometry spelled out. */}
+										<GlassSelect
+											label="Bubble shape"
+											value={draft.bubbles.shape}
+											onChange={(id) => bb({ shape: id as BubbleShape })}
+											options={(Object.keys(SHAPES) as BubbleShape[]).map((s) => ({
+												id: s,
+												label: SHAPES[s].label,
+												hint: `${SHAPES[s].r} / ${SHAPES[s].rin} px${s === "rounded" ? " · what every theme ships" : ""}`,
+											}))}
+										/>
+									</section>
 								</>
 							)}
 						</div>
@@ -392,23 +424,32 @@ export function ThemeStudio({
 	);
 }
 
+/** Same painted ground, ignoring the picture-only fields. */
+function sameGround(a: ThemeWallpaper, b: ThemeWallpaper): boolean {
+	return (
+		a.type === b.type &&
+		(a.color ?? "") === (b.color ?? "") &&
+		(a.stops?.[0] ?? "") === (b.stops?.[0] ?? "") &&
+		(a.stops?.[1] ?? "") === (b.stops?.[1] ?? "") &&
+		(a.angle ?? 160) === (b.angle ?? 160)
+	);
+}
+
 function Slider({
 	label,
 	value,
 	max,
 	unit = "%",
-	disabled,
 	onChange,
 }: {
 	label: string;
 	value: number;
 	max: number;
 	unit?: string;
-	disabled?: boolean;
 	onChange: (v: number) => void;
 }) {
 	return (
-		<div className={clsx(disabled && "opacity-40")}>
+		<div>
 			<p className="mb-1.5 flex items-center justify-between font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.12em] text-subtle">
 				{label}
 				<span className="tabular-nums text-muted">
@@ -420,10 +461,10 @@ function Slider({
 				type="range"
 				min={0}
 				max={max}
-				step={max > 100 ? 5 : 5}
+				step={5}
 				value={value}
-				disabled={disabled}
 				onChange={(e) => onChange(Number(e.target.value))}
+				aria-label={label}
 				className="w-full accent-[var(--ws-brand-primary)]"
 			/>
 		</div>

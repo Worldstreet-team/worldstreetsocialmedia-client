@@ -400,7 +400,11 @@ export const VoiceMessage = ({
 	return (
 		<div
 			className={clsx(
-				"flex items-center gap-2 p-1 rounded-xl w-full min-w-0 select-none text-primary",
+				// No colour of its own: the bars are `bg-current`, so the note
+				// wears the ink of the bubble it sits in (white on the gradient,
+				// dark on a pale themed fill). `text-primary` here was dark ink on
+				// a dark bubble in light mode and invisible on themed fills.
+				"flex items-center gap-2 p-1 rounded-xl w-full min-w-0 select-none",
 				isMe && "sm:gap-3",
 			)}
 		>
@@ -467,7 +471,14 @@ export const VoiceMessage = ({
 					type="button"
 					onClick={cycleRate}
 					aria-label={`Playback speed ${rate}x`}
-					className="shrink-0 cursor-pointer rounded-pill bg-chip px-2 py-0.5 font-sans text-[calc(11px*var(--ws-fs))] font-bold tabular-nums text-primary transition-colors hover:bg-raised"
+					className="shrink-0 cursor-pointer rounded-pill px-2 py-0.5 font-sans text-[calc(11px*var(--ws-fs))] font-bold tabular-nums transition-opacity hover:opacity-80"
+					// A wash of the bubble's own ink, like the mention chip: reads
+					// on any fill instead of a page-toned chip inside a coloured bubble.
+					style={{
+						background: isMe
+							? "var(--chat-on-mine, rgba(0,0,0,0.22))"
+							: "var(--chat-accent-18, rgba(34,184,214,0.18))",
+					}}
 				>
 					{rate}×
 				</button>
@@ -481,7 +492,11 @@ export const VoiceMessage = ({
 			<audio
 				ref={audioRef}
 				src={src}
-				preload="metadata"
+				// A note that shipped its length needs nothing until it is played:
+				// with "metadata", every note the virtualised thread mounted on the
+				// way past opened the file and started a decoder, a dozen times per
+				// flick. Legacy notes without a duration still ask for it.
+				preload={durationSec && durationSec > 0 ? "none" : "metadata"}
 				onLoadedMetadata={handleLoadedMetadata}
 				onPlay={handlePlay}
 				onPause={handlePause}

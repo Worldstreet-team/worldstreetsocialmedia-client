@@ -578,13 +578,18 @@ export const MessageBubble = memo(function MessageBubble({
 										"-mb-3 max-w-[90%] cursor-pointer truncate rounded-[16px] px-3 pb-4 pt-1.5 text-left font-sans text-[calc(12px*var(--ws-fs))] opacity-90 transition-opacity hover:opacity-100",
 										isMe ? "mr-2" : "ml-2",
 									)}
+									// The quote peeks out from BEHIND the bubble, so it sits
+									// on the ground, not on a fill: it takes an opaque chip
+									// of its own (theme pack 2026-09-11) rather than a wash
+									// of the bubble's ink, which on a pale wallpaper was
+									// white text at 16% white.
 									style={{
 										background: isMe
-											? "var(--chat-quote-mine, rgba(255,255,255,0.16))"
+											? "var(--chat-quote-mine, var(--ws-bg-raised))"
 											: "var(--chat-quote-theirs, var(--ws-bg-raised))",
 										color: isMe
-											? "var(--chat-mine-ink, #FFFFFF)"
-											: "var(--chat-theirs-ink, var(--ws-text-muted))",
+											? "var(--chat-quote-mine-ink, var(--ws-text-primary))"
+											: "var(--chat-quote-theirs-ink, var(--ws-text-primary))",
 									}}
 								>
 									{quotedPreview(m.replyTo)}

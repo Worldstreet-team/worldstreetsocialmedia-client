@@ -355,6 +355,22 @@ export const THEME_CARDS: {
 	light: ChatTheme;
 }[] = CARDS.map((c) => ({ ...c, dark: stamp(c.dark), light: stamp(c.light) }));
 
+/**
+ * The painted grounds Advanced offers, per mode: every solid and gradient
+ * the gallery ships, under the card's own name, so a custom theme can stand
+ * on a ground someone already chose rather than only on a photograph.
+ */
+export const GROUND_PRESETS: {
+	id: string;
+	label: string;
+	dark: ThemeWallpaper;
+	light: ThemeWallpaper;
+}[] = CARDS.filter(
+	(c) =>
+		(c.dark.wallpaper.type === "solid" || c.dark.wallpaper.type === "gradient") &&
+		(c.light.wallpaper.type === "solid" || c.light.wallpaper.type === "gradient"),
+).map((c) => ({ id: c.id, label: c.label, dark: c.dark.wallpaper, light: c.light.wallpaper }));
+
 /* ------------------------------------------------------------------ */
 /* Resolution and CSS. */
 
@@ -498,9 +514,15 @@ export function themeVars(t: ChatTheme): CSSProperties {
 		"--chat-on-mine": `color-mix(in srgb, ${inkFor(t.bubbles.mine)} 22%, transparent)`,
 		"--chat-theirs": t.bubbles.theirs.color,
 		"--chat-theirs-ink": inkFor(t.bubbles.theirs.color),
-		// A quoted reply inside a bubble: a wash of the bubble it sits in.
-		"--chat-quote-mine": `color-mix(in srgb, ${inkFor(t.bubbles.mine)} 16%, transparent)`,
-		"--chat-quote-theirs": `color-mix(in srgb, ${inkFor(t.bubbles.theirs.color)} 12%, transparent)`,
+		// The quoted reply peeks out from behind a bubble, so it sits on the
+		// GROUND, which may be a photograph. It gets an opaque chip: mine is
+		// the accent folded into the surface token, theirs is their own fill.
+		// A translucent wash of the bubble's ink (the old rule) was white text
+		// on 16% white over a pale wallpaper.
+		"--chat-quote-mine": `color-mix(in srgb, ${accent} 24%, var(--ws-bg-surface))`,
+		"--chat-quote-mine-ink": "var(--ws-text-primary)",
+		"--chat-quote-theirs": t.bubbles.theirs.color,
+		"--chat-quote-theirs-ink": inkFor(t.bubbles.theirs.color),
 		"--chat-r": `${s.r}px`,
 		"--chat-r-in": `${s.rin}px`,
 	} as CSSProperties;
