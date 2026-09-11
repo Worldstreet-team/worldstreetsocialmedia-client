@@ -100,6 +100,44 @@ export default clerkMiddleware(async (auth, req) => {
 		// to clerkMiddleware below is what makes protect() send genuinely
 		// signed-out people to the hub's /login instead of Clerk's hosted
 		// portal, which was the original complaint.
+		//
+		// One loop protect() cannot see (owner, 2026-09-11, "always unless I
+		// hard reload"): on a production satellite every session-less
+		// document request is a handshake, and Clerk counts them in the
+		// `__clerk_redirect_count` cookie (Max-Age 2s). At 3 it stops
+		// handshaking and reports the visitor signed out. protect() then
+		// sends them to the hub's /login, which, when the hub DOES hold a
+		// session, bounces straight back here, where the count is still 3,
+		// so: signed out, hub, back, signed out... until Chrome gives up with
+		// ERR_TOO_MANY_REDIRECTS on the hub's URL. Three failed handshakes in
+		// two seconds means the sync itself is failing (the nonce fetch, or
+		// the primary's client cookie), and the fix for THAT needs the reason
+		// from the log line below. What this does is stop the ping-pong: drop
+		// the counter, hold the visitor for one beat on a page of our own,
+		// try the handshake once more, and only after a second failure offer
+		// the hub's login as a link rather than a redirect.
+		if (
+			!userId &&
+			req.cookies.get("__clerk_redirect_count")?.value === "3" &&
+			!isSpeculative(req)
+		) {
+			const retry = Number(req.nextUrl.searchParams.get("__ws_retry")) || 0;
+			console.warn("[auth] satellite handshake looped", {
+				path: pathname,
+				retry,
+				referer: req.headers.get("referer"),
+				cookies: req.cookies.getAll().map((c) => c.name),
+			});
+			const res = new NextResponse(handshakeLoopPage(req, retry), {
+				status: 200,
+				headers: {
+					"content-type": "text/html; charset=utf-8",
+					"cache-control": "no-store",
+				},
+			});
+			res.cookies.set("__clerk_redirect_count", "", { maxAge: 0, path: "/" });
+			return res;
+		}
 		await auth.protect();
 	}
 
@@ -129,6 +167,42 @@ export default clerkMiddleware(async (auth, req) => {
  *    header is set. JSON.stringify leaves those characters raw, so they are
  *    escaped to \uXXXX here — still valid JSON, restored intact by JSON.parse.
  */
+/**
+ * The page that breaks the satellite handshake ping-pong (see the call
+ * site). First time: hold one beat so Clerk's 2s loop counter is gone, then
+ * try again. Second time: the sync is not going to work on this visit, so
+ * say so and hand over the hub's login as a link the person clicks, never
+ * as a redirect that bounces back into the loop.
+ */
+function handshakeLoopPage(req: NextRequest, retry: number): string {
+	const again = new URL(req.nextUrl.href);
+	again.searchParams.set("__ws_retry", String(retry + 1));
+	const clean = new URL(req.nextUrl.href);
+	clean.searchParams.delete("__ws_retry");
+	const login = new URL(HUB_LOGIN_URL);
+	login.searchParams.set("redirect_url", clean.href);
+	const esc = (v: string) =>
+		v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+	const retrying = retry < 1;
+	return `<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${retrying ? "Signing you in" : "Sign in"} · WorldSpace</title>
+${retrying ? `<meta http-equiv="refresh" content="2;url=${esc(again.href)}">` : ""}
+<style>html{background:#0C0A09;color:#FAFAF9;font:15px/1.6 -apple-system,"Public Sans",system-ui,sans-serif}
+body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:24px}
+main{max-width:360px;text-align:center}h1{font-size:18px;margin:0 0 8px}p{margin:0 0 20px;color:#A8A29E}
+a{display:inline-block;background:#EAB308;color:#0C0A09;font-weight:600;border-radius:9999px;padding:10px 20px;text-decoration:none}</style>
+</head><body><main>
+<h1>${retrying ? "Signing you in…" : "We couldn't sign you in here"}</h1>
+<p>${
+		retrying
+			? "Connecting your WorldStreet session to WorldSpace."
+			: "Your WorldStreet session didn't carry over to this device. Sign in once more and you'll come straight back."
+	}</p>
+${retrying ? "" : `<a href="${esc(login.href)}">Sign in at WorldStreet</a>`}
+</main></body></html>`;
+}
+
 /**
  * A speculative request: a Link prefetch, or an RSC payload fetch. Redirecting
  * either one poisons the router (see the call sites).
