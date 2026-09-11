@@ -32,6 +32,22 @@ const PLACEHOLDER_PEAKS = Array.from(
 
 type DecodedWave = { peaks: number[]; duration: number };
 
+/** Stretch or squeeze a peak series to `n` bars, keeping each bar's max. */
+function resample(src: number[], n: number): number[] {
+	if (src.length === 0) return PLACEHOLDER_PEAKS;
+	if (src.length === n) return src;
+	const out: number[] = [];
+	for (let i = 0; i < n; i++) {
+		const start = Math.floor((i * src.length) / n);
+		const end = Math.max(start + 1, Math.floor(((i + 1) * src.length) / n));
+		let peak = 0;
+		for (let j = start; j < end && j < src.length; j++)
+			if (src[j] > peak) peak = src[j];
+		out.push(peak);
+	}
+	return out;
+}
+
 // Module-level caches: decoding is per-src, not per-mount, so re-renders,
 // re-mounts and duplicate messages never re-fetch or re-decode.
 const waveCache = new Map<string, DecodedWave>();
@@ -395,7 +411,10 @@ export const VoiceMessage = ({
 
 	const progress = duration > 0 ? currentTime / duration : 0;
 	const decoding = !hasSentPeaks && peaks === null && !decodeFailed;
-	const shownPeaks = peaks ?? PLACEHOLDER_PEAKS;
+	// The wire carries 8..64 peaks depending on how long the note ran; the
+	// bubble always draws BAR_COUNT bars, so a short note filled a third of
+	// its row and a long one overflowed it. Resample to the fixed count.
+	const shownPeaks = resample(peaks ?? PLACEHOLDER_PEAKS, BAR_COUNT);
 
 	return (
 		<div

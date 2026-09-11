@@ -120,15 +120,25 @@ export function VoiceRecorder({
 	const analyserRef = useRef<AnalyserNode | null>(null);
 	const chunksRef = useRef<Blob[]>([]);
 	const levelsRef = useRef<number[]>([]);
-	const lastSampleRef = useRef(0);
-	const elapsedMsRef = useRef(0);
-	// null until the MediaRecorder is actually running. The rAF loop below
-	// mounts with phase "live" BEFORE getUserMedia resolves, and it used to
-	// accumulate `now - 0` on its first frame - performance.now() is time
-	// since the page loaded, so opening the recorder on a tab that had been
-	// up for four minutes started the clock at 4:00 and wrote that into the
-	// note's durationSec (owner 2026-09-10).
-	const lastTickRef = useRef<number | null>(null);
+	// Recorded time = the sum of finished segments + the running one. Kept
+	// on wall-clock timestamps (start, pause, resume, stop), NOT on frames:
+	// the rAF loop below stops the moment the tab is hidden, and a note
+	// recorded while the person glanced at another window used to come out
+	// with a duration of whatever they watched the meter for (2026-09-11).
+	const doneMsRef = useRef(0);
+	// null until the MediaRecorder is actually running: everything before
+	// that (the permission prompt especially) is not recorded audio, and
+	// performance.now() is time since page load, so an unguarded first
+	// frame once started the clock at 4:00 (owner 2026-09-10).
+	const segmentStartRef = useRef<number | null>(null);
+	const elapsedMs = useCallback(
+		() =>
+			doneMsRef.current +
+			(segmentStartRef.current === null || pausedRef.current
+				? 0
+				: performance.now() - segmentStartRef.current),
+		[],
+	);
 	const recordingRef = useRef(false);
 	const rafRef = useRef<number | undefined>(undefined);
 	const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -160,6 +170,10 @@ export function VoiceRecorder({
 			onStopModeRef.current = mode;
 			// Freeze the clock the moment we ask it to stop, so the tail of
 			// frames between stop() and onstop cannot inflate the duration.
+			if (segmentStartRef.current !== null && !pausedRef.current) {
+				doneMsRef.current += performance.now() - segmentStartRef.current;
+			}
+			segmentStartRef.current = null;
 			recordingRef.current = false;
 			if (!rec || rec.state === "inactive") {
 				if (mode === "discard") onClose();
@@ -217,10 +231,7 @@ export function VoiceRecorder({
 					const blob = new Blob(chunksRef.current, {
 						type: mimeRef.current || "audio/webm",
 					});
-					const durationSec = Math.max(
-						1,
-						Math.round(elapsedMsRef.current / 1000),
-					);
+					const durationSec = Math.max(1, Math.round(elapsedMs() / 1000));
 					const peaks = toPeaks(levelsRef.current);
 					if (mode === "send") {
 						onSend(blob, {
@@ -257,10 +268,9 @@ export function VoiceRecorder({
 					analyserRef.current = analyser;
 				}
 				rec.start(250);
-				// The clock starts HERE, not at mount: everything before this
-				// (the permission prompt especially) is not recorded audio.
-				elapsedMsRef.current = 0;
-				lastTickRef.current = performance.now();
+				// The clock starts HERE, not at mount.
+				doneMsRef.current = 0;
+				segmentStartRef.current = performance.now();
 				recordingRef.current = true;
 			} catch {
 				onError("Microphone access denied");
@@ -273,38 +283,49 @@ export function VoiceRecorder({
 			teardownMedia();
 		};
 		// biome-ignore lint/correctness/useExhaustiveDependencies: acquire once per mount
-	}, []);
+	}, [elapsedMs]);
 
-	// ── Level sampling + live canvas + elapsed clock, one rAF loop ──
+	// ── Level sampling + the clock, on timers that keep going in a hidden
+	// tab (throttled to once a second there, which still leaves the peaks
+	// honest in shape); the rAF loop below only draws. ──
 	useEffect(() => {
 		if (phase !== "live") return;
 		const data = new Uint8Array(1024);
-		const step = (now: number) => {
-			rafRef.current = requestAnimationFrame(step);
-			if (!recordingRef.current || lastTickRef.current === null) {
-				// Waiting on the mic. Draw nothing, count nothing.
-				return;
-			}
-			if (pausedRef.current) {
-				lastTickRef.current = now;
-				return;
-			}
-			elapsedMsRef.current += now - lastTickRef.current;
-			lastTickRef.current = now;
+		const sample = () => {
+			if (!recordingRef.current || pausedRef.current) return;
 			const analyser = analyserRef.current;
-			if (analyser && now - lastSampleRef.current >= SAMPLE_EVERY_MS) {
-				lastSampleRef.current = now;
-				analyser.getByteTimeDomainData(data);
-				let sum = 0;
-				for (let i = 0; i < data.length; i++) {
-					const v = (data[i] - 128) / 128;
-					sum += v * v;
-				}
-				// RMS with a touch of gain — speech rarely nears full scale.
-				levelsRef.current.push(
-					Math.min(1, Math.sqrt(sum / data.length) * 3.2),
-				);
+			if (!analyser) return;
+			analyser.getByteTimeDomainData(data);
+			let sum = 0;
+			for (let i = 0; i < data.length; i++) {
+				const v = (data[i] - 128) / 128;
+				sum += v * v;
 			}
+			// RMS with a touch of gain — speech rarely nears full scale.
+			levelsRef.current.push(Math.min(1, Math.sqrt(sum / data.length) * 3.2));
+		};
+		const tick = () => {
+			if (!recordingRef.current) return;
+			setElapsed((prev) => {
+				const next = Math.floor(elapsedMs() / 1000);
+				return next === prev ? prev : next;
+			});
+			if (elapsedMs() >= MAX_SECONDS * 1000) finish("review");
+		};
+		const sampler = setInterval(sample, SAMPLE_EVERY_MS);
+		const clock = setInterval(tick, 250);
+		return () => {
+			clearInterval(sampler);
+			clearInterval(clock);
+		};
+	}, [phase, finish, elapsedMs]);
+
+	// ── The live canvas: the last N levels as bars, one rAF loop ──
+	useEffect(() => {
+		if (phase !== "live") return;
+		const step = () => {
+			rafRef.current = requestAnimationFrame(step);
+			if (!recordingRef.current) return;
 			const canvas = canvasRef.current;
 			const ctx = canvas?.getContext("2d");
 			if (canvas && ctx) {
@@ -336,19 +357,12 @@ export function VoiceRecorder({
 					ctx.fill();
 				}
 			}
-			setElapsed((prev) => {
-				const next = Math.floor(elapsedMsRef.current / 1000);
-				return next === prev ? prev : next;
-			});
-			if (elapsedMsRef.current >= MAX_SECONDS * 1000) {
-				finish("review");
-			}
 		};
 		rafRef.current = requestAnimationFrame(step);
 		return () => {
 			if (rafRef.current !== undefined) cancelAnimationFrame(rafRef.current);
 		};
-	}, [phase, finish]);
+	}, [phase]);
 
 	// ── "recording audio…" heartbeat to the peer (register 84) ──
 	useEffect(() => {
@@ -382,7 +396,7 @@ export function VoiceRecorder({
 			// A sub-second press is a TAP, not a hold: lock and keep
 			// recording (Telegram grammar). Discarding here made the mic
 			// button feel dead on phones — tap, overlay blinks, nothing.
-			if (elapsedMsRef.current < 700) setLocked(true);
+			if (elapsedMs() < 700) setLocked(true);
 			else finish("send");
 		};
 		window.addEventListener("pointermove", onMove);
@@ -393,17 +407,20 @@ export function VoiceRecorder({
 			window.removeEventListener("pointerup", onUp);
 			window.removeEventListener("pointercancel", onUp);
 		};
-	}, [locked, phase, start.x, start.y, finish]);
+	}, [locked, phase, start.x, start.y, finish, elapsedMs]);
 
 	const togglePause = () => {
 		const rec = recorderRef.current;
 		if (!rec) return;
 		if (rec.state === "recording") {
 			rec.pause();
+			if (segmentStartRef.current !== null)
+				doneMsRef.current += performance.now() - segmentStartRef.current;
 			pausedRef.current = true;
 			setPaused(true);
 		} else if (rec.state === "paused") {
 			rec.resume();
+			segmentStartRef.current = performance.now();
 			pausedRef.current = false;
 			setPaused(false);
 		}
@@ -434,7 +451,7 @@ export function VoiceRecorder({
 
 	if (phase === "review" && review) {
 		return (
-			<div className="absolute inset-0 z-10 flex items-center gap-1 rounded-2xl bg-raised px-2">
+			<div className="absolute inset-0 z-10 flex items-center gap-1 rounded-xl bg-raised px-2">
 				<button
 					type="button"
 					onClick={discardReview}
@@ -455,11 +472,13 @@ export function VoiceRecorder({
 						<RiPlayFill size={20} />
 					)}
 				</button>
-				<div className="flex h-8 min-w-0 flex-1 items-center gap-[2px] overflow-hidden">
+				<div className="flex h-8 min-w-0 flex-1 items-center justify-between overflow-hidden">
 					{review.peaks.map((p, i) => (
 						<span
 							// biome-ignore lint/suspicious/noArrayIndexKey: bars are positional
 							key={i}
+							// Spread across the row: a short note has few peaks, and a
+							// fixed 2px pitch left them huddled at the left edge.
 							className="w-[2px] shrink-0 rounded-pill bg-gold"
 							style={{ height: Math.max(3, p * 26) }}
 						/>
@@ -490,7 +509,7 @@ export function VoiceRecorder({
 	}
 
 	return (
-		<div className="absolute inset-0 z-10 flex items-center gap-2 rounded-2xl bg-raised px-3">
+		<div className="absolute inset-0 z-10 flex items-center gap-2 rounded-xl bg-raised px-3">
 			{/* Sanctioned live-state loop: opacity-only pulse (06-motion). */}
 			<span
 				className={clsx(

@@ -208,6 +208,10 @@ export default function MediaModal({
 								   menu offers "Save video as" and routes around us. */
 								controlsList="nodownload"
 								autoPlay
+								// A clip runs until it is closed (owner 2026-09-11): one
+								// that stops on its last frame reads as broken, the same
+								// ruling the feed player already follows.
+								loop
 								/* iOS refuses autoplay outright without `muted`, and
 								   yanks any playing video into the native fullscreen
 								   player without `playsInline` — this element had
