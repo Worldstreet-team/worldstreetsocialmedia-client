@@ -15,7 +15,7 @@ import {
   X,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotionConfig } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Cropper, { type Area } from "react-easy-crop";
 import "react-easy-crop/react-easy-crop.css";
@@ -160,7 +160,7 @@ export default function StoryStudio({
   initialKind = "media",
 }: StoryStudioProps) {
   const { toast } = useToast();
-  const reduce = useReducedMotion();
+  const reduce = useReducedMotionConfig();
   const kind = initialKind;
   const [file, setFile] = useState<File | null>(null);
   const [bg, setBg] = useState<StoryCanvas>(STORY_CANVASES[0]);

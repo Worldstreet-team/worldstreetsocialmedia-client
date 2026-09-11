@@ -1,5 +1,7 @@
 "use client";
 
+import { motionReduced } from "@/lib/motion";
+
 import { flushSync } from "react-dom";
 
 /**
@@ -13,7 +15,8 @@ import { flushSync } from "react-dom";
  * Fallback: a `.theme-switching` class on <html> that turns on color
  * transitions for one motion-slow beat (see globals.css), then detaches.
  *
- * Under prefers-reduced-motion both paths are skipped and the swap is instant.
+ * Under reduced motion (the OS or the in-app setting, see lib/motion) both
+ * paths are skipped and the swap is instant.
  */
 export function withThemeTransition(apply: () => void) {
   if (typeof document === "undefined") {
@@ -21,7 +24,7 @@ export function withThemeTransition(apply: () => void) {
     return;
   }
 
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  if (motionReduced()) {
     apply();
     return;
   }

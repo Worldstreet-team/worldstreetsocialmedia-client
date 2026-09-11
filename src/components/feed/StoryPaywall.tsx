@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import clsx from "clsx";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotionConfig } from "framer-motion";
 import {
 	Camera,
 	Confetti,
@@ -44,7 +44,7 @@ export function StoryPaywall({
 	onClose: () => void;
 }) {
 	const t = useT();
-	const reduce = useReducedMotion();
+	const reduce = useReducedMotionConfig();
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 

@@ -23,7 +23,7 @@ import {
   Users,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotionConfig } from "framer-motion";
 import { useSetAtom, useAtomValue } from "jotai";
 import type { Room } from "livekit-client";
 import { useRouter } from "next/navigation";
@@ -142,7 +142,7 @@ function SpeakingRing({
   identity?: string;
 }) {
   const ref = useRef<HTMLSpanElement>(null);
-  const reduce = useReducedMotion();
+  const reduce = useReducedMotionConfig();
 
   useEffect(() => {
     const el = ref.current;
@@ -308,7 +308,7 @@ export default function SpaceRoom({
 }: SpaceRoomProps) {
   const t = useT();
   const { toast } = useToast();
-  const reduce = useReducedMotion();
+  const reduce = useReducedMotionConfig();
   const router = useRouter();
   const me = useAtomValue(userAtom);
   const setPendingDraft = useSetAtom(pendingDraftAtom);

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import clsx from "clsx";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotionConfig } from "framer-motion";
 import { ArrowLeft, Check, Prohibit, ShieldCheck } from "@phosphor-icons/react";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import {
@@ -56,7 +56,7 @@ export default function ReportSheet({
 	onClose: () => void;
 }) {
 	const t = useT();
-	const reduce = useReducedMotion();
+	const reduce = useReducedMotionConfig();
 	const { toast } = useToast();
 
 	const [step, setStep] = useState<Step>("reason");

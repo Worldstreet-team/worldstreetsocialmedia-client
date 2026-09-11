@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Plus } from "@phosphor-icons/react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotionConfig } from "framer-motion";
 import { useT } from "@/i18n/client";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
@@ -30,7 +30,7 @@ export function MyCommunitiesRail({
   onCreate: () => void;
 }) {
   const t = useT();
-  const reduced = useReducedMotion();
+  const reduced = useReducedMotionConfig();
 
   return (
     <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

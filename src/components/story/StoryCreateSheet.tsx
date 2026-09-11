@@ -1,7 +1,7 @@
 "use client";
 
 import { ImageSquare, Microphone, TextAa } from "@phosphor-icons/react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotionConfig } from "framer-motion";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import {
   OverlayHeader,
@@ -98,7 +98,7 @@ export default function StoryCreateSheet({
   onClose,
   onPick,
 }: StoryCreateSheetProps) {
-  const reduce = useReducedMotion();
+  const reduce = useReducedMotionConfig();
 
   // Esc + the body scroll lock come from the overlay grammar now.
   useOverlayDismiss(true, onClose);

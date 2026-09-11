@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Compass as CompassIcon, House, MagnifyingGlass, Plus } from "@phosphor-icons/react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotionConfig } from "framer-motion";
 import { useAtom, useSetAtom } from "jotai";
 import { Compass, UsersRound } from "lucide-react";
 
@@ -66,7 +66,7 @@ export default function CommunitiesPage() {
 	// Both halves are cached app-wide (stale-while-revalidate): a revisit
 	// paints the last result immediately and refreshes quietly underneath.
 	// Skeletons only on the genuinely first visit of a session.
-	const reduced = useReducedMotion();
+	const reduced = useReducedMotionConfig();
 	const [home, setHome] = useAtom(communityHomeAtom);
 	const setHomeFetchedAt = useSetAtom(communityHomeFetchedAtAtom);
 	const [rows, setRows] = useAtom(communityDirAtom);

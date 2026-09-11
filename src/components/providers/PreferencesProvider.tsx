@@ -1,5 +1,8 @@
 "use client";
 
+import { MotionConfig } from "framer-motion";
+import { useMotionReduced } from "@/lib/motion";
+
 import axios from "axios";
 import {
 	createContext,
@@ -230,9 +233,18 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
 		};
 	}, [prefs]);
 
+	// framer-motion never saw the in-app Reduce motion setting: nothing set a
+	// MotionConfig and its own hook only hears the OS, so sixty files of
+	// sheets, springs and count rolls kept moving for people who had asked
+	// them not to (audit 2026-09-11). "always" drops transform and layout
+	// motion and keeps fades; data-ws-motion already folds in the OS on auto.
+	const reducedMotion = useMotionReduced();
+
 	return (
 		<PreferencesContext.Provider value={{ prefs, setPrefs, resetPrefs, synced }}>
-			{children}
+			<MotionConfig reducedMotion={reducedMotion ? "always" : "never"}>
+				{children}
+			</MotionConfig>
 		</PreferencesContext.Provider>
 	);
 }

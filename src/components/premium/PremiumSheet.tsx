@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import clsx from "clsx";
 import VerifiedIcon from "@/assets/icons/VerifiedIcon";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotionConfig } from "framer-motion";
 import {
   ChartLineUp,
   ChatCircle,
@@ -82,7 +82,7 @@ export function PremiumSheet() {
   const { toast } = useToast();
   const [open, setOpen] = useAtom(premiumOpenAtom);
   const [user, setUser] = useAtom(userAtom);
-  const reduce = useReducedMotion();
+  const reduce = useReducedMotionConfig();
 
   const [state, setState] = useState<SubscriptionState | null>(null);
   const [loading, setLoading] = useState(true);

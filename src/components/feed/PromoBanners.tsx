@@ -1,5 +1,7 @@
 "use client";
 
+import { motionReduced } from "@/lib/motion";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import VerifiedIcon from "@/assets/icons/VerifiedIcon";
@@ -42,9 +44,7 @@ export function PromoBanners() {
 	const reduceRef = useRef(false);
 
 	useEffect(() => {
-		reduceRef.current = window.matchMedia(
-			"(prefers-reduced-motion: reduce)",
-		).matches;
+		reduceRef.current = motionReduced();
 	}, []);
 
 	const slides: Slide[] = [

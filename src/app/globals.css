@@ -547,7 +547,8 @@ html {
   to { opacity: 1; transform: none; }
 }
 @utility animate-pop {
-  animation: ws-pop 160ms var(--ws-ease) both;
+  /* Fast tier (was 160ms, off the 120/200/320 ladder). */
+  animation: ws-pop var(--ws-motion-fast, 120ms) var(--ws-ease) both;
 }
 
 /* The reply box docking to the bottom of a phone once it scrolls past its
@@ -1203,8 +1204,10 @@ video,
    NOTE: named ws-sheen-sweep, NOT ws-shimmer — the skeleton utility owns
    that name (a background-position sweep), and a second definition of it
    here silently killed every skeleton's animation once already.
-   Transform-only animation (the sweep is a translated pseudo-element), so
-   reduced-motion stills it with everything else. */
+   Transform-only animation (the sweep is a translated pseudo-element). It
+   has NO resting position of its own, so a stilled sweep froze at inset 0
+   as a white bar across the left of the pill: reduced motion hides it
+   instead (the block right after the rule). */
 @keyframes ws-sheen-sweep {
 	0% { transform: translateX(-160%) skewX(-12deg); }
 	100% { transform: translateX(260%) skewX(-12deg); }
@@ -1234,6 +1237,12 @@ video,
 		transparent
 	);
 	animation: ws-sheen-sweep 2.6s var(--ws-ease) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+	.shine-pill::after {
+		animation: none;
+		opacity: 0;
+	}
 }
 
 /* The ballot falling into the hinged vote box: appears above the mouth,
@@ -1273,10 +1282,6 @@ video,
     0 10px 30px rgb(0 0 0 / 0.16);
 }
 
-/* Pull-to-refresh ring while the refresh promise runs. */
-@keyframes ws-spin {
-	to { transform: rotate(360deg); }
-}
 
 /* Phase 5 motion. Timeline switches slide in FROM the direction of travel
    (swipe left = the next timeline enters from the right); first loads
@@ -1297,7 +1302,7 @@ video,
 }
 .animate-slide-in-r { animation: ws-slide-in-r var(--ws-motion-base, 200ms) var(--ws-ease) backwards; }
 .animate-slide-in-l { animation: ws-slide-in-l var(--ws-motion-base, 200ms) var(--ws-ease) backwards; }
-.animate-content-in { animation: ws-fade-in 150ms var(--ws-ease) backwards; }
+.animate-content-in { animation: ws-fade-in var(--ws-motion-fast, 120ms) var(--ws-ease) backwards; }
 
 /* W2 messenger motion: live arrivals only (history renders static), and
    the CSS-loop typing dots that cost zero React renders. */
@@ -1404,6 +1409,50 @@ html[data-ws-motion="reduce"] *::after {
   transition-duration: 0.01ms !important;
   transition-delay: 0ms !important;
   scroll-behavior: auto !important;
+}
+
+/* The in-app setting's twins of every OS reduced-motion end state in this
+   file. The flatten above ENDS each animation on its resting style, so any
+   element whose rest is not its settled look must be pinned here as well
+   as in its @media block: the MARKET wordmark's torn slices rest at full
+   opacity and sat on the logo as a ghosted double, and the promo image
+   lost the scale that hides its blurred edge (audit 2026-09-11). The brand
+   lockup's twins sit beside its own block. Add a twin whenever you add an
+   OS end state. */
+html[data-ws-motion="reduce"] .shine::after,
+html[data-ws-motion="reduce"] .shine-soft::after,
+html[data-ws-motion="reduce"] .shine-pill::after {
+  animation: none;
+  opacity: 0;
+}
+html[data-ws-motion="reduce"] .promo-amb {
+  animation: none;
+  transform: scale(1.18);
+}
+html[data-ws-motion="reduce"] .mk-glitch,
+html[data-ws-motion="reduce"] .mk-slice-up,
+html[data-ws-motion="reduce"] .mk-slice-down,
+html[data-ws-motion="reduce"] .mk-square {
+  animation: none;
+}
+html[data-ws-motion="reduce"] .mk-slice-up,
+html[data-ws-motion="reduce"] .mk-slice-down {
+  opacity: 0;
+}
+
+/* Spinners keep spinning, under both triggers. A stopped spinner reads as
+   a hung load, and here the rotation IS the information (iOS keeps its
+   activity indicator running under Reduce Motion for the same reason). The
+   flattens set 0.01ms and one iteration; this restores only the spin. */
+html[data-ws-motion="reduce"] .animate-spin {
+  animation-duration: 1s !important;
+  animation-iteration-count: infinite !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-spin {
+    animation-duration: 1s !important;
+    animation-iteration-count: infinite !important;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   *,

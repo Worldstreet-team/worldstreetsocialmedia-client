@@ -2,7 +2,7 @@
 
 import { Check, Plus } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotionConfig } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { HexColorPicker } from "react-colorful";
 import TextBlock from "@/components/story/overlays/TextBlock";
@@ -83,7 +83,7 @@ export default function TextTool({
   const [paletteId, setPaletteId] = useState(TEXT_PALETTES[0].id);
   const [customOpen, setCustomOpen] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const reduce = useReducedMotion();
+  const reduce = useReducedMotionConfig();
 
   useEffect(() => {
     inputRef.current?.focus();

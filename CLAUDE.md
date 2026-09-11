@@ -154,7 +154,17 @@ Non-obvious rules the spec enforces, all of which this page now follows:
   are the only durations. They're wired as Tailwind's *defaults* in
   `globals.css`, so a plain `transition-colors` is already on-token — don't add
   `duration-*` unless you mean the base or slow tier. Animate opacity and
-  transform only; `prefers-reduced-motion` is handled globally.
+  transform only.
+- **Reduced motion has TWO triggers** (audit 2026-09-11): the OS query and
+  the in-app Settings > Accessibility toggle, both resolved into
+  `html[data-ws-motion="reduce"]` ("on", or "auto" while the OS asks).
+  CSS: the flatten ends every animation on its RESTING style, so anything
+  hidden at rest needs its end state under the `@media` block AND a
+  `html[data-ws-motion="reduce"]` twin. JS: ask `motionReduced()` /
+  `useMotionReduced()` from `src/lib/motion.ts`, never `matchMedia`
+  directly. framer: a `MotionConfig` in PreferencesProvider obeys the
+  setting; use `useReducedMotionConfig`, never `useReducedMotion` (OS only).
+  Spinners (`animate-spin`) stay exempt: the spin is the information.
 - **Four z-index values, nothing else**: `z-sticky` 100, `z-dropdown` 400,
   `z-modal` 800, `z-toast` 1200 (custom utilities in `globals.css`). The
   `z-0/10/20` inside PostCard are intra-card stacking that predate this and sit

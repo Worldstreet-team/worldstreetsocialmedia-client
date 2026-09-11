@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppPathname } from "@/i18n/useAppPathname";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotionConfig } from "framer-motion";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
   Broadcast,
@@ -42,7 +42,7 @@ export function CreateFab() {
   const t = useT();
   const router = useRouter();
   const pathname = useAppPathname();
-  const reduced = useReducedMotion();
+  const reduced = useReducedMotionConfig();
 
   const [open, setOpen] = useState(false);
   // The FAB stays out of the way until you've scrolled past the composer —

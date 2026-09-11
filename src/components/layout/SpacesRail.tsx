@@ -2,7 +2,7 @@
 
 import { formatCompact } from "@/lib/utils";
 import clsx from "clsx";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotionConfig } from "framer-motion";
 import Link from "next/link";
 import { useAtomValue } from "jotai";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -47,14 +47,14 @@ const MAX_UPCOMING = 2;
 /**
  * Three-bar equaliser — the "this is audio, and it is happening" signal that
  * a static dot can't carry. Transform-only (scaleY on a bottom origin), and
- * it flattens to a static meter under prefers-reduced-motion.
+ * it flattens to a static meter under reduced motion (OS or in-app).
  *
  * The loop runs longer than the three UI durations on purpose: those govern
  * state transitions, while ambient loops already sit outside them (the
  * skeleton shimmer is 1.6s, the sidebar shine 5s).
  */
 function LiveBars() {
-	const reduced = useReducedMotion();
+	const reduced = useReducedMotionConfig();
 	return (
 		<span
 			className="flex h-3.5 shrink-0 items-end gap-[2px]"
@@ -184,7 +184,7 @@ export function SpacesRail({ delay = 210 }: { delay?: number }) {
 	const trackRef = useRef<HTMLDivElement>(null);
 	const [page, setPage] = useState(0);
 	// Smooth paging is motion; honour the reader's setting like everything else.
-	const reduced = useReducedMotion();
+	const reduced = useReducedMotionConfig();
 	const onVoice = useAppPathname().startsWith("/voice");
 
 	// A room ending can shorten the list under a reader parked on the last

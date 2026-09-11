@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotionConfig } from "framer-motion";
 import { compactTrendPosts } from "@/lib/utils";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { useT } from "@/i18n/client";
@@ -34,7 +34,7 @@ export function TrendingList({
   delay: number;
 }) {
   const t = useT();
-  const reduced = useReducedMotion();
+  const reduced = useReducedMotionConfig();
 
   return (
     <ExploreSection

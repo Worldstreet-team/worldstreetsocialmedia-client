@@ -1,5 +1,7 @@
 "use client";
 
+import { motionReduced } from "@/lib/motion";
+
 import clsx from "clsx";
 import { motion } from "framer-motion";
 import { X } from "@phosphor-icons/react";
@@ -260,7 +262,7 @@ export function OverlayPanel({
 						if (!d || !el) return;
 						d.dy = Math.max(0, e.touches[0].clientY - d.y);
 						if (
-							matchMedia("(prefers-reduced-motion: reduce)").matches
+							motionReduced()
 						)
 							return;
 						el.style.transition = "none";

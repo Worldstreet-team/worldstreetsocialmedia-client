@@ -964,13 +964,13 @@ export default function Feed({
 				}}
 			>
 				<span
-					className="mb-2.5 inline-block h-6 w-6 rounded-pill border-2 border-hairline border-t-gold"
+					// animate-spin, not an inline ws-spin: spinners are exempt
+					// from reduced motion (the spin is the information), and an
+					// inline animation cannot be exempted from the flatten.
+					className={`mb-2.5 inline-block h-6 w-6 rounded-pill border-2 border-hairline border-t-gold${pullApi.refreshing ? " animate-spin" : ""}`}
 					style={{
 						transform: `rotate(${pullApi.pull * 2.6}deg)`,
 						opacity: Math.min(1, pullApi.pull / 40),
-						animation: pullApi.refreshing
-							? "ws-spin 700ms linear infinite"
-							: undefined,
 					}}
 					role={pullApi.refreshing ? "status" : undefined}
 					aria-label={pullApi.refreshing ? "Refreshing" : undefined}

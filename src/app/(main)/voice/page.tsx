@@ -2,7 +2,7 @@
 
 import { MagnifyingGlass, Plus } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotionConfig } from "framer-motion";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { Mic } from "lucide-react";
 import { useSearchParams } from "next/navigation";
@@ -80,7 +80,7 @@ function VoiceDirectory() {
   const { toast } = useToast();
   const { client } = useRealtime();
   const params = useSearchParams();
-  const reduced = useReducedMotion();
+  const reduced = useReducedMotionConfig();
   // The directory is cached app-wide (stale-while-revalidate): a revisit
   // paints the last result immediately and the poll/refetch converges it.
   const [cachedLive, setCachedLive] = useAtom(spacesLiveAtom);

@@ -1,5 +1,7 @@
 "use client";
 
+import { motionReduced } from "@/lib/motion";
+
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -60,7 +62,7 @@ export default function ImageModal({
 	const requestClose = useCallback(() => {
 		if (closingRef.current) return;
 		const el = flipRef.current;
-		const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+		const reduced = motionReduced();
 		if (reduced || !el || !originRect || zoomApi.zoomed) {
 			onClose();
 			return;
@@ -199,7 +201,7 @@ export default function ImageModal({
 		el.style.transition = "";
 		el.style.transform = "";
 		el.style.opacity = "";
-		if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+		if (motionReduced()) return;
 		const d = originDelta();
 		if (!d) return;
 		// A thumbnail nowhere near the viewport would morph across half the

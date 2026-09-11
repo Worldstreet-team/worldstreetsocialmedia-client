@@ -3153,7 +3153,7 @@ export const MessageBox = ({
 										setMsgMenu(null);
 									}}
 									aria-label={`React ${emoji}`}
-									className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-[calc(20px*var(--ws-fs))] transition-transform hover:scale-125"
+									className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-[calc(20px*var(--ws-fs))] transition-colors hover:bg-primary/10"
 								>
 									{emoji}
 								</button>

@@ -1,5 +1,7 @@
 "use client";
 
+import { motionReduced } from "@/lib/motion";
+
 import { useCallback, useRef } from "react";
 import { haptic } from "@/lib/haptics";
 
@@ -102,7 +104,7 @@ export function useSwipeTabs<T extends string>(
 			if (s.intent === "abort") return;
 		}
 		s.dx = dx;
-		if (!matchMedia("(prefers-reduced-motion: reduce)").matches) setHint(dx);
+		if (!motionReduced()) setHint(dx);
 	};
 
 	const onTouchEnd = () => {

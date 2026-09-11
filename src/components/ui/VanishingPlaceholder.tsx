@@ -1,5 +1,7 @@
 "use client";
 
+import { motionReduced } from "@/lib/motion";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 
 interface Particle {
@@ -176,9 +178,7 @@ export function VanishingPlaceholder({
 
 	useEffect(() => {
 		if (!visible) return;
-		const reduced = window.matchMedia(
-			"(prefers-reduced-motion: reduce)",
-		).matches;
+		const reduced = motionReduced();
 
 		if (reduced) {
 			draw(texts[index]);
