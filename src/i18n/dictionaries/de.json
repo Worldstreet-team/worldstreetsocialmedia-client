@@ -736,5 +736,7 @@
   "post.buy.confirmBody": "Du kaufst diesen Beitrag von {seller} für {price}. Der Betrag wird von deinem Wallet-Guthaben abgebucht.",
   "post.buy.confirmCta": "Zahlung fortsetzen",
   "messages.kind.payment": "Zahlung",
+  "messages.kind.contact": "Contact",
+  "messages.onlineNow": "Online now",
   "profile.alignedTo": "Ausgerichtet auf"
 }

@@ -73,6 +73,7 @@ export interface ThreadListProps {
 		| "onRetryUpload"
 		| "onCancelUpload"
 		| "onReact"
+		| "onMessageContact"
 	>;
 }
 
@@ -371,7 +372,7 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 								View profile
 							</Link>
 						)}
-						<span className="mt-6 font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle">
+						<span className="mt-6 font-sans text-[calc(13px*var(--ws-fs))] text-muted">
 							Say the first thing.
 						</span>
 					</div>

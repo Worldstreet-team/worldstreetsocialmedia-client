@@ -46,6 +46,8 @@ export interface BubbleMessage {
 	payToName?: string;
 	systemEvent?: SystemEvent;
 	storyRef?: { story: string; thumbnail: string; authorUsername: string };
+	/** A shared account, rendered as a card with a Message action. */
+	contact?: { profile: string; name: string; username?: string; avatar?: string };
 	replyTo?: {
 		_id: string;
 		content?: string;
@@ -76,6 +78,8 @@ function quotedPreview(r: {
 				: "Voice note";
 		case "payment":
 			return "Payment";
+		case "contact":
+			return "Contact";
 		default:
 			return "Message";
 	}
@@ -220,6 +224,8 @@ export interface BubbleProps {
 	onCancelUpload?: (clientKey: string) => void;
 	/** Toggle MY reaction on this message (register 132/134). */
 	onReact?: (m: BubbleMessage, emoji: string) => void;
+	/** The Message action on a shared contact card. */
+	onMessageContact?: (profileId: string) => void;
 }
 
 /**
@@ -263,6 +269,7 @@ export const MessageBubble = memo(function MessageBubble({
 	onRetryUpload,
 	onCancelUpload,
 	onReact,
+	onMessageContact,
 }: BubbleProps) {
 	const rowRef = useRef<HTMLDivElement | null>(null);
 	// Snapshot the bubble node itself (not the row — no avatar, no reply
@@ -327,7 +334,7 @@ export const MessageBubble = memo(function MessageBubble({
 		const actorAvatar = (m.sender as { avatar?: string })?.avatar;
 		return (
 			<div className="mx-auto flex w-full max-w-[52rem] justify-center px-4 py-1.5">
-				<span className="inline-flex items-center gap-1.5 rounded-pill bg-page/70 px-3 py-1 text-center font-sans text-[calc(11.5px*var(--ws-fs))] font-medium text-muted">
+				<span className="inline-flex items-center gap-1.5 rounded-pill bg-page/70 px-3 py-1 text-center font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-muted">
 					{/* The actor's face inline (owner pick): a busy group reads
 					    as people, not names. */}
 					{actorAvatar && (
@@ -401,7 +408,7 @@ export const MessageBubble = memo(function MessageBubble({
 				// Telegram's rule (owner pick): the thread opens here.
 				<div className="mx-auto flex w-full max-w-[52rem] items-center gap-3 px-4 py-3 sm:px-6">
 					<span className="h-px flex-1" style={{ background: "var(--chat-accent-40, rgba(34,184,214,0.4))" }} />
-					<span className="font-sans text-[calc(11px*var(--ws-fs))] font-semibold" style={{ color: "var(--chat-accent, var(--ws-brand-primary))" }}>
+					<span className="font-sans text-[calc(12px*var(--ws-fs))] font-semibold" style={{ color: "var(--chat-accent, var(--ws-brand-primary))" }}>
 						{unreadLabel && unreadLabel > 1
 							? `${unreadLabel} unread messages`
 							: "Unread messages"}
@@ -412,10 +419,10 @@ export const MessageBubble = memo(function MessageBubble({
 			{showDay && (
 				<div className="flex justify-center pb-2 pt-5">
 					<span
-						className="rounded-pill px-2.5 py-0.5 font-sans text-[calc(11px*var(--ws-fs))] font-medium tabular-nums"
+						className="rounded-pill px-2.5 py-0.5 font-sans text-[calc(12px*var(--ws-fs))] font-medium tabular-nums"
 						style={{
 							background: "var(--chat-stamp-bg, transparent)",
-							color: "var(--chat-stamp-ink, var(--ws-text-subtle))",
+							color: "var(--chat-stamp-ink, var(--ws-text-muted))",
 						}}
 					>
 						{dayLabel(m.createdAt)}
@@ -503,7 +510,7 @@ export const MessageBubble = memo(function MessageBubble({
 				    --reveal is set by ThreadList's drag handler. */}
 				<span
 					aria-hidden
-					className="pointer-events-none absolute right-[-64px] top-1/2 w-[56px] -translate-y-1/2 text-right font-sans text-[calc(11px*var(--ws-fs))] tabular-nums text-subtle"
+					className="pointer-events-none absolute right-[-64px] top-1/2 w-[56px] -translate-y-1/2 text-right font-sans text-[calc(12px*var(--ws-fs))] tabular-nums text-muted"
 					style={{ opacity: "var(--reveal, 0)" }}
 				>
 					{format(new Date(m.createdAt), "h:mm a")}
@@ -537,7 +544,7 @@ export const MessageBubble = memo(function MessageBubble({
 								// face leads an incoming message (owner 2026-09-02;
 								// the old row-reverse painted it backwards).
 								isMe ? "order-1" : "order-3",
-								"flex h-8 w-8 shrink-0 items-center justify-center rounded-pill text-subtle transition hover:bg-primary/5 hover:text-muted",
+								"-mx-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-pill text-subtle transition hover:bg-primary/5 hover:text-muted",
 								"opacity-100 md:opacity-0 md:group-hover/msg:opacity-100 md:focus-visible:opacity-100",
 							)}
 						>
@@ -568,7 +575,7 @@ export const MessageBubble = memo(function MessageBubble({
 							/* Stacked quote (owner pick, Instagram): a label, then the
 							   quoted message peeking out from BEHIND the reply. */
 							<>
-								<span className="mb-1 px-1 font-sans text-[calc(11px*var(--ws-fs))] text-subtle">
+								<span className="mb-1 px-1 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-muted">
 									{(() => {
 										// Whose message is being quoted decides the copy:
 										// "replied to you" when it was mine.
@@ -590,7 +597,7 @@ export const MessageBubble = memo(function MessageBubble({
 									type="button"
 									onClick={() => onJump(m.replyTo!._id)}
 									className={clsx(
-										"-mb-3 max-w-[90%] cursor-pointer truncate rounded-[16px] px-3 pb-4 pt-1.5 text-left font-sans text-[calc(12px*var(--ws-fs))] opacity-90 transition-opacity hover:opacity-100",
+										"-mb-3 max-w-[90%] cursor-pointer truncate rounded-[16px] px-3 pb-4 pt-1.5 text-left font-sans text-[calc(12.5px*var(--ws-fs))] opacity-90 transition-opacity hover:opacity-100",
 										isMe ? "mr-2" : "ml-2",
 									)}
 									// The quote peeks out from BEHIND the bubble, so it sits
@@ -713,14 +720,14 @@ export const MessageBubble = memo(function MessageBubble({
 										<button
 											type="button"
 											onClick={() => onRetryUpload?.(m.clientKey!)}
-											className="cursor-pointer rounded-pill bg-raised px-2.5 py-0.5 font-sans text-[calc(11.5px*var(--ws-fs))] font-semibold text-danger transition-colors hover:bg-primary/5"
+											className="cursor-pointer rounded-pill bg-raised px-2.5 py-0.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-danger transition-colors hover:bg-primary/5"
 										>
 											Failed — retry
 										</button>
 										<button
 											type="button"
 											onClick={() => onCancelUpload?.(m.clientKey!)}
-											className="cursor-pointer font-sans text-[calc(11px*var(--ws-fs))] text-muted transition-colors hover:text-primary"
+											className="cursor-pointer font-sans text-[calc(12.5px*var(--ws-fs))] text-muted transition-colors hover:text-primary"
 										>
 											Discard
 										</button>
@@ -733,6 +740,52 @@ export const MessageBubble = memo(function MessageBubble({
 										“{m.transcript}”
 									</p>
 								)}
+							</div>
+						)}
+						{m.type === "contact" && m.contact && (
+							/* The shared-account card (owner 2026-09-15): face, name and
+							   handle, then one full-width action, the WhatsApp grammar.
+							   Inks and the action wash come from the bubble it sits in. */
+							<div className="w-[248px] max-w-full">
+								<div className="flex items-center gap-3 py-0.5">
+									<span
+										className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-pill"
+										style={{ background: isMe ? "var(--chat-on-mine, rgba(0,0,0,0.22))" : "var(--chat-accent-18, rgba(34,184,214,0.18))" }}
+									>
+										{m.contact.avatar ? (
+											// eslint-disable-next-line @next/next/no-img-element
+											<img src={m.contact.avatar} alt="" className="h-full w-full object-cover" />
+										) : (
+											<span className="font-sans text-[calc(15px*var(--ws-fs))] font-semibold">
+												{(m.contact.name || "?").slice(0, 1).toUpperCase()}
+											</span>
+										)}
+									</span>
+									<span className="min-w-0 flex-1">
+										<span className="block truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold">
+											{m.contact.name}
+										</span>
+										{m.contact.username && (
+											<span className="block truncate font-sans text-[calc(12.5px*var(--ws-fs))] opacity-75">
+												@{m.contact.username}
+											</span>
+										)}
+									</span>
+								</div>
+								<button
+									type="button"
+									onClick={(e) => {
+										e.stopPropagation();
+										onMessageContact?.(m.contact!.profile);
+									}}
+									className="mt-2.5 flex h-9 w-full cursor-pointer items-center justify-center rounded-pill font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-opacity hover:opacity-85"
+									style={{
+										background: isMe ? "var(--chat-on-mine, rgba(0,0,0,0.22))" : "var(--chat-accent-18, rgba(34,184,214,0.18))",
+										color: isMe ? "inherit" : "var(--chat-accent, var(--ws-brand-primary))",
+									}}
+								>
+									Message
+								</button>
 							</div>
 						)}
 						{m.storyRef && (
@@ -756,7 +809,7 @@ export const MessageBubble = memo(function MessageBubble({
 						{m.content && (
 							<p
 								className={clsx(
-									"text-sm leading-relaxed break-words whitespace-pre-wrap",
+									"text-[calc(14px*var(--ws-fs))] leading-[1.6] break-words whitespace-pre-wrap",
 									m.mediaUrl && "mt-2",
 								)}
 							>
@@ -824,7 +877,7 @@ export const MessageBubble = memo(function MessageBubble({
 								onClick={() => onReact?.(m, emoji)}
 								aria-label={`${emoji} reaction${info.count > 1 ? `, ${info.count}` : ""}${info.mine ? ", including yours" : ""}`}
 								className={clsx(
-									"flex cursor-pointer items-center gap-1 rounded-pill px-1.5 py-0.5 font-sans text-[calc(12px*var(--ws-fs))] ring-2 ring-page transition-colors animate-pop",
+									"flex cursor-pointer items-center gap-1 rounded-pill px-1.5 py-0.5 font-sans text-[calc(13px*var(--ws-fs))] ring-2 ring-page transition-colors animate-pop",
 									info.mine
 										? "[background:var(--chat-accent-40,rgba(34,184,214,0.4))]"
 										: "bg-primary/5 hover:bg-primary/10",
@@ -832,7 +885,7 @@ export const MessageBubble = memo(function MessageBubble({
 							>
 								<span>{emoji}</span>
 								{info.count > 1 && (
-									<span className="tabular-nums text-[calc(10.5px*var(--ws-fs))] font-semibold text-muted">
+									<span className="tabular-nums text-[calc(12px*var(--ws-fs))] font-semibold text-muted">
 										{info.count}
 									</span>
 								)}
@@ -859,7 +912,7 @@ export const MessageBubble = memo(function MessageBubble({
 							<img src={peerAvatar} alt="Seen" className="h-3.5 w-3.5 rounded-pill object-cover" />
 						</span>
 					) : (
-						<span className="mt-1 flex items-center gap-1 font-sans text-[calc(11px*var(--ws-fs))] text-subtle">
+						<span className="mt-1 flex items-center gap-1 font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
 							<MessageTicks state={state} />
 						</span>
 					);

@@ -32,7 +32,7 @@ export function TypingIndicator({
 				))}
 			</div>
 			{name && (
-				<span className="mt-1 block text-xs text-subtle">
+				<span className="mt-1 block font-sans text-[calc(12px*var(--ws-fs))] text-muted">
 					{name} {mode === "recording" ? "is recording audio…" : "is typing…"}
 				</span>
 			)}

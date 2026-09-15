@@ -14,11 +14,9 @@ import {
 	useMemo,
 } from "react";
 import {
-	Search,
 	Info,
 	Phone,
 	Video,
-	UserPlus,
 	Plus,
 	ArrowLeft,
 	MessageCircle,
@@ -38,7 +36,7 @@ import EmojiPicker, { Theme } from "emoji-picker-react";
 import { useT } from "@/i18n/client";
 import { getUserStoriesAction } from "@/lib/stories.actions";
 import { startConversationAction } from "@/lib/conversation.actions";
-import { getFollowingAction } from "@/lib/user.actions";
+import { getFollowersAction, getFollowingAction } from "@/lib/user.actions";
 import { StoryViewer, type RailEntry } from "@/components/feed/StoryViewer";
 import { toast } from "sonner";
 import { useToast } from "@/components/ui/Toast/ToastContext";
@@ -72,13 +70,19 @@ import { ThemeBackdrop } from "@/components/messages/theme/ThemeBackdrop";
 import { ThemeGallery } from "@/components/messages/theme/ThemeGallery";
 import { ThemeStudio } from "@/components/messages/theme/ThemeStudio";
 import { AttachSheet, type AttachAnchor } from "@/components/messages/AttachSheet";
+import type { ConversationRowUser } from "@/components/messages/ConversationList";
 import { ContactPicker, type PickedUser } from "@/components/messages/ContactPicker";
 import {
 	fetchGlobalTheme,
 	saveChatTheme,
 	saveGlobalTheme,
 } from "@/components/messages/theme/themeApi";
-import { RiPaletteLine } from "@remixicon/react";
+import {
+	RiChatNewLine,
+	RiGroupLine,
+	RiPaletteLine,
+	RiSearchLine,
+} from "@remixicon/react";
 import type { BubbleLift } from "@/components/messages/thread/MessageBubble";
 import {
 	ComposerInput,
@@ -220,7 +224,9 @@ interface Message {
 	sender: UserProfile;
 	content: string;
 	// "call" is a finished call logged into the thread, not something typed.
-	type: "text" | "image" | "video" | "audio" | "file" | "call" | "payment";
+	type: "text" | "image" | "video" | "audio" | "file" | "call" | "payment" | "contact";
+	/** A shared account: the bubble is a card with a Message action. */
+	contact?: { profile: string; name: string; username?: string; avatar?: string };
 	/** USD minor units, payment messages only. */
 	amountMinor?: number;
 	/** Voice-note length, so a quoted voice note can say how long it is. */
@@ -514,6 +520,29 @@ export const MessageBox = ({
 	const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 	const [showAttachMenu, setShowAttachMenu] = useState(false);
 	const [attachAnchor, setAttachAnchor] = useState<AttachAnchor | null>(null);
+	// Who can appear in the inbox's online rail (owner 2026-09-15): your
+	// Allies and the people you are Aligned to, not only those you have a
+	// thread with. Fetched once per session; presence does the rest.
+	const [people, setPeople] = useState<ConversationRowUser[] | null>(null);
+	useEffect(() => {
+		if (!myProfileId || people !== null) return;
+		let gone = false;
+		void Promise.all([
+			getFollowersAction(myProfileId),
+			getFollowingAction(myProfileId),
+		]).then(([a, b]: any[]) => {
+			if (gone) return;
+			const seen = new Map<string, ConversationRowUser>();
+			for (const list of [a?.data, b?.data]) {
+				if (!Array.isArray(list)) continue;
+				for (const u of list) if (u?._id && !seen.has(u._id)) seen.set(u._id, u);
+			}
+			setPeople([...seen.values()]);
+		});
+		return () => {
+			gone = true;
+		};
+	}, [myProfileId, people]);
 	const [contactPickerOpen, setContactPickerOpen] = useState(false);
 	const audioInputRef = useRef<HTMLInputElement>(null);
 	const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -1112,6 +1141,72 @@ export const MessageBox = ({
 		setPendingNew(0);
 		scrollToBottom();
 		await runAttachmentUpload(att.id);
+	};
+
+	/** Share an account as a card (owner 2026-09-15, "like WhatsApp does it").
+	 *  Optimistic like every other send; the gateway looks the profile up and
+	 *  writes the card from the record, never from what we post. */
+	const sendContact = async (u: PickedUser) => {
+		if (!activeConversation || !myProfileId) return;
+		const convId = activeConversation._id;
+		const clientKey = newKey();
+		const name = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.username || "";
+		setMessageCache((prev) => ({
+			...prev,
+			[convId]: [
+				...(prev[convId] || []),
+				{
+					_id: `temp-${clientKey}`,
+					clientKey,
+					conversationId: convId,
+					sender: {
+						_id: myProfileId,
+						firstName: user?.firstName || "",
+						lastName: user?.lastName || "",
+						username: user?.username || "",
+						avatar: me?.avatar || user?.imageUrl || "",
+					},
+					content: "",
+					type: "contact" as const,
+					contact: { profile: u._id, name, username: u.username, avatar: u.avatar },
+					createdAt: new Date().toISOString(),
+				} as Message,
+			],
+		}));
+		setPendingNew(0);
+		scrollToBottom();
+		const res = await postJsonDirect("/api/messages", {
+			conversationId: convId,
+			content: "",
+			type: "contact",
+			contact: { profile: u._id },
+			clientKey,
+		});
+		if (!res.success) {
+			toast.error(res.message || "Couldn't share the contact");
+			removeByClientKey(convId, clientKey);
+			return;
+		}
+		const server = res.data as Message;
+		setMessageCache((prev) => ({
+			...prev,
+			[convId]: (prev[convId] || []).map((m) =>
+				m.clientKey === clientKey ? { ...server, clientKey } : m,
+			),
+		}));
+		setSendPulse((n) => n + 1);
+	};
+
+	/** The Message action on a shared card: open (or start) the thread. */
+	const openPerson = async (profileId: string) => {
+		const r: any = await startConversationAction(profileId);
+		const id = r?.data?._id ?? r?.data?.conversation?._id;
+		if (r?.success && id) {
+			router.push(`/messages/${id}`);
+			router.refresh();
+		} else {
+			toast.error(r?.message || "Couldn't open that chat");
+		}
 	};
 
 	/** The + opens the attach sheet, anchored to the button on a desktop. */
@@ -2083,6 +2178,7 @@ export const MessageBox = ({
 			onRetryUpload: retryUpload,
 			onCancelUpload: cancelUpload,
 			onReact: reactTo,
+			onMessageContact: (profileId: string) => void openPerson(profileId),
 			onStory: (ref: { story: string; thumbnail: string; authorUsername: string }) =>
 				void openStoryRef(ref),
 			onCallBack: (video: boolean) => {
@@ -2150,7 +2246,7 @@ export const MessageBox = ({
 		// so the composer sat below the fold until the bar collapsed.
 		<div
 			style={themeVars(sectionTheme)}
-			className="relative flex h-[100dvh] bg-page text-primary overflow-hidden"
+			className="ws-chat-scale relative flex h-[100dvh] bg-page text-primary overflow-hidden"
 		>
 			{/* The section's own ground, when the profile theme has one. */}
 			<ThemeBackdrop wallpaper={sectionTheme.wallpaper} />
@@ -2193,7 +2289,7 @@ export const MessageBox = ({
 						>
 							<ArrowLeft className="h-5 w-5" />
 						</button>
-						<h1 className="font-display text-lg font-semibold">
+						<h1 className="font-display text-[calc(20px*var(--ws-fs))] font-semibold leading-6 tracking-[-0.01em] text-primary">
 							{t("nav.messages")}
 						</h1>
 						{totalUnread > 0 && (
@@ -2205,29 +2301,29 @@ export const MessageBox = ({
 						    share a card split by a hairline — not two floating
 						    chips. No outer border; the fill is the same faint
 						    white wash as the active chat chip. */}
-						<span className="ml-auto flex items-center overflow-hidden rounded-pill bg-primary/10">
+						<span className="ml-auto flex items-center overflow-hidden rounded-pill bg-primary/5">
 							<button
 								type="button"
 								onClick={() => setShowGroupCreate(true)}
 								aria-label="New group"
 								title="New group"
-								className="flex h-9 w-11 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/5 hover:text-primary"
+								className="flex h-10 w-11 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/10 hover:text-primary"
 							>
-								<Users className="h-[18px] w-[18px]" />
+								<RiGroupLine size={19} />
 							</button>
 							<span aria-hidden className="h-5 w-px bg-hairline" />
 							<button
 								type="button"
 								onClick={() => setShowNewConversationModal(true)}
 								aria-label={t("messages.newChat")}
-								className="flex h-9 w-11 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/5 hover:text-primary"
+								className="flex h-10 w-11 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/10 hover:text-primary"
 							>
-								<RiUserAddLine size={19} />
+								<RiChatNewLine size={19} />
 							</button>
 						</span>
 					</div>
 					<div className="relative">
-						<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" />
+						<RiSearchLine size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-subtle" />
 						<input
 							type="text"
 							placeholder={t("messages.searchPlaceholder")}
@@ -2237,7 +2333,7 @@ export const MessageBox = ({
 							// text-base below sm stops iOS zooming the pane on focus.
 							// Same faint white wash as the control pills and the
 							// active chat chip — one fill across the header.
-							className="h-9 w-full rounded-pill bg-primary/5 pl-10 pr-4 text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-primary/10 sm:text-sm"
+							className="h-10 w-full rounded-pill bg-primary/5 pl-10 pr-4 text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-primary/10 sm:text-[calc(14px*var(--ws-fs))]"
 						/>
 					</div>
 				</div>
@@ -2299,6 +2395,8 @@ export const MessageBox = ({
 						/>
 					)}
 					<ConversationList
+						people={showRequests ? undefined : (people ?? undefined)}
+						onOpenPerson={(u) => void openPerson(u._id)}
 						conversations={
 							(showRequests
 								? requestConversations
@@ -2355,8 +2453,8 @@ export const MessageBox = ({
 					    composer keep a band of the page colour, or the chrome
 					    reads as mush over the photograph. */}
 					<ThemeBackdrop wallpaper={chatTheme.wallpaper} />
-					<div className={clsx("relative z-10 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-hairline/60 px-2 md:px-5", hasPicture && "bg-page")}>
-						<div className="flex items-center gap-2 md:gap-3 min-w-0">
+					<div className={clsx("relative z-10 flex h-14 shrink-0 items-center gap-2 border-b border-hairline/60 px-2 md:px-5", hasPicture && "bg-page")}>
+						<div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3">
 							<button
 								type="button"
 								onClick={() => {
@@ -2386,13 +2484,13 @@ export const MessageBox = ({
 									onClick={() => !iLeftGroup && setGroupSheetOpen(true)}
 									className="flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 text-left transition-colors hover:bg-primary/5 md:gap-3"
 								>
-									<span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-pill bg-raised">
+									<span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-pill bg-raised">
 										{headerIdentity.avatar ? (
 											<SafeAvatar
 												src={headerIdentity.avatar}
-												width={36}
-												height={36}
-												className="h-9 w-9 rounded-pill object-cover"
+												width={40}
+												height={40}
+												className="h-10 w-10 rounded-pill object-cover"
 												alt="group"
 											/>
 										) : (
@@ -2400,15 +2498,15 @@ export const MessageBox = ({
 										)}
 									</span>
 									<div className="min-w-0">
-										<h2 className="truncate font-semibold text-[calc(15px*var(--ws-fs))]">
+										<h2 className="truncate font-semibold text-[calc(17px*var(--ws-fs))]">
 											{headerIdentity.title}
 										</h2>
 										{chat.typers.length > 0 ? (
-											<p className="truncate text-xs text-gold">
+											<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
 												{groupActivityLine(chat.typers)}
 											</p>
 										) : (
-											<p className="truncate text-xs text-muted">
+											<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
 												{headerIdentity.memberCount ?? 0} members
 											</p>
 										)}
@@ -2422,9 +2520,9 @@ export const MessageBox = ({
 								<span className="relative shrink-0">
 									<SafeAvatar
 										src={activeConversation.otherParticipant?.avatar}
-										width={36}
-										height={36}
-										className="h-9 w-9 rounded-pill object-cover"
+										width={40}
+										height={40}
+										className="h-10 w-10 rounded-pill object-cover"
 										alt="avatar"
 									/>
 									{/* The dot belongs on the face, not in a line of text
@@ -2437,7 +2535,7 @@ export const MessageBox = ({
 									)}
 								</span>
 								<div className="min-w-0">
-									<h2 className="flex items-center gap-1 font-semibold text-[calc(15px*var(--ws-fs))] truncate">
+									<h2 className="flex items-center gap-1 font-semibold text-[calc(17px*var(--ws-fs))] truncate">
 										<span className="min-w-0 truncate">
 											{activeConversation.otherParticipant?.firstName}{" "}
 											{activeConversation.otherParticipant?.lastName}
@@ -2459,30 +2557,30 @@ export const MessageBox = ({
 										/>
 									</h2>
 									{!isConnected ? (
-										<p className="truncate text-xs text-danger">
+										<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-danger">
 											Waiting for network…
 										</p>
 									) : chat.peerRecording ? (
-										<p className="truncate text-xs text-gold">
+										<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
 											recording audio…
 										</p>
 									) : chat.peerTyping ? (
-										<p className="text-xs text-gold truncate">typing…</p>
+										<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">typing…</p>
 									) : peerOnline ? (
 										// No dot here — the avatar already carries one, and
 										// two green dots for one fact read as two facts.
-										<p className="truncate text-xs text-muted">Online</p>
+										<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">Online</p>
 									) : (activeConversation.otherParticipant as any)
 											?.lastSeenAt ? (
-										<p className="truncate text-xs text-muted">
-											Seen{" "}
+										<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
+											Last seen{" "}
 											{formatLastSeen(
 												(activeConversation.otherParticipant as any)
 													.lastSeenAt,
 											)}
 										</p>
 									) : (
-										<p className="text-xs text-muted truncate">
+										<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
 											@{activeConversation.otherParticipant?.username}
 										</p>
 									)}
@@ -2490,25 +2588,22 @@ export const MessageBox = ({
 								</Link>
 							)}
 						</div>
-					<button
-							type="button"
-							onClick={() => setThemeSheet("gallery")}
-							aria-label="Chat theme"
-							title="Chat theme"
-							className="mr-1.5 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
-						>
-							<RiPaletteLine size={20} />
-						</button>
+					{/* ONE right-hand cluster. The palette used to be a third
+					    child of the justify-between row, which is how it ended up
+					    floating in the middle of the header (owner 2026-09-15). */}
+					<div className="flex shrink-0 items-center gap-1">
 					{/* Audio | video as ONE segmented pill (owner 2026-09-06):
-						    no outer border, the faint white wash as fill, a
-						    hairline between the segments. */}
-						<div className="flex shrink-0 items-center overflow-hidden rounded-pill bg-primary/10 text-muted">
+						    no outer border, the resting wash as fill, a
+						    hairline between the segments; the theme control sits
+						    LAST, the secondary slot every messenger keeps at the
+						    far right. */}
+						<div className="flex shrink-0 items-center overflow-hidden rounded-pill bg-primary/5 text-muted">
 							{isGroupThread && (
 								<>
 									<button
 										type="button"
 										aria-label="Start group voice call"
-										className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/5 hover:text-primary"
+										className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/10 hover:text-primary"
 										onClick={() =>
 											startCall({
 												conversationId: activeConversation._id,
@@ -2529,7 +2624,7 @@ export const MessageBox = ({
 									<button
 										type="button"
 										aria-label="Start group video call"
-										className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/5 hover:text-primary"
+										className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/10 hover:text-primary"
 										onClick={() =>
 											startCall({
 												conversationId: activeConversation._id,
@@ -2553,7 +2648,7 @@ export const MessageBox = ({
 							<button
 								type="button"
 								aria-label="Start voice call"
-								className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/5 hover:text-primary"
+								className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/10 hover:text-primary"
 								onClick={() =>
 									startCall({
 										conversationId: activeConversation._id,
@@ -2577,7 +2672,7 @@ export const MessageBox = ({
 							<button
 								type="button"
 								aria-label="Start video call"
-								className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/5 hover:text-primary"
+								className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/10 hover:text-primary"
 								onClick={() =>
 									startCall({
 										conversationId: activeConversation._id,
@@ -2600,6 +2695,16 @@ export const MessageBox = ({
 							</>
 							)}
 						</div>
+					<button
+							type="button"
+							onClick={() => setThemeSheet("gallery")}
+							aria-label="Chat theme"
+							title="Chat theme"
+							className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
+						>
+							<RiPaletteLine size={20} />
+						</button>
+					</div>
 					</div>
 
 					<div
@@ -2683,13 +2788,13 @@ export const MessageBox = ({
 							   chip, gold name, no border bar. */
 							<div className="mb-2 flex items-center gap-2 rounded-[10px] bg-sunken px-3 py-2">
 								<span className="flex min-w-0 flex-1 flex-col gap-0.5">
-									<span className="truncate font-sans text-[calc(11.5px*var(--ws-fs))] font-semibold text-gold">
+									<span className="truncate font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-muted">
 										Replying to{" "}
 										{replyTarget.sender?._id === myProfileId
 											? "yourself"
 											: `@${replyTarget.sender?.username ?? ""}`}
 									</span>
-									<span className="truncate font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle">
+									<span className="truncate font-sans text-[calc(13.5px*var(--ws-fs))] text-primary">
 										{quotedPreview(replyTarget)}
 									</span>
 								</span>
@@ -2981,8 +3086,8 @@ export const MessageBox = ({
 							onClick={() => setShowNewConversationModal(true)}
 							className="flex items-center gap-2 px-6 py-3 bg-brand text-brand-on font-semibold rounded-pill hover:bg-brand-active transition-colors cursor-pointer"
 						>
-							<UserPlus className="w-5 h-5" />
-							New Conversation
+							<RiChatNewLine size={20} />
+							{t("messages.newChat")}
 						</button>
 					</div>
 				</div>
@@ -3319,11 +3424,7 @@ export const MessageBox = ({
 			<ContactPicker
 				open={contactPickerOpen}
 				onClose={() => setContactPickerOpen(false)}
-				onPick={(u: PickedUser) => {
-					const name = [u.firstName, u.lastName].filter(Boolean).join(" ");
-					const handle = u.username ? `@${u.username}` : "";
-					void sendMessage([name, handle].filter(Boolean).join(" "));
-				}}
+				onPick={(u: PickedUser) => void sendContact(u)}
 			/>
 			{themeSheet === "gallery" && activeConversation && (
 				<ThemeGallery
@@ -3389,7 +3490,7 @@ function SuggestedPeople({
 	if (rows.length === 0) return null;
 	return (
 		<div className="px-2 pb-3 animate-pop">
-			<p className="px-2 pb-1.5 pt-2 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.12em] text-subtle">
+			<p className="px-2 pb-1.5 pt-3 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
 				People you follow
 			</p>
 			{rows.map((u) => (

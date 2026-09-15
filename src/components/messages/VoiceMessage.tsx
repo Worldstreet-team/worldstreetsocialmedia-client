@@ -553,7 +553,7 @@ export const VoiceMessage = ({
 					type="button"
 					onClick={cycleRate}
 					aria-label={`Playback speed ${rate}x`}
-					className="shrink-0 cursor-pointer rounded-pill px-2 py-0.5 font-sans text-[calc(11px*var(--ws-fs))] font-bold tabular-nums transition-opacity hover:opacity-80"
+					className="shrink-0 cursor-pointer rounded-pill px-2 py-0.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold tabular-nums transition-opacity hover:opacity-80"
 					// A wash of the bubble's own ink, like the mention chip: reads
 					// on any fill instead of a page-toned chip inside a coloured bubble.
 					style={{
@@ -565,7 +565,7 @@ export const VoiceMessage = ({
 					{rate}×
 				</button>
 			)}
-			<span className="text-xs font-sans tabular-nums opacity-80 shrink-0 min-w-[32px] text-right">
+			<span className="font-sans text-[calc(12px*var(--ws-fs))] tabular-nums opacity-80 shrink-0 min-w-[32px] text-right">
 				{formatTime(
 					isPlaying ? Math.max(0, duration - currentTime) : duration,
 				)}

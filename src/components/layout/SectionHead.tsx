@@ -18,7 +18,7 @@ export function SectionHead({
 	return (
 		<div className="flex items-center gap-2 px-3 pb-1.5">
 			{icon && (
-				<span className="flex shrink-0 items-center text-subtle">{icon}</span>
+				<span className="flex shrink-0 items-center text-muted">{icon}</span>
 			)}
 			{live && (
 				<span className="relative flex h-2 w-2">
@@ -26,7 +26,7 @@ export function SectionHead({
 					<span className="relative inline-flex h-2 w-2 rounded-pill bg-danger" />
 				</span>
 			)}
-			<h3 className="font-sans font-semibold text-[calc(11px*var(--ws-fs))] uppercase tracking-[0.14em] text-subtle flex-1">
+			<h3 className="font-sans font-semibold text-[calc(13px*var(--ws-fs))] text-primary flex-1">
 				{label}
 			</h3>
 			{trailing}

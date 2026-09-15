@@ -69,7 +69,7 @@ import { SafeAvatar } from "@/components/ui/SafeAvatar";
 /* Section eyebrow — the landing page's uppercase-tracking micro-label. */
 function Eyebrow({ children }: { children: React.ReactNode }) {
 	return (
-		<p className="px-4 pt-5 pb-1.5 font-sans text-[calc(10px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-subtle select-none">
+		<p className="px-4 pt-5 pb-1.5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary select-none">
 			{children}
 		</p>
 	);

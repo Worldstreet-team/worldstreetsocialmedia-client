@@ -736,5 +736,7 @@
   "post.buy.confirmBody": "Você está comprando esta publicação de {seller} por {price}. O valor sai do saldo da sua carteira.",
   "post.buy.confirmCta": "Prosseguir com o pagamento",
   "messages.kind.payment": "Pagamento",
+  "messages.kind.contact": "Contact",
+  "messages.onlineNow": "Online now",
   "profile.alignedTo": "Alinhado com"
 }

@@ -325,7 +325,7 @@
   "explore.tab.posts": "Posts",
   "explore.trends": "Trends for you",
   "explore.popular": "Popular",
-  "messages.searchPlaceholder": "Search Direct Messages",
+  "messages.searchPlaceholder": "Search messages",
   "messages.selectTitle": "Select a conversation or start a new one",
   "messages.selectCaption": "Choose from your existing conversations or start a new chat",
   "messages.noMessages": "No messages yet",
@@ -839,5 +839,7 @@
   "post.buy.confirmBody": "You're buying this post from {seller} for {price}. The amount comes out of your wallet balance.",
   "post.buy.confirmCta": "Proceed with payment",
   "messages.kind.payment": "Payment",
+  "messages.kind.contact": "Contact",
+  "messages.onlineNow": "Online now",
   "profile.alignedTo": "Aligned to"
 }

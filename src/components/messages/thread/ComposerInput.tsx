@@ -2,6 +2,7 @@
 
 import {
 	RiAddLine,
+	RiFileGifLine,
 	RiArrowUpLine,
 	RiEmotionLine,
 	RiMoneyDollarCircleLine,
@@ -173,12 +174,12 @@ export const ComposerInput = forwardRef<
 				))}
 			</div>
 		)}
-		<div className="relative flex min-w-0 items-end gap-1 rounded-pill border border-hairline bg-transparent py-1 pl-1.5 pr-1.5 transition-colors focus-within:border-muted/60 sm:gap-1.5">
+		<div className="relative flex min-w-0 items-end gap-1 rounded-pill bg-primary/5 py-1 pl-1.5 pr-1.5 transition-colors focus-within:bg-primary/10 sm:gap-1.5">
 			<button
 				type="button"
 				onClick={onAttach}
 				aria-label="Attach a file"
-				className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
+				className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/10 hover:text-primary"
 			>
 				<RiAddLine size={20} />
 			</button>
@@ -240,7 +241,7 @@ export const ComposerInput = forwardRef<
 					onClick={onMoney}
 					aria-label="Send money"
 					title="Send money"
-					className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
+					className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/10 hover:text-primary"
 				>
 					<RiMoneyDollarCircleLine size={20} />
 				</button>
@@ -249,9 +250,9 @@ export const ComposerInput = forwardRef<
 						type="button"
 						onClick={onGif}
 						aria-label="Send a GIF"
-						className="flex h-9 cursor-pointer items-center justify-center rounded-pill px-1.5 font-sans text-[calc(11px*var(--ws-fs))] font-bold tracking-wide text-muted transition-colors hover:bg-primary/5 hover:text-primary"
+						className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/10 hover:text-primary"
 					>
-						GIF
+						<RiFileGifLine size={20} />
 					</button>
 				)}
 				<button
@@ -260,7 +261,7 @@ export const ComposerInput = forwardRef<
 					aria-label="Insert emoji"
 					aria-expanded={showEmoji}
 					className={clsx(
-						"flex h-9 w-9 items-center justify-center rounded-pill transition-colors cursor-pointer",
+						"flex h-10 w-10 items-center justify-center rounded-pill transition-colors cursor-pointer",
 						showEmoji
 							? "bg-primary/10 text-primary"
 							: "text-muted hover:text-primary hover:bg-primary/5",
@@ -271,18 +272,23 @@ export const ComposerInput = forwardRef<
 				{value.trim() || hasAttachment ? (
 					// iMessage grammar (owner pick): the up-arrow lives inside the
 					// pill's right edge, in the mic's cell, so nothing jumps.
-					<span className="flex h-9 w-9 items-center justify-center">
-						<button
-							type="button"
-							onClick={() => void send()}
-							disabled={disabled}
-							aria-label="Send message"
+					// The BUTTON is the 40px target; the disc inside it is the 28px
+					// glyph. It used to be the other way round: a 28px button in an
+					// inert 36px span.
+					<button
+						type="button"
+						onClick={() => void send()}
+						disabled={disabled}
+						aria-label="Send message"
+						className="flex h-10 w-10 cursor-pointer items-center justify-center disabled:opacity-50 animate-pop"
+					>
+						<span
+							className="flex h-8 w-8 items-center justify-center rounded-pill transition-opacity hover:opacity-90"
 							style={{ background: "var(--chat-mine, linear-gradient(135deg, var(--ws-brand-primary), #6D5BFF))", color: "var(--chat-mine-ink, #FFFFFF)" }}
-							className="flex h-7 w-7 items-center justify-center rounded-pill transition-opacity hover:opacity-90 disabled:opacity-50 cursor-pointer animate-pop"
 						>
 							<RiArrowUpLine size={17} />
-						</button>
-					</span>
+						</span>
+					</button>
 				) : (
 					<button
 						type="button"
@@ -298,7 +304,7 @@ export const ComposerInput = forwardRef<
 							});
 						}}
 						aria-label="Record a voice message"
-						className="flex h-9 w-9 touch-none items-center justify-center rounded-pill text-muted hover:text-primary hover:bg-primary/5 transition-colors cursor-pointer animate-pop"
+						className="flex h-10 w-10 touch-none items-center justify-center rounded-pill text-muted hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer animate-pop"
 					>
 						<RiVoiceprintFill size={21} />
 					</button>

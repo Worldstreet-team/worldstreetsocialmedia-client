@@ -17,7 +17,9 @@ export interface Message {
 	sender: UserProfile;
 	content: string;
 	// "call" is a finished call logged into the thread, not something typed.
-	type: "text" | "image" | "video" | "audio" | "file" | "call" | "payment";
+	type: "text" | "image" | "video" | "audio" | "file" | "call" | "payment" | "contact";
+	/** A shared account (owner 2026-09-15): the bubble is a card with a Message action. */
+	contact?: { profile: string; name: string; username?: string; avatar?: string };
 	/** USD minor units, payment messages only. */
 	amountMinor?: number;
 	/** Voice-note length, so a quoted voice note can say how long it is. */

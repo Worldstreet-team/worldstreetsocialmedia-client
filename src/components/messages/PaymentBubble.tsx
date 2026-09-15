@@ -101,7 +101,7 @@ export function PaymentBubble({
 						</span>
 					</span>
 					<span className="min-w-0">
-						<span className="block font-sans text-[calc(10.5px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] opacity-70">
+						<span className="block font-sans text-[calc(12px*var(--ws-fs))] font-semibold opacity-70">
 							{mine ? "Sent" : bystander ? "Payment" : "Received"}
 						</span>
 						<span className="block font-display text-[calc(20px*var(--ws-fs))] font-semibold tabular-nums leading-tight">

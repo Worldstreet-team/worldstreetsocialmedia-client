@@ -127,7 +127,7 @@ export function ThemeStudio({
 		input.click();
 	};
 
-	const heading = "font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.12em] text-subtle";
+	const heading = "font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary";
 	const tile = "relative aspect-[4/3] cursor-pointer overflow-hidden rounded-[10px] border transition-colors";
 	const chip = "h-9 w-9 shrink-0 cursor-pointer rounded-pill border-2 transition-transform";
 
@@ -450,9 +450,9 @@ function Slider({
 }) {
 	return (
 		<div>
-			<p className="mb-1.5 flex items-center justify-between font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.12em] text-subtle">
+			<p className="mb-1.5 flex items-center justify-between font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
 				{label}
-				<span className="tabular-nums text-muted">
+				<span className="font-normal tabular-nums text-subtle">
 					{value}
 					{unit}
 				</span>
@@ -493,7 +493,7 @@ function ColorField({
 			</span>
 			<span className="font-sans text-[calc(12px*var(--ws-fs))] text-muted">
 				{label}
-				<span className="ml-1 font-mono text-[calc(11px*var(--ws-fs))] uppercase text-subtle">{value}</span>
+				<span className="ml-1 font-mono text-[calc(12px*var(--ws-fs))] uppercase text-muted">{value}</span>
 			</span>
 		</label>
 	);

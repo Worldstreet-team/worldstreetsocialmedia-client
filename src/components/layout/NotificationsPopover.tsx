@@ -163,7 +163,7 @@ export function NotificationsPopover({
 								label={t("nav.notifications")}
 							>
 								<OverlayHeader onClose={close}>
-									<span className="flex-1 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-subtle">
+									<span className="flex-1 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
 										{t("nav.notifications")}
 									</span>
 									<Link

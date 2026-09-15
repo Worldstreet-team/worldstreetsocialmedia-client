@@ -8,6 +8,7 @@ import {
 	RiVoiceprintFill,
 	RiFile2Fill,
 	RiMoneyDollarCircleFill,
+	RiUserSharedFill,
 	RiPhoneFill,
 	RiVideoOnFill,
 } from "@remixicon/react";
@@ -94,6 +95,7 @@ const KIND: Record<string, { glyph: any; key: string }> = {
 	call: { glyph: RiPhoneFill, key: "messages.kind.call" },
 	// A transfer carries no content either when there is no note.
 	payment: { glyph: RiMoneyDollarCircleFill, key: "messages.kind.payment" },
+	contact: { glyph: RiUserSharedFill, key: "messages.kind.contact" },
 };
 
 export function ConversationList({
@@ -104,6 +106,8 @@ export function ConversationList({
 	myProfileId,
 	onOpen,
 	onDelete,
+	people,
+	onOpenPerson,
 }: {
 	conversations: ConversationRow[];
 	loading: boolean;
@@ -113,6 +117,11 @@ export function ConversationList({
 	onOpen: (conv: ConversationRow) => void;
 	/** Swipe a row left (touch) to reveal it, or use the requests chips. */
 	onDelete?: (conv: ConversationRow) => void;
+	/** Everyone who may appear in the online rail beyond your threads: your
+	 *  Allies and the people you are Aligned to. */
+	people?: ConversationRowUser[];
+	/** Tap on someone in the rail you have no thread with yet. */
+	onOpenPerson?: (u: ConversationRowUser) => void;
 }) {
 	const t = useT();
 	const online = useAtomValue(onlineIdsAtom);
@@ -154,7 +163,7 @@ export function ConversationList({
 						<span className="skeleton h-[52px] w-[52px] shrink-0 rounded-pill" />
 						<span className="flex min-w-0 flex-1 flex-col gap-2">
 							<span className="skeleton h-[18px] w-1/3 rounded-[4px]" />
-							<span className="skeleton h-[17px] w-2/3 rounded-[4px]" />
+							<span className="skeleton h-[15px] w-2/3 rounded-[4px]" />
 						</span>
 					</div>
 				))}
@@ -164,55 +173,59 @@ export function ConversationList({
 
 	if (rows.length === 0) {
 		return (
-			<p className="px-6 py-10 text-center font-sans text-[calc(17px*var(--ws-fs))] text-subtle">
+			<p className="px-6 py-10 text-center font-sans text-[calc(15px*var(--ws-fs))] text-subtle">
 				{query.trim() ? t("messages.noMatches") : t("messages.empty")}
 			</p>
 		);
 	}
 
-	// Who is online right now, from the people you already talk to (owner
-	// 2026-09-15, the Messenger strip). The global presence set is the
-	// truth; this only intersects it with your DMs. Hidden while searching,
-	// and gone entirely when nobody is on, so it never sits there empty.
-	const activeNow = query.trim()
-		? []
-		: conversations.filter(
-				(c) =>
-					c.kind !== "group" &&
-					!c.isRequestForMe &&
-					!!c.otherParticipant?._id &&
-					online.has(c.otherParticipant._id),
-			);
+	// Who is online right now (owner 2026-09-15): your Allies and the people
+	// you are Aligned to, plus anyone you already have a thread with, against
+	// the global presence set. A thread wins when both exist, so a tap opens
+	// it; a person without one starts it. Hidden while searching, and gone
+	// entirely when nobody is on, so it never sits there empty.
+	const onlineNow = useMemo(() => {
+		if (query.trim()) return [] as { key: string; user: ConversationRowUser; conv?: ConversationRow }[];
+		const out = new Map<string, { key: string; user: ConversationRowUser; conv?: ConversationRow }>();
+		for (const c of conversations) {
+			const u = c.otherParticipant;
+			if (c.kind === "group" || c.isRequestForMe || !u?._id || !online.has(u._id)) continue;
+			out.set(u._id, { key: u._id, user: u, conv: c });
+		}
+		for (const u of people ?? []) {
+			if (!u?._id || out.has(u._id) || !online.has(u._id)) continue;
+			out.set(u._id, { key: u._id, user: u });
+		}
+		return [...out.values()];
+	}, [conversations, people, online, query]);
 
 	return (
 		<div className="flex flex-col px-2">
-			{activeNow.length > 0 && (
-				<section aria-label="Active now" className="mb-1 px-1 pt-1">
-					<p className="mb-2 px-1 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.12em] text-subtle">
-						Active now
+			{onlineNow.length > 0 && (
+				<section aria-label={t("messages.onlineNow")} className="mb-1 px-1 pt-2">
+					<p className="mb-1.5 px-1 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
+						{t("messages.onlineNow")}
 					</p>
-					<div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-						{activeNow.map((conv) => {
-							const peer = conv.otherParticipant!;
-							const first =
-								(peer.firstName || peer.username || "").split(" ")[0];
+					<div className="flex gap-2.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+						{onlineNow.map(({ key, user: peer, conv }) => {
+							const first = (peer.firstName || peer.username || "").split(" ")[0];
 							return (
 								<button
-									key={conv._id}
+									key={key}
 									type="button"
-									onClick={() => onOpen(conv)}
-									className="flex w-14 shrink-0 cursor-pointer flex-col items-center gap-1 rounded-[10px] py-1 text-center transition-colors hover:bg-primary/5"
+									onClick={() => (conv ? onOpen(conv) : onOpenPerson?.(peer))}
+									className="flex w-16 shrink-0 cursor-pointer flex-col items-center gap-1.5 rounded-[10px] py-1 text-center transition-colors hover:bg-primary/5"
 								>
 									<span className="relative">
-										<span className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-pill bg-raised">
+										<span className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-pill bg-raised">
 											<SafeAvatar src={peer.avatar} />
 										</span>
 										<span
 											aria-hidden
-											className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-pill bg-success ring-2 ring-page"
+											className="ws-cue-online absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-pill bg-success ring-2 ring-page"
 										/>
 									</span>
-									<span className="w-full truncate font-sans text-[calc(11px*var(--ws-fs))] text-muted">
+									<span className="w-full truncate font-sans text-[calc(13px*var(--ws-fs))] font-medium text-muted">
 										{first}
 									</span>
 								</button>
@@ -286,7 +299,7 @@ export function ConversationList({
 									{identity.title}
 								</span>
 								{isGroup ? (
-									<span className="flex shrink-0 items-center gap-0.5 font-sans text-[calc(16px*var(--ws-fs))] text-subtle">
+									<span className="flex shrink-0 items-center gap-0.5 font-sans text-[calc(15px*var(--ws-fs))] text-subtle">
 										<Users className="h-3 w-3" />
 										{identity.memberCount ?? ""}
 									</span>
@@ -302,7 +315,7 @@ export function ConversationList({
 											{(ambiguous.get(identity.title.toLowerCase()) ??
 												0) > 1 &&
 												u.username && (
-													<span className="min-w-0 shrink truncate font-sans text-[calc(16px*var(--ws-fs))] text-subtle">
+													<span className="min-w-0 shrink truncate font-sans text-[calc(15px*var(--ws-fs))] text-subtle">
 														@{u.username}
 													</span>
 												)}
@@ -313,7 +326,7 @@ export function ConversationList({
 
 							<span
 								className={clsx(
-									"mt-0.5 flex items-center gap-1 font-sans text-[calc(17px*var(--ws-fs))]",
+									"mt-0.5 flex items-center gap-1 font-sans text-[calc(15px*var(--ws-fs))]",
 									unread ? "font-medium text-primary" : "text-muted",
 								)}
 							>

@@ -56,7 +56,7 @@ export function CallLogRow({
 						{content}
 					</span>
 					{at && (
-						<span className="block font-sans text-[calc(11px*var(--ws-fs))] tabular-nums text-subtle">
+						<span className="block font-sans text-[calc(12px*var(--ws-fs))] tabular-nums text-subtle">
 							{format(new Date(at), "h:mm a")}
 						</span>
 					)}
