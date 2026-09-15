@@ -170,8 +170,57 @@ export function ConversationList({
 		);
 	}
 
+	// Who is online right now, from the people you already talk to (owner
+	// 2026-09-15, the Messenger strip). The global presence set is the
+	// truth; this only intersects it with your DMs. Hidden while searching,
+	// and gone entirely when nobody is on, so it never sits there empty.
+	const activeNow = query.trim()
+		? []
+		: conversations.filter(
+				(c) =>
+					c.kind !== "group" &&
+					!c.isRequestForMe &&
+					!!c.otherParticipant?._id &&
+					online.has(c.otherParticipant._id),
+			);
+
 	return (
 		<div className="flex flex-col px-2">
+			{activeNow.length > 0 && (
+				<section aria-label="Active now" className="mb-1 px-1 pt-1">
+					<p className="mb-2 px-1 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.12em] text-subtle">
+						Active now
+					</p>
+					<div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+						{activeNow.map((conv) => {
+							const peer = conv.otherParticipant!;
+							const first =
+								(peer.firstName || peer.username || "").split(" ")[0];
+							return (
+								<button
+									key={conv._id}
+									type="button"
+									onClick={() => onOpen(conv)}
+									className="flex w-14 shrink-0 cursor-pointer flex-col items-center gap-1 rounded-[10px] py-1 text-center transition-colors hover:bg-primary/5"
+								>
+									<span className="relative">
+										<span className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-pill bg-raised">
+											<SafeAvatar src={peer.avatar} />
+										</span>
+										<span
+											aria-hidden
+											className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-pill bg-success ring-2 ring-page"
+										/>
+									</span>
+									<span className="w-full truncate font-sans text-[calc(11px*var(--ws-fs))] text-muted">
+										{first}
+									</span>
+								</button>
+							);
+						})}
+					</div>
+				</section>
+			)}
 			{rows.map((conv) => {
 				const identity = conversationIdentity(conv);
 				const isGroup = identity.kind === "group";
@@ -204,7 +253,7 @@ export function ConversationList({
 							// Its fill is a FADED white (owner): the ink token
 							// at a wash, not raised-grey and not solid white.
 							"group relative flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-1.5 text-left transition-colors",
-							active ? "bg-primary/10" : "hover:bg-surface",
+							active ? "bg-primary/10" : "hover:bg-primary/5",
 						)}
 					>
 						<span className="relative shrink-0">

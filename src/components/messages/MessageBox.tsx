@@ -71,6 +71,8 @@ import {
 import { ThemeBackdrop } from "@/components/messages/theme/ThemeBackdrop";
 import { ThemeGallery } from "@/components/messages/theme/ThemeGallery";
 import { ThemeStudio } from "@/components/messages/theme/ThemeStudio";
+import { AttachSheet, type AttachAnchor } from "@/components/messages/AttachSheet";
+import { ContactPicker, type PickedUser } from "@/components/messages/ContactPicker";
 import {
 	fetchGlobalTheme,
 	saveChatTheme,
@@ -511,6 +513,9 @@ export const MessageBox = ({
 	);
 	const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 	const [showAttachMenu, setShowAttachMenu] = useState(false);
+	const [attachAnchor, setAttachAnchor] = useState<AttachAnchor | null>(null);
+	const [contactPickerOpen, setContactPickerOpen] = useState(false);
+	const audioInputRef = useRef<HTMLInputElement>(null);
 	const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 	const [showGifPicker, setShowGifPicker] = useState(false);
 	const [showSendMoney, setShowSendMoney] = useState(false);
@@ -1088,6 +1093,51 @@ export const MessageBox = ({
 		setPendingNew(0);
 		scrollToBottom();
 		await runAttachmentUpload(att.id);
+	};
+
+	/** An audio FILE (a song, a recording from elsewhere) rides the voice
+	 *  note pipeline: same type, no peaks, so the receiver decodes its own
+	 *  waveform the way legacy notes do. */
+	const sendAudioFile = async (file: File) => {
+		if (!activeConversation || !myProfileId) return;
+		const convId = activeConversation._id;
+		const att: PendingAttachment = {
+			id: newKey(),
+			file,
+			previewUrl: URL.createObjectURL(file),
+			kind: "audio",
+			caption: "",
+		};
+		queueAttachment(att, "", convId);
+		setPendingNew(0);
+		scrollToBottom();
+		await runAttachmentUpload(att.id);
+	};
+
+	/** The + opens the attach sheet, anchored to the button on a desktop. */
+	const openAttach = () => {
+		const btn =
+			(threadPaneRef.current ?? document).querySelector<HTMLButtonElement>(
+				'button[aria-label="Attach a file"]',
+			) ?? document.querySelector<HTMLButtonElement>('button[aria-label="Attach a file"]');
+		const r = btn?.getBoundingClientRect();
+		setAttachAnchor(r ? { left: r.left, top: r.top } : null);
+		setShowAttachMenu(true);
+	};
+
+	/** Android Chrome's contact picker; the row only renders where it exists. */
+	const sendPhoneContact = async () => {
+		try {
+			const picked = await (navigator as any).contacts.select(["name", "tel"], { multiple: false });
+			const c = picked?.[0];
+			if (!c) return;
+			const name = Array.isArray(c.name) ? c.name[0] : c.name;
+			const tel = Array.isArray(c.tel) ? c.tel[0] : c.tel;
+			const text = [name, tel].filter(Boolean).join(" · ");
+			if (text) void sendMessage(text);
+		} catch {
+			/* dismissed */
+		}
 	};
 
 	/**
@@ -2139,7 +2189,7 @@ export const MessageBox = ({
 							type="button"
 							onClick={() => goBack("/")}
 							aria-label={t("common.back")}
-							className="-ml-2 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary md:hidden"
+							className="-ml-2 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary md:hidden"
 						>
 							<ArrowLeft className="h-5 w-5" />
 						</button>
@@ -2161,7 +2211,7 @@ export const MessageBox = ({
 								onClick={() => setShowGroupCreate(true)}
 								aria-label="New group"
 								title="New group"
-								className="flex h-9 w-11 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-chip hover:text-primary"
+								className="flex h-9 w-11 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/5 hover:text-primary"
 							>
 								<Users className="h-[18px] w-[18px]" />
 							</button>
@@ -2170,7 +2220,7 @@ export const MessageBox = ({
 								type="button"
 								onClick={() => setShowNewConversationModal(true)}
 								aria-label={t("messages.newChat")}
-								className="flex h-9 w-11 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-chip hover:text-primary"
+								className="flex h-9 w-11 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/5 hover:text-primary"
 							>
 								<RiUserAddLine size={19} />
 							</button>
@@ -2187,7 +2237,7 @@ export const MessageBox = ({
 							// text-base below sm stops iOS zooming the pane on focus.
 							// Same faint white wash as the control pills and the
 							// active chat chip — one fill across the header.
-							className="h-9 w-full rounded-pill bg-primary/10 pl-10 pr-4 text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-primary/15 sm:text-sm"
+							className="h-9 w-full rounded-pill bg-primary/5 pl-10 pr-4 text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-primary/10 sm:text-sm"
 						/>
 					</div>
 				</div>
@@ -2305,7 +2355,7 @@ export const MessageBox = ({
 					    composer keep a band of the page colour, or the chrome
 					    reads as mush over the photograph. */}
 					<ThemeBackdrop wallpaper={chatTheme.wallpaper} />
-					<div className={clsx("relative z-10 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-hairline/60 px-2 md:px-5", hasPicture && "bg-page/80")}>
+					<div className={clsx("relative z-10 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-hairline/60 px-2 md:px-5", hasPicture && "bg-page")}>
 						<div className="flex items-center gap-2 md:gap-3 min-w-0">
 							<button
 								type="button"
@@ -2321,7 +2371,7 @@ export const MessageBox = ({
 									window.history.pushState({}, "", base);
 								}}
 								aria-label="Back to conversations"
-								className="md:hidden h-11 w-11 shrink-0 flex items-center justify-center rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors"
+								className="md:hidden h-11 w-11 shrink-0 flex items-center justify-center rounded-pill text-muted hover:text-primary hover:bg-primary/5 transition-colors"
 							>
 								<ArrowLeft className="w-5 h-5" />
 							</button>
@@ -2334,7 +2384,7 @@ export const MessageBox = ({
 								<button
 									type="button"
 									onClick={() => !iLeftGroup && setGroupSheetOpen(true)}
-									className="flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 text-left transition-colors hover:bg-raised md:gap-3"
+									className="flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 text-left transition-colors hover:bg-primary/5 md:gap-3"
 								>
 									<span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-pill bg-raised">
 										{headerIdentity.avatar ? (
@@ -2367,7 +2417,7 @@ export const MessageBox = ({
 							) : (
 								<Link
 									href={`/profile/${activeConversation.otherParticipant?.username ?? ""}`}
-									className="flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 transition-colors hover:bg-raised md:gap-3"
+									className="flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 transition-colors hover:bg-primary/5 md:gap-3"
 								>
 								<span className="relative shrink-0">
 									<SafeAvatar
@@ -2445,7 +2495,7 @@ export const MessageBox = ({
 							onClick={() => setThemeSheet("gallery")}
 							aria-label="Chat theme"
 							title="Chat theme"
-							className="mr-1.5 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/10 hover:text-primary"
+							className="mr-1.5 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
 						>
 							<RiPaletteLine size={20} />
 						</button>
@@ -2458,7 +2508,7 @@ export const MessageBox = ({
 									<button
 										type="button"
 										aria-label="Start group voice call"
-										className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-chip hover:text-primary"
+										className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/5 hover:text-primary"
 										onClick={() =>
 											startCall({
 												conversationId: activeConversation._id,
@@ -2479,7 +2529,7 @@ export const MessageBox = ({
 									<button
 										type="button"
 										aria-label="Start group video call"
-										className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-chip hover:text-primary"
+										className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/5 hover:text-primary"
 										onClick={() =>
 											startCall({
 												conversationId: activeConversation._id,
@@ -2503,7 +2553,7 @@ export const MessageBox = ({
 							<button
 								type="button"
 								aria-label="Start voice call"
-								className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-chip hover:text-primary"
+								className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/5 hover:text-primary"
 								onClick={() =>
 									startCall({
 										conversationId: activeConversation._id,
@@ -2527,7 +2577,7 @@ export const MessageBox = ({
 							<button
 								type="button"
 								aria-label="Start video call"
-								className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-chip hover:text-primary"
+								className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/5 hover:text-primary"
 								onClick={() =>
 									startCall({
 										conversationId: activeConversation._id,
@@ -2624,7 +2674,7 @@ export const MessageBox = ({
 
 					{/* shrink-0 + pb-safe: the composer is the flex row that must never
 					    be squeezed out, and it sits on the iOS home indicator. */}
-					<div className={clsx("relative z-10 shrink-0 px-3 pb-safe pt-2 sm:px-4", hasPicture && "bg-page/80")}>
+					<div className={clsx("relative z-10 shrink-0 px-3 pb-safe pt-2 sm:px-4", hasPicture && "border-t border-hairline/60 bg-page")}>
 						{/* What you are answering, above the input, with a way out.
 						    Sending clears it; so does Escape, because a reply you
 						    cannot cancel is a trap. */}
@@ -2647,7 +2697,7 @@ export const MessageBox = ({
 									type="button"
 									onClick={() => setReplyTarget(null)}
 									aria-label="Cancel reply"
-									className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-pill text-subtle transition-colors hover:bg-raised hover:text-primary"
+									className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-pill text-subtle transition-colors hover:bg-primary/5 hover:text-primary"
 								>
 									<RiCloseLine size={15} />
 								</button>
@@ -2683,7 +2733,7 @@ export const MessageBox = ({
 									type="button"
 									onClick={toggleVoicePlayback}
 									aria-label="Pause voice note"
-									className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-primary transition-colors hover:bg-chip"
+									className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-primary transition-colors hover:bg-primary/5"
 								>
 									<RiPauseFill size={18} />
 								</button>
@@ -2754,7 +2804,7 @@ export const MessageBox = ({
 											type="button"
 											onClick={() => fileInputRef.current?.click()}
 											aria-label="Add another file"
-											className="flex h-[72px] w-11 shrink-0 cursor-pointer items-center justify-center rounded-[10px] bg-raised text-muted transition-colors hover:bg-chip hover:text-primary"
+											className="flex h-[72px] w-11 shrink-0 cursor-pointer items-center justify-center rounded-[10px] bg-primary/5 text-muted transition-colors hover:bg-primary/5 hover:text-primary"
 										>
 											<RiAddLine size={18} />
 										</button>
@@ -2770,7 +2820,7 @@ export const MessageBox = ({
 											"ml-auto flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center self-center rounded-pill transition-colors",
 											hdSend
 												? "bg-brand text-brand-on"
-												: "bg-raised text-muted hover:text-primary",
+												: "bg-primary/10 text-muted hover:text-primary",
 										)}
 									>
 										<RiHdLine size={16} />
@@ -2820,7 +2870,7 @@ export const MessageBox = ({
 								<button
 									type="button"
 									onClick={() => void declineRequest(activeConversation._id)}
-									className="h-8 shrink-0 cursor-pointer rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-medium text-danger transition-colors hover:bg-chip"
+									className="h-8 shrink-0 cursor-pointer rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-medium text-danger transition-colors hover:bg-primary/5"
 								>
 									Delete
 								</button>
@@ -2857,6 +2907,17 @@ export const MessageBox = ({
 								accept="image/*,video/*"
 								onChange={handleFileSelect}
 							/>
+							<input
+								type="file"
+								ref={audioInputRef}
+								className="hidden"
+								accept="audio/*"
+								onChange={(e) => {
+									const f = e.target.files?.[0];
+									e.target.value = "";
+									if (f) void sendAudioFile(f);
+								}}
+							/>
 							<ComposerInput
 								ref={composerRef}
 								disabled={false}
@@ -2865,7 +2926,7 @@ export const MessageBox = ({
 								onSend={(text) => sendMessage(text)}
 								onTyping={chat.notifyTyping}
 								onStopTyping={chat.notifyStoppedTyping}
-								onAttach={() => fileInputRef.current?.click()}
+								onAttach={openAttach}
 								onMoney={() => setShowSendMoney(true)}
 								onGif={() => setShowGifPicker(true)}
 								onFiles={addFiles}
@@ -3062,7 +3123,7 @@ export const MessageBox = ({
 							<button
 								type="button"
 								onClick={() => setPendingDeleteConv(null)}
-								className="h-9 cursor-pointer rounded-pill bg-raised px-4 font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-chip"
+								className="h-9 cursor-pointer rounded-pill bg-raised px-4 font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/5"
 							>
 								Keep
 							</button>
@@ -3153,7 +3214,7 @@ export const MessageBox = ({
 										setMsgMenu(null);
 									}}
 									aria-label={`React ${emoji}`}
-									className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-[calc(20px*var(--ws-fs))] transition-colors hover:bg-primary/10"
+									className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-[calc(20px*var(--ws-fs))] transition-colors hover:bg-primary/5"
 								>
 									{emoji}
 								</button>
@@ -3162,7 +3223,7 @@ export const MessageBox = ({
 								type="button"
 								onClick={() => setMenuPicker((v) => !v)}
 								aria-label="More reactions"
-								className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-raised hover:text-primary"
+								className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
 							>
 								<Plus className="h-4 w-4" />
 							</button>
@@ -3201,7 +3262,7 @@ export const MessageBox = ({
 							setReplyTarget(msgMenu.message);
 							setMsgMenu(null);
 						}}
-						className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-raised"
+						className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/5"
 					>
 						<RiReplyLine size={16} />
 						Reply
@@ -3217,7 +3278,7 @@ export const MessageBox = ({
 								setMsgMenu(null);
 								toast.success("Copied");
 							}}
-							className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-raised"
+							className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/5"
 						>
 							<RiFileCopyLine size={16} />
 							Copy text
@@ -3233,7 +3294,7 @@ export const MessageBox = ({
 								void unsendMessage(msgMenu.message);
 								setMsgMenu(null);
 							}}
-							className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-danger transition-colors hover:bg-raised"
+							className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-danger transition-colors hover:bg-primary/5"
 						>
 							<RiRestartLine size={16} />
 							Unsend
@@ -3245,6 +3306,25 @@ export const MessageBox = ({
 				);
 			})()}
 
+			<AttachSheet
+				open={showAttachMenu && !!activeConversation}
+				anchor={attachAnchor}
+				onClose={() => setShowAttachMenu(false)}
+				onPhoto={() => fileInputRef.current?.click()}
+				onAudio={() => audioInputRef.current?.click()}
+				onMoney={() => setShowSendMoney(true)}
+				onContact={() => setContactPickerOpen(true)}
+				onPhoneContact={() => void sendPhoneContact()}
+			/>
+			<ContactPicker
+				open={contactPickerOpen}
+				onClose={() => setContactPickerOpen(false)}
+				onPick={(u: PickedUser) => {
+					const name = [u.firstName, u.lastName].filter(Boolean).join(" ");
+					const handle = u.username ? `@${u.username}` : "";
+					void sendMessage([name, handle].filter(Boolean).join(" "));
+				}}
+			/>
 			{themeSheet === "gallery" && activeConversation && (
 				<ThemeGallery
 					mode={themeMode}
@@ -3331,7 +3411,7 @@ function SuggestedPeople({
 						type="button"
 						disabled={startingWith === u._id}
 						onClick={() => onMessage(u)}
-						className="h-8 shrink-0 cursor-pointer rounded-pill bg-raised px-3.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-chip disabled:opacity-60"
+						className="h-8 shrink-0 cursor-pointer rounded-pill bg-raised px-3.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-primary/5 disabled:opacity-60"
 					>
 						{startingWith === u._id ? "…" : "Message"}
 					</button>
