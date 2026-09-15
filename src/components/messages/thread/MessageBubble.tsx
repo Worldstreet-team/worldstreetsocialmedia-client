@@ -431,29 +431,16 @@ export const MessageBubble = memo(function MessageBubble({
 			)}
 			<motion.div
 				ref={rowRef}
-				// layout: the row TWEENS between sizes instead of snapping —
-				// an optimistic bubble growing into its server twin, a
-				// reaction chip appearing, a tail radius changing when the
-				// next message joins the run (owner ruling 2026-09-02).
-				// Fresh arrivals also spring in from 8px below; history is
-				// static, so a scroll never animates a wall of bubbles.
-				layout="position"
-				// Only the changes the tween exists for may trigger it. Without
-				// this, framer measured every row on every render, and inside a
-				// virtualised scroller the list repositions rows on each scroll
-				// frame against an offset framer is not told about (no
-				// layoutScroll on the scroller), so the projection tweened rows
-				// back to where they had been and the list corrected them again:
-				// the fight the owner felt as "scroll up, scroll down, and it
-				// becomes impossible to scroll down" (2026-09-15).
-				layoutDependency={`${m._id}|${m.reactions?.length ?? 0}|${sameRunAsPrev}|${endsRun}|${m.failed ? 1 : 0}|${album?.length ?? 0}`}
+				// No framer `layout` on a virtualised row (2026-09-15). It was
+				// added so a bubble would tween between sizes, but position-only
+				// projection never animates size, so it did none of that; what it
+				// DID do was snapshot every row on every re-render and, on a
+				// prepend, spring each one in from the 50-row margin virtuoso
+				// applies synchronously, with reduce-motion turning the spring
+				// into a hard snap. Live arrivals still rise in via `initial`.
 				initial={fresh ? { opacity: 0, y: 8, scale: 0.98 } : false}
 				animate={{ opacity: 1, y: 0, scale: 1 }}
-				transition={{
-					layout: { type: "spring", stiffness: 420, damping: 34 },
-					duration: 0.2,
-					ease: [0.2, 0, 0, 1],
-				}}
+				transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
 				id={`msg-${m._id}`}
 				onContextMenu={(e) => {
 					if (isTemp) return;

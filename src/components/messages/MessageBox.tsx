@@ -58,7 +58,7 @@ import { GIPHY_KEY, GifPicker } from "./GifPicker";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCall } from "@/providers/CallProvider";
 import { useChatSignals } from "@/hooks/useChatSignals";
-import { ThreadList } from "@/components/messages/thread/ThreadList";
+import { ThreadList, type ThreadListHandle } from "@/components/messages/thread/ThreadList";
 import {
 	type ChatTheme,
 	type ThemeByMode,
@@ -88,7 +88,6 @@ import {
 	ComposerInput,
 	type ComposerInputHandle,
 } from "@/components/messages/thread/ComposerInput";
-import type { VirtuosoHandle } from "react-virtuoso";
 import { imageMeta, videoMeta } from "@/lib/media-meta";
 import { conversationIdentity } from "@/lib/conversation-identity";
 import { compressImage } from "@/lib/image-compress";
@@ -412,7 +411,6 @@ export const MessageBox = ({
 		? messageCache[activeConversation._id] || []
 		: [];
 	// Virtuoso backwards-pagination plumbing (register items 24-25).
-	const [firstItemIndex, setFirstItemIndex] = useState(100000);
 	const [pendingNew, setPendingNew] = useState(0);
 	// The chat theme pack (owner 2026-09-10). Global (profile) + per-chat
 	// (member record); per-chat wins; both per mode. Painted as CSS
@@ -426,7 +424,7 @@ export const MessageBox = ({
 	const loadingOlderRef = useRef(false);
 	const atBottomRef = useRef(true);
 	const lastMarkRef = useRef(0);
-	const virtuosoRef = useRef<VirtuosoHandle | null>(null);
+	const virtuosoRef = useRef<ThreadListHandle | null>(null);
 	const composerRef = useRef<ComposerInputHandle | null>(null);
 	const messageCacheRef = useRef(messageCache);
 	messageCacheRef.current = messageCache;
@@ -501,17 +499,12 @@ export const MessageBox = ({
 		(id: string) => {
 			const conv = activeIdRef.current;
 			const list = conv ? messageCacheRef.current[conv] || [] : [];
-			const idx = list.findIndex((mm) => mm._id === id);
-			if (idx < 0) return;
-			virtuosoRef.current?.scrollToIndex({
-				index: firstItemIndex + idx,
-				align: "center",
-				behavior: "smooth",
-			});
+			if (!list.some((mm) => mm._id === id)) return;
+			virtuosoRef.current?.scrollToMessage(id, "smooth");
 			setFlashedId(id);
 			setTimeout(() => setFlashedId((cur) => (cur === id ? null : cur)), 1200);
 		},
-		[firstItemIndex],
+		[],
 	);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [isLoadingConversations, setIsLoadingConversations] = useState(
@@ -1435,10 +1428,7 @@ export const MessageBox = ({
 	};
 
 	const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
-		virtuosoRef.current?.scrollToIndex({
-			index: "LAST",
-			behavior: behavior === "auto" ? "auto" : "smooth",
-		});
+		virtuosoRef.current?.scrollToBottom(behavior === "auto" ? "auto" : "smooth");
 	}, []);
 
 	const markAsRead = async (conversationId: string, upTo?: string) => {
@@ -1504,7 +1494,7 @@ export const MessageBox = ({
 					targets.map(async (c) => {
 						try {
 							const r = await axios.get(
-								`${API_URL}/api/messages/${c._id}?limit=30`,
+								`${API_URL}/api/messages/${c._id}?limit=50`,
 								{ headers: { Authorization: `Bearer ${token}` } },
 							);
 							setMessageCache((prev) =>
@@ -1556,7 +1546,6 @@ export const MessageBox = ({
 
 	const fetchMessages = async (conversationId: string) => {
 		hasMoreOlderRef.current = true;
-		setFirstItemIndex(100000);
 		setPendingNew(0);
 		const cached = messageCache[conversationId];
 		if (cached?.length > 0) {
@@ -1606,7 +1595,7 @@ export const MessageBox = ({
 	};
 
 	/** Older page prepend — virtuoso preserves the visual position via the
-	 *  shrinking firstItemIndex (register item 24). */
+	 *  ThreadList measures the prepend on its own rows (register item 24). */
 	const loadOlder = useCallback(async () => {
 		const conv = activeIdRef.current;
 		if (!conv || loadingOlderRef.current || !hasMoreOlderRef.current) return;
@@ -1626,7 +1615,6 @@ export const MessageBox = ({
 					...prev,
 					[conv]: [...r.data, ...(prev[conv] || [])],
 				}));
-				setFirstItemIndex((i) => i - r.data.length);
 			}
 		} catch {
 			// Scrolling further retries; no toast for a background page.
@@ -2737,7 +2725,6 @@ export const MessageBox = ({
 							ref={virtuosoRef}
 							threadId={activeConversation._id}
 							messages={messages as never}
-							firstItemIndex={firstItemIndex}
 							myProfileId={myProfileId ?? ""}
 							flashedId={flashedId}
 							peerName={

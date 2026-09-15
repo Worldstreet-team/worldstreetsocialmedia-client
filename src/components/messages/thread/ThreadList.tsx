@@ -6,6 +6,7 @@ import {
 	forwardRef,
 	useCallback,
 	useEffect,
+	useImperativeHandle,
 	useMemo,
 	useRef,
 	useState,
@@ -15,6 +16,7 @@ import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import { RiArrowDownLine } from "@remixicon/react";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { TypingIndicator } from "@/components/messages/TypingIndicator";
+import { systemEventCopy } from "./groupSystem";
 import {
 	MessageBubble,
 	type BubbleMessage,
@@ -33,10 +35,16 @@ import {
  * - Footer reserves the typing indicator's height PERMANENTLY, so its
  *   appearance never pulses the layout.
  */
+/** What the pane may ask the list to do. The list owns its index space. */
+export interface ThreadListHandle {
+	scrollToBottom: (behavior?: "auto" | "smooth") => void;
+	/** Scrolls a message into the centre, including one folded into an album. */
+	scrollToMessage: (id: string, behavior?: "auto" | "smooth") => void;
+}
+
 export interface ThreadListProps {
 	threadId: string;
 	messages: BubbleMessage[];
-	firstItemIndex: number;
 	myProfileId: string;
 	flashedId: string | null;
 	peerName: string;
@@ -77,12 +85,14 @@ export interface ThreadListProps {
 	>;
 }
 
-export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
+/** Module-level so virtuoso does not see a new follow rule every render. */
+const FOLLOW_OUTPUT = (bottom: boolean) => (bottom ? ("smooth" as const) : false);
+
+export const ThreadList = forwardRef<ThreadListHandle, ThreadListProps>(
 	function ThreadList(
 		{
 			threadId,
 			messages,
-			firstItemIndex,
 			myProfileId,
 			flashedId,
 			peerName,
@@ -174,6 +184,11 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 			const rows: BubbleMessage[] = [];
 			const albums = new Map<string, BubbleMessage[]>();
 			for (const m of messages) {
+				// A membership event with no copy renders nothing; a zero-height
+				// item poisons virtuoso's size estimate for every prepend after
+				// it (it estimates new rows at the LAST row's size), so it never
+				// becomes a row at all.
+				if (m.type === "system" && (m.systemEvent ? !systemEventCopy(m.systemEvent, undefined, myProfileId) : !m.content)) continue;
 				const prev = rows[rows.length - 1];
 				const photo = m.type === "image" && !!m.groupKey;
 				if (
@@ -191,6 +206,62 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 			}
 			return { rows, albums };
 		}, [messages]);
+
+		// The list owns firstItemIndex (2026-09-15). MessageBox used to shrink
+		// it by the number of MESSAGES an older page added, but what the list
+		// renders is ROWS, and an album folds several photos into one row, so
+		// after any page with an album the index space was off by the folded
+		// count: virtuoso kept the wrong row in view and every later scroll
+		// fought the correction. A prepend is measured here, on the rows
+		// themselves: the row that was first is found at index p, so p rows
+		// were added above it. Keyed per thread; a thread change resets.
+		const prependRef = useRef<{ thread: string; firstKey: string | null; prepended: number }>({
+			thread: threadId,
+			firstKey: null,
+			prepended: 0,
+		});
+		if (prependRef.current.thread !== threadId) {
+			prependRef.current = { thread: threadId, firstKey: null, prepended: 0 };
+		}
+		const keyOf = (m: BubbleMessage) => m.clientKey ?? m._id;
+		// Remember the first MESSAGE, not the first row: a photo that opened
+		// the page can be folded into the older page's trailing album and
+		// stop being a row key. Count the ROWS above whichever row now holds it.
+		const firstKey = messages[0] ? keyOf(messages[0]) : null;
+		if (
+			firstKey !== null &&
+			prependRef.current.firstKey !== null &&
+			firstKey !== prependRef.current.firstKey
+		) {
+			const was = prependRef.current.firstKey;
+			const p = rows.findIndex(
+				(r) => keyOf(r) === was || (albums.get(r._id)?.some((a) => keyOf(a) === was) ?? false),
+			);
+			if (p > 0) prependRef.current.prepended += p;
+		}
+		if (firstKey !== null) prependRef.current.firstKey = firstKey;
+		const firstItemIndex = 100000 - prependRef.current.prepended;
+
+		const virtuosoRef = useRef<VirtuosoHandle | null>(null);
+		useImperativeHandle(
+			ref,
+			() => ({
+				scrollToBottom: (behavior = "smooth") =>
+					virtuosoRef.current?.scrollToIndex({ index: "LAST", behavior }),
+				scrollToMessage: (id, behavior = "smooth") => {
+					const i = rows.findIndex(
+						(r) => r._id === id || (albums.get(r._id)?.some((a) => a._id === id) ?? false),
+					);
+					if (i < 0) return;
+					virtuosoRef.current?.scrollToIndex({
+						index: firstItemIndex + i,
+						align: "center",
+						behavior,
+					});
+				},
+			}),
+			[rows, albums, firstItemIndex],
+		);
 
 		// The newest message of mine is the one that wears the delivery word.
 		const lastMineIndex = useMemo(() => {
@@ -388,7 +459,7 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 				>
 				<Virtuoso<BubbleMessage>
 					key={threadId}
-					ref={ref}
+					ref={virtuosoRef}
 					// overflow-x-hidden: swipe-to-reply translates rows sideways,
 					// and without this the scroller grew a horizontal scrollbar
 					// mid-gesture (owner, 2026-09-02). The settle veil hides the
@@ -417,14 +488,17 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 							? { index: firstItemIndex + unreadAnchorIndex, align: "start" }
 							: firstItemIndex + rows.length - 1
 					}
-					followOutput={(bottom) => (bottom ? "smooth" : false)}
+					followOutput={FOLLOW_OUTPUT}
 					atBottomThreshold={80}
 					atBottomStateChange={(bottom) => {
 						setAtBottom(bottom);
 						onAtBottomChange(bottom);
 					}}
 					startReached={onLoadOlder}
-					increaseViewportBy={{ top: 600, bottom: 200 }}
+					// 200 above, not 600: the rows rendered in the top overscan are the
+					// ones measured in one batch right after a page lands, and that batch
+					// is the jump a reader feels when the estimate was off.
+					increaseViewportBy={{ top: 200, bottom: 200 }}
 					components={{ Footer }}
 					itemContent={itemContent}
 				/>

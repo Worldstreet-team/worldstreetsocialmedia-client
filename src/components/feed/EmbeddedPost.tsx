@@ -96,7 +96,7 @@ export function EmbeddedPost({ postId }: { postId: string }) {
 
 	if (data === "loading") {
 		return (
-			<div className="relative z-10 mt-3 rounded-xl border border-hairline p-3 pointer-events-auto">
+			<div className="relative z-10 mt-3 min-h-[76px] rounded-xl border border-hairline p-3 pointer-events-auto">
 				<div className="skeleton mb-2 h-3.5 w-1/3 rounded-sm" />
 				<div className="skeleton h-3 w-2/3 rounded-sm" />
 			</div>
