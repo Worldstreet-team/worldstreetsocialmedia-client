@@ -411,7 +411,13 @@ export const MessageBubble = memo(function MessageBubble({
 			)}
 			{showDay && (
 				<div className="flex justify-center pb-2 pt-5">
-					<span className="font-sans text-[calc(11px*var(--ws-fs))] font-medium tabular-nums text-subtle">
+					<span
+						className="rounded-pill px-2.5 py-0.5 font-sans text-[calc(11px*var(--ws-fs))] font-medium tabular-nums"
+						style={{
+							background: "var(--chat-stamp-bg, transparent)",
+							color: "var(--chat-stamp-ink, var(--ws-text-subtle))",
+						}}
+					>
 						{dayLabel(m.createdAt)}
 					</span>
 				</div>
@@ -425,6 +431,15 @@ export const MessageBubble = memo(function MessageBubble({
 				// Fresh arrivals also spring in from 8px below; history is
 				// static, so a scroll never animates a wall of bubbles.
 				layout="position"
+				// Only the changes the tween exists for may trigger it. Without
+				// this, framer measured every row on every render, and inside a
+				// virtualised scroller the list repositions rows on each scroll
+				// frame against an offset framer is not told about (no
+				// layoutScroll on the scroller), so the projection tweened rows
+				// back to where they had been and the list corrected them again:
+				// the fight the owner felt as "scroll up, scroll down, and it
+				// becomes impossible to scroll down" (2026-09-15).
+				layoutDependency={`${m._id}|${m.reactions?.length ?? 0}|${sameRunAsPrev}|${endsRun}|${m.failed ? 1 : 0}|${album?.length ?? 0}`}
 				initial={fresh ? { opacity: 0, y: 8, scale: 0.98 } : false}
 				animate={{ opacity: 1, y: 0, scale: 1 }}
 				transition={{
@@ -522,7 +537,7 @@ export const MessageBubble = memo(function MessageBubble({
 								// face leads an incoming message (owner 2026-09-02;
 								// the old row-reverse painted it backwards).
 								isMe ? "order-1" : "order-3",
-								"flex h-8 w-8 shrink-0 items-center justify-center rounded-pill text-subtle transition hover:bg-raised hover:text-muted",
+								"flex h-8 w-8 shrink-0 items-center justify-center rounded-pill text-subtle transition hover:bg-primary/5 hover:text-muted",
 								"opacity-100 md:opacity-0 md:group-hover/msg:opacity-100 md:focus-visible:opacity-100",
 							)}
 						>
@@ -698,7 +713,7 @@ export const MessageBubble = memo(function MessageBubble({
 										<button
 											type="button"
 											onClick={() => onRetryUpload?.(m.clientKey!)}
-											className="cursor-pointer rounded-pill bg-raised px-2.5 py-0.5 font-sans text-[calc(11.5px*var(--ws-fs))] font-semibold text-danger transition-colors hover:bg-chip"
+											className="cursor-pointer rounded-pill bg-raised px-2.5 py-0.5 font-sans text-[calc(11.5px*var(--ws-fs))] font-semibold text-danger transition-colors hover:bg-primary/5"
 										>
 											Failed — retry
 										</button>
@@ -812,7 +827,7 @@ export const MessageBubble = memo(function MessageBubble({
 									"flex cursor-pointer items-center gap-1 rounded-pill px-1.5 py-0.5 font-sans text-[calc(12px*var(--ws-fs))] ring-2 ring-page transition-colors animate-pop",
 									info.mine
 										? "[background:var(--chat-accent-40,rgba(34,184,214,0.4))]"
-										: "bg-surface hover:bg-chip",
+										: "bg-primary/5 hover:bg-primary/10",
 								)}
 							>
 								<span>{emoji}</span>

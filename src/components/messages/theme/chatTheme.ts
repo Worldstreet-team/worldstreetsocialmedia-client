@@ -410,12 +410,12 @@ export function normalizeTheme(x: unknown, mode: ThemeMode): ChatTheme {
 	return {
 		wallpaper: {
 			type,
-			color: type === "solid" ? okColor(w.color, "#0C0A09") : undefined,
+			color: type === "solid" ? okColor(w.color, "#000000") : undefined,
 			stops:
 				type === "gradient"
 					? [
-							okColor(w.stops?.[0], "#0C0A09"),
-							okColor(w.stops?.[1], "#1C1917"),
+							okColor(w.stops?.[0], "#000000"),
+							okColor(w.stops?.[1], "#0D0D0D"),
 						]
 					: undefined,
 			angle: type === "gradient" ? clamp(w.angle, 0, 360, 160) : undefined,
@@ -523,6 +523,16 @@ export function themeVars(t: ChatTheme): CSSProperties {
 		"--chat-quote-mine-ink": "var(--ws-text-primary)",
 		"--chat-quote-theirs": t.bubbles.theirs.color,
 		"--chat-quote-theirs-ink": inkFor(t.bubbles.theirs.color),
+		// The centred day stamp. On a flat ground it is bare subtle ink; on
+		// any picture or painted ground it sits in a chip of the page colour
+		// so it reads over whatever is behind it (owner 2026-09-15: the dates
+		// vanished on a pale wallpaper).
+		"--chat-stamp-bg":
+			t.wallpaper.type === "flat"
+				? "transparent"
+				: "color-mix(in srgb, var(--ws-bg-page) 72%, transparent)",
+		"--chat-stamp-ink":
+			t.wallpaper.type === "flat" ? "var(--ws-text-subtle)" : "var(--ws-text-muted)",
 		"--chat-r": `${s.r}px`,
 		"--chat-r-in": `${s.rin}px`,
 	} as CSSProperties;

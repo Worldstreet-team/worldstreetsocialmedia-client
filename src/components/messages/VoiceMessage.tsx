@@ -192,6 +192,22 @@ export const VoiceMessage = ({
 	const barsRef = useRef<HTMLDivElement>(null);
 	const requestRef = useRef<number | undefined>(undefined);
 	const draggingRef = useRef(false);
+	// Progress paints by direct style writes from the rAF loop, never by
+	// React state: the played layer is a copy of the bars clipped to the
+	// played fraction, so the head moves continuously instead of stepping a
+	// bar at a time, and a three-minute note no longer re-renders 44 spans
+	// sixty times a second (owner 2026-09-15: "not going smoothly"). State
+	// carries whole seconds only, for the label and the fallback slider.
+	const playedRef = useRef<HTMLDivElement>(null);
+	const durationRef = useRef(duration);
+	durationRef.current = duration;
+	const probedRef = useRef(false);
+	const paintProgress = useCallback((frac: number) => {
+		const el = playedRef.current;
+		if (!el) return;
+		const pct = Math.max(0, 100 - Math.min(1, Math.max(0, frac)) * 100);
+		el.style.clipPath = `inset(0 ${pct}% 0 0)`;
+	}, []);
 
 	// Decode the waveform — ONLY when the message didn't ship one. Any
 	// failure (CORS, codec) falls back to the progress bar.
@@ -263,7 +279,11 @@ export const VoiceMessage = ({
 	const animate = useCallback(() => {
 		const audio = audioRef.current;
 		if (!audio) return;
-		setCurrentTime(audio.currentTime);
+		const t = audio.currentTime;
+		const d = durationRef.current;
+		paintProgress(d > 0 ? t / d : 0);
+		// Only a new whole second is worth a render.
+		setCurrentTime((prev) => (Math.floor(prev) === Math.floor(t) ? prev : t));
 		if (messageId && playbackState.id === messageId) {
 			publishPlayback({
 				time: audio.currentTime,
@@ -274,7 +294,7 @@ export const VoiceMessage = ({
 			});
 		}
 		requestRef.current = requestAnimationFrame(animate);
-	}, [messageId]);
+	}, [messageId, paintProgress]);
 
 	useEffect(() => {
 		if (isPlaying) {
@@ -345,6 +365,7 @@ export const VoiceMessage = ({
 		const audio = audioRef.current;
 		if (audio) {
 			setCurrentTime(audio.currentTime);
+			paintProgress(durationRef.current > 0 ? audio.currentTime / durationRef.current : 0);
 		}
 		if (messageId && playbackState.id === messageId)
 			publishPlayback({ playing: false });
@@ -353,6 +374,7 @@ export const VoiceMessage = ({
 	const handleEnded = () => {
 		if (audioRef.current) audioRef.current.currentTime = 0;
 		setCurrentTime(0);
+		paintProgress(0);
 		if (messageId && playbackState.id === messageId)
 			publishPlayback({ playing: false, time: 0 });
 		// Consecutive notes play through as a run (register 87).
@@ -364,7 +386,32 @@ export const VoiceMessage = ({
 		if (!audio) return;
 		if (Number.isFinite(audio.duration) && audio.duration > 0) {
 			setDuration(audio.duration);
+			return;
 		}
+		// MediaRecorder's webm carries no length in its header, so Chrome
+		// reports Infinity and the recorder's whole-second count stood in
+		// for it, which is why the head drifted from the sound. Seeking to
+		// the end makes the browser scan the file and report the real
+		// length on durationchange; then rewind. Only while paused: a note
+		// that has started playing keeps the count and takes the real
+		// length when the browser reaches the end on its own.
+		if (probedRef.current || !audio.paused) return;
+		probedRef.current = true;
+		const onDur = () => {
+			if (!Number.isFinite(audio.duration) || audio.duration <= 0) return;
+			audio.removeEventListener("durationchange", onDur);
+			setDuration(audio.duration);
+			if (audio.paused) audio.currentTime = 0;
+		};
+		audio.addEventListener("durationchange", onDur);
+		audio.currentTime = 1e101;
+	};
+	// The real length can also arrive mid-play (webm, at the end of the
+	// first pass); take it whenever it does.
+	const handleDurationChange = () => {
+		const audio = audioRef.current;
+		if (!audio || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
+		setDuration(audio.duration);
 	};
 
 	const formatTime = (time: number) => {
@@ -384,6 +431,7 @@ export const VoiceMessage = ({
 		const time = frac * duration;
 		audio.currentTime = time;
 		setCurrentTime(time);
+		paintProgress(frac);
 	};
 
 	const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -407,6 +455,7 @@ export const VoiceMessage = ({
 		const time = (Number(e.target.value) / 100) * duration;
 		audio.currentTime = time;
 		setCurrentTime(time);
+		paintProgress(Number(e.target.value) / 100);
 	};
 
 	const progress = duration > 0 ? currentTime / duration : 0;
@@ -460,26 +509,40 @@ export const VoiceMessage = ({
 					onPointerMove={handlePointerMove}
 					onPointerUp={endDrag}
 					onPointerCancel={endDrag}
-					className="flex h-10 min-w-0 flex-1 cursor-pointer touch-none items-center gap-[2px] overflow-hidden"
+					className="relative flex h-10 min-w-0 flex-1 cursor-pointer touch-none items-center gap-[2px] overflow-hidden"
 				>
 					{shownPeaks.map((peak, i) => (
 						<span
 							// biome-ignore lint/suspicious/noArrayIndexKey: bars are positional by definition
 							key={i}
-							className="w-[2px] shrink-0 rounded-full bg-current transition-opacity"
+							className="w-[2px] shrink-0 rounded-full bg-current"
 							style={{
-								height: Math.max(
-									BAR_MIN_HEIGHT,
-									Math.round(peak * BAR_MAX_HEIGHT),
-								),
-								opacity: decoding
-									? 0.25
-									: i / shownPeaks.length < progress
-										? 1
-										: 0.35,
+								height: Math.max(BAR_MIN_HEIGHT, Math.round(peak * BAR_MAX_HEIGHT)),
+								opacity: decoding ? 0.25 : 0.35,
 							}}
 						/>
 					))}
+					{/* The played layer: the same bars at full ink, clipped from the
+					    right by the rAF loop. Same flex, same gap, so it lands
+					    exactly over the base. The initial clip is a constant, so
+					    React never rewrites what the loop painted. */}
+					{!decoding && (
+						<div
+							ref={playedRef}
+							aria-hidden
+							className="pointer-events-none absolute inset-0 flex items-center gap-[2px]"
+							style={{ clipPath: "inset(0 100% 0 0)" }}
+						>
+							{shownPeaks.map((peak, i) => (
+								<span
+									// biome-ignore lint/suspicious/noArrayIndexKey: bars are positional by definition
+									key={i}
+									className="w-[2px] shrink-0 rounded-full bg-current"
+									style={{ height: Math.max(BAR_MIN_HEIGHT, Math.round(peak * BAR_MAX_HEIGHT)) }}
+								/>
+							))}
+						</div>
+					)}
 				</div>
 			)}
 
@@ -517,6 +580,7 @@ export const VoiceMessage = ({
 				// flick. Legacy notes without a duration still ask for it.
 				preload={durationSec && durationSec > 0 ? "none" : "metadata"}
 				onLoadedMetadata={handleLoadedMetadata}
+				onDurationChange={handleDurationChange}
 				onPlay={handlePlay}
 				onPause={handlePause}
 				onEnded={handleEnded}
