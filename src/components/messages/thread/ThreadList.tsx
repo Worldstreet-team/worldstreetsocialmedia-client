@@ -366,7 +366,7 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 						{peer?.username && !isGroup && (
 							<Link
 								href={`/profile/${peer.username}`}
-								className="mt-3 rounded-pill bg-raised px-4 py-1.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-chip"
+								className="mt-3 rounded-pill bg-raised px-4 py-1.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-primary/5"
 							>
 								View profile
 							</Link>
@@ -438,7 +438,7 @@ export const ThreadList = forwardRef<VirtuosoHandle, ThreadListProps>(
 						aria-label={
 							pendingNew > 0 ? `${pendingNew} new messages` : "Jump to latest"
 						}
-						className="absolute bottom-3 right-4 z-10 flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill bg-surface text-primary shadow-nav transition-colors hover:bg-raised animate-pop"
+						className="absolute bottom-3 right-4 z-10 flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill bg-surface text-primary shadow-nav transition-colors hover:bg-primary/5 animate-pop"
 					>
 						<RiArrowDownLine size={17} />
 						{pendingNew > 0 && (

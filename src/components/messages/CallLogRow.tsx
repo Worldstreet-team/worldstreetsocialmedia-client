@@ -65,7 +65,7 @@ export function CallLogRow({
 					<button
 						type="button"
 						onClick={() => onCallBack(video)}
-						className="ml-1 flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-pill bg-chip px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-primary hover:text-page"
+						className="ml-1 flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-pill bg-primary/5 px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-primary hover:text-page"
 					>
 						<RiArrowGoBackLine size={14} />
 						Call back

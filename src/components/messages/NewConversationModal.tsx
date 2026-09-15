@@ -165,7 +165,7 @@ export default function NewConversationModal({
 									value={searchQuery}
 									onChange={(e) => setSearchQuery(e.target.value)}
 									autoFocus
-									className="w-full bg-sunken rounded-pill pl-10 pr-4 py-2.5 text-base sm:text-sm text-primary placeholder:text-subtle focus:bg-raised outline-none transition-colors"
+									className="w-full bg-primary/5 rounded-pill pl-10 pr-4 py-2.5 text-base sm:text-sm text-primary placeholder:text-subtle focus:bg-primary/10 outline-none transition-colors"
 								/>
 							</div>
 							{/* The directory tabs: who you're aligned to first
@@ -207,7 +207,7 @@ export default function NewConversationModal({
 										key={user._id}
 										onClick={() => handleSelectUser(user)}
 										disabled={startingWith !== null}
-										className="w-full flex items-center gap-3 px-4 py-3 hover:bg-raised transition-colors disabled:opacity-50 cursor-pointer"
+										className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary/5 transition-colors disabled:opacity-50 cursor-pointer"
 									>
 										<div className="relative w-11 h-11 rounded-full overflow-hidden shrink-0 bg-raised">
 											<SafeAvatar src={user.avatar} className="object-cover" alt={user.username || "User"} />

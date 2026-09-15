@@ -163,7 +163,7 @@ export const ComposerInput = forwardRef<
 							e.preventDefault();
 							insertMention(c);
 						}}
-						className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-pill bg-raised py-1 pl-1 pr-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-chip"
+						className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-pill bg-raised py-1 pl-1 pr-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/5"
 					>
 						<span className="relative h-5 w-5 overflow-hidden rounded-pill bg-chip">
 							<SafeAvatar src={c.avatar} eager />
@@ -178,7 +178,7 @@ export const ComposerInput = forwardRef<
 				type="button"
 				onClick={onAttach}
 				aria-label="Attach a file"
-				className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary"
+				className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
 			>
 				<RiAddLine size={20} />
 			</button>
@@ -240,7 +240,7 @@ export const ComposerInput = forwardRef<
 					onClick={onMoney}
 					aria-label="Send money"
 					title="Send money"
-					className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-raised hover:text-primary"
+					className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
 				>
 					<RiMoneyDollarCircleLine size={20} />
 				</button>
@@ -249,7 +249,7 @@ export const ComposerInput = forwardRef<
 						type="button"
 						onClick={onGif}
 						aria-label="Send a GIF"
-						className="flex h-9 cursor-pointer items-center justify-center rounded-pill px-1.5 font-sans text-[calc(11px*var(--ws-fs))] font-bold tracking-wide text-muted transition-colors hover:bg-chip hover:text-primary"
+						className="flex h-9 cursor-pointer items-center justify-center rounded-pill px-1.5 font-sans text-[calc(11px*var(--ws-fs))] font-bold tracking-wide text-muted transition-colors hover:bg-primary/5 hover:text-primary"
 					>
 						GIF
 					</button>
@@ -262,8 +262,8 @@ export const ComposerInput = forwardRef<
 					className={clsx(
 						"flex h-9 w-9 items-center justify-center rounded-pill transition-colors cursor-pointer",
 						showEmoji
-							? "bg-raised text-primary"
-							: "text-muted hover:text-primary hover:bg-raised",
+							? "bg-primary/10 text-primary"
+							: "text-muted hover:text-primary hover:bg-primary/5",
 					)}
 				>
 					<RiEmotionLine size={21} />
@@ -298,7 +298,7 @@ export const ComposerInput = forwardRef<
 							});
 						}}
 						aria-label="Record a voice message"
-						className="flex h-9 w-9 touch-none items-center justify-center rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors cursor-pointer animate-pop"
+						className="flex h-9 w-9 touch-none items-center justify-center rounded-pill text-muted hover:text-primary hover:bg-primary/5 transition-colors cursor-pointer animate-pop"
 					>
 						<RiVoiceprintFill size={21} />
 					</button>

@@ -76,7 +76,7 @@ export function ThemeGallery({
 									onClick={() => onApply(t, scope)}
 									className={clsx(
 										"group flex cursor-pointer flex-col gap-1.5 rounded-xl p-1 text-left transition-colors",
-										on ? "bg-brand/12" : "hover:bg-raised",
+										on ? "bg-brand/12" : "hover:bg-primary/5",
 									)}
 								>
 									<ThemePreview
@@ -109,7 +109,7 @@ export function ThemeGallery({
 						<button
 							type="button"
 							onClick={() => onAdvanced(scope)}
-							className="h-10 cursor-pointer rounded-pill border border-hairline px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-raised"
+							className="h-10 cursor-pointer rounded-pill border border-hairline px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-primary/5"
 						>
 							Advanced
 						</button>

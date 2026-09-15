@@ -218,7 +218,7 @@ export function ThemeStudio({
 											))}
 											<ColorField
 												label="Own colour"
-												value={w.type === "solid" && w.color ? w.color : mode === "dark" ? "#0C0A09" : "#FAFAF9"}
+												value={w.type === "solid" && w.color ? w.color : mode === "dark" ? "#000000" : "#FAFAF9"}
 												onChange={(c) => wp({ type: "solid", color: c, stops: undefined, preset: undefined, imageKey: undefined, imageUrl: undefined })}
 											/>
 										</div>

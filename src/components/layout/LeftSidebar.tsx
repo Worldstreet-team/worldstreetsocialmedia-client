@@ -176,8 +176,8 @@ export function LeftSidebar() {
 					// Active = light chip + filled glyph; nothing heavier.
 					"relative flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors group animate-rise",
 					isActive
-						? "bg-raised text-primary font-semibold"
-						: "text-muted hover:bg-surface hover:text-primary",
+						? "bg-primary/10 text-primary font-semibold"
+						: "text-muted hover:bg-primary/5 hover:text-primary",
 				)}
 			>
 				<BadgedIcon count={badgeCount} label={t(item.labelKey)}>
@@ -224,8 +224,8 @@ export function LeftSidebar() {
 					className={clsx(
 						"relative flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors group animate-rise",
 						pathname.startsWith("/votes")
-							? "bg-raised text-primary font-semibold"
-							: "text-muted hover:bg-surface hover:text-primary",
+							? "bg-primary/10 text-primary font-semibold"
+							: "text-muted hover:bg-primary/5 hover:text-primary",
 					)}
 				>
 					<VoteBox open={pathname.startsWith("/votes")} size={24} />
@@ -274,7 +274,7 @@ export function LeftSidebar() {
 				<button
 					type="button"
 					onClick={() => setPremiumOpen(true)}
-					className="animate-rise flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors w-full text-left cursor-pointer text-muted hover:bg-surface hover:text-primary"
+					className="animate-rise flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors w-full text-left cursor-pointer text-muted hover:bg-primary/5 hover:text-primary"
 					style={{ animationDelay: "280ms" }}
 				>
 					<span className="inline-flex w-[22px] h-[22px] items-center justify-center">
@@ -293,7 +293,7 @@ export function LeftSidebar() {
 							"flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors w-full text-left cursor-pointer",
 							productsOpen
 								? "text-primary"
-								: "text-muted hover:bg-surface hover:text-primary",
+								: "text-muted hover:bg-primary/5 hover:text-primary",
 						)}
 					>
 						<span className="inline-flex w-[22px] h-[22px] items-center justify-center">
@@ -329,7 +329,7 @@ export function LeftSidebar() {
 										href={app.href}
 										target="_blank"
 										rel="noopener noreferrer"
-										className="relative flex items-center gap-2.5 pl-3 pr-7 py-2 rounded-xl text-muted hover:bg-surface hover:text-primary transition-colors group/app"
+										className="relative flex items-center gap-2.5 pl-3 pr-7 py-2 rounded-xl text-muted hover:bg-primary/5 hover:text-primary transition-colors group/app"
 									>
 										<Image
 											src="/images/wsa-mark.png"
@@ -432,7 +432,7 @@ export function LeftSidebar() {
 													: "/profile"
 											}
 											onClick={closeMenu}
-											className="w-full text-left px-3.5 py-2.5 hover:bg-raised text-sm text-primary font-sans font-medium flex items-center gap-2.5 transition-colors"
+											className="w-full text-left px-3.5 py-2.5 hover:bg-primary/5 text-sm text-primary font-sans font-medium flex items-center gap-2.5 transition-colors"
 										>
 											<UserCircle size={16} />
 											{t("nav.viewProfile")}
@@ -444,7 +444,7 @@ export function LeftSidebar() {
 													setTheme(isLight ? "dark" : "light"),
 												)
 											}
-											className="w-full text-left px-3.5 py-2.5 hover:bg-raised text-sm text-primary font-sans font-medium flex items-center gap-2.5 transition-colors cursor-pointer"
+											className="w-full text-left px-3.5 py-2.5 hover:bg-primary/5 text-sm text-primary font-sans font-medium flex items-center gap-2.5 transition-colors cursor-pointer"
 										>
 											{mounted && isLight ? (
 												<Moon size={16} />
@@ -462,7 +462,7 @@ export function LeftSidebar() {
 										<div className="my-1 border-t border-hairline" />
 										<button
 											type="button"
-											className="w-full text-left px-3.5 py-2.5 hover:bg-raised text-sm text-danger font-sans font-medium flex items-center gap-2.5 transition-colors cursor-pointer"
+											className="w-full text-left px-3.5 py-2.5 hover:bg-primary/5 text-sm text-danger font-sans font-medium flex items-center gap-2.5 transition-colors cursor-pointer"
 											onClick={() => handleSignOut(signOut)}
 										>
 											<SignOut size={16} />
@@ -480,7 +480,7 @@ export function LeftSidebar() {
 						onClick={() => setMenuOpen((v) => !v)}
 						aria-haspopup="dialog"
 						aria-expanded={menuOpen}
-						className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-surface transition-colors text-left group cursor-pointer"
+						className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-primary/5 transition-colors text-left group cursor-pointer"
 					>
 						<div className="relative w-10 h-10 rounded-pill overflow-hidden border border-hairline shrink-0">
 							<SafeAvatar src={user.avatar} className="object-cover" alt={user.username || "User"} />

@@ -135,7 +135,7 @@ export function GroupCreateModal({
 									placeholder="Group name"
 									maxLength={80}
 									autoFocus
-									className="min-w-0 flex-1 rounded-pill bg-sunken px-4 py-2.5 text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised sm:text-sm"
+									className="min-w-0 flex-1 rounded-pill bg-primary/5 px-4 py-2.5 text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-primary/10 sm:text-sm"
 								/>
 							</div>
 
@@ -146,7 +146,7 @@ export function GroupCreateModal({
 											key={u._id}
 											type="button"
 											onClick={() => toggle(u)}
-											className="flex cursor-pointer items-center gap-1.5 rounded-pill bg-chip py-1 pl-1 pr-2.5 font-sans text-[calc(12.5px*var(--ws-fs))] text-primary transition-colors hover:bg-raised"
+											className="flex cursor-pointer items-center gap-1.5 rounded-pill bg-primary/5 py-1 pl-1 pr-2.5 font-sans text-[calc(12.5px*var(--ws-fs))] text-primary transition-colors hover:bg-primary/5"
 										>
 											<span className="relative h-6 w-6 overflow-hidden rounded-pill bg-raised">
 												<SafeAvatar src={u.avatar} eager />
@@ -164,7 +164,7 @@ export function GroupCreateModal({
 									value={query}
 									onChange={(e) => setQuery(e.target.value)}
 									placeholder="Add people you're aligned to"
-									className="w-full rounded-pill bg-sunken py-2.5 pl-10 pr-4 text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised sm:text-sm"
+									className="w-full rounded-pill bg-primary/5 py-2.5 pl-10 pr-4 text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-primary/10 sm:text-sm"
 								/>
 							</div>
 						</div>
@@ -189,7 +189,7 @@ export function GroupCreateModal({
 											key={u._id}
 											type="button"
 											onClick={() => toggle(u)}
-											className="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-raised"
+											className="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-primary/5"
 										>
 											<span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-pill bg-raised">
 												<SafeAvatar src={u.avatar} eager />

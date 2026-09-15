@@ -98,7 +98,7 @@ export function MobileNavigation() {
 							type="button"
 							onClick={() => setIsOpen(true)}
 							aria-label="Open navigation menu"
-							className="flex h-12 w-12 shrink-0 items-center justify-center rounded-pill text-primary active:bg-raised transition-colors"
+							className="flex h-12 w-12 shrink-0 items-center justify-center rounded-pill text-primary active:bg-primary/10 transition-colors"
 						>
 							<svg
 								width="24"
@@ -121,7 +121,7 @@ export function MobileNavigation() {
 							type="button"
 							onClick={() => setSearchOpen(true)}
 							aria-label={t("rail.search")}
-							className="flex h-11 w-11 items-center justify-center rounded-pill text-muted active:bg-raised transition-colors"
+							className="flex h-11 w-11 items-center justify-center rounded-pill text-muted active:bg-primary/10 transition-colors"
 						>
 							<MagnifyingGlass size={23} />
 						</button>
@@ -133,7 +133,7 @@ export function MobileNavigation() {
 					<Link
 						href="/"
 						aria-label="WorldSpace home"
-						className="absolute left-1/2 -translate-x-1/2 flex h-12 items-center justify-center px-2 rounded-pill active:bg-raised transition-colors"
+						className="absolute left-1/2 -translate-x-1/2 flex h-12 items-center justify-center px-2 rounded-pill active:bg-primary/10 transition-colors"
 					>
 						<BrandRitual size={36} wordSize={18} />
 					</Link>
@@ -241,8 +241,8 @@ export function MobileNavigation() {
 										// pill rows, active = bg/chip + semibold.
 										"flex items-center gap-3.5 px-4 py-3.5 rounded-pill transition-colors font-sans text-[calc(16.5px*var(--ws-fs))] relative",
 										isActive
-											? "bg-chip text-primary font-semibold"
-											: "text-muted hover:text-primary hover:bg-raised",
+											? "bg-primary/10 text-primary font-semibold"
+											: "text-muted hover:text-primary hover:bg-primary/5",
 									);
 
 								// The Products entry is a disclosure over the ecosystem
@@ -273,7 +273,7 @@ export function MobileNavigation() {
 														href={product.link}
 														target="_blank"
 														rel="noopener noreferrer"
-														className="flex items-center gap-2 pl-[52px] pr-4 py-2.5 rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors font-sans text-sm"
+														className="flex items-center gap-2 pl-[52px] pr-4 py-2.5 rounded-pill text-muted hover:text-primary hover:bg-primary/5 transition-colors font-sans text-sm"
 													>
 														{product.title}
 														<ArrowUpRight size={13} />
@@ -326,7 +326,7 @@ export function MobileNavigation() {
 										: "/profile"
 								}
 								onClick={closeDrawer}
-								className="flex items-center gap-3 rounded-pill px-4 py-3 transition-colors hover:bg-raised"
+								className="flex items-center gap-3 rounded-pill px-4 py-3 transition-colors hover:bg-primary/5"
 							>
 								<div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full border border-hairline">
 									<SafeAvatar
@@ -349,7 +349,7 @@ export function MobileNavigation() {
 								onClick={() =>
 									withThemeTransition(() => setTheme(isLight ? "dark" : "light"))
 								}
-								className="w-full flex items-center gap-3 px-4 py-3 rounded-pill text-muted hover:text-primary hover:bg-raised transition-colors font-sans font-medium text-[calc(15px*var(--ws-fs))] cursor-pointer"
+								className="w-full flex items-center gap-3 px-4 py-3 rounded-pill text-muted hover:text-primary hover:bg-primary/5 transition-colors font-sans font-medium text-[calc(15px*var(--ws-fs))] cursor-pointer"
 							>
 								{mounted && isLight ? <Moon size={20} /> : <Sun size={20} />}
 								{mounted && isLight ? t("nav.darkMode") : t("nav.lightMode")}
@@ -362,7 +362,7 @@ export function MobileNavigation() {
 							</div>
 							<button
 								onClick={() => handleSignOut(signOut)}
-								className="w-full flex items-center gap-3 px-4 py-3 text-danger hover:bg-raised rounded-pill transition-colors font-sans font-bold text-[calc(15px*var(--ws-fs))] cursor-pointer"
+								className="w-full flex items-center gap-3 px-4 py-3 text-danger hover:bg-primary/5 rounded-pill transition-colors font-sans font-bold text-[calc(15px*var(--ws-fs))] cursor-pointer"
 							>
 								<SignOut size={20} />
 								{t("nav.logout")}

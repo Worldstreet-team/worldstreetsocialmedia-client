@@ -191,7 +191,7 @@ export function MessageDock() {
 								type="button"
 								onClick={close}
 								aria-label={t("common.close")}
-								className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-chip text-muted transition-colors hover:text-primary"
+								className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-primary/5 text-muted transition-colors hover:text-primary"
 							>
 								<RiArrowDownSLine size={17} />
 							</button>
@@ -213,7 +213,7 @@ export function MessageDock() {
 										onChange={(e) => setQuery(e.target.value)}
 										placeholder={t("messages.searchPlaceholder")}
 										aria-label={t("messages.searchPlaceholder")}
-										className="w-full rounded-pill bg-sunken px-4 py-2 font-sans text-[calc(13px*var(--ws-fs))] text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised"
+										className="w-full rounded-pill bg-primary/5 px-4 py-2 font-sans text-[calc(13px*var(--ws-fs))] text-primary outline-none transition-colors placeholder:text-subtle focus:bg-primary/10"
 									/>
 								</div>
 								<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2">

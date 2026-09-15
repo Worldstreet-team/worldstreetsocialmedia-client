@@ -188,7 +188,7 @@ function handshakeLoopPage(req: NextRequest, retry: number): string {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${retrying ? "Signing you in" : "Sign in"} · WorldSpace</title>
 ${retrying ? `<meta http-equiv="refresh" content="2;url=${esc(again.href)}">` : ""}
-<style>html{background:#0C0A09;color:#FAFAF9;font:15px/1.6 -apple-system,"Public Sans",system-ui,sans-serif}
+<style>html{background:#000000;color:#FAFAF9;font:15px/1.6 -apple-system,"Public Sans",system-ui,sans-serif}
 body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:24px}
 main{max-width:360px;text-align:center}h1{font-size:18px;margin:0 0 8px}p{margin:0 0 20px;color:#A8A29E}
 a{display:inline-block;background:#EAB308;color:#0C0A09;font-weight:600;border-radius:9999px;padding:10px 20px;text-decoration:none}</style>

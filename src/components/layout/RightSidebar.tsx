@@ -193,7 +193,7 @@ export function RightSidebar() {
 				type="button"
 				onClick={() => setSearchOpen(true)}
 				style={{ animationDelay: "60ms" }}
-				className="relative mt-2 shrink-0 flex items-center w-full h-10 bg-chip rounded-pill pl-[42px] pr-3 font-sans text-sm text-subtle hover:text-muted transition-colors cursor-pointer animate-rise"
+				className="relative mt-2 shrink-0 flex items-center w-full h-10 bg-primary/5 rounded-pill pl-[42px] pr-3 font-sans text-sm text-subtle hover:text-muted transition-colors cursor-pointer animate-rise"
 			>
 				<MagnifyingGlass
 					size={16}
@@ -343,7 +343,7 @@ export function RightSidebar() {
 										trend.title.replace(/^#/, ""),
 									)}`}
 									key={trend.title}
-									className="flex items-start gap-3.5 px-3 py-2.5 rounded-xl hover:bg-surface transition-colors"
+									className="flex items-start gap-3.5 px-3 py-2.5 rounded-xl hover:bg-primary/5 transition-colors"
 								>
 									<span className="pt-0.5 font-mono text-[calc(13px*var(--ws-fs))] text-gold tabular-nums select-none">
 										{String(i + 1).padStart(2, "0")}
@@ -396,7 +396,7 @@ export function RightSidebar() {
 								setIsSuggestionsLoaded(false);
 								void fetchAll(true);
 							}}
-							className="mx-3 my-2 px-3 py-2 rounded-pill bg-raised text-sm text-primary font-sans hover:bg-chip transition-colors cursor-pointer"
+							className="mx-3 my-2 px-3 py-2 rounded-pill bg-raised text-sm text-primary font-sans hover:bg-primary/5 transition-colors cursor-pointer"
 						>
 							{t("rail.retry")}
 						</button>
@@ -457,7 +457,7 @@ export function RightSidebar() {
 								return (
 									<div
 										key={user._id}
-										className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-surface transition-colors group"
+										className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-primary/5 transition-colors group"
 									>
 										<Link
 											href={`/profile/${user.username}`}

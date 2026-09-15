@@ -175,7 +175,7 @@ export const MobileBottomNav = () => {
 									<span
 										className={clsx(
 											"flex h-[36px] w-[36px] items-center justify-center rounded-[10px] transition-colors",
-											ecosystemOpen && "bg-raised",
+											ecosystemOpen && "bg-primary/10",
 										)}
 									>
 										{/* Bigger than the Phosphor glyphs beside it on

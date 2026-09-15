@@ -137,7 +137,7 @@ export function Attachment({
 					<button
 						type="button"
 						onClick={onRetry}
-						className="flex cursor-pointer items-center gap-1.5 rounded-pill bg-raised px-3.5 py-1.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-chip"
+						className="flex cursor-pointer items-center gap-1.5 rounded-pill bg-raised px-3.5 py-1.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-primary/5"
 					>
 						<RiRestartLine size={14} />
 						Retry

@@ -37,6 +37,27 @@
     monospace;
 }
 
+/* Dark is BLACK (owner 2026-09-15), not the stone ladder the token file
+   ships. Each step is a white wash over black, stored as its opaque
+   equivalent: surface = white/5, raised/chip = white/10. Opaque on purpose,
+   because bg-surface paints every modal, sheet and menu and a translucent
+   panel would show the page through it. The two live washes for chrome are
+   bg-primary/5 (resting: search wells, icon pills, hover) and bg-primary/10
+   (active) - on black the ink IS white, and on paper they flip to black
+   washes, which a literal bg-white/5 never would. Text greys keep the stone
+   values by owner choice. Lives here, not in the vendored token file, so it
+   survives the next re-sync; light mode is untouched. The selector is
+   html[...] on purpose: a bare [data-ws-theme="platform"] block was folded
+   away by the CSS optimiser because the token file already carries that
+   selector in a group, and the html prefix also outranks it. */
+html[data-ws-theme="platform"] {
+  --ws-bg-page: #000000;
+  --ws-bg-sunken: #0A0A0A;
+  --ws-bg-surface: #0D0D0D;
+  --ws-bg-raised: #1A1A1A;
+  --ws-bg-chip: #1A1A1A;
+}
+
 /* Softer elevation on paper (referenced from @theme inline below). */
 :root {
   --ws-shadow-nav: 0 3px 8px rgb(0 0 0 / 0.45);

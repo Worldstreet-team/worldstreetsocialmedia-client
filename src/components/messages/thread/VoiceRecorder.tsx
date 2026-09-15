@@ -456,7 +456,7 @@ export function VoiceRecorder({
 					type="button"
 					onClick={discardReview}
 					aria-label="Delete recording"
-					className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-danger"
+					className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-danger"
 				>
 					<RiDeleteBin6Line size={19} />
 				</button>
@@ -464,7 +464,7 @@ export function VoiceRecorder({
 					type="button"
 					onClick={toggleReviewPlay}
 					aria-label={playingReview ? "Pause" : "Play recording"}
-					className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-primary transition-colors hover:bg-chip"
+					className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-primary transition-colors hover:bg-primary/5"
 				>
 					{playingReview ? (
 						<RiPauseFill size={20} />
@@ -531,7 +531,7 @@ export function VoiceRecorder({
 						type="button"
 						onClick={() => finish("discard")}
 						aria-label="Cancel recording"
-						className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-danger"
+						className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-danger"
 					>
 						<RiDeleteBin6Line size={19} />
 					</button>
@@ -539,7 +539,7 @@ export function VoiceRecorder({
 						type="button"
 						onClick={togglePause}
 						aria-label={paused ? "Resume recording" : "Pause recording"}
-						className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-primary transition-colors hover:bg-chip"
+						className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-primary transition-colors hover:bg-primary/5"
 					>
 						{paused ? <RiMicFill size={18} /> : <RiPauseFill size={19} />}
 					</button>
@@ -547,7 +547,7 @@ export function VoiceRecorder({
 						type="button"
 						onClick={() => finish("review")}
 						aria-label="Stop and review"
-						className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-primary transition-colors hover:bg-chip"
+						className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-primary transition-colors hover:bg-primary/5"
 					>
 						<RiCheckLine size={20} />
 					</button>

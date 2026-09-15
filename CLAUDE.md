@@ -104,6 +104,20 @@ the vendored token file wins. `<html data-ws-theme="platform">` is set in
   `inline` matters: it keeps the `var()` in the output, so flipping
   `data-ws-theme` re-themes at runtime with no rebuild.
 
+**Dark is BLACK (owner 2026-09-15).** `globals.css` overrides the token
+file's stone ladder under `html[data-ws-theme="platform"]`: page `#000000`,
+sunken `#0A0A0A`, surface `#0D0D0D` (= white/5), raised/chip `#1A1A1A`
+(= white/10), text greys unchanged. Opaque equivalents, not rgba, because
+`bg-surface` paints every modal and sheet. The two live washes for chrome
+are `bg-primary/5` (resting: search wells, icon pills, hover) and
+`bg-primary/10` (pressed/selected); on black the ink is white, on paper
+they flip to black washes, which a literal `bg-white/5` never would.
+Messages and the nav use exactly those two; avatar/media placeholders and
+solid text buttons stay on the opaque tokens. The override selector MUST
+be `html[...]`: a bare `[data-ws-theme="platform"]` block is folded away by
+the CSS optimiser because the token file already carries that selector in a
+group. The "platform value" column below predates both DS v2 and this.
+
 Use the semantic classes, never a raw palette color:
 
 | Use | Class | platform value |

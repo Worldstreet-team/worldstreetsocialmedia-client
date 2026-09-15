@@ -226,7 +226,7 @@ export function DockChat({
 					type="button"
 					onClick={onBack}
 					aria-label="Back to conversations"
-					className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary"
+					className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
 				>
 					<RiArrowLeftLine size={17} />
 				</button>
@@ -265,7 +265,7 @@ export function DockChat({
 							type="button"
 							onClick={() => call(false)}
 							aria-label="Start voice call"
-							className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary"
+							className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
 						>
 							<RiPhoneFill size={17} />
 						</button>
@@ -273,7 +273,7 @@ export function DockChat({
 							type="button"
 							onClick={() => call(true)}
 							aria-label="Start video call"
-							className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary"
+							className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
 						>
 							<RiVideoOnFill size={17} />
 						</button>
@@ -337,7 +337,7 @@ export function DockChat({
 												: "bg-brand text-brand-on"
 											: m.type === "image" || m.type === "video"
 												? ""
-												: "bg-raised text-primary",
+												: "bg-primary/10 text-primary",
 									)}
 								>
 									{m.type === "image" && m.mediaUrl && (

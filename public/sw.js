@@ -23,7 +23,7 @@
 // Bump on any change to PRECACHE contents: the offline mark changed
 // from the cloud to the helmet (2026-09-11), and a same-URL precache
 // entry is never refetched until the cache name moves.
-const VERSION = "ws-v2";
+const VERSION = "ws-v3";
 const STATIC_CACHE = `${VERSION}-static`;
 const MEDIA_CACHE = `${VERSION}-media`;
 const OFFLINE_URL = "/offline.html";

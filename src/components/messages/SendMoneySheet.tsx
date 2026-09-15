@@ -163,7 +163,7 @@ export function SendMoneySheet({
 										key={m.id}
 										type="button"
 										onClick={() => setRecipient(m)}
-										className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-raised"
+										className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-primary/5"
 									>
 										<span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-pill bg-raised">
 											<SafeAvatar src={m.avatar} eager />
@@ -197,7 +197,7 @@ export function SendMoneySheet({
 										type="button"
 										onClick={() => setConfirming(false)}
 										disabled={sending}
-										className="h-11 flex-1 cursor-pointer rounded-pill bg-chip font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-raised disabled:opacity-60"
+										className="h-11 flex-1 cursor-pointer rounded-pill bg-chip font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-primary/5 disabled:opacity-60"
 									>
 										Back
 									</button>
@@ -248,7 +248,7 @@ export function SendMoneySheet({
 									onChange={(e) => setNote(e.target.value)}
 									maxLength={140}
 									placeholder="What's it for? (optional)"
-									className="mt-4 w-full rounded-pill bg-sunken px-4 py-2.5 font-sans text-[calc(13.5px*var(--ws-fs))] text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised"
+									className="mt-4 w-full rounded-pill bg-primary/5 px-4 py-2.5 font-sans text-[calc(13.5px*var(--ws-fs))] text-primary outline-none transition-colors placeholder:text-subtle focus:bg-primary/10"
 								/>
 
 								<p className="mt-3 min-h-[18px] text-center font-sans text-[calc(12.5px*var(--ws-fs))]">

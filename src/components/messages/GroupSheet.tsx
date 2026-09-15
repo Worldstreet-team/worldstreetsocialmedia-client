@@ -339,7 +339,7 @@ export function GroupSheet({
 											onChange={(e) => setDraftName(e.target.value)}
 											maxLength={80}
 											autoFocus
-											className="min-w-0 flex-1 rounded-[10px] bg-sunken px-3 py-2 text-center font-sans text-[calc(16px*var(--ws-fs))] font-semibold text-primary outline-none focus:bg-raised"
+											className="min-w-0 flex-1 rounded-[10px] bg-primary/5 px-3 py-2 text-center font-sans text-[calc(16px*var(--ws-fs))] font-semibold text-primary outline-none focus:bg-primary/10"
 										/>
 										<button
 											type="button"
@@ -379,7 +379,7 @@ export function GroupSheet({
 										type="button"
 										onClick={toggleLock}
 										disabled={busy === "lock"}
-										className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-[10px] px-1 py-2 text-left transition-colors hover:bg-raised disabled:opacity-60"
+										className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-[10px] px-1 py-2 text-left transition-colors hover:bg-primary/5 disabled:opacity-60"
 									>
 										<span className="min-w-0">
 											<span className="block font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary">
@@ -408,7 +408,7 @@ export function GroupSheet({
 									<button
 										type="button"
 										onClick={() => void openAdd()}
-										className="flex w-full cursor-pointer items-center gap-2.5 rounded-[10px] px-1 py-2.5 text-left font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-raised"
+										className="flex w-full cursor-pointer items-center gap-2.5 rounded-[10px] px-1 py-2.5 text-left font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/5"
 									>
 										<UserPlus className="h-4 w-4 text-muted" />
 										Add people
@@ -421,7 +421,7 @@ export function GroupSheet({
 													value={addQuery}
 													onChange={(e) => setAddQuery(e.target.value)}
 													placeholder="Search people you follow"
-													className="w-full rounded-pill bg-sunken py-2 pl-9 pr-3 font-sans text-[calc(13px*var(--ws-fs))] text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised"
+													className="w-full rounded-pill bg-primary/5 py-2 pl-9 pr-3 font-sans text-[calc(13px*var(--ws-fs))] text-primary outline-none transition-colors placeholder:text-subtle focus:bg-primary/10"
 												/>
 											</div>
 											{candidates
@@ -440,7 +440,7 @@ export function GroupSheet({
 														type="button"
 														onClick={() => void addMember(String(c._id))}
 														disabled={busy === String(c._id)}
-														className="flex w-full cursor-pointer items-center gap-2.5 rounded-[10px] px-1 py-1.5 text-left transition-colors hover:bg-raised disabled:opacity-50"
+														className="flex w-full cursor-pointer items-center gap-2.5 rounded-[10px] px-1 py-1.5 text-left transition-colors hover:bg-primary/5 disabled:opacity-50"
 													>
 														<span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-pill bg-raised">
 															<SafeAvatar src={c.avatar} eager />
@@ -516,7 +516,7 @@ export function GroupSheet({
 																	? "Demote"
 																	: "Make admin"
 															}
-															className="flex h-8 w-8 items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-primary disabled:opacity-50"
+															className="flex h-8 w-8 items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary disabled:opacity-50"
 														>
 															<Shield
 																className={
@@ -532,7 +532,7 @@ export function GroupSheet({
 														onClick={() => remove(a.id)}
 														disabled={busy === a.id}
 														aria-label="Remove"
-														className="flex h-8 w-8 items-center justify-center rounded-pill text-muted transition-colors hover:bg-chip hover:text-danger disabled:opacity-50"
+														className="flex h-8 w-8 items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-danger disabled:opacity-50"
 													>
 														<UserMinus className="h-4 w-4" />
 													</button>
@@ -549,7 +549,7 @@ export function GroupSheet({
 								type="button"
 								onClick={() => remove(myProfileId)}
 								disabled={busy === myProfileId}
-								className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-pill bg-raised font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-danger transition-colors hover:bg-chip disabled:opacity-50"
+								className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-pill bg-raised font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-danger transition-colors hover:bg-primary/5 disabled:opacity-50"
 							>
 								<LogOut className="h-4 w-4" />
 								Leave group
