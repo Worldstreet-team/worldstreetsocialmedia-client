@@ -179,6 +179,19 @@ Non-obvious rules the spec enforces, all of which this page now follows:
   directly. framer: a `MotionConfig` in PreferencesProvider obeys the
   setting; use `useReducedMotionConfig`, never `useReducedMotion` (OS only).
   Spinners (`animate-spin`) stay exempt: the spin is the information.
+- **Section labels are words, not signage** (owner 2026-09-15: the 10-11px
+  uppercase tracked `text-subtle` eyebrow read as "dead headers"). A section
+  label is `font-sans text-[calc(13px*var(--ws-fs))] font-semibold
+  text-primary`, sentence case, no tracking; a page title is 20-22px
+  display semibold; a settings group header is a 15px title with the icon
+  in a `bg-primary/5` chip and its caption directly UNDER it, not as a
+  footnote after the card. Do not reintroduce `uppercase tracking-[...]`
+  for anything a person is meant to read; badges and the brand lockup
+  eyebrow are the only uppercase left.
+- **Ink is white and its variations** on the black theme: primary `#FFFFFF`,
+  muted white 62%, subtle white 42% (globals.css override, alpha on purpose
+  so the same ink reads over page, surface and chip). The stone greys are
+  gone from dark; light mode keeps the paper ink.
 - **Four z-index values, nothing else**: `z-sticky` 100, `z-dropdown` 400,
   `z-modal` 800, `z-toast` 1200 (custom utilities in `globals.css`). The
   `z-0/10/20` inside PostCard are intra-card stacking that predate this and sit

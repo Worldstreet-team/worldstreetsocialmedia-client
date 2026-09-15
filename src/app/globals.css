@@ -56,6 +56,16 @@ html[data-ws-theme="platform"] {
   --ws-bg-surface: #0D0D0D;
   --ws-bg-raised: #1A1A1A;
   --ws-bg-chip: #1A1A1A;
+  /* Ink is WHITE and its variations (owner 2026-09-15, revising the earlier
+     "keep the stone greys"): primary pure white, secondary white at 62%,
+     tertiary white at 42%. Alpha, not solid greys, so the same ink reads
+     right over the black page, a white/5 surface and a white/10 chip
+     alike, and so bg-primary/5 and bg-primary/10 are exactly white/5 and
+     white/10. 62% on black is 9.6:1, 42% is 4.6:1 (subtle is decorative
+     only, never under 13px). */
+  --ws-text-primary: #FFFFFF;
+  --ws-text-muted: rgba(255, 255, 255, 0.62);
+  --ws-text-subtle: rgba(255, 255, 255, 0.42);
 }
 
 /* Softer elevation on paper (referenced from @theme inline below). */
