@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAtom, useSetAtom } from "jotai";
 import { useTheme } from "next-themes";
 import { useParams } from "next/navigation";
@@ -37,10 +37,12 @@ import { UserBadges } from "@/components/ui/UserBadges";
 import { NotificationPrefs } from "@/components/settings/NotificationPrefs";
 import { SettingsNav } from "@/components/settings/SettingsNav";
 import {
+	GROUPS,
 	SECTIONS,
 	type SectionId,
 	isSectionId,
 } from "@/components/settings/sections";
+import { motionReduced } from "@/lib/motion";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { updateMyProfileAction } from "@/lib/user.actions";
 import { withThemeTransition } from "@/lib/theme-transition";
@@ -90,6 +92,43 @@ export default function SettingsPage() {
 	const valid = isSectionId(rawSeg) ? rawSeg : undefined;
 	const activeId: SectionId = valid ?? "account";
 	const activeDef = SECTIONS.find((s) => s.id === activeId)!;
+	const groups = GROUPS[activeId];
+
+	// Sub-nav (owner 2026-09-15): the groups of the open section, tap to
+	// scroll. The group in view is lit by an observer against the main
+	// scroll box, so the nav answers "where am I" as well as "take me there".
+	const [activeGroup, setActiveGroup] = useState<string>(groups[0]?.id ?? "");
+	const detailRef = useRef<HTMLDivElement>(null);
+	useEffect(() => {
+		setActiveGroup(GROUPS[activeId][0]?.id ?? "");
+	}, [activeId]);
+	useEffect(() => {
+		const root = document.getElementById("ws-main-scroll");
+		const targets = Array.from(
+			detailRef.current?.querySelectorAll<HTMLElement>("[data-group]") ?? [],
+		);
+		if (targets.length < 2) return;
+		const io = new IntersectionObserver(
+			(entries) => {
+				// Topmost visible group wins; falling back to the last one that
+				// crossed above the line keeps the nav lit while scrolling up.
+				const visible = entries
+					.filter((e) => e.isIntersecting)
+					.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+				const top = visible[0]?.target.getAttribute("data-group");
+				if (top) setActiveGroup(top);
+			},
+			{ root, rootMargin: "-96px 0px -55% 0px", threshold: 0 },
+		);
+		for (const el of targets) io.observe(el);
+		return () => io.disconnect();
+	}, [activeId]);
+	const scrollToGroup = useCallback((id: string) => {
+		const el = document.getElementById(`group-${id}`);
+		if (!el) return;
+		setActiveGroup(id);
+		el.scrollIntoView({ behavior: motionReduced() ? "auto" : "smooth", block: "start" });
+	}, []);
 
 	const setPremiumOpen = useSetAtom(premiumOpenAtom);
 	const [subState, setSubState] = useState<SubscriptionState | null>(null);
@@ -176,7 +215,7 @@ export default function SettingsPage() {
 					valid ? "hidden" : "block w-full",
 				)}
 			>
-				<SettingsNav activeId={activeId} />
+				<SettingsNav activeId={activeId} activeGroup={activeGroup} onGroup={scrollToGroup} />
 			</div>
 
 			{/* The open section. Hidden on mobile at the hub. */}
@@ -186,20 +225,49 @@ export default function SettingsPage() {
 					valid ? "block" : "hidden lg:block",
 				)}
 			>
-				<header className="sticky top-0 z-sticky flex items-center gap-2 border-b border-hairline bg-page px-4 py-3">
-					<Link
-						href="/settings"
-						aria-label="Back to settings"
-						className="-ml-1 flex h-9 w-9 items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary lg:hidden"
-					>
-						<ArrowLeft className="h-5 w-5" strokeWidth={2.5} />
-					</Link>
-					<h2 className="font-display text-[calc(17px*var(--ws-fs))] font-semibold text-primary">
-						{t(activeDef.labelKey)}
-					</h2>
+				<header className="sticky top-0 z-sticky border-b border-hairline bg-page">
+					<div className="flex items-center gap-2 px-4 py-3">
+						<Link
+							href="/settings"
+							aria-label="Back to settings"
+							className="-ml-1 flex h-9 w-9 items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary lg:hidden"
+						>
+							<ArrowLeft className="h-5 w-5" strokeWidth={2.5} />
+						</Link>
+						<h2 className="font-display text-[calc(20px*var(--ws-fs))] font-semibold tracking-tight text-primary">
+							{t(activeDef.labelKey)}
+						</h2>
+					</div>
+					{/* The sub-nav on a phone: the section's groups as chips, tap to
+					    scroll. The desktop list carries the same groups under the
+					    open section, so this strip is mobile only. */}
+					{groups.length > 1 && (
+						<nav
+							aria-label="On this page"
+							className="flex gap-1.5 overflow-x-auto px-4 pb-2.5 [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden"
+						>
+							{groups.map((g) => {
+								const on = g.id === activeGroup;
+								return (
+									<button
+										key={g.id}
+										type="button"
+										aria-current={on ? "true" : undefined}
+										onClick={() => scrollToGroup(g.id)}
+										className={clsx(
+											"h-8 shrink-0 cursor-pointer whitespace-nowrap rounded-pill px-3 font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors",
+											on ? "bg-primary/10 text-primary" : "text-muted hover:bg-primary/5 hover:text-primary",
+										)}
+									>
+										{g.label}
+									</button>
+								);
+							})}
+						</nav>
+					)}
 				</header>
 
-				<div className="mx-auto flex w-full max-w-[640px] flex-col gap-6 px-4 py-4">
+				<div ref={detailRef} className="mx-auto flex w-full max-w-[640px] flex-col gap-7 px-4 py-5">
 					{activeId === "account" && (
 						<>
 							{/* Identity card: gives the page a subject rather than
@@ -229,6 +297,7 @@ export default function SettingsPage() {
 							</div>
 
 							<Section
+								id="account"
 								icon={UserCircle}
 								title={t("settings.account.title")}
 								caption={t("settings.account.managedNote")}
@@ -241,6 +310,7 @@ export default function SettingsPage() {
 							</Section>
 
 							<Section
+								id="danger"
 								icon={ShieldAlert}
 								title={t("settings.danger.title")}
 								caption={t("settings.danger.caption")}
@@ -253,6 +323,7 @@ export default function SettingsPage() {
 
 					{activeId === "premium" && (
 						<Section
+							id="plan"
 							icon={BadgeCheck}
 							title={t("premium.eyebrow")}
 							caption={t("premium.pitch")}
@@ -301,6 +372,7 @@ export default function SettingsPage() {
 
 					{activeId === "topics" && (
 						<Section
+							id="interests"
 							icon={SlidersHorizontal}
 							title={t("settings.topics.title")}
 							caption={t("settings.topics.caption")}
@@ -329,6 +401,7 @@ export default function SettingsPage() {
 					{activeId === "notifications" && (
 						<>
 							<Section
+								id="alerts"
 								icon={Bell}
 								title={t("settings.notify.title")}
 								caption={t("settings.notify.caption")}
@@ -337,6 +410,7 @@ export default function SettingsPage() {
 							</Section>
 
 							<Section
+								id="behaviour"
 								icon={BellRing}
 								title="Notification behaviour"
 								caption="How notifications reach you inside the app."
@@ -349,6 +423,7 @@ export default function SettingsPage() {
 					{activeId === "safety" && (
 						<>
 							<Section
+								id="privacy"
 								icon={Lock}
 								title="Privacy"
 								caption="Who sees what about you. Each of these is enforced on the server, not just hidden in the app."
@@ -357,6 +432,7 @@ export default function SettingsPage() {
 							</Section>
 
 							<Section
+								id="blocked"
 								icon={ShieldCheck}
 								title={t("settings.blocked.title")}
 								caption={t("settings.blocked.caption")}
@@ -369,6 +445,7 @@ export default function SettingsPage() {
 					{activeId === "data" && (
 						<>
 							<Section
+								id="usage"
 								icon={Gauge}
 								title="Data usage"
 								caption="What the app downloads on its own. Most of these follow one switch, so a phone already saving data gets the lighter app."
@@ -376,6 +453,7 @@ export default function SettingsPage() {
 								<DataSettings />
 							</Section>
 							<Section
+								id="timeline"
 								icon={Rss}
 								title="Timeline"
 								caption="What shows up when you open Home, and how much of it loads at once."
@@ -383,6 +461,7 @@ export default function SettingsPage() {
 								<ContentSettings />
 							</Section>
 							<Section
+								id="messaging"
 								icon={MessageSquare}
 								title="Messaging"
 								caption="How chat behaves for you. None of it changes what the other person sees."
@@ -395,6 +474,7 @@ export default function SettingsPage() {
 					{activeId === "display" && (
 						<>
 							<Section
+								id="accessibility"
 								icon={Eye}
 								title="Accessibility"
 								caption="Size, colour and motion. Saved to your account, so it follows you to every device you sign in on."
@@ -403,13 +483,14 @@ export default function SettingsPage() {
 							</Section>
 
 							<Section
+								id="appearance"
 								icon={Palette}
 								title={t("settings.display.title")}
 								caption={t("settings.display.caption")}
 							>
 								<InstallAppRow />
 								<div className="flex items-center justify-between gap-3 px-4 py-3">
-									<span className="font-sans text-sm font-medium text-primary">
+									<span className="font-sans text-[calc(15px*var(--ws-fs))] font-medium text-primary">
 										{t("settings.display.theme")}
 									</span>
 									<div className="flex gap-1.5">
@@ -444,7 +525,7 @@ export default function SettingsPage() {
 								</div>
 
 								<div className="border-t border-hairline px-4 py-3">
-									<span className="font-sans text-sm font-medium text-primary">
+									<span className="font-sans text-[calc(15px*var(--ws-fs))] font-medium text-primary">
 										{t("settings.display.language")}
 									</span>
 									<div className="mt-2.5 flex flex-wrap gap-1.5">
@@ -484,12 +565,15 @@ export default function SettingsPage() {
  * footnote underneath. Cards get no shadow, the surface ladder does depth.
  */
 function Section({
+	id,
 	icon: Icon,
 	title,
 	caption,
 	children,
 	tone,
 }: {
+	/** Matches a GROUPS entry for this section; the sub-nav scrolls here. */
+	id: string;
 	icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
 	title: string;
 	caption: string;
@@ -497,16 +581,37 @@ function Section({
 	tone?: "danger";
 }) {
 	return (
-		<section>
-			<h2
-				className={clsx(
-					"flex items-center gap-1.5 px-1 pb-2 font-sans text-[calc(11px*var(--ws-fs))] font-bold uppercase tracking-[0.14em]",
-					tone === "danger" ? "text-danger" : "text-subtle",
-				)}
-			>
-				<Icon className="h-3.5 w-3.5" strokeWidth={2.5} />
-				{title}
-			</h2>
+		// scroll-mt clears the sticky header (and the chip strip on a phone)
+		// when the sub-nav jumps here.
+		<section id={`group-${id}`} data-group={id} className="scroll-mt-[112px] lg:scroll-mt-[72px]">
+			{/* A header, not an eyebrow (owner 2026-09-15): a real title in the
+			    body ink with the icon in a chip, and the explanation directly
+			    under it, where a reader meets it before the controls. */}
+			<div className="mb-3 flex items-start gap-3 px-1">
+				<span
+					className={clsx(
+						"mt-px flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px]",
+						tone === "danger" ? "bg-danger/10 text-danger" : "bg-primary/5 text-primary",
+					)}
+				>
+					<Icon className="h-4 w-4" strokeWidth={2.25} />
+				</span>
+				<div className="min-w-0">
+					<h3
+						className={clsx(
+							"font-sans text-[calc(15px*var(--ws-fs))] font-semibold leading-tight",
+							tone === "danger" ? "text-danger" : "text-primary",
+						)}
+					>
+						{title}
+					</h3>
+					{caption && (
+						<p className="mt-1 max-w-[62ch] font-sans text-[calc(13px*var(--ws-fs))] leading-snug text-muted">
+							{caption}
+						</p>
+					)}
+				</div>
+			</div>
 
 			<div
 				className={clsx(
@@ -517,12 +622,6 @@ function Section({
 			>
 				{children}
 			</div>
-
-			{caption && (
-				<p className="px-1 pt-2 font-sans text-[calc(12.5px*var(--ws-fs))] leading-relaxed text-muted">
-					{caption}
-				</p>
-			)}
 		</section>
 	);
 }
@@ -530,10 +629,10 @@ function Section({
 function Row({ label, value }: { label: string; value: string }) {
 	return (
 		<div className="flex items-center justify-between gap-4 px-4 py-3.5">
-			<span className="shrink-0 font-sans text-sm font-medium text-primary">
+			<span className="shrink-0 font-sans text-[calc(15px*var(--ws-fs))] font-medium text-primary">
 				{label}
 			</span>
-			<span className="truncate font-sans text-[calc(13px*var(--ws-fs))] tabular-nums text-muted">
+			<span className="truncate font-sans text-[calc(14px*var(--ws-fs))] tabular-nums text-muted">
 				{value}
 			</span>
 		</div>

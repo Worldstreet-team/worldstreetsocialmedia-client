@@ -6,6 +6,7 @@ import { useAtomValue } from "jotai";
 import { CaretRight, MagnifyingGlass } from "@phosphor-icons/react";
 import clsx from "clsx";
 import {
+	GROUPS,
 	SECTIONS,
 	type SectionId,
 	searchSettings,
@@ -25,7 +26,17 @@ import { useT } from "@/i18n/client";
  * rest wash (bg-primary/5). Gold stays reserved, so the active row reads by
  * fill and ink weight, not colour.
  */
-export function SettingsNav({ activeId }: { activeId: SectionId }) {
+export function SettingsNav({
+	activeId,
+	activeGroup,
+	onGroup,
+}: {
+	activeId: SectionId;
+	/** The group currently in view, lit in the sub-list. */
+	activeGroup?: string;
+	/** Tap a group: the page scrolls the detail to it. */
+	onGroup?: (id: string) => void;
+}) {
 	const t = useT();
 	const user = useAtomValue(userAtom);
 	const [query, setQuery] = useState("");
@@ -38,7 +49,7 @@ export function SettingsNav({ activeId }: { activeId: SectionId }) {
 	return (
 		<div className="flex flex-col p-3">
 			<div className="px-1 pb-2 pt-1">
-				<h1 className="font-display text-[calc(20px*var(--ws-fs))] font-semibold text-primary lg:text-[calc(17px*var(--ws-fs))]">
+				<h1 className="font-display text-[calc(22px*var(--ws-fs))] font-semibold tracking-tight text-primary lg:text-[calc(20px*var(--ws-fs))]">
 					{t("settings.title")}
 				</h1>
 				<div className="font-sans text-[calc(13px*var(--ws-fs))] text-muted">
@@ -121,9 +132,10 @@ export function SettingsNav({ activeId }: { activeId: SectionId }) {
 			>
 				{SECTIONS.map(({ id, labelKey, hint, icon: Icon }) => {
 					const active = id === activeId;
+					const subs = GROUPS[id];
 					return (
+						<div key={id} className="flex flex-col">
 						<Link
-							key={id}
 							href={`/settings/${id}`}
 							aria-current={active ? "page" : undefined}
 							className={clsx(
@@ -156,6 +168,34 @@ export function SettingsNav({ activeId }: { activeId: SectionId }) {
 								className="ml-auto shrink-0 text-subtle lg:hidden"
 							/>
 						</Link>
+						{/* The sub-nav (desktop): the open section's groups, tap to
+						    scroll, the one in view lit. Hidden on a phone, where the
+						    chip strip in the detail header does this job. */}
+						{active && subs.length > 1 && (
+							<ul className="my-1 ml-[22px] hidden flex-col border-l border-hairline pl-3 lg:flex">
+								{subs.map((g) => {
+									const on = g.id === activeGroup;
+									return (
+										<li key={g.id}>
+											<button
+												type="button"
+												aria-current={on ? "true" : undefined}
+												onClick={() => onGroup?.(g.id)}
+												className={clsx(
+													"flex h-8 w-full cursor-pointer items-center rounded-[7px] px-2 text-left font-sans text-[calc(13px*var(--ws-fs))] transition-colors",
+													on
+														? "font-semibold text-primary"
+														: "text-muted hover:bg-primary/5 hover:text-primary",
+												)}
+											>
+												{g.label}
+											</button>
+										</li>
+									);
+								})}
+							</ul>
+						)}
+						</div>
 					);
 				})}
 			</nav>

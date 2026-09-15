@@ -23,11 +23,11 @@ export function Choice({
 }) {
 	return (
 		<div className="border-t border-hairline px-4 py-3 first:border-t-0">
-			<span className="font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary">
+			<span className="font-sans text-[calc(15px*var(--ws-fs))] font-medium text-primary">
 				{label}
 			</span>
 			{hint && (
-				<p className="mt-0.5 max-w-[62ch] font-sans text-[calc(12.5px*var(--ws-fs))] leading-snug text-muted">
+				<p className="mt-0.5 max-w-[62ch] font-sans text-[calc(13px*var(--ws-fs))] leading-snug text-muted">
 					{hint}
 				</p>
 			)}
@@ -72,16 +72,16 @@ export function Toggle({
 	return (
 		<div
 			className={clsx(
-				"flex items-center justify-between gap-4 border-t border-hairline px-4 py-2.5 first:border-t-0",
+				"flex items-center justify-between gap-4 border-t border-hairline px-4 py-3 first:border-t-0",
 				disabled && "opacity-60",
 			)}
 		>
 			<span className="min-w-0">
-				<span className="block font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary">
+				<span className="block font-sans text-[calc(15px*var(--ws-fs))] font-medium text-primary">
 					{label}
 				</span>
 				{hint && (
-					<span className="mt-0.5 block max-w-[62ch] font-sans text-[calc(12.5px*var(--ws-fs))] leading-snug text-muted">
+					<span className="mt-0.5 block max-w-[62ch] font-sans text-[calc(13px*var(--ws-fs))] leading-snug text-muted">
 						{hint}
 					</span>
 				)}

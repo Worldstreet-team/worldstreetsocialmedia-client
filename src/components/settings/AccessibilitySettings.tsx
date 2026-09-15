@@ -138,7 +138,7 @@ export function AccessibilitySettings() {
 function Preview() {
 	return (
 		<div className="border-t border-hairline px-4 py-3">
-			<p className="mb-2 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.12em] text-subtle">
+			<p className="mb-2 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
 				Preview
 			</p>
 			<div className="rounded-xl bg-raised px-3.5 py-3">

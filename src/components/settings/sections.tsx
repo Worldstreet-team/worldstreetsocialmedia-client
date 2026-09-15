@@ -79,6 +79,43 @@ export const SECTIONS: SectionDef[] = [
 
 export const SECTION_IDS = SECTIONS.map((s) => s.id) as SectionId[];
 
+/**
+ * The groups inside each section, in the order they render. This is what
+ * the sub-nav is built from (owner 2026-09-15: "sub navs, tap to scroll"),
+ * so the nav never has to render the detail to know what is in it. A
+ * section renders `<Section id>` for each of its groups; the id here and
+ * there must match, and the observer in the page lights the one in view.
+ */
+export interface GroupDef {
+	id: string;
+	label: string;
+}
+export const GROUPS: Record<SectionId, GroupDef[]> = {
+	account: [
+		{ id: "account", label: "Account" },
+		{ id: "danger", label: "Danger zone" },
+	],
+	premium: [{ id: "plan", label: "Your plan" }],
+	topics: [{ id: "interests", label: "Interests" }],
+	notifications: [
+		{ id: "alerts", label: "What reaches you" },
+		{ id: "behaviour", label: "Behaviour" },
+	],
+	safety: [
+		{ id: "privacy", label: "Privacy" },
+		{ id: "blocked", label: "Blocked accounts" },
+	],
+	display: [
+		{ id: "accessibility", label: "Accessibility" },
+		{ id: "appearance", label: "Appearance" },
+	],
+	data: [
+		{ id: "usage", label: "Data usage" },
+		{ id: "timeline", label: "Timeline" },
+		{ id: "messaging", label: "Messaging" },
+	],
+};
+
 export function isSectionId(v: unknown): v is SectionId {
 	return typeof v === "string" && (SECTION_IDS as string[]).includes(v);
 }
