@@ -752,5 +752,6 @@
   "messages.kind.payment": "Paiement",
   "messages.kind.contact": "Contact",
   "messages.onlineNow": "Online now",
+  "messages.chats": "Discussions",
   "profile.alignedTo": "Aligné avec"
 }

@@ -98,6 +98,19 @@ const KIND: Record<string, { glyph: any; key: string }> = {
 	contact: { glyph: RiUserSharedFill, key: "messages.kind.contact" },
 };
 
+/**
+ * The thumb (owner 2026-09-16): a short centred pill that divides the
+ * inbox's sections (stories, Online now, Chats) without drawing a line
+ * across the column. One component so every divider is the same size.
+ */
+export function InboxThumb() {
+	return (
+		<div aria-hidden className="flex justify-center pb-1 pt-2">
+			<span className="h-1 w-10 rounded-pill bg-primary/15" />
+		</div>
+	);
+}
+
 export function ConversationList({
 	conversations,
 	loading,
@@ -108,6 +121,7 @@ export function ConversationList({
 	onDelete,
 	people,
 	onOpenPerson,
+	heading,
 }: {
 	conversations: ConversationRow[];
 	loading: boolean;
@@ -122,6 +136,8 @@ export function ConversationList({
 	people?: ConversationRowUser[];
 	/** Tap on someone in the rail you have no thread with yet. */
 	onOpenPerson?: (u: ConversationRowUser) => void;
+	/** Names the list of rows ("Chats"), styled like "Online now". */
+	heading?: string;
 }) {
 	const t = useT();
 	const online = useAtomValue(onlineIdsAtom);
@@ -235,6 +251,12 @@ export function ConversationList({
 						})}
 					</div>
 				</section>
+			)}
+			{onlineNow.length > 0 && rows.length > 0 && <InboxThumb />}
+			{heading && rows.length > 0 && !query.trim() && (
+				<p className="mb-1.5 mt-1 px-2 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
+					{heading}
+				</p>
 			)}
 			{rows.map((conv) => {
 				const identity = conversationIdentity(conv);

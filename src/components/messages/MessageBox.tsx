@@ -52,7 +52,7 @@ const MediaEditor = dynamic(
 	() => import("@/components/editor/MediaEditor"),
 	{ ssr: false },
 );
-import { ConversationList } from "./ConversationList";
+import { ConversationList, InboxThumb } from "./ConversationList";
 import { StoriesRail } from "@/components/feed/StoriesRail";
 import { GIPHY_KEY, GifPicker } from "./GifPicker";
 import { AnimatePresence, motion } from "framer-motion";
@@ -2334,13 +2334,7 @@ export const MessageBox = ({
 					{prefs.messaging.inboxStories && (
 						<div className="px-1 pt-1">
 							<StoriesRail compact="thumbs" />
-							{/* The thumb (owner 2026-09-16): a short pill, not a
-							    full-width hairline, marks where stories end and the
-							    inbox begins. It divides without drawing a line
-							    across the column. */}
-							<div aria-hidden className="flex justify-center pb-1 pt-2">
-								<span className="h-1 w-10 rounded-pill bg-primary/15" />
-							</div>
+							<InboxThumb />
 						</div>
 					)}
 					{/* Primary / Requests as pill tabs (the one tab grammar).
@@ -2390,6 +2384,7 @@ export const MessageBox = ({
 						/>
 					)}
 					<ConversationList
+						heading={showRequests ? undefined : t("messages.chats")}
 						people={showRequests ? undefined : (people ?? undefined)}
 						onOpenPerson={(u) => void openPerson(u._id)}
 						conversations={
