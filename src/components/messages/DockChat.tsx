@@ -166,7 +166,7 @@ export function DockChat({
 				prev.some((m) => m._id === incoming._id) ? prev : [...prev, incoming],
 			);
 		};
-		channel.subscribe(onEvent);
+		void channel.subscribe(onEvent).catch(() => {});
 		return () => channel.unsubscribe(onEvent);
 	}, [client, myProfileId, conversation._id]);
 

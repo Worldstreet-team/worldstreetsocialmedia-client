@@ -196,8 +196,8 @@ export function useChatSignals({
 			}
 		};
 
-		channel.subscribe(onSignal);
-		channel.presence.subscribe(["enter", "leave", "present"], refreshPresence);
+		void channel.subscribe(onSignal).catch(() => {});
+		void channel.presence.subscribe(["enter", "leave", "present"], refreshPresence).catch(() => {});
 		void channel.presence.enter({}).catch(() => {});
 		void refreshPresence();
 

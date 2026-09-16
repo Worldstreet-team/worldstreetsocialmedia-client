@@ -318,7 +318,7 @@ class CallManager {
 		this.teardownChannel();
 		this.myProfileId = myProfileId;
 		this.channel = this.ably.channels.get(`calls:${myProfileId}`);
-		this.channel.subscribe(this.onSignal);
+		void this.channel.subscribe(this.onSignal).catch(() => {});
 	}
 
 	private teardownChannel() {

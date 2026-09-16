@@ -65,7 +65,7 @@ export default function GlobalMessageListener() {
 			toast(`New message from ${senderName}`, { duration: 4000 });
 		};
 
-		channel.subscribe(handleMessage);
+		void channel.subscribe(handleMessage).catch(() => {});
 		return () => channel.unsubscribe(handleMessage);
 	}, [
 		client,

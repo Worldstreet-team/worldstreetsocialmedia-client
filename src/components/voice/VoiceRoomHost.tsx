@@ -155,7 +155,7 @@ export default function VoiceRoomHost() {
         toast(`${from} — ${t("voice.speakRequests")}`, { type: "success" });
       }
     };
-    void channel.subscribe("notification", onNotif);
+    void channel.subscribe("notification", onNotif).catch(() => {});
     return () => channel.unsubscribe("notification", onNotif);
     // biome-ignore lint/correctness/useExhaustiveDependencies: tf is render-stable per t.
   }, [client, me?._id, liveSpaceId, isHost, reconnect, room, toast, t, setSession, bumpRefresh]);

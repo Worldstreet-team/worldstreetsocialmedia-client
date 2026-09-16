@@ -37,8 +37,8 @@ export function useUserEvents(
 		const channel = client.channels.get(`user:${myId}`);
 		const onNotif = (m: any) => notifRef.current(m?.data ?? {});
 		const onView = (m: any) => viewRef.current?.(m?.data ?? {});
-		void channel.subscribe("notification", onNotif);
-		void channel.subscribe("story:view", onView);
+		void channel.subscribe("notification", onNotif).catch(() => {});
+		void channel.subscribe("story:view", onView).catch(() => {});
 		return () => {
 			channel.unsubscribe("notification", onNotif);
 			channel.unsubscribe("story:view", onView);
@@ -67,9 +67,9 @@ export function usePostEvents(
 		const onLike = (m: any) => ref.current("like", m?.data ?? {});
 		const onReply = (m: any) => ref.current("reply", m?.data ?? {});
 		const onRepost = (m: any) => ref.current("repost", m?.data ?? {});
-		void channel.subscribe("like", onLike);
-		void channel.subscribe("reply", onReply);
-		void channel.subscribe("repost", onRepost);
+		void channel.subscribe("like", onLike).catch(() => {});
+		void channel.subscribe("reply", onReply).catch(() => {});
+		void channel.subscribe("repost", onRepost).catch(() => {});
 		return () => {
 			channel.unsubscribe("like", onLike);
 			channel.unsubscribe("reply", onReply);
@@ -100,10 +100,16 @@ export function useFeedEvents(
 		// A reply is its own event, never "post": the home timeline filters
 		// replies out entirely, so only a surface that lists them reacts.
 		const onReply = (m: any) => ref.current("reply", m?.data ?? {});
-		void channel.subscribe("post", onPost);
-		void channel.subscribe("reply", onReply);
-		void channel.subscribe("story", onStory);
-		void channel.subscribe("engagement", onEngagement);
+		// subscribe() returns a promise that rejects when the attach fails (no
+		// network, or the token request to the gateway failed). The listener is
+		// registered either way and Ably re-attaches on reconnect, so a
+		// rejection is transient state, not an error: uncaught, it surfaced as a
+		// full-screen runtime error on every page (2026-09-16). Same catch on
+		// every subscribe in the app.
+		void channel.subscribe("post", onPost).catch(() => {});
+		void channel.subscribe("reply", onReply).catch(() => {});
+		void channel.subscribe("story", onStory).catch(() => {});
+		void channel.subscribe("engagement", onEngagement).catch(() => {});
 		return () => {
 			channel.unsubscribe("post", onPost);
 			channel.unsubscribe("reply", onReply);

@@ -121,8 +121,8 @@ export function useLiveNow(pollMs = 20_000) {
 		if (!client) return;
 		const channel = client.channels.get("live");
 		const onEvent = () => void loadLive();
-		void channel.subscribe("started", onEvent);
-		void channel.subscribe("ended", onEvent);
+		void channel.subscribe("started", onEvent).catch(() => {});
+		void channel.subscribe("ended", onEvent).catch(() => {});
 		return () => {
 			channel.unsubscribe("started", onEvent);
 			channel.unsubscribe("ended", onEvent);
@@ -150,8 +150,8 @@ export function useLiveEvents(
 		const channel = client.channels.get("live");
 		const onStarted = (m: any) => ref.current("started", m?.data ?? {});
 		const onEnded = (m: any) => ref.current("ended", m?.data ?? {});
-		void channel.subscribe("started", onStarted);
-		void channel.subscribe("ended", onEnded);
+		void channel.subscribe("started", onStarted).catch(() => {});
+		void channel.subscribe("ended", onEnded).catch(() => {});
 		return () => {
 			channel.unsubscribe("started", onStarted);
 			channel.unsubscribe("ended", onEnded);

@@ -239,9 +239,9 @@ export function useSpaceRoom(spaceId: string | null) {
         if (cancelled) return;
         setRealtime(true);
         await syncMembers();
-        channel.presence.subscribe(syncSoon);
-        void channel.subscribe("reaction", onReaction);
-        void channel.subscribe("chat", onChat);
+        void channel.presence.subscribe(syncSoon).catch(() => {});
+        void channel.subscribe("reaction", onReaction).catch(() => {});
+        void channel.subscribe("chat", onChat).catch(() => {});
       } catch {
         // Capability (40160) or transport failure — REST-only mode.
         if (!cancelled) setRealtime(false);

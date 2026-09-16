@@ -216,7 +216,7 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
 				return next;
 			});
 		};
-		channel.subscribe("event", onEvent);
+		void channel.subscribe("event", onEvent).catch(() => {});
 		return () => channel.unsubscribe("event", onEvent);
 	}, [client, isConnected, me?._id]);
 

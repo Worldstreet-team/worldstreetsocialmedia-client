@@ -49,7 +49,7 @@ export function SpacesLiveSync() {
     if (!client) return;
     const channel = client.channels.get("spaces");
     const onEvent = () => void sync();
-    void channel.subscribe(onEvent);
+    void channel.subscribe(onEvent).catch(() => {});
     return () => channel.unsubscribe(onEvent);
   }, [client, sync]);
 

@@ -128,7 +128,7 @@ export function LiveDock() {
 				setSession(null);
 			}
 		};
-		void channel.subscribe("ended", onEnded);
+		void channel.subscribe("ended", onEnded).catch(() => {});
 		return () => channel.unsubscribe("ended", onEnded);
 	}, [ably, session, setSession]);
 
