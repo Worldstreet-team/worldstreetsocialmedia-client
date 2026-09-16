@@ -1,5 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { type NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse, type NextFetchEvent } from "next/server";
 import { syncUser } from "./lib/auth.actions";
 
 // Per-isolate profile cache: userId → last good sync result. Best-effort —
@@ -45,7 +45,21 @@ const isLocalDev =
 const HUB_LOGIN_URL = "https://www.worldstreetgold.com/login";
 const HUB_REGISTER_URL = "https://www.worldstreetgold.com/register";
 
-export default clerkMiddleware(async (auth, req) => {
+/**
+ * A speculative request: a Link prefetch, or an RSC payload fetch. Redirecting
+ * either one poisons the router (see the call sites).
+ */
+function isSpeculative(req: NextRequest): boolean {
+	const h = req.headers;
+	return (
+		h.get("Next-Router-Prefetch") === "1" ||
+		h.get("purpose") === "prefetch" ||
+		h.get("Purpose") === "prefetch" ||
+		h.get("x-middleware-prefetch") === "1"
+	);
+}
+
+const withClerk = clerkMiddleware(async (auth, req) => {
 	// ── i18n: /es/foo serves the same app as /foo ─────────────────────────
 	// The locale prefix is stripped via rewrite so app/ keeps its structure;
 	// the choice persists in the ws_locale cookie and reaches server
@@ -82,6 +96,15 @@ export default clerkMiddleware(async (auth, req) => {
 
 	// ── auth ──────────────────────────────────────────────────────────────
 	const { userId, getToken } = await auth();
+
+	// The cookie-less loop guard below rides a marker through the handshake;
+	// once a session exists the marker has done its job. One redirect to the
+	// clean URL, so it never lingers in the address bar or a shared link.
+	if (userId && req.nextUrl.searchParams.has(HS_MARK)) {
+		const clean = new URL(req.nextUrl.href);
+		clean.searchParams.delete(HS_MARK);
+		return NextResponse.redirect(clean, 307);
+	}
 
 	if (isProtectedRoute(req)) {
 		// `auth.protect()`, NOT a hand-rolled redirect to the hub.
@@ -203,19 +226,6 @@ ${retrying ? "" : `<a href="${esc(login.href)}">Sign in at WorldStreet</a>`}
 </main></body></html>`;
 }
 
-/**
- * A speculative request: a Link prefetch, or an RSC payload fetch. Redirecting
- * either one poisons the router (see the call sites).
- */
-function isSpeculative(req: NextRequest): boolean {
-	const h = req.headers;
-	return (
-		h.get("Next-Router-Prefetch") === "1" ||
-		h.get("purpose") === "prefetch" ||
-		h.get("Purpose") === "prefetch" ||
-		h.get("x-middleware-prefetch") === "1"
-	);
-}
 
 /**
  * Build a redirect target that KEEPS the original query string — Next attaches
@@ -411,6 +421,85 @@ function userDataHeader(profile: unknown): string {
 				signUpUrl: HUB_REGISTER_URL,
 			},
 );
+
+const HS_MARK = "__ws_hs";
+
+/**
+ * The loop clerkMiddleware cannot stop (production, 2026-09-16, "some users
+ * are told redirected too many times"): on a satellite, every session-less
+ * document request is answered with a redirect to the primary's handshake,
+ * which hands the token back IN A COOKIE (format=nonce) and returns the
+ * visitor to the same URL. A browser that is not keeping cookies (an in-app
+ * browser, cookies switched off, a locked-down private mode) comes back
+ * exactly as it left, so it is sent to the handshake again, forever. Both
+ * existing breakers, Clerk's `__clerk_redirect_count` and our page above,
+ * are cookies too, so they never fire for exactly the visitor who needs
+ * them, and the browser gives up with ERR_TOO_MANY_REDIRECTS. Reproduced
+ * with curl by discarding cookies: 10 hops and counting.
+ *
+ * clerkMiddleware issues the handshake redirect BEFORE the handler runs, so
+ * the guard has to sit in front of it. It is cookie-free by construction: a
+ * document request with no Cookie header at all and no marker gets one
+ * self-redirect that adds `__ws_hs=1`, which Clerk then carries inside the
+ * handshake's redirect_url. When the return arrives with the marker and
+ * still not a single cookie, this browser is not keeping any, and we say
+ * so on a page of our own instead of redirecting again. A browser that
+ * keeps cookies always returns with at least `__clerk_redirect_count`, so
+ * it never sees the page. Signed-in visitors have the marker stripped in
+ * the handler.
+ */
+export default function proxy(req: NextRequest, evt: NextFetchEvent) {
+	const dest = req.headers.get("sec-fetch-dest");
+	const isDocument =
+		req.method === "GET" &&
+		!isSpeculative(req) &&
+		(dest === "document" ||
+			(dest === null && (req.headers.get("accept") ?? "").includes("text/html")));
+	const noCookies = !req.headers.get("cookie");
+	if (isDocument && noCookies && !isLocalDev) {
+		const marked = req.nextUrl.searchParams.get(HS_MARK) === "1";
+		if (marked) {
+			console.warn("[auth] handshake returned with no cookies at all", {
+				path: req.nextUrl.pathname,
+				ua: req.headers.get("user-agent"),
+				referer: req.headers.get("referer"),
+			});
+			return new NextResponse(cookiesOffPage(req), {
+				status: 200,
+				headers: {
+					"content-type": "text/html; charset=utf-8",
+					"cache-control": "no-store",
+				},
+			});
+		}
+		const marker = new URL(req.nextUrl.href);
+		marker.searchParams.set(HS_MARK, "1");
+		return NextResponse.redirect(marker, 307);
+	}
+	return withClerk(req, evt);
+}
+
+/** The page for a browser that keeps no cookies: no redirect, a way out. */
+function cookiesOffPage(req: NextRequest): string {
+	const clean = new URL(req.nextUrl.href);
+	clean.searchParams.delete(HS_MARK);
+	const esc = (v: string) =>
+		v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+	return `<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open in your browser · WorldSpace</title>
+<style>html{background:#000000;color:#FFFFFF;font:15px/1.6 -apple-system,"Public Sans",system-ui,sans-serif}
+body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:24px}
+main{max-width:360px;text-align:center}h1{font-size:18px;margin:0 0 8px}p{margin:0 0 20px;color:rgba(255,255,255,0.62)}
+a{display:inline-block;background:#FFFFFF;color:#000000;font-weight:600;border-radius:9999px;padding:10px 20px;text-decoration:none}
+small{display:block;margin-top:16px;color:rgba(255,255,255,0.42);word-break:break-all}</style>
+</head><body><main>
+<h1>Open this in your browser</h1>
+<p>WorldSpace needs cookies to keep you signed in, and this browser isn't saving them. If you opened this link inside another app, use its menu to open the page in Safari or Chrome.</p>
+<a href="${esc(clean.href)}">Try again</a>
+<small>${esc(clean.href)}</small>
+</main></body></html>`;
+}
 
 export const config = {
 	matcher: [
