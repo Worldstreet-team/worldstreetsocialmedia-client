@@ -2,6 +2,11 @@
 
 import { usePreferences } from "@/components/providers/PreferencesProvider";
 import { saverOn } from "@/lib/preferences";
+import {
+	cachedVideoRatio,
+	probeVideoRatio,
+	rememberVideoRatio,
+} from "@/lib/media-meta";
 
 import { formatCompact } from "@/lib/utils";
 import {
@@ -101,7 +106,17 @@ export function VideoPlayer({
 	/** The height ceiling the feed gives a video; width is derived from it
 	 *  for portrait clips so nothing is letterboxed. */
 	const MAX_MEDIA_H = 600;
-	const [ratio, setRatio] = useState<number | null>(null);
+	// A phone's own portrait shape (9:16) is the floor, 16:9 the ceiling.
+	// Between them a clip fits its frame exactly; beyond them the maxWidth
+	// branch keeps a tall frame from running away.
+	const clampRatio = (r: number) => Math.min(16 / 9, Math.max(9 / 16, r));
+	const [ratio, setRatio] = useState<number | null>(() => {
+		// Seed from what this URL already taught us this session, so a paused
+		// or not-yet-played clip shows its real shape at once instead of the
+		// 16:9 placeholder (owner report 2026-09-16).
+		const known = src ? cachedVideoRatio(src) : undefined;
+		return known ? clampRatio(known) : null;
+	});
 	const { prefs } = usePreferences();
 	const autoplayAllowed =
 		prefs.data.autoplay === "always" ||
@@ -393,6 +408,25 @@ export function VideoPlayer({
 		return () => io.disconnect();
 	}, []);
 
+	// Learn the clip's shape without waiting for it to play. On mobile a
+	// browser defers a video's metadata until playback, so a paused feed clip
+	// had no ratio and fell back to the 16:9 placeholder, letterboxed in a
+	// wide box while only the actively-playing clip looked right (owner
+	// report 2026-09-16). Probing the URL's metadata off-element fills the
+	// ratio in for paused and not-yet-played clips too. Feed only: elsewhere
+	// the frame is sized by its caller, not by this ratio.
+	useEffect(() => {
+		if (!fitToMedia || !src || ratio != null) return;
+		let cancelled = false;
+		void probeVideoRatio(src).then((r) => {
+			if (!cancelled && r) setRatio(clampRatio(r));
+		});
+		return () => {
+			cancelled = true;
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [fitToMedia, src, ratio]);
+
 	const seekBy = useCallback((delta: number) => {
 		const v = videoRef.current;
 		if (!v) return;
@@ -647,7 +681,8 @@ export function VideoPlayer({
 						// boxed it, which is the black bars down both sides
 						// the owner reported 2026-09-09. The maxWidth branch
 						// below is what keeps a tall frame from running away.
-						setRatio(Math.min(16 / 9, Math.max(9 / 16, r)));
+						rememberVideoRatio(src, r);
+						setRatio(clampRatio(r));
 					}
 				}}
 				onTimeUpdate={(e) => {

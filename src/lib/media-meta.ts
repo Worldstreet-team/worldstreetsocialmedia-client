@@ -118,3 +118,69 @@ export function thumbhashToDataURL(hash?: string): string | undefined {
 		return undefined;
 	}
 }
+
+/**
+ * Aspect ratio (width / height) of a video by URL, learned WITHOUT playing
+ * it, and remembered for the session.
+ *
+ * The feed reserves a clip's box from its real shape. On mobile a browser
+ * will not load a clip's metadata until it actually plays, so a paused or
+ * not-yet-autoplayed portrait clip had no known shape and fell back to the
+ * 16:9 placeholder, letterboxed in a wide box (owner report 2026-09-16). A
+ * detached `preload="metadata"` element reads the dimensions off the same
+ * bytes without becoming a visible, playing video, and the cache means each
+ * URL is probed at most once and every later mount is instant.
+ */
+const VIDEO_RATIO_CACHE = new Map<string, number>();
+
+/** The remembered raw ratio for a URL, if we have it. */
+export function cachedVideoRatio(src: string): number | undefined {
+	return VIDEO_RATIO_CACHE.get(src);
+}
+
+/** Remember a ratio learned elsewhere (e.g. the visible element's own
+ *  loadedmetadata), so siblings and later mounts of the same URL get it. */
+export function rememberVideoRatio(src: string, ratio: number): void {
+	if (src && Number.isFinite(ratio) && ratio > 0) {
+		VIDEO_RATIO_CACHE.set(src, ratio);
+	}
+}
+
+/** Learn a URL's ratio via a detached metadata load. Resolves null when the
+ *  browser will not surface it (e.g. iOS deferring metadata until a gesture);
+ *  the visible element's own play still fills the cache in that case. */
+export function probeVideoRatio(src: string): Promise<number | null> {
+	const hit = VIDEO_RATIO_CACHE.get(src);
+	if (hit) return Promise.resolve(hit);
+	if (typeof document === "undefined") return Promise.resolve(null);
+	return new Promise((resolve) => {
+		const video = document.createElement("video");
+		let settled = false;
+		const finish = (r: number | null) => {
+			if (settled) return;
+			settled = true;
+			clearTimeout(bail);
+			video.onloadedmetadata = null;
+			video.onerror = null;
+			video.removeAttribute("src");
+			resolve(r);
+		};
+		// Metadata is an enhancement; a codec the browser cannot probe must
+		// never hang a pending promise.
+		const bail = setTimeout(() => finish(null), 4000);
+		video.muted = true;
+		video.playsInline = true;
+		video.preload = "metadata";
+		video.onerror = () => finish(null);
+		video.onloadedmetadata = () => {
+			const w = video.videoWidth;
+			const h = video.videoHeight;
+			if (w > 0 && h > 0) {
+				const r = w / h;
+				VIDEO_RATIO_CACHE.set(src, r);
+				finish(r);
+			} else finish(null);
+		};
+		video.src = src;
+	});
+}
