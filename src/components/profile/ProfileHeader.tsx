@@ -13,7 +13,17 @@ import {
   profileRatesRequestAtom,
 } from "@/store/ui.atom";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Mail, MoreHorizontal, Share } from "lucide-react";
+import {
+  ArrowLeft,
+  Ban,
+  Flag,
+  Link2,
+  Mail,
+  MoreHorizontal,
+  Settings,
+  Share2,
+} from "lucide-react";
+import { toast } from "sonner";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { useT } from "@/i18n/client";
 
@@ -114,6 +124,22 @@ export function ProfileHeader({
     "h-10 w-10 shrink-0 rounded-pill border border-hairline flex items-center justify-center transition-colors hover:bg-raised cursor-pointer text-muted hover:text-primary";
   const pill =
     "rounded-pill px-5 h-10 shrink-0 font-semibold transition-colors text-sm font-sans min-w-[104px]";
+  const menuItem =
+    "flex h-10 w-full cursor-pointer items-center gap-3 rounded-lg px-3 text-left font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/5";
+  const menuIcon = "h-[17px] w-[17px] shrink-0 text-muted";
+
+  const canShare = !blockedByYou && !blockedByThem;
+  const copyLink = async () => {
+    setMenuOpen(false);
+    try {
+      await navigator.clipboard.writeText(
+        `${window.location.origin}/profile/${username}`,
+      );
+      toast.success(t("share.linkCopied"));
+    } catch {
+      toast.error(t("share.failed"));
+    }
+  };
 
   // The ad-space affordance while a campaign occupies the slot: AdSlot
   // publishes here, and the header wears it as a glimmer icon among the
@@ -233,46 +259,78 @@ export function ProfileHeader({
               {adIconChrome}
             </Link>
           ))}
-        {/* Share sits on every profile, yours included: a link, a chat, or
-            the OS sheet. Hidden across a block in either direction, where
-            passing the profile around is the last thing anyone wants. */}
-        {!blockedByThem && !blockedByYou && (
+        {!isMe && !blockedByThem && !blockedByYou && canMessage && (
           <button
             type="button"
-            aria-label={t("profile.share")}
-            onClick={onShare}
+            aria-label={t("profile.message")}
+            onClick={onMessage}
             className={iconButton}
           >
-            <Share className="h-[18px] w-[18px]" />
+            <Mail className="h-[18px] w-[18px]" />
           </button>
         )}
-        {!isMe && !blockedByThem && !blockedByYou && (
-          <>
-            {canMessage && (
-              <button
-                type="button"
-                aria-label={t("profile.message")}
-                onClick={onMessage}
-                className={iconButton}
-              >
-                <Mail className="h-[18px] w-[18px]" />
-              </button>
-            )}
-            <div className="relative" ref={menuRef}>
-              <button
-                type="button"
-                aria-label={t("profile.more")}
-                aria-expanded={menuOpen}
-                onClick={() => setMenuOpen((v) => !v)}
-                className={iconButton}
-              >
-                <MoreHorizontal className="h-[18px] w-[18px]" />
-              </button>
-              {menuOpen && (
-                <div
-                  role="menu"
-                  className="absolute right-0 top-full z-dropdown mt-2 flex w-[220px] flex-col overflow-hidden rounded-lg border border-hairline bg-surface py-1.5 shadow-nav"
+
+        {/* One overflow menu on every profile, yours included (owner
+            2026-09-16): sharing lives here, not as a lone icon, alongside
+            whatever else fits this profile. Sharing is hidden across a
+            block in either direction. */}
+        <div className="relative" ref={menuRef}>
+          <button
+            type="button"
+            aria-label={t("profile.more")}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((v) => !v)}
+            className={clsx(iconButton, menuOpen && "bg-primary/10 text-primary")}
+          >
+            <MoreHorizontal className="h-[18px] w-[18px]" />
+          </button>
+          {menuOpen && (
+            <div
+              role="menu"
+              aria-label={t("profile.more")}
+              className="absolute right-0 top-full z-dropdown mt-2 flex w-[232px] flex-col overflow-hidden rounded-xl bg-surface p-1.5 shadow-nav animate-rise"
+            >
+              {canShare && (
+                <>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onShare();
+                    }}
+                    className={menuItem}
+                  >
+                    <Share2 className={menuIcon} />
+                    {t("profile.share")}
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={copyLink}
+                    className={menuItem}
+                  >
+                    <Link2 className={menuIcon} />
+                    {t("share.copyLink")}
+                  </button>
+                </>
+              )}
+              {isMe ? (
+                <Link
+                  href="/settings"
+                  role="menuitem"
+                  onClick={() => setMenuOpen(false)}
+                  className={menuItem}
                 >
+                  <Settings className={menuIcon} />
+                  {t("nav.settings")}
+                </Link>
+              ) : (
+                <>
+                  {canShare && (
+                    <span aria-hidden className="mx-2 my-1 h-px bg-primary/10" />
+                  )}
                   <button
                     type="button"
                     role="menuitem"
@@ -280,30 +338,34 @@ export function ProfileHeader({
                       setMenuOpen(false);
                       onReport();
                     }}
-                    className="cursor-pointer px-3.5 py-2.5 text-left font-sans text-sm font-medium text-primary transition-colors hover:bg-raised"
+                    className={menuItem}
                   >
+                    <Flag className={menuIcon} />
                     {t("safety.report")} @{username}
                   </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      blockedByYou ? onUnblock() : onBlock();
-                    }}
-                    className={clsx(
-                      "cursor-pointer px-3.5 py-2.5 text-left font-sans text-sm font-medium transition-colors hover:bg-raised",
-                      blockedByYou ? "text-primary" : "text-danger",
-                    )}
-                  >
-                    {blockedByYou ? t("safety.unblock") : t("safety.block")} @
-                    {username}
-                  </button>
-                </div>
+                  {!blockedByThem && (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        blockedByYou ? onUnblock() : onBlock();
+                      }}
+                      className={clsx(
+                        menuItem,
+                        !blockedByYou && "text-danger hover:text-danger",
+                      )}
+                    >
+                      <Ban className={clsx(menuIcon, !blockedByYou && "text-danger")} />
+                      {blockedByYou ? t("safety.unblock") : t("safety.block")} @
+                      {username}
+                    </button>
+                  )}
+                </>
               )}
             </div>
-          </>
-        )}
+          )}
+        </div>
 
         {isMe ? (
           <button
