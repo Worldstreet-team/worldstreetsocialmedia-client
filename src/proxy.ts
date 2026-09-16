@@ -42,7 +42,8 @@ const isProtectedRoute = createRouteMatcher(["/(.*)"]);
  */
 const isLocalDev =
 	process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.startsWith("pk_test_");
-const HUB_LOGIN_URL = "https://www.worldstreetgold.com/login";
+const HUB_ORIGIN = "https://www.worldstreetgold.com";
+const HUB_LOGIN_URL = `${HUB_ORIGIN}/login`;
 const HUB_REGISTER_URL = "https://www.worldstreetgold.com/register";
 
 /**
@@ -139,18 +140,40 @@ const withClerk = clerkMiddleware(async (auth, req) => {
 		// the counter, hold the visitor for one beat on a page of our own,
 		// try the handshake once more, and only after a second failure offer
 		// the hub's login as a link rather than a redirect.
+		//
+		// The second loop (owner 2026-09-16, "redirected too many times" on
+		// www.worldstreetgold.com/login?redirect_url=social...): the hub
+		// believes the visitor is signed in and bounces them back; here a
+		// failed handshake has already written `__client_uat=0`, so the
+		// satellite does not handshake again, reports them signed out and
+		// sends them to the hub, which bounces them back... The counter above
+		// never moves because no handshake runs, so that breaker cannot see
+		// this one. What can: a signed-out document request whose referer is
+		// the hub. A visitor the hub just sent back and we still cannot sign
+		// in IS the ping-pong. Clear the shared `__client_uat` so the next hop
+		// is a fresh handshake; if the hub's session is real it succeeds, and
+		// if it is dead the hub finally shows its form instead of bouncing.
+		const referer = req.headers.get("referer") ?? "";
+		const fromHub = referer.startsWith(`${HUB_ORIGIN}/`);
 		if (
 			!userId &&
-			req.cookies.get("__clerk_redirect_count")?.value === "3" &&
-			!isSpeculative(req)
+			!isSpeculative(req) &&
+			(req.cookies.get("__clerk_redirect_count")?.value === "3" || fromHub)
 		) {
 			const retry = Number(req.nextUrl.searchParams.get("__ws_retry")) || 0;
-			console.warn("[auth] satellite handshake looped", {
-				path: pathname,
-				retry,
-				referer: req.headers.get("referer"),
-				cookies: req.cookies.getAll().map((c) => c.name),
-			});
+			console.warn(
+				fromHub
+					? "[auth] hub bounced a signed-out visitor back"
+					: "[auth] satellite handshake looped",
+				{
+					path: pathname,
+					retry,
+					referer,
+					ua: req.headers.get("user-agent"),
+					cookies: req.cookies.getAll().map((c) => c.name),
+					uat: req.cookies.get("__client_uat")?.value ?? null,
+				},
+			);
 			const res = new NextResponse(handshakeLoopPage(req, retry), {
 				status: 200,
 				headers: {
@@ -159,6 +182,16 @@ const withClerk = clerkMiddleware(async (auth, req) => {
 				},
 			});
 			res.cookies.set("__clerk_redirect_count", "", { maxAge: 0, path: "/" });
+			if (fromHub) {
+				// Both copies: the shared one the hub writes and any host-only one.
+				res.cookies.set("__client_uat", "", {
+					maxAge: 0,
+					path: "/",
+					domain: "worldstreetgold.com",
+				});
+				res.cookies.set("__client_uat", "", { maxAge: 0, path: "/" });
+				res.cookies.set("__session", "", { maxAge: 0, path: "/" });
+			}
 			return res;
 		}
 		await auth.protect();
