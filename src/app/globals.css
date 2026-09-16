@@ -1376,8 +1376,14 @@ video,
   /* Text-size multipliers. --ws-fs scales every text-[Npx] in the app;
      --ws-fs-chat multiplies again inside the messages surface, because
      chat is read one-handed at arm's length. */
-  --ws-fs: 1;
+  --ws-fs-app: 1;
   --ws-fs-chat: 1;
+  /* The value every text-[calc(Npx*var(--ws-fs))] reads. Derived, never
+     set directly: JS writes --ws-fs-app, and the chat surface re-derives
+     it below. Writing --ws-fs: calc(var(--ws-fs) * ...) was a cycle, which
+     CSS resolves by discarding the property, so inside Messages every
+     scaled size fell back to the browser's 16px (found 2026-09-16). */
+  --ws-fs: var(--ws-fs-app);
   /* What "auto" reads: the browser's own root size, which is the thing a
      phone's display-size setting actually moves. */
   --ws-root-fs: 1rem;
@@ -1386,7 +1392,7 @@ video,
 /* Chat compounds on top of the app scale rather than replacing it. */
 [data-ws-theme] .ws-chat-scale,
 #ws-main-scroll .ws-chat-scale {
-  --ws-fs: calc(var(--ws-fs) * var(--ws-fs-chat));
+  --ws-fs: calc(var(--ws-fs-app) * var(--ws-fs-chat));
 }
 
 /* Bold text: one step heavier everywhere, size and layout untouched.

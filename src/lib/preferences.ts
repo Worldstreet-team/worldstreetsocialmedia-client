@@ -266,7 +266,7 @@ export function applyPrefsToDocument(p: Preferences) {
 				) / 100
 			: p.a11y.textScale / 100;
 	scale = Math.max(0.9, Math.min(1.75, scale));
-	h.style.setProperty("--ws-fs", String(scale));
+	h.style.setProperty("--ws-fs-app", String(scale));
 
 	const chat =
 		p.a11y.chatTextScale === "match" ? 1 : p.a11y.chatTextScale / 100;

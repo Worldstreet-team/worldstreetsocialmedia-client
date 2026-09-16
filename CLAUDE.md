@@ -656,6 +656,23 @@ column.
 
 ## Gotchas
 
+**`--ws-fs` is derived; never write it directly** (found 2026-09-16, shipped
+broken since 09-10). JS sets `--ws-fs-app` (pre-paint script + preferences)
+and `--ws-fs-chat`; `globals.css` derives `--ws-fs: var(--ws-fs-app)` on
+`:root` and `calc(var(--ws-fs-app) * var(--ws-fs-chat))` under
+`.ws-chat-scale`. The old `--ws-fs: calc(var(--ws-fs) * ...)` was a custom
+property cycle: CSS discards the property, every `calc(Npx*var(--ws-fs))`
+inside Messages went invalid, and the whole inbox rendered at the browser's
+16px regardless of the spec or the user's text-size setting. A custom
+property may never reference itself, even from a more specific selector.
+
+**Turbopack's persistent dev cache can replay stale CSS.** A `globals.css`
+edit that never reaches the served chunk (same content after touch AND a
+server restart, `curl` of the chunk shows the old rule) is
+`.next/dev/cache/turbopack` replaying an old compile. Stop the server,
+`rm -rf .next/dev/cache/turbopack`, start again. TSX edits still hot-reload
+fine while this is happening, which is what makes it confusing.
+
 **Backend URL is unified through `src/const.ts`.** `BACKEND_URL` is
 `process.env.NEXT_PUBLIC_API_URL ?? <Render gateway>`, and every API module
 resolves through it (the actions import `BACKEND_URL`; conversation actions,

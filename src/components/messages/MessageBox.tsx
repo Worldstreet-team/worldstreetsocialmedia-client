@@ -2332,8 +2332,8 @@ export const MessageBox = ({
 					{/* Stories of the people you're aligned with — messaging is
 					    where you already are when you want to reply to one. */}
 					{prefs.messaging.inboxStories && (
-						<div className="px-2 pt-1">
-							<StoriesRail />
+						<div className="px-1 pt-1">
+							<StoriesRail compact="thumbs" />
 						</div>
 					)}
 					{/* Primary / Requests as pill tabs (the one tab grammar).

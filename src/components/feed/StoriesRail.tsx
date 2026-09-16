@@ -146,7 +146,7 @@ function useCollapseOnScrollDown() {
  * order the gateway returns). Tapping a live ring goes straight to the
  * stream; everything else opens the viewer.
  */
-export function StoriesRail({ compact }: { compact?: boolean } = {}) {
+export function StoriesRail({ compact }: { compact?: boolean | "thumbs" } = {}) {
 	// Spaces and Messages are destinations in their own right; the tall
 	// story tiles pushed their actual content below the fold. The rail
 	// decides for itself so every mount point gets it right — the (main)
@@ -159,7 +159,14 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 	// and the tall cover cards are that shape. Kept as a prop so a future
 	// cramped surface can ask for it explicitly, rather than a route being
 	// silently special-cased from in here.
-	const circlesOnly = compact ?? false;
+	// `true` is the bare circle (no name); "thumbs" is the phone layout at
+	// every width: a ringed 64px circle with the first name beneath, no
+	// hairline under the row. The inbox column asks for it (owner
+	// 2026-09-16, reversing the earlier veto for that one surface: a
+	// 152px cover card in a 372px column crowded the chats below it).
+	const circlesOnly = compact === true;
+	const thumbs = compact === "thumbs";
+	const card = !circlesOnly && !thumbs;
 	const t = useT();
 	const [rail, setRail] = useAtom(storyRailAtom) as [
 		RailEntry[],
@@ -269,10 +276,10 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 			aria-hidden={collapsed}
 		>
 			<div className="min-h-0 overflow-hidden">
-				<div className="border-b border-hairline py-2">
+				<div className={clsx(thumbs ? "py-1" : "border-b border-hairline py-2")}>
 					<div
 						ref={rootRef}
-						className="flex gap-3 overflow-x-auto px-3 py-1.5 [scrollbar-width:none]"
+						className={clsx("flex overflow-x-auto py-1.5 [scrollbar-width:none]", thumbs ? "gap-1 px-1" : "gap-3 px-3")}
 					>
 			{/* self / add.
 			    Two shapes, one markup: a ringed circle with the name beneath it
@@ -290,20 +297,20 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 						// With no name beneath it, the column is just the circle —
 						// the 68px width and the gap were both reserving room for
 						// a label that is no longer rendered.
-						circlesOnly ? "w-16 gap-0" : "w-[68px] gap-1.5",
-						!circlesOnly && "sm:w-[100px] sm:gap-0",
+						circlesOnly ? "w-16 gap-0" : thumbs ? "w-[72px] gap-1.5" : "w-[68px] gap-1.5",
+						card && "sm:w-[100px] sm:gap-0",
 					)}
 				aria-label={t("story.add")}
 			>
 				<span
 					className={clsx(
 						"relative block h-16 w-16 rounded-pill p-[3px]",
-							!circlesOnly &&
+							card &&
 								"sm:h-[152px] sm:w-[100px] sm:rounded-xl sm:p-0",
 						self?.hasUnseen ? "ring-2 ring-brand" : "ring-1 ring-hairline",
 					)}
 				>
-					<span className={clsx("relative block h-full w-full overflow-hidden rounded-pill bg-sunken", !circlesOnly && "sm:rounded-xl")}>
+					<span className={clsx("relative block h-full w-full overflow-hidden rounded-pill bg-sunken", card && "sm:rounded-xl")}>
 						{selfCover?.type === "video" ? (
 							// eslint-disable-next-line jsx-a11y/media-has-caption
 							<video
@@ -324,20 +331,20 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 						) : (
 							// No story yet: your own avatar. Dimmed only on the card,
 							// where an avatar-as-cover would otherwise read as a story.
-							<SafeAvatar src={selfAvatar} className="object-cover sm:opacity-40" alt={t("story.yours")} />
+							<SafeAvatar src={selfAvatar} className={clsx("object-cover", card && "sm:opacity-40")} alt={t("story.yours")} />
 						)}
 
 						{/* Card-only: veils so the white ink below holds on any cover. */}
-						<span className="absolute inset-0 hidden bg-[#0c0a09]/30 sm:block" />
-						<span className="absolute inset-x-0 bottom-0 hidden h-14 bg-[#0c0a09]/55 sm:block" />
+						<span className={clsx("absolute inset-0 hidden bg-[#0c0a09]/30", card && "sm:block")} />
+						<span className={clsx("absolute inset-x-0 bottom-0 hidden h-14 bg-[#0c0a09]/55", card && "sm:block")} />
 
 						{/* Card-only: avatar top left. */}
-						<span className="absolute left-2 top-2 hidden h-9 w-9 overflow-hidden rounded-pill ring-2 ring-white/90 sm:block">
+						<span className={clsx("absolute left-2 top-2 hidden h-9 w-9 overflow-hidden rounded-pill ring-2 ring-white/90", card && "sm:block")}>
 							<SafeAvatar src={selfAvatar} className="object-cover" />
 						</span>
 
 						{/* Card-only: name over the cover. */}
-						<span className={clsx("absolute inset-x-2 bottom-2 hidden truncate text-left font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-white", !circlesOnly && "sm:block")}>
+						<span className={clsx("absolute inset-x-2 bottom-2 hidden truncate text-left font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-white", card && "sm:block")}>
 							{t("story.yours")}
 						</span>
 					</span>
@@ -352,14 +359,14 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 							e.stopPropagation();
 							setCreateOpen(true);
 						}}
-						className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-pill border-2 border-page bg-brand text-brand-on sm:bottom-auto sm:right-auto sm:left-[26px] sm:top-[26px] sm:h-[18px] sm:w-[18px]"
+						className={clsx("absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-pill border-2 border-page bg-brand text-brand-on", card && "sm:bottom-auto sm:right-auto sm:left-[26px] sm:top-[26px] sm:h-[18px] sm:w-[18px]")}
 					>
 						<Plus className="h-2.5 w-2.5" strokeWidth={3} />
 					</span>
 				</span>
 
 				{/* Circle-only: name beneath. */}
-				<span className={clsx("w-full truncate text-center font-sans text-[calc(12px*var(--ws-fs))] font-medium text-muted sm:hidden", circlesOnly ? "hidden" : "block")}>
+				<span className={clsx("w-full truncate text-center font-sans text-[calc(12px*var(--ws-fs))] font-medium text-muted", card && "sm:hidden", circlesOnly ? "hidden" : "block")}>
 					{t("story.yours")}
 				</span>
 			</button>
@@ -394,15 +401,15 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 						// With no name beneath it, the column is just the circle —
 						// the 68px width and the gap were both reserving room for
 						// a label that is no longer rendered.
-						circlesOnly ? "w-16 gap-0" : "w-[68px] gap-1.5",
-						!circlesOnly && "sm:w-[100px] sm:gap-0",
+						circlesOnly ? "w-16 gap-0" : thumbs ? "w-[72px] gap-1.5" : "w-[68px] gap-1.5",
+						card && "sm:w-[100px] sm:gap-0",
 					)}
 						aria-label={name}
 					>
 						<span
 							className={clsx(
 								"relative block h-16 w-16 rounded-pill p-[3px]",
-							!circlesOnly &&
+							card &&
 								"sm:h-[152px] sm:w-[100px] sm:rounded-xl sm:p-0",
 								// The ring is the unseen state; live outranks it.
 								entry.isLive
@@ -412,7 +419,7 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 										: "ring-1 ring-hairline",
 							)}
 						>
-							<span className={clsx("relative block h-full w-full overflow-hidden rounded-pill bg-sunken", !circlesOnly && "sm:rounded-xl")}>
+							<span className={clsx("relative block h-full w-full overflow-hidden rounded-pill bg-sunken", card && "sm:rounded-xl")}>
 								{cover?.type === "video" ? (
 									// eslint-disable-next-line jsx-a11y/media-has-caption
 									<video
@@ -429,16 +436,16 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 								)}
 
 								{/* Card-only: veils so the white ink below holds. */}
-								<span className="absolute inset-0 hidden bg-[#0c0a09]/30 sm:block" />
-								<span className="absolute inset-x-0 bottom-0 hidden h-14 bg-[#0c0a09]/55 sm:block" />
+								<span className={clsx("absolute inset-0 hidden bg-[#0c0a09]/30", card && "sm:block")} />
+								<span className={clsx("absolute inset-x-0 bottom-0 hidden h-14 bg-[#0c0a09]/55", card && "sm:block")} />
 
 								{/* Card-only: avatar top left. */}
-								<span className="absolute left-2 top-2 hidden h-9 w-9 overflow-hidden rounded-pill ring-2 ring-white/90 sm:block">
+								<span className={clsx("absolute left-2 top-2 hidden h-9 w-9 overflow-hidden rounded-pill ring-2 ring-white/90", card && "sm:block")}>
 									<SafeAvatar src={entry.author.avatar} className="object-cover" />
 								</span>
 
 								{/* Card-only: name over the cover. */}
-								<span className={clsx("absolute inset-x-2 bottom-2 hidden items-center gap-1 text-left font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-white", !circlesOnly && "sm:flex")}>
+								<span className={clsx("absolute inset-x-2 bottom-2 hidden items-center gap-1 text-left font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-white", card && "sm:flex")}>
 									<span className="min-w-0 truncate">@{name}</span>
 									<UserBadges
 										isVerified={entry.author.isVerified}
@@ -450,15 +457,17 @@ export function StoriesRail({ compact }: { compact?: boolean } = {}) {
 							</span>
 
 							{entry.isLive && (
-								<span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-[4px] bg-danger px-1.5 py-px font-sans text-[calc(9px*var(--ws-fs))] font-bold tracking-wide text-white sm:bottom-auto sm:left-auto sm:right-2 sm:top-2 sm:translate-x-0">
+								<span className={clsx("absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-[4px] bg-danger px-1.5 py-px font-sans text-[calc(9px*var(--ws-fs))] font-bold tracking-wide text-white", card && "sm:bottom-auto sm:left-auto sm:right-2 sm:top-2 sm:translate-x-0")}>
 									{t("live.badge")}
 								</span>
 							)}
 						</span>
 
 						{/* Circle-only: name beneath. */}
-						<span className={clsx("w-full truncate text-center font-sans text-[calc(12px*var(--ws-fs))] font-medium text-muted sm:hidden", circlesOnly ? "hidden" : "block")}>
-							@{name}
+						<span className={clsx("w-full truncate text-center font-sans text-[calc(12px*var(--ws-fs))] font-medium", card && "sm:hidden", circlesOnly ? "hidden" : "block", thumbs ? "text-primary" : "text-muted")}>
+							{/* Thumbs: the first name, whole, in the ink the chat rows
+							    use; a truncated @handle under a face read as broken. */}
+							{thumbs ? name.split(" ")[0] : `@${name}`}
 						</span>
 					</button>
 				);

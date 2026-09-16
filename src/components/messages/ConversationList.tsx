@@ -189,24 +189,26 @@ export function ConversationList({
 		const out = new Map<string, { key: string; user: ConversationRowUser; conv?: ConversationRow }>();
 		for (const c of conversations) {
 			const u = c.otherParticipant;
-			if (c.kind === "group" || c.isRequestForMe || !u?._id || !online.has(u._id)) continue;
+			// You are always online to yourself; a self-thread put your own
+			// face first in the rail.
+			if (c.kind === "group" || c.isRequestForMe || !u?._id || u._id === myProfileId || !online.has(u._id)) continue;
 			out.set(u._id, { key: u._id, user: u, conv: c });
 		}
 		for (const u of people ?? []) {
-			if (!u?._id || out.has(u._id) || !online.has(u._id)) continue;
+			if (!u?._id || u._id === myProfileId || out.has(u._id) || !online.has(u._id)) continue;
 			out.set(u._id, { key: u._id, user: u });
 		}
 		return [...out.values()];
-	}, [conversations, people, online, query]);
+	}, [conversations, people, online, query, myProfileId]);
 
 	return (
 		<div className="flex flex-col px-2">
 			{onlineNow.length > 0 && (
-				<section aria-label={t("messages.onlineNow")} className="mb-1 px-1 pt-2">
+				<section aria-label={t("messages.onlineNow")} className="mb-2 px-1 pt-3">
 					<p className="mb-1.5 px-1 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
 						{t("messages.onlineNow")}
 					</p>
-					<div className="flex gap-2.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+					<div className="flex gap-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 						{onlineNow.map(({ key, user: peer, conv }) => {
 							const first = (peer.firstName || peer.username || "").split(" ")[0];
 							return (
@@ -214,10 +216,10 @@ export function ConversationList({
 									key={key}
 									type="button"
 									onClick={() => (conv ? onOpen(conv) : onOpenPerson?.(peer))}
-									className="flex w-16 shrink-0 cursor-pointer flex-col items-center gap-1.5 rounded-[10px] py-1 text-center transition-colors hover:bg-primary/5"
+									className="flex w-[72px] shrink-0 cursor-pointer flex-col items-center gap-1.5 rounded-[10px] py-1 text-center transition-colors hover:bg-primary/5"
 								>
 									<span className="relative">
-										<span className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-pill bg-raised">
+										<span className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-pill bg-raised">
 											<SafeAvatar src={peer.avatar} />
 										</span>
 										<span
@@ -225,7 +227,7 @@ export function ConversationList({
 											className="ws-cue-online absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-pill bg-success ring-2 ring-page"
 										/>
 									</span>
-									<span className="w-full truncate font-sans text-[calc(13px*var(--ws-fs))] font-medium text-muted">
+									<span className="w-full truncate font-sans text-[calc(12px*var(--ws-fs))] font-medium text-primary">
 										{first}
 									</span>
 								</button>
@@ -265,12 +267,12 @@ export function ConversationList({
 							// wrapper's px-2 gives the radius air on both sides.
 							// Its fill is a FADED white (owner): the ink token
 							// at a wash, not raised-grey and not solid white.
-							"group relative flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-1.5 text-left transition-colors",
+							"group relative flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors",
 							active ? "bg-primary/10" : "hover:bg-primary/5",
 						)}
 					>
 						<span className="relative shrink-0">
-							<span className="relative flex h-[52px] w-[52px] items-center justify-center overflow-hidden rounded-pill bg-raised">
+							<span className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-pill bg-raised">
 								{isGroup && !identity.avatar ? (
 									<Users className="h-6 w-6 text-muted" />
 								) : (
@@ -290,7 +292,7 @@ export function ConversationList({
 							<span className="flex items-center gap-1.5">
 								<span
 									className={clsx(
-										"truncate font-sans text-[calc(18px*var(--ws-fs))]",
+										"truncate font-sans text-[calc(15px*var(--ws-fs))]",
 										unread
 											? "font-semibold text-primary"
 											: "font-medium text-primary",
@@ -299,7 +301,7 @@ export function ConversationList({
 									{identity.title}
 								</span>
 								{isGroup ? (
-									<span className="flex shrink-0 items-center gap-0.5 font-sans text-[calc(15px*var(--ws-fs))] text-subtle">
+									<span className="flex shrink-0 items-center gap-0.5 font-sans text-[calc(13px*var(--ws-fs))] text-subtle">
 										<Users className="h-3 w-3" />
 										{identity.memberCount ?? ""}
 									</span>
@@ -310,12 +312,12 @@ export function ConversationList({
 												isVerified={u.isVerified}
 												verification={u.verification}
 												badges={u.badges}
-												size={17}
+												size={15}
 											/>
 											{(ambiguous.get(identity.title.toLowerCase()) ??
 												0) > 1 &&
 												u.username && (
-													<span className="min-w-0 shrink truncate font-sans text-[calc(15px*var(--ws-fs))] text-subtle">
+													<span className="min-w-0 shrink truncate font-sans text-[calc(13px*var(--ws-fs))] text-subtle">
 														@{u.username}
 													</span>
 												)}
@@ -326,7 +328,7 @@ export function ConversationList({
 
 							<span
 								className={clsx(
-									"mt-0.5 flex items-center gap-1 font-sans text-[calc(15px*var(--ws-fs))]",
+									"mt-0.5 flex items-center gap-1 font-sans text-[calc(13px*var(--ws-fs))]",
 									unread ? "font-medium text-primary" : "text-muted",
 								)}
 							>
@@ -336,7 +338,7 @@ export function ConversationList({
 									</span>
 								)}
 								{Glyph && conv.lastMessage?.type !== "system" && (
-									<Glyph size={18} className="shrink-0 text-subtle" />
+									<Glyph size={15} className="shrink-0 text-subtle" />
 								)}
 								<span className="truncate">
 									{conv.lastMessage?.type === "system"
