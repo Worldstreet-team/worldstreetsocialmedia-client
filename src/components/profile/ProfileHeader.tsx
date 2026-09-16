@@ -13,7 +13,7 @@ import {
   profileRatesRequestAtom,
 } from "@/store/ui.atom";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Mail, MoreHorizontal } from "lucide-react";
+import { ArrowLeft, Mail, MoreHorizontal, Share } from "lucide-react";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { useT } from "@/i18n/client";
 
@@ -48,6 +48,7 @@ export function ProfileHeader({
   onBlock,
   onUnblock,
   onReport,
+  onShare,
   onAvatarClick,
 }: {
   fullName: string;
@@ -72,6 +73,7 @@ export function ProfileHeader({
   onBlock: () => void;
   onUnblock: () => void;
   onReport: () => void;
+  onShare: () => void;
   onAvatarClick?: () => void;
 }) {
   const t = useT();
@@ -231,6 +233,19 @@ export function ProfileHeader({
               {adIconChrome}
             </Link>
           ))}
+        {/* Share sits on every profile, yours included: a link, a chat, or
+            the OS sheet. Hidden across a block in either direction, where
+            passing the profile around is the last thing anyone wants. */}
+        {!blockedByThem && !blockedByYou && (
+          <button
+            type="button"
+            aria-label={t("profile.share")}
+            onClick={onShare}
+            className={iconButton}
+          >
+            <Share className="h-[18px] w-[18px]" />
+          </button>
+        )}
         {!isMe && !blockedByThem && !blockedByYou && (
           <>
             {canMessage && (

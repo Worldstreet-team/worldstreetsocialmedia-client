@@ -37,7 +37,8 @@ export async function sharePost({
 	return "unsupported";
 }
 
-const TARGETS = [
+/** Shared with the profile sheet, so the two share surfaces cannot drift. */
+export const SHARE_TARGETS = [
 	{
 		key: "x",
 		label: "X",
@@ -99,7 +100,7 @@ export function ShareMenu({
 				className="absolute bottom-11 right-0 z-dropdown w-44 overflow-hidden rounded-xl card-depth py-1 animate-rise"
 				onClick={(e) => e.stopPropagation()}
 			>
-				{TARGETS.map((tgt) => (
+				{SHARE_TARGETS.map((tgt) => (
 					<a
 						key={tgt.key}
 						role="menuitem"

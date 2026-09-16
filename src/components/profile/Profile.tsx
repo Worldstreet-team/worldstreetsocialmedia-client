@@ -23,6 +23,7 @@ import { useToast } from "@/components/ui/Toast/ToastContext";
 import EditProfileModal from "@/components/profile/EditProfileModal";
 import FollowsModal from "@/components/profile/FollowsModal";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
+import { ShareProfileSheet } from "@/components/profile/ShareProfileSheet";
 import { ProfileAbout, type CommunityChip } from "@/components/profile/ProfileAbout";
 import { ProfileTabs, type ProfileTab } from "@/components/profile/ProfileTabs";
 import { ProfileGrid } from "@/components/profile/ProfileGrid";
@@ -124,6 +125,7 @@ export default function Profile({ username }: { username?: string }) {
 	const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 	const [isFollowsModalOpen, setIsFollowsModalOpen] = useState(false);
 	const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
+	const [isShareOpen, setIsShareOpen] = useState(false);
 	const [isReportOpen, setIsReportOpen] = useState(false);
 	const [followsInitialTab, setFollowsInitialTab] = useState<
 		"followers" | "following"
@@ -582,6 +584,16 @@ export default function Profile({ username }: { username?: string }) {
 				onBlock={() => setIsBlockModalOpen(true)}
 				onUnblock={handleUnblock}
 				onReport={() => setIsReportOpen(true)}
+				onShare={() => setIsShareOpen(true)}
+			/>
+
+			<ShareProfileSheet
+				open={isShareOpen}
+				onClose={() => setIsShareOpen(false)}
+				profileId={profileUser._id}
+				username={profileUser.username}
+				fullName={fullName}
+				avatar={profileUser.avatar}
 			/>
 
 			{isReportOpen && (
