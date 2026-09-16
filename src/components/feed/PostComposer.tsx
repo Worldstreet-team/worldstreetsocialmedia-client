@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle } from "lucide-react";
+import { videoMeta } from "@/lib/media-meta";
 
 import dynamic from "next/dynamic";
 
@@ -301,6 +302,14 @@ export const PostComposer = ({
 	const [selling, setSelling] = useState(false);
 	const [canSell, setCanSell] = useState(false);
 	const [videoSeconds, setVideoSeconds] = useState<number | null>(null);
+	// The clip's width/height (and a thumbhash), measured while the browser
+	// already has the file open, and sent with the post so every feed can
+	// size the frame before any metadata loads (2026-09-16).
+	const [videoGeom, setVideoGeom] = useState<{
+		width?: number;
+		height?: number;
+		thumbhash?: string;
+	} | null>(null);
 	const [videoLimit, setVideoLimit] = useState<number | null>(null);
 	// Voice-note attachment: measured once at attach; blur is the poster's
 	// call and defaults on (plan artifact spec).
@@ -666,7 +675,10 @@ export const PostComposer = ({
 				// long this clip is. Measured here because the browser already
 				// decodes the metadata for the preview; the failure path leaves
 				// it undefined and the gateway rejects rather than guesses.
-				void readVideoDuration(video).then((secs) => {
+				void videoMeta(video)
+				.then((m) => setVideoGeom(m))
+				.catch(() => setVideoGeom(null));
+			void readVideoDuration(video).then((secs) => {
 					setVideoSeconds(secs);
 					if (secs && videoLimit && secs > videoLimit) {
 						toast(
@@ -841,6 +853,16 @@ export const PostComposer = ({
 					formData.append("video", item.file);
 					if (videoSeconds) {
 						formData.append("videoDurationSeconds", String(Math.round(videoSeconds)));
+					}
+					if (videoGeom?.width && videoGeom?.height) {
+						formData.append(
+							"videoMeta",
+							JSON.stringify({
+								width: videoGeom.width,
+								height: videoGeom.height,
+								thumbhash: videoGeom.thumbhash,
+							}),
+						);
 					}
 				} else {
 					formData.append("images", item.file);

@@ -57,6 +57,7 @@ export function VideoPlayer({
 	className,
 	rounded = true,
 	fitToMedia = false,
+	ratioHint,
 	plays,
 	onFirstPlay,
 	onDoubleTap,
@@ -67,6 +68,9 @@ export function VideoPlayer({
 	rounded?: boolean;
 	/** Size the frame to the clip's own aspect ratio (feed/timeline usage). */
 	fitToMedia?: boolean;
+	/** The clip's width/height ratio from the post record: the frame is
+	 *  born the right shape and no probe runs. */
+	ratioHint?: number;
 	/** Play count worn as a quiet chip on the frame. */
 	plays?: number;
 	/** Feed usage: double-tap means LIKE, not fullscreen (owner
@@ -119,7 +123,7 @@ export function VideoPlayer({
 		// Seed from what this URL already taught us this session, so a paused
 		// or not-yet-played clip shows its real shape at once instead of the
 		// 16:9 placeholder (owner report 2026-09-16).
-		const known = src ? cachedVideoRatio(src) : undefined;
+		const known = ratioHint ?? (src ? cachedVideoRatio(src) : undefined);
 		return known ? clampRatio(known) : null;
 	});
 	const { prefs } = usePreferences();

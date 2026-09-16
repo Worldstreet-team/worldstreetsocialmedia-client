@@ -202,6 +202,8 @@ export interface PostProps {
     images?: string[];
     videos?: string[];
     videoPlays?: number;
+    /** Measured at publish: sizes the frame before the clip loads. */
+    videoMeta?: { width?: number; height?: number; thumbhash?: string };
     /** Weekly Vote count for the open cycle. */
     votes?: number;
     /** Voice-note post: peaks are 64 ints (0-127) stored with the post. */
@@ -797,6 +799,7 @@ export const PostCard = memo(
                     content: d.content ?? "",
                     images: d.images,
                     videos: d.videos,
+                    videoMeta: d.videoMeta,
                     mentions: d.mentions,
                     linkPreview: d.linkPreview,
                     sale: d.sale,
@@ -1630,6 +1633,11 @@ export const PostCard = memo(
                             <VideoPlayer
                                 src={post.videos[0]}
                                 fitToMedia
+                                ratioHint={
+                                    post.videoMeta?.width && post.videoMeta?.height
+                                        ? post.videoMeta.width / post.videoMeta.height
+                                        : undefined
+                                }
                                 plays={post.videoPlays}
                                 onDoubleTap={() => {
                                     if (!isLiked) void handleLike();
