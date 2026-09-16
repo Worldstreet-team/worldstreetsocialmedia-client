@@ -1639,7 +1639,7 @@ export const PostCard = memo(
                                         () => {},
                                     );
                                 }}
-                                className="w-full max-h-[600px] aspect-video border border-hairline"
+                                className="w-full aspect-video border border-hairline"
                             />
                         </div>
                     )}

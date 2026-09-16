@@ -104,8 +104,13 @@ export function VideoPlayer({
 	 * 16:9, which is nearly everything, now fits its frame exactly.
 	 */
 	/** The height ceiling the feed gives a video; width is derived from it
-	 *  for portrait clips so nothing is letterboxed. */
-	const MAX_MEDIA_H = 600;
+	 *  for portrait clips so nothing is letterboxed. A CSS length, not a
+	 *  pixel constant: 600px is taller than a phone's feed viewport (about
+	 *  500px once Safari's bars, the header and the tab bar are taken), so
+	 *  a portrait clip could never be on screen whole and every reader on a
+	 *  phone saw half of it (owner 2026-09-16). 62dvh keeps the whole frame
+	 *  in view on any screen; 600px is the ceiling and the fallback. */
+	const MEDIA_H_CAP = "min(600px, 62dvh)";
 	// A phone's own portrait shape (9:16) is the floor, 16:9 the ceiling.
 	// Between them a clip fits its frame exactly; beyond them the maxWidth
 	// branch keeps a tall frame from running away.
@@ -365,6 +370,16 @@ export function VideoPlayer({
 		if (!v) return;
 		v.defaultMuted = true;
 		v.setAttribute("muted", "");
+		// Page one is server-rendered with the <video> already in the HTML, so
+		// its metadata can land before React attaches onLoadedMetadata; read
+		// what the element already knows rather than lose that ratio until the
+		// off-element probe answers (2026-09-16).
+		if (v.readyState >= 1 && v.videoWidth > 0 && v.videoHeight > 0) {
+			const r = v.videoWidth / v.videoHeight;
+			if (src) rememberVideoRatio(src, r);
+			setRatio(clampRatio(r));
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	useEffect(() => {
@@ -504,17 +519,18 @@ export function VideoPlayer({
 				// once known. Until then the caller's placeholder ratio holds the
 				// space, so the frame resizes at most once and the feed below it
 				// never jumps twice.
-				fitToMedia && !full && ratio
+				fitToMedia && !full
 					? {
-							aspectRatio: String(ratio),
+							maxHeight: MEDIA_H_CAP,
+							...(ratio ? { aspectRatio: String(ratio) } : {}),
 							// A portrait clip at full width would need ~1000px of
 							// height; the caller caps height at 600px, so the box
 							// stayed wide while the video shrank to fit — black
 							// bars down both sides (owner report 2026-09-01).
 							// Cap the WIDTH instead so the frame hugs the clip.
-							...(ratio < 1
+							...(ratio && ratio < 1
 								? {
-										maxWidth: `${Math.round(MAX_MEDIA_H * ratio)}px`,
+										maxWidth: `calc(${MEDIA_H_CAP} * ${ratio})`,
 										marginLeft: "auto",
 										marginRight: "auto",
 									}
