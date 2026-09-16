@@ -798,6 +798,28 @@ export const MessageBox = ({
 		to: { left: number; top: number; width: number };
 	} | null>(null);
 	const threadPaneRef = useRef<HTMLDivElement | null>(null);
+	// On a phone the thread is a screen pushed over the inbox, so it
+	// enters from the right and leaves the same way, like a native push
+	// (owner 2026-09-16). From md up both panes are on screen and nothing
+	// slides. matchMedia, not a CSS breakpoint, because framer writes the
+	// transform inline and a media query cannot cancel it. MotionConfig
+	// drops the transform under reduce-motion, so it becomes a cut.
+	const [phone, setPhone] = useState(false);
+	useEffect(() => {
+		const mq = window.matchMedia("(max-width: 767px)");
+		const sync = () => setPhone(mq.matches);
+		sync();
+		mq.addEventListener("change", sync);
+		return () => mq.removeEventListener("change", sync);
+	}, []);
+	const threadSlide = phone
+		? {
+				initial: { x: "100%" },
+				animate: { x: 0 },
+				exit: { x: "100%" },
+				transition: { duration: 0.32, ease: [0.2, 0, 0, 1] as const },
+			}
+		: {};
 	// Failed TEXT sends keep their bubble (owner pick); this remembers what
 	// to resend when the red mark is tapped.
 	const textRetryRef = useRef(
@@ -2432,9 +2454,11 @@ export const MessageBox = ({
 			    ThemeBackdrop is absolute inset-0 and needs this pane as its
 			    positioned ancestor; static let it resolve against the whole
 			    MessageBox and paint over the inbox list. */}
+			<AnimatePresence initial={false}>
 			{activeConversation ? (
-				<div
+				<motion.div
 					key={activeConversation._id}
+					{...threadSlide}
 					style={themeVars(chatTheme)}
 					className="absolute inset-0 z-10 flex min-w-0 flex-col bg-page md:relative md:inset-auto md:z-auto md:flex-1 md:border-l md:border-hairline"
 				>
@@ -3046,7 +3070,7 @@ export const MessageBox = ({
 						</div>
 						)}
 					</div>
-				</div>
+				</motion.div>
 			) : (
 				<div
 					key="empty"
@@ -3081,6 +3105,7 @@ export const MessageBox = ({
 					</div>
 				</div>
 			)}
+			</AnimatePresence>
 
 			{/* The send flight (owner pick): text lifts from the field, rounds
 			    into a bubble and lands where the optimistic bubble appears. */}
