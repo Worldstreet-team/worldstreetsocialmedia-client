@@ -92,6 +92,7 @@ import { imageMeta, videoMeta } from "@/lib/media-meta";
 import { conversationIdentity } from "@/lib/conversation-identity";
 import { compressImage } from "@/lib/image-compress";
 import { postJsonDirect, sendFormProgress } from "@/lib/upload-direct";
+import { loadThreads, saveThread } from "@/lib/chat-vault";
 import {
 	VoiceRecorder,
 	type RecorderStart,
@@ -621,6 +622,85 @@ export const MessageBox = ({
 	// surface renders the profile one — an optimistic bubble that wears a
 	// different face than your posts reads as someone else talking.
 	const me = useAtomValue(userAtom);
+
+	// ── The device vault (owner 2026-09-17): recent threads persist,
+	// encrypted, so a reload or a relaunch paints chats at once instead of a
+	// skeleton. See src/lib/chat-vault.ts for what it does and does not
+	// protect. Hydration is absent-only (anything already in memory is
+	// fresher) and the open path still revalidates from the network. ──
+	const vaultLoadRef = useRef<Promise<Record<string, Message[]>> | null>(null);
+	const vaultProfileRef = useRef<string | null>(null);
+	useEffect(() => {
+		const profileId = me?._id;
+		if (!profileId || conversations.length === 0) return;
+		if (vaultProfileRef.current === profileId) return;
+		vaultProfileRef.current = profileId;
+		const keep = new Set(conversations.map((c) => c._id));
+		const load = loadThreads<Message>(profileId, keep);
+		vaultLoadRef.current = load;
+		void load.then(async (saved) => {
+			if (Object.keys(saved).length) {
+				setMessageCache((prev) => {
+					let next = prev;
+					for (const [id, rows] of Object.entries(saved)) {
+						if (prev[id]?.length || !rows?.length) continue;
+						if (next === prev) next = { ...prev };
+						next[id] = rows;
+					}
+					return next;
+				});
+			}
+			// Warm the top of the inbox on every start, not only when the list
+			// was fetched in the browser: the server-rendered inbox (the normal
+			// load) skipped it, so after a reload every thread but the ones
+			// already opened loaded on tap. Saved threads are revalidated,
+			// missing ones filled; one quiet request each, merged, never a
+			// loading state.
+			try {
+				const token = await getToken();
+				if (!token) return;
+				await Promise.all(
+					conversations.slice(0, 8).map(async (c) => {
+						try {
+							const r = await axios.get(
+								`${API_URL}/api/messages/${c._id}?limit=50`,
+								{ headers: { Authorization: `Bearer ${token}` } },
+							);
+							setMessageCache((prev) => ({
+								...prev,
+								[c._id]: prev[c._id]?.length
+									? mergeMessages(prev[c._id], r.data)
+									: r.data,
+							}));
+						} catch {
+							/* a cold thread just loads on open */
+						}
+					}),
+				);
+			} catch {
+				/* no token: the open path handles it */
+			}
+		});
+	}, [me?._id, conversations.length > 0]);
+
+	// Save threads whose messages changed, a moment after they settle.
+	const vaultSavedRef = useRef<Record<string, Message[]>>({});
+	useEffect(() => {
+		const profileId = me?._id;
+		if (!profileId || vaultProfileRef.current !== profileId) return;
+		const id = window.setTimeout(() => {
+			const saved = vaultSavedRef.current;
+			let budget = 10;
+			for (const [convId, rows] of Object.entries(messageCache)) {
+				if (budget <= 0) break;
+				if (!rows?.length || saved[convId] === rows) continue;
+				saved[convId] = rows;
+				budget--;
+				void saveThread(profileId, convId, rows);
+			}
+		}, 1500);
+		return () => window.clearTimeout(id);
+	}, [messageCache, me?._id]);
 	// Requests are OUT of the number on the nav — quiet by design. Their
 	// shelf carries its own count instead.
 	const inboxConversations = conversations.filter((c) => !c.isRequestForMe);
@@ -1595,6 +1675,37 @@ export const MessageBox = ({
 				}
 			})();
 			return;
+		}
+
+		// Opened before the vault finished reading (a deep link on a cold
+		// start): wait for it, it is milliseconds, and a hit paints now and
+		// revalidates exactly like the in-memory path above.
+		if (vaultLoadRef.current) {
+			// Bounded: a vault that cannot answer must never hold a chat back.
+			const saved = await Promise.race([
+				vaultLoadRef.current.catch(() => ({}) as Record<string, Message[]>),
+				new Promise<Record<string, Message[]>>((r) => setTimeout(() => r({}), 1500)),
+			]);
+			const hit = saved[conversationId];
+			if (hit?.length) {
+				setMessageCache((prev) =>
+					prev[conversationId]?.length ? prev : { ...prev, [conversationId]: hit },
+				);
+				try {
+					const token = await getToken();
+					const r = await axios.get(
+						`${API_URL}/api/messages/${conversationId}?limit=50`,
+						{ headers: { Authorization: `Bearer ${token}` } },
+					);
+					setMessageCache((prev) => ({
+						...prev,
+						[conversationId]: mergeMessages(prev[conversationId] || [], r.data),
+					}));
+				} catch {
+					// Silent: the saved copy is already on screen.
+				}
+				return;
+			}
 		}
 
 		try {

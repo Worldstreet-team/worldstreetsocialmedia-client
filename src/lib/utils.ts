@@ -56,6 +56,15 @@ export const formatTimeAgo = (dateString: string) => {
 export const handleSignOut = async (
 	signOut: (callback?: () => void) => Promise<void>,
 ) => {
+	// 0. Chats saved on this device go before anything else, so a shared
+	// browser keeps nothing of the account that just left.
+	try {
+		const { wipeChatVault } = await import("@/lib/chat-vault");
+		await wipeChatVault();
+	} catch {
+		/* never block sign-out */
+	}
+
 	// 1. Clear Clerk session
 	await signOut();
 
