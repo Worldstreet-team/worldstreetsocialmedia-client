@@ -52,7 +52,7 @@ export function Attachment({
 	// is the message.
 	const bare = type === "image" && /\.gif(\?|$)/i.test(src);
 	const clock = durationSec
-		? `${Math.floor(durationSec / 60)}:${String(Math.round(durationSec % 60)).padStart(2, "0")}`
+		? `${Math.floor(durationSec / 60)}:${String(Math.floor(durationSec % 60)).padStart(2, "0")}`
 		: null;
 
 	return (

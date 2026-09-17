@@ -2,6 +2,7 @@
 
 import { UserBadges } from "@/components/ui/UserBadges";
 import { useBackWithFallback } from "@/lib/nav";
+import Image from "next/image";
 import Link from "next/link";
 
 import dynamic from "next/dynamic";
@@ -19,7 +20,6 @@ import {
 	Video,
 	Plus,
 	ArrowLeft,
-	MessageCircle,
 	Users,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -131,6 +131,7 @@ import { onlineIdsAtom } from "@/store/ui.atom";
 import { userAtom } from "@/store/user.atom";
 import { activeConversationIdAtom, messageCacheAtom, unreadMessagesCountAtom } from "@/store/messageCache";
 import NewConversationModal from "./NewConversationModal";
+import { MessagesFeatureTour } from "./MessagesFeatureTour";
 
 // Helper component for conditional channel subscription
 const UserMessageSubscription = ({
@@ -207,7 +208,7 @@ function quotedPreview(r: {
 		case "audio":
 			return r.durationSec
 				? `Voice note · ${Math.floor(r.durationSec / 60)}:${String(
-						Math.round(r.durationSec % 60),
+						Math.floor(r.durationSec % 60),
 					).padStart(2, "0")}`
 				: "Voice note";
 		case "payment":
@@ -3079,11 +3080,15 @@ export const MessageBox = ({
 						"hidden md:flex",
 					)}
 				>
-					<div className="max-w-md flex flex-col items-center text-center space-y-6">
-						<div className="flex h-16 w-16 items-center justify-center rounded-pill bg-raised">
-							<MessageCircle
-								className="h-[26px] w-[26px] text-muted"
-								strokeWidth={2}
+					<div className="flex max-w-sm flex-col items-center text-center">
+						<div className="relative h-52 w-52" aria-hidden="true">
+							<Image
+								src="/images/empty-states/chat-empty.webp"
+								alt=""
+								fill
+								sizes="208px"
+								className="object-contain"
+								priority
 							/>
 						</div>
 						<div className="space-y-2">
@@ -3097,7 +3102,7 @@ export const MessageBox = ({
 						<button
 							type="button"
 							onClick={() => setShowNewConversationModal(true)}
-							className="flex items-center gap-2 px-6 py-3 bg-brand text-brand-on font-semibold rounded-pill hover:bg-brand-active transition-colors cursor-pointer"
+							className="mt-6 flex h-10 cursor-pointer items-center gap-2 rounded-pill bg-brand px-5 font-semibold text-brand-on transition-colors hover:bg-brand-active"
 						>
 							<RiChatNewLine size={20} />
 							{t("messages.newChat")}
@@ -3473,6 +3478,7 @@ export const MessageBox = ({
 					router.push(`/messages/${conversationId}`);
 				}}
 			/>
+			<MessagesFeatureTour />
 		</div>
 	);
 };
@@ -3500,13 +3506,33 @@ function SuggestedPeople({
 		onLoad();
 		// biome-ignore lint/correctness/useExhaustiveDependencies: once
 	}, [myProfileId]);
-	const rows = (people ?? []).filter((u) => u && u._id !== myProfileId).slice(0, 12);
-	if (rows.length === 0) return null;
+	const rows = (people ?? [])
+		.filter((u) => u && u._id !== myProfileId)
+		.slice(0, 12);
 	return (
 		<div className="px-2 pb-3 animate-pop">
-			<p className="px-2 pb-1.5 pt-3 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
-				People you follow
-			</p>
+			<div className="flex flex-col items-center px-4 pb-3 pt-4 text-center">
+				<div className="relative h-24 w-full max-w-[220px]" aria-hidden="true">
+					<Image
+						src="/images/empty-states/start-chat.webp"
+						alt=""
+						fill
+						sizes="220px"
+						className="object-contain"
+					/>
+				</div>
+				<h2 className="mt-1 font-display text-base font-semibold text-primary">
+					Start a conversation
+				</h2>
+				<p className="mt-1 max-w-[30ch] font-sans text-[calc(12px*var(--ws-fs))] leading-relaxed text-muted">
+					Message someone you follow or find a new connection.
+				</p>
+			</div>
+			{rows.length > 0 && (
+				<p className="px-2 pb-1.5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
+					People you follow
+				</p>
+			)}
 			{rows.map((u) => (
 				<div key={u._id} className="flex items-center gap-3 rounded-xl px-2 py-2">
 					<span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-pill bg-raised">

@@ -202,6 +202,16 @@ export const VoiceMessage = ({
 	const durationRef = useRef(duration);
 	durationRef.current = duration;
 	const probedRef = useRef(false);
+	/** The length the head is measured against. The element's own number
+	 *  wins whenever the browser knows it; the recorder's count stands in
+	 *  only while it does not (a webm from MediaRecorder reports Infinity).
+	 *  Never shorter than where playback already is, so the head cannot
+	 *  pin at the end while the sound is still going. */
+	const lengthNow = useCallback((t: number) => {
+		const a = audioRef.current;
+		const real = a && Number.isFinite(a.duration) && a.duration > 0 ? a.duration : 0;
+		return Math.max(real || durationRef.current, t, 0.001);
+	}, []);
 	const paintProgress = useCallback((frac: number) => {
 		const el = playedRef.current;
 		if (!el) return;
@@ -280,8 +290,7 @@ export const VoiceMessage = ({
 		const audio = audioRef.current;
 		if (!audio) return;
 		const t = audio.currentTime;
-		const d = durationRef.current;
-		paintProgress(d > 0 ? t / d : 0);
+		paintProgress(t / lengthNow(t));
 		// Only a new whole second is worth a render.
 		setCurrentTime((prev) => (Math.floor(prev) === Math.floor(t) ? prev : t));
 		if (messageId && playbackState.id === messageId) {
@@ -294,7 +303,7 @@ export const VoiceMessage = ({
 			});
 		}
 		requestRef.current = requestAnimationFrame(animate);
-	}, [messageId, paintProgress]);
+	}, [messageId, paintProgress, lengthNow]);
 
 	useEffect(() => {
 		if (isPlaying) {
@@ -365,7 +374,7 @@ export const VoiceMessage = ({
 		const audio = audioRef.current;
 		if (audio) {
 			setCurrentTime(audio.currentTime);
-			paintProgress(durationRef.current > 0 ? audio.currentTime / durationRef.current : 0);
+			paintProgress(audio.currentTime / lengthNow(audio.currentTime));
 		}
 		if (messageId && playbackState.id === messageId)
 			publishPlayback({ playing: false });
@@ -428,7 +437,7 @@ export const VoiceMessage = ({
 		const rect = el.getBoundingClientRect();
 		if (rect.width === 0) return;
 		const frac = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
-		const time = frac * duration;
+		const time = frac * lengthNow(0);
 		audio.currentTime = time;
 		setCurrentTime(time);
 		paintProgress(frac);
@@ -452,7 +461,7 @@ export const VoiceMessage = ({
 	const handleRangeSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const audio = audioRef.current;
 		if (!audio || !duration) return;
-		const time = (Number(e.target.value) / 100) * duration;
+		const time = (Number(e.target.value) / 100) * lengthNow(0);
 		audio.currentTime = time;
 		setCurrentTime(time);
 		paintProgress(Number(e.target.value) / 100);
@@ -509,7 +518,11 @@ export const VoiceMessage = ({
 					onPointerMove={handlePointerMove}
 					onPointerUp={endDrag}
 					onPointerCancel={endDrag}
-					className="relative flex h-10 min-w-0 flex-1 cursor-pointer touch-none items-center gap-[2px] overflow-hidden"
+					// justify-between, not a fixed gap: the played layer is clipped by a
+					// percentage of THIS row, so the bars must span the row or the
+					// highlight runs ahead of the sound (owner 2026-09-17: 44 bars filled
+					// ~174px of a wider row).
+					className="relative flex h-10 min-w-0 flex-1 cursor-pointer touch-none items-center justify-between overflow-hidden"
 				>
 					{shownPeaks.map((peak, i) => (
 						<span
@@ -530,7 +543,7 @@ export const VoiceMessage = ({
 						<div
 							ref={playedRef}
 							aria-hidden
-							className="pointer-events-none absolute inset-0 flex items-center gap-[2px]"
+							className="pointer-events-none absolute inset-0 flex items-center justify-between"
 							style={{ clipPath: "inset(0 100% 0 0)" }}
 						>
 							{shownPeaks.map((peak, i) => (

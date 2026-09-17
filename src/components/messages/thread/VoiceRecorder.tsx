@@ -231,7 +231,10 @@ export function VoiceRecorder({
 					const blob = new Blob(chunksRef.current, {
 						type: mimeRef.current || "audio/webm",
 					});
-					const durationSec = Math.max(1, Math.round(elapsedMs() / 1000));
+					// Hundredths, not whole seconds: the player measures its head against
+					// this whenever the browser cannot read a webm's length, and a
+					// rounded second is a 17% error on a three-second note.
+					const durationSec = Math.max(0.3, Math.round(elapsedMs() / 10) / 100);
 					const peaks = toPeaks(levelsRef.current);
 					if (mode === "send") {
 						onSend(blob, {

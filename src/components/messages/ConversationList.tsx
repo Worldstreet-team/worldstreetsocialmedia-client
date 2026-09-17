@@ -379,7 +379,7 @@ export function ConversationList({
 										: kind
 											? conv.lastMessage?.type === "audio" &&
 												conv.lastMessage?.durationSec
-												? `${Math.floor(conv.lastMessage.durationSec / 60)}:${String(conv.lastMessage.durationSec % 60).padStart(2, "0")}`
+												? `${Math.floor(conv.lastMessage.durationSec / 60)}:${String(Math.floor(conv.lastMessage.durationSec % 60)).padStart(2, "0")}`
 												: t(kind.key)
 											: conv.lastMessage?.content ||
 												t("messages.noMessages")}

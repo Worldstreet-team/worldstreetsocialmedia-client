@@ -73,7 +73,7 @@ function quotedPreview(r: {
 		case "audio":
 			return r.durationSec
 				? `Voice note · ${Math.floor(r.durationSec / 60)}:${String(
-						Math.round(r.durationSec % 60),
+						Math.floor(r.durationSec % 60),
 					).padStart(2, "0")}`
 				: "Voice note";
 		case "payment":
