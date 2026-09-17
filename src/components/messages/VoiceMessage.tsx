@@ -79,12 +79,17 @@ export interface VoicePlaybackState {
 	playing: boolean;
 	time: number;
 	duration: number;
+	/** The exact fraction the bubble's track painted this frame, so the
+	 *  mini player above the composer draws the same head, not its own
+	 *  arithmetic over a different length. */
+	frac: number;
 }
 let playbackState: VoicePlaybackState = {
 	id: null,
 	playing: false,
 	time: 0,
 	duration: 0,
+	frac: 0,
 };
 const playbackListeners = new Set<(s: VoicePlaybackState) => void>();
 function publishPlayback(next: Partial<VoicePlaybackState>) {
@@ -202,6 +207,27 @@ export const VoiceMessage = ({
 	const durationRef = useRef(duration);
 	durationRef.current = duration;
 	const probedRef = useRef(false);
+	// The head's clock (owner 2026-09-17, "the progress isn't going properly
+	// though the audio is playing"). `audio.currentTime` is not a smooth
+	// signal on every engine: iOS Safari and some Android builds advance it
+	// in audio-buffer steps, so a head painted straight from it stutters
+	// while the sound is continuous. The head runs on performance.now()
+	// from an anchor instead, and only re-syncs to currentTime when the two
+	// disagree by more than a beat (a seek, a stall, a rate change). While
+	// the element is buffering it holds still rather than racing ahead.
+	const anchorRef = useRef<{ t: number; at: number }>({ t: 0, at: 0 });
+	// The last currentTime the engine reported, and when it changed. Between
+	// steps the sound is at `value + elapsed`, not at `value`.
+	const sampleRef = useRef<{ v: number; at: number }>({ v: 0, at: 0 });
+	const lastHeadRef = useRef(0);
+	const reanchor = useCallback(() => {
+		const a = audioRef.current;
+		const t = a?.currentTime ?? 0;
+		const at = performance.now();
+		anchorRef.current = { t, at };
+		sampleRef.current = { v: t, at };
+		lastHeadRef.current = t;
+	}, []);
 	/** The length the head is measured against. The element's own number
 	 *  wins whenever the browser knows it; the recorder's count stands in
 	 *  only while it does not (a webm from MediaRecorder reports Infinity).
@@ -289,18 +315,42 @@ export const VoiceMessage = ({
 	const animate = useCallback(() => {
 		const audio = audioRef.current;
 		if (!audio) return;
-		const t = audio.currentTime;
-		paintProgress(t / lengthNow(t));
+		const actual = audio.currentTime;
+		const now = performance.now();
+		const rate = audio.playbackRate || 1;
+		if (actual !== sampleRef.current.v) sampleRef.current = { v: actual, at: now };
+		let t = actual;
+		if (!audio.paused && audio.readyState >= 3) {
+			// Where the sound must be now: the last reported position plus the
+			// time since it was reported. Steering toward the stale value
+			// instead slid the head backwards 17 times in 6s when currentTime
+			// stepped every 250ms (harness, 2026-09-17).
+			const s = sampleRef.current;
+			const estimate = s.v + ((now - s.at) / 1000) * rate;
+			const a = anchorRef.current;
+			const predicted = a.t + ((now - a.at) / 1000) * rate;
+			if (Math.abs(predicted - estimate) > 0.35) {
+				// A seek or a stall the events missed: go where the sound is.
+				t = estimate;
+			} else {
+				// A fifth of the way toward the estimate each frame, and never
+				// backwards: smooth on stepping engines, cannot run ahead.
+				t = Math.max(lastHeadRef.current, predicted + (estimate - predicted) * 0.2);
+			}
+			anchorRef.current = { t, at: now };
+		} else {
+			// Buffering or paused: hold where the sound is.
+			anchorRef.current = { t: actual, at: now };
+			sampleRef.current = { v: actual, at: now };
+		}
+		lastHeadRef.current = t;
+		const len = lengthNow(t);
+		const frac = Math.min(1, t / len);
+		paintProgress(frac);
 		// Only a new whole second is worth a render.
 		setCurrentTime((prev) => (Math.floor(prev) === Math.floor(t) ? prev : t));
 		if (messageId && playbackState.id === messageId) {
-			publishPlayback({
-				time: audio.currentTime,
-				duration:
-					Number.isFinite(audio.duration) && audio.duration > 0
-						? audio.duration
-						: playbackState.duration,
-			});
+			publishPlayback({ time: t, duration: len, frac });
 		}
 		requestRef.current = requestAnimationFrame(animate);
 	}, [messageId, paintProgress, lengthNow]);
@@ -352,14 +402,17 @@ export const VoiceMessage = ({
 		setRate(next);
 		const audio = audioRef.current;
 		if (audio) audio.playbackRate = next;
+		reanchor();
 	};
 
 	const handlePlay = () => {
+		reanchor();
 		setIsPlaying(true);
 		if (messageId)
 			publishPlayback({
 				id: messageId,
 				playing: true,
+				frac: playbackState.id === messageId ? playbackState.frac : 0,
 				time: audioRef.current?.currentTime ?? 0,
 				duration:
 					duration ||
@@ -382,10 +435,11 @@ export const VoiceMessage = ({
 
 	const handleEnded = () => {
 		if (audioRef.current) audioRef.current.currentTime = 0;
+		lastHeadRef.current = 0;
 		setCurrentTime(0);
 		paintProgress(0);
 		if (messageId && playbackState.id === messageId)
-			publishPlayback({ playing: false, time: 0 });
+			publishPlayback({ playing: false, time: 0, frac: 0 });
 		// Consecutive notes play through as a run (register 87).
 		if (chainOn && autoplayNextId) playRegistry.get(autoplayNextId)?.();
 	};
@@ -439,6 +493,9 @@ export const VoiceMessage = ({
 		const frac = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
 		const time = frac * lengthNow(0);
 		audio.currentTime = time;
+		anchorRef.current = { t: time, at: performance.now() };
+		sampleRef.current = { v: time, at: performance.now() };
+		lastHeadRef.current = time;
 		setCurrentTime(time);
 		paintProgress(frac);
 	};
@@ -463,6 +520,9 @@ export const VoiceMessage = ({
 		if (!audio || !duration) return;
 		const time = (Number(e.target.value) / 100) * lengthNow(0);
 		audio.currentTime = time;
+		anchorRef.current = { t: time, at: performance.now() };
+		sampleRef.current = { v: time, at: performance.now() };
+		lastHeadRef.current = time;
 		setCurrentTime(time);
 		paintProgress(Number(e.target.value) / 100);
 	};
@@ -595,6 +655,9 @@ export const VoiceMessage = ({
 				onLoadedMetadata={handleLoadedMetadata}
 				onDurationChange={handleDurationChange}
 				onPlay={handlePlay}
+				onPlaying={reanchor}
+				onSeeked={reanchor}
+				onRateChange={reanchor}
 				onPause={handlePause}
 				onEnded={handleEnded}
 				className="hidden"

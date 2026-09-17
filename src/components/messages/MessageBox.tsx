@@ -847,7 +847,6 @@ export const MessageBox = ({
 	);
 	// Mini player (register 88): what the voice store says is playing.
 	const [voiceBar, setVoiceBar] = useState<VoicePlaybackState | null>(null);
-	const voiceBarThrottleRef = useRef(0);
 
 	const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
 	const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
@@ -888,23 +887,25 @@ export const MessageBox = ({
 		});
 	};
 
-	// The playback store publishes per frame while a note plays; the mini
-	// player only needs id/playing edges immediately and time twice a second.
+	// The playback store publishes per frame while a note plays. The mini
+	// player's bar is painted straight from that, by ref, with the fraction
+	// the bubble's own track painted, so the two heads move as one and
+	// smoothly (owner 2026-09-17: it stepped twice a second, measured
+	// against a different length). React state only changes on id/playing
+	// edges and when the whole second on the clock changes.
+	const voiceBarFillRef = useRef<HTMLSpanElement | null>(null);
 	useEffect(
 		() =>
 			subscribeVoicePlayback((st) => {
-				const now = Date.now();
-				setVoiceBar((prev) => {
-					if (
-						prev?.id !== st.id ||
-						prev?.playing !== st.playing ||
-						now - voiceBarThrottleRef.current > 500
-					) {
-						voiceBarThrottleRef.current = now;
-						return { ...st };
-					}
-					return prev;
-				});
+				const fill = voiceBarFillRef.current;
+				if (fill) fill.style.transform = `scaleX(${Math.min(1, Math.max(0, st.frac))})`;
+				setVoiceBar((prev) =>
+					prev?.id !== st.id ||
+					prev?.playing !== st.playing ||
+					Math.floor(prev?.time ?? -1) !== Math.floor(st.time)
+						? { ...st }
+						: prev,
+				);
 			}),
 		[],
 	);
@@ -2837,10 +2838,11 @@ export const MessageBox = ({
 									</span>
 									<span className="mt-1 block h-[3px] w-full overflow-hidden rounded-pill bg-chip">
 										<span
-											className="block h-full rounded-pill bg-brand"
-											style={{
-												width: `${voiceBar.duration > 0 ? Math.min(100, (voiceBar.time / voiceBar.duration) * 100) : 0}%`,
-											}}
+											ref={voiceBarFillRef}
+											className="block h-full w-full origin-left rounded-pill bg-brand"
+											// Initial value only; the subscription above paints it
+											// every frame. A constant, so React never overwrites it.
+											style={{ transform: "scaleX(0)" }}
 										/>
 									</span>
 								</button>
