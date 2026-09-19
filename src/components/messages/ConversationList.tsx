@@ -104,6 +104,12 @@ const KIND: Record<string, { glyph: any; key: string }> = {
  * inbox's sections (stories, Online now, Chats) without drawing a line
  * across the column. One component so every divider is the same size.
  */
+/** A block's title: the same display face, size and padding the inbox's own
+ *  "Messages" title uses, so every block on the column reads as a header
+ *  rather than a label (owner 2026-09-19). */
+const sectionTitle =
+	"mb-3 px-4 font-display text-[calc(20px*var(--ws-fs))] font-semibold leading-6 tracking-[-0.01em] text-primary";
+
 export function InboxThumb() {
 	return (
 		<div aria-hidden className="flex justify-center pb-1 pt-2">
@@ -123,6 +129,7 @@ export function ConversationList({
 	people,
 	onOpenPerson,
 	heading,
+	filter,
 }: {
 	conversations: ConversationRow[];
 	loading: boolean;
@@ -139,6 +146,9 @@ export function ConversationList({
 	onOpenPerson?: (u: ConversationRowUser) => void;
 	/** Names the list of rows ("Chats"), styled like "Online now". */
 	heading?: string;
+	/** The Primary / Requests pills, rendered inside the chats block under
+	 *  its title (owner 2026-09-19) rather than as a block of their own. */
+	filter?: React.ReactNode;
 }) {
 	const t = useT();
 	const online = useAtomValue(onlineIdsAtom);
@@ -239,10 +249,8 @@ export function ConversationList({
 	return (
 		<div className="flex flex-col px-2">
 			{onlineNow.length > 0 && (
-				<section aria-label={t("messages.onlineNow")} className="mb-2 rounded-2xl px-1 pb-2 pt-3 md:bg-sunken">
-					<p className="mb-1.5 px-1 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
-						{t("messages.onlineNow")}
-					</p>
+				<section aria-label={t("messages.onlineNow")} className="mb-2 rounded-2xl px-1 pb-3 pt-4 md:bg-sunken">
+					<h2 className={sectionTitle}>{t("messages.onlineNow")}</h2>
 					<div className="flex gap-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 						{onlineNow.map(({ key, user: peer, conv }) => {
 							const first = (peer.firstName || peer.username || "").split(" ")[0];
@@ -272,11 +280,12 @@ export function ConversationList({
 				</section>
 			)}
 			{onlineNow.length > 0 && rows.length > 0 && <InboxThumb />}
-			<div className="flex flex-col rounded-2xl pb-2 md:bg-sunken">
+			<div className="flex flex-col rounded-2xl pb-2 pt-4 md:bg-sunken">
 			{heading && rows.length > 0 && !query.trim() && (
-				<p className="mb-1.5 mt-1 px-2 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
-					{heading}
-				</p>
+				<h2 className={sectionTitle}>{heading}</h2>
+			)}
+			{filter && rows.length > 0 && !query.trim() && (
+				<div className="mb-1 px-1">{filter}</div>
 			)}
 			{rows.map((conv) => {
 				const identity = conversationIdentity(conv);

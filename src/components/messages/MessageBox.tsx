@@ -2483,22 +2483,6 @@ export const MessageBox = ({
 					    messages, never on the nav. The tab shows even when
 					    empty so the place a stranger's opener waits is
 					    discoverable before one ever arrives. */}
-					<Tabs
-						ariaLabel="Inbox sections"
-						value={showRequests ? "requests" : "primary"}
-						onChange={(k) => setShowRequests(k === "requests")}
-						items={[
-							{ key: "primary", label: "Primary" },
-							{
-								key: "requests",
-								label: "Requests",
-								Icon: Tray,
-								badge: requestConversations.length,
-							},
-						]}
-						className="px-4 py-2 md:mt-0 md:rounded-2xl md:bg-sunken"
-					/>
-					<InboxThumb />
 					{conversations.length === 0 && !isLoadingConversations && (
 						<SuggestedPeople
 							myProfileId={myProfileId ?? ""}
@@ -2526,6 +2510,23 @@ export const MessageBox = ({
 						/>
 					)}
 					<ConversationList
+						filter={
+							<Tabs
+								ariaLabel="Inbox sections"
+								value={showRequests ? "requests" : "primary"}
+								onChange={(k) => setShowRequests(k === "requests")}
+								items={[
+									{ key: "primary", label: "Primary" },
+									{
+										key: "requests",
+										label: "Requests",
+										Icon: Tray,
+										badge: requestConversations.length,
+									},
+								]}
+								className="px-3"
+							/>
+						}
 						heading={showRequests ? undefined : t("messages.chats")}
 						people={showRequests ? undefined : (people ?? undefined)}
 						onOpenPerson={(u) => void openPerson(u._id)}
