@@ -507,7 +507,20 @@ export default function proxy(req: NextRequest, evt: NextFetchEvent) {
 		}
 		const marker = new URL(req.nextUrl.href);
 		marker.searchParams.set(HS_MARK, "1");
-		return NextResponse.redirect(marker, 307);
+		const res = NextResponse.redirect(marker, 307);
+		// The probe. Without it a first-time visitor whose browser keeps
+		// cookies perfectly well ALSO arrives at the marked URL with none,
+		// because nothing has set one yet, and was shown the cookies-off page
+		// (shipped 19:47 on 2026-09-19, caught by the post-deploy trace and
+		// fixed the same hour). With it, "marker and still no cookies" means
+		// exactly what the page says.
+		res.cookies.set("ws_ck", "1", {
+			path: "/",
+			maxAge: 600,
+			sameSite: "lax",
+			secure: true,
+		});
+		return res;
 	}
 	return withClerk(req, evt);
 }
