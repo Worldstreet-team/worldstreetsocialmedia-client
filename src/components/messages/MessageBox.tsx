@@ -93,6 +93,7 @@ import { conversationIdentity } from "@/lib/conversation-identity";
 import { compressImage } from "@/lib/image-compress";
 import { postJsonDirect, sendFormProgress } from "@/lib/upload-direct";
 import { loadThreads, saveThread } from "@/lib/chat-vault";
+import { ThreadRail } from "@/components/messages/ThreadRail";
 import {
 	VoiceRecorder,
 	type RecorderStart,
@@ -3223,6 +3224,30 @@ export const MessageBox = ({
 				</div>
 			)}
 			</AnimatePresence>
+
+			{/* The third column, xl and up (owner 2026-09-19): who this thread
+			    is with and what you have shared, or the people rail when no
+			    thread is open. It reads what is already in memory. */}
+			<ThreadRail
+				conversation={(activeConversation as any) ?? null}
+				media={allMedia}
+				people={people ?? []}
+				onOpenMedia={handleMediaClick}
+				onOpenPerson={(id) => void openPerson(id)}
+				onCall={(kind) => {
+					if (!activeConversation) return;
+					startCall({
+						conversationId: activeConversation._id,
+						peer: {
+							id: activeConversation._id,
+							name: headerIdentity.title,
+							avatar: headerIdentity.avatar,
+							username: "",
+						},
+						isVideo: kind === "video",
+					});
+				}}
+			/>
 
 			{/* The send flight (owner pick): text lifts from the field, rounds
 			    into a bubble and lands where the optimistic bubble appears. */}
