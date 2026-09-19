@@ -93,7 +93,6 @@ import { conversationIdentity } from "@/lib/conversation-identity";
 import { compressImage } from "@/lib/image-compress";
 import { postJsonDirect, sendFormProgress } from "@/lib/upload-direct";
 import { loadThreads, saveThread } from "@/lib/chat-vault";
-import { ThreadRail } from "@/components/messages/ThreadRail";
 import {
 	VoiceRecorder,
 	type RecorderStart,
@@ -2394,10 +2393,15 @@ export const MessageBox = ({
 			    open/close is static (owner 2026-09-06) — no parallax slide. */}
 			<div
 				className={clsx(
-					"relative z-10 flex w-full shrink-0 min-w-0 flex-col md:w-[360px]",
+					// The column keeps the grid border that divides it from the
+					// chat; the CARD lives inside it (owner 2026-09-19).
+					"relative z-10 flex w-full shrink-0 min-w-0 flex-col md:w-[372px] md:p-3",
 					sectionHasPicture && "bg-page/70",
 				)}
 			>
+				{/* The long card: one rounded surface holding the whole inbox,
+				    header to last row, inset from the column's edges. */}
+				<div className="flex min-h-0 flex-1 flex-col md:overflow-hidden md:rounded-2xl md:bg-sunken">
 				<div className="px-4 pb-1 pt-4">
 					<div className="mb-3 flex items-center gap-2">
 						{/* Phones only. On desktop the inbox sits inside the app
@@ -2559,6 +2563,7 @@ export const MessageBox = ({
 						}}
 					/>
 				</div>
+				</div>
 			</div>
 
 			{/* Chat Area. Open and close are STATIC (owner 2026-09-06): the
@@ -2573,8 +2578,12 @@ export const MessageBox = ({
 					key={activeConversation._id}
 					{...threadSlide}
 					style={themeVars(chatTheme)}
-					className="absolute inset-0 z-10 flex min-w-0 flex-col bg-page md:relative md:inset-auto md:z-auto md:flex-1 md:border-l md:border-hairline"
+					className="absolute inset-0 z-10 flex min-w-0 flex-col bg-page md:relative md:inset-auto md:z-auto md:flex-1 md:border-l md:border-hairline md:p-3"
 				>
+					{/* The long card, same architecture as the inbox: everything
+					    from the header to the composer rides inside one rounded
+					    surface, inset from the column's edges. */}
+					<div className="relative flex min-h-0 flex-1 flex-col md:overflow-hidden md:rounded-2xl md:bg-sunken">
 					{/* This chat's picture (per-chat theme, else the profile's).
 					    Only the message list floats on it: the header and the
 					    composer keep a band of the page colour, or the chrome
@@ -3184,15 +3193,17 @@ export const MessageBox = ({
 						</div>
 						)}
 					</div>
+					</div>
 				</motion.div>
 			) : (
 				<div
 					key="empty"
 					className={clsx(
-						"flex-1 flex flex-col items-center justify-center text-muted p-8",
-						"hidden md:flex",
+						"flex-1 flex-col text-muted",
+						"hidden md:flex md:border-l md:border-hairline md:p-3",
 					)}
 				>
+					<div className="flex min-h-0 flex-1 flex-col items-center justify-center rounded-2xl bg-sunken p-8">
 					<div className="flex max-w-sm flex-col items-center text-center">
 						<div className="relative h-52 w-52" aria-hidden="true">
 							<Image
@@ -3221,33 +3232,10 @@ export const MessageBox = ({
 							{t("messages.newChat")}
 						</button>
 					</div>
+					</div>
 				</div>
 			)}
 			</AnimatePresence>
-
-			{/* The third column, xl and up (owner 2026-09-19): who this thread
-			    is with and what you have shared, or the people rail when no
-			    thread is open. It reads what is already in memory. */}
-			<ThreadRail
-				conversation={(activeConversation as any) ?? null}
-				media={allMedia}
-				people={people ?? []}
-				onOpenMedia={handleMediaClick}
-				onOpenPerson={(id) => void openPerson(id)}
-				onCall={(kind) => {
-					if (!activeConversation) return;
-					startCall({
-						conversationId: activeConversation._id,
-						peer: {
-							id: activeConversation._id,
-							name: headerIdentity.title,
-							avatar: headerIdentity.avatar,
-							username: "",
-						},
-						isVideo: kind === "video",
-					});
-				}}
-			/>
 
 			{/* The send flight (owner pick): text lifts from the field, rounds
 			    into a bubble and lands where the optimistic bubble appears. */}
