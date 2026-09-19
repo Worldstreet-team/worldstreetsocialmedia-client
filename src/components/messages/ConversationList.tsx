@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useAtomValue } from "jotai";
 import {
 	RiImageFill,
@@ -18,6 +18,7 @@ import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { useT } from "@/i18n/client";
 import { formatTimeAgo } from "@/lib/utils";
+import { useGatewayRead } from "@/hooks/useGateway";
 import {
 	conversationIdentity,
 	displayNameOf,
@@ -171,30 +172,6 @@ export function ConversationList({
 		return seen;
 	}, [rows]);
 
-	if (loading) {
-		return (
-			<div className="flex flex-col">
-				{[0, 1, 2, 3, 4].map((i) => (
-					<div key={i} className="flex items-center gap-3 px-4 py-1.5">
-						<span className="skeleton h-[52px] w-[52px] shrink-0 rounded-pill" />
-						<span className="flex min-w-0 flex-1 flex-col gap-2">
-							<span className="skeleton h-[18px] w-1/3 rounded-[4px]" />
-							<span className="skeleton h-[15px] w-2/3 rounded-[4px]" />
-						</span>
-					</div>
-				))}
-			</div>
-		);
-	}
-
-	if (rows.length === 0) {
-		return (
-			<p className="px-6 py-10 text-center font-sans text-[calc(15px*var(--ws-fs))] text-subtle">
-				{query.trim() ? t("messages.noMatches") : t("messages.empty")}
-			</p>
-		);
-	}
-
 	// Who is online right now (owner 2026-09-15): your Allies and the people
 	// you are Aligned to, plus anyone you already have a thread with, against
 	// the global presence set. A thread wins when both exist, so a tap opens
@@ -216,6 +193,48 @@ export function ConversationList({
 		}
 		return [...out.values()];
 	}, [conversations, people, online, query, myProfileId]);
+
+	// Every hook lives ABOVE the early returns below. `onlineNow` used to sit
+	// under them, so the first search with no match rendered fewer hooks than
+	// the render before it and took the whole Messages page down (found
+	// 2026-09-19, shipped 09-15).
+	if (loading) {
+		return (
+			<div className="flex flex-col">
+				{[0, 1, 2, 3, 4].map((i) => (
+					<div key={i} className="flex items-center gap-3 px-4 py-1.5">
+						<span className="skeleton h-[52px] w-[52px] shrink-0 rounded-pill" />
+						<span className="flex min-w-0 flex-1 flex-col gap-2">
+							<span className="skeleton h-[18px] w-1/3 rounded-[4px]" />
+							<span className="skeleton h-[15px] w-2/3 rounded-[4px]" />
+						</span>
+					</div>
+				))}
+			</div>
+		);
+	}
+
+	// A search that finds no conversation is not a dead end (owner
+	// 2026-09-19): offer the people it could mean, and failing that the
+	// people you already know, each one tap from a chat.
+	if (rows.length === 0 && query.trim() && onOpenPerson) {
+		return (
+			<PeopleToChat
+				query={query}
+				suggested={people ?? []}
+				myProfileId={myProfileId}
+				onOpenPerson={onOpenPerson}
+			/>
+		);
+	}
+
+	if (rows.length === 0) {
+		return (
+			<p className="px-6 py-10 text-center font-sans text-[calc(15px*var(--ws-fs))] text-subtle">
+				{query.trim() ? t("messages.noMatches") : t("messages.empty")}
+			</p>
+		);
+	}
 
 	return (
 		<div className="flex flex-col px-2">
@@ -406,6 +425,116 @@ export function ConversationList({
 					</SwipeRow>
 				);
 			})}
+		</div>
+	);
+}
+
+/** People to start a chat with, shown when a search matches no thread. */
+function PeopleToChat({
+	query,
+	suggested,
+	myProfileId,
+	onOpenPerson,
+}: {
+	query: string;
+	suggested: ConversationRowUser[];
+	myProfileId?: string | null;
+	onOpenPerson: (u: ConversationRowUser) => void;
+}) {
+	const t = useT();
+	const read = useGatewayRead();
+	const [found, setFound] = useState<ConversationRowUser[] | null>(null);
+
+	useEffect(() => {
+		const term = query.trim();
+		if (term.length < 2) {
+			setFound([]);
+			return;
+		}
+		setFound(null);
+		let alive = true;
+		const id = window.setTimeout(async () => {
+			const res = await read(
+				`/api/users/search?q=${encodeURIComponent(term)}`,
+				(b) => b.data,
+			);
+			if (!alive) return;
+			setFound(
+				res.success && Array.isArray(res.data)
+					? (res.data as ConversationRowUser[]).filter((u) => u._id !== myProfileId)
+					: [],
+			);
+		}, 300);
+		return () => {
+			alive = false;
+			window.clearTimeout(id);
+		};
+	}, [query, read, myProfileId]);
+
+	const searching = found === null;
+	const list = found?.length ? found.slice(0, 8) : suggested.filter((u) => u._id !== myProfileId).slice(0, 6);
+	const label = found?.length ? t("messages.people") : t("messages.suggested");
+
+	return (
+		<div className="flex flex-col px-2 pb-4">
+			<p className="px-2 pb-3 pt-6 text-center font-sans text-[calc(13px*var(--ws-fs))] text-subtle">
+				{t("messages.noMatches")}
+			</p>
+			{searching ? (
+				<div className="flex flex-col">
+					{[0, 1, 2].map((i) => (
+						<div key={i} className="flex items-center gap-3 px-3 py-2">
+							<span className="skeleton h-12 w-12 shrink-0 rounded-pill" />
+							<span className="skeleton h-[14px] w-1/2 rounded-[4px]" />
+						</div>
+					))}
+				</div>
+			) : (
+				list.length > 0 && (
+					<>
+						<p className="mb-1.5 px-2 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
+							{label}
+						</p>
+						{list.map((u) => {
+							const real = [u.firstName, u.lastName].filter(Boolean).join(" ");
+							const name = real || (u.username ? `@${u.username}` : "");
+							return (
+								<button
+									key={u._id}
+									type="button"
+									onClick={() => onOpenPerson(u)}
+									className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors hover:bg-primary/5"
+								>
+									<span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-pill bg-raised">
+										<SafeAvatar src={u.avatar} />
+									</span>
+									<span className="min-w-0 flex-1">
+										<span className="flex items-center gap-1.5">
+											<span className="truncate font-sans text-[calc(15px*var(--ws-fs))] font-medium text-primary">
+												{name}
+											</span>
+											<UserBadges
+												isVerified={u.isVerified}
+												verification={u.verification}
+												badges={u.badges}
+												size={15}
+											/>
+										</span>
+										{real && u.username && (
+											<span className="block truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
+												@{u.username}
+											</span>
+										)}
+									</span>
+									<span className="shrink-0 rounded-pill bg-primary/10 px-3 py-1.5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
+										{t("messages.message")}
+									</span>
+								</button>
+							);
+						})}
+					</>
+				)
+			)}
 		</div>
 	);
 }

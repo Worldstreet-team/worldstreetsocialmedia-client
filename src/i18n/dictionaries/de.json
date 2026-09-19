@@ -752,6 +752,9 @@
   "messages.kind.payment": "Zahlung",
   "messages.kind.contact": "Contact",
   "messages.onlineNow": "Online now",
+  "messages.people": "Personen",
+  "messages.suggested": "Vorschläge",
+  "messages.message": "Nachricht",
   "messages.chats": "Chats",
   "profile.alignedTo": "Ausgerichtet auf"
 }

@@ -855,6 +855,9 @@
   "messages.kind.payment": "Payment",
   "messages.kind.contact": "Contact",
   "messages.onlineNow": "Online now",
+  "messages.people": "People",
+  "messages.suggested": "Suggested",
+  "messages.message": "Message",
   "messages.chats": "Chats",
   "profile.alignedTo": "Aligned to"
 }
