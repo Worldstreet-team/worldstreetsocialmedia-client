@@ -239,7 +239,7 @@ export function ConversationList({
 	return (
 		<div className="flex flex-col px-2">
 			{onlineNow.length > 0 && (
-				<section aria-label={t("messages.onlineNow")} className="mb-2 px-1 pt-3">
+				<section aria-label={t("messages.onlineNow")} className="mb-2 rounded-2xl px-1 pb-2 pt-3 md:bg-brand/[0.06]">
 					<p className="mb-1.5 px-1 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
 						{t("messages.onlineNow")}
 					</p>
@@ -272,6 +272,7 @@ export function ConversationList({
 				</section>
 			)}
 			{onlineNow.length > 0 && rows.length > 0 && <InboxThumb />}
+			<div className="flex flex-col rounded-2xl pb-2 md:bg-brand/[0.06]">
 			{heading && rows.length > 0 && !query.trim() && (
 				<p className="mb-1.5 mt-1 px-2 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
 					{heading}
@@ -425,6 +426,7 @@ export function ConversationList({
 					</SwipeRow>
 				);
 			})}
+			</div>
 		</div>
 	);
 }

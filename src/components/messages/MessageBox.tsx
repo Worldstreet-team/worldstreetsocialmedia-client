@@ -2399,10 +2399,12 @@ export const MessageBox = ({
 					sectionHasPicture && "bg-page/70",
 				)}
 			>
-				{/* The long card: one rounded surface holding the whole inbox,
-				    header to last row, inset from the column's edges. */}
-				<div className="flex min-h-0 flex-1 flex-col md:overflow-hidden md:rounded-2xl md:bg-sunken">
-				<div className="px-4 pb-1 pt-4">
+				{/* The inbox reads as a stack of blocks (owner 2026-09-19):
+				    messages-and-story, the filter, Online now and the chats
+				    each carry their own ground, a light cyan layer over the
+				    page, with a thumb between them. */}
+				<div className="flex min-h-0 flex-1 flex-col md:overflow-hidden">
+				<div className="px-4 pb-1 pt-4 md:rounded-2xl md:bg-brand/[0.06] md:pb-3 md:[&:has(+*>.ws-inbox-story)]:rounded-b-none">
 					<div className="mb-3 flex items-center gap-2">
 						{/* Phones only. On desktop the inbox sits inside the app
 						    shell with the rail right there; on a phone it fills
@@ -2471,11 +2473,11 @@ export const MessageBox = ({
 					{/* Stories of the people you're aligned with — messaging is
 					    where you already are when you want to reply to one. */}
 					{prefs.messaging.inboxStories && (
-						<div className="px-1 pt-1">
+						<div className="ws-inbox-story px-1 pt-1 md:rounded-2xl md:rounded-t-none md:bg-brand/[0.06] md:px-1 md:pb-1">
 							<StoriesRail compact="thumbs" />
-							<InboxThumb />
 						</div>
 					)}
+					<InboxThumb />
 					{/* Primary / Requests as pill tabs (the one tab grammar).
 					    Requests stay quiet — the badge lives HERE, inside
 					    messages, never on the nav. The tab shows even when
@@ -2494,8 +2496,9 @@ export const MessageBox = ({
 								badge: requestConversations.length,
 							},
 						]}
-						className="px-4"
+						className="px-4 py-2 md:mt-0 md:rounded-2xl md:bg-brand/[0.06]"
 					/>
+					<InboxThumb />
 					{conversations.length === 0 && !isLoadingConversations && (
 						<SuggestedPeople
 							myProfileId={myProfileId ?? ""}
