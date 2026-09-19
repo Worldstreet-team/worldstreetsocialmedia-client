@@ -868,5 +868,9 @@
   "messages.suggested": "Suggested",
   "messages.message": "Message",
   "messages.chats": "Chats",
+  "messages.archived": "Archived",
+  "messages.archive": "Archive",
+  "messages.unarchive": "Unarchive",
+  "messages.requests": "Requests",
   "profile.alignedTo": "Aligned to"
 }

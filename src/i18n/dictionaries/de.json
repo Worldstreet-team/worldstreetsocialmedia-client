@@ -765,5 +765,9 @@
   "messages.suggested": "Vorschläge",
   "messages.message": "Nachricht",
   "messages.chats": "Chats",
+  "messages.archived": "Archiviert",
+  "messages.archive": "Archivieren",
+  "messages.unarchive": "Dearchivieren",
+  "messages.requests": "Anfragen",
   "profile.alignedTo": "Ausgerichtet auf"
 }

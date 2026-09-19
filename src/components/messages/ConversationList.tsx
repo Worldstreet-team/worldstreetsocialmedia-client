@@ -62,6 +62,8 @@ export interface ConversationRow {
 	unreadCount: number;
 	/** Waiting on the Requests shelf — quiet until accepted. */
 	isRequestForMe?: boolean;
+	/** On my Archived shelf (per member, from the gateway). */
+	archived?: boolean;
 }
 
 /**
@@ -126,6 +128,7 @@ export function ConversationList({
 	myProfileId,
 	onOpen,
 	onDelete,
+	onArchive,
 	people,
 	onOpenPerson,
 	heading,
@@ -139,6 +142,8 @@ export function ConversationList({
 	onOpen: (conv: ConversationRow) => void;
 	/** Swipe a row left (touch) to reveal it, or use the requests chips. */
 	onDelete?: (conv: ConversationRow) => void;
+	/** Archive from the inbox, unarchive from the shelf (owner 2026-09-19). */
+	onArchive?: (conv: ConversationRow) => void;
 	/** Everyone who may appear in the online rail beyond your threads: your
 	 *  Allies and the people you are Aligned to. */
 	people?: ConversationRowUser[];
@@ -239,10 +244,23 @@ export function ConversationList({
 	}
 
 	if (rows.length === 0) {
+		// The shelf keeps its header and its pills even with nothing on it:
+		// an empty Requests or Archived view used to render the line alone,
+		// and there was no way back to Primary (owner 2026-09-19).
 		return (
-			<p className="px-6 py-10 text-center font-sans text-[calc(15px*var(--ws-fs))] text-subtle">
-				{query.trim() ? t("messages.noMatches") : t("messages.empty")}
-			</p>
+			<div className="flex flex-col px-2">
+				<div className="flex flex-col rounded-2xl pb-6 pt-4 md:bg-sunken">
+					{heading && !query.trim() && (
+						<h2 className={sectionTitle}>{heading}</h2>
+					)}
+					{filter && !query.trim() && (
+						<div className="mb-1 px-1">{filter}</div>
+					)}
+					<p className="px-6 py-8 text-center font-sans text-[calc(15px*var(--ws-fs))] text-subtle">
+						{query.trim() ? t("messages.noMatches") : t("messages.empty")}
+					</p>
+				</div>
+			</div>
 		);
 	}
 
@@ -281,12 +299,10 @@ export function ConversationList({
 			)}
 			{onlineNow.length > 0 && rows.length > 0 && <InboxThumb />}
 			<div className="flex flex-col rounded-2xl pb-2 pt-4 md:bg-sunken">
-			{heading && rows.length > 0 && !query.trim() && (
-				<h2 className={sectionTitle}>{heading}</h2>
-			)}
-			{filter && rows.length > 0 && !query.trim() && (
-				<div className="mb-1 px-1">{filter}</div>
-			)}
+			{heading && !query.trim() && <h2 className={sectionTitle}>{heading}</h2>}
+			{/* Always, in every view: the pills are the only way back from
+			    Requests or the Archived shelf. */}
+			{filter && !query.trim() && <div className="mb-1 px-1">{filter}</div>}
 			{rows.map((conv) => {
 				const identity = conversationIdentity(conv);
 				const isGroup = identity.kind === "group";
@@ -307,6 +323,10 @@ export function ConversationList({
 					<SwipeRow
 						key={conv._id}
 						onDelete={onDelete ? () => onDelete(conv) : undefined}
+						onArchive={onArchive ? () => onArchive(conv) : undefined}
+						archiveLabel={
+							conv.archived ? t("messages.unarchive") : t("messages.archive")
+						}
 					>
 					<button
 						type="button"
@@ -559,37 +579,71 @@ function PeopleToChat({
 function SwipeRow({
 	children,
 	onDelete,
+	onArchive,
+	archiveLabel,
 }: {
 	children: React.ReactNode;
 	onDelete?: () => void;
+	/** Archive, or unarchive when the row is already on the shelf. */
+	onArchive?: () => void;
+	archiveLabel?: string;
 }) {
 	const [dx, setDx] = useState(0);
 	const startX = useRef<number | null>(null);
 	const startY = useRef<number | null>(null);
+	const committed = useRef(false);
 
-	if (!onDelete) return <>{children}</>;
+	if (!onDelete && !onArchive) return <>{children}</>;
+
+	// The iOS shape (owner 2026-09-19): the actions sit under the row and are
+	// uncovered as it slides; a short pull parks the row open so either can be
+	// tapped, a long pull commits the nearest one outright.
+	const actions = [
+		onArchive && {
+			key: "archive",
+			label: archiveLabel ?? "Archive",
+			cls: "bg-raised text-primary",
+			run: onArchive,
+		},
+		onDelete && { key: "delete", label: "Delete", cls: "bg-danger text-white", run: onDelete },
+	].filter(Boolean) as { key: string; label: string; cls: string; run: () => void }[];
+	const OPEN = actions.length * 88;
+	const COMMIT = OPEN + 56;
+
+	const close = () => setDx(0);
 
 	return (
 		<div className="relative overflow-hidden rounded-xl">
-			<div
-				aria-hidden
-				className={clsx(
-					"absolute inset-y-0 right-0 flex w-24 items-center justify-center bg-danger transition-opacity",
-					dx < -10 ? "opacity-100" : "opacity-0",
-				)}
-			>
-				<span className="font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-white">
-					Delete
-				</span>
+			<div aria-hidden className="absolute inset-y-0 right-0 flex">
+				{actions.map((a) => (
+					<button
+						key={a.key}
+						type="button"
+						tabIndex={-1}
+						onClick={() => {
+							close();
+							a.run();
+						}}
+						className={clsx(
+							"flex w-[88px] cursor-pointer items-center justify-center font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold transition-opacity",
+							a.cls,
+							dx < -10 ? "opacity-100" : "opacity-0",
+						)}
+					>
+						{a.label}
+					</button>
+				))}
 			</div>
 			<div
 				style={{
 					transform: `translateX(${dx}px)`,
-					transition: startX.current === null ? "transform 200ms var(--ws-ease)" : "none",
+					transition:
+						startX.current === null ? "transform 200ms var(--ws-ease)" : "none",
 				}}
 				onTouchStart={(e) => {
-					startX.current = e.touches[0].clientX;
+					startX.current = e.touches[0].clientX - dx;
 					startY.current = e.touches[0].clientY;
+					committed.current = false;
 				}}
 				onTouchMove={(e) => {
 					if (startX.current === null) return;
@@ -602,13 +656,20 @@ function SwipeRow({
 						setDx(0);
 						return;
 					}
-					if (ddx < 0) setDx(Math.max(ddx, -110));
+					// Rubber band past the open width so the commit has a feel.
+					setDx(Math.min(0, ddx > 0 ? 0 : Math.max(ddx, -COMMIT - 24)));
 				}}
 				onTouchEnd={() => {
-					if (dx < -80) onDelete();
 					startX.current = null;
 					startY.current = null;
-					setDx(0);
+					if (dx <= -COMMIT) {
+						committed.current = true;
+						setDx(0);
+						actions[0].run();
+						return;
+					}
+					// Park open past half, otherwise spring shut.
+					setDx(dx <= -OPEN / 2 ? -OPEN : 0);
 				}}
 			>
 				{children}

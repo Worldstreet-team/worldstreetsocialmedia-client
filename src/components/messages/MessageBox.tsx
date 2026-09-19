@@ -91,7 +91,11 @@ import {
 import { imageMeta, videoMeta } from "@/lib/media-meta";
 import { conversationIdentity } from "@/lib/conversation-identity";
 import { compressImage } from "@/lib/image-compress";
-import { postJsonDirect, sendFormProgress } from "@/lib/upload-direct";
+import {
+	patchJsonDirect,
+	postJsonDirect,
+	sendFormProgress,
+} from "@/lib/upload-direct";
 import { loadThreads, saveThread } from "@/lib/chat-vault";
 import {
 	VoiceRecorder,
@@ -119,7 +123,8 @@ import {
 // Tray stays Phosphor: it feeds the shared Tabs component (feed tabs use it
 // too), which is Phosphor-typed and drives its own active weight. The Remix
 // swap is for the chat MESSAGE glyphs, not the tab chrome.
-import { Tray } from "@phosphor-icons/react";
+import {
+	Archive, Tray } from "@phosphor-icons/react";
 import { SendMoneySheet } from "@/components/messages/SendMoneySheet";
 import { GroupSheet } from "@/components/messages/GroupSheet";
 import { GroupCreateModal } from "@/components/messages/GroupCreateModal";
@@ -702,9 +707,46 @@ export const MessageBox = ({
 	}, [messageCache, me?._id]);
 	// Requests are OUT of the number on the nav — quiet by design. Their
 	// shelf carries its own count instead.
-	const inboxConversations = conversations.filter((c) => !c.isRequestForMe);
-	const requestConversations = conversations.filter((c) => c.isRequestForMe);
-	const [showRequests, setShowRequests] = useState(false);
+	// Three shelves: the inbox, strangers' openers, and what I put away.
+	// Archived wins over both — a thread I filed is not in my inbox, and a
+	// request I filed is not on the Requests shelf either.
+	const inboxConversations = conversations.filter(
+		(c) => !c.isRequestForMe && !(c as any).archived,
+	);
+	const requestConversations = conversations.filter(
+		(c) => c.isRequestForMe && !(c as any).archived,
+	);
+	const archivedConversations = conversations.filter((c) => (c as any).archived);
+	const [inboxTab, setInboxTab] = useState<"primary" | "requests" | "archived">(
+		"primary",
+	);
+	const showRequests = inboxTab === "requests";
+	const listConversations =
+		inboxTab === "requests"
+			? requestConversations
+			: inboxTab === "archived"
+				? archivedConversations
+				: inboxConversations;
+
+	/** Put a thread away, or take it back. Optimistic; the gateway keeps the
+	 *  flag per member, so it never touches the other person's inbox. */
+	const setArchived = async (convId: string, archived: boolean) => {
+		setConversations((prev) =>
+			prev.map((c) => (c._id === convId ? ({ ...c, archived } as any) : c)),
+		);
+		const res = await patchJsonDirect(
+			`/api/messages/conversations/${convId}/archive`,
+			{ archived },
+		);
+		if (!res.success) {
+			setConversations((prev) =>
+				prev.map((c) =>
+					c._id === convId ? ({ ...c, archived: !archived } as any) : c,
+				),
+			);
+			toast.error(res.message || "Couldn't update that chat");
+		}
+	};
 	const totalUnread = inboxConversations.reduce(
 		(n, c) => n + (c.unreadCount || 0),
 		0,
@@ -2513,28 +2555,38 @@ export const MessageBox = ({
 						filter={
 							<Tabs
 								ariaLabel="Inbox sections"
-								value={showRequests ? "requests" : "primary"}
-								onChange={(k) => setShowRequests(k === "requests")}
+								value={inboxTab}
+								onChange={(k) => setInboxTab(k)}
 								items={[
-									{ key: "primary", label: "Primary" },
+									{ key: "primary" as const, label: "Primary" },
 									{
-										key: "requests",
-										label: "Requests",
+										key: "requests" as const,
+										label: t("messages.requests"),
 										Icon: Tray,
 										badge: requestConversations.length,
+									},
+									{
+										key: "archived" as const,
+										label: t("messages.archived"),
+										Icon: Archive,
 									},
 								]}
 								className="px-3"
 							/>
 						}
-						heading={showRequests ? undefined : t("messages.chats")}
+						heading={
+								inboxTab === "requests"
+									? t("messages.requests")
+									: inboxTab === "archived"
+										? t("messages.archived")
+										: t("messages.chats")
+							}
 						people={showRequests ? undefined : (people ?? undefined)}
+							onArchive={(conv) =>
+								void setArchived(conv._id, !(conv as any).archived)
+							}
 						onOpenPerson={(u) => void openPerson(u._id)}
-						conversations={
-							(showRequests
-								? requestConversations
-								: inboxConversations) as any
-						}
+						conversations={listConversations as any}
 						loading={isLoadingConversations}
 						query={searchQuery}
 						activeId={activeConversation?._id}

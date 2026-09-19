@@ -765,5 +765,9 @@
   "messages.suggested": "Sugestões",
   "messages.message": "Mensagem",
   "messages.chats": "Conversas",
+  "messages.archived": "Arquivadas",
+  "messages.archive": "Arquivar",
+  "messages.unarchive": "Desarquivar",
+  "messages.requests": "Pedidos",
   "profile.alignedTo": "Alinhado com"
 }
