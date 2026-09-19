@@ -2583,13 +2583,24 @@ export const MessageBox = ({
 					{/* The long card, same architecture as the inbox: everything
 					    from the header to the composer rides inside one rounded
 					    surface, inset from the column's edges. */}
-					<div className="relative flex min-h-0 flex-1 flex-col md:overflow-hidden md:rounded-2xl md:bg-sunken">
+					<div className="relative flex min-h-0 flex-1 flex-col overflow-hidden md:rounded-2xl md:bg-sunken">
 					{/* This chat's picture (per-chat theme, else the profile's).
 					    Only the message list floats on it: the header and the
 					    composer keep a band of the page colour, or the chrome
 					    reads as mush over the photograph. */}
 					<ThemeBackdrop wallpaper={chatTheme.wallpaper} />
-					<div className={clsx("relative z-10 flex h-14 shrink-0 items-center gap-2 border-b border-hairline/60 px-2 md:px-5", hasPicture && "bg-page")}>
+					<div
+						className={clsx(
+							// Floating chrome (owner 2026-09-19): the background
+							// runs to the card's own edges and the header rides on
+							// top of it, so the thread reads as one surface with
+							// controls above it rather than three stacked bands.
+							"relative z-10 flex h-14 shrink-0 items-center gap-2 px-2 md:px-5",
+							hasPicture
+								? "bg-gradient-to-b from-page/75 to-transparent"
+								: "border-b border-hairline/60",
+						)}
+					>
 						<div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3">
 							<button
 								type="button"
@@ -2914,7 +2925,12 @@ export const MessageBox = ({
 
 					{/* shrink-0 + pb-safe: the composer is the flex row that must never
 					    be squeezed out, and it sits on the iOS home indicator. */}
-					<div className={clsx("relative z-10 shrink-0 px-3 pb-safe pt-2 sm:px-4", hasPicture && "border-t border-hairline/60 bg-page")}>
+					<div
+						className={clsx(
+							"relative z-10 shrink-0 px-3 pb-safe pt-2 sm:px-4",
+							hasPicture && "bg-gradient-to-t from-page/75 to-transparent pb-3",
+						)}
+					>
 						{/* What you are answering, above the input, with a way out.
 						    Sending clears it; so does Escape, because a reply you
 						    cannot cancel is a trap. */}
