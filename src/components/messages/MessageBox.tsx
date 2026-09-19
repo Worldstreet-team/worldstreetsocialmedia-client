@@ -132,7 +132,6 @@ import { onlineIdsAtom } from "@/store/ui.atom";
 import { userAtom } from "@/store/user.atom";
 import { activeConversationIdAtom, messageCacheAtom, unreadMessagesCountAtom } from "@/store/messageCache";
 import NewConversationModal from "./NewConversationModal";
-import { MessagesFeatureTour } from "./MessagesFeatureTour";
 
 // Helper component for conditional channel subscription
 const UserMessageSubscription = ({
@@ -3591,7 +3590,6 @@ export const MessageBox = ({
 					router.push(`/messages/${conversationId}`);
 				}}
 			/>
-			<MessagesFeatureTour />
 		</div>
 	);
 };

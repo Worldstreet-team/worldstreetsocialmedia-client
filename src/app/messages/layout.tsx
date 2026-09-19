@@ -1,4 +1,5 @@
 import { LeftSidebar } from "@/components/layout/LeftSidebar";
+import { MessagesFeatureTour } from "@/components/messages/MessagesFeatureTour";
 
 export default function MessagesLayout({
 	children,
@@ -14,6 +15,7 @@ export default function MessagesLayout({
 			>
 				{children}
 			</main>
+			<MessagesFeatureTour />
 		</div>
 	);
 }
