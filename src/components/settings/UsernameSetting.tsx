@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAtom } from "jotai";
+import { AnimatePresence, motion } from "framer-motion";
 import { Check, LoaderCircle, X } from "lucide-react";
+import { pop, swap } from "@/lib/motion-presets";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { changeUsernameAction, checkUsernameAction } from "@/lib/user.actions";
 import { USERNAME_RE } from "@/lib/username";
@@ -104,23 +106,32 @@ export function UsernameSetting() {
 	}, [canSave, trimmed, toast, setUser, user?.userId]);
 
 	return (
-		<div className="px-4 py-3.5">
-			<div className="flex items-center justify-between gap-4">
-				<span className="shrink-0 font-sans text-sm font-medium text-primary">
-					Username
-				</span>
-				<button
-					type="button"
-					onClick={save}
-					disabled={!canSave}
-					className="h-9 shrink-0 cursor-pointer rounded-pill bg-brand px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-				>
-					{saving ? "Saving…" : "Save"}
-				</button>
-			</div>
-
-			<div className="mt-2 flex items-center gap-2 rounded-xl bg-sunken px-3.5">
-				<span className="font-sans text-[calc(15px*var(--ws-fs))] text-subtle">@</span>
+		// The Inspector row, with a field where a dropdown would sit: name,
+		// the handle and its verdict, Save at the right edge.
+		<div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 gap-y-2 border-b border-hairline py-2.5 lg:grid-cols-[minmax(0,220px)_minmax(0,1fr)_auto] lg:gap-x-6">
+			<span className="flex h-10 items-center font-sans text-[calc(13.5px*var(--ws-fs))] font-medium text-primary">
+				Username
+			</span>
+			<button
+				type="button"
+				onClick={save}
+				disabled={!canSave}
+				className="col-start-2 row-start-1 h-10 shrink-0 cursor-pointer rounded-[7px] bg-primary px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-page transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 lg:col-start-3"
+			>
+				{/* inline-block: a transform does nothing on an inline box. */}
+				<AnimatePresence mode="wait" initial={false}>
+					<motion.span
+						key={saving ? "saving" : "save"}
+						{...swap}
+						className="inline-block"
+					>
+						{saving ? "Saving…" : "Save"}
+					</motion.span>
+				</AnimatePresence>
+			</button>
+			<div className="col-span-2 min-w-0 lg:col-span-1 lg:col-start-2 lg:row-start-1">
+			<div className="flex h-10 items-center gap-2 rounded-[7px] border border-hairline px-3 focus-within:border-primary/40">
+				<span className="font-sans text-[calc(14px*var(--ws-fs))] text-subtle">@</span>
 				<input
 					value={trimmed}
 					onChange={(e) => setValue(e.target.value)}
@@ -132,19 +143,42 @@ export function UsernameSetting() {
 					autoCorrect="off"
 					maxLength={20}
 					aria-label="Username"
-					className="min-w-0 flex-1 bg-transparent py-3 font-sans text-[calc(15px*var(--ws-fs))] text-primary outline-none placeholder:text-subtle"
+					className="min-w-0 flex-1 bg-transparent font-sans text-[calc(14px*var(--ws-fs))] text-primary outline-none placeholder:text-subtle"
 				/>
 				{state === "checking" && (
 					<LoaderCircle className="h-4 w-4 shrink-0 animate-spin text-subtle" />
 				)}
-				{state === "ok" && <Check className="h-4 w-4 shrink-0 text-success" />}
+				{/* The verdict lands; it does not leave. Entrance only, no
+				    presence: the next keystroke cuts straight back to the
+				    spinner, because typing never waits on an exit. */}
+				{state === "ok" && (
+					<motion.span
+						initial={pop.initial}
+						animate={pop.animate}
+						className="flex shrink-0"
+					>
+						<Check className="h-4 w-4 text-success" />
+					</motion.span>
+				)}
 				{(state === "taken" || state === "invalid") && (
-					<X className="h-4 w-4 shrink-0 text-danger" />
+					<motion.span
+						initial={pop.initial}
+						animate={pop.animate}
+						className="flex shrink-0"
+					>
+						<X className="h-4 w-4 text-danger" />
+					</motion.span>
 				)}
 			</div>
 
+			{/* Keyed by the state, not the text: the line rises once when the
+			    verdict changes and holds still while the handle is typed. The
+			    old line is cut rather than faded out, same reason as above. */}
 			{hint.text && (
-				<p
+				<motion.p
+					key={unchanged ? "unchanged" : state}
+					initial={swap.initial}
+					animate={swap.animate}
 					className={`mt-1.5 font-sans text-[calc(12px*var(--ws-fs))] ${
 						hint.tone === "danger"
 							? "text-danger"
@@ -154,12 +188,13 @@ export function UsernameSetting() {
 					}`}
 				>
 					{hint.text}
-				</p>
+				</motion.p>
 			)}
 			<p className="mt-1 font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
 				You can change this again 30 days after a change. Your old handle
 				becomes free for someone else to take.
 			</p>
+			</div>
 		</div>
 	);
 }

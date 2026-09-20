@@ -14,7 +14,8 @@ import {
 	useOverlayDismiss,
 } from "@/components/ui/Overlay";
 import { useToast } from "@/components/ui/Toast/ToastContext";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import { swap } from "@/lib/motion-presets";
 import {
 	deactivateAccountAction,
 	deleteAccountAction,
@@ -237,38 +238,36 @@ function Action({
 	destructive?: boolean;
 }) {
 	return (
-		<div className="flex items-center justify-between gap-4 px-4 py-3.5">
-			<div className="flex min-w-0 items-start gap-3">
-				<Icon
-					className={`mt-0.5 h-[17px] w-[17px] shrink-0 ${
-						destructive ? "text-danger" : "text-muted"
-					}`}
-					strokeWidth={2}
-				/>
-				<div className="min-w-0">
-					<span
-						className={`block font-sans text-sm font-medium ${
-							destructive ? "text-danger" : "text-primary"
-						}`}
-					>
-						{title}
-					</span>
-					<span className="mt-0.5 block font-sans text-[calc(13px*var(--ws-fs))] leading-relaxed text-muted">
-						{caption}
-					</span>
-				</div>
-			</div>
+		// An Inspector row (settings/inspector.tsx): name, what it does, the
+		// action at the right edge. No icon; the red title carries the warning.
+		<div className="grid min-h-[52px] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 border-b border-hairline py-1.5 lg:grid-cols-[minmax(0,220px)_minmax(0,1fr)_auto] lg:gap-x-6">
+			<span
+				className={`font-sans text-[calc(13.5px*var(--ws-fs))] font-medium ${
+					destructive ? "text-danger" : "text-primary"
+				}`}
+			>
+				{title}
+			</span>
+			<span className="col-start-1 row-start-2 font-sans text-[calc(12.5px*var(--ws-fs))] leading-snug text-muted lg:col-start-2 lg:row-start-1">
+				{caption}
+			</span>
 			<button
 				type="button"
 				onClick={onClick}
 				disabled={disabled}
-				className={`h-9 shrink-0 cursor-pointer rounded-pill px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-opacity hover:opacity-90 disabled:opacity-50 ${
+				className={`col-start-2 row-span-2 row-start-1 h-10 shrink-0 cursor-pointer rounded-[7px] border px-3.5 font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors disabled:opacity-50 lg:col-start-3 lg:row-span-1 ${
 					destructive
-						? "bg-danger/12 text-danger"
-						: "bg-raised text-primary"
+						? "border-danger/40 text-danger hover:bg-danger/10"
+						: "border-hairline text-primary hover:bg-primary/5"
 				}`}
 			>
-				{label}
+				{/* Download to Building…: the label rolls so the button visibly
+				    took the tap. inline-block: an inline box ignores transforms. */}
+				<AnimatePresence mode="wait" initial={false}>
+					<motion.span key={label} {...swap} className="inline-block">
+						{label}
+					</motion.span>
+				</AnimatePresence>
 			</button>
 		</div>
 	);

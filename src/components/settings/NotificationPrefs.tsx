@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useAtom } from "jotai";
 import clsx from "clsx";
+import { motion } from "framer-motion";
+import { snappySpring } from "@/lib/motion-presets";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { updateMyProfileAction } from "@/lib/user.actions";
 import { userAtom } from "@/store/user.atom";
@@ -93,7 +95,7 @@ export function NotificationPrefs() {
 				/>
 			))}
 
-			<div className="mt-1 border-t border-hairline pt-1">
+			<div>
 				<Toggle
 					label={t("settings.notify.followingOnly")}
 					caption={t("settings.notify.followingOnly.desc")}
@@ -127,28 +129,36 @@ function Toggle({
 			aria-label={label}
 			disabled={busy}
 			onClick={onChange}
-			className="flex cursor-pointer items-center justify-between gap-4 px-4 py-3 text-left transition-colors hover:bg-raised disabled:opacity-60"
+			// The Inspector row (settings/inspector.tsx), as one switch button:
+			// name, what it does, the control at the right edge.
+			className="grid min-h-[52px] cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 border-b border-hairline py-1.5 text-left disabled:opacity-60 lg:grid-cols-[minmax(0,220px)_minmax(0,1fr)_auto] lg:gap-x-6"
 		>
-			<span className="min-w-0">
-				<span className="block font-sans text-sm font-medium text-primary">
-					{label}
-				</span>
-				<span className="mt-0.5 block font-sans text-[calc(13px*var(--ws-fs))] leading-relaxed text-muted">
-					{caption}
-				</span>
+			<span className="font-sans text-[calc(13.5px*var(--ws-fs))] font-medium text-primary">
+				{label}
+			</span>
+			<span className="col-start-1 row-start-2 font-sans text-[calc(12.5px*var(--ws-fs))] leading-snug text-muted lg:col-start-2 lg:row-start-1">
+				{caption}
 			</span>
 			{/* Track + knob. No scale on press — the surface ladder does state. */}
 			<span
 				aria-hidden="true"
 				className={clsx(
-					"relative h-6 w-10 shrink-0 rounded-pill transition-colors",
-					checked ? "bg-brand" : "bg-raised",
+					"relative col-start-2 row-span-2 row-start-1 h-6 w-10 shrink-0 rounded-pill transition-colors lg:col-start-3 lg:row-span-1",
+					checked ? "bg-brand" : "bg-chip",
 				)}
 			>
-				<span
+				{/* Rides x, not left, so the slide never touches layout; the
+				    same spring as ui/Switch, which turns round mid-flight when
+				    a failed write reverts it. The whole row is the switch
+				    button here, so ui/Switch (a button) cannot nest inside.
+				    initial={false}: a pref that loads on is on. */}
+				<motion.span
+					initial={false}
+					animate={{ x: checked ? 16 : 0 }}
+					transition={snappySpring}
 					className={clsx(
-						"absolute top-1 h-4 w-4 rounded-pill transition-[left]",
-						checked ? "left-5 bg-brand-on" : "left-1 bg-muted",
+						"absolute left-1 top-1 h-4 w-4 rounded-pill transition-colors",
+						checked ? "bg-brand-on" : "bg-muted",
 					)}
 				/>
 			</span>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { AnimatePresence, motion } from "framer-motion";
 // EmptyState's contract is a Lucide glyph; Ban is the documented stand-in
 // for "blocked" since the 74-icon set has no equivalent.
 import { Ban } from "lucide-react";
@@ -13,6 +14,7 @@ import { getBlockedUsersAction } from "@/lib/report.actions";
 import { unblockUserAction } from "@/lib/user.actions";
 import { useT } from "@/i18n/client";
 import { DEFAULT_AVATAR } from "@/const";
+import { collapse, staggerItem, staggerParentFast } from "@/lib/motion-presets";
 
 type BlockedUser = {
 	_id: string;
@@ -65,7 +67,7 @@ export function BlockedAccounts() {
 
 	if (users === null) {
 		return (
-			<div className="flex flex-col gap-2 px-4 py-3">
+			<div className="flex flex-col gap-2 py-3">
 				{[0, 1, 2].map((i) => (
 					<div key={i} className="flex items-center gap-3">
 						<Skeleton className="h-10 w-10 rounded-full" />
@@ -90,23 +92,38 @@ export function BlockedAccounts() {
 	}
 
 	return (
-		<ul className="flex flex-col">
+		// The list lands once, when the fetch resolves; an unblock only filters
+		// it, so the cascade never replays. The presence is here for the exit
+		// only (no initial={false}: that would block the rows' entrance too).
+		<motion.ul
+			variants={staggerParentFast}
+			initial="hidden"
+			animate="show"
+			className="flex flex-col"
+		>
+			<AnimatePresence>
 			{users.map((user) => {
 				const name =
 					[user.firstName, user.lastName].filter(Boolean).join(" ") ||
 					user.username;
 				return (
-					<li
+					// The li carries the height so an unblocked row folds shut
+					// and the rows below glide up; the padding sits on the inner
+					// div because a padded box cannot collapse to zero.
+					<motion.li
 						key={user._id}
-						className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-raised"
+						variants={staggerItem}
+						exit={collapse.exit}
+						className="overflow-hidden"
 					>
+					<div className="flex min-h-[56px] items-center gap-3 border-b border-hairline py-2">
 						<Link
 							href={`/profile/${user.username}`}
 							className="flex min-w-0 flex-1 items-center gap-3"
 						>
 							{/* SafeAvatar renders with `fill`, so it needs a
 							    positioned box to fill. */}
-							<span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-sunken">
+							<span className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-sunken">
 								<SafeAvatar src={user.avatar || DEFAULT_AVATAR} />
 							</span>
 							<span className="flex min-w-0 flex-col">
@@ -122,15 +139,17 @@ export function BlockedAccounts() {
 							type="button"
 							onClick={() => unblock(user)}
 							disabled={busyId === user._id}
-							className="h-9 shrink-0 cursor-pointer rounded-pill bg-primary px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-page transition-opacity hover:opacity-90 disabled:opacity-50"
+							className="h-10 shrink-0 cursor-pointer rounded-[7px] border border-hairline px-3.5 font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/5 disabled:opacity-50"
 						>
 							{busyId === user._id
 								? t("settings.blocked.unblocking")
 								: t("safety.unblock")}
 						</button>
-					</li>
+					</div>
+					</motion.li>
 				);
 			})}
-		</ul>
+			</AnimatePresence>
+		</motion.ul>
 	);
 }

@@ -1,9 +1,11 @@
 "use client";
 
-import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
-import { Switch } from "@/components/ui/Switch";
+import { swap } from "@/lib/motion-presets";
 import type { Preferences } from "@/lib/preferences";
+import { rowButton } from "./inspector";
+import { Choice, Toggle } from "./SettingRows";
 
 /**
  * The accessibility controls, on the preferences layer.
@@ -56,9 +58,9 @@ export function AccessibilitySettings() {
 				value={a.colorVision}
 				options={[
 					["off", "Off"],
-					["deuteran", "Red–green (deuteran)"],
-					["protan", "Red–green (protan)"],
-					["tritan", "Blue–yellow"],
+					["deuteran", "Red and green (deuteran)"],
+					["protan", "Red and green (protan)"],
+					["tritan", "Blue and yellow"],
 					["achroma", "No colour"],
 				]}
 				onPick={(v) =>
@@ -116,16 +118,24 @@ export function AccessibilitySettings() {
 				onChange={(v) => setPrefs({ a11y: { reduceTransparency: v } })}
 			/>
 
-			<div className="flex items-center justify-between gap-3 border-t border-hairline px-4 py-3">
-				<span className="font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle">
-					{synced
-						? "Saved to your account and applied on every device."
-						: "Saving to your account…"}
-				</span>
+			<div className="flex min-h-[52px] items-center justify-between gap-3 py-1.5">
+				{/* The save landing is the one event on this screen worth a beat.
+				    initial={false}: a page that opens already saved just says so. */}
+				<AnimatePresence mode="wait" initial={false}>
+					<motion.span
+						key={synced ? "saved" : "saving"}
+						{...swap}
+						className="font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle"
+					>
+						{synced
+							? "Saved to your account and applied on every device."
+							: "Saving to your account…"}
+					</motion.span>
+				</AnimatePresence>
 				<button
 					type="button"
 					onClick={() => void resetPrefs()}
-					className="h-9 shrink-0 cursor-pointer rounded-pill bg-raised px-3.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-muted transition-colors hover:text-primary"
+					className={rowButton}
 				>
 					Reset
 				</button>
@@ -137,11 +147,9 @@ export function AccessibilitySettings() {
 /** Real app text at the chosen size, so the choice is judged not guessed. */
 function Preview() {
 	return (
-		<div className="border-t border-hairline px-4 py-3">
-			<p className="mb-2 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
-				Preview
-			</p>
-			<div className="rounded-xl bg-raised px-3.5 py-3">
+		<div className="border-b border-hairline py-3">
+			{/* A quote, not a card: a rule down the side and the real type. */}
+			<div className="border-l-2 border-hairline pl-4">
 				<p className="font-sans text-[calc(15px*var(--ws-fs))] font-semibold text-primary">
 					John Doe
 				</p>
@@ -153,95 +161,6 @@ function Preview() {
 					2:46 PM · Seen
 				</p>
 			</div>
-		</div>
-	);
-}
-
-function Choice({
-	label,
-	hint,
-	value,
-	options,
-	onPick,
-}: {
-	label: string;
-	hint?: string;
-	value: string | number;
-	options: [string | number, string][];
-	onPick: (v: string | number) => void;
-}) {
-	return (
-		<div className="border-t border-hairline px-4 py-3 first:border-t-0">
-			<span className="font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary">
-				{label}
-			</span>
-			{hint && (
-				<p className="mt-0.5 max-w-[62ch] font-sans text-[calc(12.5px*var(--ws-fs))] leading-snug text-muted">
-					{hint}
-				</p>
-			)}
-			<div className="mt-2.5 flex flex-wrap gap-1.5">
-				{options.map(([v, l]) => {
-					const active = v === value;
-					return (
-						<button
-							key={String(v)}
-							type="button"
-							aria-pressed={active}
-							onClick={() => onPick(v)}
-							className={clsx(
-								"flex h-9 cursor-pointer items-center rounded-pill px-3.5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-colors",
-								active
-									? "bg-primary text-page"
-									: "bg-raised text-muted hover:text-primary",
-							)}
-						>
-							{l}
-						</button>
-					);
-				})}
-			</div>
-		</div>
-	);
-}
-
-function Toggle({
-	label,
-	hint,
-	checked,
-	disabled,
-	onChange,
-}: {
-	label: string;
-	hint?: string;
-	checked: boolean;
-	disabled?: boolean;
-	onChange: (v: boolean) => void;
-}) {
-	return (
-		<div
-			className={clsx(
-				"flex items-center justify-between gap-4 border-t border-hairline px-4 py-2.5",
-				disabled && "opacity-60",
-			)}
-		>
-			<span className="min-w-0">
-				<span className="block font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary">
-					{label}
-				</span>
-				{hint && (
-					<span className="mt-0.5 block max-w-[62ch] font-sans text-[calc(12.5px*var(--ws-fs))] leading-snug text-muted">
-						{hint}
-					</span>
-				)}
-			</span>
-			<Switch
-				checked={checked}
-				disabled={disabled}
-				onChange={onChange}
-				label={label}
-				className="-mr-2"
-			/>
 		</div>
 	);
 }

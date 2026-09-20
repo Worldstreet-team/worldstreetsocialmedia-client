@@ -21,8 +21,8 @@ import {
 	SlidersHorizontal,
 	UserCircle,
 } from "lucide-react";
-import { Check, Moon, Sun } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
 import { AccessibilitySettings } from "@/components/settings/AccessibilitySettings";
 import { ContentSettings, DataSettings } from "@/components/settings/DataSettings";
 import { MessagingSettings } from "@/components/settings/MessagingSettings";
@@ -38,12 +38,19 @@ import { NotificationPrefs } from "@/components/settings/NotificationPrefs";
 import { PaletteSetting } from "@/components/settings/PaletteSetting";
 import { SettingsNav } from "@/components/settings/SettingsNav";
 import {
+	SelectRow,
+	SettingGroup,
+	SettingRow,
+	ValueRow,
+} from "@/components/settings/inspector";
+import {
 	GROUPS,
 	SECTIONS,
 	type SectionId,
 	isSectionId,
 } from "@/components/settings/sections";
 import { motionReduced } from "@/lib/motion";
+import { press, reveal, swap, thumbSpring } from "@/lib/motion-presets";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { updateMyProfileAction } from "@/lib/user.actions";
 import { withThemeTransition } from "@/lib/theme-transition";
@@ -205,6 +212,16 @@ export default function SettingsPage() {
 	}, [activeId, subState]);
 
 	const isLight = resolvedTheme === "light";
+	// next-themes resolves on the client. The mode thumb waits for mount, so
+	// the server markup matches and a light reader does not watch it slide
+	// across from Dark on load.
+	const [mounted, setMounted] = useState(false);
+	useEffect(() => setMounted(true), []);
+
+	// "{n} of {max} selected", split around the number so only the digits roll.
+	const [countBefore, countAfter = ""] = t("settings.topics.count")
+		.replace("{max}", String(MAX_INTERESTS))
+		.split("{n}");
 
 	return (
 		<div className="flex min-h-full w-full items-start">
@@ -212,7 +229,7 @@ export default function SettingsPage() {
 			    section is open so the detail owns the screen. */}
 			<div
 				className={clsx(
-					"pb-nav lg:sticky lg:top-0 lg:block lg:w-[264px] lg:shrink-0 lg:border-r lg:border-hairline lg:pb-0",
+					"pb-nav lg:sticky lg:top-0 lg:block lg:w-[236px] lg:shrink-0 lg:border-r lg:border-hairline lg:pb-0",
 					valid ? "hidden" : "block w-full",
 				)}
 			>
@@ -227,7 +244,7 @@ export default function SettingsPage() {
 				)}
 			>
 				<header className="sticky top-0 z-sticky border-b border-hairline bg-page">
-					<div className="flex items-center gap-2 px-4 py-3">
+					<div className="flex items-center gap-2 px-4 py-3 lg:px-8">
 						<Link
 							href="/settings"
 							aria-label="Back to settings"
@@ -235,9 +252,13 @@ export default function SettingsPage() {
 						>
 							<ArrowLeft className="h-5 w-5" strokeWidth={2.5} />
 						</Link>
-						<h2 className="font-display text-[calc(20px*var(--ws-fs))] font-semibold tracking-tight text-primary">
+						<h2 className="font-display text-[calc(20px*var(--ws-fs))] font-semibold tracking-tight text-primary lg:text-[calc(17px*var(--ws-fs))] lg:font-medium">
 							{t(activeDef.labelKey)}
 						</h2>
+						{/* The inspector's status line: where these settings live. */}
+						<span className="ml-auto hidden font-sans text-[calc(12.5px*var(--ws-fs))] text-muted lg:block">
+							Synced to your account
+						</span>
 					</div>
 					{/* The sub-nav on a phone: the section's groups as chips, tap to
 					    scroll. The desktop list carries the same groups under the
@@ -256,11 +277,20 @@ export default function SettingsPage() {
 										aria-current={on ? "true" : undefined}
 										onClick={() => scrollToGroup(g.id)}
 										className={clsx(
-											"h-8 shrink-0 cursor-pointer whitespace-nowrap rounded-pill px-3 font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors",
-											on ? "bg-primary/10 text-primary" : "text-muted hover:bg-primary/5 hover:text-primary",
+											"relative h-8 shrink-0 cursor-pointer whitespace-nowrap rounded-pill px-3 font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors",
+											on ? "text-primary" : "text-muted hover:bg-primary/5 hover:text-primary",
 										)}
 									>
-										{g.label}
+										{/* The wash slides as the scroll-spy moves, so the strip
+										    answers "where am I" without a jump. Page singleton. */}
+										{on && (
+											<motion.span
+												layoutId="settings-group-chip"
+												transition={thumbSpring}
+												className="absolute inset-0 rounded-pill bg-primary/10"
+											/>
+										)}
+										<span className="relative">{g.label}</span>
 									</button>
 								);
 							})}
@@ -268,12 +298,15 @@ export default function SettingsPage() {
 					)}
 				</header>
 
-				<div ref={detailRef} className="mx-auto flex w-full max-w-[640px] flex-col gap-7 px-4 py-5">
+				<div ref={detailRef} className="flex w-full max-w-[960px] flex-col gap-9 px-4 py-5 lg:px-8 lg:py-7">
 					{activeId === "account" && (
 						<>
 							{/* Identity card: gives the page a subject rather than
 							    opening on a bare label/value list. */}
-							<div className="flex items-center gap-3.5 rounded-xl bg-surface p-4">
+							<motion.div
+								{...reveal(0)}
+								className="flex items-center gap-3.5"
+							>
 								<span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-pill bg-sunken">
 									<SafeAvatar src={user?.avatar} />
 								</span>
@@ -295,10 +328,11 @@ export default function SettingsPage() {
 										@{user?.username}
 									</span>
 								</div>
-							</div>
+							</motion.div>
 
 							<Section
 								id="account"
+								order={1}
 								icon={UserCircle}
 								title={t("settings.account.title")}
 								caption={t("settings.account.managedNote")}
@@ -312,6 +346,7 @@ export default function SettingsPage() {
 
 							<Section
 								id="danger"
+								order={2}
 								icon={ShieldAlert}
 								title={t("settings.danger.title")}
 								caption={t("settings.danger.caption")}
@@ -357,17 +392,18 @@ export default function SettingsPage() {
 											: "-"
 								}
 							/>
-							<div className="px-4 pb-4 pt-1">
-								<button
+							<SettingRow label="Plan" hint="Billing, renewal and your verified tick.">
+								<motion.button
 									type="button"
+									{...press}
 									onClick={() => setPremiumOpen(true)}
-									className="h-9 cursor-pointer rounded-pill bg-brand px-5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-opacity hover:opacity-90"
+									className="h-10 cursor-pointer rounded-[7px] bg-brand px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-opacity hover:opacity-90"
 								>
 									{subState?.subscription
 										? t("premium.manageTitle")
 										: t("premium.cta")}
-								</button>
-							</div>
+								</motion.button>
+							</SettingRow>
 						</Section>
 					)}
 
@@ -378,23 +414,44 @@ export default function SettingsPage() {
 							title={t("settings.topics.title")}
 							caption={t("settings.topics.caption")}
 						>
-							<div className="p-4">
+							<div className="py-4">
 								<InterestPicker selected={interests} onToggle={toggleInterest} />
 							</div>
-							<div className="flex items-center justify-between gap-3 px-4 py-3">
+							<div className="flex min-h-[52px] items-center justify-between gap-3 border-y border-hairline py-1.5">
 								<span className="font-sans text-[calc(13px*var(--ws-fs))] tabular-nums text-muted">
-									{t("settings.topics.count")
-										.replace("{n}", String(interests.length))
-										.replace("{max}", String(MAX_INTERESTS))}
+									{countBefore}
+									<span className="relative inline-flex overflow-hidden align-bottom">
+										<AnimatePresence mode="popLayout" initial={false}>
+											<motion.span
+												key={interests.length}
+												{...swap}
+												className="inline-block"
+											>
+												{interests.length}
+											</motion.span>
+										</AnimatePresence>
+									</span>
+									{countAfter}
 								</span>
-								<button
+								<motion.button
 									type="button"
+									{...press}
 									onClick={saveTopics}
 									disabled={!dirty || savingTopics}
-									className="h-9 cursor-pointer rounded-pill bg-brand px-5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+									className="h-10 cursor-pointer rounded-[7px] bg-brand px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
 								>
-									{savingTopics ? t("settings.topics.saving") : t("common.save")}
-								</button>
+									<AnimatePresence mode="wait" initial={false}>
+										<motion.span
+											key={savingTopics ? "saving" : "save"}
+											{...swap}
+											className="inline-block"
+										>
+											{savingTopics
+												? t("settings.topics.saving")
+												: t("common.save")}
+										</motion.span>
+									</AnimatePresence>
+								</motion.button>
 							</div>
 						</Section>
 					)}
@@ -412,6 +469,7 @@ export default function SettingsPage() {
 
 							<Section
 								id="behaviour"
+								order={1}
 								icon={BellRing}
 								title="Notification behaviour"
 								caption="How notifications reach you inside the app."
@@ -434,6 +492,7 @@ export default function SettingsPage() {
 
 							<Section
 								id="blocked"
+								order={1}
 								icon={ShieldCheck}
 								title={t("settings.blocked.title")}
 								caption={t("settings.blocked.caption")}
@@ -455,6 +514,7 @@ export default function SettingsPage() {
 							</Section>
 							<Section
 								id="timeline"
+								order={1}
 								icon={Rss}
 								title="Timeline"
 								caption="What shows up when you open Home, and how much of it loads at once."
@@ -463,6 +523,7 @@ export default function SettingsPage() {
 							</Section>
 							<Section
 								id="messaging"
+								order={2}
 								icon={MessageSquare}
 								title="Messaging"
 								caption="How chat behaves for you. None of it changes what the other person sees."
@@ -485,75 +546,33 @@ export default function SettingsPage() {
 
 							<Section
 								id="appearance"
+								order={1}
 								icon={Palette}
 								title={t("settings.display.title")}
 								caption={t("settings.display.caption")}
 							>
 								<InstallAppRow />
-								<div className="flex items-center justify-between gap-3 px-4 py-3">
-									<span className="font-sans text-[calc(15px*var(--ws-fs))] font-medium text-primary">
-										{t("settings.display.theme")}
-									</span>
-									<div className="flex gap-1.5">
-										{(
-											[
-												["dark", Moon, t("settings.display.dark")],
-												["light", Sun, t("settings.display.light")],
-											] as const
-										).map(([value, Icon, label]) => {
-											const active = value === (isLight ? "light" : "dark");
-											return (
-												<button
-													key={value}
-													type="button"
-													aria-pressed={active}
-													onClick={() =>
-														withThemeTransition(() => setTheme(value))
-													}
-													className={clsx(
-														"flex h-9 cursor-pointer items-center gap-1.5 rounded-pill px-3.5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-colors",
-														active
-															? "bg-primary text-page"
-															: "bg-raised text-muted hover:text-primary",
-													)}
-												>
-													<Icon size={14} weight="bold" />
-													{label}
-												</button>
-											);
-										})}
-									</div>
-								</div>
+								<SelectRow
+									label={t("settings.display.theme")}
+									hint="Dark or light. Stays on this device."
+									// next-themes resolves on the client; until then the
+									// row says Dark, which is what the server rendered.
+									value={mounted && isLight ? "light" : "dark"}
+									options={[
+										["dark", t("settings.display.dark")],
+										["light", t("settings.display.light")],
+									]}
+									onPick={(v) => withThemeTransition(() => setTheme(v))}
+								/>
 
 								<PaletteSetting />
 
-								<div className="border-t border-hairline px-4 py-3">
-									<span className="font-sans text-[calc(15px*var(--ws-fs))] font-medium text-primary">
-										{t("settings.display.language")}
-									</span>
-									<div className="mt-2.5 flex flex-wrap gap-1.5">
-										{LOCALES.map((code) => {
-											const active = code === locale;
-											return (
-												<button
-													key={code}
-													type="button"
-													aria-pressed={active}
-													onClick={() => pickLocale(code)}
-													className={clsx(
-														"flex h-9 cursor-pointer items-center gap-1.5 rounded-pill px-3.5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-colors",
-														active
-															? "bg-primary text-page"
-															: "bg-raised text-muted hover:text-primary",
-													)}
-												>
-													{active && <Check size={13} weight="bold" />}
-													{LANGUAGE_NAMES[code]}
-												</button>
-											);
-										})}
-									</div>
-								</div>
+								<SelectRow
+									label={t("settings.display.language")}
+									value={locale}
+									options={LOCALES.map((code) => [code, LANGUAGE_NAMES[code]] as const)}
+									onPick={(code) => pickLocale(code)}
+								/>
 							</Section>
 						</>
 					)}
@@ -564,12 +583,14 @@ export default function SettingsPage() {
 }
 
 /**
- * A settings group: a small label, a contained card, and the explanation as a
- * footnote underneath. Cards get no shadow, the surface ladder does depth.
+ * A settings group in the Inspector layout (owner 2026-09-20): a quiet label
+ * with its explanation on the same line, then hairline rows. No card, no
+ * icon chip. `icon` is still accepted so the call sites did not all churn;
+ * it is not drawn.
  */
 function Section({
 	id,
-	icon: Icon,
+	order = 0,
 	title,
 	caption,
 	children,
@@ -577,67 +598,22 @@ function Section({
 }: {
 	/** Matches a GROUPS entry for this section; the sub-nav scrolls here. */
 	id: string;
-	icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+	/** Position on the page. The groups rise in sequence when a section
+	 *  opens; they mount once per open, so it never replays on a re-render. */
+	order?: number;
+	icon?: React.ComponentType<{ className?: string; strokeWidth?: number }>;
 	title: string;
 	caption: string;
 	children: React.ReactNode;
 	tone?: "danger";
 }) {
 	return (
-		// scroll-mt clears the sticky header (and the chip strip on a phone)
-		// when the sub-nav jumps here.
-		<section id={`group-${id}`} data-group={id} className="scroll-mt-[112px] lg:scroll-mt-[72px]">
-			{/* A header, not an eyebrow (owner 2026-09-15): a real title in the
-			    body ink with the icon in a chip, and the explanation directly
-			    under it, where a reader meets it before the controls. */}
-			<div className="mb-3 flex items-start gap-3 px-1">
-				<span
-					className={clsx(
-						"mt-px flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px]",
-						tone === "danger" ? "bg-danger/10 text-danger" : "bg-primary/5 text-primary",
-					)}
-				>
-					<Icon className="h-4 w-4" strokeWidth={2.25} />
-				</span>
-				<div className="min-w-0">
-					<h3
-						className={clsx(
-							"font-sans text-[calc(15px*var(--ws-fs))] font-semibold leading-tight",
-							tone === "danger" ? "text-danger" : "text-primary",
-						)}
-					>
-						{title}
-					</h3>
-					{caption && (
-						<p className="mt-1 max-w-[62ch] font-sans text-[calc(13px*var(--ws-fs))] leading-snug text-muted">
-							{caption}
-						</p>
-					)}
-				</div>
-			</div>
-
-			<div
-				className={clsx(
-					"overflow-hidden rounded-xl bg-surface",
-					"[&>*+*]:border-t [&>*+*]:border-hairline",
-					tone === "danger" && "ring-1 ring-danger/15",
-				)}
-			>
+		<motion.div {...reveal(order)}>
+			<SettingGroup id={id} title={title} caption={caption} tone={tone}>
 				{children}
-			</div>
-		</section>
+			</SettingGroup>
+		</motion.div>
 	);
 }
 
-function Row({ label, value }: { label: string; value: string }) {
-	return (
-		<div className="flex items-center justify-between gap-4 px-4 py-3.5">
-			<span className="shrink-0 font-sans text-[calc(15px*var(--ws-fs))] font-medium text-primary">
-				{label}
-			</span>
-			<span className="truncate font-sans text-[calc(14px*var(--ws-fs))] tabular-nums text-muted">
-				{value}
-			</span>
-		</div>
-	);
-}
+const Row = ValueRow;

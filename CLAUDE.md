@@ -164,11 +164,24 @@ Non-obvious rules the spec enforces, all of which this page now follows:
   warning), `Link2` (link-preview domain glyph). The command palette's Profile
   row shows the user's avatar because the set has no plain `user` icon.
 - **Tabular numerals** on any number that changes (`tabular-nums` on counts).
-- **One easing, three durations.** `--ws-ease` is the only easing; 120/200/320ms
-  are the only durations. They're wired as Tailwind's *defaults* in
-  `globals.css`, so a plain `transition-colors` is already on-token — don't add
-  `duration-*` unless you mean the base or slow tier. Animate opacity and
-  transform only.
+- **Motion draws from one file: `src/lib/motion-presets.ts`** (owner
+  2026-09-20 asked for richer motion, "cool beziers", staggered menus; this
+  replaces the old "one easing, three durations" rule for framer work).
+  Named curves (`EASE`, `EASE_OUT_EXPO`, `EASE_BACK`, `EASE_BACK_SOFT`,
+  `EASE_IN`, `EASE_SHEET`), `DUR`, and the variants every surface spreads:
+  `menu(origin)` / `menuStagger(origin)`, `staggerParent(Fast)` +
+  `staggerItem` / `staggerPop`, `pop`, `press`, `thumbSpring`,
+  `snappySpring`, `sheetSpring`, `swap`, `reveal(i)`, `collapse`. Never
+  write a private bezier, spring or duration at a call site. The house
+  rules are in that file's header and they are about restraint: frequency
+  first (nothing done a hundred times a day gets an entrance), a cascade
+  plays on first open only and fits in 300ms, exits never stagger and are
+  quicker than entrances, keyboard actions never wait, the person's own
+  action pops while other people's roll a number, `exit` needs
+  `AnimatePresence`, no `layout` props inside virtualised lists, `layoutId`
+  unique per instance. Plain CSS `transition-colors` still rides the token
+  defaults in `globals.css` (`--ws-ease`, 120/200/320ms). Animate opacity
+  and transform only.
 - **Reduced motion has TWO triggers** (audit 2026-09-11): the OS query and
   the in-app Settings > Accessibility toggle, both resolved into
   `html[data-ws-motion="reduce"]` ("on", or "auto" while the OS asks).
@@ -218,6 +231,66 @@ directly via `attribute="data-ws-theme"` + `value={{ dark: "platform", light:
 "platform-light" }}` in the root ThemeProvider — there is no app-level light
 palette anymore (the old `html.light[data-ws-theme="platform"]` fork in
 globals.css was deleted; don't reintroduce it).
+
+## App palettes and chat chrome (added 2026-09-20)
+
+Three independent colour axes, and they must stay independent:
+
+| Axis | Stamp | Owner |
+| --- | --- | --- |
+| Mode (dark / light) | `html[data-ws-theme]` | next-themes, device-local |
+| App palette (brand colour) | `html[data-ws-palette]` | `prefs.appearance.palette`, synced to the account |
+| Chat theme | `--chat-*` on the thread pane | per chat / per profile, `chatTheme.ts` |
+
+- **Palettes** (`src/data/palettes.ts` registry, `src/styles/ws-palettes.css`
+  values, `components/settings/PaletteSetting.tsx` picker under Settings >
+  Display): Tide (default, NO attribute, it is the token file), Cobalt,
+  Iris, Orchid, Sunset, Heritage, Mono. A palette block may declare ONLY
+  the six brand tokens (`--ws-brand-primary`, `-on-primary`, `-active`,
+  `-dim`, `--ws-brand-gold-text`, `--ws-glow-brand`), always as
+  `html[data-ws-palette="x"][data-ws-theme="platform"]` plus the
+  `platform-light` twin. Those blocks are specificity (0,2,1) and the High
+  contrast / colour-vision blocks are (0,1,1): a palette that declared a
+  status, money, text or border token would silently switch those modes
+  off. Money, status, the focus ring and the verified tick never follow a
+  palette. Rose / red and emerald / teal were left out on purpose (like is
+  `text-danger`; credit is green). The pre-paint script stamps the palette
+  before first paint; switch through `withThemeTransition()`.
+- **`text-gold` means "brand ink"** and follows the palette. Anything that
+  must read as literal gold (prizes, premium) needs a literal, like the
+  verified tick already has.
+- **Chat chrome**: `themeVars()` always emits a `--chat-chrome-*` set (fill
+  = the theme's ground with a tenth of the accent, one step lighter, 88%;
+  ink chosen by the fill itself, pushed to 7.5:1 or better). The
+  `.chat-chrome` / `.chat-chrome-solid` classes (`src/styles/chat-chrome.css`)
+  re-point the INK tokens inside the bar so `text-muted`, `bg-primary/5`
+  and `border-hairline` re-theme with no class churn. Never put
+  `.chat-chrome` on the element that carries `themeVars()` (a property
+  that reaches itself is a cycle, the `--ws-fs` bug again), never re-point
+  `--ws-bg-*` in it, and no blur (the thread card has the one blur). The
+  flat house theme's chrome is exactly the app frost.
+- **Wallpapers**: `WALLPAPERS` rows carry a measured `tint`; nothing is
+  sampled at runtime. The generated set lives in `public/wallpapers/gen`
+  (dark under 3.5% luminance, light over 80%, so frost 0 / dim 0). Card
+  key order must match `normalizeTheme` output or `sameTheme` never marks
+  the card selected. The gallery is three shelves: Colour, Artwork,
+  Photographs.
+
+## Settings is the Inspector (owner pick 2026-09-20)
+
+The owner rejected the pill-chip, card-on-card Settings ("child's play") and
+chose the Inspector from four mocked directions. The grammar lives in
+`src/components/settings/inspector.tsx`: `SettingGroup` (a quiet 13px label
+with its caption on the same line, then hairline rows; no card, no icon
+chip), `SettingRow` (name | what it does | control at the right edge; on a
+phone the explanation drops under the name), `SelectRow` (a native
+`<select>` on purpose: the phone gets its own picker and there is no overlay
+to build), `ToggleRow`, `ValueRow`, and the `rowButton` class. `Choice` and
+`Toggle` in `SettingRows.tsx` are thin names over those, so every group
+inherits it. The rail (`SettingsNav`) has search on every width, two labels
+(You / App), 40px text rows and no icons. Controls are 7px-radius bordered
+boxes; pills are gone from Settings. A new setting is a row from that file,
+never a bespoke block, and never a row of option chips.
 
 ## Finance-native feed layer (added 2026-08-02)
 

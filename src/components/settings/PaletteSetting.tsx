@@ -1,14 +1,14 @@
 "use client";
 
 import clsx from "clsx";
-import { Check } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
 import { PALETTES } from "@/data/palettes";
-import { staggerParentFast, staggerPop, thumbSpring } from "@/lib/motion-presets";
+import { thumbSpring } from "@/lib/motion-presets";
 import { withThemeTransition } from "@/lib/theme-transition";
+import { SettingRow } from "./inspector";
 
 /**
  * Settings > Appearance > Colour: the app's brand colour (owner
@@ -32,23 +32,10 @@ export function PaletteSetting() {
 	const active = PALETTES.find((p) => p.id === current) ?? PALETTES[0];
 
 	return (
-		<div className="border-t border-hairline px-4 py-3">
-			<div className="flex items-baseline justify-between gap-3">
-				<span className="font-sans text-[calc(15px*var(--ws-fs))] font-medium text-primary">
-					Colour
-				</span>
-				<span className="font-sans text-[calc(13px*var(--ws-fs))] text-muted">
-					{active.label}. {active.blurb}
-				</span>
-			</div>
-			<motion.div
-				role="radiogroup"
-				aria-label="App colour"
-				variants={staggerParentFast}
-				initial="hidden"
-				animate="show"
-				className="mt-3 flex flex-wrap gap-2"
-			>
+		<SettingRow label="Colour" hint={`${active.label}. ${active.blurb}`}>
+			{/* The dot is 16px; the button around it is the 40px target. They
+			    overlap by a hair (-mx-1) so seven fit a phone row. */}
+			<div role="radiogroup" aria-label="App colour" className="-mr-3 flex">
 				{PALETTES.map((p) => {
 					const on = p.id === current;
 					const sw = p[mode];
@@ -60,7 +47,6 @@ export function PaletteSetting() {
 							aria-checked={on}
 							aria-label={`${p.label}. ${p.blurb}`}
 							title={p.label}
-							variants={staggerPop}
 							whileTap={{ scale: 0.92 }}
 							onClick={() => {
 								if (on) return;
@@ -68,30 +54,28 @@ export function PaletteSetting() {
 									setPrefs({ appearance: { palette: p.id } }),
 								);
 							}}
-							className="relative flex size-11 cursor-pointer items-center justify-center rounded-pill"
+							className="relative -mx-1 flex size-10 cursor-pointer items-center justify-center rounded-pill"
 						>
 							{on && (
 								<motion.span
 									layoutId="palette-ring"
 									transition={thumbSpring}
-									className="absolute inset-0 rounded-pill border-2 border-primary"
+									className="absolute inset-[7px] rounded-pill border-[1.5px] border-primary"
 								/>
 							)}
 							<span
 								className={clsx(
-									"flex size-8 items-center justify-center rounded-pill",
-									// Mono's swatch is the ink itself: a hairline keeps it
+									"block size-4 rounded-pill",
+									// Mono's dot is the ink itself: a hairline keeps it
 									// from dissolving into a same-coloured page.
 									p.id === "mono" && "border border-hairline",
 								)}
-								style={{ background: sw.fill, color: sw.on }}
-							>
-								{on && <Check size={14} weight="bold" />}
-							</span>
+								style={{ background: sw.fill }}
+							/>
 						</motion.button>
 					);
 				})}
-			</motion.div>
-		</div>
+			</div>
+		</SettingRow>
 	);
 }
