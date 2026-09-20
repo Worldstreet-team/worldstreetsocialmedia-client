@@ -5,6 +5,8 @@ import { usePreferences } from "@/components/providers/PreferencesProvider";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { RiPauseFill, RiPlayFill } from "@remixicon/react";
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
+import { pop, press, swap } from "@/lib/motion-presets";
 
 interface VoiceMessageProps {
 	src: string;
@@ -549,9 +551,16 @@ export const VoiceMessage = ({
 				type="button"
 				onClick={togglePlay}
 				aria-label={isPlaying ? "Pause voice message" : "Play voice message"}
-				className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill outline-none"
+				// relative: the outgoing glyph is lifted out of flow against it.
+				className="relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill outline-none"
 			>
-				{isPlaying ? <RiPauseFill size={19} /> : <RiPlayFill size={19} />}
+				{/* The glyph answers the tap. initial={false}: a note scrolled
+				    back into the virtualised thread paints at rest. */}
+				<AnimatePresence mode="popLayout" initial={false}>
+					<motion.span key={isPlaying ? "pause" : "play"} className="flex" {...pop}>
+						{isPlaying ? <RiPauseFill size={19} /> : <RiPlayFill size={19} />}
+					</motion.span>
+				</AnimatePresence>
 			</button>
 
 			{decodeFailed ? (
@@ -620,24 +629,45 @@ export const VoiceMessage = ({
 			)}
 
 			{/* Mid-note → the speed chip joins the countdown (register 85);
-			    idle → just the length. tabular-nums does the fixed digits. */}
+			    idle → just the length. tabular-nums does the fixed digits.
+			    The chip lands when the note starts and leaves when it ends;
+			    initial={false} keeps a half-played note that scrolls back into
+			    view at rest. */}
+			<AnimatePresence initial={false}>
 			{(isPlaying || (currentTime > 0 && currentTime < duration)) && (
-				<button
+				<motion.button
+					key="rate"
 					type="button"
+					{...pop}
+					{...press}
 					onClick={cycleRate}
 					aria-label={`Playback speed ${rate}x`}
-					className="shrink-0 cursor-pointer rounded-pill px-2 py-0.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold tabular-nums transition-opacity hover:opacity-80"
-					// A wash of the bubble's own ink, like the mention chip: reads
-					// on any fill instead of a page-toned chip inside a coloured bubble.
-					style={{
-						background: isMe
-							? "var(--chat-on-mine, rgba(0,0,0,0.22))"
-							: "var(--chat-accent-18, rgba(34,184,214,0.18))",
-					}}
+					className="group/rate shrink-0 cursor-pointer rounded-pill"
 				>
-					{rate}×
-				</button>
+					{/* The wash sits on an inner pill: the pop leaves an inline
+					    opacity on the button, which would mute the hover dim. It
+					    is relative and clipped so the rate can roll inside it. */}
+					<span
+						className="relative flex overflow-hidden rounded-pill px-2 py-0.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold tabular-nums transition-opacity group-hover/rate:opacity-80"
+						// A wash of the bubble's own ink, like the mention chip: reads
+						// on any fill instead of a page-toned chip inside a coloured
+						// bubble. The fallbacks are mixed from the ink and the brand
+						// token, not a fixed black and a literal cyan.
+						style={{
+							background: isMe
+								? "var(--chat-on-mine, color-mix(in srgb, currentColor 22%, transparent))"
+								: "var(--chat-accent-18, color-mix(in srgb, var(--ws-brand-primary) 18%, transparent))",
+						}}
+					>
+						<AnimatePresence mode="popLayout" initial={false}>
+							<motion.span key={rate} className="inline-block" {...swap}>
+								{rate}×
+							</motion.span>
+						</AnimatePresence>
+					</span>
+				</motion.button>
 			)}
+			</AnimatePresence>
 			<span className="font-sans text-[calc(12px*var(--ws-fs))] tabular-nums opacity-80 shrink-0 min-w-[32px] text-right">
 				{formatTime(
 					isPlaying ? Math.max(0, duration - currentTime) : duration,

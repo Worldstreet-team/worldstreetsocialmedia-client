@@ -13,6 +13,8 @@ import {
   profileRatesRequestAtom,
 } from "@/store/ui.atom";
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { menuStagger, pop, press, staggerItem, swap } from "@/lib/motion-presets";
 import {
   ArrowLeft,
   Ban,
@@ -224,18 +226,34 @@ export function ProfileHeader({
           >
             <SafeAvatar src={avatar} />
           </button>
-          {isLive && (
-            <span className="absolute -bottom-1 left-1/2 flex h-5 -translate-x-1/2 items-center gap-1 rounded-pill bg-danger px-2 font-sans text-[calc(9px*var(--ws-fs))] font-bold tracking-wide text-white">
-              <span className="h-1 w-1 animate-pulse rounded-pill bg-white" />
-              {t("live.badge")}
-            </span>
-          )}
+          {/* The outer span keeps the centring; framer owns the inner
+              one's transform, and the two must not share an element. */}
+          <AnimatePresence initial={false}>
+            {isLive && (
+              <span
+                key="live"
+                className="absolute -bottom-1 left-1/2 -translate-x-1/2"
+              >
+                <motion.span
+                  {...pop}
+                  className="flex h-5 items-center gap-1 rounded-pill bg-danger px-2 font-sans text-[calc(9px*var(--ws-fs))] font-bold tracking-wide text-white"
+                >
+                  <span className="h-1 w-1 animate-pulse rounded-pill bg-white" />
+                  {t("live.badge")}
+                </motion.span>
+              </span>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
       <div className="mt-2 flex min-h-[52px] justify-end gap-2 px-4 py-3">
-        {showAdIcon &&
-          (isMe ? (
+        {/* The chip arrives late, when AdSlot publishes the atom, so it
+            lands rather than blinking into the row. */}
+        <AnimatePresence initial={false}>
+        {showAdIcon && (
+          <motion.div key="ad-icon" {...pop} className="shrink-0">
+          {isMe ? (
             <button
               type="button"
               aria-label="Your ad space — rates"
@@ -258,7 +276,10 @@ export function ProfileHeader({
             >
               {adIconChrome}
             </Link>
-          ))}
+          )}
+          </motion.div>
+        )}
+        </AnimatePresence>
         {!isMe && !blockedByThem && !blockedByYou && canMessage && (
           <button
             type="button"
@@ -285,15 +306,22 @@ export function ProfileHeader({
           >
             <MoreHorizontal className="h-[18px] w-[18px]" />
           </button>
+          {/* Unfolds from the trigger's corner and cascades its rows.
+              animate-rise did nothing here: the intro kill-switch turns it
+              off for the session, and it never had an exit. */}
+          <AnimatePresence>
           {menuOpen && (
-            <div
+            <motion.div
+              key="profile-menu"
+              {...menuStagger("top-right")}
               role="menu"
               aria-label={t("profile.more")}
-              className="absolute right-0 top-full z-dropdown mt-2 flex w-[232px] flex-col overflow-hidden rounded-xl bg-surface p-1.5 shadow-nav animate-rise"
+              className="absolute right-0 top-full z-dropdown mt-2 flex w-[232px] flex-col overflow-hidden rounded-xl bg-surface p-1.5 shadow-nav"
             >
               {canShare && (
                 <>
-                  <button
+                  <motion.button
+                    variants={staggerItem}
                     type="button"
                     role="menuitem"
                     onClick={() => {
@@ -304,8 +332,9 @@ export function ProfileHeader({
                   >
                     <Share2 className={menuIcon} />
                     {t("profile.share")}
-                  </button>
-                  <button
+                  </motion.button>
+                  <motion.button
+                    variants={staggerItem}
                     type="button"
                     role="menuitem"
                     onClick={copyLink}
@@ -313,25 +342,28 @@ export function ProfileHeader({
                   >
                     <Link2 className={menuIcon} />
                     {t("share.copyLink")}
-                  </button>
+                  </motion.button>
                 </>
               )}
               {isMe ? (
-                <Link
-                  href="/settings"
-                  role="menuitem"
-                  onClick={() => setMenuOpen(false)}
-                  className={menuItem}
-                >
-                  <Settings className={menuIcon} />
-                  {t("nav.settings")}
-                </Link>
+                <motion.div variants={staggerItem}>
+                  <Link
+                    href="/settings"
+                    role="menuitem"
+                    onClick={() => setMenuOpen(false)}
+                    className={menuItem}
+                  >
+                    <Settings className={menuIcon} />
+                    {t("nav.settings")}
+                  </Link>
+                </motion.div>
               ) : (
                 <>
                   {canShare && (
                     <span aria-hidden className="mx-2 my-1 h-px bg-primary/10" />
                   )}
-                  <button
+                  <motion.button
+                    variants={staggerItem}
                     type="button"
                     role="menuitem"
                     onClick={() => {
@@ -342,9 +374,10 @@ export function ProfileHeader({
                   >
                     <Flag className={menuIcon} />
                     {t("safety.report")} @{username}
-                  </button>
+                  </motion.button>
                   {!blockedByThem && (
-                    <button
+                    <motion.button
+                      variants={staggerItem}
                       type="button"
                       role="menuitem"
                       onClick={() => {
@@ -359,12 +392,13 @@ export function ProfileHeader({
                       <Ban className={clsx(menuIcon, !blockedByYou && "text-danger")} />
                       {blockedByYou ? t("safety.unblock") : t("safety.block")} @
                       {username}
-                    </button>
+                    </motion.button>
                   )}
                 </>
               )}
-            </div>
+            </motion.div>
           )}
+          </AnimatePresence>
         </div>
 
         {isMe ? (
@@ -398,7 +432,8 @@ export function ProfileHeader({
             Blocked
           </button>
         ) : (
-          <button
+          <motion.button
+            {...press}
             type="button"
             onClick={onFollowToggle}
             disabled={followLoading}
@@ -419,12 +454,24 @@ export function ProfileHeader({
                 own key, not the stats-row one: that noun reads as
                 "Abonnements"/"Subscriptions" in French, which is a list
                 heading, not a button state. */}
-            {isFollowing
-              ? hoveringFollow
-                ? t("profile.unfollow")
-                : t("profile.followingState")
-              : t("profile.follow")}
-          </button>
+            {/* Keyed on the follow state only: your own action rolls the
+                label, the hover preview of "Unfollow" just cuts. */}
+            <span className="relative inline-flex justify-center">
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.span
+                  key={isFollowing ? "following" : "follow"}
+                  {...swap}
+                  className="inline-block"
+                >
+                  {isFollowing
+                    ? hoveringFollow
+                      ? t("profile.unfollow")
+                      : t("profile.followingState")
+                    : t("profile.follow")}
+                </motion.span>
+              </AnimatePresence>
+            </span>
+          </motion.button>
         )}
       </div>
     </>

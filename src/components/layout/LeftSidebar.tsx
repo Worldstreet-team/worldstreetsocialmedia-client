@@ -15,7 +15,17 @@ import {
 	UserCircle,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+	pop,
+	press as pressTap,
+	staggerItem,
+	staggerParent,
+	staggerParentFast,
+	staggerPop,
+	swap,
+	thumbSpring,
+} from "@/lib/motion-presets";
 import { Flame } from "@phosphor-icons/react";
 import { BadgedIcon } from "@/components/ui/Badge";
 import { getVoteLeaders } from "@/lib/votes";
@@ -176,33 +186,59 @@ export function LeftSidebar() {
 					// Active = light chip + filled glyph; nothing heavier.
 					"relative flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors group animate-rise",
 					isActive
-						? "bg-primary/10 text-primary font-semibold"
+						? "text-primary font-semibold"
 						: "text-muted hover:bg-primary/5 hover:text-primary",
 				)}
 			>
+				{isActive && (
+					// One chip that slides between rows instead of jumping. The
+					// rail is a page singleton, so a fixed layoutId is safe.
+					<motion.span
+						layoutId="rail-active"
+						transition={thumbSpring}
+						aria-hidden
+						className="absolute inset-0 rounded-xl bg-primary/10"
+					/>
+				)}
 				<BadgedIcon count={badgeCount} label={t(item.labelKey)}>
 					<item.icon isActive={isActive} />
 				</BadgedIcon>
-				<span className="font-sans text-[calc(16.5px*var(--ws-fs))]">{t(item.labelKey)}</span>
-				{item.labelKey === "nav.voice" && liveSpaces > 0 && (
-					// A broadcast dot, not a count: rooms are happening now, they
-					// aren't a backlog. The title carries the actual number for
-					// anyone who wants it.
-					<span
-						className="relative ml-auto flex h-2 w-2 shrink-0"
-						title={`${liveSpaces} ${t("voice.liveNow")}`}
-					>
-						<span className="absolute inline-flex h-full w-full animate-ping rounded-pill bg-danger opacity-75" />
-						<span className="relative inline-flex h-2 w-2 rounded-pill bg-danger" />
-						<span className="sr-only">{t("voice.liveNow")}</span>
-					</span>
+				<span className="relative font-sans text-[calc(16.5px*var(--ws-fs))]">{t(item.labelKey)}</span>
+				{item.labelKey === "nav.voice" && (
+					// initial={false}: a dot that is there on load just is; one
+					// that arrives while you watch lands.
+					<AnimatePresence initial={false}>
+						{liveSpaces > 0 && (
+							// A broadcast dot, not a count: rooms are happening now, they
+							// aren't a backlog. The title carries the actual number for
+							// anyone who wants it.
+							<motion.span
+								key="live-dot"
+								{...pop}
+								className="relative ml-auto flex h-2 w-2 shrink-0"
+								title={`${liveSpaces} ${t("voice.liveNow")}`}
+							>
+								<span className="absolute inline-flex h-full w-full animate-ping rounded-pill bg-danger opacity-75" />
+								<span className="relative inline-flex h-2 w-2 rounded-pill bg-danger" />
+								<span className="sr-only">{t("voice.liveNow")}</span>
+							</motion.span>
+						)}
+					</AnimatePresence>
 				)}
 			</Link>
 		);
 	};
 
 	return (
-		<header className="w-[264px] shrink-0 hidden md:flex flex-col sticky top-0 h-dvh overflow-y-auto no-scrollbar pl-4 pr-5 border-r border-hairline">
+		// layoutScroll: the rail scrolls on short windows, and the active
+		// thumb has to measure against that offset. layoutRoot: the rail is
+		// stuck to the viewport, so on routes that scroll the window (messages)
+		// the thumb is measured against the rail, not the page.
+		<motion.header
+			layoutScroll
+			layoutRoot
+			className="w-[264px] shrink-0 hidden md:flex flex-col sticky top-0 h-dvh overflow-y-auto no-scrollbar pl-4 pr-5 border-r border-hairline"
+		>
 			{/* Intro: logo leads, nav items cascade after it (animate-rise + delays). */}
 			<div className="py-7 px-2 animate-rise">
 				{/* Same brand ritual the mobile top bar plays — the rail is where
@@ -224,20 +260,35 @@ export function LeftSidebar() {
 					className={clsx(
 						"relative flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors group animate-rise",
 						pathname.startsWith("/votes")
-							? "bg-primary/10 text-primary font-semibold"
+							? "text-primary font-semibold"
 							: "text-muted hover:bg-primary/5 hover:text-primary",
 					)}
 				>
-					<VoteBox open={pathname.startsWith("/votes")} size={24} />
-					<span className="font-sans text-[calc(16.5px*var(--ws-fs))]">Votes</span>
-					<span className="ml-auto flex items-center gap-1.5">
+					{pathname.startsWith("/votes") && (
+						<motion.span
+							layoutId="rail-active"
+							transition={thumbSpring}
+							aria-hidden
+							className="absolute inset-0 rounded-xl bg-primary/10"
+						/>
+					)}
+					<span className="relative inline-flex">
+						<VoteBox open={pathname.startsWith("/votes")} size={24} />
+					</span>
+					<span className="relative font-sans text-[calc(16.5px*var(--ws-fs))]">Votes</span>
+					<span className="relative ml-auto flex items-center gap-1.5">
 						<Flame
 							size={17}
 							weight="fill"
 							className="animate-flicker text-gold"
 						/>
 						{voteLeaders.length > 0 && (
-							<span
+							// Mounts once, when the one fetch lands: the faces
+							// arrive in order instead of snapping in together.
+							<motion.span
+								variants={staggerParent}
+								initial="hidden"
+								animate="show"
 								className="flex -space-x-2"
 								title={
 									voteLeaders[0]?.username
@@ -246,15 +297,16 @@ export function LeftSidebar() {
 								}
 							>
 								{voteLeaders.map((l, i) => (
-									<span
+									<motion.span
 										key={l.username ?? i}
+										variants={staggerPop}
 										className="relative block h-6 w-6 shrink-0 overflow-hidden rounded-pill ring-2 ring-page"
 										style={{ zIndex: 3 - i }}
 									>
 										<SafeAvatar src={l.avatar} />
-									</span>
+									</motion.span>
 								))}
-							</span>
+							</motion.span>
 						)}
 					</span>
 				</Link>
@@ -322,10 +374,18 @@ export function LeftSidebar() {
 							    parent's label, which is enough to read as nested. The
 							    arrow is absolutely placed so it costs no row width 
 							    "Cryptocurrencies" needs every pixel in this rail. */}
-							<div className="flex flex-col py-0.5 pl-3">
+							{/* The rows stay mounted (the grid does the height), so
+							    the cascade is driven by the open flag, not by mount. */}
+							<motion.div
+								variants={staggerParentFast}
+								initial={false}
+								animate={productsOpen ? "show" : "exit"}
+								className="flex flex-col py-0.5 pl-3"
+							>
 								{ECOSYSTEM.map((app) => (
-									<a
+									<motion.a
 										key={app.title}
+										variants={staggerItem}
 										href={app.href}
 										target="_blank"
 										rel="noopener noreferrer"
@@ -346,9 +406,9 @@ export function LeftSidebar() {
 											size={12}
 											className="absolute right-2.5 top-1/2 -translate-y-1/2 text-subtle opacity-0 group-hover/app:opacity-100 transition-opacity"
 										/>
-									</a>
+									</motion.a>
 								))}
-							</div>
+							</motion.div>
 						</div>
 					</div>
 				</div>
@@ -359,19 +419,17 @@ export function LeftSidebar() {
 					className="mt-5 animate-rise"
 					style={{ animationDelay: "330ms" }}
 				>
-					<button
+					<motion.button
 						type="button"
+						{...pressTap}
 						// The compose WINDOW, from any route (owner ruling
 						// 2026-09-03) — this used to scroll to the home feed's
 						// composer, which meant posting required going home.
-						onClick={() => {
-							console.log("[compose] sidebar Post clicked");
-							setComposeOpen(true);
-						}}
+						onClick={() => setComposeOpen(true)}
 						className="w-full h-12 shine bg-brand hover:bg-brand-active text-brand-on font-semibold text-[calc(15px*var(--ws-fs))] rounded-pill font-sans transition-colors cursor-pointer"
 					>
 						{t("composer.post")}
-					</button>
+					</motion.button>
 				</div>
 			</nav>
 
@@ -424,20 +482,28 @@ export function LeftSidebar() {
 										onClose={closeMenu}
 										closeLabel={t("common.close")}
 									/>
-									<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[calc(6px+var(--ws-safe-bottom))]">
-										<Link
-											href={
-												user.username
-													? `/profile/${user.username}`
-													: "/profile"
-											}
-											onClick={closeMenu}
-											className="w-full text-left px-3.5 py-2.5 hover:bg-primary/5 text-sm text-primary font-sans font-medium flex items-center gap-2.5 transition-colors"
-										>
-											<UserCircle size={16} />
-											{t("nav.viewProfile")}
-										</Link>
-										<button
+									<motion.div
+										variants={staggerParent}
+										initial="hidden"
+										animate="show"
+										className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[calc(6px+var(--ws-safe-bottom))]"
+									>
+										<motion.div variants={staggerItem}>
+											<Link
+												href={
+													user.username
+														? `/profile/${user.username}`
+														: "/profile"
+												}
+												onClick={closeMenu}
+												className="w-full text-left px-3.5 py-2.5 hover:bg-primary/5 text-sm text-primary font-sans font-medium flex items-center gap-2.5 transition-colors"
+											>
+												<UserCircle size={16} />
+												{t("nav.viewProfile")}
+											</Link>
+										</motion.div>
+										<motion.button
+											variants={staggerItem}
 											type="button"
 											onClick={() =>
 												withThemeTransition(() =>
@@ -446,29 +512,43 @@ export function LeftSidebar() {
 											}
 											className="w-full text-left px-3.5 py-2.5 hover:bg-primary/5 text-sm text-primary font-sans font-medium flex items-center gap-2.5 transition-colors cursor-pointer"
 										>
-											{mounted && isLight ? (
-												<Moon size={16} />
-											) : (
-												<Sun size={16} />
-											)}
-											{mounted && isLight
-												? t("nav.darkMode")
-												: t("nav.lightMode")}
-										</button>
-										<LanguageMenu
-											expanded={langOpen}
-											onToggle={() => setLangOpen((v) => !v)}
-										/>
-										<div className="my-1 border-t border-hairline" />
-										<button
-											type="button"
-											className="w-full text-left px-3.5 py-2.5 hover:bg-primary/5 text-sm text-danger font-sans font-medium flex items-center gap-2.5 transition-colors cursor-pointer"
-											onClick={() => handleSignOut(signOut)}
-										>
-											<SignOut size={16} />
-											{t("nav.logout")} @{user.username}
-										</button>
-									</div>
+											{/* The glyph and its label trade places as one
+											    piece when the theme flips. */}
+											<AnimatePresence mode="wait" initial={false}>
+												<motion.span
+													key={mounted && isLight ? "to-dark" : "to-light"}
+													{...swap}
+													className="flex items-center gap-2.5"
+												>
+													{mounted && isLight ? (
+														<Moon size={16} />
+													) : (
+														<Sun size={16} />
+													)}
+													{mounted && isLight
+														? t("nav.darkMode")
+														: t("nav.lightMode")}
+												</motion.span>
+											</AnimatePresence>
+										</motion.button>
+										<motion.div variants={staggerItem}>
+											<LanguageMenu
+												expanded={langOpen}
+												onToggle={() => setLangOpen((v) => !v)}
+											/>
+										</motion.div>
+										<motion.div variants={staggerItem}>
+											<div className="my-1 border-t border-hairline" />
+											<button
+												type="button"
+												className="w-full text-left px-3.5 py-2.5 hover:bg-primary/5 text-sm text-danger font-sans font-medium flex items-center gap-2.5 transition-colors cursor-pointer"
+												onClick={() => handleSignOut(signOut)}
+											>
+												<SignOut size={16} />
+												{t("nav.logout")} @{user.username}
+											</button>
+										</motion.div>
+									</motion.div>
 								</OverlayPanel>
 							)}
 						</AnimatePresence>
@@ -509,6 +589,6 @@ export function LeftSidebar() {
 					</button>
 				</div>
 			)}
-		</header>
+		</motion.header>
 	);
 }

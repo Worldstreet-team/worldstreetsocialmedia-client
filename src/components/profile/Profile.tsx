@@ -5,6 +5,8 @@ import { useGatewayRead } from "@/hooks/useGateway";
 import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { collapse, reveal } from "@/lib/motion-presets";
 import { useRouter } from "next/navigation";
 import { useAtom, useAtomValue } from "jotai";
 import { Grid3x3, Heart, MessageCircle, Plus, Search, Video } from "lucide-react";
@@ -608,20 +610,26 @@ export default function Profile({ username }: { username?: string }) {
 				/>
 			)}
 
-			{profileUser.isBlockedByYou && (
-				<div className="mx-4 mt-2 flex items-center justify-between rounded-xl border border-danger/20 bg-danger/10 p-3">
-					<span className="font-sans text-sm font-semibold text-danger">
-						You blocked this user.
-					</span>
-					<button
-						type="button"
-						onClick={handleUnblock}
-						className="cursor-pointer rounded-md bg-danger px-3 py-1.5 font-sans text-xs font-semibold text-page transition-opacity hover:opacity-90"
-					>
-						Unblock
-					</button>
-				</div>
-			)}
+			{/* Opens and closes with height, so blocking in place does not
+			    shove the whole profile down a row in one frame. */}
+			<AnimatePresence initial={false}>
+				{profileUser.isBlockedByYou && (
+					<motion.div key="blocked-banner" {...collapse} className="overflow-hidden">
+						<div className="mx-4 mt-2 flex items-center justify-between rounded-xl border border-danger/20 bg-danger/10 p-3">
+							<span className="font-sans text-sm font-semibold text-danger">
+								You blocked this user.
+							</span>
+							<button
+								type="button"
+								onClick={handleUnblock}
+								className="cursor-pointer rounded-md bg-danger px-3 py-1.5 font-sans text-xs font-semibold text-page transition-opacity hover:opacity-90"
+							>
+								Unblock
+							</button>
+						</div>
+					</motion.div>
+				)}
+			</AnimatePresence>
 
 			{profileUser.isBlockedByThem && (
 				<div className="mx-4 mt-2 rounded-xl border border-hairline bg-surface p-3">
@@ -679,20 +687,31 @@ export default function Profile({ username }: { username?: string }) {
 			<div className="flex min-h-[300px] flex-col">
 				{loadingFeed ? (
 					[0, 1, 2].map((i) => <PostSkeleton key={i} />)
-				) : visiblePosts.length === 0 ? (
-					<EmptyState
-						icon={emptyIcon}
-						title={t(`profile.emptyTitle.${activeTab}`)}
-						caption={t(emptyCaptionKey)}
-					/>
-				) : activeTab === "media" || activeTab === "street" ? (
-					<ProfileGrid posts={visiblePosts} kind={activeTab} />
 				) : (
-					visiblePosts.map((post, i) => (
-						<ImpressionSensor key={post.id} meta={{ post: post.id, author: post.author?.id ?? "", surface: "profile", position: i }}>
-							<PostCard post={post} />
-						</ImpressionSensor>
-					))
+					// Keyed by tab: the content rises once when a tab lands, as
+					// the home feed does, and never again for a page appended
+					// under the same tab.
+					<motion.div
+						key={activeTab}
+						{...reveal()}
+						className="flex flex-1 flex-col"
+					>
+						{visiblePosts.length === 0 ? (
+							<EmptyState
+								icon={emptyIcon}
+								title={t(`profile.emptyTitle.${activeTab}`)}
+								caption={t(emptyCaptionKey)}
+							/>
+						) : activeTab === "media" || activeTab === "street" ? (
+							<ProfileGrid posts={visiblePosts} kind={activeTab} />
+						) : (
+							visiblePosts.map((post, i) => (
+								<ImpressionSensor key={post.id} meta={{ post: post.id, author: post.author?.id ?? "", surface: "profile", position: i }}>
+									<PostCard post={post} />
+								</ImpressionSensor>
+							))
+						)}
+					</motion.div>
 				)}
 			</div>
 		</div>

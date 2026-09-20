@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 import { MagnifyingGlass, X } from "@phosphor-icons/react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Compass } from "lucide-react";
 import { useGatewayRead } from "@/hooks/useGateway";
 import { searchPostsAction } from "@/lib/post.actions";
@@ -16,6 +17,7 @@ import { Tabs } from "@/components/ui/Tabs";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { useT } from "@/i18n/client";
 import { mapApiPost } from "@/lib/post-mapper";
+import { pop } from "@/lib/motion-presets";
 import { useAtom } from "jotai";
 import { syncUrlIfStillOn } from "@/lib/url-sync";
 import { effectiveFollowing } from "@/lib/engagementStore";
@@ -263,19 +265,27 @@ export default function ExploreClient({
               // text-base on mobile or iOS Safari zooms the page on focus.
               className="h-10 w-full rounded-pill bg-chip pl-10 pr-11 font-sans text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised sm:text-[calc(14px*var(--ws-fs))]"
             />
-            {query && (
-              <button
-                type="button"
-                onClick={() => {
-                  setQuery("");
-                  inputRef.current?.focus();
-                }}
-                aria-label={t("explore.clear")}
-                className="absolute right-0 top-1/2 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-pill text-subtle transition-colors hover:text-primary"
-              >
-                <X size={14} weight="bold" />
-              </button>
-            )}
+            {/* The X answers a keystroke, so it cuts in (initial={false})
+                and only the leaving is animated. Centred with auto margins,
+                not a translate class: framer owns the transform here. */}
+            <AnimatePresence initial={false}>
+              {query && (
+                <motion.button
+                  key="clear"
+                  {...pop}
+                  initial={false}
+                  type="button"
+                  onClick={() => {
+                    setQuery("");
+                    inputRef.current?.focus();
+                  }}
+                  aria-label={t("explore.clear")}
+                  className="absolute inset-y-0 right-0 my-auto flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill text-subtle transition-colors hover:text-primary"
+                >
+                  <X size={14} weight="bold" />
+                </motion.button>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 

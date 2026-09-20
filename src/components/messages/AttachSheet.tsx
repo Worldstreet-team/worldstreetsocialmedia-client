@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import type { ReactNode } from "react";
 import {
 	RiContactsBookLine,
@@ -15,6 +15,7 @@ import {
 	OverlayScrim,
 	useOverlayDismiss,
 } from "@/components/ui/Overlay";
+import { staggerItem, staggerParent } from "@/lib/motion-presets";
 
 /** Where the + button is, so the sheet grows from it on a desktop. */
 export interface AttachAnchor {
@@ -95,10 +96,19 @@ export function AttachSheet({
 								: undefined
 						}
 					>
-						<div className="flex flex-col py-2 pb-[calc(8px+var(--ws-safe-bottom))]">
+						{/* The rows rise in one after another as the sheet opens. They
+						    carry no exit: the panel leaves as one piece, and each row
+						    is tappable from its first frame. */}
+						<motion.div
+							variants={staggerParent}
+							initial="hidden"
+							animate="show"
+							className="flex flex-col py-2 pb-[calc(8px+var(--ws-safe-bottom))]"
+						>
 							{rows.map((r) => (
-								<button
+								<motion.button
 									key={r.label}
+									variants={staggerItem}
 									type="button"
 									onClick={r.go}
 									className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-primary/5"
@@ -114,9 +124,9 @@ export function AttachSheet({
 											{r.hint}
 										</span>
 									</span>
-								</button>
+								</motion.button>
 							))}
-						</div>
+						</motion.div>
 					</OverlayPanel>
 				</>
 			)}

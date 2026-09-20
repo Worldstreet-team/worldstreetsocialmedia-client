@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import clsx from "clsx";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { CaretDown, Check, Globe, UsersThree } from "@phosphor-icons/react";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import {
@@ -13,6 +13,15 @@ import {
 } from "@/components/ui/Overlay";
 import { useT } from "@/i18n/client";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import {
+  press,
+  snappySpring,
+  staggerItem,
+  staggerParent,
+  staggerParentFast,
+  staggerPop,
+  swap,
+} from "@/lib/motion-presets";
 
 export interface AudienceCommunity {
   id: string;
@@ -55,19 +64,27 @@ export function AudiencePicker({
 
   return (
     <>
-      <button
+      <motion.button
         type="button"
         disabled={locked}
         onClick={() => setOpen((v) => !v)}
         aria-haspopup={locked ? undefined : "dialog"}
         aria-expanded={locked ? undefined : open}
         aria-label={t("community.audience.label")}
+        {...press}
         className={clsx(
-          "flex h-7 max-w-[220px] items-center gap-1.5 rounded-pill px-2.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold transition-colors",
+          "flex h-7 max-w-[220px] items-center gap-1.5 overflow-hidden rounded-pill px-2.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold transition-colors",
           value ? "bg-brand/15 text-gold" : "bg-raised text-muted",
           !locked && "cursor-pointer hover:text-primary",
         )}
       >
+        {/* The destination changed: the old one lifts out, the new rises in. */}
+        <AnimatePresence mode="wait" initial={false}>
+        <motion.span
+          key={value?.id ?? "everyone"}
+          {...swap}
+          className="flex min-w-0 items-center gap-1.5"
+        >
         {value ? (
           <span className="relative h-4 w-4 shrink-0 overflow-hidden rounded-pill bg-page">
             {value.avatar ? (
@@ -82,8 +99,19 @@ export function AudiencePicker({
           <Globe size={13} weight="bold" />
         )}
         <span className="truncate">{label}</span>
-        {!locked && <CaretDown size={11} weight="bold" className="shrink-0 opacity-70" />}
-      </button>
+        </motion.span>
+        </AnimatePresence>
+        {!locked && (
+          <motion.span
+            aria-hidden
+            animate={{ rotate: open ? 180 : 0 }}
+            transition={snappySpring}
+            className="flex shrink-0 opacity-70"
+          >
+            <CaretDown size={11} weight="bold" />
+          </motion.span>
+        )}
+      </motion.button>
 
       <ConfirmModalPortal>
         <AnimatePresence>
@@ -98,9 +126,14 @@ export function AudiencePicker({
                   onClose={close}
                   closeLabel={t("common.close")}
                 />
-                <div
+                {/* Plays once per open. Past six rows the tighter pace keeps
+                    the last community from arriving late. */}
+                <motion.div
                   role="listbox"
                   aria-label={t("community.audience.label")}
+                  variants={communities.length > 5 ? staggerParentFast : staggerParent}
+                  initial="hidden"
+                  animate="show"
                   className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[calc(8px+var(--ws-safe-bottom))]"
                 >
                   <Option
@@ -141,7 +174,7 @@ export function AudiencePicker({
                       label={c.name}
                     />
                   ))}
-                </div>
+                </motion.div>
               </OverlayPanel>
             </>
           )}
@@ -163,19 +196,24 @@ function Option({
   label: string;
 }) {
   return (
-    <button
+    <motion.button
       type="button"
       role="option"
       aria-selected={selected}
       onClick={onSelect}
+      variants={staggerItem}
       className="flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-left transition-colors hover:bg-raised"
     >
       {icon}
       <span className="min-w-0 flex-1 truncate font-sans text-[calc(13.5px*var(--ws-fs))] text-primary">
         {label}
       </span>
-      {selected && <Check size={14} weight="bold" className="shrink-0 text-gold" />}
-    </button>
+      {selected && (
+        <motion.span variants={staggerPop} className="flex shrink-0 text-gold">
+          <Check size={14} weight="bold" />
+        </motion.span>
+      )}
+    </motion.button>
   );
 }
 

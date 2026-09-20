@@ -162,7 +162,8 @@ export function UsernameSetting() {
 				)}
 				{(state === "taken" || state === "invalid") && (
 					<motion.span
-						initial={pop.initial}
+						// The format rule answers a keystroke, so it cuts in.
+						initial={state === "taken" ? pop.initial : false}
 						animate={pop.animate}
 						className="flex shrink-0"
 					>
@@ -171,13 +172,18 @@ export function UsernameSetting() {
 				)}
 			</div>
 
-			{/* Keyed by the state, not the text: the line rises once when the
-			    verdict changes and holds still while the handle is typed. The
-			    old line is cut rather than faded out, same reason as above. */}
+			{/* Keyed by the state, not the text: the line rises once when a
+			    checked verdict lands and holds still while the handle is typed.
+			    Lines a keystroke produces (Checking, the format rule) cut in,
+			    and the old line is cut rather than faded out, same reason. */}
 			{hint.text && (
 				<motion.p
 					key={unchanged ? "unchanged" : state}
-					initial={swap.initial}
+					initial={
+						!unchanged && (state === "ok" || state === "taken")
+							? swap.initial
+							: false
+					}
 					animate={swap.animate}
 					className={`mt-1.5 font-sans text-[calc(12px*var(--ws-fs))] ${
 						hint.tone === "danger"

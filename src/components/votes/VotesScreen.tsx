@@ -4,6 +4,7 @@ import { useBackWithFallback } from "@/lib/nav";
 import clsx from "clsx";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { ArrowLeft, Crown, Lightning } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
@@ -11,6 +12,12 @@ import { UserBadges } from "@/components/ui/UserBadges";
 import { VoteCountdown } from "@/components/votes/VoteCountdown";
 import { formatCompact } from "@/lib/utils";
 import { getVoteLeaderboard } from "@/lib/votes";
+import {
+	reveal,
+	staggerItem,
+	staggerParentFast,
+	staggerPop,
+} from "@/lib/motion-presets";
 
 interface BoardRow {
 	post: {
@@ -98,18 +105,33 @@ export function VotesScreen() {
 					))}
 				</div>
 			) : board.length === 0 ? (
-				<p className="px-6 py-14 text-center font-sans text-[calc(14px*var(--ws-fs))] text-muted">
-					No votes yet this week — the first free vote starts the race.
-				</p>
+				<motion.p
+					{...reveal()}
+					className="px-6 py-14 text-center font-sans text-[calc(14px*var(--ws-fs))] text-muted"
+				>
+					No votes yet this week. The first free vote starts the race.
+				</motion.p>
 			) : (
-				<div className="flex flex-col gap-1.5 px-3">
+				// The board loads once per visit, so this is a first-open cascade
+				// by construction. It was animate-rise, which the intro kill
+				// switch turns off for the rest of the session.
+				<motion.div
+					variants={staggerParentFast}
+					initial="hidden"
+					animate="show"
+					className="flex flex-col gap-1.5 px-3"
+				>
 					{leader && (
+						<motion.div variants={staggerItem}>
 						<Link
 							href={`/post/${leader.post.id}`}
-							className="animate-rise relative overflow-hidden rounded-xl bg-surface p-5 transition-colors hover:bg-raised"
+							className="relative block overflow-hidden rounded-xl bg-surface p-5 transition-colors hover:bg-raised"
 						>
 							<div className="flex items-center gap-2 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-widest text-gold">
-								<Crown size={15} weight="fill" />
+								{/* The crown lands with the card it sits on. */}
+								<motion.span variants={staggerPop} className="flex">
+									<Crown size={15} weight="fill" />
+								</motion.span>
 								Leading this week
 							</div>
 							<div className="mt-3 flex items-center gap-3">
@@ -165,14 +187,14 @@ export function VotesScreen() {
 								</div>
 							)}
 						</Link>
+						</motion.div>
 					)}
 
 					{rest.map((row, i) => (
+						<motion.div key={row.post.id} variants={staggerItem}>
 						<Link
-							key={row.post.id}
 							href={`/post/${row.post.id}`}
-							className="animate-rise flex items-center gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-surface"
-							style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
+							className="flex items-center gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-surface"
 						>
 							<span className="w-7 shrink-0 text-center font-display text-[calc(15px*var(--ws-fs))] font-semibold tabular-nums text-subtle">
 								{i + 2}
@@ -209,8 +231,9 @@ export function VotesScreen() {
 								{formatCompact(row.votes)}
 							</span>
 						</Link>
+						</motion.div>
 					))}
-				</div>
+				</motion.div>
 			)}
 
 			{history.length > 0 && (

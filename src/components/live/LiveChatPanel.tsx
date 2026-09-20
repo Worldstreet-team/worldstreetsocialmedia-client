@@ -2,11 +2,20 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
 import { Gift, HandWaving, Heart, PaperPlaneTilt } from "@phosphor-icons/react";
 import type { Room } from "livekit-client";
 import { BACKEND_URL, XSTREAM_API_URL } from "@/const";
 import { useT } from "@/i18n/client";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import {
+	collapse,
+	pop,
+	press,
+	staggerParent,
+	staggerPop,
+	swap,
+} from "@/lib/motion-presets";
 
 /** The cross-platform chat wire shape (matches Xstream's LiveChat). */
 export interface ChatMsg {
@@ -70,10 +79,14 @@ export function LiveChatPanel({
 	const [walletError, setWalletError] = useState<string | null>(null);
 	const listRef = useRef<HTMLDivElement>(null);
 	const seenRef = useRef<Set<string>>(new Set());
+	// Gifts that arrived while the panel was open. History never goes through
+	// append(), so a gift loaded from the backlog renders still.
+	const liveTipsRef = useRef<Set<string>>(new Set());
 
 	const append = useCallback((msg: ChatMsg) => {
 		if (seenRef.current.has(msg.id)) return;
 		seenRef.current.add(msg.id);
+		if (msg.type === "tip") liveTipsRef.current.add(msg.id);
 		setMessages((prev) => [...prev.slice(-149), msg]);
 	}, []);
 
@@ -386,8 +399,21 @@ export function LiveChatPanel({
 							</span>
 						</div>
 					) : msg.type === "tip" ? (
-						<div
+						// The one row that lands. Your own gift pops; someone
+						// else's rises. Ordinary lines stay still: this list moves
+						// too fast for every row to make an entrance.
+						<motion.div
 							key={msg.id}
+							initial={
+								liveTipsRef.current.has(msg.id)
+									? msg.username === me?.username
+										? pop.initial
+										: swap.initial
+									: false
+							}
+							animate={
+								msg.username === me?.username ? pop.animate : swap.animate
+							}
 							className="flex items-center gap-2 rounded-lg bg-gold/10 px-2.5 py-2"
 						>
 							<Gift size={15} weight="fill" className="text-gold shrink-0" />
@@ -402,7 +428,7 @@ export function LiveChatPanel({
 									{msg.tipAmount}
 								</span>
 							)}
-						</div>
+						</motion.div>
 					) : msg.type === "reaction" ? (
 						<div key={msg.id} className="flex items-center gap-2 px-1">
 							<span className={clsx("font-sans text-[calc(12px*var(--ws-fs))]", inkDim)}>
@@ -412,7 +438,12 @@ export function LiveChatPanel({
 						</div>
 					) : (
 						<div key={msg.id} className="flex gap-2 px-1 py-0.5">
-							<span className="relative h-5 w-5 rounded-pill overflow-hidden shrink-0 mt-0.5 bg-white/10">
+							<span
+								className={clsx(
+									"relative h-5 w-5 rounded-pill overflow-hidden shrink-0 mt-0.5",
+									glass ? "bg-white/10" : "bg-raised",
+								)}
+							>
 								<SafeAvatar src={msg.avatar} className="object-cover" />
 							</span>
 							<div className="min-w-0 flex-1">
@@ -458,72 +489,96 @@ export function LiveChatPanel({
 				)}
 			</div>
 
-			{error && (
-				<p className="px-3 pb-1 font-sans text-[calc(11.5px*var(--ws-fs))] text-danger truncate">
-					{error}
-				</p>
-			)}
+			<AnimatePresence initial={false}>
+				{error && (
+					<motion.div key="error" {...collapse} className="overflow-hidden">
+						<p className="px-3 pb-1 font-sans text-[calc(11.5px*var(--ws-fs))] text-danger truncate">
+							{error}
+						</p>
+					</motion.div>
+				)}
+			</AnimatePresence>
 
-			{giftOpen && (
-				<div
-					className={clsx(
-						"border-t p-3",
-						glass ? "border-white/10" : "border-hairline",
-					)}
-				>
-					<div className="mb-2 flex items-center justify-between">
-						<span
+			<AnimatePresence initial={false}>
+				{giftOpen && (
+					<motion.div key="gift-tray" {...collapse} className="overflow-hidden">
+						<div
 							className={clsx(
-								"font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.1em]",
-								glass ? "glass-ink-faint" : "text-subtle",
+								"border-t p-3",
+								glass ? "border-white/10" : "border-hairline",
 							)}
 						>
-							{t("chat.gift")}
-						</span>
-						{wallet !== null ? (
-							<span
-								className={clsx(
-									"font-sans text-[calc(11px*var(--ws-fs))] tabular-nums",
-									glass ? "glass-ink-dim" : "text-muted",
-								)}
-							>
-								{t("chat.wallet")} {centsToDollars(wallet)}
-							</span>
-						) : walletError ? (
-							<span className="font-sans text-[calc(11px*var(--ws-fs))] text-danger">
-								{walletError}
-							</span>
-						) : null}
-					</div>
-					<div className="flex flex-wrap gap-1.5">
-						{GIFT_OPTIONS.map((g) => (
-							<button
-								key={g.name}
-								type="button"
-								disabled={giftBusy || !me}
-								onClick={() => void sendGift(g)}
-								className={clsx(
-									"flex items-center gap-1.5 rounded-pill px-3 py-1.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors cursor-pointer disabled:opacity-40",
-									glass
-										? "bg-white/[0.08] glass-ink hover:bg-white/[0.14]"
-										: "bg-raised text-primary hover:bg-hairline",
-								)}
-							>
-								<span className="text-[calc(14px*var(--ws-fs))] leading-none">{g.emoji}</span>
-								{g.name}
+							<div className="mb-2 flex items-center justify-between">
 								<span
 									className={clsx(
-										"tabular-nums",
+										"font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.1em]",
 										glass ? "glass-ink-faint" : "text-subtle",
 									)}
 								>
-									{centsToDollars(g.usdMinor)}
+									{t("chat.gift")}
 								</span>
-							</button>
-						))}
-					</div>
-				</div>
-			)}
+								{wallet !== null ? (
+									<span
+										className={clsx(
+											"font-sans text-[calc(11px*var(--ws-fs))] tabular-nums",
+											glass ? "glass-ink-dim" : "text-muted",
+										)}
+									>
+										{t("chat.wallet")}{" "}
+										<AnimatePresence mode="wait" initial={false}>
+											<motion.span
+												key={wallet}
+												{...swap}
+												className="inline-block"
+											>
+												{centsToDollars(wallet)}
+											</motion.span>
+										</AnimatePresence>
+									</span>
+								) : walletError ? (
+									<span className="font-sans text-[calc(11px*var(--ws-fs))] text-danger">
+										{walletError}
+									</span>
+								) : null}
+							</div>
+							<motion.div
+								variants={staggerParent}
+								initial="hidden"
+								animate="show"
+								className="flex flex-wrap gap-1.5"
+							>
+								{GIFT_OPTIONS.map((g) => (
+									<motion.button
+										key={g.name}
+										variants={staggerPop}
+										{...press}
+										type="button"
+										disabled={giftBusy || !me}
+										onClick={() => void sendGift(g)}
+										className={clsx(
+											"flex items-center gap-1.5 rounded-pill px-3 py-1.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors cursor-pointer disabled:opacity-40",
+											glass
+												? "bg-white/[0.08] glass-ink hover:bg-white/[0.14]"
+												: "bg-raised text-primary hover:bg-hairline",
+										)}
+									>
+										<span className="text-[calc(14px*var(--ws-fs))] leading-none">{g.emoji}</span>
+										{g.name}
+										<span
+											className={clsx(
+												"tabular-nums",
+												glass ? "glass-ink-faint" : "text-subtle",
+											)}
+										>
+											{centsToDollars(g.usdMinor)}
+										</span>
+									</motion.button>
+								))}
+							</motion.div>
+						</div>
+					</motion.div>
+				)}
+			</AnimatePresence>
 
 			<div
 				className={clsx(
@@ -531,7 +586,8 @@ export function LiveChatPanel({
 					glass ? "border-white/10" : "border-hairline",
 				)}
 			>
-				<button
+				<motion.button
+					{...press}
 					type="button"
 					onClick={() => setGiftOpen((v) => !v)}
 					disabled={!me}
@@ -547,7 +603,7 @@ export function LiveChatPanel({
 					)}
 				>
 					<Gift size={15} weight={giftOpen ? "fill" : "bold"} />
-				</button>
+				</motion.button>
 				<input
 					value={input}
 					onChange={(e) => setInput(e.target.value)}

@@ -2,10 +2,11 @@
 
 import clsx from "clsx";
 import { format } from "date-fns";
-import { motion } from "framer-motion";
-import { memo, useRef } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { memo, useEffect, useRef } from "react";
 import { RiErrorWarningFill, RiReplyLine } from "@remixicon/react";
 import { haptic } from "@/lib/haptics";
+import { DUR, EASE, EASE_IN, pop, press, swap } from "@/lib/motion-presets";
 import {
 	EmbeddedPost,
 	firstPlatformPostId,
@@ -85,6 +86,18 @@ function quotedPreview(r: {
 	}
 }
 
+// Washes for chips and rules. themeVars() sets the --chat-* half inside a
+// thread; the fallbacks cover a bubble outside a themed pane, and they are
+// mixed from the brand token (or the bubble's own ink) so the app palette
+// reaches them. They used to be a literal cyan and a fixed black.
+const accentWash = (pct: 12 | 18 | 40) =>
+	`var(--chat-accent-${pct}, color-mix(in srgb, var(--ws-brand-primary) ${pct}%, transparent))`;
+const ACCENT_12 = accentWash(12);
+const ACCENT_18 = accentWash(18);
+const ACCENT_40 = accentWash(40);
+const ON_MINE =
+	"var(--chat-on-mine, color-mix(in srgb, currentColor 22%, transparent))";
+
 const URL_RE = /(https?:\/\/[^\s<]+)/;
 const TOKEN_RE = /(https?:\/\/[^\s<]+|@[A-Za-z0-9_.]{2,32})/g;
 function linkify(text: string, mine: boolean) {
@@ -128,9 +141,9 @@ function linkify(text: string, mine: boolean) {
 					className="rounded-md px-1.5 py-[1px] font-semibold"
 					style={
 						mine
-							? { background: "var(--chat-on-mine, rgba(0,0,0,0.22))" }
+							? { background: ON_MINE }
 							: {
-								background: "var(--chat-accent-18, rgba(34,184,214,0.18))",
+								background: ACCENT_18,
 								color: "var(--chat-accent, var(--ws-brand-primary))",
 							}
 					}
@@ -176,10 +189,78 @@ export interface BubbleLift {
 
 const R = "var(--chat-r, 22px)";
 const RIN = "var(--chat-r-in, 8px)";
-const MINE_FILL = "var(--chat-mine, linear-gradient(135deg, var(--ws-brand-primary), #6D5BFF))";
-const MINE_INK = "var(--chat-mine-ink, #FFFFFF)";
+// Exported so the composer's send disc wears the same fill. The fallback is
+// the brand token into its own deeper step with the brand's ink: it used to
+// end on a literal indigo under white, which no app palette could move.
+export const MINE_FILL = "var(--chat-mine, linear-gradient(135deg, var(--ws-brand-primary), var(--ws-brand-dim)))";
+export const MINE_INK = "var(--chat-mine-ink, var(--ws-brand-on-primary))";
 const THEIRS_FILL = "var(--chat-theirs, var(--ws-bg-raised))";
 const THEIRS_INK = "var(--chat-theirs-ink, var(--ws-text-primary))";
+
+/**
+ * One reaction under a bubble. `live` is false when the chip is painted with
+ * its row (history, scroll-back) and true when it arrives on a row already
+ * on screen: only then does it move. Mine pops, because I put it there;
+ * someone else's rises in quietly, and a count rolls either way.
+ */
+function ReactionChip({
+	emoji,
+	count,
+	mine,
+	live,
+	onToggle,
+}: {
+	emoji: string;
+	count: number;
+	mine: boolean;
+	live: boolean;
+	onToggle: () => void;
+}) {
+	// Joining a chip that is already there answers the tap: the glyph lands
+	// again. Not on the chip's first paint, where the whole chip is arriving.
+	const paintedRef = useRef(false);
+	useEffect(() => {
+		paintedRef.current = true;
+	}, []);
+	const enter = mine ? pop : swap;
+	return (
+		<motion.button
+			type="button"
+			onClick={onToggle}
+			aria-label={`${emoji} reaction${count > 1 ? `, ${count}` : ""}${mine ? ", including yours" : ""}`}
+			initial={live ? enter.initial : false}
+			animate={enter.animate}
+			exit={pop.exit}
+			{...press}
+			className={clsx(
+				// relative: the outgoing count is popped out of flow against it.
+				"relative flex cursor-pointer items-center gap-1 rounded-pill px-1.5 py-0.5 font-sans text-[calc(13px*var(--ws-fs))] ring-2 ring-page transition-colors",
+				!mine && "bg-primary/5 hover:bg-primary/10",
+			)}
+			style={mine ? { background: ACCENT_40 } : undefined}
+		>
+			<motion.span
+				key={mine ? "mine" : "theirs"}
+				className="inline-block"
+				initial={paintedRef.current && mine ? pop.initial : false}
+				animate={pop.animate}
+			>
+				{emoji}
+			</motion.span>
+			<AnimatePresence mode="popLayout" initial={false}>
+				{count > 1 && (
+					<motion.span
+						key={count}
+						className="inline-block tabular-nums text-[calc(12px*var(--ws-fs))] font-semibold text-muted"
+						{...swap}
+					>
+						{count}
+					</motion.span>
+				)}
+			</AnimatePresence>
+		</motion.button>
+	);
+}
 
 export interface BubbleProps {
 	m: BubbleMessage;
@@ -291,6 +372,14 @@ export const MessageBubble = memo(function MessageBubble({
 	const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const hintRef = useRef<HTMLSpanElement | null>(null);
 	const armedRef = useRef(false);
+	// False for the row's first paint, true after. The small things inside
+	// (a reaction, the seen face, the failed mark) move only when they arrive
+	// on a row already on screen: history and scroll-back remount rows, and
+	// those paint at rest.
+	const liveRef = useRef(false);
+	useEffect(() => {
+		liveRef.current = true;
+	}, []);
 	const isTemp = m._id.startsWith("temp-");
 
 	const setDx = (dx: number) => {
@@ -407,13 +496,13 @@ export const MessageBubble = memo(function MessageBubble({
 			{showUnreadDivider && (
 				// Telegram's rule (owner pick): the thread opens here.
 				<div className="mx-auto flex w-full max-w-[52rem] items-center gap-3 px-4 py-3 sm:px-6">
-					<span className="h-px flex-1" style={{ background: "var(--chat-accent-40, rgba(34,184,214,0.4))" }} />
+					<span className="h-px flex-1" style={{ background: ACCENT_40 }} />
 					<span className="font-sans text-[calc(12px*var(--ws-fs))] font-semibold" style={{ color: "var(--chat-accent, var(--ws-brand-primary))" }}>
 						{unreadLabel && unreadLabel > 1
 							? `${unreadLabel} unread messages`
 							: "Unread messages"}
 					</span>
-					<span className="h-px flex-1" style={{ background: "var(--chat-accent-40, rgba(34,184,214,0.4))" }} />
+					<span className="h-px flex-1" style={{ background: ACCENT_40 }} />
 				</div>
 			)}
 			{showDay && (
@@ -440,7 +529,7 @@ export const MessageBubble = memo(function MessageBubble({
 				// into a hard snap. Live arrivals still rise in via `initial`.
 				initial={fresh ? { opacity: 0, y: 8, scale: 0.98 } : false}
 				animate={{ opacity: 1, y: 0, scale: 1 }}
-				transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+				transition={{ duration: DUR.base, ease: EASE }}
 				id={`msg-${m._id}`}
 				onContextMenu={(e) => {
 					if (isTemp) return;
@@ -489,9 +578,23 @@ export const MessageBubble = memo(function MessageBubble({
 					// runs, the centred stamp carries the big gap.
 					sameRunAsPrev ? "mt-[2px]" : "mt-2",
 					isMe ? "items-end" : "items-start",
-					flashed && "rounded-xl [background:var(--chat-accent-12,rgba(34,184,214,0.12))]",
 				)}
 			>
+				{/* The jump flash fades in and out instead of snapping. Opacity
+				    only; the presets have no plain fade, so it is DUR + EASE. */}
+				<AnimatePresence>
+					{flashed && (
+						<motion.span
+							key="flash"
+							aria-hidden
+							className="pointer-events-none absolute inset-0 rounded-xl"
+							style={{ background: ACCENT_12 }}
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1, transition: { duration: DUR.base, ease: EASE } }}
+							exit={{ opacity: 0, transition: { duration: DUR.fast, ease: EASE_IN } }}
+						/>
+					)}
+				</AnimatePresence>
 				{/* iMessage grammar (owner pick): every message's time hides off
 				    the right edge and rides in when the thread is dragged left.
 				    --reveal is set by ThreadList's drag handler. */}
@@ -737,7 +840,7 @@ export const MessageBubble = memo(function MessageBubble({
 								<div className="flex items-center gap-3 py-0.5">
 									<span
 										className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-pill"
-										style={{ background: isMe ? "var(--chat-on-mine, rgba(0,0,0,0.22))" : "var(--chat-accent-18, rgba(34,184,214,0.18))" }}
+										style={{ background: isMe ? ON_MINE : ACCENT_18 }}
 									>
 										{m.contact.avatar ? (
 											// eslint-disable-next-line @next/next/no-img-element
@@ -767,7 +870,7 @@ export const MessageBubble = memo(function MessageBubble({
 									}}
 									className="mt-2.5 flex h-9 w-full cursor-pointer items-center justify-center rounded-pill font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-opacity hover:opacity-85"
 									style={{
-										background: isMe ? "var(--chat-on-mine, rgba(0,0,0,0.22))" : "var(--chat-accent-18, rgba(34,184,214,0.18))",
+										background: isMe ? ON_MINE : ACCENT_18,
 										color: isMe ? "inherit" : "var(--chat-accent, var(--ws-brand-primary))",
 									}}
 								>
@@ -815,8 +918,12 @@ export const MessageBubble = memo(function MessageBubble({
 					{/* A failed TEXT send stays put with a red mark and a retry
 					    (owner pick) — it used to vanish into a toast. */}
 					{m.failed && m.type === "text" && (
-						<button
+						<motion.button
 							type="button"
+							// Lands once, when a send fails on a row already on screen.
+							initial={liveRef.current ? pop.initial : false}
+							animate={pop.animate}
+							{...press}
 							onClick={() => m.clientKey && onRetryUpload?.(m.clientKey)}
 							aria-label="Not delivered. Tap to retry"
 							title="Not delivered. Tap to retry"
@@ -826,7 +933,7 @@ export const MessageBubble = memo(function MessageBubble({
 							)}
 						>
 							<RiErrorWarningFill size={18} />
-						</button>
+						</motion.button>
 					)}
 				</div>
 				{m.failed && m.type === "text" && (
@@ -843,6 +950,8 @@ export const MessageBubble = memo(function MessageBubble({
 							isMe ? "justify-end" : "pl-[34px]",
 						)}
 					>
+						{/* Presence for the exit only; `live` gates the entrance. */}
+						<AnimatePresence>
 						{Object.entries(
 							m.reactions.reduce<
 								Record<string, { count: number; mine: boolean }>
@@ -858,26 +967,16 @@ export const MessageBubble = memo(function MessageBubble({
 								return acc;
 							}, {}),
 						).map(([emoji, info]) => (
-							<button
+							<ReactionChip
 								key={emoji}
-								type="button"
-								onClick={() => onReact?.(m, emoji)}
-								aria-label={`${emoji} reaction${info.count > 1 ? `, ${info.count}` : ""}${info.mine ? ", including yours" : ""}`}
-								className={clsx(
-									"flex cursor-pointer items-center gap-1 rounded-pill px-1.5 py-0.5 font-sans text-[calc(13px*var(--ws-fs))] ring-2 ring-page transition-colors animate-pop",
-									info.mine
-										? "[background:var(--chat-accent-40,rgba(34,184,214,0.4))]"
-										: "bg-primary/5 hover:bg-primary/10",
-								)}
-							>
-								<span>{emoji}</span>
-								{info.count > 1 && (
-									<span className="tabular-nums text-[calc(12px*var(--ws-fs))] font-semibold text-muted">
-										{info.count}
-									</span>
-								)}
-							</button>
+								emoji={emoji}
+								count={info.count}
+								mine={info.mine}
+								live={liveRef.current}
+								onToggle={() => onReact?.(m, emoji)}
+							/>
 						))}
+						</AnimatePresence>
 					</div>
 				)}
 				{/* No per-message timestamps (Instagram): the centred stamp
@@ -894,10 +993,16 @@ export const MessageBubble = memo(function MessageBubble({
 					// Messenger grammar (owner pick): once seen, the reader's own
 					// 14px face marks how far they've read; before that, a word.
 					return state === "read" && peerAvatar ? (
-						<span className="mt-1 flex items-center justify-end" title="Seen">
+						<motion.span
+							className="mt-1 flex items-center justify-end"
+							title="Seen"
+							// The peer's doing, not mine: it rises in, it does not pop.
+							initial={liveRef.current ? swap.initial : false}
+							animate={swap.animate}
+						>
 							{/* eslint-disable-next-line @next/next/no-img-element */}
 							<img src={peerAvatar} alt="Seen" className="h-3.5 w-3.5 rounded-pill object-cover" />
-						</span>
+						</motion.span>
 					) : (
 						<span className="mt-1 flex items-center gap-1 font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
 							<MessageTicks state={state} />

@@ -1,6 +1,8 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { swap } from "@/lib/motion-presets";
 
 function parts(target: string) {
   const diff = Math.max(0, new Date(target).getTime() - Date.now());
@@ -34,16 +36,6 @@ export default function Countdown({
     return () => clearInterval(tick);
   }, [target]);
 
-  if (now.live) {
-    return (
-      <span className={className}>
-        <span className="font-mono text-[calc(15px*var(--ws-fs))] font-bold tracking-[0.08em] text-gold">
-          STARTING…
-        </span>
-      </span>
-    );
-  }
-
   const cells =
     now.days > 0
       ? [
@@ -59,25 +51,43 @@ export default function Countdown({
 
   return (
     <span className={className}>
-      <span className="flex items-start gap-1.5">
-        {cells.map((cell, i) => (
-          <span key={cell.label} className="flex items-start gap-1.5">
-            {i > 0 && (
-              <span className="pt-0.5 font-mono text-[calc(22px*var(--ws-fs))] font-bold leading-none text-[#fafaf9]/35">
-                :
+      <AnimatePresence mode="wait" initial={false}>
+        {now.live ? (
+          <motion.span
+            key="live"
+            {...swap}
+            className="inline-block font-mono text-[calc(15px*var(--ws-fs))] font-bold tracking-[0.08em] text-gold"
+          >
+            STARTING…
+          </motion.span>
+        ) : (
+          <motion.span key="clock" {...swap} className="flex items-start gap-1.5">
+            {cells.map((cell, i) => (
+              <span key={cell.label} className="flex items-start gap-1.5">
+                {i > 0 && (
+                  <span className="pt-0.5 font-mono text-[calc(22px*var(--ws-fs))] font-bold leading-none text-[#fafaf9]/35">
+                    :
+                  </span>
+                )}
+                <span className="flex flex-col items-center">
+                  {/* The digits roll inside the cell: clipped, so the plate
+                      itself never moves. */}
+                  <span className="relative overflow-hidden rounded-lg bg-[#0c0a09]/55 px-2 py-1 font-mono text-[calc(24px*var(--ws-fs))] font-bold leading-none tracking-tight text-[#fafaf9] tabular-nums">
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      <motion.span key={cell.v} {...swap} className="inline-block">
+                        {String(cell.v).padStart(2, "0")}
+                      </motion.span>
+                    </AnimatePresence>
+                  </span>
+                  <span className="mt-1 font-sans text-[calc(8.5px*var(--ws-fs))] font-bold uppercase tracking-[0.14em] text-[#fafaf9]/55">
+                    {cell.label}
+                  </span>
+                </span>
               </span>
-            )}
-            <span className="flex flex-col items-center">
-              <span className="rounded-lg bg-[#0c0a09]/55 px-2 py-1 font-mono text-[calc(24px*var(--ws-fs))] font-bold leading-none tracking-tight text-[#fafaf9] tabular-nums">
-                {String(cell.v).padStart(2, "0")}
-              </span>
-              <span className="mt-1 font-sans text-[calc(8.5px*var(--ws-fs))] font-bold uppercase tracking-[0.14em] text-[#fafaf9]/55">
-                {cell.label}
-              </span>
-            </span>
-          </span>
-        ))}
-      </span>
+            ))}
+          </motion.span>
+        )}
+      </AnimatePresence>
     </span>
   );
 }

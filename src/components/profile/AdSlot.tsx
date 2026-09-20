@@ -5,8 +5,8 @@ import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import axios from "axios";
 import clsx from "clsx";
 import Link from "next/link";
-import { AnimatePresence } from "framer-motion";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
 	ArrowUpRight,
 	CalendarBlank,
@@ -31,6 +31,15 @@ import {
 	useOverlayDismiss,
 } from "@/components/ui/Overlay";
 import { useToast } from "@/components/ui/Toast/ToastContext";
+import {
+	collapse,
+	press,
+	reveal,
+	staggerItem,
+	staggerParent,
+	swap,
+	thumbSpring,
+} from "@/lib/motion-presets";
 
 /**
  * The profile ad slot — the space where Topics sits, sold by Gold creators.
@@ -103,6 +112,8 @@ export function AdSlot({
 	const [canSell, setCanSell] = useState(false);
 	const [ratesOpen, setRatesOpen] = useState(false);
 	const [confirmEnd, setConfirmEnd] = useState(false);
+	// Per instance, so two slots on one page never trade the carousel dot.
+	const dotThumbId = useId();
 
 	const authed = useCallback(
 		async (method: "get" | "post" | "put", path: string, body?: unknown) => {
@@ -239,7 +250,8 @@ export function AdSlot({
 	);
 	const scheduledNote =
 		upcomingMine.length > 0 ? (
-			<div className="mt-1.5 flex flex-col gap-1">
+			// Arrives after the slot fetch, so it rises in rather than snapping.
+			<motion.div {...reveal()} className="mt-1.5 flex flex-col gap-1">
 				{upcomingMine.map((u) => (
 					<div
 						key={u._id}
@@ -258,16 +270,20 @@ export function AdSlot({
 						</span>
 					</div>
 				))}
-			</div>
+			</motion.div>
 		) : null;
 
 	const current = slots[slotIndex % Math.max(1, slots.length)];
 	if (current) {
 		return (
 			<>
-				{/* Keyed by campaign: each rotation remounts the card through the
-				    house rise — a clean hand-off, not a slideshow of controls. */}
-				<div key={current._id} className="animate-rise">
+				{/* Keyed by campaign: each rotation hands the card over, the old
+				    one lifting out before the next rises in. animate-rise did
+				    nothing here: the intro kill-switch turns it off for the
+				    session. */}
+				<div>
+					<AnimatePresence mode="wait">
+					<motion.div key={current._id} {...swap}>
 					<SponsoredCard
 						slot={current}
 						isOwner={isMe}
@@ -279,6 +295,8 @@ export function AdSlot({
 							).catch(() => {})
 						}
 					/>
+					</motion.div>
+					</AnimatePresence>
 					{slots.length > 1 && (
 						<div
 							aria-hidden
@@ -287,13 +305,16 @@ export function AdSlot({
 							{slots.map((s, i) => (
 								<span
 									key={s._id}
-									className={clsx(
-										"h-1 w-1 rounded-pill transition-colors",
-										i === slotIndex % slots.length
-											? "bg-gold"
-											: "bg-raised",
+									className="relative h-1 w-1 rounded-pill bg-raised"
+								>
+									{i === slotIndex % slots.length && (
+										<motion.span
+											layoutId={dotThumbId}
+											transition={thumbSpring}
+											className="absolute inset-0 rounded-pill bg-gold"
+										/>
 									)}
-								/>
+								</span>
 							))}
 						</div>
 					)}
@@ -331,6 +352,8 @@ export function AdSlot({
 	if (isMe && canSell) {
 		return (
 			<>
+				{/* Known only after the entitlement read, so it rises in. */}
+				<motion.div {...reveal()}>
 				<button
 					type="button"
 					onClick={() => setRatesOpen(true)}
@@ -369,6 +392,7 @@ export function AdSlot({
 						Set rates
 					</span>
 				</button>
+				</motion.div>
 				{scheduledNote}
 				<AnimatePresence>
 					{ratesOpen && (
@@ -387,6 +411,8 @@ export function AdSlot({
 		const from = Math.min(...publicRates.map((r) => r.priceUsdMinor));
 		return (
 			<>
+			{/* Known only after the rates load, so it rises in. */}
+			<motion.div {...reveal()}>
 			<Link
 				href={`/bm?book=${encodeURIComponent(username)}`}
 				className="group/slot relative mt-2 flex w-full items-center gap-3 overflow-hidden rounded-xl px-4 py-3.5"
@@ -418,6 +444,7 @@ export function AdSlot({
 					Book
 				</span>
 			</Link>
+			</motion.div>
 			{scheduledNote}
 			</>
 		);
@@ -857,7 +884,12 @@ function RatesSheet({
 			<OverlayScrim onClose={onClose} />
 			<OverlayPanel dragClose={onClose} variant="sheet" label="Your ad rates">
 				<OverlayHeader title="Your ad space" onClose={onClose} />
-				<div className="flex flex-col gap-3 overflow-y-auto px-5 pb-5">
+				<motion.div
+					variants={staggerParent}
+					initial="hidden"
+					animate="show"
+					className="flex flex-col gap-3 overflow-y-auto px-5 pb-5"
+				>
 					<p className="font-sans text-[calc(13px*var(--ws-fs))] leading-relaxed text-muted">
 						Advertisers book by the day at your price. Money sits in escrow
 						and you're paid every few days as the campaign runs — 60% of every
@@ -868,8 +900,11 @@ function RatesSheet({
 						const meta = FORMAT_META[row.format];
 						const Icon = meta.Icon;
 						return (
+							// A wrapper carries the cascade: the row dims itself
+							// with an opacity class that framer's inline value
+							// would otherwise pin.
+							<motion.div key={row.format} variants={staggerItem}>
 							<div
-								key={row.format}
 								className={clsx(
 									"overflow-hidden rounded-xl transition-colors",
 									row.enabled ? "bg-raised" : "bg-surface/60 opacity-75",
@@ -902,7 +937,13 @@ function RatesSheet({
 										}
 									/>
 								</div>
+								<AnimatePresence initial={false}>
 								{row.enabled && (
+									<motion.div
+										key="price"
+										{...collapse}
+										className="overflow-hidden"
+									>
 									<div className="flex items-center justify-between gap-3 border-t border-hairline/60 bg-sunken/60 px-4 py-2.5">
 										<label className="flex items-baseline gap-1.5">
 											<span className="font-display text-[calc(20px*var(--ws-fs))] font-semibold text-primary tabular-nums">
@@ -980,20 +1021,34 @@ function RatesSheet({
 											</span>
 										</span>
 									</div>
+									</motion.div>
 								)}
+								</AnimatePresence>
 							</div>
+							</motion.div>
 						);
 					})}
 
-					<button
+					<motion.button
+						{...press}
 						type="button"
 						disabled={saving || rows.every((r) => !r.enabled)}
 						onClick={save}
 						className="mt-1 h-11 shrink-0 cursor-pointer rounded-pill bg-brand font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:opacity-90 disabled:opacity-50"
 					>
-						{saving ? "Publishing…" : "Publish rates"}
-					</button>
-				</div>
+						<span className="relative inline-flex justify-center">
+							<AnimatePresence mode="popLayout" initial={false}>
+								<motion.span
+									key={saving ? "publishing" : "publish"}
+									{...swap}
+									className="inline-block"
+								>
+									{saving ? "Publishing…" : "Publish rates"}
+								</motion.span>
+							</AnimatePresence>
+						</span>
+					</motion.button>
+				</motion.div>
 			</OverlayPanel>
 		</>
 	);

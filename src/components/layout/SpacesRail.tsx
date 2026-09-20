@@ -2,7 +2,8 @@
 
 import { formatCompact } from "@/lib/utils";
 import clsx from "clsx";
-import { motion, useReducedMotionConfig } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotionConfig } from "framer-motion";
+import { swap } from "@/lib/motion-presets";
 import Link from "next/link";
 import { useAtomValue } from "jotai";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -289,8 +290,16 @@ export function SpacesRail({ delay = 210 }: { delay?: number }) {
 								>
 									<CaretLeft size={13} weight="bold" />
 								</button>
-								<span className="font-sans text-[calc(11px*var(--ws-fs))] tabular-nums text-subtle">
-									{page + 1}/{slides.length}
+								<span className="flex font-sans text-[calc(11px*var(--ws-fs))] tabular-nums text-subtle">
+									{/* Only the page digit rolls; the total stays put. */}
+									<span className="relative inline-flex overflow-hidden">
+										<AnimatePresence mode="popLayout" initial={false}>
+											<motion.span key={page} {...swap} className="inline-block">
+												{page + 1}
+											</motion.span>
+										</AnimatePresence>
+									</span>
+									/{slides.length}
 								</span>
 								<button
 									type="button"

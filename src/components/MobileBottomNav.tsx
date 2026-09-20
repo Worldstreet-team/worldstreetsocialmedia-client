@@ -15,11 +15,23 @@ import {
 	UserCircle,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { motion } from "framer-motion";
 import { BadgedIcon } from "@/components/ui/Badge";
 import { useAtomValue } from "jotai";
 import { unreadMessagesCountAtom } from "@/store/messageCache";
 import { userAtom } from "@/store/user.atom";
 import { useT } from "@/i18n/client";
+// Aliased: `press` in this file is already the prefetch-on-pointer-down hook.
+import { press as pressTap } from "@/lib/motion-presets";
+
+const MotionLink = motion.create(Link);
+
+/* Press feedback only, and only on the glyph. The whole cell is the target,
+   so the cell carries the gesture and the glyph answers it. No entrance and
+   no pop on becoming active: this bar is tapped all day, and a bar that
+   performs on every tap gets tiring by lunch. Nothing here scales the
+   blurred bar itself. */
+const GLYPH_TAP = { tap: pressTap.whileTap } as const;
 
 const navIcon = (Icon: PhosphorIcon) => {
 	const NavIcon = ({ isActive }: { isActive?: boolean }) => (
@@ -159,12 +171,13 @@ export const MobileBottomNav = () => {
 							    to be The Space, which is still one tap away in the rail
 							    and the FAB — the ecosystem had no mobile entry at all. */}
 							{index === CENTER_SLOT && (
-								<button
+								<motion.button
 									type="button"
 									onClick={() => setEcosystemOpen(true)}
 									aria-haspopup="dialog"
 									aria-expanded={ecosystemOpen}
 									aria-label="WorldStreet"
+									whileTap="tap"
 									className="flex h-full w-full min-w-0 items-center justify-center transition-colors active:bg-primary/10"
 								>
 									{/* The real animated mark, not the flat PNG: it draws
@@ -172,7 +185,9 @@ export const MobileBottomNav = () => {
 									    and strokes in the brand token, so it follows the
 									    palette. Its own reduced-motion rule in globals.css
 									    resolves it to the finished W. */}
-									<span
+									<motion.span
+										variants={GLYPH_TAP}
+										transition={pressTap.transition}
 										className={clsx(
 											"flex h-[36px] w-[36px] items-center justify-center rounded-[10px] transition-colors",
 											ecosystemOpen && "bg-primary/10",
@@ -183,12 +198,13 @@ export const MobileBottomNav = () => {
 										    a matched size it reads lighter than the solid
 										    duotone icons it sits between. */}
 										<BrandMark size={31} />
-									</span>
-								</button>
+									</motion.span>
+								</motion.button>
 							)}
-						<Link
+						<MotionLink
 							href={item.href}
 							{...press(item.href)}
+							whileTap="tap"
 							aria-label={item.label}
 							className={clsx(
 								// Icon-only (owner ruling 2026-09-02): no labels, the
@@ -199,10 +215,16 @@ export const MobileBottomNav = () => {
 								item.active ? "text-gold" : "text-muted",
 							)}
 						>
-							<BadgedIcon count={item.badge} label={item.label} size={29}>
-								<item.icon isActive={item.active} />
-							</BadgedIcon>
-						</Link>
+							<motion.span
+								variants={GLYPH_TAP}
+								transition={pressTap.transition}
+								className="flex"
+							>
+								<BadgedIcon count={item.badge} label={item.label} size={29}>
+									<item.icon isActive={item.active} />
+								</BadgedIcon>
+							</motion.span>
+						</MotionLink>
 						</Fragment>
 					))}
 					</div>

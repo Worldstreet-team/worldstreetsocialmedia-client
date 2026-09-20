@@ -17,6 +17,7 @@ import {
   OverlayScrim,
   useOverlayDismiss,
 } from "@/components/ui/Overlay";
+import { DUR, EASE, pop, press } from "@/lib/motion-presets";
 import { welcomeTourOpenAtom } from "@/store/ui.atom";
 
 /**
@@ -27,7 +28,6 @@ import { welcomeTourOpenAtom } from "@/store/ui.atom";
  */
 
 const SEEN_KEY = "ws-social-welcome-v1";
-const EASE: [number, number, number, number] = [0.2, 0, 0, 1];
 
 const ECOSYSTEM_CHIPS = [
   { icon: GraduationCap, label: "Academy" },
@@ -53,7 +53,10 @@ const ALL_STEPS = [
     // under a "Socials" eyebrow, so the first thing a new account ever saw was
     // the OLD brand and the OLD product name.
     hero: (
-      <>
+      // The mark lands: this is a first run, once per account, which is
+      // exactly the kind of moment a pop is for.
+      // No exit: the step swap is keyed, not inside a presence.
+      <motion.span initial={pop.initial} animate={pop.animate} className="flex">
         <Image
           src="/images/worldspace-mark-dark.png"
           alt=""
@@ -72,7 +75,7 @@ const ALL_STEPS = [
           unoptimized
           className="hidden object-contain [[data-ws-theme='platform-light']_&]:block"
         />
-      </>
+      </motion.span>
     ),
   },
   {
@@ -250,7 +253,7 @@ export function WelcomeTour() {
               key={current.key}
               initial={{ opacity: 0, x: 8 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.2, ease: EASE }}
+              transition={{ duration: DUR.base, ease: EASE }}
               className="relative flex flex-col items-center gap-3"
             >
               {current.hero}
@@ -264,7 +267,7 @@ export function WelcomeTour() {
               key={current.key}
               initial={{ opacity: 0, x: 8 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.2, ease: EASE }}
+              transition={{ duration: DUR.base, ease: EASE }}
             >
               <h2 className="font-display font-semibold text-xl text-primary mb-2">
                 {current.title}
@@ -319,15 +322,16 @@ export function WelcomeTour() {
                   Back
                 </button>
               )}
-              <button
+              <motion.button
                 type="button"
                 onClick={() =>
                   isLast ? finish(true) : setStep((s) => s + 1)
                 }
+                {...press}
                 className="h-11 sm:h-9 px-[18px] rounded-pill font-sans text-[calc(13px*var(--ws-fs))] font-semibold bg-brand text-brand-on hover:bg-brand-active transition-colors cursor-pointer whitespace-nowrap"
             >
                 {isLast ? "Start posting" : "Next"}
-              </button>
+              </motion.button>
             </div>
           </div>
         </OverlayPanel>

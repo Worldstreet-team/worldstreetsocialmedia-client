@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
+import { motion } from "framer-motion";
 
 import { useGatewayRead } from "@/hooks/useGateway";
 import { getSubscriptionAction } from "@/lib/subscription.actions";
@@ -10,6 +11,7 @@ import { useSetAtom } from "jotai";
 import { Lock } from "lucide-react";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import { menu } from "@/lib/motion-presets";
 
 /**
  * Whether the viewer may summon @vivid, fetched once per app session. The
@@ -160,14 +162,20 @@ export function MentionAutocomplete({
 		// nothing left to insert into — the row looked dead for any click held
 		// longer than a flick. Preventing the default keeps focus in the
 		// textarea, so no blur ever fires.
-		<div
+		//
+		// The panel unfolds once; the rows do not cascade, because they are
+		// re-fetched on every keystroke and a cascade would replay each time.
+		// The frost follows the theme (this floats over the page, not media),
+		// so the ink inside is theme ink too.
+		<motion.div
+			{...menu("top-left")}
 			role="listbox"
 			aria-label="People to tag"
 			onMouseDown={(e) => e.preventDefault()}
-			className="absolute left-0 top-full mt-1 z-dropdown w-[300px] max-w-full overflow-hidden py-1 glass-panel backdrop-blur-2xl backdrop-saturate-150"
+			className="absolute left-0 top-full mt-1 z-dropdown w-[300px] max-w-full overflow-hidden rounded-xl py-1 glass-frost backdrop-blur-2xl backdrop-saturate-150"
 		>
 			{loading && users.length === 0 ? (
-				<p className="px-3 py-2 font-sans text-[calc(12.5px*var(--ws-fs))] glass-ink-faint">
+				<p className="px-3 py-2 font-sans text-[calc(12.5px*var(--ws-fs))] text-muted">
 					Searching
 				</p>
 			) : (
@@ -186,16 +194,16 @@ export function MentionAutocomplete({
 							className={clsx(
 								"w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors cursor-pointer",
 								i === active
-									? "bg-white/[0.12]"
-									: "hover:bg-white/[0.07]",
+									? "bg-primary/10"
+									: "hover:bg-primary/5",
 							)}
 						>
-							<span className="relative h-8 w-8 rounded-pill overflow-hidden bg-white/10 shrink-0 ring-1 ring-white/15">
+							<span className="relative h-8 w-8 rounded-pill overflow-hidden bg-raised shrink-0 ring-1 ring-hairline">
 								<SafeAvatar src={u.avatar} className="object-cover" />
 							</span>
 							<span className="min-w-0 flex-1">
 								<span className="flex items-center gap-1 min-w-0">
-									<span className="font-sans text-[calc(13px*var(--ws-fs))] font-semibold glass-ink truncate">
+									<span className="font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary truncate">
 										{name}
 									</span>
 									<span className="shrink-0 flex">
@@ -207,12 +215,12 @@ export function MentionAutocomplete({
 										/>
 									</span>
 								</span>
-								<span className="block font-sans text-[calc(11.5px*var(--ws-fs))] glass-ink-dim truncate">
+								<span className="block font-sans text-[calc(11.5px*var(--ws-fs))] text-muted truncate">
 									@{u.username}
 								</span>
 							</span>
 							{isLocked(u) && (
-								<span className="ml-auto flex shrink-0 items-center gap-1 rounded-pill bg-white/10 px-2 py-1 text-[calc(10px*var(--ws-fs))] font-semibold uppercase tracking-wide glass-ink-dim">
+								<span className="ml-auto flex shrink-0 items-center gap-1 rounded-pill bg-primary/10 px-2 py-1 text-[calc(10px*var(--ws-fs))] font-semibold uppercase tracking-wide text-muted">
 									<Lock className="h-3 w-3" />
 									Premium
 								</span>
@@ -221,6 +229,6 @@ export function MentionAutocomplete({
 					);
 				})
 			)}
-		</div>
+		</motion.div>
 	);
 }

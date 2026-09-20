@@ -24,6 +24,7 @@ import {
 } from "@/store/ui.atom";
 import { useT } from "@/i18n/client";
 import { mainScroller } from "@/lib/utils";
+import { pop, press, swap } from "@/lib/motion-presets";
 import { groupNotifications } from "@/components/notifications/notification-groups";
 import {
   NotificationRow,
@@ -225,16 +226,21 @@ export default function NotificationsPage() {
               {t("nav.notifications")}
             </h1>
           </div>
-          {totalUnread > 0 && (
-            <button
-              type="button"
-              onClick={markAllRead}
-              className="flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-pill border border-hairline bg-raised px-3.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-muted transition-colors hover:text-primary"
-            >
-              <Check size={13} weight="bold" />
-              {t("notif.markAllRead")}
-            </button>
-          )}
+          <AnimatePresence>
+            {totalUnread > 0 && (
+              <motion.button
+                key="mark-all-read"
+                {...pop}
+                {...press}
+                type="button"
+                onClick={markAllRead}
+                className="flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-pill border border-hairline bg-raised px-3.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-muted transition-colors hover:text-primary"
+              >
+                <Check size={13} weight="bold" />
+                {t("notif.markAllRead")}
+              </motion.button>
+            )}
+          </AnimatePresence>
         </div>
 
         <Tabs
@@ -260,7 +266,15 @@ export default function NotificationsPage() {
             transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
             className="fixed left-1/2 top-[72px] z-sticky flex h-9 cursor-pointer items-center gap-1.5 rounded-pill bg-brand pl-3.5 pr-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on shadow-nav transition-colors hover:bg-brand-active md:top-16"
           >
-            <span className="tabular-nums">{pending}</span> {t("notif.new")}
+            {/* Other people's activity rolls the number; it never pops. */}
+            <span className="relative inline-block tabular-nums">
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.span key={pending} {...swap} className="inline-block">
+                  {pending}
+                </motion.span>
+              </AnimatePresence>
+            </span>{" "}
+            {t("notif.new")}
           </motion.button>
         )}
       </AnimatePresence>

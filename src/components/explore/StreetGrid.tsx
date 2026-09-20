@@ -2,9 +2,11 @@
 
 import { formatCompact } from "@/lib/utils";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { Heart, Play } from "@phosphor-icons/react";
 import { useT } from "@/i18n/client";
 import { ExploreSection, SectionLink } from "./ExploreSection";
+import { staggerItem, staggerParent } from "@/lib/motion-presets";
 
 export interface StreetPost {
   _id: string;
@@ -44,9 +46,17 @@ export function StreetGrid({
           ? [0, 1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="skeleton aspect-[9/16] rounded-lg" />
             ))
-          : withVideo.map((p) => (
+          : (
+            // `contents` so the tiles stay the grid's own cells.
+            <motion.div
+              className="contents"
+              variants={staggerParent}
+              initial="hidden"
+              animate="show"
+            >
+            {withVideo.map((p) => (
+              <motion.div key={p._id} variants={staggerItem}>
               <Link
-                key={p._id}
                 href={`/live?v=${p._id}`}
                 className="group relative block aspect-[9/16] overflow-hidden rounded-lg bg-raised"
               >
@@ -67,7 +77,10 @@ export function StreetGrid({
                   </span>
                 </span>
               </Link>
+              </motion.div>
             ))}
+            </motion.div>
+          )}
       </div>
     </ExploreSection>
   );

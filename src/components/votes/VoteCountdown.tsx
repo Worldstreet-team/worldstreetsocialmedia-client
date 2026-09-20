@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { getVoteCycle } from "@/lib/votes";
+import { swap } from "@/lib/motion-presets";
 
 /**
  * The clock, redesigned (owner note: the flat gold line read bland).
@@ -100,11 +102,22 @@ export function VoteCountdown({
 							<span
 								className={
 									lg
-										? "flex min-w-[62px] items-center justify-center rounded-[10px] bg-raised px-2.5 py-2.5 font-display text-[calc(32px*var(--ws-fs))] font-semibold leading-none tabular-nums text-gold"
-										: "flex min-w-[36px] items-center justify-center rounded-[7px] bg-raised px-1.5 py-1.5 font-display text-[calc(16px*var(--ws-fs))] font-semibold leading-none tabular-nums text-gold"
+										? "relative flex min-w-[62px] items-center justify-center overflow-hidden rounded-[10px] bg-raised px-2.5 py-2.5 font-display text-[calc(32px*var(--ws-fs))] font-semibold leading-none tabular-nums text-gold"
+										: "relative flex min-w-[36px] items-center justify-center overflow-hidden rounded-[7px] bg-raised px-1.5 py-1.5 font-display text-[calc(16px*var(--ws-fs))] font-semibold leading-none tabular-nums text-gold"
 								}
 							>
-								{v}
+								{/* Days, hours and minutes roll: each changes once a
+								    minute at most. Seconds cut. This clock sits in the
+								    rail app-wide, and a roll every second is a loop. */}
+								{l === "sec" ? (
+									v
+								) : (
+									<AnimatePresence mode="popLayout" initial={false}>
+										<motion.span key={v} {...swap} className="inline-block">
+											{v}
+										</motion.span>
+									</AnimatePresence>
+								)}
 							</span>
 							<span
 								className={

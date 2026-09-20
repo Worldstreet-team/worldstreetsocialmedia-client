@@ -3,9 +3,17 @@
 import { motionReduced } from "@/lib/motion";
 
 import clsx from "clsx";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { X } from "@phosphor-icons/react";
 import { useEffect, useRef } from "react";
+import {
+	DUR,
+	EASE,
+	EASE_IN,
+	EASE_SHEET,
+	press,
+	swap,
+} from "@/lib/motion-presets";
 
 /**
  * THE overlay grammar. Every popover, sheet, select and modal in the app is
@@ -29,29 +37,60 @@ import { useEffect, useRef } from "react";
  *   radius ladder; glass surfaces are their own family.
  */
 
-/** The one easing. */
-const EASE = [0.2, 0, 0, 1] as const;
-
 export const overlayPanelClass =
 	"glass-frost backdrop-blur-2xl backdrop-saturate-150 overflow-hidden flex flex-col";
 
 /** Same box, no glass fill — for callers that own their ground. */
 export const overlayPanelBare = "overflow-hidden flex flex-col";
 
-/** Drops down from the top. For search, command and anything centred. */
+/**
+ * Drops down from the top. For search, command and anything centred.
+ * Mostly keyboard-opened (Cmd+K, `/`), so it stays on the quick house curve:
+ * a plate someone summoned by key must not make them wait for a flourish.
+ * Leaving is quicker than arriving, and accelerates away.
+ */
 export const centerMotion = {
 	initial: { opacity: 0, y: -10, scale: 0.985 },
-	animate: { opacity: 1, y: 0, scale: 1 },
-	exit: { opacity: 0, y: -10, scale: 0.985 },
-	transition: { duration: 0.22, ease: EASE },
+	animate: {
+		opacity: 1,
+		y: 0,
+		scale: 1,
+		transition: { duration: DUR.base, ease: EASE },
+	},
+	exit: {
+		opacity: 0,
+		y: -10,
+		scale: 0.985,
+		transition: { duration: DUR.fast, ease: EASE_IN },
+	},
 };
 
-/** Grows from the control that opened it. For anchored popovers and sheets. */
+/**
+ * Grows from the control that opened it. For anchored popovers and sheets.
+ * The sheet curve launches at once and settles long, which is what a panel
+ * coming up under a thumb wants. DUR.slow, not DUR.travel: the rise is 16px,
+ * not a full-height slide.
+ *
+ * The exit stays on the house curve, NOT the accelerating EASE_IN the centred
+ * plate leaves on. A drag-dismissed sheet is already off screen at opacity 0
+ * when this exit starts, and framer fades from ITS last value, which is 1.
+ * EASE drops that to half within a fifth of the run, so nothing shows; a
+ * curve that starts slow would hold a ghost of the sheet on screen.
+ */
 export const anchoredMotion = {
 	initial: { opacity: 0, y: 16, scale: 0.98 },
-	animate: { opacity: 1, y: 0, scale: 1 },
-	exit: { opacity: 0, y: 16, scale: 0.98 },
-	transition: { duration: 0.26, ease: EASE },
+	animate: {
+		opacity: 1,
+		y: 0,
+		scale: 1,
+		transition: { duration: DUR.slow, ease: EASE_SHEET },
+	},
+	exit: {
+		opacity: 0,
+		y: 16,
+		scale: 0.98,
+		transition: { duration: DUR.base, ease: EASE },
+	},
 };
 
 /**
@@ -158,17 +197,21 @@ export function OverlayScrim({
 			initial={{ opacity: 0 }}
 			animate={{ opacity: 1 }}
 			exit={{ opacity: 0 }}
-			transition={{ duration: 0.2, ease: EASE }}
+			transition={{ duration: DUR.base, ease: EASE }}
 			onClick={onClose}
 			className={clsx(
 				"fixed inset-0 z-modal cursor-default",
 				// Dimmed on mobile even for popovers: down there the panel owns
 				// the screen and there is nothing to keep visible behind it.
+				// `bg-scrim` is the theme's own wash, so a palette moves it.
+				// `strong` stays literal black: its one caller (the create fan)
+				// draws fixed-white ink on it, which needs a dark ground in
+				// both themes.
 				strong
 					? "bg-black/70"
 					: dim
-						? "bg-black/50"
-						: "bg-black/45 sm:bg-transparent",
+						? "bg-scrim"
+						: "bg-scrim sm:bg-transparent",
 			)}
 		/>
 	);
@@ -345,22 +388,37 @@ export function OverlayHeader({
 				<h2 className="flex-1 truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
 					{title}
 					{count != null && (
-						<span className="ml-1.5 font-normal tabular-nums text-subtle">
-							{count}
+						<span className="relative ml-1.5 inline-block font-normal tabular-nums text-subtle">
+							{/* A list shrinking or growing rolls its number. Not on
+							    open: the panel's own entrance is the event then. */}
+							<AnimatePresence mode="popLayout" initial={false}>
+								<motion.span
+									key={
+										typeof count === "number" || typeof count === "string"
+											? count
+											: "count"
+									}
+									{...swap}
+									className="inline-block"
+								>
+									{count}
+								</motion.span>
+							</AnimatePresence>
 						</span>
 					)}
 				</h2>
 			)}
-			<button
+			<motion.button
 				type="button"
 				onClick={onClose}
 				aria-label={closeLabel}
+				{...press}
 				/* A tint, not another blur — nesting backdrop-filter inside a
 				   blurred panel blurs the panel's own fill. */
 				className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-chip text-muted transition-colors hover:text-primary"
 			>
 				<X size={14} weight="bold" />
-			</button>
+			</motion.button>
 		</div>
 	);
 }

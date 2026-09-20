@@ -10,7 +10,21 @@ import {
 	RiSendPlane2Fill,
 } from "@remixicon/react";
 import clsx from "clsx";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+	type ReactNode,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
+import {
+	pop,
+	press,
+	staggerParent,
+	staggerPop,
+	swap,
+} from "@/lib/motion-presets";
 
 /**
  * Voice v2 (register 80-83, 89, 91). One overlay over the composer that owns
@@ -86,6 +100,19 @@ function toPeaks(levels: number[]): number[] {
 
 function fmt(sec: number) {
 	return `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
+}
+
+/** A glyph that changes in place (play to pause, pause to mic): the old one
+ *  leaves as the new one lands. Its button must be `relative`, because the
+ *  outgoing glyph is lifted out of flow against it. */
+function GlyphSwap({ id, children }: { id: string; children: ReactNode }) {
+	return (
+		<AnimatePresence mode="popLayout" initial={false}>
+			<motion.span key={id} className="flex" {...pop}>
+				{children}
+			</motion.span>
+		</AnimatePresence>
+	);
 }
 
 export function VoiceRecorder({
@@ -454,27 +481,38 @@ export function VoiceRecorder({
 
 	if (phase === "review" && review) {
 		return (
-			<div className="chat-chrome-solid absolute inset-0 z-10 flex items-center gap-1 rounded-pill px-2">
-				<button
+			// Keyed, so the draft rises in over the bar it replaces instead of
+			// the two being one element that changes its insides.
+			<motion.div
+				key="review"
+				initial={swap.initial}
+				animate={swap.animate}
+				className="chat-chrome-solid absolute inset-0 z-10 flex items-center gap-1 rounded-pill px-2"
+			>
+				<motion.button
 					type="button"
+					{...press}
 					onClick={discardReview}
 					aria-label="Delete recording"
 					className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-danger"
 				>
 					<RiDeleteBin6Line size={19} />
-				</button>
-				<button
+				</motion.button>
+				<motion.button
 					type="button"
+					{...press}
 					onClick={toggleReviewPlay}
 					aria-label={playingReview ? "Pause" : "Play recording"}
-					className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-primary transition-colors hover:bg-primary/5"
+					className="relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-primary transition-colors hover:bg-primary/5"
 				>
-					{playingReview ? (
-						<RiPauseFill size={20} />
-					) : (
-						<RiPlayFill size={20} />
-					)}
-				</button>
+					<GlyphSwap id={playingReview ? "pause" : "play"}>
+						{playingReview ? (
+							<RiPauseFill size={20} />
+						) : (
+							<RiPlayFill size={20} />
+						)}
+					</GlyphSwap>
+				</motion.button>
 				<div className="flex h-8 min-w-0 flex-1 items-center justify-between overflow-hidden">
 					{review.peaks.map((p, i) => (
 						<span
@@ -490,14 +528,15 @@ export function VoiceRecorder({
 				<span className="shrink-0 font-sans text-[calc(12px*var(--ws-fs))] tabular-nums text-muted">
 					{fmt(review.durationSec)}
 				</span>
-				<button
+				<motion.button
 					type="button"
+					{...press}
 					onClick={sendReview}
 					aria-label="Send voice message"
 					className="ml-1 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill transition-opacity [background:var(--chat-mine,var(--ws-brand-primary))] [color:var(--chat-mine-ink,var(--ws-brand-on-primary))] hover:opacity-90"
 				>
 					<RiSendPlane2Fill size={16} />
-				</button>
+				</motion.button>
 				{/* Playback only exists in review; hidden element, no chrome. */}
 				<audio
 					ref={reviewAudioRef}
@@ -507,12 +546,17 @@ export function VoiceRecorder({
 					onEnded={() => setPlayingReview(false)}
 					className="hidden"
 				/>
-			</div>
+			</motion.div>
 		);
 	}
 
 	return (
-		<div className="chat-chrome-solid absolute inset-0 z-10 flex items-center gap-2 rounded-pill px-3">
+		<motion.div
+			key="live"
+			initial={swap.initial}
+			animate={swap.animate}
+			className="chat-chrome-solid absolute inset-0 z-10 flex items-center gap-2 rounded-pill px-3"
+		>
 			{/* Sanctioned live-state loop: opacity-only pulse (06-motion). */}
 			<span
 				className={clsx(
@@ -529,40 +573,62 @@ export function VoiceRecorder({
 				aria-hidden
 			/>
 			{locked ? (
-				<>
-					<button
+				// Locking is a deliberate gesture, so the controls it earns land
+				// one by one where the slide hint was. Same gap as the bar's own,
+				// so wrapping them moved nothing; each is live mid-cascade.
+				<motion.div
+					variants={staggerParent}
+					initial="hidden"
+					animate="show"
+					className="flex shrink-0 items-center gap-2"
+				>
+					<motion.button
 						type="button"
+						variants={staggerPop}
+						{...press}
 						onClick={() => finish("discard")}
 						aria-label="Cancel recording"
 						className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-danger"
 					>
 						<RiDeleteBin6Line size={19} />
-					</button>
-					<button
+					</motion.button>
+					<motion.button
 						type="button"
+						variants={staggerPop}
+						{...press}
 						onClick={togglePause}
 						aria-label={paused ? "Resume recording" : "Pause recording"}
-						className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-primary transition-colors hover:bg-primary/5"
+						className="relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-primary transition-colors hover:bg-primary/5"
 					>
-						{paused ? <RiMicFill size={18} /> : <RiPauseFill size={19} />}
-					</button>
-					<button
+						<GlyphSwap id={paused ? "mic" : "pause"}>
+							{paused ? <RiMicFill size={18} /> : <RiPauseFill size={19} />}
+						</GlyphSwap>
+					</motion.button>
+					<motion.button
 						type="button"
+						variants={staggerPop}
+						{...press}
 						onClick={() => finish("review")}
 						aria-label="Stop and review"
 						className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-primary transition-colors hover:bg-primary/5"
 					>
 						<RiCheckLine size={20} />
-					</button>
-					<button
+					</motion.button>
+					<motion.button
 						type="button"
+						variants={staggerPop}
+						{...press}
 						onClick={() => finish("send")}
 						aria-label="Send voice message"
-						className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill transition-opacity [background:var(--chat-mine,var(--ws-brand-primary))] [color:var(--chat-mine-ink,var(--ws-brand-on-primary))] hover:opacity-90"
+						className="group/send flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill"
 					>
-						<RiSendPlane2Fill size={16} />
-					</button>
-				</>
+						{/* The disc is its own element: the cascade leaves an inline
+						    opacity on the button, which would mute the hover dim. */}
+						<span className="flex h-full w-full items-center justify-center rounded-pill transition-opacity [background:var(--chat-mine,var(--ws-brand-primary))] [color:var(--chat-mine-ink,var(--ws-brand-on-primary))] group-hover/send:opacity-90">
+							<RiSendPlane2Fill size={16} />
+						</span>
+					</motion.button>
+				</motion.div>
 			) : (
 				<div
 					ref={hintRef}
@@ -574,6 +640,6 @@ export function VoiceRecorder({
 					</span>
 				</div>
 			)}
-		</div>
+		</motion.div>
 	);
 }

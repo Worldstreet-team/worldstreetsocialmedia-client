@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import clsx from "clsx";
 import VerifiedIcon from "@/assets/icons/VerifiedIcon";
 import { AnimatePresence, motion, useReducedMotionConfig } from "framer-motion";
@@ -29,11 +29,22 @@ import {
 import { premiumOpenAtom } from "@/store/ui.atom";
 import { userAtom } from "@/store/user.atom";
 import { useT } from "@/i18n/client";
+import {
+  collapse,
+  EASE,
+  EASE_BACK_SOFT,
+  press,
+  reveal,
+  staggerItem,
+  staggerParent,
+  swap,
+  thumbSpring,
+} from "@/lib/motion-presets";
 
-const EASE = [0.2, 0, 0, 1] as const;
 /* The orbit's own curve: a slight overshoot so the glyphs land with a bounce
-   rather than easing flatly into place. */
-const ORBIT_EASE = [0.22, 1.35, 0.36, 1] as const;
+   rather than easing flatly into place. The shared soft-back preset is that
+   curve, so it is drawn from there and not kept as a private one. */
+const ORBIT_EASE = EASE_BACK_SOFT;
 
 /**
  * Metal per tier — the same literals VerifiedIcon pins, because they are the
@@ -83,6 +94,7 @@ export function PremiumSheet() {
   const [open, setOpen] = useAtom(premiumOpenAtom);
   const [user, setUser] = useAtom(userAtom);
   const reduce = useReducedMotionConfig();
+  const rungThumbId = useId();
 
   const [state, setState] = useState<SubscriptionState | null>(null);
   const [loading, setLoading] = useState(true);
@@ -271,6 +283,9 @@ export function PremiumSheet() {
           role="dialog"
           aria-modal="true"
           aria-label={t("premium.title")}
+          // This panel is the scroll container, and the rung thumb below
+          // is measured inside it.
+          layoutScroll
           /* Frosted, theme-following, borderless. The page reads through it. */
           className="relative max-h-[92dvh] w-full overflow-y-auto overflow-x-hidden rounded-t-2xl glass-frost backdrop-blur-2xl backdrop-saturate-150 pb-safe text-primary sm:max-w-[440px] sm:rounded-2xl"
           onClick={(e) => e.stopPropagation()}
@@ -366,7 +381,7 @@ export function PremiumSheet() {
             <>
               {/* status card, only while a subscription is live */}
               {live && (
-                <div className="mx-6 mt-2 rounded-xl glass-tile p-4">
+                <motion.div {...reveal()} className="mx-6 mt-2 rounded-xl glass-tile p-4">
                   <div className="flex items-center justify-between gap-3">
                     <span
                       className={clsx(
@@ -405,13 +420,26 @@ export function PremiumSheet() {
                       {t("premium.pastDueNote")}
                     </p>
                   )}
-                </div>
+                </motion.div>
               )}
 
-              <div className="flex flex-col gap-1 px-4 py-4">
+              {/* Cascades once, when the skeleton hands over. After that a
+                  tier switch only moves the rows that differ: a perk the new
+                  level adds rises in, one it drops fades out. */}
+              <motion.div
+                variants={staggerParent}
+                initial="hidden"
+                animate="show"
+                className="flex flex-col gap-1 px-4 py-4"
+              >
+                <AnimatePresence>
                 {PERKS.map((perk) => (
-                  <div
+                  <motion.div
                     key={perk.title}
+                    variants={staggerItem}
+                    // An object, not the "exit" label: a label would make the
+                    // row its own variant root and drop it from the cascade.
+                    exit={staggerItem.exit}
                     className="flex items-center gap-3.5 rounded-xl px-2.5 py-2.5"
                   >
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl glass-tile ">
@@ -425,9 +453,10 @@ export function PremiumSheet() {
                         {perk.sub}
                       </span>
                     </span>
-                  </div>
+                  </motion.div>
                 ))}
-              </div>
+                </AnimatePresence>
+              </motion.div>
 
               <div className="px-6 pb-6">
                 {/* Three levels, same tick in three metals. Selecting one only
@@ -445,18 +474,28 @@ export function PremiumSheet() {
                           onClick={() => setTier(rung.id)}
                           aria-pressed={on}
                           className={clsx(
-                            "relative flex-1 cursor-pointer rounded-xl px-2 pb-3 pt-3.5 text-center transition-all",
+                            "relative flex-1 cursor-pointer rounded-xl px-2 pb-3 pt-3.5 text-center",
                             on ? "" : "glass-tile ",
                           )}
-                          style={
-                            on
-                              ? {
-                                  background: `rgb(${m.rgb} / 0.13)`,
-                                  boxShadow: `inset 0 0 0 1.5px rgb(${m.rgb} / 0.55)`,
-                                }
-                              : undefined
-                          }
                         >
+                          {/* One metal ring that slides between rungs. It wears
+                              the metal of the rung it lands on. */}
+                          {on && (
+                            <motion.span
+                              aria-hidden
+                              layoutId={rungThumbId}
+                              // Measured on a tier change only. The perk list
+                              // above changes height a beat later, and the ring
+                              // should ride down with its rung, not chase it.
+                              layoutDependency={tier}
+                              transition={thumbSpring}
+                              className="absolute inset-0 rounded-xl"
+                              style={{
+                                background: `rgb(${m.rgb} / 0.13)`,
+                                boxShadow: `inset 0 0 0 1.5px rgb(${m.rgb} / 0.55)`,
+                              }}
+                            />
+                          )}
                           {/* The summit rung carries the crowd's pick. */}
                           {rung.id === "gold" && (
                             <span
@@ -466,7 +505,7 @@ export function PremiumSheet() {
                               {t("premium.tier.popular")}
                             </span>
                           )}
-                          <span className="flex items-center justify-center gap-1">
+                          <span className="relative flex items-center justify-center gap-1">
                             <VerifiedIcon
                               size={{ width: "13", height: "13" }}
                               tier={rung.id}
@@ -475,7 +514,7 @@ export function PremiumSheet() {
                               {t(`premium.tier.${rung.id}`)}
                             </span>
                           </span>
-                          <span className="mt-1 block font-sans text-[calc(12.5px*var(--ws-fs))] tabular-nums text-muted">
+                          <span className="relative mt-1 block font-sans text-[calc(12.5px*var(--ws-fs))] tabular-nums text-muted">
                             ${(rung.priceUsdMinor / 100).toFixed(0)}
                           </span>
                         </button>
@@ -504,11 +543,16 @@ export function PremiumSheet() {
                   </div>
                 )}
 
-                {error && (
-                  <p className="mb-3 text-center font-sans text-[calc(12.5px*var(--ws-fs))] leading-relaxed text-danger">
-                    {error}
-                  </p>
-                )}
+                {/* Opens its own room, so the CTA eases down and does not jump. */}
+                <AnimatePresence initial={false}>
+                  {error && (
+                    <motion.div key="error" {...collapse} className="overflow-hidden">
+                      <p className="pb-3 text-center font-sans text-[calc(12.5px*var(--ws-fs))] leading-relaxed text-danger">
+                        {error}
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 {!live && state && !state.available && !error && (
                   <p className="mb-3 text-center font-sans text-[calc(12.5px*var(--ws-fs))] leading-relaxed text-subtle">
                     {t("premium.unavailable")}
@@ -544,10 +588,11 @@ export function PremiumSheet() {
                     )}
                   </div>
                 ) : (
-                  <button
+                  <motion.button
                     type="button"
                     onClick={subscribe}
                     disabled={busy || !state?.available}
+                    {...press}
                     className={clsx(
                       "flex h-11 w-full items-center justify-center gap-2 rounded-pill font-sans text-[calc(14px*var(--ws-fs))] font-semibold transition-colors",
                       busy || !state?.available
@@ -558,8 +603,16 @@ export function PremiumSheet() {
                     {busy && (
                       <span className="h-3.5 w-3.5 animate-spin rounded-pill border-2 border-current/30 border-t-current" />
                     )}
-                    {busy ? t("premium.processing") : t("premium.cta")}
-                  </button>
+                    <AnimatePresence mode="wait" initial={false}>
+                      <motion.span
+                        key={busy ? "busy" : "idle"}
+                        {...swap}
+                        className="block"
+                      >
+                        {busy ? t("premium.processing") : t("premium.cta")}
+                      </motion.span>
+                    </AnimatePresence>
+                  </motion.button>
                 )}
 
                 <p className="mt-3 text-center font-sans text-[calc(11.5px*var(--ws-fs))] text-subtle">

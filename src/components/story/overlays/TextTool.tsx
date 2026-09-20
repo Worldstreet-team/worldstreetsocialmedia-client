@@ -2,8 +2,12 @@
 
 import { Check, Plus } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { motion, useReducedMotionConfig } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import {
+  AnimatePresence,
+  motion,
+  useReducedMotionConfig,
+} from "framer-motion";
+import { useEffect, useId, useRef, useState } from "react";
 import { HexColorPicker } from "react-colorful";
 import TextBlock from "@/components/story/overlays/TextBlock";
 import ScrollStrip from "@/components/ui/ScrollStrip";
@@ -19,6 +23,14 @@ import {
   type TextOverlay,
   type TextStyle,
 } from "@/lib/editor/overlays";
+import {
+  collapse,
+  pop,
+  staggerParent,
+  staggerPop,
+  swap,
+  thumbSpring,
+} from "@/lib/motion-presets";
 
 interface TextToolProps {
   /** Existing overlay when re-editing; null for a new one. */
@@ -84,6 +96,7 @@ export default function TextTool({
   const [customOpen, setCustomOpen] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const reduce = useReducedMotionConfig();
+  const thumbId = useId();
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -185,6 +198,13 @@ export default function TextTool({
           ))}
         </div>
 
+        {/* Enter only, no exit: the new panel rises at once, so a tab tap
+            never waits for the old one to leave. */}
+        <motion.div
+          key={tab}
+          initial={swap.initial}
+          animate={swap.animate}
+        >
         {tab === "font" && (
           <ScrollStrip ariaLabel="Typeface">
             {VOICES.map((voice) => {
@@ -291,17 +311,32 @@ export default function TextTool({
                   onClick={() => setPaletteId(p.id)}
                   aria-pressed={paletteId === p.id}
                   className={clsx(
-                    "h-7 shrink-0 px-3 rounded-pill font-sans text-[calc(11px*var(--ws-fs))] font-medium transition-colors cursor-pointer",
+                    "relative h-7 shrink-0 px-3 rounded-pill font-sans text-[calc(11px*var(--ws-fs))] font-medium transition-colors cursor-pointer",
                     paletteId === p.id
-                      ? "glass-chip-active"
+                      ? "text-[#0c0a09]"
                       : "glass-chip backdrop-blur-md",
                   )}
                 >
-                  {p.label}
+                  {paletteId === p.id && (
+                    <motion.span
+                      layoutId={`${thumbId}-palette`}
+                      transition={thumbSpring}
+                      className="pointer-events-none absolute inset-0 rounded-pill glass-chip-active"
+                    />
+                  )}
+                  <span className="relative">{p.label}</span>
                 </button>
               ))}
             </ScrollStrip>
-            <div className="flex items-center justify-center gap-2">
+            {/* Keyed by palette: a new set of inks cascades in once when
+                the person picks it, and never on a plain re-render. */}
+            <motion.div
+              key={paletteId}
+              variants={staggerParent}
+              initial="hidden"
+              animate="show"
+              className="flex items-center justify-center gap-2"
+            >
               {palette.colors.map((c) => (
                 <button
                   key={c}
@@ -319,23 +354,30 @@ export default function TextTool({
                       : "opacity-55 hover:opacity-90",
                   )}
                 >
-                  <span
+                  {/* The pop rides the dot: the button's opacity is its
+                      selected / receded state. */}
+                  <motion.span
+                    variants={staggerPop}
                     className="flex h-6 w-6 items-center justify-center rounded-pill shadow-[0_2px_10px_rgba(0,0,0,0.55)]"
                     style={{ background: c }}
                   >
-                    {color.toLowerCase() === c.toLowerCase() && (
-                      <Check
-                        size={12}
-                        weight="bold"
-                        style={{
-                          color:
-                            c.toLowerCase() === "#0c0a09"
-                              ? "#fafaf9"
-                              : "#0c0a09",
-                        }}
-                      />
-                    )}
-                  </span>
+                    <AnimatePresence initial={false}>
+                      {color.toLowerCase() === c.toLowerCase() && (
+                        <motion.span key="check" {...pop} className="flex">
+                          <Check
+                            size={12}
+                            weight="bold"
+                            style={{
+                              color:
+                                c.toLowerCase() === "#0c0a09"
+                                  ? "#fafaf9"
+                                  : "#0c0a09",
+                            }}
+                          />
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </motion.span>
                 </button>
               ))}
               {/* Custom colour — the palette's escape hatch. */}
@@ -349,7 +391,8 @@ export default function TextTool({
                   custom || customOpen ? "opacity-100" : "opacity-70",
                 )}
               >
-                <span
+                <motion.span
+                  variants={staggerPop}
                   className="flex h-6 w-6 items-center justify-center rounded-pill shadow-[0_2px_10px_rgba(0,0,0,0.55)]"
                   style={{
                     background: custom
@@ -360,18 +403,30 @@ export default function TextTool({
                   {!custom && (
                     <Plus size={11} weight="bold" className="text-[#0c0a09]" />
                   )}
-                </span>
+                </motion.span>
               </button>
-            </div>
-            {customOpen && (
-              <div className="flex justify-center pt-1">
-                <div className="ws-color-picker">
-                  <HexColorPicker color={color} onChange={setColor} />
-                </div>
-              </div>
-            )}
+            </motion.div>
+            <AnimatePresence initial={false}>
+              {customOpen && (
+                <motion.div
+                  key="custom-colour"
+                  {...collapse}
+                  // -mt-2 cancels the column's space-y gap, which the inner
+                  // padding gives back, so the closed state leaves no ghost.
+                  className="-mt-2 overflow-hidden"
+                >
+                  {/* pb-1: the hue handle overhangs its track by a pixel. */}
+                  <div className="flex justify-center pt-3 pb-1">
+                    <div className="ws-color-picker">
+                      <HexColorPicker color={color} onChange={setColor} />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
+        </motion.div>
       </div>
     </motion.div>
   );

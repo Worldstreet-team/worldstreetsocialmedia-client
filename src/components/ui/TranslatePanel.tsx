@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
 import {
 	ChartLineUp,
 	CurrencyCircleDollar,
@@ -22,6 +23,14 @@ import { LOCALES, type Locale } from "@/i18n/config";
 import { useT } from "@/i18n/client";
 import { translatePostToAction } from "@/lib/translate.actions";
 import { decodePost } from "@/lib/decode";
+import {
+	staggerItem,
+	staggerParent,
+	staggerParentFast,
+	staggerPop,
+	swap,
+	thumbSpring,
+} from "@/lib/motion-presets";
 
 type Cached =
 	| { kind: "translated"; text: string; source?: string }
@@ -46,6 +55,8 @@ export function TranslatePanel({
 	const [target, setTarget] = useState<Locale>(t.locale);
 	const [cache, setCache] = useState<Partial<Record<Locale, Cached>>>({});
 	const [loading, setLoading] = useState(false);
+	// Per instance, so two panels could never trade one thumb between them.
+	const thumbId = useId();
 
 	const decoded = useMemo(() => decodePost(content), [content]);
 
@@ -96,6 +107,23 @@ export function TranslatePanel({
 				? TrendDown
 				: ChartLineUp;
 
+	// No entry for this language yet means it is on its way: the effect above
+	// always fetches a missing one. Keying off `loading` alone left one frame,
+	// before that effect ran, that fell through to "failed"; harmless as a
+	// blink, but a swap would hold it on screen for a whole fade.
+	const pending = !current;
+	// What the translation slot is showing. The slot swaps when this changes
+	// and at no other time, so a re-render never replays the roll.
+	const bodyKey = pending ? "loading" : `${target}:${current.kind}`;
+
+	// The decode reads in once, when the panel opens (it is memoised on the
+	// post, so nothing refetches it). A long one takes the list pace so the
+	// last chip is never still arriving after the sheet has settled.
+	const cascade =
+		decoded.entities.length + decoded.signals.length + 1 > 8
+			? staggerParentFast
+			: staggerParent;
+
 	if (typeof document === "undefined") return null;
 
 	return createPortal(
@@ -111,24 +139,37 @@ export function TranslatePanel({
 					</h2>
 				</OverlayHeader>
 
-				{/* language tabs */}
-				<div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-hairline shrink-0 overflow-x-auto [scrollbar-width:none]">
+				{/* language tabs. The active fill is one element that slides
+				    between the pills; every pill keeps its resting chip under it.
+				    `layoutScroll` because the row scrolls sideways. */}
+				<motion.div
+					layoutScroll
+					className="flex items-center gap-1.5 px-4 py-2.5 border-b border-hairline shrink-0 overflow-x-auto [scrollbar-width:none]"
+				>
 					{LOCALES.map((loc) => (
 						<button
 							key={loc}
 							type="button"
 							onClick={() => setTarget(loc)}
 							className={clsx(
-								"h-8 px-3.5 rounded-pill font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold uppercase tracking-wide transition-colors cursor-pointer shrink-0",
+								"relative h-8 px-3.5 rounded-pill bg-raised/60 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold uppercase tracking-wide transition-colors cursor-pointer shrink-0",
 								target === loc
-									? "bg-primary text-page"
-									: "bg-raised/60 text-muted hover:text-primary",
+									? "text-page"
+									: "text-muted hover:text-primary",
 							)}
 						>
-							{loc}
+							{target === loc && (
+								<motion.span
+									aria-hidden
+									layoutId={thumbId}
+									transition={thumbSpring}
+									className="absolute inset-0 rounded-pill bg-primary"
+								/>
+							)}
+							<span className="relative">{loc}</span>
 						</button>
 					))}
-				</div>
+				</motion.div>
 
 				<div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
 					{/* original */}
@@ -143,32 +184,41 @@ export function TranslatePanel({
 					<p className="font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.12em] text-subtle mb-1.5">
 						{target.toUpperCase()}
 					</p>
-					{loading && !current ? (
-						<div className="space-y-2 mb-4">
-							<div className="h-4 skeleton rounded w-full" />
-							<div className="h-4 skeleton rounded w-2/3" />
-						</div>
-					) : current?.kind === "translated" ? (
-						<div className="mb-4">
-							<p className="font-sans text-[calc(15px*var(--ws-fs))] text-primary whitespace-pre-wrap leading-relaxed">
-								{current.text}
-							</p>
-							{current.source && (
-								<p className="font-sans text-[calc(12px*var(--ws-fs))] text-subtle mt-1.5">
-									{t("post.translatedFrom")}{" "}
-									{sourceLabel(current.source)}
-								</p>
-							)}
-						</div>
-					) : current?.kind === "same" ? (
-						<p className="font-sans text-[calc(13.5px*var(--ws-fs))] text-subtle mb-4">
-							{t("translate.same")}
-						</p>
-					) : (
-						<p className="font-sans text-[calc(13.5px*var(--ws-fs))] text-subtle mb-4">
-							{t("translate.failed")}
-						</p>
-					)}
+					{/* Skeleton, translation, "same language" and "failed" trade
+					    places instead of blinking. popLayout, not wait: the text
+					    is on screen the moment it exists. */}
+					<div className="relative mb-4" aria-busy={loading && pending}>
+						<AnimatePresence mode="popLayout" initial={false}>
+							<motion.div key={bodyKey} {...swap}>
+								{pending ? (
+									<div className="space-y-2">
+										<div className="h-4 skeleton rounded w-full" />
+										<div className="h-4 skeleton rounded w-2/3" />
+									</div>
+								) : current?.kind === "translated" ? (
+									<div>
+										<p className="font-sans text-[calc(15px*var(--ws-fs))] text-primary whitespace-pre-wrap leading-relaxed">
+											{current.text}
+										</p>
+										{current.source && (
+											<p className="font-sans text-[calc(12px*var(--ws-fs))] text-subtle mt-1.5">
+												{t("post.translatedFrom")}{" "}
+												{sourceLabel(current.source)}
+											</p>
+										)}
+									</div>
+								) : current?.kind === "same" ? (
+									<p className="font-sans text-[calc(13.5px*var(--ws-fs))] text-subtle">
+										{t("translate.same")}
+									</p>
+								) : (
+									<p className="font-sans text-[calc(13.5px*var(--ws-fs))] text-subtle">
+										{t("translate.failed")}
+									</p>
+								)}
+							</motion.div>
+						</AnimatePresence>
+					</div>
 
 					<div className="border-t border-hairline my-4" />
 
@@ -184,12 +234,15 @@ export function TranslatePanel({
 							{t("translate.empty")}
 						</p>
 					) : (
-						<>
+						// One variant tree for the whole decode: the rows rise,
+						// then the chips land, as a single cascade.
+						<motion.div variants={cascade} initial="hidden" animate="show">
 							{decoded.entities.length > 0 && (
 								<div className="flex flex-col gap-2 mb-4">
 									{decoded.entities.map((e) => (
-										<div
+										<motion.div
 											key={e.term}
+											variants={staggerItem}
 											className="flex items-baseline gap-2.5"
 										>
 											<span
@@ -215,14 +268,15 @@ export function TranslatePanel({
 											<span className="font-sans text-[calc(13px*var(--ws-fs))] text-muted leading-snug">
 												{e.explanation}
 											</span>
-										</div>
+										</motion.div>
 									))}
 								</div>
 							)}
 
 							{/* signals + tone */}
 							<div className="flex items-center gap-1.5 flex-wrap">
-								<span
+								<motion.span
+									variants={staggerPop}
 									className={clsx(
 										"flex items-center gap-1.5 h-7 px-3 rounded-pill text-[calc(12px*var(--ws-fs))] font-semibold font-sans",
 										decoded.tone === "bullish" &&
@@ -235,10 +289,11 @@ export function TranslatePanel({
 								>
 									<ToneIcon size={13} weight="bold" />
 									{t(`translate.tone.${decoded.tone}`)}
-								</span>
+								</motion.span>
 								{decoded.signals.map((sig) => (
-									<span
+									<motion.span
 										key={sig}
+										variants={staggerPop}
 										className="flex items-center gap-1 h-7 px-3 rounded-pill bg-raised text-primary text-[calc(12px*var(--ws-fs))] font-semibold font-sans tabular-nums"
 									>
 										<CurrencyCircleDollar
@@ -246,10 +301,10 @@ export function TranslatePanel({
 											className="text-subtle"
 										/>
 										{sig}
-									</span>
+									</motion.span>
 								))}
 							</div>
-						</>
+						</motion.div>
 					)}
 				</div>
 			</OverlayPanel>

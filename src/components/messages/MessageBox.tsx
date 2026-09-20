@@ -92,7 +92,22 @@ import {
 	sendFormProgress,
 } from "@/lib/upload-direct";
 import { loadThreads, saveThread } from "@/lib/chat-vault";
-import { menuStagger, staggerItem, staggerPop } from "@/lib/motion-presets";
+import {
+	DUR,
+	EASE,
+	EASE_IN,
+	collapse,
+	menu,
+	menuStagger,
+	pop,
+	press,
+	reveal,
+	staggerItem,
+	staggerParentFast,
+	staggerPop,
+	swap,
+	thumbSpring,
+} from "@/lib/motion-presets";
 import {
 	VoiceRecorder,
 	type RecorderStart,
@@ -183,6 +198,14 @@ interface PendingAttachment {
 
 /** The WhatsApp-six (register 134); the plus opens the full picker. */
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
+
+/** A plain fade, for scrims and washes. motion-presets has no opacity-only
+ *  preset, so this one is composed from its own durations and curves. */
+const fade = {
+	initial: { opacity: 0 },
+	animate: { opacity: 1, transition: { duration: DUR.base, ease: EASE } },
+	exit: { opacity: 0, transition: { duration: DUR.fast, ease: EASE_IN } },
+} as const;
 
 const newKey = () =>
 	typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -2479,41 +2502,69 @@ export const MessageBox = ({
 				{/* New chat and new group live in a FAB over the list now
 				    (owner 2026-09-20), not as icons on the title row. */}
 				<div className="pointer-events-none absolute bottom-4 right-4 z-20 flex flex-col items-end gap-2 md:bottom-6 md:right-6">
-					{fabOpen && (
-						<>
-							<button
-								type="button"
-								onClick={() => {
-									setFabOpen(false);
-									setShowGroupCreate(true);
-								}}
-								className="pointer-events-auto flex h-11 cursor-pointer items-center gap-2 rounded-pill glass-frost px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary shadow-nav animate-rise"
+					{/* animate-rise is switched off once the intro has played, so
+					    these used to appear with no motion and had no exit. They
+					    unfold from the FAB's corner and leave as one piece. */}
+					<AnimatePresence>
+						{fabOpen && (
+							<motion.div
+								key="fab-options"
+								{...menuStagger("bottom-right")}
+								className="flex flex-col items-end gap-2"
 							>
-								<RiGroupLine size={18} />
-								{t("messages.newGroup")}
-							</button>
-							<button
-								type="button"
-								onClick={() => {
-									setFabOpen(false);
-									setShowNewConversationModal(true);
-								}}
-								className="pointer-events-auto flex h-11 cursor-pointer items-center gap-2 rounded-pill glass-frost px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary shadow-nav animate-rise"
-							>
-								<RiChatNewLine size={18} />
-								{t("messages.newChat")}
-							</button>
-						</>
-					)}
-					<button
+								<motion.button
+									variants={staggerItem}
+									type="button"
+									onClick={() => {
+										setFabOpen(false);
+										setShowGroupCreate(true);
+									}}
+									className="pointer-events-auto flex h-11 cursor-pointer items-center gap-2 rounded-pill glass-frost px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary shadow-nav"
+								>
+									<RiGroupLine size={18} />
+									{t("messages.newGroup")}
+								</motion.button>
+								<motion.button
+									variants={staggerItem}
+									type="button"
+									onClick={() => {
+										setFabOpen(false);
+										setShowNewConversationModal(true);
+									}}
+									className="pointer-events-auto flex h-11 cursor-pointer items-center gap-2 rounded-pill glass-frost px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary shadow-nav"
+								>
+									<RiChatNewLine size={18} />
+									{t("messages.newChat")}
+								</motion.button>
+							</motion.div>
+						)}
+					</AnimatePresence>
+					{/* Press feedback only: hover never scales (house rule), it
+					    takes the brand's own hover step instead. */}
+					<motion.button
+						{...press}
 						type="button"
 						onClick={() => setFabOpen((v) => !v)}
 						aria-expanded={fabOpen}
 						aria-label={t("messages.newChat")}
-						className="pointer-events-auto flex h-14 w-14 cursor-pointer items-center justify-center rounded-pill bg-brand text-brand-on shadow-nav transition-transform hover:scale-[1.02]"
+						className="pointer-events-auto relative flex h-14 w-14 cursor-pointer items-center justify-center rounded-pill bg-brand text-brand-on shadow-nav transition-colors hover:bg-brand-active"
 					>
-						<RiChatNewLine size={22} className={fabOpen ? "rotate-12" : undefined} />
-					</button>
+						{/* The chat glyph at rest, a close mark while the options
+						    are out. It used to snap to a 12 degree tilt. */}
+						<AnimatePresence mode="popLayout" initial={false}>
+							<motion.span
+								key={fabOpen ? "close" : "new"}
+								{...pop}
+								className="flex"
+							>
+								{fabOpen ? (
+									<RiCloseLine size={22} />
+								) : (
+									<RiChatNewLine size={22} />
+								)}
+							</motion.span>
+						</AnimatePresence>
+					</motion.button>
 				</div>
 
 				{/* The inbox reads as a stack of blocks (owner 2026-09-19):
@@ -2538,11 +2589,29 @@ export const MessageBox = ({
 						<h1 className="font-display text-[calc(20px*var(--ws-fs))] font-semibold leading-6 tracking-[-0.01em] text-primary">
 							{t("nav.messages")}
 						</h1>
-						{totalUnread > 0 && (
-							<span className="flex h-5 min-w-5 items-center justify-center rounded-pill bg-brand px-1.5 font-sans text-[calc(11px*var(--ws-fs))] font-bold tabular-nums text-brand-on">
-								{totalUnread}
-							</span>
-						)}
+						{/* Same grammar as ui/Badge: a count that ARRIVES pops, and the
+						    digits roll, because other people's messages move them. */}
+						<AnimatePresence initial={false}>
+							{totalUnread > 0 && (
+								<motion.span
+									key="unread"
+									{...pop}
+									className="flex h-5 min-w-5 items-center justify-center overflow-hidden rounded-pill bg-brand px-1.5 font-sans text-[calc(11px*var(--ws-fs))] font-bold tabular-nums text-brand-on"
+								>
+									<span className="relative inline-flex">
+										<AnimatePresence mode="popLayout" initial={false}>
+											<motion.span
+												key={totalUnread}
+												{...swap}
+												className="inline-block"
+											>
+												{totalUnread}
+											</motion.span>
+										</AnimatePresence>
+									</span>
+								</motion.span>
+							)}
+						</AnimatePresence>
 					</div>
 					<div className="relative">
               <RiSearchLine
@@ -2641,14 +2710,30 @@ export const MessageBox = ({
 											}
 											aria-pressed={kindFilter === key}
 											className={clsx(
-												"flex h-7 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
+												"relative flex h-7 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
 												kindFilter === key
-													? "bg-primary/15 text-primary"
+													? "text-primary"
 													: "text-muted hover:text-primary",
 											)}
 										>
-											<Icon size={15} />
-											{label}
+											{/* One fill that slides between the two, as in Tabs.
+											    A fixed id is safe, this pane is a page singleton;
+											    layoutDependency stops a component this busy from
+											    re-measuring it on every render. */}
+											{kindFilter === key && (
+												<motion.span
+													aria-hidden
+													layoutId="inbox-kind-thumb"
+													layoutDependency={kindFilter}
+													transition={thumbSpring}
+													className="absolute inset-0 rounded-pill bg-primary/15"
+												/>
+											)}
+											{/* Positioned, so it paints above the thumb. */}
+											<span className="relative flex items-center gap-1.5">
+												<Icon size={15} />
+												{label}
+											</span>
 										</button>
 									),
 								)}
@@ -2789,15 +2874,27 @@ export const MessageBox = ({
 										<h2 className="truncate font-semibold leading-tight text-[calc(17px*var(--ws-fs))]">
 											{headerIdentity.title}
 										</h2>
-										{chat.typers.length > 0 ? (
-											<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] leading-tight text-muted">
-												{groupActivityLine(chat.typers)}
-											</p>
-										) : (
-											<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] leading-tight text-muted">
-												{headerIdentity.memberCount ?? 0} members
-											</p>
-										)}
+										{/* Keyed by STATE, not by text: the line rolls when typing
+										    starts or stops, never when a name or the count moves. */}
+										<AnimatePresence mode="wait" initial={false}>
+											{chat.typers.length > 0 ? (
+												<motion.p
+													key="typing"
+													{...swap}
+													className="truncate font-sans text-[calc(13px*var(--ws-fs))] leading-tight text-muted"
+												>
+													{groupActivityLine(chat.typers)}
+												</motion.p>
+											) : (
+												<motion.p
+													key="members"
+													{...swap}
+													className="truncate font-sans text-[calc(13px*var(--ws-fs))] leading-tight text-muted"
+												>
+													{headerIdentity.memberCount ?? 0} members
+												</motion.p>
+											)}
+										</AnimatePresence>
 									</div>
 								</button>
 							) : (
@@ -2815,12 +2912,18 @@ export const MessageBox = ({
 									/>
 									{/* The dot belongs on the face, not in a line of text
 									    below it — it is the first thing you look for. */}
-									{peerOnline && (
-										<span
-											aria-hidden
-											className="absolute bottom-0 right-0 h-3 w-3 rounded-pill bg-success ring-2 ring-page ws-cue-online"
-										/>
-									)}
+									{/* Presence flips rarely, so the dot may land and leave;
+									    one already there when the thread opens does not. */}
+									<AnimatePresence initial={false}>
+										{peerOnline && (
+											<motion.span
+												key="online"
+												aria-hidden
+												{...pop}
+												className="absolute bottom-0 right-0 h-3 w-3 rounded-pill bg-success ring-2 ring-page ws-cue-online"
+											/>
+										)}
+									</AnimatePresence>
 								</span>
 								<div className="min-w-0">
 									<h2 className="flex items-center gap-1 font-semibold text-[calc(17px*var(--ws-fs))] truncate">
@@ -2844,38 +2947,67 @@ export const MessageBox = ({
 											size={14}
 										/>
 									</h2>
-									{!isConnected ? (
-										<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-danger">
-											Waiting for network…
-										</p>
-									) : chat.peerRecording ? (
-										<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] leading-tight text-muted">
-											recording audio…
-										</p>
-									) : chat.peerTyping ? (
-                          <p className="truncate font-sans text-[calc(13px*var(--ws-fs))] leading-tight text-muted">
-                            typing…
-                          </p>
-									) : peerOnline ? (
-										// No dot here — the avatar already carries one, and
-										// two green dots for one fact read as two facts.
-                          <p className="truncate font-sans text-[calc(13px*var(--ws-fs))] leading-tight text-muted">
-                            Online
-                          </p>
-									) : (activeConversation.otherParticipant as any)
-											?.lastSeenAt ? (
-										<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] leading-tight text-muted">
-											Last seen{" "}
-											{formatLastSeen(
-												(activeConversation.otherParticipant as any)
-													.lastSeenAt,
-											)}
-										</p>
-									) : (
-										<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] leading-tight text-muted">
-											@{activeConversation.otherParticipant?.username}
-										</p>
-									)}
+									{/* Six states share this line. Keyed by STATE, so the old
+									    one lifts out and the new one rises in, while a moving
+									    "last seen" inside a state never replays it. */}
+									<AnimatePresence mode="wait" initial={false}>
+										{!isConnected ? (
+											<motion.p
+												key="offline"
+												{...swap}
+												className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-danger"
+											>
+												Waiting for network…
+											</motion.p>
+										) : chat.peerRecording ? (
+											<motion.p
+												key="recording"
+												{...swap}
+												className="truncate font-sans text-[calc(13px*var(--ws-fs))] leading-tight text-muted"
+											>
+												recording audio…
+											</motion.p>
+										) : chat.peerTyping ? (
+											<motion.p
+												key="typing"
+												{...swap}
+												className="truncate font-sans text-[calc(13px*var(--ws-fs))] leading-tight text-muted"
+											>
+												typing…
+											</motion.p>
+										) : peerOnline ? (
+											// No dot here: the avatar already carries one, and
+											// two green dots for one fact read as two facts.
+											<motion.p
+												key="online"
+												{...swap}
+												className="truncate font-sans text-[calc(13px*var(--ws-fs))] leading-tight text-muted"
+											>
+												Online
+											</motion.p>
+										) : (activeConversation.otherParticipant as any)
+												?.lastSeenAt ? (
+											<motion.p
+												key="seen"
+												{...swap}
+												className="truncate font-sans text-[calc(13px*var(--ws-fs))] leading-tight text-muted"
+											>
+												Last seen{" "}
+												{formatLastSeen(
+													(activeConversation.otherParticipant as any)
+														.lastSeenAt,
+												)}
+											</motion.p>
+										) : (
+											<motion.p
+												key="handle"
+												{...swap}
+												className="truncate font-sans text-[calc(13px*var(--ws-fs))] leading-tight text-muted"
+											>
+												@{activeConversation.otherParticipant?.username}
+											</motion.p>
+										)}
+									</AnimatePresence>
 								</div>
 								</Link>
 							)}
@@ -2889,10 +3021,13 @@ export const MessageBox = ({
 						    hairline between the segments; the theme control sits
 						    LAST, the secondary slot every messenger keeps at the
 						    far right. */}
+						{/* Each segment dips a hair under the finger (press); starting
+						    a call is rare and deliberate, so it earns the feedback. */}
 						<div className="flex shrink-0 items-center overflow-hidden rounded-pill bg-primary/5 text-muted">
 							{isGroupThread && (
 								<>
-									<button
+									<motion.button
+										{...press}
 										type="button"
 										aria-label="Start group voice call"
 										className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/10 hover:text-primary"
@@ -2911,9 +3046,10 @@ export const MessageBox = ({
 										}
 									>
 										<Phone className="w-5 h-5" />
-									</button>
+									</motion.button>
 									<span aria-hidden className="h-5 w-px bg-hairline" />
-									<button
+									<motion.button
+										{...press}
 										type="button"
 										aria-label="Start group video call"
 										className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/10 hover:text-primary"
@@ -2932,12 +3068,13 @@ export const MessageBox = ({
 										}
 									>
 										<Video className="w-5 h-5" />
-									</button>
+									</motion.button>
 								</>
 							)}
 							{!isGroupThread && (
 							<>
-							<button
+							<motion.button
+								{...press}
 								type="button"
 								aria-label="Start voice call"
 								className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/10 hover:text-primary"
@@ -2965,9 +3102,10 @@ export const MessageBox = ({
 								}
 							>
 								<Phone className="w-5 h-5" />
-							</button>
+							</motion.button>
 							<span aria-hidden className="h-5 w-px bg-hairline" />
-							<button
+							<motion.button
+								{...press}
 								type="button"
 								aria-label="Start video call"
 								className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/10 hover:text-primary"
@@ -2995,11 +3133,12 @@ export const MessageBox = ({
 								}
 							>
 								<Video className="w-5 h-5" />
-							</button>
+							</motion.button>
 							</>
 							)}
 						</div>
-					<button
+					<motion.button
+							{...press}
 							type="button"
 							onClick={() => setThemeSheet("gallery")}
 							aria-label="Chat theme"
@@ -3007,7 +3146,7 @@ export const MessageBox = ({
 							className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
 						>
 							<RiPaletteLine size={20} />
-						</button>
+						</motion.button>
 					</div>
 					</div>
 
@@ -3029,13 +3168,24 @@ export const MessageBox = ({
 							addFiles(Array.from(e.dataTransfer.files ?? []));
 						}}
 					>
-						{dragOver && (
-							<div className="pointer-events-none absolute inset-2 z-20 flex items-center justify-center rounded-xl border-2 border-dashed border-brand bg-page/60">
-								<span className="rounded-pill bg-raised px-4 py-2 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
-									Drop to send
-								</span>
-							</div>
-						)}
+						{/* The wash only fades, it is the size of the pane; the chip is
+						    the small thing that lands. */}
+						<AnimatePresence>
+							{dragOver && (
+								<motion.div
+									key="drop"
+									{...fade}
+									className="pointer-events-none absolute inset-2 z-20 flex items-center justify-center rounded-xl border-2 border-dashed border-brand bg-page/60"
+								>
+									<motion.span
+										{...pop}
+										className="rounded-pill bg-raised px-4 py-2 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary"
+									>
+										Drop to send
+									</motion.span>
+								</motion.div>
+							)}
+						</AnimatePresence>
 						<div className="relative z-10 flex min-h-0 flex-1 flex-col">
 						<ThreadList
 							ref={virtuosoRef}
@@ -3093,9 +3243,15 @@ export const MessageBox = ({
 						{/* What you are answering, above the input, with a way out.
 						    Sending clears it; so does Escape, because a reply you
 						    cannot cancel is a trap. */}
+						{/* A wrapper owns the height, so the thread's bottom edge glides
+						    instead of jolting; the chip keeps its own classes. It is
+						    shorter than the list's 80px at-bottom threshold, so the
+						    list settles the same whether this snaps or glides. */}
+						<AnimatePresence initial={false}>
 						{replyTarget && (
 							/* Same modern quote grammar as the bubbles: soft inset
 							   chip, gold name, no border bar. */
+							<motion.div key="reply" {...collapse} className="overflow-hidden">
 							<div className="chat-chrome mb-2 flex items-center gap-2 rounded-[10px] px-3 py-2">
 								<span className="flex min-w-0 flex-1 flex-col gap-0.5">
 									<span className="truncate font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-muted">
@@ -3117,10 +3273,16 @@ export const MessageBox = ({
 									<RiCloseLine size={15} />
 								</button>
 							</div>
+							</motion.div>
 						)}
+						</AnimatePresence>
 						{/* Mini player (register 88): the note keeps playing while you
 						    scroll or read; the bar keeps its controls in reach. */}
+						{/* Same wrapper as the reply chip: it mounts on play and leaves
+						    on pause, and used to snap the thread's edge both ways. */}
+						<AnimatePresence initial={false}>
 						{voiceBar?.id && voiceBar.playing && (
+							<motion.div key="voice" {...collapse} className="overflow-hidden">
 							<div className="chat-chrome mb-2 flex items-center gap-2 rounded-[10px] px-2 py-1.5">
                     <RiVoiceprintFill
                       size={16}
@@ -3157,15 +3319,33 @@ export const MessageBox = ({
 									<RiPauseFill size={18} />
 								</button>
 							</div>
+							</motion.div>
 						)}
+						</AnimatePresence>
 						{/* The tray (register 62-63): thumbs, per-image caption for
 						    the selected one, HD chip, and the editor a tap away. */}
+						<AnimatePresence initial={false}>
 						{attachments.length > 0 && (
-							<div className="chat-chrome mb-2 rounded-xl p-2">
+							// Rises in place; the height still snaps, on purpose. The
+							// tray is taller than the list's 80px at-bottom threshold:
+							// a snap re-pins the newest message, a gliding shrink would
+							// leave it part covered.
+							<motion.div
+								key="tray"
+								variants={staggerItem}
+								initial="hidden"
+								animate="show"
+								exit="exit"
+								className="chat-chrome mb-2 rounded-xl p-2"
+							>
 								<div className="flex items-center gap-2 overflow-x-auto pb-0.5">
+									{/* The first batch arrives with the tray; a file added
+									    or removed after that lands and leaves on its own. */}
+									<AnimatePresence initial={false}>
 									{attachments.map((att) => (
-										<div
+										<motion.div
 											key={att.id}
+											{...pop}
 											onClick={() => setSelectedAttId(att.id)}
 											className={clsx(
 												"relative h-[72px] w-[72px] shrink-0 cursor-pointer overflow-hidden rounded-[10px] bg-raised",
@@ -3216,8 +3396,9 @@ export const MessageBox = ({
 													<RiPencilLine size={13} />
 												</button>
 											)}
-										</div>
+										</motion.div>
 									))}
+									</AnimatePresence>
 									{attachments.length < 8 && (
 										<button
 											type="button"
@@ -3229,7 +3410,8 @@ export const MessageBox = ({
 										</button>
 									)}
 									{/* HD = a lighter cap, never the original (register 66). */}
-									<button
+									<motion.button
+										{...press}
 										type="button"
 										onClick={toggleHd}
 										aria-pressed={hdSend}
@@ -3243,7 +3425,7 @@ export const MessageBox = ({
 										)}
 									>
 										<RiHdLine size={16} />
-									</button>
+									</motion.button>
 								</div>
 								{selectedAtt && (
 									<input
@@ -3265,8 +3447,9 @@ export const MessageBox = ({
 										className="mt-2 w-full rounded-[7px] bg-transparent px-1.5 py-1 font-sans text-[calc(13px*var(--ws-fs))] text-primary outline-none placeholder:text-subtle"
 									/>
 								)}
-							</div>
+							</motion.div>
 						)}
+						</AnimatePresence>
 
 						{editingAtt && (
 							<MediaEditor
@@ -3279,10 +3462,18 @@ export const MessageBox = ({
 							/>
 						)}
 
+						{/* One slot, four states, keyed by state: Accept handing over
+						    to the composer is the moment that matters. Nothing plays
+						    when a thread opens (initial false). */}
+						<AnimatePresence mode="wait" initial={false}>
 						{activeConversation.isRequestForMe ? (
 							// The decision sits where the reply would (owner pick,
 							// Instagram): a slim bar in the composer's place.
-							<div className="chat-chrome flex items-center gap-2 rounded-xl px-3 py-2">
+							<motion.div
+								key="request"
+								{...swap}
+								className="chat-chrome flex items-center gap-2 rounded-xl px-3 py-2"
+							>
 								<span className="min-w-0 flex-1 font-sans text-[calc(12px*var(--ws-fs))] text-muted">
 									Accept to reply. They won't know you've seen this.
 								</span>
@@ -3302,23 +3493,35 @@ export const MessageBox = ({
 								>
 									Accept
 								</button>
-							</div>
+							</motion.div>
 						) : iLeftGroup ? (
-							<div className="chat-chrome flex h-[52px] items-center justify-center rounded-2xl px-4">
+							<motion.div
+								key="left"
+								{...swap}
+								className="chat-chrome flex h-[52px] items-center justify-center rounded-2xl px-4"
+							>
 								<span className="font-sans text-[calc(13px*var(--ws-fs))] text-muted">
 									You left this group
 								</span>
-							</div>
+							</motion.div>
 						) : isGroupThread &&
 						activeConversation.adminsOnly &&
 						activeConversation.myRole === "member" ? (
-							<div className="chat-chrome flex h-[52px] items-center justify-center rounded-2xl px-4">
+							<motion.div
+								key="admins"
+								{...swap}
+								className="chat-chrome flex h-[52px] items-center justify-center rounded-2xl px-4"
+							>
 								<span className="font-sans text-[calc(13px*var(--ws-fs))] text-muted">
 									Only admins can send messages in this group
 								</span>
-							</div>
+							</motion.div>
 						) : (
-						<div className="relative flex items-center gap-2 sm:gap-3">
+						<motion.div
+							key="composer"
+							{...swap}
+							className="relative flex items-center gap-2 sm:gap-3"
+						>
 							{/* Hidden File Input */}
 							<input
 								type="file"
@@ -3370,8 +3573,9 @@ export const MessageBox = ({
 									onSignal={chat.notifyRecording}
 								/>
 							)}
-						</div>
+						</motion.div>
 						)}
+						</AnimatePresence>
 					</div>
 					</div>
 				</motion.div>
@@ -3384,7 +3588,13 @@ export const MessageBox = ({
 					)}
 				>
 					<div className="ws-default-chat-wallpaper relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden rounded-2xl p-8">
-						<div className="flex max-w-sm flex-col items-center rounded-xl bg-page/75 px-8 py-7 text-center">
+						{/* Blocked on first load by the presence above (the route's own
+						    rise covers that); it plays when a closed or deleted
+						    thread hands the pane back. */}
+						<motion.div
+							{...reveal()}
+							className="flex max-w-sm flex-col items-center rounded-xl bg-page/75 px-8 py-7 text-center"
+						>
 						<div className="space-y-2">
 							<h3 className="font-display text-lg font-semibold text-primary">
 								{t("messages.selectTitle")}
@@ -3393,15 +3603,16 @@ export const MessageBox = ({
 								{t("messages.selectCaption")}
 							</p>
 						</div>
-						<button
+						<motion.button
+							{...press}
 							type="button"
 							onClick={() => setShowNewConversationModal(true)}
 							className="mt-6 flex h-10 cursor-pointer items-center gap-2 rounded-pill bg-brand px-5 font-semibold text-brand-on transition-colors hover:bg-brand-active"
 						>
 							<RiChatNewLine size={20} />
 							{t("messages.newChat")}
-						</button>
-					</div>
+						</motion.button>
+					</motion.div>
 					</div>
 				</div>
 			)}
@@ -3418,7 +3629,6 @@ export const MessageBox = ({
 							top: flight.from.top,
 							width: flight.from.width,
 							borderRadius: 999,
-							backgroundColor: "rgba(34,184,214,0)",
 							opacity: 0.95,
 						}}
 						animate={{
@@ -3426,15 +3636,27 @@ export const MessageBox = ({
 							top: flight.to.top,
 							width: flight.to.width,
 							borderRadius: 22,
-							backgroundColor: "var(--chat-accent, var(--ws-brand-primary))",
 							opacity: 1,
 						}}
 						exit={{ opacity: 0, transition: { duration: 0.1 } }}
-						transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
+						transition={{ duration: DUR.slow, ease: EASE }}
 						onAnimationComplete={() => setFlight(null)}
-						className="pointer-events-none fixed z-modal max-h-24 overflow-hidden px-4 py-2.5 font-sans text-sm leading-relaxed text-white"
+						// It renders outside the thread pane, so it carries the chat's
+						// own variables; without them it wore the inbox's theme.
+						style={themeVars(chatTheme)}
+						className="pointer-events-none fixed z-modal max-h-24 overflow-hidden px-4 py-2.5 font-sans text-sm leading-relaxed [color:var(--chat-accent-ink,var(--ws-brand-on-primary))]"
 					>
-						{flight.text}
+						{/* The fill fades in as its own layer. framer cannot mix a
+						    colour out of a var(), and the literal cyan it started
+						    from tinted every theme's bubble in mid-flight. */}
+						<motion.span
+							aria-hidden
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							transition={{ duration: DUR.slow, ease: EASE }}
+							className="absolute inset-0 [background:var(--chat-accent,var(--ws-brand-primary))]"
+						/>
+						<span className="relative">{flight.text}</span>
 					</motion.div>
 				)}
 			</AnimatePresence>
@@ -3513,15 +3735,28 @@ export const MessageBox = ({
 					}}
 				/>
 			)}
+			{/* It had a CSS entrance and no exit: Keep and Delete both cut the
+			    card and the scrim in one frame. The card unfolds from its
+			    centre, the scrim only fades, and both leave quicker. */}
+			<AnimatePresence>
 			{pendingDeleteConv && (
-				<div className="fixed inset-0 z-modal flex items-center justify-center">
-					<button
+				<div
+					key="delete-confirm"
+					className="fixed inset-0 z-modal flex items-center justify-center"
+				>
+					<motion.button
+						{...fade}
 						type="button"
 						aria-label="Cancel"
 						onClick={() => setPendingDeleteConv(null)}
 						className="absolute inset-0 cursor-default bg-scrim"
 					/>
-					<div className="relative w-[320px] rounded-xl bg-surface p-5 shadow-nav animate-pop">
+					<motion.div
+						role="alertdialog"
+						aria-modal="true"
+						{...menu("center")}
+						className="relative w-[320px] rounded-xl bg-surface p-5 shadow-nav"
+					>
 						<p className="font-sans text-[calc(14.5px*var(--ws-fs))] font-semibold text-primary">
 							{pendingDeleteConv.kind === "group"
 								? pendingDeleteConv.myRole === "owner"
@@ -3568,192 +3803,253 @@ export const MessageBox = ({
 									: "Delete"}
 							</button>
 						</div>
-					</div>
-				</div>
-			)}
-
-      {msgMenu &&
-        (() => {
-				// Long-press grammar (owner pick, Instagram): the thread dims
-				// and blurs; the PRESSED bubble is repainted sharp above the
-				// scrim (its live DOM sits under the blur), with the reaction
-				// bar hugging its top edge and the actions its bottom.
-				const vw = window.innerWidth;
-				const vh = window.innerHeight;
-				const r = msgMenu.lift?.rect;
-				const alignRight = msgMenu.lift?.mine ?? false;
-				const barLeft = r
-            ? Math.max(
-                8,
-                Math.min(
-                  alignRight ? r.left + r.width - 292 : r.left,
-                  vw - 300,
-                ),
-              )
-					: Math.max(8, Math.min(msgMenu.x - 120, vw - 300));
-				const barTop = r
-					? Math.max(8, r.top - 54)
-					: Math.max(8, msgMenu.y - 62);
-				const menuLeft = r
-            ? Math.max(
-                8,
-                Math.min(
-                  alignRight ? r.left + r.width - 190 : r.left,
-                  vw - 198,
-                ),
-              )
-					: Math.min(msgMenu.x, vw - 200);
-				const menuTop = r
-					? Math.min(r.top + r.height + 8, vh - 260)
-					: Math.min(msgMenu.y + 8, vh - 220);
-				// Both unfold from the corner nearest the pressed bubble, and
-				// their children cascade (owner 2026-09-20): emoji land one by
-				// one with a touch of overshoot, actions rise in sequence.
-				const reactionBar = menuStagger(
-					alignRight ? "bottom-right" : "bottom-left",
-					0.03,
-				);
-				const actionMenu = menuStagger(alignRight ? "top-right" : "top-left");
-				return (
-            <div
-              className="fixed inset-0 z-modal"
-              onClick={() => setMsgMenu(null)}
-            >
-					<div className="absolute inset-0 bg-black/45 backdrop-blur-[2px] animate-pop" />
-					{msgMenu.lift && (
-						<div
-							aria-hidden
-							className="pointer-events-none absolute animate-pop"
-							style={{
-								left: r!.left,
-								top: r!.top,
-								width: r!.width,
-								height: r!.height,
-							}}
-							// Our own already-rendered markup, captured verbatim —
-							// React escaped the message text on first render.
-							dangerouslySetInnerHTML={{ __html: msgMenu.lift.html }}
-						/>
-					)}
-					{!msgMenu.message._id.startsWith("temp-") && (
-						<motion.div
-							{...reactionBar}
-							style={{
-								...reactionBar.style,
-								left: barLeft,
-								top: barTop,
-							}}
-							className="absolute flex items-center gap-0.5 rounded-pill card-depth px-1.5 py-1"
-							onClick={(e) => e.stopPropagation()}
-						>
-							{QUICK_REACTIONS.map((emoji) => (
-								<motion.button
-									key={emoji}
-									variants={staggerPop}
-									whileTap={{ scale: 0.82 }}
-									type="button"
-									onClick={() => {
-										reactTo(msgMenu.message, emoji);
-										setMsgMenu(null);
-									}}
-									aria-label={`React ${emoji}`}
-									className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-[calc(20px*var(--ws-fs))] transition-colors hover:bg-primary/5"
-								>
-									{emoji}
-								</motion.button>
-							))}
-							<motion.button
-								variants={staggerPop}
-								type="button"
-								onClick={() => setMenuPicker((v) => !v)}
-								aria-label="More reactions"
-								className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
-							>
-								<Plus className="h-4 w-4" />
-							</motion.button>
-						</motion.div>
-					)}
-				<motion.div
-					role="menu"
-					{...actionMenu}
-					style={{
-						...actionMenu.style,
-						left: menuLeft,
-						top: menuTop,
-					}}
-					className="absolute w-[190px] overflow-hidden rounded-xl card-depth"
-					onClick={(e) => e.stopPropagation()}
-				>
-					{menuPicker && (
-						<div className="border-b border-hairline p-1 ws-emoji-picker">
-							<EmojiPicker
-								theme={
-									resolvedTheme === "light" ? Theme.LIGHT : Theme.DARK
-								}
-								width="100%"
-								height={320}
-								lazyLoadEmojis
-								onEmojiClick={(e) => {
-									reactTo(msgMenu.message, e.emoji);
-									setMsgMenu(null);
-								}}
-							/>
-						</div>
-					)}
-					<div className="py-1">
-					<motion.button
-						variants={staggerItem}
-						type="button"
-						role="menuitem"
-						onClick={() => {
-							setReplyTarget(msgMenu.message);
-							setMsgMenu(null);
-						}}
-						className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/5"
-					>
-						<RiReplyLine size={16} />
-						Reply
-					</motion.button>
-					{msgMenu.message.content && (
-						<motion.button
-						variants={staggerItem}
-							type="button"
-							role="menuitem"
-							onClick={() => {
-								void navigator.clipboard
-									.writeText(msgMenu.message.content ?? "")
-									.catch(() => {});
-								setMsgMenu(null);
-								toast.success("Copied");
-							}}
-							className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/5"
-						>
-							<RiFileCopyLine size={16} />
-							Copy text
-						</motion.button>
-					)}
-					{(typeof msgMenu.message.sender === "string"
-						? msgMenu.message.sender === myProfileId
-						: (msgMenu.message.sender as any)?._id === myProfileId) && (
-						<motion.button
-						variants={staggerItem}
-							type="button"
-							role="menuitem"
-							onClick={() => {
-								void unsendMessage(msgMenu.message);
-								setMsgMenu(null);
-							}}
-							className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-danger transition-colors hover:bg-primary/5"
-						>
-							<RiRestartLine size={16} />
-							Unsend
-						</motion.button>
-					)}
-				</div>
 					</motion.div>
 				</div>
-				);
-			})()}
+			)}
+			</AnimatePresence>
+
+			{/* Inside AnimatePresence, so the exits in menuStagger really run:
+			    closing, reacting and Unsend used to cut the scrim, the bubble
+			    and both menus in one frame. The 350ms grace and the click /
+			    Escape handlers only ever set state, so they work unchanged,
+			    and every button is live from the first frame of the cascade. */}
+			<AnimatePresence>
+				{msgMenu &&
+					(() => {
+						// Long-press grammar (owner pick, Instagram): the thread dims
+						// and blurs; the PRESSED bubble is repainted sharp above the
+						// scrim (its live DOM sits under the blur), with the reaction
+						// bar hugging its top edge and the actions its bottom.
+						const vw = window.innerWidth;
+						const vh = window.innerHeight;
+						const r = msgMenu.lift?.rect;
+						const alignRight = msgMenu.lift?.mine ?? false;
+						const barLeft = r
+							? Math.max(
+									8,
+									Math.min(
+										alignRight ? r.left + r.width - 292 : r.left,
+										vw - 300,
+									),
+								)
+							: Math.max(8, Math.min(msgMenu.x - 120, vw - 300));
+						const barTop = r
+							? Math.max(8, r.top - 54)
+							: Math.max(8, msgMenu.y - 62);
+						const menuLeft = r
+							? Math.max(
+									8,
+									Math.min(
+										alignRight ? r.left + r.width - 190 : r.left,
+										vw - 198,
+									),
+								)
+							: Math.min(msgMenu.x, vw - 200);
+						const menuTop = r
+							? Math.min(r.top + r.height + 8, vh - 260)
+							: Math.min(msgMenu.y + 8, vh - 220);
+						// The full picker adds about 330px to a menu whose top was
+						// clamped for three rows (136px), so on a phone it ran off
+						// the bottom. The menu rides up by the overflow, as a
+						// transform, in step with the picker opening.
+						const pickerLift = menuPicker
+							? Math.max(
+									0,
+									Math.min(menuTop - 8, menuTop + 136 + 330 - (vh - 8)),
+								)
+							: 0;
+						// Both unfold from the corner nearest the pressed bubble, and
+						// their children cascade (owner 2026-09-20): emoji land one by
+						// one with a touch of overshoot, actions rise in sequence.
+						const reactionBar = menuStagger(
+							alignRight ? "bottom-right" : "bottom-left",
+							0.03,
+						);
+						const actionMenu = menuStagger(
+							alignRight ? "top-right" : "top-left",
+						);
+						return (
+							<div
+								// One stable key: a reopen during the exit re-enters this
+								// overlay instead of stacking a second one.
+								key="msg-menu"
+								// Painted outside the thread pane, so it carries the
+								// chat's variables itself. Without them the lifted copy
+								// resolved --chat-mine against the inbox theme and
+								// changed colour in a per-chat themed thread.
+								style={themeVars(chatTheme)}
+								className="fixed inset-0 z-modal"
+								onClick={() => setMsgMenu(null)}
+							>
+								{/* The fade sits on the blurred element itself: under a
+								    fading ancestor a backdrop blur has nothing to sample
+								    and would snap on at the end. */}
+								<motion.div
+									{...fade}
+									className="absolute inset-0 bg-scrim backdrop-blur-[2px]"
+								/>
+								{msgMenu.lift && (
+									// No entrance of its own. It sits exactly on the bubble
+									// it copies, so holding still while the thread dims
+									// under it IS the lift, and its text is never scaled
+									// soft.
+									<div
+										aria-hidden
+										className="pointer-events-none absolute"
+										style={{
+											left: r!.left,
+											top: r!.top,
+											width: r!.width,
+											height: r!.height,
+										}}
+										// Our own already-rendered markup, captured verbatim:
+										// React escaped the message text on first render.
+										dangerouslySetInnerHTML={{ __html: msgMenu.lift.html }}
+									/>
+								)}
+								{!msgMenu.message._id.startsWith("temp-") && (
+									<motion.div
+										{...reactionBar}
+										style={{
+											...reactionBar.style,
+											left: barLeft,
+											top: barTop,
+										}}
+										className="absolute flex items-center gap-0.5 rounded-pill card-depth px-1.5 py-1"
+										onClick={(e) => e.stopPropagation()}
+									>
+										{QUICK_REACTIONS.map((emoji) => (
+											<motion.button
+												key={emoji}
+												variants={staggerPop}
+												whileTap={{ scale: 0.82 }}
+												type="button"
+												onClick={() => {
+													reactTo(msgMenu.message, emoji);
+													setMsgMenu(null);
+												}}
+												aria-label={`React ${emoji}`}
+												className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-[calc(20px*var(--ws-fs))] transition-colors hover:bg-primary/5"
+											>
+												{emoji}
+											</motion.button>
+										))}
+										<motion.button
+											variants={staggerPop}
+											// Same dip as its six siblings.
+											whileTap={{ scale: 0.82 }}
+											type="button"
+											onClick={() => setMenuPicker((v) => !v)}
+											aria-label="More reactions"
+											aria-expanded={menuPicker}
+											className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
+										>
+											<Plus className="h-4 w-4" />
+										</motion.button>
+									</motion.div>
+								)}
+								{/* Position lives on this wrapper so the ride-up is its
+								    own transform and never fights the menu's unfold. */}
+								<motion.div
+									initial={false}
+									animate={{ y: -pickerLift }}
+									transition={{ duration: DUR.slow, ease: EASE }}
+									style={{ left: menuLeft, top: menuTop }}
+									className="absolute"
+								>
+									<motion.div
+										role="menu"
+										{...actionMenu}
+										className="w-[190px] overflow-hidden rounded-xl card-depth"
+										onClick={(e) => e.stopPropagation()}
+									>
+										{/* The picker used to snap 320px open and shove the
+										    rows down in one frame. */}
+										<AnimatePresence initial={false}>
+											{menuPicker && (
+												<motion.div
+													key="picker"
+													{...collapse}
+													className="overflow-hidden"
+												>
+													<div className="border-b border-hairline p-1 ws-emoji-picker">
+														<EmojiPicker
+															theme={
+																resolvedTheme === "light"
+																	? Theme.LIGHT
+																	: Theme.DARK
+															}
+															width="100%"
+															height={320}
+															lazyLoadEmojis
+															onEmojiClick={(e) => {
+																reactTo(msgMenu.message, e.emoji);
+																setMsgMenu(null);
+															}}
+														/>
+													</div>
+												</motion.div>
+											)}
+										</AnimatePresence>
+										{/* A plain wrapper: variants pass through DOM, so the
+										    rows still follow the menu's cascade. */}
+										<div className="py-1">
+											<motion.button
+												variants={staggerItem}
+												type="button"
+												role="menuitem"
+												onClick={() => {
+													setReplyTarget(msgMenu.message);
+													setMsgMenu(null);
+												}}
+												className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/5"
+											>
+												<RiReplyLine size={16} />
+												Reply
+											</motion.button>
+											{msgMenu.message.content && (
+												<motion.button
+													variants={staggerItem}
+													type="button"
+													role="menuitem"
+													onClick={() => {
+														void navigator.clipboard
+															.writeText(msgMenu.message.content ?? "")
+															.catch(() => {});
+														setMsgMenu(null);
+														toast.success("Copied");
+													}}
+													className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/5"
+												>
+													<RiFileCopyLine size={16} />
+													Copy text
+												</motion.button>
+											)}
+											{(typeof msgMenu.message.sender === "string"
+												? msgMenu.message.sender === myProfileId
+												: (msgMenu.message.sender as any)?._id ===
+													myProfileId) && (
+												<motion.button
+													variants={staggerItem}
+													type="button"
+													role="menuitem"
+													onClick={() => {
+														void unsendMessage(msgMenu.message);
+														setMsgMenu(null);
+													}}
+													className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-danger transition-colors hover:bg-primary/5"
+												>
+													<RiRestartLine size={16} />
+													Unsend
+												</motion.button>
+											)}
+										</div>
+									</motion.div>
+								</motion.div>
+							</div>
+						);
+					})()}
+			</AnimatePresence>
 
 			<AttachSheet
 				open={showAttachMenu && !!activeConversation}
@@ -3809,6 +4105,11 @@ export const MessageBox = ({
 
 export default MessageBox;
 
+/** The cascade below belongs to the first open. An empty inbox remounts
+ *  SuggestedPeople on every refetch, and rows that cascade again read as
+ *  the list reloading. Module scope, so it outlives the remount. */
+let suggestedCascadePlayed = false;
+
 /**
  * Empty inbox (owner pick): the people you follow, one tap from a first
  * message. Loads on first render, renders nothing while there's no one.
@@ -3852,40 +4153,56 @@ function SuggestedPeople({
 					Message someone you follow or find a new connection.
 				</p>
 			</div>
+			{/* Mounted only once the rows exist: a stagger parent that has
+			    already played cannot cascade children that arrive later. */}
 			{rows.length > 0 && (
-				<p className="px-2 pb-1.5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
-					People you follow
-				</p>
-			)}
-			{rows.map((u) => (
-        <div
-          key={u._id}
-          className="flex items-center gap-3 rounded-xl px-2 py-2"
-        >
-					<span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-pill bg-raised">
-						<SafeAvatar src={u.avatar} eager />
-					</span>
-					<span className="min-w-0 flex-1">
-						<span className="block truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
-              {[u.firstName, u.lastName].filter(Boolean).join(" ") ||
-                u.username}
-						</span>
-						{u.username && (
-							<span className="block truncate font-sans text-[calc(12px*var(--ws-fs))] text-muted">
-								@{u.username}
-							</span>
-						)}
-					</span>
-					<button
-						type="button"
-						disabled={startingWith === u._id}
-						onClick={() => onMessage(u)}
-						className="h-8 shrink-0 cursor-pointer rounded-pill bg-raised px-3.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-primary/5 disabled:opacity-60"
+				<motion.div
+					variants={staggerParentFast}
+					initial={suggestedCascadePlayed ? false : "hidden"}
+					animate="show"
+					onAnimationComplete={() => {
+						suggestedCascadePlayed = true;
+					}}
+				>
+					<motion.p
+						variants={staggerItem}
+						className="px-2 pb-1.5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary"
 					>
-						{startingWith === u._id ? "…" : "Message"}
-					</button>
-				</div>
-			))}
+						People you follow
+					</motion.p>
+					{rows.map((u) => (
+						<motion.div
+							key={u._id}
+							variants={staggerItem}
+							className="flex items-center gap-3 rounded-xl px-2 py-2"
+						>
+							<span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-pill bg-raised">
+								<SafeAvatar src={u.avatar} eager />
+							</span>
+							<span className="min-w-0 flex-1">
+								<span className="block truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
+									{[u.firstName, u.lastName].filter(Boolean).join(" ") ||
+										u.username}
+								</span>
+								{u.username && (
+									<span className="block truncate font-sans text-[calc(12px*var(--ws-fs))] text-muted">
+										@{u.username}
+									</span>
+								)}
+							</span>
+							<motion.button
+								{...press}
+								type="button"
+								disabled={startingWith === u._id}
+								onClick={() => onMessage(u)}
+								className="h-8 shrink-0 cursor-pointer rounded-pill bg-raised px-3.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-primary/5 disabled:opacity-60"
+							>
+								{startingWith === u._id ? "…" : "Message"}
+							</motion.button>
+						</motion.div>
+					))}
+				</motion.div>
+			)}
 		</div>
 	);
 }

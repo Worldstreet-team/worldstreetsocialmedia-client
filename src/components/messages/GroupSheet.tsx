@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
 	Check,
 	Crown,
@@ -12,7 +12,7 @@ import {
 	UserPlus,
 	Users,
 } from "lucide-react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import {
 	OverlayHeader,
@@ -23,6 +23,15 @@ import {
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { sendFormDirect } from "@/lib/upload-direct";
 import { compressImage } from "@/lib/image-compress";
+import {
+	collapse,
+	snappySpring,
+	staggerItem,
+	staggerParent,
+	staggerParentFast,
+	swap,
+} from "@/lib/motion-presets";
+import { CascadeRow } from "./ConversationList";
 import { senderColor } from "./thread/groupSystem";
 
 type Role = "owner" | "admin" | "member";
@@ -284,6 +293,31 @@ export function GroupSheet({
 		} else toast.error(res.message || "Couldn't remove");
 	};
 
+	// Who may be added, as the list below shows it: six at most.
+	const shownCandidates = candidates
+		.filter(
+			(c) =>
+				!active.some((a) => a.id === String(c._id)) &&
+				(!addQuery.trim() ||
+					`${c.firstName ?? ""} ${c.lastName ?? ""} ${c.username ?? ""}`
+						.toLowerCase()
+						.includes(addQuery.toLowerCase())),
+		)
+		.slice(0, 6);
+
+	// Each cascade plays once: the roster per open of the sheet, the
+	// candidates the first time they are shown. A refetch after a role change
+	// or a search remounts rows, and those must cut.
+	const rosterPlayed = useRef(false);
+	const candidatesPlayed = useRef(false);
+	useEffect(() => {
+		rosterPlayed.current = open;
+	}, [open]);
+	useEffect(() => {
+		if (open && addOpen && shownCandidates.length > 0)
+			candidatesPlayed.current = true;
+	}, [open, addOpen, shownCandidates.length]);
+
 	return (
 		<AnimatePresence>
 			{open && (
@@ -332,8 +366,15 @@ export function GroupSheet({
 										if (photoInputRef.current) photoInputRef.current.value = "";
 									}}
 								/>
+								{/* Name and field trade places; "wait" so the field
+								    mounts (and takes focus) once the name is gone. */}
+								<AnimatePresence mode="wait" initial={false}>
 								{renaming ? (
-									<div className="flex w-full items-center gap-2">
+									<motion.div
+										key="rename"
+										{...swap}
+										className="flex w-full items-center gap-2"
+									>
 										<input
 											value={draftName}
 											onChange={(e) => setDraftName(e.target.value)}
@@ -350,9 +391,11 @@ export function GroupSheet({
 										>
 											<Check className="h-4 w-4" />
 										</button>
-									</div>
+									</motion.div>
 								) : (
-									<button
+									<motion.button
+										key="name"
+										{...swap}
 										type="button"
 										onClick={() => iAmAdmin && setRenaming(true)}
 										className={
@@ -365,8 +408,9 @@ export function GroupSheet({
 										{iAmAdmin && (
 											<Pencil className="h-3.5 w-3.5 text-muted" />
 										)}
-									</button>
+									</motion.button>
 								)}
+								</AnimatePresence>
 								<span className="text-[calc(13px*var(--ws-fs))] text-muted">
 									{active.length} members
 								</span>
@@ -396,12 +440,14 @@ export function GroupSheet({
 													: "relative h-6 w-11 shrink-0 rounded-pill bg-chip transition-colors"
 											}
 										>
-											<span
-												className={
-													adminsOnly
-														? "absolute top-0.5 left-[22px] h-5 w-5 rounded-pill bg-page transition-all"
-														: "absolute top-0.5 left-0.5 h-5 w-5 rounded-pill bg-page transition-all"
-												}
+											{/* The knob travels on a transform, not on
+											    `left`: 20px is the old 22px stop less the
+											    2px inset. */}
+											<motion.span
+												initial={false}
+												animate={{ x: adminsOnly ? 20 : 0 }}
+												transition={snappySpring}
+												className="absolute top-0.5 left-0.5 h-5 w-5 rounded-pill bg-page"
 											/>
 										</span>
 									</button>
@@ -413,7 +459,13 @@ export function GroupSheet({
 										<UserPlus className="h-4 w-4 text-muted" />
 										Add people
 									</button>
+									<AnimatePresence initial={false}>
 									{addOpen && (
+										<motion.div
+											key="add-people"
+											{...collapse}
+											className="overflow-hidden"
+										>
 										<div className="pb-2">
 											<div className="relative mb-1">
 												<Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-subtle" />
@@ -424,19 +476,20 @@ export function GroupSheet({
 													className="w-full rounded-pill bg-primary/5 py-2 pl-9 pr-3 font-sans text-[calc(13px*var(--ws-fs))] text-primary outline-none transition-colors placeholder:text-subtle focus:bg-primary/10"
 												/>
 											</div>
-											{candidates
-												.filter(
-													(c) =>
-														!active.some((a) => a.id === String(c._id)) &&
-														(!addQuery.trim() ||
-															`${c.firstName ?? ""} ${c.lastName ?? ""} ${c.username ?? ""}`
-																.toLowerCase()
-																.includes(addQuery.toLowerCase())),
-												)
-												.slice(0, 6)
-												.map((c) => (
+											{/* Mounted only once there is someone to show, so
+											    the parent is there to time its six rows. */}
+											{shownCandidates.length > 0 && (
+											<motion.div
+												variants={staggerParent}
+												initial={candidatesPlayed.current ? false : "hidden"}
+												animate="show"
+											>
+											{shownCandidates.map((c) => (
+												// A wrapper carries the rise: framer leaves
+												// opacity inline, which would beat the
+												// button's own disabled dim.
+												<motion.div key={String(c._id)} variants={staggerItem}>
 													<button
-														key={String(c._id)}
 														type="button"
 														onClick={() => void addMember(String(c._id))}
 														disabled={busy === String(c._id)}
@@ -450,15 +503,25 @@ export function GroupSheet({
 														</span>
 														<UserPlus className="h-3.5 w-3.5 shrink-0 text-muted" />
 													</button>
+												</motion.div>
 												))}
+											</motion.div>
+											)}
 										</div>
+										</motion.div>
 									)}
+									</AnimatePresence>
 								</div>
 							)}
 
 							{/* Roster */}
-							<div className="border-t border-hairline">
-								{active.map((a) => {
+							<motion.div
+								variants={staggerParentFast}
+								initial={rosterPlayed.current ? false : "hidden"}
+								animate="show"
+								className="border-t border-hairline"
+							>
+								{active.map((a, i) => {
 									const u = byId.get(a.id);
 									const nm =
 										`${u?.firstName ?? ""} ${u?.lastName ?? ""}`.trim() ||
@@ -472,10 +535,8 @@ export function GroupSheet({
 										// Admins can't act on admins; only the owner can.
 										(myRole === "owner" || a.role === "member");
 									return (
-										<div
-											key={a.id}
-											className="flex items-center gap-3 px-4 py-2.5"
-										>
+										<CascadeRow key={a.id} index={i}>
+										<div className="flex items-center gap-3 px-4 py-2.5">
 											<span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-pill bg-raised">
 												<SafeAvatar src={u?.avatar} eager />
 											</span>
@@ -539,9 +600,10 @@ export function GroupSheet({
 												</div>
 											)}
 										</div>
+										</CascadeRow>
 									);
 								})}
-							</div>
+							</motion.div>
 						</div>
 
 						<div className="shrink-0 border-t border-hairline p-3">

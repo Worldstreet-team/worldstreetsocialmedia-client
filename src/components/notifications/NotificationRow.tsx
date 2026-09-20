@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   At,
   Bell,
@@ -23,6 +24,7 @@ import { UserBadges } from "@/components/ui/UserBadges";
 import { renderRichText } from "@/components/ui/RichText";
 import { formatTimeAgo, formatCompact } from "@/lib/utils";
 import { useT } from "@/i18n/client";
+import { pop, press, reveal, swap } from "@/lib/motion-presets";
 import { senderName, type NotificationGroup, type NotificationType } from "./types";
 
 /**
@@ -128,13 +130,24 @@ export function NotificationRow({
   const excerpt = post?.content;
   const thumb = post?.images?.[0];
 
+  // Callers hand over a 30ms-per-row delay, capped; that is the row's index
+  // in disguise. Only the first screenful rises (animate-rise, which this
+  // replaces, is switched off once the app intro has played). Everything
+  // past it, which is also every paginated row, mounts settled: a long list
+  // never makes anyone wait for row 14.
+  const order = Math.round(delay / 30);
+  const rises = order < 6;
+
   return (
+    <motion.div
+      initial={rises ? reveal(order).initial : false}
+      animate={reveal(rises ? order : 0).animate}
+    >
     <Link
       href={href}
       onClick={() => onOpen(group)}
-      style={{ animationDelay: `${delay}ms` }}
       className={clsx(
-        "animate-rise relative flex gap-3 border-b border-hairline px-4 py-3.5 transition-colors hover:bg-surface/60",
+        "relative flex gap-3 border-b border-hairline px-4 py-3.5 transition-colors hover:bg-surface/60",
         unread && "bg-surface/40",
       )}
     >
@@ -237,15 +250,25 @@ export function NotificationRow({
           </span>
         )}
 
-        {type === "live" && isLive && (
-          <span className="mt-1 flex h-5 w-fit items-center gap-1 rounded-pill bg-danger px-2 font-sans text-[calc(10px*var(--ws-fs))] font-bold tracking-wide text-white">
-            <span className="h-1 w-1 animate-pulse rounded-pill bg-white" />
-            {t("live.badge")}
-          </span>
-        )}
+        {/* The live set loads after the rows, and a stream can start or end
+            while the list is open: the pill lands and leaves. initial={false}
+            so a row that mounts already live does not pop on top of its rise. */}
+        <AnimatePresence initial={false}>
+          {type === "live" && isLive && (
+            <motion.span
+              key="live"
+              {...pop}
+              className="mt-1 flex h-5 w-fit items-center gap-1 rounded-pill bg-danger px-2 font-sans text-[calc(10px*var(--ws-fs))] font-bold tracking-wide text-white"
+            >
+              <span className="h-1 w-1 animate-pulse rounded-pill bg-white" />
+              {t("live.badge")}
+            </motion.span>
+          )}
+        </AnimatePresence>
 
         {type === "follow" && (
-          <button
+          <motion.button
+            {...press}
             type="button"
             onClick={(e) => {
               e.preventDefault();
@@ -265,10 +288,20 @@ export function NotificationRow({
           >
             {/* You align with a person; you JOIN a community. Borrowing the
                 community string made an alignment read "Joined". */}
-            {alreadyFollowing
-              ? t("profile.followingState")
-              : t("notif.followBack")}
-          </button>
+            {/* The person's own action, so the label rolls to its new state.
+                inline-block: an inline box ignores transforms. */}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={alreadyFollowing ? "following" : "follow-back"}
+                {...swap}
+                className="inline-block"
+              >
+                {alreadyFollowing
+                  ? t("profile.followingState")
+                  : t("notif.followBack")}
+              </motion.span>
+            </AnimatePresence>
+          </motion.button>
         )}
       </span>
 
@@ -278,6 +311,7 @@ export function NotificationRow({
         </span>
       )}
     </Link>
+    </motion.div>
   );
 }
 

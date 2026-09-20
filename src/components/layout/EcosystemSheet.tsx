@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUpRight } from "@phosphor-icons/react";
 import Image from "next/image";
 import { ECOSYSTEM } from "@/data/ecosystem";
@@ -10,6 +10,7 @@ import {
 	OverlayScrim,
 	useOverlayDismiss,
 } from "@/components/ui/Overlay";
+import { staggerItem, staggerParentFast } from "@/lib/motion-presets";
 
 /**
  * The ecosystem sheet behind the mobile nav's brand mark.
@@ -73,10 +74,16 @@ export function EcosystemSheet({
 
 					{/* Capped height: nine products must not become a sheet
 					    taller than the phone. */}
-					<div className="max-h-[52dvh] overflow-y-auto overscroll-contain px-2 pb-3">
+					<motion.div
+						variants={staggerParentFast}
+						initial="hidden"
+						animate="show"
+						className="max-h-[52dvh] overflow-y-auto overscroll-contain px-2 pb-3"
+					>
 						{ECOSYSTEM.map((app) => (
-							<a
+							<motion.a
 								key={app.title}
+								variants={staggerItem}
 								href={app.href}
 								target="_blank"
 								rel="noopener noreferrer"
@@ -106,9 +113,9 @@ export function EcosystemSheet({
 									className="shrink-0 text-subtle"
 									aria-hidden
 								/>
-							</a>
+							</motion.a>
 						))}
-					</div>
+					</motion.div>
 				</OverlayPanel>
 			)}
 		</AnimatePresence>

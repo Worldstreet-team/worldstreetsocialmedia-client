@@ -1,7 +1,9 @@
 "use client";
 
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import { pop } from "@/lib/motion-presets";
 
 /**
  * The face inside a live ring. Solo broadcast: the host, exactly as before.
@@ -38,16 +40,28 @@ export function StageAvatar({
 			>
 				<SafeAvatar src={avatar} />
 			</span>
-			{live.length > 0 && (
-				<span className="absolute -right-1 -top-1 h-[45%] w-[45%] overflow-hidden rounded-pill border-2 border-page bg-raised">
-					<SafeAvatar src={live[0].avatar} />
-				</span>
-			)}
-			{extra > 0 && (
-				<span className="absolute -left-1 -top-1 rounded-pill border border-page bg-raised px-1 font-sans text-[calc(8px*var(--ws-fs))] font-bold leading-[calc(13px*var(--ws-fs))] text-primary tabular-nums">
-					+{extra}
-				</span>
-			)}
+			{/* initial={false}: a rail of rings must not pop on every paint,
+			    only when a stage actually merges while it is on screen. */}
+			<AnimatePresence initial={false}>
+				{live.length > 0 && (
+					<motion.span
+						key="satellite"
+						{...pop}
+						className="absolute -right-1 -top-1 h-[45%] w-[45%] overflow-hidden rounded-pill border-2 border-page bg-raised"
+					>
+						<SafeAvatar src={live[0].avatar} />
+					</motion.span>
+				)}
+				{extra > 0 && (
+					<motion.span
+						key="extra"
+						{...pop}
+						className="absolute -left-1 -top-1 rounded-pill border border-page bg-raised px-1 font-sans text-[calc(8px*var(--ws-fs))] font-bold leading-[calc(13px*var(--ws-fs))] text-primary tabular-nums"
+					>
+						+{extra}
+					</motion.span>
+				)}
+			</AnimatePresence>
 		</>
 	);
 }

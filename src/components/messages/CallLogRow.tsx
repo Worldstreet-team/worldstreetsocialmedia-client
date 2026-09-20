@@ -8,6 +8,8 @@ import {
 } from "@remixicon/react";
 import clsx from "clsx";
 import { format } from "date-fns";
+import { motion } from "framer-motion";
+import { press } from "@/lib/motion-presets";
 
 /**
  * A finished call, in the thread.
@@ -62,14 +64,15 @@ export function CallLogRow({
 					)}
 				</span>
 				{missed && onCallBack && (
-					<button
+					<motion.button
 						type="button"
+						{...press}
 						onClick={() => onCallBack(video)}
 						className="ml-1 flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-pill bg-primary/5 px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-primary hover:text-page"
 					>
 						<RiArrowGoBackLine size={14} />
 						Call back
-					</button>
+					</motion.button>
 				)}
 			</div>
 		</div>

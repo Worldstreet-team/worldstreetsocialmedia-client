@@ -1,5 +1,8 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
+import { pop } from "@/lib/motion-presets";
+
 /* Flat section header — eyebrow + optional live dot + optional trailing
    chip. No boxes: the rail reads as one column of content, not a stack of
    cards. Shared by every right-rail section so the eyebrows stay identical. */
@@ -20,12 +23,16 @@ export function SectionHead({
 			{icon && (
 				<span className="flex shrink-0 items-center text-muted">{icon}</span>
 			)}
-			{live && (
-				<span className="relative flex h-2 w-2">
-					<span className="absolute inline-flex h-full w-full rounded-pill bg-danger opacity-60 animate-ping" />
-					<span className="relative inline-flex h-2 w-2 rounded-pill bg-danger" />
-				</span>
-			)}
+			{/* initial={false}: a section that is live on load just is; one
+			    that goes live while you watch lands. */}
+			<AnimatePresence initial={false}>
+				{live && (
+					<motion.span key="live" {...pop} className="relative flex h-2 w-2">
+						<span className="absolute inline-flex h-full w-full rounded-pill bg-danger opacity-60 animate-ping" />
+						<span className="relative inline-flex h-2 w-2 rounded-pill bg-danger" />
+					</motion.span>
+				)}
+			</AnimatePresence>
 			<h3 className="font-sans font-semibold text-[calc(13px*var(--ws-fs))] text-primary flex-1">
 				{label}
 			</h3>

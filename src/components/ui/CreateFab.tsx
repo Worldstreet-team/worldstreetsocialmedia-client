@@ -28,6 +28,7 @@ import {
   storyStudioSignalAtom,
 } from "@/store/ui.atom";
 import { useT } from "@/i18n/client";
+import { press } from "@/lib/motion-presets";
 import clsx from "clsx";
 
 /**
@@ -250,11 +251,12 @@ export function CreateFab() {
             ))}
         </AnimatePresence>
 
-        <button
+        <motion.button
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
           aria-label={open ? t("fab.close") : t("fab.create")}
+          {...press}
           className="flex h-14 w-14 items-center justify-center rounded-pill bg-brand text-brand-on shadow-nav hover:bg-brand-active transition-colors cursor-pointer"
         >
           <motion.span
@@ -268,7 +270,7 @@ export function CreateFab() {
           >
             <Plus size={26} weight="bold" />
           </motion.span>
-        </button>
+        </motion.button>
       </motion.div>
         )}
       </AnimatePresence>

@@ -2,6 +2,9 @@
 
 import { ArrowDownRight, ArrowUpRight } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
+import { useId } from "react";
+import { pop, swap, thumbSpring } from "@/lib/motion-presets";
 
 /**
  * The Studio's kit — flat professional dark, benchmarked against
@@ -93,7 +96,11 @@ export function DeltaChip({
 	const value = magnitude >= 100 ? Math.round(magnitude) : magnitude.toFixed(1);
 	return (
 		<span className="flex items-center gap-1.5">
-			<span
+			{/* Lands once, when the comparison resolves. A window change updates
+			    it in place: no key, so no replay. */}
+			<motion.span
+				initial={pop.initial}
+				animate={pop.animate}
 				className={clsx(
 					"inline-flex items-center gap-0.5 rounded-pill px-1.5 py-0.5 font-sans text-[calc(11px*var(--ws-fs))] font-semibold tabular-nums",
 					up ? "bg-success/10 text-success" : "bg-danger/10 text-danger",
@@ -106,7 +113,7 @@ export function DeltaChip({
 				)}
 				{value}
 				{suffix}
-			</span>
+			</motion.span>
 			{caption && (
 				<span className="font-sans text-[calc(11px*var(--ws-fs))] glass-ink-faint">{caption}</span>
 			)}
@@ -146,8 +153,14 @@ export function StatCard({
 				<span className="glass-eyebrow font-sans">{label}</span>
 			</div>
 			<div className="mt-3 flex items-end justify-between gap-3">
-				<span className="font-display text-[calc(30px*var(--ws-fs))] font-semibold leading-none tracking-tight glass-ink tabular-nums">
-					{value}
+				<span className="relative font-display text-[calc(30px*var(--ws-fs))] font-semibold leading-none tracking-tight glass-ink tabular-nums">
+					{/* The number rolls when the window changes; initial={false}
+					    keeps first paint still. */}
+					<AnimatePresence mode="popLayout" initial={false}>
+						<motion.span key={value} {...swap} className="inline-block">
+							{value}
+						</motion.span>
+					</AnimatePresence>
 				</span>
 				{chart}
 			</div>
@@ -189,8 +202,12 @@ export function MetricRow({
 					</span>
 				)}
 			</span>
-			<span className="shrink-0 font-sans text-[calc(15px*var(--ws-fs))] font-semibold glass-ink tabular-nums">
-				{value}
+			<span className="relative shrink-0 font-sans text-[calc(15px*var(--ws-fs))] font-semibold glass-ink tabular-nums">
+				<AnimatePresence mode="popLayout" initial={false}>
+					<motion.span key={value} {...swap} className="inline-block">
+						{value}
+					</motion.span>
+				</AnimatePresence>
 			</span>
 		</div>
 	);
@@ -204,6 +221,8 @@ export function WindowSwitch({
 	value: number;
 	onChange: (days: number) => void;
 }) {
+	// Per instance: the overview and a post drilldown can both be on screen.
+	const thumbId = useId();
 	return (
 		<div className="flex items-center gap-0.5 rounded-pill bg-[#fafaf9]/[0.05] p-0.5">
 			{[7, 28, 90].map((d) => (
@@ -213,13 +232,18 @@ export function WindowSwitch({
 					onClick={() => onChange(d)}
 					aria-pressed={value === d}
 					className={clsx(
-						"h-7 rounded-pill px-3 font-sans text-[calc(11.5px*var(--ws-fs))] font-semibold tabular-nums transition-colors cursor-pointer",
-						value === d
-							? "bg-[#fafaf9] text-[#0c0a09]"
-							: "glass-ink-faint hover:glass-ink",
+						"relative h-7 rounded-pill px-3 font-sans text-[calc(11.5px*var(--ws-fs))] font-semibold tabular-nums transition-colors cursor-pointer",
+						value === d ? "text-[#0c0a09]" : "glass-ink-faint hover:glass-ink",
 					)}
 				>
-					{d}d
+					{value === d && (
+						<motion.span
+							layoutId={`${thumbId}-window`}
+							transition={thumbSpring}
+							className="absolute inset-0 rounded-pill bg-[#fafaf9]"
+						/>
+					)}
+					<span className="relative">{d}d</span>
 				</button>
 			))}
 		</div>

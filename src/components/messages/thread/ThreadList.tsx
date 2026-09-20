@@ -1,6 +1,7 @@
 "use client";
 
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
 import {
 	forwardRef,
@@ -16,6 +17,7 @@ import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import { RiArrowDownLine } from "@remixicon/react";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { TypingIndicator } from "@/components/messages/TypingIndicator";
+import { pop, press, swap } from "@/lib/motion-presets";
 import { systemEventCopy } from "./groupSystem";
 import {
 	MessageBubble,
@@ -505,24 +507,42 @@ export const ThreadList = forwardRef<ThreadListHandle, ThreadListProps>(
 				</div>
 				)}
 				{/* Telegram's disc (owner pick): there whenever you're scrolled
-				    up, the count riding as a badge when there is one. */}
+				    up, the count riding as a badge when there is one. It leaves
+				    as it came (it used to vanish the frame you reached the
+				    bottom); the badge lands once, then its number rolls, clipped
+				    so the roll reads inside so small a pill. */}
+				<AnimatePresence>
 				{!atBottom && (
-					<button
+					<motion.button
+						key="jump"
 						type="button"
 						onClick={onShowNew}
 						aria-label={
 							pendingNew > 0 ? `${pendingNew} new messages` : "Jump to latest"
 						}
-						className="absolute bottom-3 right-4 z-10 flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill bg-surface text-primary shadow-nav transition-colors hover:bg-primary/5 animate-pop"
+						{...pop}
+						{...press}
+						className="absolute bottom-3 right-4 z-10 flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill bg-surface text-primary shadow-nav transition-colors hover:bg-primary/5"
 					>
 						<RiArrowDownLine size={17} />
-						{pendingNew > 0 && (
-							<span className="absolute -right-1 -top-1 rounded-pill bg-brand px-1.5 font-sans text-[calc(10px*var(--ws-fs))] font-bold tabular-nums text-brand-on">
-								{pendingNew}
-							</span>
-						)}
-					</button>
+						<AnimatePresence>
+							{pendingNew > 0 && (
+								<motion.span
+									key="badge"
+									{...pop}
+									className="absolute -right-1 -top-1 overflow-hidden rounded-pill bg-brand px-1.5 font-sans text-[calc(10px*var(--ws-fs))] font-bold tabular-nums text-brand-on"
+								>
+									<AnimatePresence mode="popLayout" initial={false}>
+										<motion.span key={pendingNew} className="inline-block" {...swap}>
+											{pendingNew}
+										</motion.span>
+									</AnimatePresence>
+								</motion.span>
+							)}
+						</AnimatePresence>
+					</motion.button>
 				)}
+				</AnimatePresence>
 			</div>
 		);
 	},

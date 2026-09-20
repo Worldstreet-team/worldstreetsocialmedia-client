@@ -2,9 +2,9 @@
 
 import { useGatewayRead } from "@/hooks/useGateway";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { X, Search, Loader2 } from "lucide-react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
 	OverlayHeader,
 	OverlayPanel,
@@ -17,6 +17,8 @@ import { UserBadges } from "@/components/ui/UserBadges";
 import { toast } from "sonner";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { Tabs } from "@/components/ui/Tabs";
+import { collapse, staggerParentFast } from "@/lib/motion-presets";
+import { CascadeRow } from "./ConversationList";
 
 interface UserItem {
 	_id: string;
@@ -147,6 +149,22 @@ export default function NewConversationModal({
 
 	useOverlayDismiss(isOpen, onClose);
 
+	// The contacts cascade once per open. A tab switch, a search and a
+	// refetch all remount rows, and those must cut. The delay lets the stale
+	// list a reopen paints for one frame pass without spending the cascade.
+	const cascadePlayed = useRef(false);
+	useEffect(() => {
+		if (!isOpen) {
+			cascadePlayed.current = false;
+			return;
+		}
+		if (loading || filteredUsers.length === 0) return;
+		const id = window.setTimeout(() => {
+			cascadePlayed.current = true;
+		}, 400);
+		return () => window.clearTimeout(id);
+	}, [isOpen, loading, filteredUsers.length]);
+
 	return (
 		<AnimatePresence>
 			{isOpen && (
@@ -171,19 +189,30 @@ export default function NewConversationModal({
 							{/* The directory tabs: who you're aligned to first
 							    (the people you chose), then your Allies. Search
 							    above reaches EVERYONE regardless of tab. */}
-							{!searchQuery.trim() && (
-								<div className="mt-3">
-									<Tabs
-										items={[
-											{ key: "following" as const, label: "Aligned to" },
-											{ key: "followers" as const, label: "Allies" },
-										]}
-										value={tab}
-										onChange={setTab}
-										ariaLabel="Contact lists"
-									/>
-								</div>
-							)}
+							{/* Folds away rather than vanishing, so the first
+							    keystroke does not jump the list under the eye.
+							    Nothing waits on it: the results are already there. */}
+							<AnimatePresence initial={false}>
+								{!searchQuery.trim() && (
+									<motion.div
+										key="directory-tabs"
+										{...collapse}
+										className="overflow-hidden"
+									>
+										<div className="pt-3">
+											<Tabs
+												items={[
+													{ key: "following" as const, label: "Aligned to" },
+													{ key: "followers" as const, label: "Allies" },
+												]}
+												value={tab}
+												onChange={setTab}
+												ariaLabel="Contact lists"
+											/>
+										</div>
+									</motion.div>
+								)}
+							</AnimatePresence>
 						</div>
 
 						{/* User List */}
@@ -202,9 +231,14 @@ export default function NewConversationModal({
 									</span>
 								</div>
 							) : (
-								filteredUsers.map((user) => (
+								<motion.div
+									variants={staggerParentFast}
+									initial={cascadePlayed.current ? false : "hidden"}
+									animate="show"
+								>
+								{filteredUsers.map((user, i) => (
+									<CascadeRow key={user._id} index={i}>
 									<button
-										key={user._id}
 										onClick={() => handleSelectUser(user)}
 										disabled={startingWith !== null}
 										className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary/5 transition-colors disabled:opacity-50 cursor-pointer"
@@ -233,7 +267,9 @@ export default function NewConversationModal({
 											<Loader2 className="w-4 h-4 text-gold animate-spin shrink-0" />
 										)}
 									</button>
-								))
+									</CascadeRow>
+								))}
+								</motion.div>
 							)}
 						</div>
 					</OverlayPanel>

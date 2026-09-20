@@ -2,6 +2,7 @@
 
 import { CaretDown, Check } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   useCallback,
   useEffect,
@@ -11,6 +12,20 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import {
+  menuStagger,
+  staggerItem,
+  staggerParentFast,
+  staggerPop,
+  swap,
+} from "@/lib/motion-presets";
+
+// Only the rows a person can see on open take part in the cascade. The time
+// list has 48 rows: staggering all of them would still be fading the bottom
+// in most of a second after the menu opened. The rest are simply there.
+const CASCADE_ROWS = 8;
+// The list pace, read off the preset so there is no private number here.
+const LIST_PACE = staggerParentFast.show.transition.staggerChildren;
 
 export interface GlassOption {
   id: string;
@@ -99,6 +114,8 @@ export default function GlassSelect({
   const flip = rect
     ? below < Math.min(MENU_MAX, options.length * 44 + 12)
     : false;
+  // Unfolds from the edge that touches the trigger.
+  const menuMotion = menuStagger(flip ? "bottom" : "top", LIST_PACE);
 
   return (
     <div className={clsx("relative", className)}>
@@ -112,13 +129,22 @@ export default function GlassSelect({
         className="flex w-full cursor-pointer items-center gap-2 rounded-xl bg-sunken px-3.5 py-3 text-left transition-colors"
       >
         {icon && <span className="shrink-0 opacity-75">{icon}</span>}
-        <span
-          className={clsx(
-            "min-w-0 flex-1 truncate font-sans text-[calc(13px*var(--ws-fs))] font-medium",
-            current ? "text-primary" : "text-subtle",
-          )}
-        >
-          {current?.label ?? placeholder ?? ""}
+        {/* The value rolls when it changes. The inner span truncates for
+            itself: an inline-block inside a truncating parent is replaced
+            whole by the ellipsis. */}
+        <span className="relative min-w-0 flex-1 overflow-hidden">
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.span
+              key={current?.id ?? ""}
+              {...swap}
+              className={clsx(
+                "block truncate font-sans text-[calc(13px*var(--ws-fs))] font-medium",
+                current ? "text-primary" : "text-subtle",
+              )}
+            >
+              {current?.label ?? placeholder ?? ""}
+            </motion.span>
+          </AnimatePresence>
         </span>
         <CaretDown
           size={12}
@@ -130,67 +156,80 @@ export default function GlassSelect({
         />
       </button>
 
-      {open &&
-        rect &&
+      {/* The portal stays once the trigger has been measured, and the
+          presence inside it decides whether the menu is there: an exit can
+          only play if the AnimatePresence outlives the menu. */}
+      {rect &&
         typeof document !== "undefined" &&
         createPortal(
-          <div
-            ref={menuRef}
-            id={listId}
-            role="listbox"
-            aria-label={label}
-            style={{
-              position: "fixed",
-              left: rect.left,
-              width: rect.width,
-              ...(flip
-                ? { bottom: window.innerHeight - rect.top + 6 }
-                : { top: rect.bottom + 6 }),
-              maxHeight: MENU_MAX,
-            }}
-            /* Theme-following now: this menu opens inside sheets that turn
-               white in light mode, where fixed-dark creator glass read as a
-               black slab with invisible ink. */
-            className="z-toast overflow-y-auto no-scrollbar rounded-xl glass-frost backdrop-blur-2xl backdrop-saturate-150 py-1.5"
-          >
-            {options.map((option) => {
-              const active = option.id === value;
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  role="option"
-                  aria-selected={active}
-                  onClick={() => {
-                    onChange(option.id);
-                    setOpen(false);
-                  }}
-                  className={clsx(
-                    "flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left transition-colors cursor-pointer",
-                    active ? "bg-[#fafaf9]/10" : "hover:bg-[#fafaf9]/[0.06]",
-                  )}
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary">
-                      {option.label}
-                    </span>
-                    {option.hint && (
-                      <span className="block truncate font-sans text-[calc(11px*var(--ws-fs))] text-muted">
-                        {option.hint}
+          <AnimatePresence>
+            {open && (
+              <motion.div
+                key="menu"
+                ref={menuRef}
+                id={listId}
+                role="listbox"
+                aria-label={label}
+                {...menuMotion}
+                style={{
+                  ...menuMotion.style,
+                  position: "fixed",
+                  left: rect.left,
+                  width: rect.width,
+                  ...(flip
+                    ? { bottom: window.innerHeight - rect.top + 6 }
+                    : { top: rect.bottom + 6 }),
+                  maxHeight: MENU_MAX,
+                }}
+                /* Theme-following now: this menu opens inside sheets that turn
+                   white in light mode, where fixed-dark creator glass read as a
+                   black slab with invisible ink. */
+                className="z-toast overflow-y-auto no-scrollbar rounded-xl glass-frost backdrop-blur-2xl backdrop-saturate-150 py-1.5"
+              >
+                {options.map((option, i) => {
+                  const active = option.id === value;
+                  return (
+                    <motion.button
+                      key={option.id}
+                      type="button"
+                      role="option"
+                      aria-selected={active}
+                      variants={i < CASCADE_ROWS ? staggerItem : undefined}
+                      onClick={() => {
+                        onChange(option.id);
+                        setOpen(false);
+                      }}
+                      className={clsx(
+                        "flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left transition-colors cursor-pointer",
+                        // Theme washes: the frost behind this follows the
+                        // theme, so an off-white tint vanished on paper.
+                        active ? "bg-primary/10" : "hover:bg-primary/5",
+                      )}
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary">
+                          {option.label}
+                        </span>
+                        {option.hint && (
+                          <span className="block truncate font-sans text-[calc(11px*var(--ws-fs))] text-muted">
+                            {option.hint}
+                          </span>
+                        )}
                       </span>
-                    )}
-                  </span>
-                  {active && (
-                    <Check
-                      size={13}
-                      weight="bold"
-                      className="shrink-0 text-gold"
-                    />
-                  )}
-                </button>
-              );
-            })}
-          </div>,
+                      {active && (
+                        <motion.span
+                          variants={staggerPop}
+                          className="flex shrink-0 text-gold"
+                        >
+                          <Check size={13} weight="bold" />
+                        </motion.span>
+                      )}
+                    </motion.button>
+                  );
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>,
           document.body,
         )}
     </div>

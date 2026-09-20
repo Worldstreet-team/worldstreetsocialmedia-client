@@ -2,9 +2,17 @@
 
 import { Check, Globe } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { motion } from "framer-motion";
 import { useState } from "react";
 import { useT } from "@/i18n/client";
 import { LOCALE_COOKIE, LOCALES, type Locale } from "@/i18n/config";
+import {
+	DUR,
+	EASE_IN,
+	pop,
+	staggerItem,
+	staggerParent,
+} from "@/lib/motion-presets";
 
 /* Endonyms — a language is always listed in its own language, so someone
    who can't read the current UI can still find theirs. */
@@ -78,30 +86,50 @@ export function LanguageMenu({
 					expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
 				)}
 			>
-				<div className="overflow-hidden">
-					<div className="flex flex-col pb-1">
+				{/* The pending dim lives here, not on the rows: framer owns each
+				    row's inline opacity, which would beat a `disabled:` class. */}
+				<div className={clsx("overflow-hidden", pending && "opacity-60")}>
+					{/* The rows stay mounted (the height trick needs them), so the
+					    cascade is driven by `expanded`, not by mounting. */}
+					<motion.div
+						variants={staggerParent}
+						initial={false}
+						animate={expanded ? "show" : "hidden"}
+						className="flex flex-col pb-1"
+					>
 						{LOCALES.map((locale) => {
 							const active = locale === current;
 							return (
-								<button
+								<motion.button
 									key={locale}
 									type="button"
+									variants={staggerItem}
+									// Folding away: quick and together, never a cascade.
+									transition={{ duration: DUR.fast, ease: EASE_IN }}
 									onClick={() => pick(locale)}
 									disabled={pending}
 									aria-current={active}
 									className={clsx(
-										"w-full text-left pl-11 pr-3.5 py-2 text-sm font-sans flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-60",
+										"w-full text-left pl-11 pr-3.5 py-2 text-sm font-sans flex items-center gap-2 transition-colors cursor-pointer",
 										active
 											? "text-gold font-semibold"
 											: "text-muted hover:bg-raised hover:text-primary",
 									)}
 								>
 									<span className="flex-1">{LANGUAGE_NAMES[locale]}</span>
-									{active && <Check size={14} weight="bold" />}
-								</button>
+									{active && (
+										<motion.span
+											initial={pop.initial}
+											animate={pop.animate}
+											className="flex"
+										>
+											<Check size={14} weight="bold" />
+										</motion.span>
+									)}
+								</motion.button>
 							);
 						})}
-					</div>
+					</motion.div>
 				</div>
 			</div>
 		</div>

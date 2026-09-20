@@ -13,6 +13,7 @@ import { DockChat } from "@/components/messages/DockChat";
 import type { ConversationRow } from "@/components/messages/ConversationList";
 import { useT } from "@/i18n/client";
 import { getConversationsAction } from "@/lib/conversation.actions";
+import { pop, swap } from "@/lib/motion-presets";
 import { messageDockOpenAtom, onlineIdsAtom } from "@/store/ui.atom";
 import { unreadMessagesCountAtom } from "@/store/messageCache";
 import { userAtom } from "@/store/user.atom";
@@ -132,11 +133,24 @@ export function MessageDock() {
 					)}
 				>
 					<RiChat3Fill size={21} className="-translate-x-[19%]" />
-					{unread > 0 && (
-						<span className="absolute -top-1 left-0 flex h-4 min-w-4 items-center justify-center rounded-pill bg-brand px-1 font-sans text-[calc(10px*var(--ws-fs))] font-bold tabular-nums text-brand-on ring-2 ring-page">
-							{unread}
-						</span>
-					)}
+					{/* The badge lands once; after that someone else's message
+					    only rolls the number. initial={false}: a count already
+					    there when the disc mounts is not news. */}
+					<AnimatePresence initial={false}>
+						{unread > 0 && (
+							<motion.span
+								key="unread"
+								{...pop}
+								className="absolute -top-1 left-0 flex h-4 min-w-4 items-center justify-center overflow-hidden rounded-pill bg-brand px-1 font-sans text-[calc(10px*var(--ws-fs))] font-bold tabular-nums text-brand-on ring-2 ring-page"
+							>
+								<AnimatePresence initial={false} mode="popLayout">
+									<motion.span key={unread} {...swap}>
+										{unread}
+									</motion.span>
+								</AnimatePresence>
+							</motion.span>
+						)}
+					</AnimatePresence>
 				</motion.button>
 			)}
 
@@ -174,9 +188,17 @@ export function MessageDock() {
 							<h2 className="flex-1 truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
 								{t("nav.messages")}
 								{onlineCount > 0 && (
-									<span className="ml-2 inline-flex items-center gap-1 font-normal text-subtle">
+									<span className="relative ml-2 inline-flex items-center gap-1 font-normal text-subtle">
 										<span className="h-1.5 w-1.5 rounded-pill bg-success ws-cue-online" />
-										<span className="tabular-nums">{onlineCount}</span>
+										<AnimatePresence initial={false} mode="popLayout">
+											<motion.span
+												key={onlineCount}
+												{...swap}
+												className="tabular-nums"
+											>
+												{onlineCount}
+											</motion.span>
+										</AnimatePresence>
 									</span>
 								)}
 							</h2>

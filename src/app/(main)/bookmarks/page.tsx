@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { AnimatePresence, motion, useIsPresent } from "framer-motion";
 import { PostCard, type PostProps } from "@/components/feed/PostCard";
 import { ImpressionSensor } from "@/components/feed/ImpressionSensor";
 import { PostSkeleton } from "@/components/feed/PostSkeleton";
@@ -11,6 +12,25 @@ import { bookmarksAtom, bookmarksLoadedAtom } from "@/store/bookmarks.atom";
 import { Bookmark } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useT } from "@/i18n/client";
+import { collapse } from "@/lib/motion-presets";
+
+/**
+ * One saved post. Un-bookmarking drops it from the atom, so without this the
+ * card vanished and everything under it jumped up. It folds shut on the way
+ * out. The clip is on only while leaving: a resting card must not crop its
+ * own menus and hover cards.
+ */
+function SavedRow({ children }: { children: React.ReactNode }) {
+	const present = useIsPresent();
+	return (
+		<motion.div
+			exit={collapse.exit}
+			className={present ? undefined : "overflow-hidden"}
+		>
+			{children}
+		</motion.div>
+	);
+}
 
 export default function BookmarksPage() {
 	const t = useT();
@@ -59,11 +79,15 @@ export default function BookmarksPage() {
 					</div>
 				) : bookmarks.length > 0 ? (
 					<div className="animate-content-in flex flex-col">
-						{bookmarks.map((post, i) => (
-							<ImpressionSensor key={post.id} meta={{ post: post.id, author: post.author?.id ?? "", surface: "bookmarks", position: i }}>
-								<PostCard post={post} />
-							</ImpressionSensor>
-						))}
+						<AnimatePresence initial={false}>
+							{bookmarks.map((post, i) => (
+								<SavedRow key={post.id}>
+									<ImpressionSensor meta={{ post: post.id, author: post.author?.id ?? "", surface: "bookmarks", position: i }}>
+										<PostCard post={post} />
+									</ImpressionSensor>
+								</SavedRow>
+							))}
+						</AnimatePresence>
 					</div>
 				) : (
 					<div className="py-10">

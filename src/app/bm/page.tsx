@@ -6,7 +6,8 @@ import axios from "axios";
 import clsx from "clsx";
 import { compressImage } from "@/lib/image-compress";
 import { useAtomValue, useSetAtom } from "jotai";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
 	CaretLeft,
 	ChartBar,
@@ -38,6 +39,18 @@ import {
 } from "@/components/ui/Overlay";
 import CalendarField from "@/components/ui/CalendarField";
 import { AdSlotPreview } from "@/components/profile/AdSlot";
+import {
+	collapse,
+	pop,
+	press,
+	reveal,
+	staggerItem,
+	staggerParent,
+	staggerParentFast,
+	staggerPop,
+	swap,
+	thumbSpring,
+} from "@/lib/motion-presets";
 
 /**
  * Business Messages — the deal room for ad bookings.
@@ -147,6 +160,37 @@ const STATUS_CHIP: Record<BmBooking["status"], string> = {
 	expired: "bg-raised text-subtle",
 	cancelled: "bg-raised text-subtle",
 };
+
+/**
+ * A value changing in place: the old one lifts out, the new one rises in.
+ * Numbers overlap as they trade places; `wait` is for labels, whose width
+ * changes under them.
+ */
+function Roll({
+	id,
+	wait = false,
+	className,
+	children,
+}: {
+	id: string | number;
+	wait?: boolean;
+	className?: string;
+	children: React.ReactNode;
+}) {
+	return (
+		<span className="relative inline-flex">
+			<AnimatePresence mode={wait ? "wait" : "popLayout"} initial={false}>
+				<motion.span
+					key={id}
+					{...swap}
+					className={clsx("inline-block", className)}
+				>
+					{children}
+				</motion.span>
+			</AnimatePresence>
+		</span>
+	);
+}
 
 export default function BmPage() {
 	const { getToken } = useAuth();
@@ -370,10 +414,16 @@ export default function BmPage() {
 		setUnreadBm((c) => Math.max(0, c - 1));
 	}, [activeId, threads, authed, setUnreadBm]);
 
-	// The receipt rides the full booking document.
+	// The receipt rides the full booking document. It is cleared only when
+	// the ROOM changes: `threads` is a new array on every poll and bm event,
+	// and clearing on each of those blinked the receipt out and back in.
+	const periodsForRef = useRef<string | null>(null);
 	useEffect(() => {
-		setPeriods([]);
 		const bookingId = threads.find((t) => t._id === activeId)?.booking?._id;
+		if (periodsForRef.current !== (bookingId ?? null)) {
+			periodsForRef.current = bookingId ?? null;
+			setPeriods([]);
+		}
 		if (!bookingId) return;
 		let cancelled = false;
 		void authed("get", `/api/ads/bookings/${bookingId}`)
@@ -389,6 +439,13 @@ export default function BmPage() {
 	useEffect(() => {
 		endRef.current?.scrollIntoView({ block: "end" });
 	}, [messages.length]);
+
+	// The deal rows cascade on the first load only. openBooking() re-enters
+	// this pane in the middle of a triage pass, where a flourish is noise.
+	const dealsIntroRef = useRef(false);
+	useEffect(() => {
+		if (loaded && threads.length > 0) dealsIntroRef.current = true;
+	}, [loaded, threads.length]);
 
 	const active = threads.find((t) => t._id === activeId) ?? null;
 	const myId = me?._id ? String(me._id) : "";
@@ -467,14 +524,15 @@ export default function BmPage() {
 					<h1 className="font-display text-[calc(20px*var(--ws-fs))] font-semibold tracking-[-0.01em]">
 						Business
 					</h1>
-					<button
+					<motion.button
+						{...press}
 						type="button"
 						onClick={() => setComposerOpen(true)}
 						className="flex h-9 items-center gap-1.5 rounded-pill bg-brand px-3.5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:opacity-90 cursor-pointer"
 					>
 						<Plus size={14} weight="bold" />
 						New booking
-					</button>
+					</motion.button>
 				</header>
 
 				<div className="px-4 pb-2">
@@ -535,87 +593,109 @@ export default function BmPage() {
 							caption="Booking requests for ad space arrive here — yours and ones sent to you."
 						/>
 					) : (
-						threads.map((t) => {
-							const other = counterpartOf(t);
-							const b = t.booking;
-							const myMove =
-								b?.status === "requested" &&
-								b.awaitingActionFrom === roleIn(t);
-							const active = activeId === t._id;
-							return (
-								<button
-									key={t._id}
-									type="button"
-									onClick={() => setActiveId(t._id)}
-									aria-current={active ? "true" : undefined}
-									className={clsx(
-										"group relative flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors",
-										active ? "bg-raised" : "hover:bg-surface",
-									)}
-								>
-									{/* Active marker is a rail, same as Messages — a
-									    border on every row turns a list into a ledger. */}
-									<span
-										aria-hidden
+						<motion.div
+							variants={staggerParentFast}
+							initial={dealsIntroRef.current ? false : "hidden"}
+							animate="show"
+						>
+							{threads.map((t, i) => {
+								const other = counterpartOf(t);
+								const b = t.booking;
+								const myMove =
+									b?.status === "requested" &&
+									b.awaitingActionFrom === roleIn(t);
+								const active = activeId === t._id;
+								return (
+									<motion.button
+										key={t._id}
+										variants={staggerItem}
+										// Past the fold nothing cascades: row 40 must not
+										// wait on the 39 before it.
+										initial={i < 9 ? undefined : false}
+										type="button"
+										onClick={() => setActiveId(t._id)}
+										aria-current={active ? "true" : undefined}
 										className={clsx(
-											"absolute left-0 top-1/2 h-8 w-[3px] -translate-y-1/2 rounded-r-pill bg-brand transition-opacity",
-											active ? "opacity-100" : "opacity-0",
+											"group relative flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors",
+											active ? "bg-raised" : "hover:bg-surface",
 										)}
-									/>
-									<span className="relative block h-12 w-12 shrink-0 overflow-hidden rounded-pill bg-raised">
-										<SafeAvatar src={other?.avatar} />
-									</span>
-									<span className="min-w-0 flex-1">
-										<span className="flex items-baseline justify-between gap-2">
-											<span
-												className={clsx(
-													"truncate font-sans text-[calc(14.5px*var(--ws-fs))] text-primary",
-													t.unread ? "font-bold" : "font-semibold",
-												)}
-											>
-												{other?.firstName || other?.username}
-											</span>
-											<span className="shrink-0 font-sans text-[calc(11.5px*var(--ws-fs))] text-subtle tabular-nums">
-												{formatTimeAgo(t.lastMessageAt)}
-											</span>
+									>
+										{/* Active marker is a rail, same as Messages: a
+										    border on every row turns a list into a ledger.
+										    ONE shared rail, so it slides to the row you pick
+										    (the page is a singleton, so a fixed id is safe).
+										    Centred with auto margins, not a translate class:
+										    framer owns this element's transform. */}
+										{active && (
+											<motion.span
+												aria-hidden
+												layoutId="bm-thread-rail"
+												transition={thumbSpring}
+												className="absolute inset-y-0 left-0 my-auto h-8 w-[3px] rounded-r-pill bg-brand"
+											/>
+										)}
+										<span className="relative block h-12 w-12 shrink-0 overflow-hidden rounded-pill bg-raised">
+											<SafeAvatar src={other?.avatar} />
 										</span>
-										<span className="mt-0.5 flex items-center gap-1.5">
-											{myMove || t.unread ? (
+										<span className="min-w-0 flex-1">
+											<span className="flex items-baseline justify-between gap-2">
 												<span
-													aria-hidden
 													className={clsx(
-														"h-1.5 w-1.5 shrink-0 rounded-pill",
-														myMove ? "bg-gold" : "bg-brand",
+														"truncate font-sans text-[calc(14.5px*var(--ws-fs))] text-primary",
+														t.unread ? "font-bold" : "font-semibold",
 													)}
-												/>
-											) : null}
-											<span
-												className={clsx(
-													"truncate font-sans text-[calc(13px*var(--ws-fs))]",
-													myMove || t.unread
-														? "font-medium text-primary"
-														: "text-muted",
-												)}
-											>
-												{myMove
-													? "Your move — respond to the offer"
-													: t.lastMessagePreview}
+												>
+													{other?.firstName || other?.username}
+												</span>
+												<span className="shrink-0 font-sans text-[calc(11.5px*var(--ws-fs))] text-subtle tabular-nums">
+													{formatTimeAgo(t.lastMessageAt)}
+												</span>
+											</span>
+											<span className="mt-0.5 flex items-center gap-1.5">
+												{/* initial={false}: a dot that was already there
+												    when the list painted does not pop; one that
+												    lands while you watch does. */}
+												<AnimatePresence initial={false}>
+													{(myMove || t.unread) && (
+														<motion.span
+															key="dot"
+															{...pop}
+															aria-hidden
+															className={clsx(
+																"h-1.5 w-1.5 shrink-0 rounded-pill",
+																myMove ? "bg-gold" : "bg-brand",
+															)}
+														/>
+													)}
+												</AnimatePresence>
+												<span
+													className={clsx(
+														"truncate font-sans text-[calc(13px*var(--ws-fs))]",
+														myMove || t.unread
+															? "font-medium text-primary"
+															: "text-muted",
+													)}
+												>
+													{myMove
+														? "Your move: respond to the offer"
+														: t.lastMessagePreview}
+												</span>
 											</span>
 										</span>
-									</span>
-									{b && (
-										<span
-											className={clsx(
-												"shrink-0 rounded-pill px-2 py-0.5 font-sans text-[calc(10.5px*var(--ws-fs))] font-semibold uppercase tracking-wide",
-												STATUS_CHIP[b.status],
-											)}
-										>
-											{b.status}
-										</span>
-									)}
-								</button>
-							);
-						})
+										{b && (
+											<span
+												className={clsx(
+													"shrink-0 rounded-pill px-2 py-0.5 font-sans text-[calc(10.5px*var(--ws-fs))] font-semibold uppercase tracking-wide",
+													STATUS_CHIP[b.status],
+												)}
+											>
+												{b.status}
+											</span>
+										)}
+									</motion.button>
+								);
+							})}
+						</motion.div>
 					)}
 				</div>
 			</aside>
@@ -693,6 +773,12 @@ function RequestQueue({
 	onDeclineAll: () => void;
 }) {
 	const [visible, setVisible] = useState(60);
+	// The cascade is for the first paint of the queue. Rows that arrive by
+	// "Show more" or a refetch are just there.
+	const paintedRef = useRef(false);
+	useEffect(() => {
+		if (requests.length > 0) paintedRef.current = true;
+	}, [requests.length]);
 	if (requests.length === 0) {
 		return (
 			<div className="px-6 py-10 text-center font-sans text-[calc(13px*var(--ws-fs))] text-subtle">
@@ -731,7 +817,7 @@ function RequestQueue({
 				<span className="font-sans text-[calc(12px*var(--ws-fs))] text-subtle tabular-nums">
 					{requests.length} request{requests.length === 1 ? "" : "s"} ·{" "}
 					<span className="font-semibold text-gold">
-						{usd(totalOffered)} offered
+						<Roll id={totalOffered}>{usd(totalOffered)}</Roll> offered
 					</span>
 				</span>
 				{requests.length > 1 && (
@@ -745,72 +831,84 @@ function RequestQueue({
 					</button>
 				)}
 			</div>
-			{requests.slice(0, visible).map((r) => {
-				const adv = r.advertiser ?? {};
-				return (
-					<div
-						key={r._id}
-						className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface"
-					>
-						<button
-							type="button"
-							onClick={() => onOpen(r._id)}
-							className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
-						>
-							<span className="relative block h-11 w-11 shrink-0 overflow-hidden rounded-pill bg-raised">
-								<SafeAvatar src={adv.avatar} />
-							</span>
-							<span className="min-w-0 flex-1">
-								<span className="flex items-baseline justify-between gap-2">
-									<span className="truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
-										{adv.firstName || adv.username}
+			<motion.div variants={staggerParentFast} initial="hidden" animate="show">
+				<AnimatePresence>
+					{requests.slice(0, visible).map((r, i) => {
+						const adv = r.advertiser ?? {};
+						return (
+							<motion.div
+								key={r._id}
+								variants={staggerItem}
+								initial={!paintedRef.current && i < 9 ? undefined : false}
+								// An object, not the "exit" label: a label would make the row
+								// own its variants and drop out of the cascade. A decided row
+								// leaves; it used to vanish.
+								exit={staggerItem.exit}
+								className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface"
+							>
+								<button
+									type="button"
+									onClick={() => onOpen(r._id)}
+									className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
+								>
+									<span className="relative block h-11 w-11 shrink-0 overflow-hidden rounded-pill bg-raised">
+										<SafeAvatar src={adv.avatar} />
 									</span>
-									<span className="shrink-0 font-display text-[calc(15px*var(--ws-fs))] font-semibold text-primary tabular-nums">
-										{usd(r.agreedUsdMinor)}
-									</span>
-								</span>
-								<span className="mt-0.5 block truncate font-sans text-[calc(12.5px*var(--ws-fs))] text-muted tabular-nums">
-									{r.format} · {r.durationDays}d ·{" "}
-									{new Date(r.startAt).toLocaleDateString(undefined, {
-										month: "short",
-										day: "numeric",
-									})}
-									{r.creative?.url ? " · creative attached" : ""}
-									{(overlaps.get(r._id) ?? 0) > 0 && (
-										<span className="text-gold">
-											{" "}
-											· rotates with {overlaps.get(r._id)} other
-											{overlaps.get(r._id) === 1 ? "" : "s"} on these
-											dates
+									<span className="min-w-0 flex-1">
+										<span className="flex items-baseline justify-between gap-2">
+											<span className="truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
+												{adv.firstName || adv.username}
+											</span>
+											<span className="shrink-0 font-display text-[calc(15px*var(--ws-fs))] font-semibold text-primary tabular-nums">
+												{usd(r.agreedUsdMinor)}
+											</span>
 										</span>
-									)}
-								</span>
-							</span>
-						</button>
-						{/* Accept / decline live ON the row: triage must not cost a
-						    navigation per decision. */}
-						<div className="flex shrink-0 items-center gap-1.5">
-							<button
-								type="button"
-								disabled={busy}
-								onClick={() => onAct(r._id, "accept")}
-								className="h-8 cursor-pointer rounded-pill bg-brand px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active disabled:opacity-50"
-							>
-								Accept
-							</button>
-							<button
-								type="button"
-								disabled={busy}
-								onClick={() => onAct(r._id, "decline")}
-								aria-label="Decline"
-								className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-pill bg-raised text-muted transition-colors hover:bg-chip hover:text-danger disabled:opacity-50"
-							>
-								<X size={13} weight="bold" />
-							</button>
-						</div>
-					</div>
-				);
-			})}
+										<span className="mt-0.5 block truncate font-sans text-[calc(12.5px*var(--ws-fs))] text-muted tabular-nums">
+											{r.format} · {r.durationDays}d ·{" "}
+											{new Date(r.startAt).toLocaleDateString(undefined, {
+												month: "short",
+												day: "numeric",
+											})}
+											{r.creative?.url ? " · creative attached" : ""}
+											{(overlaps.get(r._id) ?? 0) > 0 && (
+												<span className="text-gold">
+													{" "}
+													· rotates with {overlaps.get(r._id)} other
+													{overlaps.get(r._id) === 1 ? "" : "s"} on these
+													dates
+												</span>
+											)}
+										</span>
+									</span>
+								</button>
+								{/* Accept / decline live ON the row: triage must not cost a
+								    navigation per decision. */}
+								<div className="flex shrink-0 items-center gap-1.5">
+									<motion.button
+										{...press}
+										type="button"
+										disabled={busy}
+										onClick={() => onAct(r._id, "accept")}
+										className="h-8 cursor-pointer rounded-pill bg-brand px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active disabled:opacity-50"
+									>
+										Accept
+									</motion.button>
+									<motion.button
+										{...press}
+										type="button"
+										disabled={busy}
+										onClick={() => onAct(r._id, "decline")}
+										aria-label="Decline"
+										className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-pill bg-raised text-muted transition-colors hover:bg-chip hover:text-danger disabled:opacity-50"
+									>
+										<X size={13} weight="bold" />
+									</motion.button>
+								</div>
+							</motion.div>
+						);
+					})}
+				</AnimatePresence>
+			</motion.div>
 			{requests.length > visible && (
 				<button
 					type="button"
@@ -869,23 +967,29 @@ function CampaignStatsSheet({
 			<OverlayPanel dragClose={onClose} variant="anchored" label="Campaign analytics">
 				<OverlayHeader title="Campaign analytics" onClose={onClose} />
 				<div className="px-4 pb-4 md:px-5 md:pb-5">
-					<div className="grid grid-cols-3 gap-1.5">
+					<motion.div
+						variants={staggerParent}
+						initial="hidden"
+						animate="show"
+						className="grid grid-cols-3 gap-1.5"
+					>
 						{[
 							["Views", views.toLocaleString()],
 							["Clicks", clicks.toLocaleString()],
 							["CTR", ctr ? `${ctr}%` : "—"],
 						].map(([label, value]) => (
-							<div
+							<motion.div
 								key={label}
+								variants={staggerItem}
 								className="rounded-[10px] bg-sunken px-3 py-2.5"
 							>
 								<p className="font-display text-[calc(18px*var(--ws-fs))] font-semibold text-primary tabular-nums">
 									{value}
 								</p>
 								<p className="font-sans text-[calc(11px*var(--ws-fs))] text-subtle">{label}</p>
-							</div>
+							</motion.div>
 						))}
-					</div>
+					</motion.div>
 
 					<div className="mt-3 rounded-[10px] bg-sunken px-3 py-2.5">
 						<div className="flex items-baseline justify-between font-sans text-[calc(12px*var(--ws-fs))]">
@@ -1014,6 +1118,14 @@ function ThreadView({
 		(b.agreedUsdMinor / 100).toString(),
 	);
 	const [cDays, setCDays] = useState(String(b.durationDays));
+	// A pill the machine posts WHILE the room is open rises; history is just
+	// there. A batch that shares no id with the last one is a history load
+	// (the room changed, or this is its first page), so nothing in it moves.
+	const seenIdsRef = useRef<Set<string>>(new Set());
+	const historyLoad = !messages.some((m) => seenIdsRef.current.has(m._id));
+	useEffect(() => {
+		seenIdsRef.current = new Set(messages.map((m) => m._id));
+	}, [messages]);
 	const settledPeriods = periods.filter((p) =>
 		["captured", "released"].includes(p.status),
 	);
@@ -1049,20 +1161,33 @@ function ThreadView({
 						</span>
 					</Link>
 				</div>
-				<span
-					className={clsx(
-						"mr-1 shrink-0 rounded-pill px-2.5 py-1 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-wide",
-						STATUS_CHIP[b.status],
-					)}
-				>
-					{b.status}
+				{/* Keyed by room: the chip rolls when THIS deal changes state,
+				    never because you opened a different deal. */}
+				<span className="mr-1 flex shrink-0">
+					<Roll
+						key={thread._id}
+						id={b.status}
+						wait
+						className={clsx(
+							"rounded-pill px-2.5 py-1 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-wide",
+							STATUS_CHIP[b.status],
+						)}
+					>
+						{b.status}
+					</Roll>
 				</span>
 			</div>
 
 			{/* the deal card: the contract floats above the talk as its own
 			    object, instead of a wall of grey rows welded to the header */}
 			<div className="shrink-0 px-3 pt-3 md:px-6 md:pt-4">
-				<div className="rounded-xl bg-surface px-4 py-3.5">
+				{/* Keyed by room, so the card rises when a deal opens and a poll
+				    replays nothing. */}
+				<motion.div
+					key={thread._id}
+					{...reveal(0)}
+					className="rounded-xl bg-surface px-4 py-3.5"
+				>
 				<div className="flex items-center gap-3">
 					<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gold/10 text-gold">
 						{b.format === "video" ? (
@@ -1086,7 +1211,9 @@ function ThreadView({
 						</p>
 					</div>
 					<span className="shrink-0 font-display text-[calc(20px*var(--ws-fs))] font-semibold text-primary tabular-nums">
-						{usd(b.agreedUsdMinor)}
+						{/* A counter-offer moves the price: the other side's
+						    action, so the number rolls. */}
+						<Roll id={b.agreedUsdMinor}>{usd(b.agreedUsdMinor)}</Roll>
 					</span>
 					{hasStats && (
 						<button
@@ -1116,171 +1243,214 @@ function ThreadView({
 
 				{/* money state: where the dollars are, as quiet chips */}
 				{(b.settledUsdMinor > 0 || cancellable) && (
-					<div className="mt-2.5 flex flex-wrap items-center gap-1.5 font-sans text-[calc(11.5px*var(--ws-fs))] tabular-nums">
-						<span className="rounded-pill bg-raised px-2 py-0.5 text-muted">
+					<motion.div
+						variants={staggerParent}
+						initial="hidden"
+						animate="show"
+						className="mt-2.5 flex flex-wrap items-center gap-1.5 font-sans text-[calc(11.5px*var(--ws-fs))] tabular-nums"
+					>
+						<motion.span
+							variants={staggerPop}
+							className="rounded-pill bg-raised px-2 py-0.5 text-muted"
+						>
 							{b.daysServed}/{b.durationDays} days
-						</span>
-						<span className="rounded-pill bg-raised px-2 py-0.5 text-muted">
+						</motion.span>
+						<motion.span
+							variants={staggerPop}
+							className="rounded-pill bg-raised px-2 py-0.5 text-muted"
+						>
 							{usd(b.settledUsdMinor)} settled
-						</span>
+						</motion.span>
 						{role === "creator" && (
-							<span className="rounded-pill bg-success/10 px-2 py-0.5 text-success">
+							<motion.span
+								variants={staggerPop}
+								className="rounded-pill bg-success/10 px-2 py-0.5 text-success"
+							>
 								{usd(b.creatorPaidUsdMinor)} earned
-							</span>
+							</motion.span>
 						)}
 						{(b.impressions ?? 0) > 0 && (
-							<span className="rounded-pill bg-raised px-2 py-0.5 text-muted">
+							<motion.span
+								variants={staggerPop}
+								className="rounded-pill bg-raised px-2 py-0.5 text-muted"
+							>
 								{(b.impressions ?? 0).toLocaleString()} views ·{" "}
 								{(b.clicks ?? 0).toLocaleString()} clicks
-							</span>
+							</motion.span>
 						)}
 						{b.statusReason && (
-							<span className="text-subtle">{b.statusReason}</span>
+							<motion.span variants={staggerItem} className="text-subtle">
+								{b.statusReason}
+							</motion.span>
 						)}
-					</div>
+					</motion.div>
 				)}
 
+				{/* The cascade rides a wrapper, never the button: framer leaves
+				    opacity inline, which would outrank disabled:opacity-50 and
+				    hover:opacity-90 for good. The button keeps the press. */}
 				{(myTurn || cancellable || b.status === "requested") && (
-					<div className="mt-2.5 flex items-center gap-2">
+					<motion.div
+						variants={staggerParent}
+						initial="hidden"
+						animate="show"
+						className="mt-2.5 flex items-center gap-2"
+					>
 						{myTurn && (
 							<>
-								<button
-									type="button"
-									disabled={busy}
-									onClick={() => onAct(b._id, "accept")}
-									className="h-9 rounded-pill bg-brand px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:opacity-90 disabled:opacity-50 cursor-pointer"
-								>
-									Accept · {usd(b.agreedUsdMinor)}
-								</button>
-								<button
-									type="button"
-									disabled={busy}
-									onClick={() => onAct(b._id, "decline")}
-									className="h-9 rounded-pill bg-raised px-4 font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-chip disabled:opacity-50 cursor-pointer"
-								>
-									Decline
-								</button>
+								<motion.span variants={staggerItem} className="flex">
+									<motion.button
+										{...press}
+										type="button"
+										disabled={busy}
+										onClick={() => onAct(b._id, "accept")}
+										className="h-9 rounded-pill bg-brand px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:opacity-90 disabled:opacity-50 cursor-pointer"
+									>
+										Accept · {usd(b.agreedUsdMinor)}
+									</motion.button>
+								</motion.span>
+								<motion.span variants={staggerItem} className="flex">
+									<motion.button
+										{...press}
+										type="button"
+										disabled={busy}
+										onClick={() => onAct(b._id, "decline")}
+										className="h-9 rounded-pill bg-raised px-4 font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-chip disabled:opacity-50 cursor-pointer"
+									>
+										Decline
+									</motion.button>
+								</motion.span>
 							</>
 						)}
 						{b.status === "requested" && (
-							<button
-								type="button"
-								disabled={busy}
-								onClick={() => setCounterOpen((v) => !v)}
-								className="h-9 rounded-pill bg-raised px-4 font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-chip disabled:opacity-50 cursor-pointer"
-							>
-								Counter
-							</button>
+							<motion.span variants={staggerItem} className="flex">
+								<motion.button
+									{...press}
+									type="button"
+									disabled={busy}
+									onClick={() => setCounterOpen((v) => !v)}
+									className="h-9 rounded-pill bg-raised px-4 font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-chip disabled:opacity-50 cursor-pointer"
+								>
+									Counter
+								</motion.button>
+							</motion.span>
 						)}
 						{!myTurn && b.status === "requested" && (
-							<span className="font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle">
+							<motion.span
+								variants={staggerItem}
+								className="font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle"
+							>
 								Waiting on the {b.awaitingActionFrom} to respond
-							</span>
+							</motion.span>
 						)}
 						{cancellable && (
-							<button
-								type="button"
-								disabled={busy}
-								onClick={() => onAct(b._id, "cancel")}
-								className="ml-auto h-9 rounded-pill px-3.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-50 cursor-pointer"
-							>
-								End campaign
-							</button>
+							<motion.span variants={staggerItem} className="ml-auto flex">
+								<motion.button
+									{...press}
+									type="button"
+									disabled={busy}
+									onClick={() => onAct(b._id, "cancel")}
+									className="h-9 rounded-pill px-3.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-50 cursor-pointer"
+								>
+									End campaign
+								</motion.button>
+							</motion.span>
 						)}
-					</div>
+					</motion.div>
 				)}
 
-				{statsOpen && (
-					<CampaignStatsSheet
-						booking={b}
-						periods={periods}
-						role={role}
-						onClose={() => setStatsOpen(false)}
-					/>
-				)}
-				{counterOpen && b.status === "requested" && (
-					<div className="mt-2.5 flex items-end gap-2 rounded-xl bg-sunken p-3">
-						<label className="flex-1">
-							<span className="mb-1 block font-sans text-[calc(10.5px*var(--ws-fs))] font-semibold uppercase tracking-wide text-subtle">
-								Total price
-							</span>
-							<span className="flex h-10 items-center rounded-lg bg-page/60 pl-3 font-sans text-[calc(14px*var(--ws-fs))] text-subtle transition-colors focus-within:bg-page">
-								$
-								<input
-									type="text"
-									inputMode="decimal"
-									value={cPrice}
-									onChange={(e) =>
-										setCPrice(
-											e.target.value
-												.replace(/[^0-9.]/g, "")
-												.replace(/(\..*)\./g, "$1"),
-										)
-									}
-									className="h-10 w-full bg-transparent px-2 font-sans text-[calc(14px*var(--ws-fs))] text-primary outline-none tabular-nums"
-								/>
-							</span>
-						</label>
-						<label className="w-24">
-							<span className="mb-1 block font-sans text-[calc(10.5px*var(--ws-fs))] font-semibold uppercase tracking-wide text-subtle">
-								Days
-							</span>
-							<input
-								type="text"
-								inputMode="numeric"
-								value={cDays}
-								onChange={(e) =>
-									setCDays(e.target.value.replace(/[^0-9]/g, ""))
-								}
-								className="h-10 w-full rounded-lg bg-page/60 px-3 font-sans text-[calc(14px*var(--ws-fs))] text-primary outline-none tabular-nums transition-colors focus:bg-page"
-							/>
-						</label>
-						<button
-							type="button"
-							disabled={busy}
-							onClick={() => {
-								const price = Math.round(Number(cPrice || 0) * 100);
-								const days = Number(cDays || 0);
-								if (price < 100 || days < 1 || days > 30) return;
-								setCounterOpen(false);
-								onCounter(b._id, { priceUsdMinor: price, days });
-							}}
-							className="h-10 shrink-0 rounded-pill bg-primary px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-page transition-colors hover:opacity-90 disabled:opacity-50 cursor-pointer"
-						>
-							Send offer
-						</button>
-					</div>
-				)}
+				<AnimatePresence initial={false}>
+					{counterOpen && b.status === "requested" && (
+						<motion.div key="counter" {...collapse} className="overflow-hidden">
+							<div className="mt-2.5 flex items-end gap-2 rounded-xl bg-sunken p-3">
+								<label className="flex-1">
+									<span className="mb-1 block font-sans text-[calc(10.5px*var(--ws-fs))] font-semibold uppercase tracking-wide text-subtle">
+										Total price
+									</span>
+									<span className="flex h-10 items-center rounded-lg bg-page/60 pl-3 font-sans text-[calc(14px*var(--ws-fs))] text-subtle transition-colors focus-within:bg-page">
+										$
+										<input
+											type="text"
+											inputMode="decimal"
+											value={cPrice}
+											onChange={(e) =>
+												setCPrice(
+													e.target.value
+														.replace(/[^0-9.]/g, "")
+														.replace(/(\..*)\./g, "$1"),
+												)
+											}
+											className="h-10 w-full bg-transparent px-2 font-sans text-[calc(14px*var(--ws-fs))] text-primary outline-none tabular-nums"
+										/>
+									</span>
+								</label>
+								<label className="w-24">
+									<span className="mb-1 block font-sans text-[calc(10.5px*var(--ws-fs))] font-semibold uppercase tracking-wide text-subtle">
+										Days
+									</span>
+									<input
+										type="text"
+										inputMode="numeric"
+										value={cDays}
+										onChange={(e) =>
+											setCDays(e.target.value.replace(/[^0-9]/g, ""))
+										}
+										className="h-10 w-full rounded-lg bg-page/60 px-3 font-sans text-[calc(14px*var(--ws-fs))] text-primary outline-none tabular-nums transition-colors focus:bg-page"
+									/>
+								</label>
+								<button
+									type="button"
+									disabled={busy}
+									onClick={() => {
+										const price = Math.round(Number(cPrice || 0) * 100);
+										const days = Number(cDays || 0);
+										if (price < 100 || days < 1 || days > 30) return;
+										setCounterOpen(false);
+										onCounter(b._id, { priceUsdMinor: price, days });
+									}}
+									className="h-10 shrink-0 rounded-pill bg-primary px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-page transition-colors hover:opacity-90 disabled:opacity-50 cursor-pointer"
+								>
+									Send offer
+								</button>
+							</div>
+						</motion.div>
+					)}
+				</AnimatePresence>
 
 				{/* The receipt: what actually happened to the money, tranche by
 				    tranche. Both sides read the same rows — the creator sees
 				    their cut, the advertiser sees what came back. */}
+				{/* The rows arrive a beat after the room opens and made the card
+				    jump taller. They open instead. Enter only: the block leaves
+				    with the card, when the room changes. */}
 				{settledPeriods.length > 0 && (
-					<div className="mt-2.5 overflow-hidden rounded-lg bg-sunken/60">
-						{settledPeriods.map((per) => (
-							<div
-								key={per.index}
-								className="flex items-center justify-between gap-3 border-b border-hairline/60 px-3.5 py-2 font-sans text-[calc(12.5px*var(--ws-fs))] last:border-b-0"
-							>
-								<span className="text-muted">
-									{new Date(per.startAt).toISOString().slice(5, 10)} –{" "}
-									{new Date(per.endAt).toISOString().slice(5, 10)}
-								</span>
-								<span className="tabular-nums text-subtle">
-									{usd(per.amountUsdMinor)}
-								</span>
-								{per.status === "captured" ? (
-									<span className="tabular-nums text-success">
-										{role === "creator"
-											? `+${usd(per.creatorShareUsdMinor)} earned`
-											: `${usd(per.capturedUsdMinor)} settled`}
+					<motion.div {...collapse} className="overflow-hidden">
+						<div className="mt-2.5 overflow-hidden rounded-lg bg-sunken/60">
+							{settledPeriods.map((per) => (
+								<div
+									key={per.index}
+									className="flex items-center justify-between gap-3 border-b border-hairline/60 px-3.5 py-2 font-sans text-[calc(12.5px*var(--ws-fs))] last:border-b-0"
+								>
+									<span className="text-muted">
+										{new Date(per.startAt).toISOString().slice(5, 10)} –{" "}
+										{new Date(per.endAt).toISOString().slice(5, 10)}
 									</span>
-								) : (
-									<span className="text-subtle">returned</span>
-								)}
-							</div>
-						))}
-					</div>
+									<span className="tabular-nums text-subtle">
+										{usd(per.amountUsdMinor)}
+									</span>
+									{per.status === "captured" ? (
+										<span className="tabular-nums text-success">
+											{role === "creator"
+												? `+${usd(per.creatorShareUsdMinor)} earned`
+												: `${usd(per.capturedUsdMinor)} settled`}
+										</span>
+									) : (
+										<span className="text-subtle">returned</span>
+									)}
+								</div>
+							))}
+						</div>
+					</motion.div>
 				)}
 				{heldPeriod && (
 					<p className="mt-2 font-sans text-[calc(12px*var(--ws-fs))] text-subtle tabular-nums">
@@ -1288,8 +1458,20 @@ function ThreadView({
 						period
 					</p>
 				)}
-				</div>
+				</motion.div>
 			</div>
+
+			{/* Outside the card on purpose: the card carries a transform while
+			    it rises, and a transformed ancestor becomes the containing
+			    block for the sheet's fixed scrim and panel. */}
+			{statsOpen && (
+				<CampaignStatsSheet
+					booking={b}
+					periods={periods}
+					role={role}
+					onClose={() => setStatsOpen(false)}
+				/>
+			)}
 
 			{/* messages */}
 			<div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 md:px-6">
@@ -1311,11 +1493,19 @@ function ThreadView({
 						return (
 							<div key={m._id}>
 								{divider}
-								<div className="my-2 flex justify-center">
+								<motion.div
+									initial={
+										!historyLoad && !seenIdsRef.current.has(m._id)
+											? reveal(0).initial
+											: false
+									}
+									animate={reveal(0).animate}
+									className="my-2 flex justify-center"
+								>
 									<span className="max-w-[85%] rounded-lg bg-raised px-3.5 py-2 text-center font-sans text-[calc(12px*var(--ws-fs))] leading-relaxed text-muted">
 										{m.content}
 									</span>
-								</div>
+								</motion.div>
 							</div>
 						);
 					}
@@ -1370,7 +1560,8 @@ function ThreadView({
 						className="max-h-[100px] min-w-0 flex-1 resize-none border-none bg-transparent py-2 text-base text-primary outline-none placeholder:text-subtle"
 						style={{ minHeight: "24px" }}
 					/>
-					<button
+					<motion.button
+						{...press}
 						type="button"
 						onClick={onSend}
 						disabled={!draft.trim()}
@@ -1378,7 +1569,7 @@ function ThreadView({
 						className="mb-0.5 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-brand text-brand-on transition-colors hover:bg-brand-active disabled:opacity-40"
 					>
 						<PaperPlaneRight size={16} weight="fill" />
-					</button>
+					</motion.button>
 				</div>
 			</div>
 		</>
@@ -1415,6 +1606,8 @@ function NewBookingSheet({
 }) {
 	const { toast } = useToast();
 	useOverlayDismiss(true, onClose);
+	// Per instance: a shared layoutId would let two sheets trade one thumb.
+	const formatThumbId = useId();
 
 	const [username, setUsername] = useState(initialUsername);
 	const [format, setFormat] = useState<"image" | "video" | "audio">("image");
@@ -1555,8 +1748,15 @@ function NewBookingSheet({
 					title={step === "preview" ? "Preview" : "Book ad space"}
 					onClose={onClose}
 				/>
+				{/* The two steps trade places rather than cut. initial={false}:
+				    the form already arrives with the panel. */}
+				<AnimatePresence mode="wait" initial={false}>
 				{step === "preview" ? (
-					<div className="flex flex-col gap-4 overflow-y-auto px-5 pb-5">
+					<motion.div
+						key="preview"
+						{...swap}
+						className="flex flex-col gap-4 overflow-y-auto px-5 pb-5"
+					>
 						{/* Exactly what @handle's profile will render — same
 						    component, same chrome. What you preview is what the
 						    creator approves and the slot serves. */}
@@ -1576,7 +1776,12 @@ function NewBookingSheet({
 								pending" until one is agreed in the thread.
 							</p>
 						)}
-						<div className="overflow-hidden rounded-xl bg-sunken/60">
+						<motion.div
+							variants={staggerParent}
+							initial="hidden"
+							animate="show"
+							className="overflow-hidden rounded-xl bg-sunken/60"
+						>
 							{[
 								["Creator", `@${handle}`],
 								["Format", format],
@@ -1588,17 +1793,18 @@ function NewBookingSheet({
 									? [["Total", usd(rate * Number(days || 0))]]
 									: []),
 							].map(([k, v]) => (
-								<div
+								<motion.div
 									key={k}
+									variants={staggerItem}
 									className="flex items-center justify-between border-b border-hairline/60 px-3.5 py-2.5 font-sans text-[calc(13px*var(--ws-fs))] last:border-b-0"
 								>
 									<span className="text-subtle">{k}</span>
 									<span className="font-medium capitalize text-primary tabular-nums">
 										{v}
 									</span>
-								</div>
+								</motion.div>
 							))}
-						</div>
+						</motion.div>
 						<div className="flex gap-2">
 							<button
 								type="button"
@@ -1613,16 +1819,22 @@ function NewBookingSheet({
 								onClick={submit}
 								className="h-12 flex-[2] cursor-pointer rounded-pill bg-brand font-sans text-[calc(14.5px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:opacity-90 disabled:opacity-50"
 							>
-								{sending
-									? "Sending…"
-									: rate !== null && Number(days) > 0
-										? `Send request · ${usd(rate * Number(days))}`
-										: "Send request"}
+								<Roll id={sending ? "sending" : "send"} wait>
+									{sending
+										? "Sending…"
+										: rate !== null && Number(days) > 0
+											? `Send request · ${usd(rate * Number(days))}`
+											: "Send request"}
+								</Roll>
 							</button>
 						</div>
-					</div>
+					</motion.div>
 				) : (
-				<div className="flex flex-col gap-4 overflow-y-auto px-5 pb-5">
+				<motion.div
+					key="form"
+					{...swap}
+					className="flex flex-col gap-4 overflow-y-auto px-5 pb-5"
+				>
 					<div>
 						{label("Creator")}
 						<input
@@ -1643,12 +1855,22 @@ function NewBookingSheet({
 									onClick={() => setFormat(f)}
 									className={clsx(
 										"h-10 flex-1 rounded-pill font-sans text-[calc(13px*var(--ws-fs))] font-medium capitalize transition-colors cursor-pointer",
+										// Only the selected pill is positioned, so its
+										// thumb paints over the pills it crosses whichever
+										// way it travels.
 										format === f
-											? "bg-primary text-page"
+											? "relative text-page"
 											: "bg-sunken text-muted hover:bg-raised hover:text-primary",
 									)}
 								>
-									{f}
+									{format === f && (
+										<motion.span
+											layoutId={formatThumbId}
+											transition={thumbSpring}
+											className="absolute inset-0 rounded-pill bg-primary"
+										/>
+									)}
+									<span className="relative">{f}</span>
 								</button>
 							))}
 						</div>
@@ -1659,57 +1881,68 @@ function NewBookingSheet({
 						{/* The creative is UPLOADED, not linked: a dropzone that
 						    becomes its own preview. The picked file goes to R2
 						    immediately, so send needs nothing else in flight. */}
-						{mediaUrl ? (
-							<div className="relative overflow-hidden rounded-xl bg-sunken">
-								{format === "image" && (
-									// eslint-disable-next-line @next/next/no-img-element
-									<img
-										src={mediaUrl}
-										alt="Creative preview"
-										className="max-h-[200px] w-full object-cover"
-									/>
-								)}
-								{format === "video" && (
-									// biome-ignore lint/a11y/useMediaCaption: preview of own upload
-									<video
-										src={mediaUrl}
-										controls
-										muted
-										playsInline
-										className="max-h-[200px] w-full bg-black object-contain"
-									/>
-								)}
-								{format === "audio" && (
-									// biome-ignore lint/a11y/useMediaCaption: preview of own upload
-									<audio src={mediaUrl} controls className="w-full p-3" />
-								)}
-								<button
-									type="button"
-									onClick={() => setMediaUrl("")}
-									aria-label="Remove creative"
-									className="absolute right-2 top-2 flex h-8 w-8 cursor-pointer items-center justify-center rounded-pill bg-page/85 text-primary transition-colors hover:bg-page"
+						{/* The upload landing is the moment: the dropzone lifts out
+						    and the creative rises in. The motion rides wrappers, so
+						    the dropzone button keeps its disabled:opacity. */}
+						<AnimatePresence mode="wait" initial={false}>
+							{mediaUrl ? (
+								<motion.div
+									key="creative"
+									{...swap}
+									className="relative overflow-hidden rounded-xl bg-sunken"
 								>
-									<X size={14} weight="bold" />
-								</button>
-							</div>
-						) : (
-							<button
-								type="button"
-								onClick={() => mediaInputRef.current?.click()}
-								disabled={uploading === "media"}
-								className="flex h-28 w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl bg-sunken transition-colors hover:bg-raised disabled:opacity-60"
-							>
-								<UploadSimple size={20} className="text-muted" />
-								<span className="font-sans text-[calc(13px*var(--ws-fs))] font-medium text-muted tabular-nums">
-									{uploading === "media"
-										? `Uploading… ${uploadPct}%`
-										: `Upload ${format === "audio" ? "audio" : format}`}
-								</span>
-								<span className="font-sans text-[calc(11px*var(--ws-fs))] text-subtle">
-									up to 50MB
-								</span>
-							</button>
-						)}
+									{format === "image" && (
+										// eslint-disable-next-line @next/next/no-img-element
+										<img
+											src={mediaUrl}
+											alt="Creative preview"
+											className="max-h-[200px] w-full object-cover"
+										/>
+									)}
+									{format === "video" && (
+										// biome-ignore lint/a11y/useMediaCaption: preview of own upload
+										<video
+											src={mediaUrl}
+											controls
+											muted
+											playsInline
+											className="max-h-[200px] w-full bg-black object-contain"
+										/>
+									)}
+									{format === "audio" && (
+										// biome-ignore lint/a11y/useMediaCaption: preview of own upload
+										<audio src={mediaUrl} controls className="w-full p-3" />
+									)}
+									<button
+										type="button"
+										onClick={() => setMediaUrl("")}
+										aria-label="Remove creative"
+										className="absolute right-2 top-2 flex h-8 w-8 cursor-pointer items-center justify-center rounded-pill bg-page/85 text-primary transition-colors hover:bg-page"
+									>
+										<X size={14} weight="bold" />
+									</button>
+								</motion.div>
+							) : (
+								<motion.div key="dropzone" {...swap}>
+									<button
+										type="button"
+										onClick={() => mediaInputRef.current?.click()}
+										disabled={uploading === "media"}
+										className="flex h-28 w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl bg-sunken transition-colors hover:bg-raised disabled:opacity-60"
+									>
+										<UploadSimple size={20} className="text-muted" />
+										<span className="font-sans text-[calc(13px*var(--ws-fs))] font-medium text-muted tabular-nums">
+											{uploading === "media"
+												? `Uploading… ${uploadPct}%`
+												: `Upload ${format === "audio" ? "audio" : format}`}
+										</span>
+										<span className="font-sans text-[calc(11px*var(--ws-fs))] text-subtle">
+											up to 50MB
+										</span>
+									</button>
+								</motion.div>
+							)}
+						</AnimatePresence>
 						<input
 							ref={mediaInputRef}
 							type="file"
@@ -1723,52 +1956,63 @@ function NewBookingSheet({
 						/>
 					</div>
 
-					{format === "audio" && (
-						<div>
-							{label("Cover image")}
-							{coverUrl ? (
-								<div className="relative h-24 w-40 overflow-hidden rounded-xl bg-sunken">
-									{/* eslint-disable-next-line @next/next/no-img-element */}
-									<img
-										src={coverUrl}
-										alt="Cover preview"
-										className="h-full w-full object-cover"
+					{/* -mb-4 outside, pb-4 inside: a wrapper at height 0 would still
+					    claim one of the column's gaps. -mx-1 px-1 leaves the focus
+					    ring room inside the clip. */}
+					<AnimatePresence initial={false}>
+						{format === "audio" && (
+							<motion.div
+								key="cover"
+								{...collapse}
+								className="-mx-1 -mb-4 overflow-hidden px-1"
+							>
+								<div className="pb-4">
+									{label("Cover image")}
+									{coverUrl ? (
+										<div className="relative h-24 w-40 overflow-hidden rounded-xl bg-sunken">
+											{/* eslint-disable-next-line @next/next/no-img-element */}
+											<img
+												src={coverUrl}
+												alt="Cover preview"
+												className="h-full w-full object-cover"
+											/>
+											<button
+												type="button"
+												onClick={() => setCoverUrl("")}
+												aria-label="Remove cover"
+												className="absolute right-1.5 top-1.5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-pill bg-page/85 text-primary"
+											>
+												<X size={12} weight="bold" />
+											</button>
+										</div>
+									) : (
+										<button
+											type="button"
+											onClick={() => coverInputRef.current?.click()}
+											disabled={uploading === "cover"}
+											className="flex h-16 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-sunken font-sans text-[calc(13px*var(--ws-fs))] font-medium text-muted transition-colors hover:bg-raised disabled:opacity-60"
+										>
+											<UploadSimple size={16} />
+											{uploading === "cover"
+												? `Uploading… ${uploadPct}%`
+												: "Upload the banner behind the play button"}
+										</button>
+									)}
+									<input
+										ref={coverInputRef}
+										type="file"
+										accept="image/*"
+										className="hidden"
+										onChange={(e) => {
+											const f = e.target.files?.[0];
+											if (f) void upload(f, "cover");
+											e.target.value = "";
+										}}
 									/>
-									<button
-										type="button"
-										onClick={() => setCoverUrl("")}
-										aria-label="Remove cover"
-										className="absolute right-1.5 top-1.5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-pill bg-page/85 text-primary"
-									>
-										<X size={12} weight="bold" />
-									</button>
 								</div>
-							) : (
-								<button
-									type="button"
-									onClick={() => coverInputRef.current?.click()}
-									disabled={uploading === "cover"}
-									className="flex h-16 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-sunken font-sans text-[calc(13px*var(--ws-fs))] font-medium text-muted transition-colors hover:bg-raised disabled:opacity-60"
-								>
-									<UploadSimple size={16} />
-									{uploading === "cover"
-										? `Uploading… ${uploadPct}%`
-										: "Upload the banner behind the play button"}
-								</button>
-							)}
-							<input
-								ref={coverInputRef}
-								type="file"
-								accept="image/*"
-								className="hidden"
-								onChange={(e) => {
-									const f = e.target.files?.[0];
-									if (f) void upload(f, "cover");
-									e.target.value = "";
-								}}
-							/>
-						</div>
-					)}
+							</motion.div>
+						)}
+					</AnimatePresence>
 
 					<div>
 						{label("Click-through link")}
@@ -1837,8 +2081,9 @@ function NewBookingSheet({
 							refused.
 						</p>
 					)}
-				</div>
+				</motion.div>
 				)}
+				</AnimatePresence>
 			</OverlayPanel>
 		</>
 	);

@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Cropper, { type Area } from "react-easy-crop";
 import "react-easy-crop/react-easy-crop.css";
 import {
@@ -12,7 +19,7 @@ import {
   X,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import GrainOverlay from "@/components/editor/GrainOverlay";
 import PresetCarousel from "@/components/editor/PresetCarousel";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
@@ -35,6 +42,7 @@ import {
   orientCanvas,
 } from "@/lib/editor/export";
 import { colorOpsFor, cssFilterFor, getPreset } from "@/lib/editor/presets";
+import { pop, press, swap, thumbSpring } from "@/lib/motion-presets";
 
 type EditorTab = "crop" | "adjust" | "alt";
 
@@ -116,6 +124,13 @@ export default function MediaEditor({
   const [croppedPx, setCroppedPx] = useState<Area | null>(null);
   const [interacting, setInteracting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const thumbId = useId();
+  // The filter strip cascades the first time Adjust opens, not on every
+  // switch back to it.
+  const filtersSeenRef = useRef(false);
+  useEffect(() => {
+    if (tab === "adjust") filtersSeenRef.current = true;
+  }, [tab]);
 
   const bitmapRef = useRef<ImageBitmap | null>(null);
   const orientedRef = useRef<HTMLCanvasElement | null>(null);
@@ -330,19 +345,28 @@ export default function MediaEditor({
                 {title}
               </h2>
             </div>
-            <button
+            <motion.button
               type="button"
               onClick={handleSave}
               disabled={!croppedPx || exporting}
-              className="shrink-0 flex items-center gap-2 glass-cta px-5 sm:px-6 h-10 sm:h-9 rounded-pill font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-sans cursor-pointer"
+              {...press}
+              className="relative shrink-0 flex items-center gap-2 glass-cta px-5 sm:px-6 h-10 sm:h-9 rounded-pill font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-sans cursor-pointer"
             >
-              {exporting ? (
-                <div className="w-4 h-4 border-2 border-[#0c0a09]/25 border-t-[#0c0a09] rounded-full animate-spin" />
-              ) : (
-                <Check size={16} weight="bold" />
-              )}
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.span
+                  key={exporting ? "busy" : "check"}
+                  {...pop}
+                  className="flex"
+                >
+                  {exporting ? (
+                    <div className="w-4 h-4 border-2 border-[#0c0a09]/25 border-t-[#0c0a09] rounded-full animate-spin" />
+                  ) : (
+                    <Check size={16} weight="bold" />
+                  )}
+                </motion.span>
+              </AnimatePresence>
               Save
-            </button>
+            </motion.button>
           </div>
 
           {/* Stage stays mounted across tabs so crop state survives; the
@@ -386,9 +410,15 @@ export default function MediaEditor({
                 )}
               >
                 {label}
-                {id === "adjust" && adjustmentsDirty && tab !== "adjust" && (
-                  <span className="absolute top-2 ml-1 inline-block h-1.5 w-1.5 rounded-pill glass-fill" />
-                )}
+                <AnimatePresence>
+                  {id === "adjust" && adjustmentsDirty && tab !== "adjust" && (
+                    <motion.span
+                      key="dirty-dot"
+                      {...pop}
+                      className="absolute top-2 ml-1 inline-block h-1.5 w-1.5 rounded-pill glass-fill"
+                    />
+                  )}
+                </AnimatePresence>
                 {tab === id && (
                   <motion.span
                     layoutId="ws-editor-tab"
@@ -406,8 +436,14 @@ export default function MediaEditor({
               pointer a second click lands on a slider instead of a tab
               (hit while testing). */}
           <div className="shrink-0 flex flex-col">
+            {/* Panels rise in with no exit, so a tab tap never waits for the
+                old panel to leave. */}
             {tab === "adjust" && (
-              <div className="shrink-0 px-3 sm:px-4 py-3 space-y-3 border-t glass-divider overflow-y-auto">
+              <motion.div
+                initial={swap.initial}
+                animate={swap.animate}
+                className="shrink-0 px-3 sm:px-4 py-3 space-y-3 border-t glass-divider overflow-y-auto"
+              >
                 <div className="space-y-2">
                   {ADJUSTMENT_SLIDERS.map(({ key, label }) => (
                     <div key={key} className="flex items-center gap-3">
@@ -448,10 +484,18 @@ export default function MediaEditor({
                   thumbUrl={thumbUrl}
                   active={doc.preset}
                   onSelect={selectPreset}
+                  cascade={!filtersSeenRef.current}
                 />
+                {/* initial={false}: already dirty when the panel opens, the
+                    button arrives with the panel; it only rises on its own
+                    when a change makes it appear. */}
+                <AnimatePresence initial={false}>
                 {adjustmentsDirty && (
-                  <button
+                  <motion.button
+                    key="reset"
                     type="button"
+                    initial={swap.initial}
+                    animate={swap.animate}
                     onClick={() =>
                       setDoc((d) => ({
                         ...d,
@@ -462,13 +506,18 @@ export default function MediaEditor({
                     className="text-[calc(13px*var(--ws-fs))] font-medium font-sans glass-ink-dim hover:glass-ink transition-colors cursor-pointer"
                   >
                     Reset adjustments
-                  </button>
+                  </motion.button>
                 )}
-              </div>
+                </AnimatePresence>
+              </motion.div>
             )}
 
             {tab === "alt" && (
-              <div className="shrink-0 px-3 sm:px-4 py-3 border-t glass-divider">
+              <motion.div
+                initial={swap.initial}
+                animate={swap.animate}
+                className="shrink-0 px-3 sm:px-4 py-3 border-t glass-divider"
+              >
                 <label
                   htmlFor="ws-editor-alt"
                   className="block text-[calc(11px*var(--ws-fs))] uppercase tracking-[1px] font-medium glass-ink-dim mb-1 font-sans"
@@ -485,10 +534,18 @@ export default function MediaEditor({
                   placeholder="Describe the image for people using screen readers"
                   className="w-full rounded-lg glass-input p-3 text-base sm:text-sm font-sans resize-none min-h-[72px]"
                 />
-              </div>
+              </motion.div>
             )}
 
-            <div
+            {/* Stays mounted (hidden) off-tab, so it rests at the swap's
+                start and rises the same way when Crop comes back. */}
+            <motion.div
+              initial={false}
+              animate={
+                tab === "crop"
+                  ? swap.animate
+                  : { ...swap.initial, transition: { duration: 0 } }
+              }
               className={clsx(
                 "shrink-0 px-3 sm:px-4 py-3 space-y-3 border-t glass-divider",
                 tab !== "crop" && "hidden",
@@ -507,31 +564,39 @@ export default function MediaEditor({
                         type="button"
                         onClick={() => selectAspect(id)}
                         className={clsx(
-                          "h-8 px-3 rounded-pill text-[calc(13px*var(--ws-fs))] font-medium font-sans transition-colors whitespace-nowrap cursor-pointer tabular-nums",
-                          doc.aspectId === id
-                            ? "glass-chip-active"
-                            : "glass-chip ",
+                          "relative h-8 px-3 rounded-pill text-[calc(13px*var(--ws-fs))] font-medium font-sans transition-colors whitespace-nowrap cursor-pointer tabular-nums",
+                          doc.aspectId === id ? "text-[#0c0a09]" : "glass-chip",
                         )}
                         aria-pressed={doc.aspectId === id}
                       >
-                        {label}
+                        {/* One white fill that slides to the chosen ratio. */}
+                        {doc.aspectId === id && (
+                          <motion.span
+                            layoutId={`${thumbId}-aspect`}
+                            transition={thumbSpring}
+                            className="pointer-events-none absolute inset-0 rounded-pill glass-chip-active"
+                          />
+                        )}
+                        <span className="relative">{label}</span>
                       </button>
                     ))}
                   </div>
                 )}
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <button
+                  <motion.button
                     type="button"
                     onClick={applyRotate}
                     aria-label="Rotate 90 degrees"
+                    {...press}
                     className="flex h-10 w-10 items-center justify-center rounded-pill glass-chip transition-colors cursor-pointer"
                   >
                     <ArrowClockwise size={17} weight="bold" />
-                  </button>
-                  <button
+                  </motion.button>
+                  <motion.button
                     type="button"
                     onClick={applyFlip}
                     aria-label="Flip horizontally"
+                    {...press}
                     className={clsx(
                       "flex h-10 w-10 items-center justify-center rounded-pill transition-colors cursor-pointer",
                       doc.flipH ? "glass-chip-active" : "glass-chip ",
@@ -539,7 +604,7 @@ export default function MediaEditor({
                     aria-pressed={doc.flipH}
                   >
                     <FlipHorizontal size={17} weight="bold" />
-                  </button>
+                  </motion.button>
                 </div>
               </div>
 
@@ -573,7 +638,7 @@ export default function MediaEditor({
  {readout ? `${readout.w} × ${readout.h}` : ""}
                 </span>
               </div>
-            </div>
+            </motion.div>
           </div>
         </motion.div>
       </div>

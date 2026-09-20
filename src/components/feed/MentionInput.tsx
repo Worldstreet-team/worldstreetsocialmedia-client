@@ -304,6 +304,15 @@ export const MentionInput = forwardRef<MentionInputHandle, MentionInputProps>(
 				tokenRange.deleteContents();
 
 				const badge = createBadge(user);
+				// The person's own pick lands with a pop; badges rebuilt from a
+				// restored draft (setText) do not. Raw DOM, so it is the CSS
+				// utility, dropped once played so a line split cannot replay it.
+				badge.classList.add("animate-pop");
+				badge.addEventListener(
+					"animationend",
+					() => badge.classList.remove("animate-pop"),
+					{ once: true },
+				);
 				tokenRange.insertNode(badge);
 
 				// A trailing space keeps the caret out of the badge and lets the

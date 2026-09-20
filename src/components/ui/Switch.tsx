@@ -1,6 +1,8 @@
 "use client";
 
 import clsx from "clsx";
+import { motion } from "framer-motion";
+import { snappySpring } from "@/lib/motion-presets";
 
 /**
  * The house switch: a track and a thumb, the shape people already know
@@ -52,12 +54,17 @@ export function Switch({
 				)}
 			>
 				{/* Thumb. Translate, never scale — the house forbids scale on
-				    hover, and a sliding thumb is the whole affordance. */}
-				<span
-					className={clsx(
-						"absolute top-[3px] block h-5 w-5 rounded-pill bg-page shadow-nav transition-[left] duration-200",
-						checked ? "left-[23px]" : "left-[3px]",
-					)}
+				    hover, and a sliding thumb is the whole affordance. A spring,
+				    not a bezier: a toggle gets flipped back mid-flight, and a
+				    spring turns round where a curve would restart. It rides
+				    `x`, not `left`, so the slide never touches layout.
+				    `initial={false}`: a switch that loads ON is on, it does not
+				    slide there. */}
+				<motion.span
+					initial={false}
+					animate={{ x: checked ? 20 : 0 }}
+					transition={snappySpring}
+					className="absolute left-[3px] top-[3px] block h-5 w-5 rounded-pill bg-page shadow-nav"
 				/>
 			</span>
 		</button>

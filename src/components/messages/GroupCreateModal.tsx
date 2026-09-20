@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Loader2, Search, Users } from "lucide-react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import {
 	OverlayHeader,
@@ -13,7 +13,9 @@ import {
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { useGatewayRead } from "@/hooks/useGateway";
+import { collapse, pop, staggerParentFast, swap } from "@/lib/motion-presets";
 import { postJsonDirect } from "@/lib/upload-direct";
+import { CascadeRow } from "./ConversationList";
 
 interface UserItem {
 	_id: string;
@@ -116,6 +118,22 @@ export function GroupCreateModal({
 
 	useOverlayDismiss(isOpen, onClose);
 
+	// The people cascade once per open; a search remounts rows and must cut.
+	// The delay lets the stale list a reopen paints for one frame pass
+	// without spending the cascade.
+	const cascadePlayed = useRef(false);
+	useEffect(() => {
+		if (!isOpen) {
+			cascadePlayed.current = false;
+			return;
+		}
+		if (loading || filtered.length === 0) return;
+		const id = window.setTimeout(() => {
+			cascadePlayed.current = true;
+		}, 400);
+		return () => window.clearTimeout(id);
+	}, [isOpen, loading, filtered.length]);
+
 	return (
 		<AnimatePresence>
 			{isOpen && (
@@ -139,24 +157,39 @@ export function GroupCreateModal({
 								/>
 							</div>
 
-							{selectedList.length > 0 && (
-								<div className="flex flex-wrap gap-1.5">
-									{selectedList.map((u) => (
-										<button
-											key={u._id}
-											type="button"
-											onClick={() => toggle(u)}
-											className="flex cursor-pointer items-center gap-1.5 rounded-pill bg-primary/5 py-1 pl-1 pr-2.5 font-sans text-[calc(12.5px*var(--ws-fs))] text-primary transition-colors hover:bg-primary/5"
-										>
-											<span className="relative h-6 w-6 overflow-hidden rounded-pill bg-raised">
-												<SafeAvatar src={u.avatar} eager />
-											</span>
-											{u.firstName || u.username}
-											<span className="text-subtle">×</span>
-										</button>
-									))}
-								</div>
-							)}
+							{/* The shelf opens for the first pick and folds for the
+							    last; each pick after that lands as a chip. The
+							    spacing moves inside (!mb-0 + pb-3) so the fold
+							    closes to nothing instead of leaving a gap. */}
+							<AnimatePresence initial={false}>
+								{selectedList.length > 0 && (
+									<motion.div
+										key="picked"
+										{...collapse}
+										className="!mb-0 overflow-hidden"
+									>
+										<div className="flex flex-wrap gap-1.5 pb-3">
+											<AnimatePresence initial={false}>
+												{selectedList.map((u) => (
+													<motion.button
+														key={u._id}
+														{...pop}
+														type="button"
+														onClick={() => toggle(u)}
+														className="flex cursor-pointer items-center gap-1.5 rounded-pill bg-primary/5 py-1 pl-1 pr-2.5 font-sans text-[calc(12.5px*var(--ws-fs))] text-primary transition-colors hover:bg-primary/5"
+													>
+														<span className="relative h-6 w-6 overflow-hidden rounded-pill bg-raised">
+															<SafeAvatar src={u.avatar} eager />
+														</span>
+														{u.firstName || u.username}
+														<span className="text-subtle">×</span>
+													</motion.button>
+												))}
+											</AnimatePresence>
+										</div>
+									</motion.div>
+								)}
+							</AnimatePresence>
 
 							<div className="relative">
 								<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" />
@@ -182,11 +215,16 @@ export function GroupCreateModal({
 										: "People you follow show up here"}
 								</p>
 							) : (
-								filtered.map((u) => {
+								<motion.div
+									variants={staggerParentFast}
+									initial={cascadePlayed.current ? false : "hidden"}
+									animate="show"
+								>
+								{filtered.map((u, i) => {
 									const on = !!selected[u._id];
 									return (
+										<CascadeRow key={u._id} index={i}>
 										<button
-											key={u._id}
 											type="button"
 											onClick={() => toggle(u)}
 											className="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-primary/5"
@@ -210,18 +248,26 @@ export function GroupCreateModal({
 													@{u.username}
 												</span>
 											</span>
-											<span
-												className={
-													on
-														? "flex h-6 w-6 shrink-0 items-center justify-center rounded-pill bg-brand text-brand-on"
-														: "h-6 w-6 shrink-0 rounded-pill border border-hairline"
-												}
-											>
-												{on && <Check className="h-4 w-4" />}
+											{/* The ring is always there; the filled disc
+											    lands over it (own action, so it may pop). */}
+											<span className="relative h-6 w-6 shrink-0 rounded-pill border border-hairline">
+												<AnimatePresence initial={false}>
+													{on && (
+														<motion.span
+															key="on"
+															{...pop}
+															className="absolute -inset-px flex items-center justify-center rounded-pill bg-brand text-brand-on"
+														>
+															<Check className="h-4 w-4" />
+														</motion.span>
+													)}
+												</AnimatePresence>
 											</span>
 										</button>
+										</CascadeRow>
 									);
-								})
+								})}
+								</motion.div>
 							)}
 						</div>
 
@@ -233,9 +279,24 @@ export function GroupCreateModal({
 								className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-pill bg-brand font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active disabled:opacity-50"
 							>
 								{creating && <Loader2 className="h-4 w-4 animate-spin" />}
-								{selectedList.length > 0
-									? `Create group · ${selectedList.length}`
-									: "Create group"}
+								{selectedList.length > 0 ? (
+									// One flex item, so the label keeps its own spacing;
+									// only the number rolls as people are picked.
+									<span className="relative">
+										{"Create group · "}
+										<AnimatePresence mode="popLayout" initial={false}>
+											<motion.span
+												key={selectedList.length}
+												{...swap}
+												className="inline-block tabular-nums"
+											>
+												{selectedList.length}
+											</motion.span>
+										</AnimatePresence>
+									</span>
+								) : (
+									"Create group"
+								)}
 							</button>
 						</div>
 					</OverlayPanel>

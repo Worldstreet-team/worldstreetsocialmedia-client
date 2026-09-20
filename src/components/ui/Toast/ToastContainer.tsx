@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence } from "framer-motion";
 import { Toast, ToastPosition } from "./ToastContext";
 import { ToastItem } from "./Toast";
 import clsx from "clsx";
@@ -26,6 +27,12 @@ const positionClasses: Record<ToastPosition, string> = {
 		"bottom-0 left-0 right-0 sm:left-auto items-stretch sm:items-end pb-nav md:pb-4",
 };
 
+/* Every position's container is always mounted (empty, click-through).
+   They used to exist only while they held a toast, which meant the LAST
+   toast took its container, and the AnimatePresence in it, away with it and
+   had nowhere to play an exit. */
+const POSITIONS = Object.keys(positionClasses) as ToastPosition[];
+
 export const ToastContainer = ({
 	toasts,
 	removeToast,
@@ -43,7 +50,7 @@ export const ToastContainer = ({
 
 	return (
 		<>
-			{(Object.keys(toastsByPosition) as ToastPosition[]).map((position) => (
+			{POSITIONS.map((position) => (
 				<div
 					key={position}
 					className={clsx(
@@ -51,9 +58,23 @@ export const ToastContainer = ({
 						positionClasses[position],
 					)}
 				>
-					{toastsByPosition[position].map((toast) => (
-						<ToastItem key={toast.id} toast={toast} removeToast={removeToast} />
-					))}
+					{/* popLayout lifts the leaving toast out of the column so the
+					    others close up at once (each glides: `layout` on the item).
+					    The anchors pin it to the corner the column hangs from,
+					    because the column resizes the moment it is lifted out. */}
+					<AnimatePresence
+						mode="popLayout"
+						anchorX={position.endsWith("right") ? "right" : "left"}
+						anchorY={position.startsWith("bottom") ? "bottom" : "top"}
+					>
+						{(toastsByPosition[position] ?? []).map((toast) => (
+							<ToastItem
+								key={toast.id}
+								toast={toast}
+								removeToast={removeToast}
+							/>
+						))}
+					</AnimatePresence>
 				</div>
 			))}
 		</>

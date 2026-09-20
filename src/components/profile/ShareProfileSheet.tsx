@@ -1,7 +1,7 @@
 "use client";
 
-import { AnimatePresence } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Search } from "lucide-react";
 import { RiLinkM, RiShareForwardFill } from "@remixicon/react";
 import clsx from "clsx";
@@ -19,6 +19,14 @@ import {
 	useOverlayDismiss,
 } from "@/components/ui/Overlay";
 import { useT } from "@/i18n/client";
+import {
+	pop,
+	press,
+	staggerParent,
+	staggerParentFast,
+	staggerPop,
+	swap,
+} from "@/lib/motion-presets";
 
 /** A thread the sheet can send into: DMs and groups alike. */
 interface ChatRow {
@@ -77,6 +85,9 @@ export function ShareProfileSheet({
 	const [busy, setBusy] = useState<Set<string>>(() => new Set());
 	const [copied, setCopied] = useState(false);
 	const [canSystemShare, setCanSystemShare] = useState(false);
+	// The faces rail cascades once per opening. Clearing a search remounts
+	// it, and that must not replay the entrance.
+	const railPlayedRef = useRef(false);
 
 	const url =
 		typeof window === "undefined"
@@ -91,6 +102,7 @@ export function ShareProfileSheet({
 	// Fresh state per opening: what was sent last time is not sent now.
 	useEffect(() => {
 		if (!open) return;
+		railPlayedRef.current = false;
 		setQ("");
 		setPeople([]);
 		setSent(new Set());
@@ -227,15 +239,27 @@ export function ShareProfileSheet({
 				: "cursor-pointer bg-primary/10 text-primary hover:bg-primary/15",
 			busy.has(key) && "opacity-60",
 		);
-	const sendPillCopy = (key: string) =>
-		sent.has(key) ? (
-			<>
-				<Check className="h-3.5 w-3.5" />
-				{t("share.sent")}
-			</>
-		) : (
-			t("share.send")
-		);
+	// Your own send: the label rolls over to "Sent".
+	const sendPillCopy = (key: string) => (
+		<span className="relative inline-flex justify-center">
+			<AnimatePresence mode="popLayout" initial={false}>
+				<motion.span
+					key={sent.has(key) ? "sent" : "send"}
+					{...swap}
+					className="inline-flex items-center gap-1"
+				>
+					{sent.has(key) ? (
+						<>
+							<Check className="h-3.5 w-3.5" />
+							{t("share.sent")}
+						</>
+					) : (
+						t("share.send")
+					)}
+				</motion.span>
+			</AnimatePresence>
+		</span>
+	);
 
 	return (
 		<AnimatePresence>
@@ -266,23 +290,34 @@ export function ShareProfileSheet({
 										{url.replace(/^https?:\/\//, "")}
 									</span>
 								</span>
-								<button
+								<motion.button
+									{...press}
 									type="button"
 									onClick={copy}
 									className={clsx(
-										"flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-pill px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-colors",
+										"flex h-9 shrink-0 cursor-pointer items-center rounded-pill px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-colors",
 										copied
 											? "bg-primary/10 text-primary"
 											: "bg-primary text-page hover:bg-muted",
 									)}
 								>
-									{copied ? (
-										<Check className="h-4 w-4" />
-									) : (
-										<RiLinkM size={16} />
-									)}
-									{copied ? t("share.copied") : t("share.copyLink")}
-								</button>
+									<span className="relative inline-flex justify-center">
+										<AnimatePresence mode="popLayout" initial={false}>
+											<motion.span
+												key={copied ? "copied" : "copy"}
+												{...swap}
+												className="inline-flex items-center gap-1.5"
+											>
+												{copied ? (
+													<Check className="h-4 w-4" />
+												) : (
+													<RiLinkM size={16} />
+												)}
+												{copied ? t("share.copied") : t("share.copyLink")}
+											</motion.span>
+										</AnimatePresence>
+									</span>
+								</motion.button>
 							</div>
 
 							{/* Into a chat. */}
@@ -374,10 +409,24 @@ export function ShareProfileSheet({
 										{t("share.noChats")}
 									</p>
 								) : (
-									<div className="-mx-4 mt-3 flex gap-1 overflow-x-auto px-3 pb-1 [scrollbar-width:none]">
+									<motion.div
+										variants={staggerParentFast}
+										initial={railPlayedRef.current ? false : "hidden"}
+										animate="show"
+										onAnimationComplete={() => {
+											railPlayedRef.current = true;
+										}}
+										className="-mx-4 mt-3 flex gap-1 overflow-x-auto px-3 pb-1 [scrollbar-width:none]"
+									>
 										{chats.slice(0, 16).map((c) => (
-											<button
+											// A wrapper carries the entrance: framer's inline
+											// opacity would pin the button's own busy fade.
+											<motion.div
 												key={c.id}
+												variants={staggerPop}
+												className="shrink-0"
+											>
+											<button
 												type="button"
 												aria-label={`${t("share.send")}: ${c.title}`}
 												onClick={() => sendInto(c.id, c.id)}
@@ -392,7 +441,15 @@ export function ShareProfileSheet({
 													<SafeAvatar src={c.avatar} />
 													{sent.has(c.id) && (
 														<span className="absolute inset-0 flex items-center justify-center bg-page/70 text-primary">
-															<Check className="h-6 w-6" />
+															{/* Your own send: the tick lands. No exit:
+															    nothing here sits in AnimatePresence. */}
+															<motion.span
+																initial={pop.initial}
+																animate={pop.animate}
+																className="flex"
+															>
+																<Check className="h-6 w-6" />
+															</motion.span>
 														</span>
 													)}
 												</span>
@@ -405,17 +462,26 @@ export function ShareProfileSheet({
 													{sent.has(c.id) ? t("share.sent") : c.title}
 												</span>
 											</button>
+											</motion.div>
 										))}
-									</div>
+									</motion.div>
 								)}
 							</section>
 
 							{/* Off the platform. */}
 							<section>
 								<h3 className={label13}>{t("share.moreWays")}</h3>
-								<div className="-mx-4 mt-3 flex gap-1 overflow-x-auto px-3 pb-1 [scrollbar-width:none]">
+								{/* Mounts with the sheet, so the targets cascade once
+								    per opening. */}
+								<motion.div
+									variants={staggerParent}
+									initial="hidden"
+									animate="show"
+									className="-mx-4 mt-3 flex gap-1 overflow-x-auto px-3 pb-1 [scrollbar-width:none]"
+								>
 									{canSystemShare && (
-										<button
+										<motion.button
+											variants={staggerPop}
 											type="button"
 											onClick={() => void sharePost({ url, text: shareText })}
 											className="flex w-[68px] shrink-0 cursor-pointer flex-col items-center gap-1.5 rounded-lg px-1 py-1.5 transition-colors hover:bg-primary/5"
@@ -426,11 +492,12 @@ export function ShareProfileSheet({
 											<span className="w-full truncate text-center font-sans text-[calc(12px*var(--ws-fs))] text-primary">
 												{t("share.otherApps")}
 											</span>
-										</button>
+										</motion.button>
 									)}
 									{SHARE_TARGETS.map((tgt) => (
-										<a
+										<motion.a
 											key={tgt.key}
+											variants={staggerPop}
 											href={tgt.href(url, shareText)}
 											target="_blank"
 											rel="noopener noreferrer"
@@ -442,9 +509,9 @@ export function ShareProfileSheet({
 											<span className="w-full truncate text-center font-sans text-[calc(12px*var(--ws-fs))] text-primary">
 												{tgt.label}
 											</span>
-										</a>
+										</motion.a>
 									))}
-								</div>
+								</motion.div>
 							</section>
 						</div>
 					</OverlayPanel>

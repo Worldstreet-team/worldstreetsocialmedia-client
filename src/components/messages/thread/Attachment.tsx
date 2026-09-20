@@ -2,8 +2,10 @@
 
 import clsx from "clsx";
 import { RiCloseLine, RiPlayFill, RiRestartLine } from "@remixicon/react";
-import { useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { thumbhashToDataURL } from "@/lib/media-meta";
+import { pop, press } from "@/lib/motion-presets";
 
 /**
  * A media tile that never fights the scroller.
@@ -47,6 +49,13 @@ export function Attachment({
 	const ratio =
 		width && height ? Math.min(2.2, Math.max(0.45, width / height)) : 1;
 	const placeholder = useMemo(() => thumbhashToDataURL(thumbhash), [thumbhash]);
+	// True once the tile has painted: Retry lands only when an upload fails
+	// in front of you, not when a failed tile scrolls back into the
+	// virtualised thread.
+	const liveRef = useRef(false);
+	useEffect(() => {
+		liveRef.current = true;
+	}, []);
 	const uploading = isTemp && !failed && typeof uploadPct === "number";
 	// A GIF floats bare (owner pick): no frame radius, no tint — the artwork
 	// is the message.
@@ -134,14 +143,17 @@ export function Attachment({
 			)}
 			{failed && (
 				<span className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-scrim/70">
-					<button
+					<motion.button
 						type="button"
+						initial={liveRef.current ? pop.initial : false}
+						animate={pop.animate}
+						{...press}
 						onClick={onRetry}
 						className="flex cursor-pointer items-center gap-1.5 rounded-pill bg-raised px-3.5 py-1.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-primary/5"
 					>
 						<RiRestartLine size={14} />
 						Retry
-					</button>
+					</motion.button>
 					<button
 						type="button"
 						onClick={onCancelUpload}

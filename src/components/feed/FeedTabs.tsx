@@ -10,6 +10,11 @@ import { feedTabAtom } from "@/store/ui.atom";
 import { getCommunitiesAction } from "@/lib/community.actions";
 import { useT } from "@/i18n/client";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import { staggerItem, staggerParentFast } from "@/lib/motion-presets";
+
+/* Once per app session. The chips arrive after a fetch that every visit to
+   the feed repeats; they cascade the first time and are simply there after. */
+let chipsIntroPlayed = false;
 
 interface CommunityChip {
 	id: string;
@@ -51,6 +56,10 @@ export function FeedTabs() {
 			cancelled = true;
 		};
 	}, []);
+
+	useEffect(() => {
+		if (myCommunities.length > 0) chipsIntroPlayed = true;
+	}, [myCommunities.length]);
 
 	const chip =
 		"relative flex items-center gap-2 h-11 px-4 rounded-pill font-sans text-[calc(15.5px*var(--ws-fs))] whitespace-nowrap transition-colors shrink-0";
@@ -121,24 +130,38 @@ export function FeedTabs() {
 				{/* YOUR communities, by name. The generic link only appears when
 				    you haven't joined any yet. */}
 				{myCommunities.length > 0 ? (
-					myCommunities.map((c) => (
-						<Link
-							key={c.id}
-							href={`/communities/${c.slug}`}
-							className={clsx(chip, idle)}
-						>
-							<span className="relative w-[18px] h-[18px] rounded-pill overflow-hidden bg-raised shrink-0 flex items-center justify-center">
-								{c.avatar ? (
-									<SafeAvatar src={c.avatar} className="object-cover" />
-								) : (
-									<span className="text-[calc(10px*var(--ws-fs))] font-bold text-subtle font-sans uppercase">
-										{c.name.slice(0, 1)}
+					// `contents`: the wrapper only carries the cascade, the chips
+					// stay direct flex children of the scroller.
+					<motion.div
+						variants={staggerParentFast}
+						initial={chipsIntroPlayed ? false : "hidden"}
+						animate="show"
+						className="contents"
+					>
+						{myCommunities.map((c) => (
+							<motion.div
+								key={c.id}
+								variants={staggerItem}
+								className="flex shrink-0"
+							>
+								<Link
+									href={`/communities/${c.slug}`}
+									className={clsx(chip, idle)}
+								>
+									<span className="relative w-[18px] h-[18px] rounded-pill overflow-hidden bg-raised shrink-0 flex items-center justify-center">
+										{c.avatar ? (
+											<SafeAvatar src={c.avatar} className="object-cover" />
+										) : (
+											<span className="text-[calc(10px*var(--ws-fs))] font-bold text-subtle font-sans uppercase">
+												{c.name.slice(0, 1)}
+											</span>
+										)}
 									</span>
-								)}
-							</span>
-							{c.name}
-						</Link>
-					))
+									{c.name}
+								</Link>
+							</motion.div>
+						))}
+					</motion.div>
 				) : (
 					<Link href="/communities" className={clsx(chip, idle)}>
 						<UsersThree size={14} weight="duotone" />

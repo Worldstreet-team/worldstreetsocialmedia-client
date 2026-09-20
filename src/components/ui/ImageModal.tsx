@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { OverlayHeader, useOverlayDismiss } from "@/components/ui/Overlay";
 import { useImageZoom } from "@/hooks/useImageZoom";
+import { press, swap } from "@/lib/motion-presets";
 
 interface ImageModalProps {
 	isOpen: boolean;
@@ -257,24 +258,33 @@ export default function ImageModal({
 						style={{ opacity: Math.max(0.3, 1 - pullY / 480) }}
 					/>
 					{/* Navigation Arrows */}
+					{/* The wrapper holds the position and the button takes the
+					    press: framer owns the button's inline transform, and the
+					    centring translate must not share an element with it. */}
 					{images.length > 1 && (
 						<>
-							<button
-								type="button"
-								aria-label="Previous image"
-								onClick={handlePrev}
-								className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
-							>
-								<ChevronLeft className="w-6 h-6" />
-							</button>
-							<button
-								type="button"
-								aria-label="Next image"
-								onClick={handleNext}
-								className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
-							>
-								<ChevronRight className="w-6 h-6" />
-							</button>
+							<div className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-10">
+								<motion.button
+									type="button"
+									aria-label="Previous image"
+									onClick={handlePrev}
+									{...press}
+									className="w-12 h-12 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
+								>
+									<ChevronLeft className="w-6 h-6" />
+								</motion.button>
+							</div>
+							<div className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-10">
+								<motion.button
+									type="button"
+									aria-label="Next image"
+									onClick={handleNext}
+									{...press}
+									className="w-12 h-12 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
+								>
+									<ChevronRight className="w-6 h-6" />
+								</motion.button>
+							</div>
 						</>
 					)}
 
@@ -332,8 +342,20 @@ export default function ImageModal({
 
 						{/* Image Counter */}
 						{images.length > 1 && (
-							<div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-raised/90 text-primary px-3 py-1 rounded-pill text-[calc(13px*var(--ws-fs))] font-medium font-sans tabular-nums border border-hairline">
-								{currentIndex + 1} / {images.length}
+							<div className="absolute bottom-6 left-1/2 -translate-x-1/2 overflow-hidden bg-raised/90 text-primary px-3 py-1 rounded-pill text-[calc(13px*var(--ws-fs))] font-medium font-sans tabular-nums border border-hairline">
+								{/* Only the index rolls; the total stands still. */}
+								<span className="relative inline-flex">
+									<AnimatePresence mode="popLayout" initial={false}>
+										<motion.span
+											key={currentIndex}
+											{...swap}
+											className="inline-block"
+										>
+											{currentIndex + 1}
+										</motion.span>
+									</AnimatePresence>
+								</span>{" "}
+								/ {images.length}
 							</div>
 						)}
 					</div>

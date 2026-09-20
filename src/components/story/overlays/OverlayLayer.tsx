@@ -2,6 +2,7 @@
 
 import { ArrowsOutSimple } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
 import { Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import TextBlock from "@/components/story/overlays/TextBlock";
@@ -17,6 +18,7 @@ import {
   PILL_PAD_Y,
   TEXT_SIZE_FRACTION,
 } from "@/lib/editor/overlays";
+import { pop } from "@/lib/motion-presets";
 
 interface OverlayLayerProps {
   overlays: Overlay[];
@@ -392,15 +394,20 @@ export default function OverlayLayer({
         />
       )}
       {overlays.map(renderOverlay)}
-      {draggingId && (
-        <div
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 flex h-12 w-12 items-center justify-center rounded-pill bg-scrim text-primary transition-colors"
-          style={overTrash ? { color: "#EF4444" } : undefined}
-          aria-hidden
-        >
-          <Trash2 className="w-5 h-5" />
-        </div>
-      )}
+      <AnimatePresence>
+        {draggingId && (
+          // glass-ink, not text-primary: the canvas is dark in both themes.
+          <motion.div
+            key="trash"
+            {...pop}
+            className="absolute bottom-8 left-1/2 -translate-x-1/2 flex h-12 w-12 items-center justify-center rounded-pill bg-scrim glass-ink transition-colors"
+            style={overTrash ? { color: "#EF4444" } : undefined}
+            aria-hidden
+          >
+            <Trash2 className="w-5 h-5" />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

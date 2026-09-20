@@ -15,7 +15,7 @@ import {
   X,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { motion, useReducedMotionConfig } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotionConfig } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Cropper, { type Area } from "react-easy-crop";
 import "react-easy-crop/react-easy-crop.css";
@@ -67,6 +67,15 @@ import {
   storyCanvasCss,
 } from "@/lib/editor/storyBackgrounds";
 import { renderVoiceVideo, type VoiceTake } from "@/lib/editor/voiceRender";
+import {
+  collapse,
+  pop,
+  press,
+  snappySpring,
+  staggerItem,
+  staggerParentFast,
+  swap,
+} from "@/lib/motion-presets";
 import { postFormDirect } from "@/lib/upload-direct";
 
 type ToolMode = "none" | "text" | "sticker" | "draw";
@@ -121,7 +130,7 @@ function DockSection({
   label,
   children,
 }: {
-  label: string;
+  label: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -129,6 +138,22 @@ function DockSection({
       <h3 className="glass-eyebrow font-sans">{label}</h3>
       {children}
     </section>
+  );
+}
+
+// A dock section that opens and closes. The dock spaces its sections with
+// gap-5; the negative margin and inner padding cancel that gap so a closed
+// section leaves no 20px ghost. The side bleed keeps the filter strip's own
+// -mx-1 from being clipped. shrink-0: overflow-hidden drops a flex item's
+// min-height to 0, and the dock must scroll rather than squash a section.
+function DockReveal({ children }: { children: React.ReactNode }) {
+  return (
+    <motion.div
+      {...collapse}
+      className="-mx-1 -mb-5 shrink-0 overflow-hidden px-1"
+    >
+      <div className="pb-5">{children}</div>
+    </motion.div>
   );
 }
 
@@ -795,15 +820,16 @@ export default function StoryStudio({
           onClick: () => setMode("draw"),
         },
       ].map((tool) => (
-        <button
+        <motion.button
           key={tool.label}
           type="button"
           onClick={tool.onClick}
           aria-label={tool.label}
+          {...press}
           className="flex h-10 w-10 items-center justify-center rounded-pill glass-chip-canvas backdrop-blur-md backdrop-saturate-150 transition-colors cursor-pointer"
         >
           {tool.icon}
-        </button>
+        </motion.button>
       ))}
     </div>
   );
@@ -824,6 +850,7 @@ export default function StoryStudio({
 
   const stickerTrayEl = (
     <StickerTray
+      key="sticker-tray"
       onAddCashtag={(symbol) => {
         addOverlay({
           kind: "cashtag",
@@ -909,10 +936,11 @@ export default function StoryStudio({
 
       {mode === "none" && !isVideo && toolRail}
       {mode === "none" && isVideo && (
-        <button
+        <motion.button
           type="button"
           onClick={() => (kind === "voice" ? setFile(null) : setTrimOpen(true))}
           aria-label={kind === "voice" ? "Record again" : "Trim video"}
+          {...press}
           className="absolute top-3 right-3 flex items-center gap-2 h-10 px-4 rounded-pill glass-chip-canvas backdrop-blur-md backdrop-saturate-150 transition-colors cursor-pointer font-sans text-[calc(13px*var(--ws-fs))] font-semibold"
         >
           {kind === "voice" ? (
@@ -921,11 +949,11 @@ export default function StoryStudio({
             <Scissors size={15} weight="bold" />
           )}
           {kind === "voice" ? "Record again" : "Trim"}
-        </button>
+        </motion.button>
       )}
 
       {mode === "text" && textToolEl}
-      {mode === "sticker" && stickerTrayEl}
+      <AnimatePresence>{mode === "sticker" && stickerTrayEl}</AnimatePresence>
     </div>
   ) : kind === "text" ? (
     <div
@@ -963,7 +991,7 @@ export default function StoryStudio({
         </button>
       )}
       {mode === "text" && textToolEl}
-      {mode === "sticker" && stickerTrayEl}
+      <AnimatePresence>{mode === "sticker" && stickerTrayEl}</AnimatePresence>
     </div>
   ) : kind === "voice" ? (
     <div ref={stageRef} className={clsx(STAGE_FRAME, "bg-[#141110]")}>
@@ -1006,18 +1034,29 @@ export default function StoryStudio({
           then the photographic backdrops. Selection is borderless: the
           chosen tile sits at full strength with a check badge while the
           rest recede. */}
-      <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] lg:grid lg:grid-cols-3 lg:overflow-visible">
+      <motion.div
+        variants={staggerParentFast}
+        initial="hidden"
+        animate="show"
+        className="flex gap-2 overflow-x-auto [scrollbar-width:none] lg:grid lg:grid-cols-3 lg:overflow-visible"
+      >
         {STORY_CANVASES.map((option) => {
           const active = bg.id === option.id;
           return (
-            <button
+            // The cascade rides a wrapper: the tile's own opacity is its
+            // selected / receded state and has to stay with the class.
+            <motion.div
               key={option.id}
+              variants={staggerItem}
+              className="shrink-0"
+            >
+            <button
               type="button"
               onClick={() => applyBackground(option)}
               aria-label={option.label}
               aria-pressed={active}
               className={clsx(
-                "relative h-16 w-14 shrink-0 lg:w-auto rounded-[10px] overflow-hidden cursor-pointer transition-opacity",
+                "relative block h-16 w-14 lg:w-full rounded-[10px] overflow-hidden cursor-pointer transition-opacity",
                 active ? "opacity-100" : "opacity-60 hover:opacity-90",
               )}
               style={
@@ -1035,42 +1074,71 @@ export default function StoryStudio({
                   className="absolute inset-0 h-full w-full object-cover bg-[#171412]"
                 />
               )}
-              {active && (
-                <span
-                  className={clsx(
-                    "absolute bottom-1 right-1 flex h-5 w-5 items-center justify-center rounded-pill",
-                    option.ink === "dark"
-                      ? "bg-[#0c0a09] text-[#fafaf9]"
-                      : "bg-[#fafaf9] text-[#0c0a09]",
-                  )}
-                >
-                  <Check size={11} weight="bold" />
-                </span>
-              )}
+              {/* initial={false}: the check lands on a choice, not on open. */}
+              <AnimatePresence initial={false}>
+                {active && (
+                  <motion.span
+                    key="check"
+                    {...pop}
+                    className={clsx(
+                      "absolute bottom-1 right-1 flex h-5 w-5 items-center justify-center rounded-pill",
+                      option.ink === "dark"
+                        ? "bg-[#0c0a09] text-[#fafaf9]"
+                        : "bg-[#fafaf9] text-[#0c0a09]",
+                    )}
+                  >
+                    <Check size={11} weight="bold" />
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </button>
+            </motion.div>
           );
         })}
-      </div>
+      </motion.div>
     </DockSection>
   );
 
   const dock = (
     <>
-      {showFilters && (
-        <DockSection label="Filter">
-          <PresetCarousel
-            thumbUrl={thumbUrl}
-            active={preset}
-            onSelect={setPreset}
-          />
-        </DockSection>
-      )}
+      {/* initial={false} on each: a section that is there when the studio
+          opens arrives with the dock; only a later change unfolds. */}
+      <AnimatePresence initial={false}>
+        {showFilters && (
+          <DockReveal key="filter">
+            <DockSection label="Filter">
+              <PresetCarousel
+                thumbUrl={thumbUrl}
+                active={preset}
+                onSelect={setPreset}
+              />
+            </DockSection>
+          </DockReveal>
+        )}
+      </AnimatePresence>
 
       {showCanvasPicker && canvasPicker}
 
       {kind === "media" && slides.length > 0 && (
         <DockSection
-          label={slides.length > 1 ? `Slides · ${slides.length}` : "Slides"}
+          label={
+            slides.length > 1 ? (
+              <>
+                Slides ·{" "}
+                <AnimatePresence mode="popLayout" initial={false}>
+                  <motion.span
+                    key={slides.length}
+                    {...swap}
+                    className="inline-block tabular-nums"
+                  >
+                    {slides.length}
+                  </motion.span>
+                </AnimatePresence>
+              </>
+            ) : (
+              "Slides"
+            )
+          }
         >
           {/* Every slide is directly editable: tap a tile to load it into
               the stage with its crop, filter and decorations intact. */}
@@ -1078,8 +1146,13 @@ export default function StoryStudio({
             {slides.map((slide, i) => {
               const active = slide.id === activeId;
               return (
-                <div
+                // Keyed by id, so a tile rises once when it is added and
+                // never again on a slide switch. No layout: the dock scrolls.
+                <motion.div
                   key={slide.id}
+                  variants={staggerItem}
+                  initial="hidden"
+                  animate="show"
                   className="relative aspect-[9/16] rounded-[10px] overflow-hidden group/slide"
                 >
                   <button
@@ -1132,7 +1205,7 @@ export default function StoryStudio({
                   >
                     <X size={10} weight="bold" />
                   </button>
-                </div>
+                </motion.div>
               );
             })}
             <button
@@ -1148,7 +1221,9 @@ export default function StoryStudio({
         </DockSection>
       )}
 
+      <AnimatePresence initial={false}>
       {showCaption && (
+        <DockReveal key="caption">
         <DockSection
           label={
             kind === "media" && slides.length > 1
@@ -1195,11 +1270,12 @@ export default function StoryStudio({
                 allowSave ? "bg-brand" : "bg-[#fafaf9]/20",
               )}
             >
-              <span
-                className={clsx(
-                  "absolute top-0.5 h-4 w-4 rounded-pill bg-[#fafaf9] transition-all",
-                  allowSave ? "left-[18px]" : "left-0.5",
-                )}
+              {/* Slides on a transform, not on `left`. */}
+              <motion.span
+                initial={false}
+                animate={{ x: allowSave ? 16 : 0 }}
+                transition={snappySpring}
+                className="absolute top-0.5 left-0.5 h-4 w-4 rounded-pill bg-[#fafaf9]"
               />
             </span>
             <span className="min-w-0">
@@ -1226,11 +1302,12 @@ export default function StoryStudio({
                 watermarkOn ? "bg-brand" : "bg-[#fafaf9]/20",
               )}
             >
-              <span
-                className={clsx(
-                  "absolute top-0.5 h-4 w-4 rounded-pill bg-[#fafaf9] transition-all",
-                  watermarkOn ? "left-[18px]" : "left-0.5",
-                )}
+              {/* Slides on a transform, not on `left`. */}
+              <motion.span
+                initial={false}
+                animate={{ x: watermarkOn ? 16 : 0 }}
+                transition={snappySpring}
+                className="absolute top-0.5 left-0.5 h-4 w-4 rounded-pill bg-[#fafaf9]"
               />
             </span>
             <span className="min-w-0">
@@ -1242,16 +1319,28 @@ export default function StoryStudio({
               </span>
             </span>
           </button>
-          {watermarkOn && (
-            <input
-              value={watermarkText}
-              onChange={(e) => setWatermarkText(e.target.value.slice(0, 40))}
-              placeholder="Watermark text (default: your @handle)"
-              className="mt-2 h-10 w-full rounded-xl glass-input px-3 font-sans text-[calc(12.5px*var(--ws-fs))] outline-none placeholder:glass-ink-faint"
-            />
-          )}
+          <AnimatePresence initial={false}>
+            {watermarkOn && (
+              <motion.div
+                key="watermark-text"
+                {...collapse}
+                className="overflow-hidden"
+              >
+                <input
+                  value={watermarkText}
+                  onChange={(e) =>
+                    setWatermarkText(e.target.value.slice(0, 40))
+                  }
+                  placeholder="Watermark text (default: your @handle)"
+                  className="mt-2 h-10 w-full rounded-xl glass-input px-3 font-sans text-[calc(12.5px*var(--ws-fs))] outline-none placeholder:glass-ink-faint"
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </DockSection>
+        </DockReveal>
       )}
+      </AnimatePresence>
 
       <div className="mt-auto space-y-2 pt-1">
         {kind === "media" && slides.length === 0 ? (
@@ -1275,22 +1364,50 @@ export default function StoryStudio({
             ) : (
               <PaperPlaneTilt size={16} weight="bold" />
             )}
-            {posting && kind === "voice" && !postLabel
-              ? `Composing ${Math.round(renderPct * 100)}%`
-              : posting && postLabel
-                ? postLabel
-                : kind === "media" && slides.length > 1
-                  ? `Share ${slides.length} slides`
-                  : "Share to your story"}
+            {/* Keyed by phase, never by the percent: the number ticks in
+                place and only a change of state swaps the label. */}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={
+                  posting && kind === "voice" && !postLabel
+                    ? "composing"
+                    : posting && postLabel
+                      ? "posting"
+                      : "share"
+                }
+                {...swap}
+                className="tabular-nums"
+              >
+                {posting && kind === "voice" && !postLabel
+                  ? `Composing ${Math.round(renderPct * 100)}%`
+                  : posting && postLabel
+                    ? postLabel
+                    : kind === "media" && slides.length > 1
+                      ? `Share ${slides.length} slides`
+                      : "Share to your story"}
+              </motion.span>
+            </AnimatePresence>
           </button>
         )}
-        <p className="text-center font-sans text-[calc(11px*var(--ws-fs))] glass-ink-faint">
-          {kind === "voice" && !take
-            ? "Record a note to continue"
-            : kind === "voice" && posting
-              ? "Composing your voice note in real time"
-              : "Disappears after 24 hours"}
-        </p>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.p
+            key={
+              kind === "voice" && !take
+                ? "record"
+                : kind === "voice" && posting
+                  ? "composing"
+                  : "expiry"
+            }
+            {...swap}
+            className="text-center font-sans text-[calc(11px*var(--ws-fs))] glass-ink-faint"
+          >
+            {kind === "voice" && !take
+              ? "Record a note to continue"
+              : kind === "voice" && posting
+                ? "Composing your voice note in real time"
+                : "Disappears after 24 hours"}
+          </motion.p>
+        </AnimatePresence>
       </div>
     </>
   );

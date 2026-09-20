@@ -2,12 +2,19 @@
 
 import { ArrowUUpLeft, Check, Eraser, Trash } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
   STROKE_COLORS,
   STROKE_WIDTH_FRACTION,
   type Stroke,
 } from "@/lib/editor/overlays";
+import {
+  menuStagger,
+  pop,
+  staggerPop,
+  thumbSpring,
+} from "@/lib/motion-presets";
 
 interface DrawLayerProps {
   strokes: Stroke[];
@@ -48,6 +55,8 @@ export default function DrawLayer({
   const [color, setColor] = useState(STROKE_COLORS[0]);
   const [nib, setNib] = useState<(typeof NIBS)[number]["id"]>("medium");
   const [erasing, setErasing] = useState(false);
+  // Per instance: two studios must never share one sliding fill.
+  const thumbId = useId();
   const factor = NIBS.find((n) => n.id === nib)?.factor ?? 1;
 
   const redraw = useCallback(() => {
@@ -146,8 +155,13 @@ export default function DrawLayer({
           onPointerCancel={handlePointerUp}
         />
       </div>
+      <AnimatePresence>
       {active && (
-        <div className="absolute inset-x-0 bottom-0 z-20 space-y-1.5 px-3 py-2 pb-safe">
+        <motion.div
+          key="draw-tools"
+          {...menuStagger("bottom")}
+          className="absolute inset-x-0 bottom-0 z-20 space-y-1.5 px-3 py-2 pb-safe"
+        >
           {/* Nibs — each dot is drawn at its own true relative weight. */}
           <div className="flex items-center justify-center gap-1">
             {NIBS.map((option) => {
@@ -163,12 +177,21 @@ export default function DrawLayer({
                   aria-label={`${option.label} nib`}
                   aria-pressed={on}
                   className={clsx(
-                    "flex h-9 w-9 items-center justify-center rounded-pill transition-colors cursor-pointer",
-                    on ? "glass-chip-active" : "glass-chip backdrop-blur-md",
+                    "relative flex h-9 w-9 items-center justify-center rounded-pill transition-colors cursor-pointer",
+                    !on && "glass-chip backdrop-blur-md",
                   )}
                 >
+                  {/* One white fill shared by the nibs and the eraser, so
+                      it slides to the tool that was picked. */}
+                  {on && (
+                    <motion.span
+                      layoutId={`${thumbId}-tool`}
+                      transition={thumbSpring}
+                      className="pointer-events-none absolute inset-0 rounded-pill glass-chip-active"
+                    />
+                  )}
                   <span
-                    className="block rounded-pill"
+                    className="relative block rounded-pill"
                     style={{
                       width: Math.min(20, 5 + option.factor * 3.4),
                       height: Math.min(20, 5 + option.factor * 3.4),
@@ -185,11 +208,18 @@ export default function DrawLayer({
               aria-label="Eraser"
               aria-pressed={erasing}
               className={clsx(
-                "flex h-9 w-9 items-center justify-center rounded-pill transition-colors cursor-pointer",
-                erasing ? "glass-chip-active" : "glass-chip backdrop-blur-md",
+                "relative flex h-9 w-9 items-center justify-center rounded-pill transition-colors cursor-pointer",
+                erasing ? "text-[#0c0a09]" : "glass-chip backdrop-blur-md",
               )}
             >
-              <Eraser size={15} weight="bold" />
+              {erasing && (
+                <motion.span
+                  layoutId={`${thumbId}-tool`}
+                  transition={thumbSpring}
+                  className="pointer-events-none absolute inset-0 rounded-pill glass-chip-active"
+                />
+              )}
+              <Eraser size={15} weight="bold" className="relative" />
             </button>
           </div>
 
@@ -212,20 +242,27 @@ export default function DrawLayer({
                       : "opacity-55 hover:opacity-90",
                   )}
                 >
-                  <span
+                  {/* The cascade rides the dot: the button's opacity is its
+                      selected / receded state. */}
+                  <motion.span
+                    variants={staggerPop}
                     className="flex h-6 w-6 items-center justify-center rounded-pill shadow-[0_2px_10px_rgba(0,0,0,0.55)]"
                     style={{ background: c }}
                   >
-                    {color === c && !erasing && (
-                      <Check
-                        size={11}
-                        weight="bold"
-                        style={{
-                          color: c === "#0C0A09" ? "#fafaf9" : "#0c0a09",
-                        }}
-                      />
-                    )}
-                  </span>
+                    <AnimatePresence initial={false}>
+                      {color === c && !erasing && (
+                        <motion.span key="check" {...pop} className="flex">
+                          <Check
+                            size={11}
+                            weight="bold"
+                            style={{
+                              color: c === "#0C0A09" ? "#fafaf9" : "#0c0a09",
+                            }}
+                          />
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </motion.span>
                 </button>
               ))}
             </div>
@@ -258,8 +295,9 @@ export default function DrawLayer({
               </button>
             </div>
           </div>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </>
   );
 }

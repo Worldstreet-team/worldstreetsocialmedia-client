@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { formatCompact as fmt } from "@/lib/utils";
 import { resolveCategoryLabel } from "@/lib/categories";
 import { useT } from "@/i18n/client";
+import { press, swap } from "@/lib/motion-presets";
 
 export interface DiscoverCommunity {
   id: string;
@@ -57,8 +59,13 @@ export function DiscoverRow({
           {row.name}
         </Link>
         <span className="font-sans text-[calc(13px*var(--ws-fs))] text-muted">
-          <span className="font-semibold tabular-nums text-primary">
-            {fmt(row.membersCount)}
+          {/* Rolls with the optimistic join or leave; still on first paint. */}
+          <span className="relative inline-flex overflow-hidden align-bottom font-semibold tabular-nums text-primary">
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.span key={row.membersCount} {...swap} className="inline-block">
+                {fmt(row.membersCount)}
+              </motion.span>
+            </AnimatePresence>
           </span>{" "}
           {t("community.members")}
         </span>
@@ -82,9 +89,10 @@ export function DiscoverRow({
         )}
       </div>
 
-      <button
+      <motion.button
         type="button"
         onClick={() => onToggle(row)}
+        {...press}
         className={clsx(
           "h-8 shrink-0 cursor-pointer self-center rounded-pill px-3.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
           row.joined
@@ -92,8 +100,16 @@ export function DiscoverRow({
             : "bg-primary text-page hover:bg-muted",
         )}
       >
-        {row.joined ? t("community.joined") : t("community.join")}
-      </button>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.span
+            key={row.joined ? "joined" : "join"}
+            {...swap}
+            className="block"
+          >
+            {row.joined ? t("community.joined") : t("community.join")}
+          </motion.span>
+        </AnimatePresence>
+      </motion.button>
     </div>
   );
 }

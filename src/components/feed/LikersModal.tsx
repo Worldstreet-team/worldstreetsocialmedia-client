@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
 	OverlayHeader,
 	OverlayPanel,
@@ -13,6 +13,11 @@ import {
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { useGatewayRead } from "@/hooks/useGateway";
+import { press, staggerItem, staggerParentFast } from "@/lib/motion-presets";
+
+/* Only the rows the sheet can show at once cascade. Everything past them,
+   and every later page (a page is 50), is simply there. */
+const CASCADE_ROWS = 10;
 
 interface Liker {
 	_id: string;
@@ -92,45 +97,56 @@ export function LikersModal({
 							No likes yet.
 						</p>
 					) : (
-						rows.map((u) => (
-							<Link
-								key={u._id}
-								href={`/profile/${u.username}`}
-								onClick={onClose}
-								className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-raised/50"
-							>
-								<span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-pill bg-raised">
-									<SafeAvatar src={u.avatar} eager />
-								</span>
-								<span className="min-w-0 flex-1">
-									<span className="flex items-center gap-1.5">
-										<span className="truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
-											{[u.firstName, u.lastName]
-												.filter(Boolean)
-												.join(" ") || u.username}
+						<motion.div
+							variants={staggerParentFast}
+							initial="hidden"
+							animate="show"
+						>
+							{rows.map((u, i) => (
+								<motion.div
+									key={u._id}
+									variants={i < CASCADE_ROWS ? staggerItem : undefined}
+								>
+									<Link
+										href={`/profile/${u.username}`}
+										onClick={onClose}
+										className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-raised/50"
+									>
+										<span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-pill bg-raised">
+											<SafeAvatar src={u.avatar} eager />
 										</span>
-										<UserBadges
-											isVerified={u.isVerified}
-											verification={u.verification}
-											badges={u.badges}
-											size={13}
-										/>
-									</span>
-									<span className="block truncate font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle">
-										@{u.username}
-									</span>
-								</span>
-							</Link>
-						))
+										<span className="min-w-0 flex-1">
+											<span className="flex items-center gap-1.5">
+												<span className="truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
+													{[u.firstName, u.lastName]
+														.filter(Boolean)
+														.join(" ") || u.username}
+												</span>
+												<UserBadges
+													isVerified={u.isVerified}
+													verification={u.verification}
+													badges={u.badges}
+													size={13}
+												/>
+											</span>
+											<span className="block truncate font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle">
+												@{u.username}
+											</span>
+										</span>
+									</Link>
+								</motion.div>
+							))}
+						</motion.div>
 					)}
 					{hasMore && (
-						<button
+						<motion.button
+							{...press}
 							type="button"
 							onClick={() => void load(rows.length)}
 							className="mx-auto my-2 flex h-9 cursor-pointer items-center rounded-pill bg-raised px-4 font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-chip"
 						>
 							Show more
-						</button>
+						</motion.button>
 					)}
 				</div>
 			</OverlayPanel>

@@ -6,8 +6,10 @@ import {
   ProhibitInset,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useT } from "@/i18n/client";
+import { menuStagger, staggerItem } from "@/lib/motion-presets";
 import type { SpaceRow } from "@/components/voice/SpaceCard";
 
 /**
@@ -91,33 +93,39 @@ export default function HostSpaceMenu({
         <DotsThree size={20} weight="bold" />
       </button>
 
-      {open && (
-        <div
-          role="menu"
-          className="absolute right-0 bottom-full z-dropdown mb-2 w-[184px] overflow-hidden rounded-xl border border-hairline bg-surface py-1 shadow-nav"
-        >
-          {items.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setOpen(false);
-                item.run();
-              }}
-              className={clsx(
-                "flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors cursor-pointer",
-                item.danger
-                  ? "text-danger hover:bg-raised"
-                  : "text-primary hover:bg-raised",
-              )}
-            >
-              <item.icon size={15} weight="bold" />
-              {item.label}
-            </button>
-          ))}
-        </div>
-      )}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            key="host-menu"
+            role="menu"
+            // Opens upward from the overflow button, so it unfolds from there.
+            {...menuStagger("bottom-right")}
+            className="absolute right-0 bottom-full z-dropdown mb-2 w-[184px] overflow-hidden rounded-xl border border-hairline bg-surface py-1 shadow-nav"
+          >
+            {items.map((item) => (
+              <motion.button
+                key={item.id}
+                variants={staggerItem}
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setOpen(false);
+                  item.run();
+                }}
+                className={clsx(
+                  "flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors cursor-pointer",
+                  item.danger
+                    ? "text-danger hover:bg-raised"
+                    : "text-primary hover:bg-raised",
+                )}
+              >
+                <item.icon size={15} weight="bold" />
+                {item.label}
+              </motion.button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

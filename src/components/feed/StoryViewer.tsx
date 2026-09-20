@@ -20,6 +20,15 @@ import { useAtomValue } from "jotai";
 import { useT } from "@/i18n/client";
 import { useOverlayDismiss } from "@/components/ui/Overlay";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import {
+	press,
+	staggerItem,
+	staggerParentFast,
+	swap,
+} from "@/lib/motion-presets";
+
+/** Only the rows the viewers sheet can show at once cascade. */
+const CASCADE_VIEWERS = 8;
 
 export interface RailStory {
 	id: string;
@@ -373,11 +382,22 @@ export function StoryViewer({
 									aria-label={muted ? "Unmute" : "Mute"}
 									className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill text-white/80 transition-colors hover:bg-white/15 hover:text-white"
 								>
-									{muted ? (
-										<VolumeX className="w-5 h-5" />
-									) : (
-										<Volume2 className="w-5 h-5" />
-									)}
+									{/* The person's own toggle: the glyph rolls rather than blinks. */}
+									<span className="relative inline-flex">
+										<AnimatePresence mode="popLayout" initial={false}>
+											<motion.span
+												key={muted ? "muted" : "sound"}
+												{...swap}
+												className="inline-flex"
+											>
+												{muted ? (
+													<VolumeX className="w-5 h-5" />
+												) : (
+													<Volume2 className="w-5 h-5" />
+												)}
+											</motion.span>
+										</AnimatePresence>
+									</span>
 								</button>
 							)}
 							{canSave && (
@@ -585,9 +605,17 @@ export function StoryViewer({
 											{viewsCount === 1 ? t("story.viewer") : t("story.viewers")}
 										</span>
 									</div>
-									{viewers.map((v) => (
-										<a
+									{/* Opening the sheet lands the audience in a quick cascade. The
+									    parent mounts with the sheet, so a re-render never replays it. */}
+									<motion.div
+										variants={staggerParentFast}
+										initial="hidden"
+										animate="show"
+									>
+									{viewers.map((v, i) => (
+										<motion.a
 											key={v.id}
+											variants={i < CASCADE_VIEWERS ? staggerItem : undefined}
 											href={`/profile/${v.username}`}
 											className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-raised"
 										>
@@ -609,8 +637,9 @@ export function StoryViewer({
 													@{v.username}
 												</span>
 											</span>
-										</a>
-									))}
+										</motion.a>
+										))}
+										</motion.div>
 									{/* The count can exceed the list: viewers is a capped
 									    populate, and an account deleted since watching leaves
 									    a view with nobody to show. */}
@@ -639,7 +668,8 @@ export function StoryViewer({
 								placeholder={t("story.replyPlaceholder").replace("{name}", name)}
 								className="h-11 min-w-0 flex-1 rounded-pill bg-[#fafaf9]/12 px-4 font-sans text-base text-[#fafaf9] outline-none backdrop-blur-md transition-colors placeholder:text-[#fafaf9]/45 focus:bg-[#fafaf9]/20 sm:text-[calc(14px*var(--ws-fs))]"
 							/>
-							<button
+							<motion.button
+								{...press}
 								type="button"
 								onClick={() => void sendReply()}
 								disabled={!reply.trim() || replyBusy}
@@ -655,7 +685,7 @@ export function StoryViewer({
 								) : (
 									<Send className="h-[18px] w-[18px]" />
 								)}
-							</button>
+							</motion.button>
 						</div>
 					)}
 

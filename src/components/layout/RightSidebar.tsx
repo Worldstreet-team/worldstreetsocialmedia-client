@@ -1,6 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+	collapse,
+	pop,
+	press,
+	staggerItem,
+	staggerParentFast,
+	thumbSpring,
+} from "@/lib/motion-presets";
 import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 import { useGatewayRead } from "@/hooks/useGateway";
 import { useLiveNow } from "@/hooks/useLiveNow";
@@ -40,6 +49,8 @@ const RAIL_TTL_MS = 5 * 60_000;
 
 export function RightSidebar() {
 	const t = useT();
+	// Per instance, so a second rail could never trade thumbs with this one.
+	const chipThumbId = useId();
 	// Explore IS the discovery page: trends and people-to-follow are its main
 	// content. The rail keeps what Explore does not show (wallet, promos, live,
 	// spaces) and drops the two sections that would otherwise be duplicated
@@ -262,9 +273,14 @@ export function RightSidebar() {
 						}
 					/>
 					<div className="flex gap-3 overflow-x-auto px-3 py-1 [scrollbar-width:none]">
+						{/* A ring lands when a stream starts and leaves when it
+						    ends, instead of blinking in and out of the row.
+						    initial={false}: the section already rises on load, so
+						    rings that are there with it do not pop as well. */}
+						<AnimatePresence initial={false}>
 						{liveNow.map((entry) => (
+							<motion.div key={entry.id} {...pop} className="shrink-0">
 							<Link
-								key={entry.id}
 								href={`/live?tab=live&s=${entry.id}`}
 								className="flex flex-col items-center gap-1 shrink-0"
 							>
@@ -284,7 +300,9 @@ export function RightSidebar() {
 									className="max-w-14 text-[calc(11px*var(--ws-fs))] text-muted font-sans"
 								/>
 							</Link>
+							</motion.div>
 						))}
+						</AnimatePresence>
 					</div>
 				</section>
 			)}
@@ -315,13 +333,23 @@ export function RightSidebar() {
 								type="button"
 								onClick={() => setCategory(c)}
 								className={clsx(
-									"px-2.5 h-6 rounded-pill text-[calc(11px*var(--ws-fs))] font-medium font-sans transition-colors cursor-pointer",
+									"relative px-2.5 h-6 rounded-pill bg-raised text-[calc(11px*var(--ws-fs))] font-medium font-sans transition-colors cursor-pointer",
 									category === c
-										? "bg-primary text-page"
-										: "bg-raised text-muted hover:text-primary",
+										? "text-page"
+										: "text-muted hover:text-primary",
 								)}
 							>
-								{resolveCategoryLabel(c)}
+								{category === c && (
+									// One fill that slides between chips, as in ui/Tabs.
+									<motion.span
+										aria-hidden
+										layoutId={chipThumbId}
+										transition={thumbSpring}
+										className="absolute inset-0 rounded-pill bg-primary"
+									/>
+								)}
+								{/* Positioned, so it paints above the thumb. */}
+								<span className="relative">{resolveCategoryLabel(c)}</span>
 							</button>
 						))}
 					</div>
@@ -335,14 +363,25 @@ export function RightSidebar() {
 							</div>
 						))
 					) : visibleTrends.length > 0 ? (
-						visibleTrends
+						// Keyed by category: the cascade plays when the list first
+						// lands and when the person picks a chip, never on the quiet
+						// five-minute revalidate. Rows that Show more adds rise in
+						// on their own.
+						<motion.div
+							key={category}
+							variants={staggerParentFast}
+							initial="hidden"
+							animate="show"
+							className="flex flex-col"
+						>
+						{visibleTrends
 							.slice(0, trendsExpanded ? 8 : 5)
 							.map((trend: any, i: number) => (
+								<motion.div key={trend.title} variants={staggerItem}>
 								<Link
 									href={`/explore?q=${encodeURIComponent(
 										trend.title.replace(/^#/, ""),
 									)}`}
-									key={trend.title}
 									className="flex items-start gap-3.5 px-3 py-2.5 rounded-xl hover:bg-primary/5 transition-colors"
 								>
 									<span className="pt-0.5 font-mono text-[calc(13px*var(--ws-fs))] text-gold tabular-nums select-none">
@@ -387,7 +426,9 @@ export function RightSidebar() {
 										</span>
 									)}
 								</Link>
-							))
+								</motion.div>
+							))}
+						</motion.div>
 					) : failed ? (
 						<button
 							type="button"
@@ -446,7 +487,11 @@ export function RightSidebar() {
 							{t("rail.noSuggestions")}
 						</p>
 					) : (
-						visibleSuggestions
+						// A followed row folds away and Show more unfolds, so the
+						// rows below glide instead of jumping. initial={false}:
+						// content replacing a skeleton should not move.
+						<AnimatePresence initial={false}>
+						{visibleSuggestions
 							.slice(0, suggestionsExpanded ? visibleSuggestions.length : 3)
 							.map((user: any) => {
 								const displayName =
@@ -455,8 +500,12 @@ export function RightSidebar() {
 										.join(" ") || `@${user.username}`;
 								const showHandle = displayName !== `@${user.username}`;
 								return (
-									<div
+									<motion.div
 										key={user._id}
+										{...collapse}
+										className="overflow-hidden"
+									>
+									<div
 										className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-primary/5 transition-colors group"
 									>
 										<Link
@@ -485,16 +534,19 @@ export function RightSidebar() {
 												)}
 											</div>
 										</Link>
-										<button
+										<motion.button
+											{...press}
 											onClick={() => handleFollow(user._id)}
 											className="px-4 h-8 bg-primary text-page text-[calc(13px*var(--ws-fs))] font-semibold rounded-pill font-sans hover:bg-muted transition-colors shrink-0 cursor-pointer"
 											type="button"
 										>
 											{t("rail.follow")}
-										</button>
+										</motion.button>
 									</div>
+									</motion.div>
 								);
-							})
+							})}
+						</AnimatePresence>
 					)}
 
 					{visibleSuggestions.length > 3 && (

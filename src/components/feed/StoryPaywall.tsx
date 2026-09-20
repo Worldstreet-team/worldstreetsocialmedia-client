@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import clsx from "clsx";
-import { motion, useReducedMotionConfig } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotionConfig } from "framer-motion";
 import {
 	Camera,
 	Confetti,
@@ -20,6 +20,7 @@ import {
 } from "@phosphor-icons/react";
 import { unlockStoryAction } from "@/lib/stories.actions";
 import { useT } from "@/i18n/client";
+import { collapse, press } from "@/lib/motion-presets";
 
 const OUTER = [Star, Heart, Sparkle, Crown, Fire, MusicNotes, Camera, Confetti];
 const INNER = [SealCheck, Lightning, CurrencyDollar, DownloadSimple, Star, Heart];
@@ -159,13 +160,23 @@ export function StoryPaywall({
 						: t("story.unlock.sub")}
 				</p>
 
-				{error && (
-					<p className="mt-2.5 font-sans text-[calc(12px*var(--ws-fs))] leading-relaxed text-danger">
-						{error}
-					</p>
-				)}
+				{/* A refusal opens its own room instead of jolting the CTA down. */}
+				<AnimatePresence initial={false}>
+					{error && (
+						<motion.div
+							key="unlock-error"
+							{...collapse}
+							className="overflow-hidden"
+						>
+							<p className="mt-2.5 font-sans text-[calc(12px*var(--ws-fs))] leading-relaxed text-danger">
+								{error}
+							</p>
+						</motion.div>
+					)}
+				</AnimatePresence>
 
-				<button
+				<motion.button
+					{...press}
 					type="button"
 					onClick={unlock}
 					disabled={busy}
@@ -178,7 +189,7 @@ export function StoryPaywall({
 						<span className="h-3.5 w-3.5 animate-spin rounded-pill border-2 border-current/30 border-t-current" />
 					)}
 					{busy ? t("story.unlock.processing") : t("story.unlock.cta")}
-				</button>
+				</motion.button>
 			</div>
 		</motion.div>
 	);

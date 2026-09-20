@@ -5,6 +5,7 @@ import axios from "axios";
 import clsx from "clsx";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useAuth } from "@clerk/nextjs";
+import { motion } from "framer-motion";
 import {
 	RiArrowLeftLine,
 	RiSendPlane2Fill,
@@ -28,6 +29,7 @@ import {
 	type Message,
 } from "@/store/messageCache";
 import { onlineIdsAtom } from "@/store/ui.atom";
+import { press, reveal, staggerItem } from "@/lib/motion-presets";
 import { BACKEND_URL } from "@/const";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? BACKEND_URL;
@@ -99,6 +101,9 @@ export function DockChat({
 	const [loading, setLoading] = useState(true);
 	const [draft, setDraft] = useState("");
 	const endRef = useRef<HTMLDivElement | null>(null);
+	// Ids that arrived live from the other side while this chat was open.
+	// Only those rise: history is not news, and a send gets no entrance.
+	const liveIds = useRef<Set<string>>(new Set());
 
 	const identity = conversationIdentity(conversation as any);
 	const isGroup = identity.kind === "group";
@@ -162,6 +167,7 @@ export function DockChat({
 			if (msg.name !== "event" || msg.data?.type !== "message:new") return;
 			if (msg.data.conversationId !== conversation._id) return;
 			const incoming = msg.data.message as Message;
+			if (incoming.sender?._id !== myProfileId) liveIds.current.add(incoming._id);
 			setMessages((prev) =>
 				prev.some((m) => m._id === incoming._id) ? prev : [...prev, incoming],
 			);
@@ -316,8 +322,12 @@ export function DockChat({
 							);
 						}
 						return (
-							<div
+							<motion.div
 								key={m._id}
+								// Same rise the full thread gives a live arrival.
+								variants={staggerItem}
+								initial={liveIds.current.has(m._id) ? "hidden" : false}
+								animate="show"
 								className={clsx(
 									"mt-1.5 flex",
 									mine ? "justify-end" : "justify-start",
@@ -387,14 +397,17 @@ export function DockChat({
 										</p>
 									)}
 								</div>
-							</div>
+							</motion.div>
 						);
 					})
 				)}
 				{!loading && messages.length === 0 && (
-					<p className="pt-8 text-center font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle">
-						Say something — it lands here.
-					</p>
+					<motion.p
+						{...reveal()}
+						className="pt-8 text-center font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle"
+					>
+						Say something. It lands here.
+					</motion.p>
 				)}
 				<div ref={endRef} />
 			</div>
@@ -414,7 +427,8 @@ export function DockChat({
 						rows={1}
 						className="max-h-[80px] min-w-0 flex-1 resize-none bg-transparent py-1.5 font-sans text-base text-primary outline-none placeholder:text-subtle sm:text-[calc(13.5px*var(--ws-fs))]"
 					/>
-					<button
+					<motion.button
+						{...press}
 						type="button"
 						onClick={send}
 						disabled={!draft.trim()}
@@ -427,7 +441,7 @@ export function DockChat({
 						)}
 					>
 						<RiSendPlane2Fill size={15} />
-					</button>
+					</motion.button>
 				</div>
 			</div>
 		</div>

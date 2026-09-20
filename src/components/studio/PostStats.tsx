@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useState } from "react";
 import { useT } from "@/i18n/client";
 import { getCreatorPostStatsAction } from "@/lib/creator.actions";
@@ -10,6 +11,7 @@ import {
 	countryFlag,
 	countryLabel,
 } from "@/components/studio/charts";
+import { reveal, swap } from "@/lib/motion-presets";
 
 interface Drill {
 	post: { id: string; content: string; createdAt: string };
@@ -40,8 +42,13 @@ function StatTileCell({ label, value }: { label: string; value: string }) {
 	return (
 		<div className="rounded-2xl bg-[#171614] px-5 py-4">
 			<span className="glass-eyebrow font-sans">{label}</span>
-			<span className="mt-2 block font-display text-[calc(26px*var(--ws-fs))] font-semibold leading-none tracking-tight glass-ink tabular-nums">
-				{value}
+			<span className="relative mt-2 block font-display text-[calc(26px*var(--ws-fs))] font-semibold leading-none tracking-tight glass-ink tabular-nums">
+				{/* Rolls when the window changes; still on first paint. */}
+				<AnimatePresence mode="popLayout" initial={false}>
+					<motion.span key={value} {...swap} className="inline-block">
+						{value}
+					</motion.span>
+				</AnimatePresence>
 			</span>
 		</div>
 	);
@@ -100,7 +107,9 @@ export function PostStats({
 					))}
 				</div>
 			) : data ? (
-				<>
+				// The numbers arriving, as one piece (same as the overview).
+				// Mounted once: a window change swaps data in place, no replay.
+				<motion.div {...reveal()}>
 					<div className="grid grid-cols-2 gap-3 md:grid-cols-4">
 						<StatTileCell
 							label={t("studio.impressions")}
@@ -203,7 +212,7 @@ export function PostStats({
 							</section>
 						</div>
 					</div>
-				</>
+				</motion.div>
 			) : (
 				<p className="py-10 text-center font-sans text-sm glass-ink-faint">
 					{t("studio.noData")}

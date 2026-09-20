@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { press, staggerParent, staggerPop, swap } from "@/lib/motion-presets";
 import { useSetAtom } from "jotai";
 import VerifiedIcon from "@/assets/icons/VerifiedIcon";
 import { premiumOpenAtom } from "@/store/ui.atom";
@@ -24,6 +26,20 @@ export interface CommunityChip {
 }
 
 const BIO_TRUNCATE_LENGTH = 160;
+
+/** A count that rolls when it moves (a follow lands) instead of blinking.
+ *  No overflow clip: that would move the baseline the label aligns to. */
+function RollingCount({ value }: { value: number }) {
+  return (
+    <span className="relative inline-flex text-[calc(21px*var(--ws-fs))] font-bold tabular-nums text-primary">
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.span key={value} {...swap} className="inline-block">
+          {formatCompact(value)}
+        </motion.span>
+      </AnimatePresence>
+    </span>
+  );
+}
 
 /**
  * Identity, bio, metadata, and the two things that were fetched but never
@@ -106,14 +122,15 @@ export function ProfileAbout({
           {/* X's grammar: an unverified OWN profile wears the invitation
               right where the tick would sit. Opens the Premium sheet. */}
           {isMe && !isVerified && (
-            <button
+            <motion.button
+              {...press}
               type="button"
               onClick={() => setPremiumOpen(true)}
               className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-pill border border-hairline px-3 py-1 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-raised"
             >
               <VerifiedIcon size={{ width: "15", height: "15" }} />
               Get verified
-            </button>
+            </motion.button>
           )}
         </div>
         <div className="truncate font-sans text-[calc(17px*var(--ws-fs))] text-muted">@{username}</div>
@@ -180,9 +197,7 @@ export function ProfileAbout({
           onClick={() => onOpenFollows("followers")}
           className="flex cursor-pointer items-baseline gap-1 border-none bg-transparent p-0 hover:underline"
         >
-          <span className="text-[calc(21px*var(--ws-fs))] font-bold tabular-nums text-primary">
-            {formatCompact(followersCount)}
-          </span>
+          <RollingCount value={followersCount} />
           <span className="text-muted">{t("profile.followers")}</span>
         </button>
         <button
@@ -190,9 +205,7 @@ export function ProfileAbout({
           onClick={() => onOpenFollows("following")}
           className="flex cursor-pointer items-baseline gap-1 border-none bg-transparent p-0 hover:underline"
         >
-          <span className="text-[calc(21px*var(--ws-fs))] font-bold tabular-nums text-primary">
-            {formatCompact(followingCount)}
-          </span>
+          <RollingCount value={followingCount} />
           <span className="text-muted">{t("profile.following")}</span>
         </button>
       </div>
@@ -212,10 +225,16 @@ export function ProfileAbout({
           <h3 className="mb-2 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-subtle">
             {t("profile.communities")}
           </h3>
-          <div className="flex flex-wrap gap-2">
+          {/* Mounts once, when the separate communities fetch lands. */}
+          <motion.div
+            variants={staggerParent}
+            initial="hidden"
+            animate="show"
+            className="flex flex-wrap gap-2"
+          >
             {communities.slice(0, 6).map((c) => (
+              <motion.div key={c.id} variants={staggerPop}>
               <Link
-                key={c.id}
                 href={`/communities/${c.slug}`}
                 className="flex h-8 items-center gap-1.5 rounded-pill bg-raised pl-1 pr-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-muted transition-colors hover:bg-chip hover:text-primary"
               >
@@ -230,8 +249,9 @@ export function ProfileAbout({
                 </span>
                 {c.name}
               </Link>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       )}
     </div>

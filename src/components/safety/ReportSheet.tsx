@@ -21,8 +21,7 @@ import {
 	type ReportTargetType,
 } from "@/lib/reports";
 import { useT } from "@/i18n/client";
-
-const EASE = [0.2, 0, 0, 1] as const;
+import { DUR, EASE, pop, press, swap } from "@/lib/motion-presets";
 
 type Step = "reason" | "detail" | "done";
 
@@ -116,23 +115,32 @@ export default function ReportSheet({
 			<OverlayPanel dragClose={onClose} variant="sheet" label={heading}>
 				{/* header */}
 				<OverlayHeader onClose={onClose} closeLabel={t("common.close")}>
-					{step === "detail" && (
-						<button
-							type="button"
-							onClick={() => setStep("reason")}
-							aria-label={t("common.back")}
-							className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-chip text-muted transition-colors hover:text-primary"
-						>
-							<ArrowLeft size={14} weight="bold" />
-						</button>
-					)}
-					<div className="min-w-0 flex-1">
-						<h2 className="truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
-							{heading}
-						</h2>
-						<p className="truncate font-sans text-[calc(11.5px*var(--ws-fs))] text-subtle">
-							{subheading}
-						</p>
+					<AnimatePresence initial={false}>
+						{step === "detail" && (
+							<motion.button
+								key="back"
+								type="button"
+								{...pop}
+								onClick={() => setStep("reason")}
+								aria-label={t("common.back")}
+								className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-chip text-muted transition-colors hover:text-primary"
+							>
+								<ArrowLeft size={14} weight="bold" />
+							</motion.button>
+						)}
+					</AnimatePresence>
+					<div className="min-w-0 flex-1 overflow-hidden">
+						{/* The title block turns over with the step beneath it. */}
+						<AnimatePresence mode="wait" initial={false}>
+							<motion.div key={step} {...swap}>
+								<h2 className="truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
+									{heading}
+								</h2>
+								<p className="truncate font-sans text-[calc(11.5px*var(--ws-fs))] text-subtle">
+									{subheading}
+								</p>
+							</motion.div>
+						</AnimatePresence>
 					</div>
 				</OverlayHeader>
 
@@ -144,7 +152,7 @@ export default function ReportSheet({
 								initial={reduce ? false : { opacity: 0, x: 8 }}
 								animate={{ opacity: 1, x: 0 }}
 								exit={reduce ? { opacity: 0 } : { opacity: 0, x: -8 }}
-								transition={{ duration: 0.2, ease: EASE }}
+								transition={{ duration: DUR.base, ease: EASE }}
 								className="flex flex-col gap-1.5"
 								role="radiogroup"
 								aria-label={t("report.subtitle")}
@@ -185,7 +193,7 @@ export default function ReportSheet({
 								initial={reduce ? false : { opacity: 0, x: 8 }}
 								animate={{ opacity: 1, x: 0 }}
 								exit={reduce ? { opacity: 0 } : { opacity: 0, x: -8 }}
-								transition={{ duration: 0.2, ease: EASE }}
+								transition={{ duration: DUR.base, ease: EASE }}
 								className="flex flex-col gap-4"
 							>
 								{chosen && (
@@ -235,14 +243,23 @@ export default function ReportSheet({
 									</div>
 								</div>
 
-								<button
+								<motion.button
 									type="button"
 									onClick={submit}
 									disabled={busy}
-									className="h-11 w-full cursor-pointer rounded-pill bg-brand font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active disabled:cursor-not-allowed disabled:opacity-60"
+									{...press}
+									className="h-11 w-full cursor-pointer overflow-hidden rounded-pill bg-brand font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active disabled:cursor-not-allowed disabled:opacity-60"
 								>
-									{busy ? t("report.sending") : t("report.submit")}
-								</button>
+									<AnimatePresence mode="wait" initial={false}>
+										<motion.span
+											key={busy ? "busy" : "idle"}
+											{...swap}
+											className="block"
+										>
+											{busy ? t("report.sending") : t("report.submit")}
+										</motion.span>
+									</AnimatePresence>
+								</motion.button>
 
 								<p className="text-center font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
 									{t("report.anonymous")}
@@ -259,42 +276,57 @@ export default function ReportSheet({
 								className="flex flex-col gap-4"
 							>
 								<div className="flex items-start gap-3 rounded-xl bg-chip px-3.5 py-3">
-									<span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-raised text-gold">
+									{/* The report went through: the one thing here that lands. */}
+									<motion.span
+										{...pop}
+										className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-raised text-gold"
+									>
 										<ShieldCheck size={16} weight="duotone" />
-									</span>
+									</motion.span>
 									<p className="font-sans text-[calc(13.5px*var(--ws-fs))] text-muted">
 										{t("report.done.body")}
 									</p>
 								</div>
 
 								{canBlock && onBlock && (
-									<button
+									<motion.button
 										type="button"
 										onClick={blockNow}
 										disabled={blocking || blocked}
+										{...press}
 										className={clsx(
-											"flex h-11 w-full items-center justify-center gap-2 rounded-pill font-sans text-[calc(14px*var(--ws-fs))] font-semibold transition-colors",
+											"flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-pill font-sans text-[calc(14px*var(--ws-fs))] font-semibold transition-colors",
 											blocked
 												? "cursor-default bg-chip text-muted"
 												: "cursor-pointer bg-chip text-primary hover:bg-raised",
 										)}
 									>
-										{blocked ? (
-											<>
-												<Check size={15} weight="bold" />
-												{t("report.done.blocked")}
-											</>
-										) : (
-											<>
-												<Prohibit size={15} weight="bold" />
-												{blocking
-													? t("report.done.blocking")
-													: subject
-														? `${t("report.done.blockCta")} ${subject}`
-														: t("report.done.blockCta")}
-											</>
-										)}
-									</button>
+										<AnimatePresence mode="wait" initial={false}>
+											{blocked ? (
+												<motion.span
+													key="blocked"
+													{...swap}
+													className="flex items-center gap-2"
+												>
+													<Check size={15} weight="bold" />
+													{t("report.done.blocked")}
+												</motion.span>
+											) : (
+												<motion.span
+													key="block"
+													{...swap}
+													className="flex items-center gap-2"
+												>
+													<Prohibit size={15} weight="bold" />
+													{blocking
+														? t("report.done.blocking")
+														: subject
+															? `${t("report.done.blockCta")} ${subject}`
+															: t("report.done.blockCta")}
+												</motion.span>
+											)}
+										</AnimatePresence>
+									</motion.button>
 								)}
 
 								<button

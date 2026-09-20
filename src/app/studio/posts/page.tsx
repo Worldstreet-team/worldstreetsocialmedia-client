@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { CaretRight } from "@phosphor-icons/react";
 import { useT } from "@/i18n/client";
 import { getCreatorPostsAction } from "@/lib/creator.actions";
+import { press, staggerItem, staggerParentFast } from "@/lib/motion-presets";
 import { PostStats } from "@/components/studio/PostStats";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import {
@@ -78,37 +79,46 @@ export default function StudioPosts() {
 						{t("studio.noPosts")}
 					</p>
 				) : (
-					rows.map((row) => (
-						<button
-							type="button"
-							key={row.id}
-							onClick={() => setOpenId(row.id)}
-							className="grid w-full grid-cols-[1fr_28px] sm:grid-cols-[1fr_repeat(4,72px)_28px] items-center gap-2 px-4 py-3 border-b border-[#fafaf9]/[0.05] last:border-0 hover:bg-[#fafaf9]/[0.06] transition-colors text-left cursor-pointer"
-						>
-							<span className="min-w-0">
-								<span className="block font-sans text-[calc(14px*var(--ws-fs))] glass-ink truncate">
+					// The first screenful cascades once, when it replaces the
+					// skeleton. "Show more" rows sit past the clamp and arrive still.
+					<motion.div
+						variants={staggerParentFast}
+						initial="hidden"
+						animate="show"
+					>
+						{rows.map((row, i) => (
+							<motion.button
+								type="button"
+								key={row.id}
+								variants={i < 8 ? staggerItem : undefined}
+								onClick={() => setOpenId(row.id)}
+								className="grid w-full grid-cols-[1fr_28px] sm:grid-cols-[1fr_repeat(4,72px)_28px] items-center gap-2 px-4 py-3 border-b border-[#fafaf9]/[0.05] last:border-0 hover:bg-[#fafaf9]/[0.06] transition-colors text-left cursor-pointer"
+							>
+								<span className="min-w-0">
+									<span className="block font-sans text-[calc(14px*var(--ws-fs))] glass-ink truncate">
  {row.content || (row.hasMedia ? t("studio.mediaPost") : "")}
+									</span>
+									<span className="block font-sans text-[calc(12px*var(--ws-fs))] glass-ink-faint tabular-nums">
+										{formatTimeAgo(row.createdAt)}
+										{row.type === "live" ? ` · ${t("live.badge")}` : ""}
+									</span>
 								</span>
-								<span className="block font-sans text-[calc(12px*var(--ws-fs))] glass-ink-faint tabular-nums">
-									{formatTimeAgo(row.createdAt)}
-									{row.type === "live" ? ` · ${t("live.badge")}` : ""}
+								<span className="hidden sm:block text-right font-sans text-[calc(13px*var(--ws-fs))] glass-ink-dim tabular-nums">
+									{fmt(row.stats.views ?? 0)}
 								</span>
-							</span>
-							<span className="hidden sm:block text-right font-sans text-[calc(13px*var(--ws-fs))] glass-ink-dim tabular-nums">
-								{fmt(row.stats.views ?? 0)}
-							</span>
-							<span className="hidden sm:block text-right font-sans text-[calc(13px*var(--ws-fs))] glass-ink-dim tabular-nums">
-								{fmt(row.stats.likes)}
-							</span>
-							<span className="hidden sm:block text-right font-sans text-[calc(13px*var(--ws-fs))] glass-ink-dim tabular-nums">
-								{fmt(row.stats.replies)}
-							</span>
-							<span className="hidden sm:block text-right font-sans text-[calc(13px*var(--ws-fs))] glass-ink-dim tabular-nums">
-								{fmt(row.stats.reposts)}
-							</span>
-							<CaretRight size={14} className="glass-ink-faint justify-self-end" />
-						</button>
-					))
+								<span className="hidden sm:block text-right font-sans text-[calc(13px*var(--ws-fs))] glass-ink-dim tabular-nums">
+									{fmt(row.stats.likes)}
+								</span>
+								<span className="hidden sm:block text-right font-sans text-[calc(13px*var(--ws-fs))] glass-ink-dim tabular-nums">
+									{fmt(row.stats.replies)}
+								</span>
+								<span className="hidden sm:block text-right font-sans text-[calc(13px*var(--ws-fs))] glass-ink-dim tabular-nums">
+									{fmt(row.stats.reposts)}
+								</span>
+								<CaretRight size={14} className="glass-ink-faint justify-self-end" />
+							</motion.button>
+						))}
+					</motion.div>
 				)}
 			</div>
 
@@ -158,13 +168,14 @@ export default function StudioPosts() {
 			</ConfirmModalPortal>
 
 			{cursor && (
-				<button
+				<motion.button
 					type="button"
+					{...press}
 					onClick={() => load(cursor)}
 					className="mt-4 h-9 px-4 rounded-pill bg-[#fafaf9]/[0.06] glass-ink-dim hover:glass-ink hover:bg-[#fafaf9]/[0.1] font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors cursor-pointer"
 				>
 					{t("rail.showMore")}
-				</button>
+				</motion.button>
 			)}
 		</div>
 	);

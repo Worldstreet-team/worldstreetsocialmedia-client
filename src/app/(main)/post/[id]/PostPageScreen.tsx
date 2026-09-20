@@ -3,9 +3,10 @@
 import { useBackWithFallback } from "@/lib/nav";
 import { useGatewayRead } from "@/hooks/useGateway";
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
 import { ImpressionSensor } from "@/components/feed/ImpressionSensor";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { PostCard, type PostProps } from "@/components/feed/PostCard";
 import { usePostEvents } from "@/hooks/useUserEvents";
@@ -15,6 +16,14 @@ import { ArrowLeft, Search } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { mapApiPost } from "@/lib/post-mapper";
 import { formatTimeAgo } from "@/lib/utils";
+import {
+	collapse,
+	press,
+	reveal,
+	staggerItem,
+	staggerParentFast,
+	swap,
+} from "@/lib/motion-presets";
 import { useT } from "@/i18n/client";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { useAtom } from "jotai";
@@ -119,6 +128,18 @@ export default function PostPageScreen() {
 	});
 	const [loading, setLoading] = useState(!cachedPost);
 	const [isAddingComment, setIsAddingComment] = useState(false);
+	// "No comments yet" waits for the answer. Said while the request is in
+	// flight, it would rise in only to be cut by the replies.
+	const [commentsLoaded, setCommentsLoaded] = useState(false);
+	// The parent's wrapper clips only while its height is moving: PostCard's
+	// menus hang outside the card, and a standing clip would cut them.
+	const [settledParentId, setSettledParentId] = useState<string | null>(null);
+	// Past the fold nothing cascades on first paint: row 40 must not wait on
+	// the 39 before it. A reply that lands later rises wherever it lands.
+	const repliesPaintedRef = useRef(false);
+	useEffect(() => {
+		if (comments.length > 0) repliesPaintedRef.current = true;
+	}, [comments.length]);
 
 	// Update local state if cache updates (e.g. from background fetch elsewhere)
 	useEffect(() => {
@@ -176,6 +197,7 @@ export default function PostPageScreen() {
 			toast("Failed to load post", { type: "error" });
 		} finally {
 			setLoading(false);
+			setCommentsLoaded(true);
 		}
 	}, [postId, toast, updatePostCache, toPostProps]);
 
@@ -202,14 +224,15 @@ export default function PostPageScreen() {
 		return (
 			<div className="flex flex-col min-h-dvh pb-20">
 				<header className="sticky top-0 z-sticky bg-page border-b border-hairline px-4 py-2 flex items-center gap-6">
-					<button
+					<motion.button
+						{...press}
 						className="rounded-pill h-11 w-11 sm:h-9 sm:w-9 shrink-0 hover:bg-raised flex items-center justify-center transition-colors cursor-pointer text-primary"
 						type="button"
 						aria-label="Go back"
 						onClick={() => goBack("/")}
 					>
 						<ArrowLeft className="w-5 h-5" />
-					</button>
+					</motion.button>
 					<h1 className="font-display text-lg font-semibold leading-5 text-primary">
 						{t("post.title")}
 					</h1>
@@ -254,13 +277,14 @@ export default function PostPageScreen() {
 			className="flex flex-col min-h-dvh pb-[calc(var(--ws-nav-clearance)+88px)] md:pb-20"
 		>
 			<header className="sticky top-0 z-sticky bg-page border-b border-hairline px-2 sm:px-4 py-2 flex items-center gap-2 sm:gap-6">
-				<button
+				<motion.button
+					{...press}
 					className="rounded-pill h-11 w-11 sm:h-9 sm:w-9 shrink-0 hover:bg-raised flex items-center justify-center transition-colors cursor-pointer text-primary"
 					type="button"
 					onClick={() => goBack("/")}
 				>
 					<ArrowLeft className="w-5 h-5" />
-				</button>
+				</motion.button>
 				<h1 className="font-display text-lg font-semibold leading-5 text-primary">
 					{t("post.title")}
 				</h1>
@@ -272,9 +296,18 @@ export default function PostPageScreen() {
 			    what the reader came for. */}
 			{parent && (
 				<div className="relative">
-					<ImpressionSensor meta={{ post: parent.id, author: parent.author?.id ?? "", surface: "post_detail", position: 0 }}>
-						<PostCard post={parent} />
-					</ImpressionSensor>
+					{/* It arrives after the focused post, so it opens rather than
+					    shoving the reply down in one frame. */}
+					<motion.div
+						key={parent.id}
+						{...collapse}
+						className={clsx(settledParentId !== parent.id && "overflow-hidden")}
+						onAnimationComplete={() => setSettledParentId(parent.id)}
+					>
+						<ImpressionSensor meta={{ post: parent.id, author: parent.author?.id ?? "", surface: "post_detail", position: 0 }}>
+							<PostCard post={parent} />
+						</ImpressionSensor>
+					</motion.div>
 					<span
 						aria-hidden
 						className="absolute left-[38px] bottom-0 h-4 w-0.5 translate-y-full bg-hairline"
@@ -296,12 +329,36 @@ export default function PostPageScreen() {
 			</div>
 
 			<div className="flex flex-col">
-				{isAddingComment && (
-					<PostSkeleton />
-				)}
-				{comments.length > 0
-					? comments.map((comment, i) => (
-							<div key={comment.id} className="relative">
+				<AnimatePresence>
+					{isAddingComment && (
+						<motion.div
+							key="pending-reply"
+							{...collapse}
+							className="overflow-hidden"
+						>
+							<PostSkeleton />
+						</motion.div>
+					)}
+				</AnimatePresence>
+				{/* Mounted WITH its first rows, so the cascade plays once, on
+				    first load. A refetch keeps the keys and replays nothing; a
+				    reply that lands later rises alone. */}
+				{comments.length > 0 && (
+					<motion.div
+						variants={staggerParentFast}
+						initial="hidden"
+						animate="show"
+						className="flex flex-col"
+					>
+						{comments.map((comment, i) => (
+							<motion.div
+								key={comment.id}
+								variants={staggerItem}
+								initial={
+									!repliesPaintedRef.current && i >= 9 ? false : undefined
+								}
+								className="relative"
+							>
 								{/* No border between replies (owner ruling): hard
 								    rules chopped the conversation into a ledger.
 								    The thread rail runs the avatar column instead —
@@ -328,13 +385,22 @@ export default function PostPageScreen() {
 										replyingTo={post?.author?.username}
 									/>
 								</ImpressionSensor>
-							</div>
-						))
-					: !isAddingComment && (
-							<div className="p-12 text-center text-muted font-sans text-sm">
-								No comments yet. Be the first to reply!
-							</div>
-						)}
+							</motion.div>
+						))}
+					</motion.div>
+				)}
+				<AnimatePresence>
+					{commentsLoaded && comments.length === 0 && !isAddingComment && (
+						<motion.div
+							key="no-comments"
+							{...reveal(0)}
+							exit={swap.exit}
+							className="p-12 text-center text-muted font-sans text-sm"
+						>
+							No comments yet. Be the first to reply!
+						</motion.div>
+					)}
+				</AnimatePresence>
 			</div>
 		</div>
 	);

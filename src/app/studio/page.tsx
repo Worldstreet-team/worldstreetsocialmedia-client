@@ -12,6 +12,7 @@ import {
 	HandHeart,
 	UsersThree,
 } from "@phosphor-icons/react";
+import { motion } from "framer-motion";
 import { useT } from "@/i18n/client";
 import {
 	becomeCreatorAction,
@@ -37,6 +38,12 @@ import {
 	countryLabel,
 } from "@/components/studio/charts";
 import { XSTREAM_WEB_URL } from "@/const";
+import {
+	press,
+	reveal,
+	staggerItem,
+	staggerParentFast,
+} from "@/lib/motion-presets";
 import { formatTimeAgo } from "@/lib/utils";
 import { userAtom } from "@/store/user.atom";
 
@@ -191,7 +198,7 @@ export default function StudioOverview() {
 
 	if (notCreator) {
 		return (
-			<div className="mx-auto mt-14 max-w-md">
+			<motion.div {...reveal()} className="mx-auto mt-14 max-w-md">
 				<div className={`${CARD} p-8 text-center`}>
 					<span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-pill bg-[var(--ws-brand-primary)] text-[#0c0a09]">
 						<Faders size={24} weight="bold" />
@@ -202,16 +209,17 @@ export default function StudioOverview() {
 					<p className="mb-6 font-sans text-[calc(13.5px*var(--ws-fs))] leading-relaxed glass-ink-dim">
 						{t("studio.become.caption")}
 					</p>
-					<button
+					<motion.button
 						type="button"
+						{...press}
 						onClick={activate}
 						disabled={busy}
 						className="h-11 cursor-pointer rounded-pill bg-[#fafaf9] px-6 font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-[#0c0a09] transition-colors hover:bg-white disabled:opacity-50"
 					>
 						{t("studio.become.cta")}
-					</button>
+					</motion.button>
 				</div>
-			</div>
+			</motion.div>
 		);
 	}
 
@@ -257,7 +265,12 @@ export default function StudioOverview() {
 				<WindowSwitch value={days} onChange={setDays} />
 			</div>
 
-			<div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-12">
+			{/* The numbers arriving, as one piece. Mounted once: a window change
+			    swaps the data in place and does not replay it. */}
+			<motion.div
+				{...reveal()}
+				className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-12"
+			>
 				<Cell span={3}>
 					<StatCard
 						icon={Eye}
@@ -382,7 +395,13 @@ export default function StudioOverview() {
 					) : topPosts.length === 0 ? (
 						<CellEmpty>{t("studio.noPosts")}</CellEmpty>
 					) : (
-						<div className="px-2 pb-3 pt-1">
+						// Rows cascade once, when they replace the skeleton.
+						<motion.div
+							variants={staggerParentFast}
+							initial="hidden"
+							animate="show"
+							className="px-2 pb-3 pt-1"
+						>
 							{/* column heads */}
 							<div className="grid grid-cols-[24px_1fr_64px_56px_56px] items-center gap-2 px-3 pb-2">
 								<span />
@@ -400,34 +419,35 @@ export default function StudioOverview() {
 								</span>
 							</div>
 							{topPosts.map((p, i) => (
-								<Link
-									key={p.id}
-									href={`/studio/posts/${p.id}`}
-									className="grid grid-cols-[24px_1fr_64px_56px_56px] items-center gap-2 rounded-xl px-3 py-2.5 transition-colors hover:bg-[#fafaf9]/[0.05]"
-								>
-									<span className="text-center font-display text-[calc(13px*var(--ws-fs))] font-semibold glass-ink-faint tabular-nums">
-										{i + 1}
-									</span>
-									<span className="min-w-0">
-										<span className="block truncate font-sans text-[calc(13.5px*var(--ws-fs))] glass-ink">
-											{p.content || t("studio.mediaPost")}
+								<motion.div key={p.id} variants={staggerItem}>
+									<Link
+										href={`/studio/posts/${p.id}`}
+										className="grid grid-cols-[24px_1fr_64px_56px_56px] items-center gap-2 rounded-xl px-3 py-2.5 transition-colors hover:bg-[#fafaf9]/[0.05]"
+									>
+										<span className="text-center font-display text-[calc(13px*var(--ws-fs))] font-semibold glass-ink-faint tabular-nums">
+											{i + 1}
 										</span>
-										<span className="block font-sans text-[calc(11.5px*var(--ws-fs))] glass-ink-faint tabular-nums">
-											{formatTimeAgo(p.createdAt)}
+										<span className="min-w-0">
+											<span className="block truncate font-sans text-[calc(13.5px*var(--ws-fs))] glass-ink">
+												{p.content || t("studio.mediaPost")}
+											</span>
+											<span className="block font-sans text-[calc(11.5px*var(--ws-fs))] glass-ink-faint tabular-nums">
+												{formatTimeAgo(p.createdAt)}
+											</span>
 										</span>
-									</span>
-									<span className="text-right font-sans text-[calc(13px*var(--ws-fs))] font-semibold glass-ink tabular-nums">
-										{fmt(p.stats.views ?? 0)}
-									</span>
-									<span className="text-right font-sans text-[calc(13px*var(--ws-fs))] glass-ink-dim tabular-nums">
-										{fmt(p.stats.likes)}
-									</span>
-									<span className="text-right font-sans text-[calc(13px*var(--ws-fs))] glass-ink-dim tabular-nums">
-										{fmt(p.stats.replies)}
-									</span>
-								</Link>
+										<span className="text-right font-sans text-[calc(13px*var(--ws-fs))] font-semibold glass-ink tabular-nums">
+											{fmt(p.stats.views ?? 0)}
+										</span>
+										<span className="text-right font-sans text-[calc(13px*var(--ws-fs))] glass-ink-dim tabular-nums">
+											{fmt(p.stats.likes)}
+										</span>
+										<span className="text-right font-sans text-[calc(13px*var(--ws-fs))] glass-ink-dim tabular-nums">
+											{fmt(p.stats.replies)}
+										</span>
+									</Link>
+								</motion.div>
 							))}
-						</div>
+						</motion.div>
 					)}
 				</Cell>
 
@@ -450,7 +470,7 @@ export default function StudioOverview() {
 						)}
 					</div>
 				</Cell>
-			</div>
+			</motion.div>
 		</div>
 	);
 }

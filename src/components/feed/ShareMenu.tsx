@@ -7,6 +7,8 @@ import {
 	RiTwitterXFill,
 	RiWhatsappFill,
 } from "@remixicon/react";
+import { motion, useIsPresent } from "framer-motion";
+import { menuStagger, staggerItem } from "@/lib/motion-presets";
 
 /**
  * Sharing a post off-platform (owner 2026-09-03: "not just copy").
@@ -81,6 +83,9 @@ export function ShareMenu({
 	onClose: () => void;
 }) {
 	const shareText = (text ?? "").trim().slice(0, 120);
+	// While the menu plays its exit it is still mounted, and so was this
+	// full-screen catcher: it ate one click for 120ms after every close.
+	const present = useIsPresent();
 	return (
 		<>
 			{/* Click-away catcher, no dim: a popover is not a modal. */}
@@ -92,17 +97,22 @@ export function ShareMenu({
 					e.stopPropagation();
 					onClose();
 				}}
-				className="fixed inset-0 z-dropdown cursor-default"
+				className={`fixed inset-0 z-dropdown cursor-default ${present ? "" : "pointer-events-none"}`}
 			/>
-			<div
+			{/* Unfolds from the share button's corner. animate-rise is switched
+			    off once the intro has played, so this used to snap open. The exit
+			    only plays if the caller mounts it inside AnimatePresence. */}
+			<motion.div
+				{...menuStagger("bottom-right")}
 				role="menu"
 				aria-label="Share this post"
-				className="absolute bottom-11 right-0 z-dropdown w-44 overflow-hidden rounded-xl card-depth py-1 animate-rise"
+				className="absolute bottom-11 right-0 z-dropdown w-44 overflow-hidden rounded-xl card-depth py-1"
 				onClick={(e) => e.stopPropagation()}
 			>
 				{SHARE_TARGETS.map((tgt) => (
-					<a
+					<motion.a
 						key={tgt.key}
+						variants={staggerItem}
 						role="menuitem"
 						href={tgt.href(url, shareText)}
 						target="_blank"
@@ -112,9 +122,10 @@ export function ShareMenu({
 					>
 						<tgt.Icon size={17} className="shrink-0 text-muted" />
 						{tgt.label}
-					</a>
+					</motion.a>
 				))}
-				<button
+				<motion.button
+					variants={staggerItem}
 					type="button"
 					role="menuitem"
 					onClick={() => {
@@ -125,8 +136,8 @@ export function ShareMenu({
 				>
 					<RiLinkM size={17} className="shrink-0 text-muted" />
 					Copy link
-				</button>
-			</div>
+				</motion.button>
+			</motion.div>
 		</>
 	);
 }

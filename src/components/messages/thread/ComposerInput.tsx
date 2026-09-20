@@ -9,6 +9,7 @@ import {
 	RiVoiceprintFill,
 } from "@remixicon/react";
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
 import EmojiPicker, { Theme } from "emoji-picker-react";
 import { useTheme } from "next-themes";
@@ -20,6 +21,8 @@ import {
 	useState,
 } from "react";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import { press, staggerItem } from "@/lib/motion-presets";
+import { MINE_FILL, MINE_INK } from "./MessageBubble";
 
 export interface MentionCandidate {
 	id: string;
@@ -175,14 +178,15 @@ export const ComposerInput = forwardRef<
 			</div>
 		)}
 		<div className="chat-chrome relative flex min-w-0 items-end gap-1 rounded-pill py-1 pl-1.5 pr-1.5 ring-1 ring-inset ring-transparent focus-within:ring-hairline sm:gap-1.5">
-			<button
+			<motion.button
 				type="button"
+				{...press}
 				onClick={onAttach}
 				aria-label="Attach a file"
 				className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/10 hover:text-primary"
 			>
 				<RiAddLine size={20} />
-			</button>
+			</motion.button>
 			<textarea
 				ref={inputRef}
 				value={value}
@@ -236,27 +240,30 @@ export const ComposerInput = forwardRef<
 				style={{ minHeight: "24px" }}
 			/>
 			<div className="flex items-center shrink-0">
-				<button
+				<motion.button
 					type="button"
+					{...press}
 					onClick={onMoney}
 					aria-label="Send money"
 					title="Send money"
 					className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/10 hover:text-primary"
 				>
 					<RiMoneyDollarCircleLine size={20} />
-				</button>
+				</motion.button>
 				{gifEnabled && (
-					<button
+					<motion.button
 						type="button"
+						{...press}
 						onClick={onGif}
 						aria-label="Send a GIF"
 						className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/10 hover:text-primary"
 					>
 						<RiFileGifLine size={20} />
-					</button>
+					</motion.button>
 				)}
-				<button
+				<motion.button
 					type="button"
+					{...press}
 					onClick={() => setShowEmoji((v) => !v)}
 					aria-label="Insert emoji"
 					aria-expanded={showEmoji}
@@ -268,27 +275,34 @@ export const ComposerInput = forwardRef<
 					)}
 				>
 					<RiEmotionLine size={21} />
-				</button>
+				</motion.button>
 				{value.trim() || hasAttachment ? (
 					// iMessage grammar (owner pick): the up-arrow lives inside the
 					// pill's right edge, in the mic's cell, so nothing jumps.
 					// The BUTTON is the 40px target; the disc inside it is the 28px
 					// glyph. It used to be the other way round: a 28px button in an
 					// inert 36px span.
-					<button
+					<motion.button
 						type="button"
+						{...press}
 						onClick={() => void send()}
 						disabled={disabled}
 						aria-label="Send message"
-						className="flex h-10 w-10 cursor-pointer items-center justify-center disabled:opacity-50 animate-pop"
+						className="flex h-10 w-10 cursor-pointer items-center justify-center disabled:opacity-50"
 					>
-						<span
-							className="flex h-8 w-8 items-center justify-center rounded-pill transition-opacity hover:opacity-90"
-							style={{ background: "var(--chat-mine, linear-gradient(135deg, var(--ws-brand-primary), #6D5BFF))", color: "var(--chat-mine-ink, #FFFFFF)" }}
-						>
-							<RiArrowUpLine size={17} />
+						{/* The entrance moved onto a wrapper: animate-pop holds its
+						    end state, and on the button that pinned the transform
+						    the press needs. Typing swaps mic and arrow a hundred
+						    times a day, so the entrance stays this quiet. */}
+						<span className="flex animate-pop">
+							<span
+								className="flex h-8 w-8 items-center justify-center rounded-pill transition-opacity hover:opacity-90"
+								style={{ background: MINE_FILL, color: MINE_INK }}
+							>
+								<RiArrowUpLine size={17} />
+							</span>
 						</span>
-					</button>
+					</motion.button>
 				) : (
 					<button
 						type="button"
@@ -312,9 +326,22 @@ export const ComposerInput = forwardRef<
 			</div>
 		</div>
 		{/* Keyboard-slot emoji panel (owner pick): opens BELOW the pill in the
-		    keyboard's place, native-app style, instead of a floating popover. */}
+		    keyboard's place, native-app style, instead of a floating popover.
+		    It rises in and fades out before it goes. Transform and opacity
+		    only, on purpose: the panel is in flow above a bottom-pinned
+		    virtualised thread, and a height tween would resize that list every
+		    frame and make it chase its own bottom. The slot itself still
+		    opens and closes in one step. */}
+		<AnimatePresence>
 		{showEmoji && (
-			<div className="overflow-hidden rounded-xl bg-surface animate-pop ws-emoji-picker">
+			<motion.div
+				key="emoji"
+				variants={staggerItem}
+				initial="hidden"
+				animate="show"
+				exit="exit"
+				className="overflow-hidden rounded-xl bg-surface ws-emoji-picker"
+			>
 				<EmojiPicker
 					theme={resolvedTheme === "light" ? Theme.LIGHT : Theme.DARK}
 					width="100%"
@@ -322,8 +349,9 @@ export const ComposerInput = forwardRef<
 					lazyLoadEmojis={true}
 					onEmojiClick={(e) => setValue((p) => p + e.emoji)}
 				/>
-			</div>
+			</motion.div>
 		)}
+		</AnimatePresence>
 		</div>
 	);
 });

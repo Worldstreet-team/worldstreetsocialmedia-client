@@ -1,8 +1,8 @@
 "use client";
 
 import clsx from "clsx";
-import { AnimatePresence } from "framer-motion";
-import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import {
 	OverlayHeader,
@@ -14,6 +14,12 @@ import GlassSelect from "@/components/ui/GlassSelect";
 import { Switch } from "@/components/ui/Switch";
 import { Tabs } from "@/components/ui/Tabs";
 import { useToast } from "@/components/ui/Toast/ToastContext";
+import {
+	collapse,
+	staggerParentFast,
+	staggerPop,
+	swap,
+} from "@/lib/motion-presets";
 import {
 	type BubbleShape,
 	type ChatTheme,
@@ -91,6 +97,13 @@ export function ThemeStudio({
 	const [panel, setPanel] = useState<Panel>("wallpaper");
 	const [uploading, setUploading] = useState(false);
 	useOverlayDismiss(true, onClose);
+	// The studio mounts per open, so "after the first commit" is "after the
+	// opening": the ground chips cascade once, and the first panel arrives
+	// with the sheet instead of fading in a second time inside it.
+	const opened = useRef(false);
+	useEffect(() => {
+		opened.current = true;
+	}, []);
 	// Until the person picks, the stage follows the viewport.
 	const shown: Device = device ?? (phone ? "phone" : "desktop");
 
@@ -192,12 +205,27 @@ export function ThemeStudio({
 							]}
 							className="px-4 pt-3"
 						/>
-						<div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 py-4">
+						<div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-4">
+							<AnimatePresence mode="wait">
 							{panel === "wallpaper" ? (
-								<>
+								<motion.div
+									key="wallpaper"
+									{...swap}
+									initial={opened.current ? swap.initial : false}
+									className="flex shrink-0 flex-col gap-6"
+								>
 									<section>
 										<p className={clsx(heading, "mb-2")}>Ground</p>
-										<div className="flex flex-wrap items-center gap-2">
+										<motion.div
+											variants={staggerParentFast}
+											initial={opened.current ? false : "hidden"}
+											animate="show"
+											className="flex flex-wrap items-center gap-2"
+										>
+											{/* Each chip rides a wrapper: the chip's own CSS
+											    transition on transform (its selected scale)
+											    would smear a framer transform set on it. */}
+											<motion.span variants={staggerPop} className="flex shrink-0">
 											<button
 												type="button"
 												aria-label="Flat"
@@ -205,9 +233,10 @@ export function ThemeStudio({
 												onClick={() => wp({ type: "flat", color: undefined, stops: undefined, preset: undefined, imageKey: undefined, imageUrl: undefined })}
 												className={clsx(chip, "bg-page", groundId === "flat" ? "scale-110 border-primary" : "border-hairline")}
 											/>
+											</motion.span>
 											{GROUND_PRESETS.map((g) => (
+												<motion.span key={g.id} variants={staggerPop} className="flex shrink-0">
 												<button
-													key={g.id}
 													type="button"
 													aria-label={g.label}
 													title={g.label}
@@ -215,13 +244,16 @@ export function ThemeStudio({
 													className={clsx(chip, groundId === g.id ? "scale-110 border-primary" : "border-hairline")}
 													style={{ background: groundCss(g[mode]) ?? undefined }}
 												/>
+												</motion.span>
 											))}
+											<motion.span variants={staggerPop} className="flex shrink-0">
 											<ColorField
 												label="Own colour"
 												value={w.type === "solid" && w.color ? w.color : mode === "dark" ? "#000000" : "#FAFAF9"}
 												onChange={(c) => wp({ type: "solid", color: c, stops: undefined, preset: undefined, imageKey: undefined, imageUrl: undefined })}
 											/>
-										</div>
+											</motion.span>
+										</motion.div>
 									</section>
 
 									<section>
@@ -266,12 +298,15 @@ export function ThemeStudio({
 												Remove picture
 											</button>
 										)}
-									</section>
 
 									{/* Treatments exist only for a picture: a painted ground has
-									    nothing to frost or dim, so the rows are gone, not greyed. */}
+									    nothing to frost or dim, so the rows are gone, not greyed.
+									    They fold open under the pictures; the column's gap
+									    lives inside the fold (pt-6) so it closes to nothing. */}
+									<AnimatePresence initial={false}>
 									{hasPicture && (
-										<section className="flex flex-col gap-4">
+										<motion.div key="treatment" {...collapse} className="overflow-hidden">
+										<section className="flex flex-col gap-4 pt-6">
 											<p className={heading}>Treatment</p>
 											<Slider label="Frost" value={w.frost} max={100} onChange={(v) => wp({ frost: v })} />
 											<div className="flex items-center justify-between">
@@ -289,10 +324,13 @@ export function ThemeStudio({
 											</div>
 											<Slider label="Dim" value={w.dim} max={60} onChange={(v) => wp({ dim: v })} />
 										</section>
+										</motion.div>
 									)}
-								</>
+									</AnimatePresence>
+									</section>
+								</motion.div>
 							) : (
-								<>
+								<motion.div key="bubbles" {...swap} className="flex shrink-0 flex-col gap-6">
 									<section>
 										<p className={clsx(heading, "mb-2")}>My bubbles</p>
 										<div className="flex flex-wrap gap-2">
@@ -334,21 +372,33 @@ export function ThemeStudio({
 													{ key: "gradient", label: "Gradient" },
 												]}
 											/>
-											<div className="mt-3 flex flex-wrap items-center gap-3">
-												{mine.kind === "solid" ? (
-													<ColorField label="Colour" value={mine.color} onChange={(c) => setMine({ kind: "solid", color: c })} />
-												) : (
-													<>
-														<ColorField label="From" value={mine.stops[0]} onChange={(c) => setMine({ ...mine, stops: [c, mine.stops[1]] })} />
-														<ColorField label="To" value={mine.stops[1]} onChange={(c) => setMine({ ...mine, stops: [mine.stops[0], c] })} />
-													</>
-												)}
+											<div className="mt-3">
+												<AnimatePresence mode="wait" initial={false}>
+													<motion.div
+														key={mine.kind}
+														{...swap}
+														className="flex flex-wrap items-center gap-3"
+													>
+														{mine.kind === "solid" ? (
+															<ColorField label="Colour" value={mine.color} onChange={(c) => setMine({ kind: "solid", color: c })} />
+														) : (
+															<>
+																<ColorField label="From" value={mine.stops[0]} onChange={(c) => setMine({ ...mine, stops: [c, mine.stops[1]] })} />
+																<ColorField label="To" value={mine.stops[1]} onChange={(c) => setMine({ ...mine, stops: [mine.stops[0], c] })} />
+															</>
+														)}
+													</motion.div>
+												</AnimatePresence>
 											</div>
-											{mine.kind === "gradient" && (
-												<div className="mt-3">
-													<Slider label="Angle" value={mine.angle} max={360} unit="°" onChange={(v) => setMine({ ...mine, angle: v })} />
-												</div>
-											)}
+											<AnimatePresence initial={false}>
+												{mine.kind === "gradient" && (
+													<motion.div key="angle" {...collapse} className="overflow-hidden">
+														<div className="pt-3">
+															<Slider label="Angle" value={mine.angle} max={360} unit="°" onChange={(v) => setMine({ ...mine, angle: v })} />
+														</div>
+													</motion.div>
+												)}
+											</AnimatePresence>
 										</div>
 									</section>
 
@@ -393,8 +443,9 @@ export function ThemeStudio({
 											}))}
 										/>
 									</section>
-								</>
+								</motion.div>
 							)}
+							</AnimatePresence>
 						</div>
 
 						{/* Footer */}

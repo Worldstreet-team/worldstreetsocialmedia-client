@@ -17,6 +17,7 @@ import {
 	type PointerEvent as ReactPointerEvent,
 } from "react";
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
 import {
 	ArrowsIn,
 	ArrowsOut,
@@ -25,6 +26,7 @@ import {
 	SpeakerSimpleHigh,
 	SpeakerSimpleX,
 } from "@phosphor-icons/react";
+import { pop } from "@/lib/motion-presets";
 
 const HIDE_AFTER = 2400;
 /** Far enough to read a chart or a face; past this it is just mush. */
@@ -38,6 +40,31 @@ function clock(seconds: number) {
 	const h = Math.floor(seconds / 3600);
 	const mm = h > 0 ? String(m).padStart(2, "0") : String(m);
 	return `${h > 0 ? `${h}:` : ""}${mm}:${String(s).padStart(2, "0")}`;
+}
+
+/**
+ * The glyph of a two-state control (mute, play) changing in place: the new
+ * one lands, the old one leaves quicker. `initial={false}` so a player that
+ * mounts muted shows a glyph, not an entrance. The big centre Play glyph is
+ * deliberately NOT on this: scrolling the feed starts and stops clips all
+ * day, and nothing that frequent gets a flourish.
+ */
+function GlyphSwap({
+	id,
+	children,
+}: {
+	id: string;
+	children: React.ReactNode;
+}) {
+	return (
+		<span className="relative flex">
+			<AnimatePresence mode="popLayout" initial={false}>
+				<motion.span key={id} {...pop} className="flex">
+					{children}
+				</motion.span>
+			</AnimatePresence>
+		</span>
+	);
 }
 
 /**
@@ -724,17 +751,21 @@ export function VideoPlayer({
 
 			{/* Where you are, and the way back. Zoomed into a corner of a clip
 			    with no readout, "fit" is a guess. */}
-			{zoomed && (
-				<button
-					type="button"
-					onClick={resetZoom}
-					aria-label="Reset zoom"
-					className="absolute left-3 top-3 z-10 flex h-8 cursor-pointer items-center gap-1.5 rounded-pill glass-chip px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold tabular-nums"
-				>
-					{zoom.toFixed(1)}x
-					<span className="glass-ink-faint font-normal">Reset</span>
-				</button>
-			)}
+			<AnimatePresence>
+				{zoomed && (
+					<motion.button
+						key="zoom-readout"
+						type="button"
+						onClick={resetZoom}
+						aria-label="Reset zoom"
+						{...pop}
+						className="absolute left-3 top-3 z-10 flex h-8 cursor-pointer items-center gap-1.5 rounded-pill glass-chip px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold tabular-nums"
+					>
+						{zoom.toFixed(1)}x
+						<span className="glass-ink-faint font-normal">Reset</span>
+					</motion.button>
+				)}
+			</AnimatePresence>
 
 			{plays !== undefined && plays > 0 && (
 				<span className="pointer-events-none absolute left-2 top-2 flex items-center gap-1 rounded-pill bg-black/55 px-2 py-0.5 font-sans text-[calc(11px*var(--ws-fs))] font-medium text-white tabular-nums">
@@ -797,11 +828,13 @@ export function VideoPlayer({
 						aria-label={muted ? "Unmute" : "Mute"}
 						className="flex h-10 w-10 cursor-pointer items-center justify-center text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)]"
 					>
-						{muted ? (
-							<SpeakerSimpleX size={18} weight="fill" />
-						) : (
-							<SpeakerSimpleHigh size={18} weight="fill" />
-						)}
+						<GlyphSwap id={muted ? "muted" : "sound"}>
+							{muted ? (
+								<SpeakerSimpleX size={18} weight="fill" />
+							) : (
+								<SpeakerSimpleHigh size={18} weight="fill" />
+							)}
+						</GlyphSwap>
 					</button>
 					<button
 						type="button"
@@ -833,11 +866,13 @@ export function VideoPlayer({
 						aria-label={playing ? "Pause" : "Play"}
 						className={btn}
 					>
-						{playing ? (
-							<Pause size={15} weight="fill" />
-						) : (
-							<Play size={15} weight="fill" />
-						)}
+						<GlyphSwap id={playing ? "pause" : "play"}>
+							{playing ? (
+								<Pause size={15} weight="fill" />
+							) : (
+								<Play size={15} weight="fill" />
+							)}
+						</GlyphSwap>
 					</button>
 
 					{/* track: buffered underneath, played on top */}
@@ -888,11 +923,13 @@ export function VideoPlayer({
 						aria-label={muted ? "Unmute" : "Mute"}
 						className={btn}
 					>
-						{muted ? (
-							<SpeakerSimpleX size={15} weight="fill" />
-						) : (
-							<SpeakerSimpleHigh size={15} weight="fill" />
-						)}
+						<GlyphSwap id={muted ? "muted" : "sound"}>
+							{muted ? (
+								<SpeakerSimpleX size={15} weight="fill" />
+							) : (
+								<SpeakerSimpleHigh size={15} weight="fill" />
+							)}
+						</GlyphSwap>
 					</button>
 
 					<button

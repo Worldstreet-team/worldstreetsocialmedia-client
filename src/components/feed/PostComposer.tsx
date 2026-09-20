@@ -56,6 +56,16 @@ import EmojiPicker, { type EmojiClickData, Theme } from "emoji-picker-react";
 import { useTheme } from "next-themes";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
+import {
+	collapse,
+	menu,
+	menuStagger,
+	pop,
+	press,
+	staggerItem,
+	staggerParent,
+	swap,
+} from "@/lib/motion-presets";
 // Loaded on first open, not on page load: the editors are the heaviest
 // client code in the app and they render only when someone opens one. The
 // host renders them conditionally, so next/dynamic defers the chunk until
@@ -106,6 +116,14 @@ interface MediaItem {
 // entitlements fetch the video and audio caps ride.
 const MAX_LENGTH = POST_CHAR_BUDGET;
 
+// `collapse` for a region that holds a popover. It clips only while it
+// moves, so the poll's duration menu can still rise out of the block at rest.
+const collapseUnclipped = {
+	initial: { ...collapse.initial, overflow: "hidden" },
+	animate: { ...collapse.animate, transitionEnd: { overflow: "visible" } },
+	exit: { ...collapse.exit, overflow: "hidden" },
+};
+
 // The poll duration vocabulary - label is display, hours cross the wire.
 const POLL_DURATIONS = [
 	{ hours: 1, label: "1 hour" },
@@ -147,24 +165,28 @@ const CharacterRing = ({
 
 	return (
 		<div className="flex items-center gap-2">
-			{over && (
-				<AlertTriangle
-					size={14}
-					aria-hidden
-					className={clsx("shrink-0", tone)}
-				/>
-			)}
-			{remaining <= 28 && (
-				<span
-					className={clsx(
-						"font-sans text-[calc(13px*var(--ws-fs))] font-medium tabular-nums",
-						tone,
-					)}
-					aria-live="polite"
-				>
-					{remaining}
-				</span>
-			)}
+			{/* Both land ONCE, at the threshold. The digits then change with
+			    every keystroke and stay still: typing gets no flourish. */}
+			<AnimatePresence initial={false}>
+				{over && (
+					<motion.span key="over" {...pop} className="flex shrink-0">
+						<AlertTriangle size={14} aria-hidden className={tone} />
+					</motion.span>
+				)}
+				{remaining <= 28 && (
+					<motion.span
+						key="remaining"
+						{...pop}
+						className={clsx(
+							"font-sans text-[calc(13px*var(--ws-fs))] font-medium tabular-nums",
+							tone,
+						)}
+						aria-live="polite"
+					>
+						{remaining}
+					</motion.span>
+				)}
+			</AnimatePresence>
 			<svg
 				width="20"
 				height="20"
@@ -1005,11 +1027,23 @@ export const PostComposer = ({
 					)}
 					</div>
 
-					{/* Media Preview Grid */}
+					{/* Media Preview Grid. The region opens instead of snapping the
+					    composer taller; the first tile rides that, later ones rise.
+					    popLayout: a removed or re-edited tile leaves the flow at
+					    once, so the grid never holds a ghost cell while it fades. */}
+					<AnimatePresence initial={false}>
 					{mediaItems.length > 0 && (
+						<motion.div
+							key="media-preview"
+							{...collapse}
+							className="overflow-hidden"
+						>
 						<div
 							className={clsx(
-								"grid gap-2 mt-3 mb-2 rounded-xl overflow-hidden relative",
+								// mb-1 sm:mb-0, not mb-2: the clipping wrapper stops this
+								// margin collapsing into the next row's mt, so the old
+								// mb-2 would now stack on it and add 8px under the grid.
+								"grid gap-2 mt-3 mb-1 sm:mb-0 rounded-xl overflow-hidden relative",
 								// Photos always get the 2-up grid so the add-more
 								// tile can ride alongside; only a lone video goes
 								// full-width.
@@ -1018,9 +1052,14 @@ export const PostComposer = ({
 									: "grid-cols-2",
 							)}
 						>
+							<AnimatePresence mode="popLayout" initial={false}>
 							{mediaItems.map((item, index) => (
-								<div
+								<motion.div
 									key={item.url}
+									variants={staggerItem}
+									initial="hidden"
+									animate="show"
+									exit="exit"
 									className={clsx(
 										"relative bg-surface border border-hairline",
 										item.type === "video" &&
@@ -1108,8 +1147,9 @@ export const PostComposer = ({
 											<RiCloseLine className="w-4 h-4" />
 										</button>
 									</div>
-								</div>
+								</motion.div>
 							))}
+							</AnimatePresence>
 							{/* Chain photos: an explicit add tile, not a hunt
 							    for the toolbar icon. 4 slots total. */}
 							{mediaItems[0].type !== "video" &&
@@ -1131,11 +1171,21 @@ export const PostComposer = ({
 									</button>
 								)}
 						</div>
+						</motion.div>
 					)}
+					</AnimatePresence>
 
-					{/* Link Preview Card */}
+					{/* Link Preview Card. It lands after a fetch, mid-draft, so the
+					    composer opens to fit it instead of jumping a card's height
+					    under the person's cursor. */}
+					<AnimatePresence initial={false}>
 					{linkPreview && mediaItems.length === 0 && (
-						<div className="mt-3 mb-2 rounded-xl border border-hairline overflow-hidden bg-surface/50 relative group">
+						<motion.div
+							key="link-preview"
+							{...collapse}
+							className="overflow-hidden"
+						>
+						<div className="mt-3 mb-1 sm:mb-0 rounded-xl border border-hairline overflow-hidden bg-surface/50 relative group">
 							{/* Reveal-on-hover is unreachable on touch there is no
 							    hover state to enter. Always visible below sm. */}
 							<button
@@ -1171,14 +1221,25 @@ export const PostComposer = ({
 								</div>
 							</div>
 						</div>
+						</motion.div>
 					)}
+					</AnimatePresence>
 
+					{/* The waiting row folds away as the card above opens. */}
+					<AnimatePresence initial={false}>
 					{isFetchingPreview && (
-						<div className="mt-3 mb-2 p-4 rounded-xl border border-hairline bg-surface/10 flex items-center justify-center gap-2 text-muted font-sans text-[calc(13px*var(--ws-fs))]">
+						<motion.div
+							key="link-fetching"
+							{...collapse}
+							className="overflow-hidden"
+						>
+						<div className="mt-3 mb-1 sm:mb-0 p-4 rounded-xl border border-hairline bg-surface/10 flex items-center justify-center gap-2 text-muted font-sans text-[calc(13px*var(--ws-fs))]">
 							<div className="w-3 h-3 border-2 border-subtle/30 border-t-subtle rounded-full animate-spin" />
 							Fetching preview...
 						</div>
+						</motion.div>
 					)}
+					</AnimatePresence>
 
 					{(community || myCommunities.length > 0) && (
 						<div className="mt-2 flex items-center">
@@ -1198,14 +1259,28 @@ export const PostComposer = ({
 					    records it in removedTopics so re-typing can't bring it
 					    back. These ids are what the ranker matches against each
 					    reader's interests. */}
+					{/* The row opens under the draft instead of shoving the toolbar
+					    down a line mid-sentence. The chips it opens with ride that;
+					    one recognised later lands, and a dismissed one (the
+					    person's own tap) gets to leave. No `layout` on the chips:
+					    this component re-renders on every keystroke, and a layout
+					    prop would measure them each time. */}
+					<AnimatePresence initial={false}>
 					{suggestedTopics.length > 0 && (
+						<motion.div
+							key="topics"
+							{...collapse}
+							className="overflow-hidden"
+						>
 						<div className="mt-2 flex flex-wrap items-center gap-1.5">
 							<span className="font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
 								Topics
 							</span>
+							<AnimatePresence initial={false}>
 							{suggestedTopics.map((topic) => (
-								<span
+								<motion.span
 									key={topic.id}
+									{...pop}
 									className="inline-flex h-7 items-center gap-1 rounded-pill bg-raised/60 pl-2.5 pr-1 font-sans text-[calc(12px*var(--ws-fs))] text-muted"
 								>
 									{topic.label}
@@ -1219,17 +1294,21 @@ export const PostComposer = ({
 									>
 										<RiCloseLine size={11} />
 									</button>
-								</span>
+								</motion.span>
 							))}
+							</AnimatePresence>
 						</div>
+						</motion.div>
 					)}
+					</AnimatePresence>
 
 					{/* Sell this post: a quiet row until armed, then the price field
 					    appears inline with the split spelled out — the 60/40 is shown
 					    to the SELLER here, never to the buyer on the paywall. */}
 					{canSell && (
 					<div className="mt-2 flex flex-wrap items-center gap-2">
-						<button
+						<motion.button
+							{...press}
 							type="button"
 							onClick={() => setSelling((v) => !v)}
 							aria-pressed={selling}
@@ -1244,12 +1323,35 @@ export const PostComposer = ({
 									: "bg-raised/50 text-muted hover:bg-raised hover:text-primary",
 							)}
 						>
-							{selling ? <RiLockFill size={15} /> : <RiLockLine size={15} />}
-							{selling ? t("composer.sellingOn") : t("composer.sellPost")}
-						</button>
+							{/* Lock and label change hands as one piece; the button
+							    stays mounted so focus survives the toggle. */}
+							<AnimatePresence mode="wait" initial={false}>
+								<motion.span
+									key={selling ? "on" : "off"}
+									{...swap}
+									className="flex items-center gap-2 sm:gap-1.5"
+								>
+									{selling ? <RiLockFill size={15} /> : <RiLockLine size={15} />}
+									{selling ? t("composer.sellingOn") : t("composer.sellPost")}
+								</motion.span>
+							</AnimatePresence>
+						</motion.button>
+						{/* The fields are flex siblings of the toggle, so a clipping
+						    `collapse` wrapper would change how the row wraps. They
+						    cascade instead: `contents` keeps this parent out of the
+						    layout, it only conducts the stagger. */}
+						<AnimatePresence>
 						{selling && (
-							<>
-								<input
+							<motion.div
+								key="sell-fields"
+								variants={staggerParent}
+								initial="hidden"
+								animate="show"
+								exit="exit"
+								className="contents"
+							>
+								<motion.input
+									variants={staggerItem}
 									type="text"
 									value={saleTitle}
 									onChange={(e) => setSaleTitle(e.target.value.slice(0, 80))}
@@ -1267,7 +1369,10 @@ export const PostComposer = ({
 											: "border-hairline focus:border-credit/60",
 									)}
 								/>
-								<label className="flex h-9 items-center gap-1 rounded-pill bg-sunken border border-hairline px-3 font-sans text-[calc(13px*var(--ws-fs))] text-primary focus-within:border-credit/60 transition-colors">
+								<motion.label
+									variants={staggerItem}
+									className="flex h-9 items-center gap-1 rounded-pill bg-sunken border border-hairline px-3 font-sans text-[calc(13px*var(--ws-fs))] text-primary focus-within:border-credit/60 transition-colors"
+								>
 									<span className="text-muted">$</span>
 									<input
 										type="text"
@@ -1282,8 +1387,9 @@ export const PostComposer = ({
 										aria-label={t("composer.sellPrice")}
 										className="w-16 bg-transparent outline-none placeholder:text-subtle tabular-nums"
 									/>
-								</label>
-								<span
+								</motion.label>
+								<motion.span
+									variants={staggerItem}
 									className={clsx(
 										"font-sans text-[calc(11.5px*var(--ws-fs))]",
 										(saleInvalid || saleTitleMissing) && salePrice
@@ -1296,10 +1402,12 @@ export const PostComposer = ({
 										: saleInvalid && salePrice
 											? t("composer.sellBounds")
 											: t("composer.sellSplit")}
-								</span>
+								</motion.span>
 								{/* Some sellers don't want a taste out there at all
 								    (owner ask): title + honest counts only. */}
-								<button
+								<motion.button
+									variants={staggerItem}
+									{...press}
 									type="button"
 									onClick={() => setSaleHidePreview((v) => !v)}
 									aria-pressed={saleHidePreview}
@@ -1312,22 +1420,32 @@ export const PostComposer = ({
 								>
 									{saleHidePreview ? <RiLockFill size={12} /> : <RiLockLine size={12} />}
 									{saleHidePreview ? "Preview hidden" : "Hide preview"}
-								</button>
-							</>
+								</motion.button>
+							</motion.div>
 						)}
+						</AnimatePresence>
 					</div>
 					)}
 
 					{/* Poll editor (owner-ratified): 2-4 outline-pill option inputs,
 					    a duration select, one remove affordance. Lives where media
 					    previews live — a poll IS the post's attachment. */}
+					<AnimatePresence initial={false}>
 					{poll && (
+						<motion.div key="poll-editor" {...collapseUnclipped}>
 						<div className="mt-3 rounded-xl border border-hairline p-3">
 							<div className="flex flex-col gap-2">
 								{poll.options.map((opt, i) => (
-									<div
+									<motion.div
 										// biome-ignore lint/suspicious/noArrayIndexKey: positional inputs
 										key={i}
+										// An added option rises into its slot; the two
+										// the editor opens with ride the block. Removal
+										// is a cut: the keys are positional, so an exit
+										// would play on the wrong row.
+										variants={staggerItem}
+										initial={i >= 2 ? "hidden" : false}
+										animate="show"
 										className="flex items-center gap-2"
 									>
 										<input
@@ -1371,7 +1489,7 @@ export const PostComposer = ({
 												<RiCloseLine size={16} />
 											</button>
 										)}
-									</div>
+									</motion.div>
 								))}
 							</div>
 							<div className="mt-2.5 flex items-center justify-between gap-2">
@@ -1423,24 +1541,33 @@ export const PostComposer = ({
 											/>
 										</button>
 										{pollDurOpen && (
-											<>
-												{/* Click-away catcher, no dim: a chip
-												    menu is not a modal. */}
-												<button
-													type="button"
-													aria-hidden
-													tabIndex={-1}
-													onClick={() => setPollDurOpen(false)}
-													className="fixed inset-0 z-dropdown cursor-default"
-												/>
-												<div
+											/* Click-away catcher, no dim: a chip
+											   menu is not a modal. Outside the
+											   presence, so it is gone the instant
+											   the menu starts to leave. */
+											<button
+												type="button"
+												aria-hidden
+												tabIndex={-1}
+												onClick={() => setPollDurOpen(false)}
+												className="fixed inset-0 z-dropdown cursor-default"
+											/>
+										)}
+										{/* animate-rise is switched off once the
+										    intro has played, so this used to snap. */}
+										<AnimatePresence>
+											{pollDurOpen && (
+												<motion.div
+													key="poll-duration"
 													role="listbox"
 													aria-label={t("poll.duration")}
-													className="absolute bottom-full right-0 z-dropdown mb-1.5 w-36 overflow-hidden rounded-xl card-depth py-1 animate-rise"
+													{...menuStagger("bottom-right")}
+													className="absolute bottom-full right-0 z-dropdown mb-1.5 w-36 overflow-hidden rounded-xl card-depth py-1"
 												>
 													{POLL_DURATIONS.map((d) => (
-														<button
+														<motion.button
 															key={d.hours}
+															variants={staggerItem}
 															type="button"
 															role="option"
 															aria-selected={
@@ -1475,11 +1602,11 @@ export const PostComposer = ({
 																	className="text-gold"
 																/>
 															)}
-														</button>
+														</motion.button>
 													))}
-												</div>
-											</>
-										)}
+												</motion.div>
+											)}
+										</AnimatePresence>
 									</div>
 									<button
 										type="button"
@@ -1491,7 +1618,9 @@ export const PostComposer = ({
 								</div>
 							</div>
 						</div>
+						</motion.div>
 					)}
+					</AnimatePresence>
 
 					<div className="flex items-center justify-between mt-1 pt-2 sm:mt-2 sm:pt-3 border-t border-hairline/60">
 						<div className="flex items-center gap-2 relative">
@@ -1499,7 +1628,8 @@ export const PostComposer = ({
 							    Below sm the words come off — three labelled chips plus the
 							    ring and CTA need ~500px, the row has ~275 — leaving 44px
 							    icon-only targets. Go Live moved out to the create FAB. */}
-							<button
+							<motion.button
+								{...press}
 								type="button"
 								onClick={() =>
 									!linkPreview && !poll && fileInputRef.current?.click()
@@ -1515,8 +1645,9 @@ export const PostComposer = ({
 								)}
 							>
 								<RiImageLine className="h-[18px] w-[18px] shrink-0" />
-							</button>
-							<button
+							</motion.button>
+							<motion.button
+								{...press}
 								type="button"
 								onClick={() => !linkPreview && !poll && setRecordOpen(true)}
 								disabled={!!linkPreview || !!poll}
@@ -1530,10 +1661,11 @@ export const PostComposer = ({
 								)}
 							>
 								<RiMicLine className="h-[18px] w-[18px] shrink-0" size={18} />
-							</button>
+							</motion.button>
 							{/* Poll — the locked ruling: the glyph is a LIST, never a
 							    bar chart. Mutually exclusive with media and selling. */}
-							<button
+							<motion.button
+								{...press}
 								type="button"
 								onClick={() =>
 									mediaItems.length === 0 &&
@@ -1555,7 +1687,7 @@ export const PostComposer = ({
 								)}
 							>
 								<RiListCheck3 className="h-[18px] w-[18px] shrink-0" />
-							</button>
+							</motion.button>
 							<input
 								type="file"
 								ref={fileInputRef}
@@ -1566,7 +1698,8 @@ export const PostComposer = ({
 								disabled={isPosting || mediaItems.length >= 4 || !!linkPreview}
 							/>
 
-							<button
+							<motion.button
+								{...press}
 								type="button"
 								onClick={() => setShowEmojiPicker(!showEmojiPicker)}
 								aria-label={t("composer.emoji")}
@@ -1579,7 +1712,7 @@ export const PostComposer = ({
 								)}
 							>
 								<RiEmotionLine className="h-[18px] w-[18px] shrink-0" />
-							</button>
+							</motion.button>
 
 							{content.trim() && (
 								<button
@@ -1610,9 +1743,16 @@ export const PostComposer = ({
 							{/* Emoji Picker Popover below sm it centres in the viewport
 							    instead of anchoring (a fixed 320px block anchored 72px in
 							    ran off the right edge on a 320-375px screen). */}
+							{/* animate-rise is switched off once the intro has played, so
+							    this used to snap in and had no way out. The centring
+							    rides Tailwind's `translate` property, which composes
+							    with the transform framer writes. */}
+							<AnimatePresence>
 							{showEmojiPicker && (
-								<div
-									className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 sm:absolute sm:left-0 sm:top-12 sm:translate-x-0 sm:translate-y-0 w-[min(320px,calc(100vw-2rem))] max-h-[70dvh] z-dropdown animate-rise ws-emoji-picker"
+								<motion.div
+									key="emoji-picker"
+									{...menu("top-left")}
+									className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 sm:absolute sm:left-0 sm:top-12 sm:translate-x-0 sm:translate-y-0 w-[min(320px,calc(100vw-2rem))] max-h-[70dvh] z-dropdown ws-emoji-picker"
 									ref={emojiPickerRef}
 								>
 									<EmojiPicker
@@ -1626,13 +1766,15 @@ export const PostComposer = ({
 										height={360}
 										lazyLoadEmojis={true}
 									/>
-								</div>
+								</motion.div>
 							)}
+							</AnimatePresence>
 						</div>
 
 						<div className="flex items-center gap-3">
 							<CharacterRing length={content.length} budget={charBudget} />
-							<button
+							<motion.button
+							{...press}
 							onClick={handleSubmit}
 							disabled={
 								(!content.trim() && mediaItems.length === 0 && !pollReady) ||
@@ -1656,15 +1798,24 @@ export const PostComposer = ({
 									: "bg-brand text-brand-on hover:bg-brand-active",
 							)}
 						>
-							{isPosting ? (
-								<div className="w-4 h-4 border-2 border-brand-on/30 border-t-brand-on rounded-full animate-spin" />
-							) : (
-								<>
-									<span className="uppercase">{t("composer.post")}</span>
-									<RiSendPlane2Fill className="w-3 h-3" />
-								</>
-							)}
-							</button>
+							{/* The label hands over to the spinner, and back, in place. */}
+							<AnimatePresence mode="wait" initial={false}>
+								<motion.span
+									key={isPosting ? "posting" : "idle"}
+									{...swap}
+									className="flex items-center gap-2"
+								>
+									{isPosting ? (
+										<div className="w-4 h-4 border-2 border-brand-on/30 border-t-brand-on rounded-full animate-spin" />
+									) : (
+										<>
+											<span className="uppercase">{t("composer.post")}</span>
+											<RiSendPlane2Fill className="w-3 h-3" />
+										</>
+									)}
+								</motion.span>
+							</AnimatePresence>
+							</motion.button>
 						</div>
 					</div>
 				</div>

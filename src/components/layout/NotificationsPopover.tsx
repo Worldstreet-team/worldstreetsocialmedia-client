@@ -135,11 +135,11 @@ export function NotificationsPopover({
 				}
 			>
 				<Bell size={23} weight={open ? "fill" : "duotone"} />
-				{unread > 0 && (
-					<span className="absolute right-1.5 top-1.5">
-						<Badge count={unread} />
-					</span>
-				)}
+				{/* Always mounted: Badge owns its own presence, and gating it
+				    here meant the pill could neither pop in nor leave. */}
+				<span className="absolute right-1.5 top-1.5">
+					<Badge count={unread} />
+				</span>
 			</button>
 
 			{mounted &&

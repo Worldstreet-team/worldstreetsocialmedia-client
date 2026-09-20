@@ -3,12 +3,14 @@
 import { useMemo, useState } from "react";
 import { MagnifyingGlass, Check } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { motion } from "framer-motion";
 import {
 	CATEGORIES,
 	VERTICALS,
 	MAX_INTERESTS,
 	type ContentCategory,
 } from "@/data/categories";
+import { pop, press, staggerItem, staggerParent } from "@/lib/motion-presets";
 
 /**
  * The interest picker. 100 categories is far too many for a flat grid, so
@@ -29,6 +31,9 @@ export function InterestPicker({
 	onToggle: (id: string) => void;
 }) {
 	const [query, setQuery] = useState("");
+	// Latched by the first keystroke. The groups deal in once, when the step
+	// arrives; after that, searching adds and removes them with a cut.
+	const [typed, setTyped] = useState(false);
 	const atCap = selected.length >= MAX_INTERESTS;
 
 	const groups = useMemo(() => {
@@ -54,7 +59,10 @@ export function InterestPicker({
 				<input
 					type="text"
 					value={query}
-					onChange={(e) => setQuery(e.target.value)}
+					onChange={(e) => {
+						setTyped(true);
+						setQuery(e.target.value);
+					}}
 					placeholder="Search topics"
 					aria-label="Search topics"
 					// text-base on touch: a smaller field makes iOS zoom the card.
@@ -67,9 +75,19 @@ export function InterestPicker({
 			    buttons. At 42dvh the whole thing overran the viewport and pushed
 			    "Create profile" below the fold — the one control the step exists
 			    to reach. 32dvh keeps the CTA on screen down to a laptop. */}
-			<div className="max-h-[min(300px,32dvh)] overflow-y-auto overscroll-contain pr-1 space-y-5 text-left">
+			<motion.div
+				variants={staggerParent}
+				initial="hidden"
+				animate="show"
+				className="max-h-[min(300px,32dvh)] overflow-y-auto overscroll-contain pr-1 space-y-5 text-left"
+			>
 				{groups.map(({ vertical, items }) => (
-					<section key={vertical.id} className="space-y-2">
+					<motion.section
+						key={vertical.id}
+						variants={staggerItem}
+						initial={typed ? false : undefined}
+						className="space-y-2"
+					>
 						<div className="px-0.5">
 							<h3 className="font-sans text-[calc(10px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-subtle">
 								{vertical.label}
@@ -82,12 +100,13 @@ export function InterestPicker({
 								// silently doing nothing when tapped.
 								const locked = atCap && !on;
 								return (
-									<button
+									<motion.button
 										key={c.id}
 										type="button"
 										onClick={() => !locked && onToggle(c.id)}
 										aria-pressed={on}
 										disabled={locked}
+										{...press}
 										className={clsx(
 											"inline-flex items-center gap-1.5 min-h-9 px-3 rounded-pill font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors",
 											on
@@ -97,19 +116,18 @@ export function InterestPicker({
 											!locked && "cursor-pointer",
 										)}
 									>
+										{/* Their pick, so the tick lands. */}
 										{on && (
-											<Check
-												size={12}
-												weight="bold"
-												className="text-gold shrink-0"
-											/>
+											<motion.span {...pop} className="flex shrink-0 text-gold">
+												<Check size={12} weight="bold" />
+											</motion.span>
 										)}
 										{c.label}
-									</button>
+									</motion.button>
 								);
 							})}
 						</div>
-					</section>
+					</motion.section>
 				))}
 
 				{groups.length === 0 && (
@@ -117,7 +135,7 @@ export function InterestPicker({
 						No topics match “{query}”.
 					</p>
 				)}
-			</div>
+			</motion.div>
 		</div>
 	);
 }

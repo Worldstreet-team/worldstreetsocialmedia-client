@@ -1,16 +1,30 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import clsx from "clsx";
+import type { Ref } from "react";
+import { motion } from "framer-motion";
 // 03-icons: `check`, `x`, `bell` are in-set. `alert-triangle` is a justified
 // deviation — the standardized set has no warning glyph.
 import { X, Check, Bell, AlertTriangle } from "lucide-react";
-import { Toast } from "./ToastContext";
+import { menuStagger, snappySpring, staggerPop } from "@/lib/motion-presets";
+import type { Toast, ToastPosition } from "./ToastContext";
 
 interface ToastProps {
 	toast: Toast;
 	removeToast: (id: string) => void;
+	/** AnimatePresence (popLayout) measures the pill through this. */
+	ref?: Ref<HTMLOutputElement>;
 }
+
+// A toast unfolds from the screen corner it is pinned to, so the six
+// positions map straight onto the menu preset's origins.
+const ORIGIN: Record<ToastPosition, Parameters<typeof menuStagger>[0]> = {
+	"top-left": "top-left",
+	"top-center": "top",
+	"top-right": "top-right",
+	"bottom-left": "bottom-left",
+	"bottom-center": "bottom",
+	"bottom-right": "bottom-right",
+};
 
 /**
  * 04-components "Toast": horizontal pill-card, padding 12/14, gap 10,
@@ -50,52 +64,43 @@ const icons = {
 	),
 };
 
-export const ToastItem = ({ toast, removeToast }: ToastProps) => {
-	const [isVisible, setIsVisible] = useState(false);
-
-	useEffect(() => {
-		requestAnimationFrame(() => setIsVisible(true));
-	}, []);
-
-	const handleDismiss = () => {
-		setIsVisible(false);
-		// Exits are a fast fade (06-motion-accessibility); ~fast token.
-		setTimeout(() => removeToast(toast.id), 120);
-	};
+export const ToastItem = ({ toast, removeToast, ref }: ToastProps) => {
+	// No timer and no visible flag any more: the container's AnimatePresence
+	// plays the exit for EVERY removal. The old hand-rolled fade only ran for
+	// a click; the 4s auto-dismiss pulled the toast from state directly and
+	// it simply vanished.
+	const handleDismiss = () => removeToast(toast.id);
 
 	// Danger interrupts; everything else is polite.
 	const isDanger = toast.type === "error";
 
-	// Enter translates in from the nearest edge, kept to the spec's small
-	// transform budget rather than a full-width slide.
-	const offscreen = toast.position?.includes("right")
-		? "translate-x-2"
-		: toast.position?.includes("left")
-			? "-translate-x-2"
-			: toast.position?.includes("bottom")
-				? "translate-y-2"
-				: "-translate-y-2";
-
 	return (
-		<output
-			className={clsx(
+		<motion.output
+			ref={ref}
+			// Position only: when a neighbour leaves, the rest glide into the
+			// gap instead of jumping. A spring, because a second toast can
+			// leave while the first reflow is still in flight.
+			layout="position"
+			{...menuStagger(ORIGIN[toast.position ?? "bottom-right"])}
+			transition={{ layout: snappySpring }}
+			className={
 				// min-w-0 on phones (the container stretches it full-width);
 				// the 280px floor only applies once there's room for it.
 				// Adaptive frost (glass-frost follows the theme) with the blur
 				// at the usage site, per the one-blur-per-stack rule. No
 				// border: the frost IS the surface; shadow-nav keeps it lifted
 				// off whatever it floats over.
-				"flex items-center gap-3 px-3.5 py-3 w-full sm:w-auto sm:min-w-[280px] max-w-full sm:max-w-md rounded-[18px] glass-toast backdrop-blur-2xl backdrop-saturate-150 pointer-events-auto cursor-pointer",
-				"transition-[opacity,transform] duration-[var(--ws-motion-base)] ease-ws",
-				isVisible
-					? "opacity-100 translate-x-0 translate-y-0 scale-100"
-					: clsx("opacity-0 scale-[0.98]", offscreen),
-			)}
+				"flex items-center gap-3 px-3.5 py-3 w-full sm:w-auto sm:min-w-[280px] max-w-full sm:max-w-md rounded-[18px] glass-toast backdrop-blur-2xl backdrop-saturate-150 pointer-events-auto cursor-pointer"
+			}
 			onClick={handleDismiss}
 			role={isDanger ? "alert" : "status"}
 			aria-live={isDanger ? "assertive" : "polite"}
 		>
-			<span className="shrink-0">{icons[toast.type]}</span>
+			{/* The puck lands a beat after the pill, with the small-glyph
+			    overshoot: it is 28px, the pill itself never bounces. */}
+			<motion.span variants={staggerPop} className="shrink-0">
+				{icons[toast.type]}
+			</motion.span>
 			<p className="flex-1 min-w-0 text-sm font-medium font-sans text-primary break-words">
 				{toast.message}
 			</p>
@@ -110,6 +115,6 @@ export const ToastItem = ({ toast, removeToast }: ToastProps) => {
 			>
 				<X className="w-[13px] h-[13px]" />
 			</button>
-		</output>
+		</motion.output>
 	);
 };

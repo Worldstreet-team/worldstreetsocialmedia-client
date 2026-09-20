@@ -11,6 +11,7 @@ import { createPortal } from "react-dom";
 import { useAtom, useAtomValue } from "jotai";
 import { storyRailAtom, storyStudioSignalAtom } from "@/store/ui.atom";
 import clsx from "clsx";
+import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
 
 import { useT } from "@/i18n/client";
@@ -32,6 +33,7 @@ const StoryStudio = dynamic(
 );
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { displayName } from "@/components/ui/PersonName";
+import { press, staggerItem, staggerParentFast } from "@/lib/motion-presets";
 
 /* The rail now mounts twice — RightSidebar (lg+) and the feed column
    (below lg) — so a create signal fired before the visible instance mounted
@@ -40,6 +42,12 @@ import { displayName } from "@/components/ui/PersonName";
 let consumedStorySignal: number | null = null;
 /** One initial rail load per page load, shared by both mounted instances. */
 let railLoadStarted = false;
+/** The rings cascade the first time they arrive in a session. The rail
+ *  remounts on every visit home and refetches on live and story events;
+ *  none of those may replay it. */
+let railIntroPlayed = false;
+/** Only the rings a rail can show at once take part. */
+const CASCADE_RINGS = 8;
 
 /** Sustained downward travel before the rail gets out of the way. */
 const COLLAPSE_AFTER_DOWN_PX = 120;
@@ -259,6 +267,10 @@ export function StoriesRail({ compact }: { compact?: boolean | "thumbs" } = {}) 
 	const { prefs: wsPrefs } = usePreferences();
 	const collapsed = collapsedByScroll || !wsPrefs.content.showStories;
 
+	useEffect(() => {
+		if (others.length > 0) railIntroPlayed = true;
+	}, [others.length]);
+
 	return (
 		<>
 		{/* grid-rows 1fr -> 0fr is the height transition: it animates to the
@@ -285,7 +297,8 @@ export function StoriesRail({ compact }: { compact?: boolean | "thumbs" } = {}) 
 			    Two shapes, one markup: a ringed circle with the name beneath it
 			    below sm, the tall cover card from sm up. The pieces that only
 			    belong to one shape carry the breakpoint. */}
-			<button
+			<motion.button
+				{...press}
 				type="button"
 				onClick={() =>
 					self && self.stories.length > 0
@@ -369,9 +382,19 @@ export function StoriesRail({ compact }: { compact?: boolean | "thumbs" } = {}) 
 				<span className={clsx("w-full truncate text-center font-sans text-[calc(12px*var(--ws-fs))] font-medium text-muted", card && "sm:hidden", circlesOnly ? "hidden" : "block")}>
 					{t("story.yours")}
 				</span>
-			</button>
+			</motion.button>
 
-			{others.map((entry) => {
+			{/* `contents`: the wrapper only carries the cascade, the rings stay
+			    direct children of the scroller. Mounted once there ARE rings,
+			    or the parent would finish before its children exist. */}
+			{others.length > 0 && (
+			<motion.div
+				variants={staggerParentFast}
+				initial={railIntroPlayed ? false : "hidden"}
+				animate="show"
+				className="contents"
+			>
+			{others.map((entry, i) => {
 				const name = displayName(entry.author);
 				const liveStory = entry.stories.find((s) => s.origin === "live");
 				// The card wears the story it is offering. First unseen if there
@@ -379,8 +402,10 @@ export function StoriesRail({ compact }: { compact?: boolean | "thumbs" } = {}) 
 				const cover =
 					(entry.stories.find((s) => !s.seen) ?? entry.stories[0])?.media;
 				return (
-					<button
+					<motion.button
 						key={entry.author._id}
+						variants={i < CASCADE_RINGS ? staggerItem : undefined}
+						{...press}
 						type="button"
 						onClick={() => {
 							if (entry.isLive && liveStory?.streamRef) {
@@ -469,9 +494,11 @@ export function StoriesRail({ compact }: { compact?: boolean | "thumbs" } = {}) 
 							    use; a truncated @handle under a face read as broken. */}
 							{thumbs ? name.split(" ")[0] : `@${name}`}
 						</span>
-					</button>
+					</motion.button>
 				);
 			})}
+			</motion.div>
+			)}
 					</div>
 				</div>
 			</div>

@@ -4,6 +4,7 @@ import { useBackWithFallback } from "@/lib/nav";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
 import { useAtomValue } from "jotai";
 import { useEffect, useState } from "react";
 import {
@@ -17,6 +18,7 @@ import {
 import { userAtom } from "@/store/user.atom";
 import { useT } from "@/i18n/client";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import { reveal, swap, thumbSpring } from "@/lib/motion-presets";
 
 const GROUPS = [
 	{
@@ -72,7 +74,12 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 		<div className="min-h-dvh bg-[#0F0E0D] text-[#fafaf9]">
 			<div className="flex min-h-dvh">
 				{/* ── rail ─────────────────────────────────────────────────── */}
-				<aside className="sticky top-0 hidden h-dvh w-[240px] shrink-0 flex-col bg-[#141312] px-4 pb-4 pt-5 md:flex">
+				{/* layoutRoot: the rail is sticky, so the sliding pill is measured
+				    against the rail and not against a page that may have scrolled. */}
+				<motion.aside
+					layoutRoot
+					className="sticky top-0 hidden h-dvh w-[240px] shrink-0 flex-col bg-[#141312] px-4 pb-4 pt-5 md:flex"
+				>
 					<Link
 						href="/"
 						onClick={(e) => { e.preventDefault(); goBack("/"); }}
@@ -85,7 +92,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 					</Link>
 
 					<div className="mt-5 flex items-center gap-2.5 px-2.5">
-						<span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[var(--ws-brand-primary)] text-[#0c0a09]">
+						<span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[var(--ws-brand-primary)] text-brand-on">
 							<Faders size={16} weight="bold" />
 						</span>
 						<span className="font-display text-[calc(15px*var(--ws-fs))] font-semibold tracking-tight">
@@ -110,23 +117,33 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 												key={href}
 												href={href}
 												className={clsx(
-													"flex h-10 items-center gap-3 rounded-xl px-3 font-sans text-[calc(13.5px*var(--ws-fs))] transition-colors",
+													"relative flex h-10 items-center gap-3 rounded-xl px-3 font-sans text-[calc(13.5px*var(--ws-fs))] transition-colors",
 													active
-														? "bg-[var(--ws-brand-primary)] font-semibold text-[#0c0a09]"
+														? "font-semibold text-brand-on"
 														: "glass-ink-dim font-medium hover:glass-ink hover:bg-[#fafaf9]/[0.05]",
 												)}
 											>
+												{/* The one filled pill on screen: a page singleton,
+												    so it slides between sections. */}
+												{active && (
+													<motion.span
+														layoutId="studio-rail-thumb"
+														transition={thumbSpring}
+														className="absolute inset-0 rounded-xl bg-[var(--ws-brand-primary)]"
+													/>
+												)}
 												<Icon
 													size={16}
 													weight={active ? "fill" : "regular"}
+													className="relative shrink-0"
 												/>
-												<span className="truncate">{t(key)}</span>
+												<span className="relative truncate">{t(key)}</span>
 												{badgeKey && (
 													<span
 														className={clsx(
-															"ml-auto shrink-0 rounded-pill px-1.5 py-0.5 font-sans text-[calc(9.5px*var(--ws-fs))] font-bold uppercase tracking-[0.06em]",
+															"relative ml-auto shrink-0 rounded-pill px-1.5 py-0.5 font-sans text-[calc(9.5px*var(--ws-fs))] font-bold uppercase tracking-[0.06em]",
 															active
-																? "bg-[#0c0a09]/15 text-[#0c0a09]"
+																? "bg-brand-on/15 text-brand-on"
 																: "bg-[#fafaf9]/[0.08] glass-ink-faint",
 														)}
 													>
@@ -143,7 +160,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 
 					{/* identity */}
 					{mounted && user && (
-					<div className="rounded-xl bg-[#171614] p-3">
+					<motion.div {...reveal()} className="rounded-xl bg-[#171614] p-3">
 						<div className="flex items-center gap-2.5">
 							{/* No guard: SafeAvatar owns the missing-picture case, and
 							    hiding the circle left the name floating alone. */}
@@ -162,14 +179,17 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 								</span>
 							</span>
 						</div>
-					</div>
+					</motion.div>
 					)}
-				</aside>
+				</motion.aside>
 
 				{/* ── main ─────────────────────────────────────────────────── */}
 				<div className="flex min-w-0 flex-1 flex-col">
 					{/* Mobile bar: back + title + section chips. */}
-					<header className="sticky top-0 z-sticky bg-[#0F0E0D] px-3 pb-2 pt-3 md:hidden">
+					<motion.header
+						layoutRoot
+						className="sticky top-0 z-sticky bg-[#0F0E0D] px-3 pb-2 pt-3 md:hidden"
+					>
 						<div className="flex items-center gap-2">
 							<Link
 								href="/"
@@ -179,28 +199,52 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 							>
 								<ArrowLeft size={15} weight="bold" />
 							</Link>
-							<h1 className="flex-1 truncate font-display text-[calc(16px*var(--ws-fs))] font-semibold">
-								{t(current.key)}
+							<h1 className="min-w-0 flex-1 font-display text-[calc(16px*var(--ws-fs))] font-semibold">
+								<AnimatePresence mode="wait" initial={false}>
+									<motion.span
+										key={current.key}
+										{...swap}
+										className="block truncate"
+									>
+										{t(current.key)}
+									</motion.span>
+								</AnimatePresence>
 							</h1>
 						</div>
-						<div className="mt-2.5 flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
+						{/* layoutScroll: the row scrolls sideways, and the sliding fill
+						    has to account for that offset. */}
+						<motion.div
+							layoutScroll
+							className="mt-2.5 flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none]"
+						>
 							{allItems.map(({ href, key, Icon }) => (
 								<Link
 									key={href}
 									href={href}
 									className={clsx(
-										"flex h-8 shrink-0 items-center gap-1.5 rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
+										"relative flex h-8 shrink-0 items-center gap-1.5 rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
 										isActive(href)
-											? "bg-[var(--ws-brand-primary)] text-[#0c0a09]"
+											? "text-brand-on"
 											: "bg-[#fafaf9]/[0.06] glass-ink-dim",
 									)}
 								>
-									<Icon size={13} weight={isActive(href) ? "fill" : "regular"} />
-									{t(key)}
+									{isActive(href) && (
+										<motion.span
+											layoutId="studio-chip-thumb"
+											transition={thumbSpring}
+											className="absolute inset-0 rounded-pill bg-[var(--ws-brand-primary)]"
+										/>
+									)}
+									<Icon
+										size={13}
+										weight={isActive(href) ? "fill" : "regular"}
+										className="relative shrink-0"
+									/>
+									<span className="relative">{t(key)}</span>
 								</Link>
 							))}
-						</div>
-					</header>
+						</motion.div>
+					</motion.header>
 
 					<main className="flex-1 px-3 pb-8 pt-3 md:px-6 md:pt-6">
 						<div className="mx-auto w-full max-w-[1200px] animate-rise">

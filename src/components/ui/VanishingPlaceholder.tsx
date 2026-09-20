@@ -24,13 +24,18 @@ interface Particle {
  * left-to-right, holds for a beat, then dissolves right-to-left into the next
  * one — no typing required. Hidden entirely once the field has content. Under
  * prefers-reduced-motion both passes are skipped and prompts simply swap.
+ *
+ * The ink is the theme's `text-subtle`, read off the element at paint time: a
+ * canvas cannot take `var()`, and the fixed stone grey this used to default
+ * to ignored light mode, the contrast setting and every palette. Pass `color`
+ * only to pin it.
  */
 export function VanishingPlaceholder({
 	texts,
 	className = "",
 	holdMs = 2600,
 	font = "500 18px 'Public Sans', sans-serif",
-	color = "#78716C",
+	color,
 }: {
 	texts: string[];
 	className?: string;
@@ -40,6 +45,9 @@ export function VanishingPlaceholder({
 }) {
 	const [index, setIndex] = useState(0);
 	const [visible, setVisible] = useState(true);
+	// Bumped when the theme, palette or contrast mode changes, so the prompt
+	// on screen is repainted in the new ink instead of waiting for the next.
+	const [inkTick, setInkTick] = useState(0);
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const particlesRef = useRef<Particle[]>([]);
 	const rafRef = useRef<number | null>(null);
@@ -60,7 +68,23 @@ export function VanishingPlaceholder({
 			canvas.height = canvas.offsetHeight * dpr;
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
 			ctx.font = font.replace(/(\d+)px/, (_, n) => `${Number(n) * dpr}px`);
-			ctx.fillStyle = color;
+			// Two assignments on purpose. A fillStyle the browser cannot parse
+			// is ignored rather than thrown, so the computed `color` (the
+			// canvas wears `text-subtle`) goes in first as the floor, then the
+			// token itself: custom properties do not transition, so it is
+			// already the NEW value while the theme switch is still fading
+			// `color` across.
+			const style = getComputedStyle(canvas);
+			ctx.fillStyle = color ?? style.color;
+			const token = style.getPropertyValue("--ws-text-subtle").trim();
+			if (!color && token) ctx.fillStyle = token;
+			// The ink can be translucent (dark subtle is white at 42%), so
+			// "is this pixel part of a glyph" is judged against the ink's own
+			// alpha. Against a fixed half, 42% never crosses the line and the
+			// prompt assembles from no particles at all.
+			ctx.fillRect(0, 0, 1, 1);
+			const inkAlpha = ctx.getImageData(0, 0, 1, 1).data[3];
+			ctx.clearRect(0, 0, 1, 1);
 			ctx.textBaseline = "middle";
 			ctx.fillText(text, 0, canvas.height / 2);
 
@@ -71,7 +95,7 @@ export function VanishingPlaceholder({
 			for (let y = 0; y < canvas.height; y += 2) {
 				for (let x = 0; x < canvas.width; x += 2) {
 					const i = (y * canvas.width + x) * 4;
-					if (data[i + 3] > 128) {
+					if (data[i + 3] > inkAlpha / 2) {
 						particles.push({
 							x,
 							y,
@@ -203,7 +227,18 @@ export function VanishingPlaceholder({
 			if (timerRef.current) clearTimeout(timerRef.current);
 			if (rafRef.current) cancelAnimationFrame(rafRef.current);
 		};
-	}, [index, visible, texts, holdMs, draw, dissolve, assemble]);
+		// inkTick is not read here: it is a dependency so a theme change
+		// restarts the pass, and `draw` picks the new ink up on its own.
+	}, [index, visible, texts, holdMs, draw, dissolve, assemble, inkTick]);
+
+	useEffect(() => {
+		const mo = new MutationObserver(() => setInkTick((n) => n + 1));
+		mo.observe(document.documentElement, {
+			attributes: true,
+			attributeFilter: ["data-ws-theme", "data-ws-palette", "data-ws-contrast"],
+		});
+		return () => mo.disconnect();
+	}, []);
 
 	// Pause the cycle while the tab is hidden — no invisible canvas work.
 	useEffect(() => {
@@ -216,7 +251,7 @@ export function VanishingPlaceholder({
 		<canvas
 			ref={canvasRef}
 			aria-hidden="true"
-			className={`pointer-events-none absolute inset-0 h-full w-full ${className}`}
+			className={`pointer-events-none absolute inset-0 h-full w-full text-subtle ${className}`}
 		/>
 	);
 }

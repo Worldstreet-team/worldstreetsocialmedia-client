@@ -50,10 +50,13 @@ export function PaymentBubble({
 	const fromName = mine ? "You" : senderName || peerName;
 	const paidTo = mine ? toName || peerName : toMe ? "You" : toName;
 	// The ring cuts each face out of the one behind it. Mine sits on the
-	// gradient, so the ring is a white wash; theirs matches the raised fill.
+	// themed fill, so the ring is a wash of that fill's own ink (white on a
+	// dark fill, dark on gold or paper; a fixed white vanished there).
+	// Theirs matches the raised fill; it named a token that does not exist,
+	// so that ring never painted.
 	const ring = mine
-		? { boxShadow: "0 0 0 2px rgba(255,255,255,0.4)" }
-		: { boxShadow: "0 0 0 2px var(--ws-surface-raised)" };
+		? { boxShadow: "0 0 0 2px color-mix(in srgb, currentColor 40%, transparent)" }
+		: { boxShadow: "0 0 0 2px var(--ws-bg-raised)" };
 
 	const face = (src: string | undefined, name: string | undefined) =>
 		src ? (
@@ -66,10 +69,20 @@ export function PaymentBubble({
 			/>
 		) : (
 			<span
-				style={ring}
+				// Mine: the same ink wash as a mention chip on my bubble, and the
+				// letter inherits the card's ink, so it reads on any fill.
+				style={
+					mine
+						? {
+								...ring,
+								background:
+									"var(--chat-on-mine, color-mix(in srgb, currentColor 22%, transparent))",
+							}
+						: ring
+				}
 				className={clsx(
 					"flex h-9 w-9 items-center justify-center rounded-pill font-sans text-[calc(13px*var(--ws-fs))] font-semibold",
-					mine ? "bg-white/25 text-white" : "bg-chip text-muted",
+					!mine && "bg-chip text-muted",
 				)}
 			>
 				{(name || "?").charAt(0).toUpperCase()}
@@ -85,7 +98,10 @@ export function PaymentBubble({
 				)}
 				style={
 					mine
-						? { background: "var(--chat-mine, linear-gradient(135deg, var(--ws-brand-primary), #6D5BFF))", color: "var(--chat-mine-ink, #FFFFFF)" }
+						? // The same fill and ink as MessageBubble's MINE_FILL / MINE_INK
+							// (not imported: that file imports this one). Token fallbacks,
+							// so the app palette reaches a card outside a themed pane.
+							{ background: "var(--chat-mine, linear-gradient(135deg, var(--ws-brand-primary), var(--ws-brand-dim)))", color: "var(--chat-mine-ink, var(--ws-brand-on-primary))" }
 						: undefined
 				}
 			>

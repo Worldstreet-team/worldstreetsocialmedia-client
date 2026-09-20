@@ -28,6 +28,7 @@ import { useT } from "@/i18n/client";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { LiveChatPanel } from "@/components/live/LiveChatPanel";
 import { useAtomValue } from "jotai";
+import { DUR, EASE, press, reveal, swap } from "@/lib/motion-presets";
 import { userAtom } from "@/store/user.atom";
 import type { Room } from "livekit-client";
 
@@ -319,7 +320,7 @@ export function LiveDock() {
 				initial={{ opacity: 0, y: 16, scale: 0.96 }}
 				animate={{ opacity: 1, y: 0, scale: 1 }}
 				exit={{ opacity: 0, y: 16, scale: 0.96 }}
-				transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+				transition={{ duration: DUR.base, ease: EASE }}
 				className={clsx(
 					"fixed z-toast glass-panel backdrop-blur-2xl backdrop-saturate-150 overflow-hidden select-none",
 					expanded ? "w-[720px] max-w-[94vw]" : "w-[264px]",
@@ -344,9 +345,21 @@ export function LiveDock() {
 						{clockLabel}
 					</span>
 					<span className="glass-ink-dim font-sans text-[calc(11.5px*var(--ws-fs))] tabular-nums">
-						· {formatCompact(viewers)} {t("dock.watching")}
+						·{" "}
+						{/* The audience moving is other people's doing: it rolls. */}
+						<AnimatePresence mode="wait" initial={false}>
+							<motion.span
+								key={formatCompact(viewers)}
+								{...swap}
+								className="inline-block"
+							>
+								{formatCompact(viewers)}
+							</motion.span>
+						</AnimatePresence>{" "}
+						{t("dock.watching")}
 					</span>
-					<button
+					<motion.button
+						{...press}
 						type="button"
 						onClick={() => setExpanded((v) => !v)}
 						aria-label={expanded ? t("dock.collapse") : t("dock.expand")}
@@ -357,7 +370,7 @@ export function LiveDock() {
 						) : (
 							<ArrowsOutSimple size={13} weight="bold" />
 						)}
-					</button>
+					</motion.button>
 				</div>
 
 				<div
@@ -380,44 +393,59 @@ export function LiveDock() {
 							session.source === "camera" && "[transform:scaleX(-1)]",
 						)}
 					/>
-					{connecting && !publishError && (
-						<div className="absolute inset-0 flex items-center justify-center gap-2 glass-ink-dim font-sans text-[calc(12px*var(--ws-fs))]">
-							<span className="h-3 w-3 rounded-pill border-2 border-white/25 border-t-white/80 animate-spin" />
-							{t("dock.connecting")}
-						</div>
-					)}
-					{publishError && (
-						<div className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-4 text-center">
-							<span className="font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-danger">
-								{t("dock.connectFailed")}
-							</span>
-							<span className="font-sans text-[calc(10.5px*var(--ws-fs))] glass-ink-faint">
-								{publishError}
-							</span>
-						</div>
-					)}
-					{!camOn && session.source === "camera" && !connecting && (
-						<div className="absolute inset-0 flex items-center justify-center glass-ink-dim">
-							<VideoCameraSlash size={22} />
-						</div>
-					)}
+					<AnimatePresence initial={false}>
+						{connecting && !publishError && (
+							<motion.div
+								key="connecting"
+								{...swap}
+								className="absolute inset-0 flex items-center justify-center gap-2 glass-ink-dim font-sans text-[calc(12px*var(--ws-fs))]"
+							>
+								<span className="h-3 w-3 rounded-pill border-2 border-white/25 border-t-white/80 animate-spin" />
+								{t("dock.connecting")}
+							</motion.div>
+						)}
+						{publishError && (
+							<motion.div
+								key="failed"
+								{...swap}
+								className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-4 text-center"
+							>
+								<span className="font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-danger">
+									{t("dock.connectFailed")}
+								</span>
+								<span className="font-sans text-[calc(10.5px*var(--ws-fs))] glass-ink-faint">
+									{publishError}
+								</span>
+							</motion.div>
+						)}
+						{!camOn && session.source === "camera" && !connecting && (
+							<motion.div
+								key="cam-off"
+								{...swap}
+								className="absolute inset-0 flex items-center justify-center glass-ink-dim"
+							>
+								<VideoCameraSlash size={22} />
+							</motion.div>
+						)}
+					</AnimatePresence>
 				</div>
 
 				{/* expanded details */}
 				{expanded && (
-					<div className="px-3.5 pt-3 pb-1">
+					<motion.div {...reveal()} className="px-3.5 pt-3 pb-1">
 						<p className="glass-ink font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold truncate">
 							{session.title}
 						</p>
 						<p className="glass-ink-faint font-sans text-[calc(11.5px*var(--ws-fs))] truncate">
 							{session.category}
 						</p>
-					</div>
+					</motion.div>
 				)}
 
 				{/* controls */}
 				<div className="flex items-center gap-1.5 p-2.5 bg-black/55 backdrop-blur-xl backdrop-saturate-150">
-					<button
+					<motion.button
+						{...press}
 						type="button"
 						onClick={toggleMic}
 						aria-label={t("dock.mic")}
@@ -433,9 +461,10 @@ export function LiveDock() {
 						) : (
 							<MicrophoneSlash size={15} weight="fill" />
 						)}
-					</button>
+					</motion.button>
 					{session.source === "camera" && (
-						<button
+						<motion.button
+							{...press}
 							type="button"
 							onClick={toggleCam}
 							aria-label={t("dock.cam")}
@@ -451,7 +480,7 @@ export function LiveDock() {
 							) : (
 								<VideoCameraSlash size={15} weight="fill" />
 							)}
-						</button>
+						</motion.button>
 					)}
 					<a
 						href={`/live?tab=live&s=${session.streamId}`}
@@ -462,7 +491,8 @@ export function LiveDock() {
 					>
 						<ArrowSquareOut size={15} />
 					</a>
-					<button
+					<motion.button
+						{...press}
 						type="button"
 						onClick={endStream}
 						disabled={ending}
@@ -470,7 +500,7 @@ export function LiveDock() {
 					>
 						<StopCircle size={15} weight="fill" />
 						{ending ? t("golive.starting") : t("dock.end")}
-					</button>
+					</motion.button>
 				</div>
 				</div>
 

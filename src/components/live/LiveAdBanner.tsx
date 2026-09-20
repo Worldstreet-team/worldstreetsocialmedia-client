@@ -1,9 +1,11 @@
 "use client";
 
 import axios from "axios";
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { ArrowUpRight, X } from "@phosphor-icons/react";
 import { BACKEND_URL } from "@/const";
+import { menu } from "@/lib/motion-presets";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || BACKEND_URL;
 
@@ -71,13 +73,16 @@ export function LiveAdBanner({
 		setSlot(null);
 	}, [creatorProfileId]);
 
-	if (!slot || !shown || dismissed) return null;
+	// No early return: the banner has to stay mounted inside AnimatePresence
+	// for the dismissal to fade instead of snapping.
+	const visible = !!slot && shown && !dismissed;
 
-	const href = slot.creative.linkUrl;
+	const href = slot?.creative.linkUrl;
 	const thumb =
-		slot.format === "image" ? slot.creative.url : slot.creative.coverUrl;
+		slot?.format === "image" ? slot.creative.url : slot?.creative.coverUrl;
 
 	const visit = () => {
+		if (!slot) return;
 		const token = (window as any).Clerk?.session?.getToken?.();
 		void Promise.resolve(token).then((tok: string | null) => {
 			if (!tok) return;
@@ -92,43 +97,51 @@ export function LiveAdBanner({
 	};
 
 	return (
-		<div className="pointer-events-auto animate-rise absolute bottom-[132px] left-4 z-20 flex w-[290px] max-w-[calc(100%-96px)] items-center gap-2.5 rounded-xl glass-dock backdrop-blur-xl backdrop-saturate-150 p-2 pr-1.5">
-			{thumb && (
-				// eslint-disable-next-line @next/next/no-img-element
-				<img
-					src={thumb}
-					alt=""
-					className="h-10 w-10 shrink-0 rounded-lg object-cover"
-				/>
-			)}
-			<span className="min-w-0 flex-1">
-				<span className="block font-sans text-[calc(10px*var(--ws-fs))] font-semibold uppercase tracking-[0.12em] text-white/50">
-					Sponsored
-				</span>
-				<span className="block truncate font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-white/90">
-					@{slot.advertiser?.username ?? "advertiser"}
-				</span>
-			</span>
-			{href && (
-				<a
-					href={href}
-					onClick={visit}
-					target="_blank"
-					rel="sponsored noopener noreferrer"
-					className="flex h-8 shrink-0 items-center gap-1 rounded-pill bg-white px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-black transition-colors hover:bg-white/85"
+		<AnimatePresence>
+			{visible && (
+				<motion.div
+					key="live-ad"
+					{...menu("bottom-left")}
+					className="pointer-events-auto absolute bottom-[132px] left-4 z-20 flex w-[290px] max-w-[calc(100%-96px)] items-center gap-2.5 rounded-xl glass-dock backdrop-blur-xl backdrop-saturate-150 p-2 pr-1.5"
 				>
-					Visit
-					<ArrowUpRight size={12} weight="bold" />
-				</a>
+					{thumb && (
+						// eslint-disable-next-line @next/next/no-img-element
+						<img
+							src={thumb}
+							alt=""
+							className="h-10 w-10 shrink-0 rounded-lg object-cover"
+						/>
+					)}
+					<span className="min-w-0 flex-1">
+						<span className="block font-sans text-[calc(10px*var(--ws-fs))] font-semibold uppercase tracking-[0.12em] text-white/50">
+							Sponsored
+						</span>
+						<span className="block truncate font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-white/90">
+							@{slot?.advertiser?.username ?? "advertiser"}
+						</span>
+					</span>
+					{href && (
+						<a
+							href={href}
+							onClick={visit}
+							target="_blank"
+							rel="sponsored noopener noreferrer"
+							className="flex h-8 shrink-0 items-center gap-1 rounded-pill bg-white px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-black transition-colors hover:bg-white/85"
+						>
+							Visit
+							<ArrowUpRight size={12} weight="bold" />
+						</a>
+					)}
+					<button
+						type="button"
+						aria-label="Dismiss ad"
+						onClick={() => setDismissed(true)}
+						className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-pill text-white/60 transition-colors hover:text-white"
+					>
+						<X size={14} weight="bold" />
+					</button>
+				</motion.div>
 			)}
-			<button
-				type="button"
-				aria-label="Dismiss ad"
-				onClick={() => setDismissed(true)}
-				className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-pill text-white/60 transition-colors hover:text-white"
-			>
-				<X size={14} weight="bold" />
-			</button>
-		</div>
+		</AnimatePresence>
 	);
 }

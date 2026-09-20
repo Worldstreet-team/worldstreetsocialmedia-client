@@ -1,7 +1,13 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fmt } from "@/components/studio/studio-ui";
+import { DUR, EASE_OUT_EXPO, swap } from "@/lib/motion-presets";
+
+// Data arriving: bars grow from their baseline once, on mount. The presets
+// have no grow shape, so this is built from their travel duration and curve.
+const GROW = { duration: DUR.travel, ease: EASE_OUT_EXPO } as const;
 
 export interface TrendPoint {
 	date: string;
@@ -195,7 +201,7 @@ export function TrendChart({
 				))}
 
 				{/* impressions: flat fill + smooth brand curve */}
-				<g style={{ color: "var(--ws-brand-primary, #EAB308)" }}>
+				<g style={{ color: "var(--ws-brand-primary)" }}>
 					<path d={areaPath} fill="currentColor" fillOpacity={0.07} />
 					<path
 						d={path("impressions")}
@@ -231,7 +237,7 @@ export function TrendChart({
 							cx={x(hover)}
 							cy={y(hovered.impressions)}
 							r={4}
-							fill="var(--ws-brand-primary, #EAB308)"
+							fill="var(--ws-brand-primary)"
 							stroke="#131211"
 							strokeWidth={2}
 						/>
@@ -316,6 +322,14 @@ export function MiniBars({ values }: { values: number[] }) {
 			className="block h-10 w-24 shrink-0"
 			aria-hidden
 		>
+			{/* The group grows, not each rect: the rects re-key when a window
+			    change moves their values, and that must not replay this. */}
+			<motion.g
+				initial={{ scaleY: 0 }}
+				animate={{ scaleY: 1 }}
+				transition={GROW}
+				style={{ originY: 1 }}
+			>
 			{bars.map((v, i) => {
 				const h = Math.max(2, (v / max) * HH);
 				return (
@@ -328,12 +342,13 @@ export function MiniBars({ values }: { values: number[] }) {
 						rx={1.5}
 						fill={
 							i === peak && v > 0
-								? "var(--ws-brand-primary, #EAB308)"
+								? "var(--ws-brand-primary)"
 								: "rgb(255 255 255 / 0.14)"
 						}
 					/>
 				);
 			})}
+			</motion.g>
 		</svg>
 	);
 }
@@ -415,8 +430,17 @@ export function DonutChart({
 					})}
 				</svg>
 				<div className="absolute inset-0 flex flex-col items-center justify-center">
-					<span className="font-display text-[calc(24px*var(--ws-fs))] font-semibold leading-none glass-ink tabular-nums">
-						{fmt(total)}
+					<span className="relative font-display text-[calc(24px*var(--ws-fs))] font-semibold leading-none glass-ink tabular-nums">
+						{/* Rolls when the window changes; still on first paint. */}
+						<AnimatePresence mode="popLayout" initial={false}>
+							<motion.span
+								key={fmt(total)}
+								{...swap}
+								className="inline-block"
+							>
+								{fmt(total)}
+							</motion.span>
+						</AnimatePresence>
 					</span>
 					<span className="mt-1 font-sans text-[calc(10px*var(--ws-fs))] uppercase tracking-[0.1em] glass-ink-faint">
 						{centerLabel}
@@ -487,9 +511,14 @@ export function BarList({
 							</span>
 						</div>
 						<div className="h-1.5 overflow-hidden rounded-pill bg-[#fafaf9]/[0.07]">
-							<div
+							{/* Keyed rows persist across a window change, so the bar
+							    grows once and later widths simply update. */}
+							<motion.div
+								initial={{ scaleX: 0 }}
+								animate={{ scaleX: 1 }}
+								transition={GROW}
 								className="h-full rounded-pill bg-[var(--ws-brand-primary)]"
-								style={{ width: `${Math.max(2, pct)}%` }}
+								style={{ width: `${Math.max(2, pct)}%`, originX: 0 }}
 							/>
 						</div>
 					</div>

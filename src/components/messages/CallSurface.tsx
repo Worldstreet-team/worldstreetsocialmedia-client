@@ -19,6 +19,7 @@ import type { LocalVideoTrack, RemoteTrack } from "livekit-client";
 
 import { useCall } from "@/providers/CallProvider";
 import { callManager } from "@/lib/call-manager";
+import { EASE, pop, press, staggerItem } from "@/lib/motion-presets";
 import { DEFAULT_AVATAR } from "@/const";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
@@ -40,9 +41,6 @@ import { SafeAvatar } from "@/components/ui/SafeAvatar";
  * surface; everything else is a glass chip, and an engaged toggle (muted mic,
  * camera off) inverts to the flat-white `glass-cta`.
  */
-
-/** The one easing. */
-const EASE = [0.2, 0, 0, 1] as const;
 
 /** Attach a LiveKit track to a media element for as long as it is mounted. */
 function useAttach(
@@ -112,11 +110,19 @@ function GridTile({
 	isSelf?: boolean;
 }) {
 	return (
-		<div
+		<motion.div
+			// Someone joining rises into their seat. A rise, not a pop:
+			// overshoot is for small glyphs, and this is a video tile. No
+			// exit: a leaver held in the grid for its fade is a seat the
+			// column count no longer allows for, and every tile jumps twice.
+			variants={staggerItem}
+			initial="hidden"
+			animate="show"
 			className={clsx(
 				"relative overflow-hidden rounded-xl glass-well",
 				// The speaker glow: an inset ring, opacity-only, never a border.
-				speaking && "ring-2 ring-[#EAB308]/80",
+				// The brand token, so it follows the app-wide colour.
+				speaking && "ring-2 ring-brand/80",
 			)}
 		>
 			{videoTrack ? (
@@ -132,7 +138,7 @@ function GridTile({
 				{micMuted && <RiMicOffFill size={11} />}
 				<span className="truncate">{isSelf ? "You" : name}</span>
 			</span>
-		</div>
+		</motion.div>
 	);
 }
 
@@ -164,23 +170,28 @@ function GroupStage({
 					gridAutoRows: "1fr",
 				}}
 			>
-				<GridTile
-					name="You"
-					isSelf
-					videoTrack={camOn ? localVideo : null}
-					micMuted={!micOn}
-					speaking={false}
-					mirrored={facing === "user"}
-				/>
-				{people.map((p) => (
+				{/* initial={false}: whoever is seated when the stage mounts is
+				    simply there. Only a later join moves. */}
+				<AnimatePresence initial={false}>
 					<GridTile
-						key={p.identity}
-						name={p.name}
-						videoTrack={p.videoTrack}
-						micMuted={p.micMuted}
-						speaking={p.speaking}
+						key="self"
+						name="You"
+						isSelf
+						videoTrack={camOn ? localVideo : null}
+						micMuted={!micOn}
+						speaking={false}
+						mirrored={facing === "user"}
 					/>
-				))}
+					{people.map((p) => (
+						<GridTile
+							key={p.identity}
+							name={p.name}
+							videoTrack={p.videoTrack}
+							micMuted={p.micMuted}
+							speaking={p.speaking}
+						/>
+					))}
+				</AnimatePresence>
 			</div>
 		</div>
 	);
@@ -290,7 +301,8 @@ function ControlButton({
 	children: React.ReactNode;
 }) {
 	return (
-		<button
+		<motion.button
+			{...press}
 			type="button"
 			aria-label={label}
 			title={label}
@@ -305,7 +317,28 @@ function ControlButton({
 			)}
 		>
 			{children}
-		</button>
+		</motion.button>
+	);
+}
+
+/** The glyph of a toggle the person just flipped: the old state shrinks out
+ *  as the new one lands. Their own action, so it may pop. */
+function ToggleGlyph({
+	state,
+	children,
+}: {
+	state: string;
+	children: React.ReactNode;
+}) {
+	return (
+		// Positioned, because popLayout lifts the leaving glyph out of flow.
+		<span className="relative flex">
+			<AnimatePresence mode="popLayout" initial={false}>
+				<motion.span key={state} {...pop} className="flex">
+					{children}
+				</motion.span>
+			</AnimatePresence>
+		</span>
 	);
 }
 
@@ -702,11 +735,13 @@ export function CallSurface() {
 										active={micOn}
 										size="sm"
 									>
-										{micOn ? (
-											<RiMicFill size={17} />
-										) : (
-											<RiMicOffFill size={17} />
-										)}
+										<ToggleGlyph state={micOn ? "on" : "off"}>
+											{micOn ? (
+												<RiMicFill size={17} />
+											) : (
+												<RiMicOffFill size={17} />
+											)}
+										</ToggleGlyph>
 									</ControlButton>
 									<ControlButton
 										label="End call"
@@ -1023,22 +1058,22 @@ function Controls({
 				onClick={call.toggleMic}
 				active={micOn}
 			>
-				{micOn ? (
-					<RiMicFill size={22} />
-				) : (
-					<RiMicOffFill size={22} />
-				)}
+				<ToggleGlyph state={micOn ? "on" : "off"}>
+					{micOn ? <RiMicFill size={22} /> : <RiMicOffFill size={22} />}
+				</ToggleGlyph>
 			</ControlButton>
 			<ControlButton
 				label={camOn ? "Turn camera off" : "Turn camera on"}
 				onClick={call.toggleCam}
 				active={camOn}
 			>
-				{camOn ? (
-					<RiVideoOnFill size={22} />
-				) : (
-					<RiVideoOffFill size={22} />
-				)}
+				<ToggleGlyph state={camOn ? "on" : "off"}>
+					{camOn ? (
+						<RiVideoOnFill size={22} />
+					) : (
+						<RiVideoOffFill size={22} />
+					)}
+				</ToggleGlyph>
 			</ControlButton>
 			<ControlButton label="End call" onClick={call.endCall} tone="danger">
 				<RiPhoneFill size={24} />

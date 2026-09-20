@@ -48,6 +48,14 @@ import { demoStreetSlides } from "@/lib/demoSeed";
 import { getVideoFeedAction } from "@/lib/feed.actions";
 import { getStreamAction, listLiveStreamsAction } from "@/lib/live.actions";
 import {
+	pop,
+	press,
+	reveal,
+	staggerItem,
+	staggerParentFast,
+	swap,
+} from "@/lib/motion-presets";
+import {
 	bookmarkPostAction,
 	getPostCommentsAction,
 	likePostAction,
@@ -91,6 +99,20 @@ interface CommentRow {
 
 const fmt = (n: number) =>
 	n < 1000 ? String(n) : `${(n / 1000).toFixed(1).replace(/\.0$/, "")}K`;
+
+/** A count that rolls when it changes. Keyed by the SHOWN text, so 1,204
+ *  becoming 1,205 under "1.2K" does not move, and never on first paint. */
+function Roll({ value, className }: { value: string; className?: string }) {
+	return (
+		<span className={clsx("relative inline-flex overflow-hidden", className)}>
+			<AnimatePresence mode="popLayout" initial={false}>
+				<motion.span key={value} {...swap} className="inline-block">
+					{value}
+				</motion.span>
+			</AnimatePresence>
+		</span>
+	);
+}
 
 /** How often the live tab re-checks for new broadcasts when realtime is
  *  quiet. Long enough to be invisible, short enough that nobody waits. */
@@ -755,6 +777,13 @@ function VerticalSurface() {
 	const railBtn =
 		"flex h-12 w-12 items-center justify-center rounded-pill bg-white/[0.09] backdrop-blur-md backdrop-saturate-150 transition-colors cursor-pointer hover:bg-white/[0.18]";
 
+	// `commentsFor` is a snapshot taken when the panel opened. Read the live
+	// slide so the header count moves when a comment lands.
+	const commentsCount = commentsFor
+		? (slides.find((s) => s.key === commentsFor.key)?.replies ??
+			commentsFor.replies)
+		: 0;
+
 	return (
 		<div
 			ref={containerRef}
@@ -828,13 +857,21 @@ function VerticalSurface() {
 					type="button"
 					onClick={() => setMuted((m) => !m)}
 					aria-label={t("vertical.unmute")}
-					className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-pill bg-white/[0.09] backdrop-blur-md text-white hover:bg-white/[0.18] transition-colors cursor-pointer"
+					className="pointer-events-auto relative flex h-10 w-10 items-center justify-center rounded-pill bg-white/[0.09] backdrop-blur-md text-white hover:bg-white/[0.18] transition-colors cursor-pointer"
 				>
-					{muted ? (
-						<SpeakerSimpleX size={17} />
-					) : (
-						<SpeakerSimpleHigh size={17} />
-					)}
+					<AnimatePresence mode="popLayout" initial={false}>
+						<motion.span
+							key={muted ? "muted" : "on"}
+							{...swap}
+							className="flex"
+						>
+							{muted ? (
+								<SpeakerSimpleX size={17} />
+							) : (
+								<SpeakerSimpleHigh size={17} />
+							)}
+						</motion.span>
+					</AnimatePresence>
 				</button>
 			</div>
 
@@ -845,7 +882,10 @@ function VerticalSurface() {
 			)}
 
 			{!loading && slides.length === 0 && (
-				<div className="h-dvh flex flex-col items-center justify-center gap-3 px-8">
+				<motion.div
+					{...reveal()}
+					className="h-dvh flex flex-col items-center justify-center gap-3 px-8"
+				>
 					<span className="flex h-16 w-16 items-center justify-center rounded-pill bg-white/[0.07] text-white/60">
 						<Broadcast size={26} weight="light" />
 					</span>
@@ -861,7 +901,7 @@ function VerticalSurface() {
 					>
 						{t("watch.browse")}
 					</Link>
-				</div>
+				</motion.div>
 			)}
 
 			{slides.map((slide, idx) => {
@@ -979,7 +1019,7 @@ function VerticalSurface() {
 									{isActive && (
 										<span className="flex items-center gap-1.5 rounded-[4px] bg-black/50 backdrop-blur-md px-2 h-6 text-[calc(11px*var(--ws-fs))] font-semibold text-white/85 font-sans tabular-nums">
 											<Eye size={12} />
-											{formatCompact(viewers)}
+											<Roll value={formatCompact(viewers)} />
 										</span>
 									)}
 									{slide.category && (
@@ -1016,15 +1056,23 @@ function VerticalSurface() {
 										>
 											@{slide.username}
 										</Link>
-										{!isSelf && !followed && alignable && (
-											<button
-												type="button"
-												onClick={() => follow(slide)}
-												className="h-7 px-3 rounded-pill bg-white text-black font-sans text-[calc(12px*var(--ws-fs))] font-bold hover:bg-white/85 transition-colors cursor-pointer shrink-0"
-											>
-												{t("rail.follow")}
-											</button>
-										)}
+										{/* initial={false}: a pill that is there when the slide
+										    paints stays still. One that resolves a beat late
+										    pops in, and following pops it out. */}
+										<AnimatePresence initial={false}>
+											{!isSelf && !followed && alignable && (
+												<motion.button
+													key="follow"
+													type="button"
+													{...pop}
+													{...press}
+													onClick={() => follow(slide)}
+													className="h-7 px-3 rounded-pill bg-white text-black font-sans text-[calc(12px*var(--ws-fs))] font-bold hover:bg-white/85 transition-colors cursor-pointer shrink-0"
+												>
+													{t("rail.follow")}
+												</motion.button>
+											)}
+										</AnimatePresence>
 									</div>
 									{slide.streamId && slide.liveTitle ? (
 										<p className="text-[calc(16px*var(--ws-fs))] font-semibold text-white font-sans leading-snug line-clamp-2">
@@ -1059,9 +1107,10 @@ function VerticalSurface() {
 								>
 									<Heart size={22} weight={slide.isLiked ? "fill" : "regular"} />
 								</motion.span>
-								<span className="text-[calc(11.5px*var(--ws-fs))] font-semibold font-sans tabular-nums text-white/85">
-									{fmt(slide.likes)}
-								</span>
+								<Roll
+									value={fmt(slide.likes)}
+									className="text-[calc(11.5px*var(--ws-fs))] font-semibold font-sans tabular-nums text-white/85"
+								/>
 							</button>
 
 							{slide.postId && (
@@ -1075,9 +1124,10 @@ function VerticalSurface() {
 										<span className={railBtn}>
 											<ChatCircle size={22} />
 										</span>
-										<span className="text-[calc(11.5px*var(--ws-fs))] font-semibold font-sans tabular-nums text-white/85">
-											{fmt(slide.replies)}
-										</span>
+										<Roll
+											value={fmt(slide.replies)}
+											className="text-[calc(11.5px*var(--ws-fs))] font-semibold font-sans tabular-nums text-white/85"
+										/>
 									</button>
 
 									<button
@@ -1089,13 +1139,24 @@ function VerticalSurface() {
 										<span
 											className={clsx(
 												railBtn,
+												"relative",
 												slide.isBookmarked && "text-gold",
 											)}
 										>
-											<BookmarkSimple
-												size={22}
-												weight={slide.isBookmarked ? "fill" : "regular"}
-											/>
+											{/* The glyph pops, not the pill: the pill carries
+											    the blur and must not be scaled. */}
+											<AnimatePresence mode="popLayout" initial={false}>
+												<motion.span
+													key={slide.isBookmarked ? "on" : "off"}
+													{...pop}
+													className="flex"
+												>
+													<BookmarkSimple
+														size={22}
+														weight={slide.isBookmarked ? "fill" : "regular"}
+													/>
+												</motion.span>
+											</AnimatePresence>
 										</span>
 									</button>
 								</>
@@ -1243,9 +1304,10 @@ function VerticalSurface() {
 							<div className="flex h-12 shrink-0 items-center gap-2 px-4">
 								<h2 className="flex-1 font-sans text-[calc(14px*var(--ws-fs))] font-semibold glass-ink">
 									{t("vertical.comments")}
-									<span className="ml-1.5 font-normal tabular-nums glass-ink-faint">
-										{fmt(commentsFor.replies)}
-									</span>
+									<Roll
+										value={fmt(commentsCount)}
+										className="ml-1.5 align-bottom font-normal tabular-nums glass-ink-faint"
+									/>
 								</h2>
 								<button
 									type="button"
@@ -1280,37 +1342,51 @@ function VerticalSurface() {
 										</p>
 									</div>
 								) : (
-									comments.map((c) => (
-										<div key={c.id} className="flex gap-2.5">
-											<Link
-												href={`/profile/${c.username}`}
-												className="relative h-8 w-8 shrink-0 overflow-hidden rounded-pill bg-white/10"
+									/* Cascades when the rows replace the skeleton, once per
+									   open. Only the first screenful takes part, so a long
+									   thread is not late. */
+									<motion.div
+										variants={staggerParentFast}
+										initial="hidden"
+										animate="show"
+										className="flex flex-col gap-3.5"
+									>
+										{comments.map((c, i) => (
+											<motion.div
+												key={c.id}
+												variants={i < 8 ? staggerItem : undefined}
+												className="flex gap-2.5"
 											>
-												<SafeAvatar src={c.avatar} className="object-cover" />
-											</Link>
-											{/* The comment sits in its own tinted bubble so a
-											    wall of replies has rhythm instead of running
-											    together as one block of text. */}
-											<div className="min-w-0 flex-1 rounded-xl rounded-tl-[4px] bg-white/[0.07] px-3 py-2">
-												<span className="flex items-baseline gap-2">
-													<Link
-														href={`/profile/${c.username}`}
-														className="truncate font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold glass-ink hover:underline"
-													>
-														@{c.username}
-													</Link>
-													{c.timestamp && (
-														<span className="shrink-0 font-sans text-[calc(11px*var(--ws-fs))] glass-ink-faint">
-															{c.timestamp}
-														</span>
-													)}
-												</span>
-												<p className="break-words font-sans text-[calc(13.5px*var(--ws-fs))] leading-snug glass-ink-dim">
-													{c.content}
-												</p>
-											</div>
-										</div>
-									))
+												<Link
+													href={`/profile/${c.username}`}
+													className="relative h-8 w-8 shrink-0 overflow-hidden rounded-pill bg-white/10"
+												>
+													<SafeAvatar src={c.avatar} className="object-cover" />
+												</Link>
+												{/* The comment sits in its own tinted bubble so a
+												    wall of replies has rhythm instead of running
+												    together as one block of text. */}
+												<div className="min-w-0 flex-1 rounded-xl rounded-tl-[4px] bg-white/[0.07] px-3 py-2">
+													<span className="flex items-baseline gap-2">
+														<Link
+															href={`/profile/${c.username}`}
+															className="truncate font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold glass-ink hover:underline"
+														>
+															@{c.username}
+														</Link>
+														{c.timestamp && (
+															<span className="shrink-0 font-sans text-[calc(11px*var(--ws-fs))] glass-ink-faint">
+																{c.timestamp}
+															</span>
+														)}
+													</span>
+													<p className="break-words font-sans text-[calc(13.5px*var(--ws-fs))] leading-snug glass-ink-dim">
+														{c.content}
+													</p>
+												</div>
+											</motion.div>
+										))}
+									</motion.div>
 								)}
 							</div>
 
@@ -1329,15 +1405,16 @@ function VerticalSurface() {
 										maxLength={280}
 										className="h-11 w-full rounded-pill bg-white/[0.09] pl-4 pr-12 font-sans text-[calc(13.5px*var(--ws-fs))] glass-ink outline-none transition-colors placeholder:text-white/40 focus:bg-white/[0.14]"
 									/>
-									<button
+									<motion.button
 										type="button"
+										{...press}
 										onClick={() => void sendComment()}
 										disabled={!draft.trim() || sending}
 										aria-label={t("chat.send")}
 										className="absolute right-1.5 flex h-8 w-8 cursor-pointer items-center justify-center rounded-pill glass-cta transition-opacity disabled:cursor-not-allowed disabled:opacity-35"
 									>
 										<PaperPlaneTilt size={14} weight="fill" />
-									</button>
+									</motion.button>
 								</div>
 							</div>
 						</motion.aside>

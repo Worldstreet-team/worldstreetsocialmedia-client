@@ -9,7 +9,7 @@ import {
   UsersThree,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import ConfirmModal from "@/components/ui/ConfirmModal";
@@ -32,6 +32,12 @@ import {
   updateCommunityAction,
 } from "@/lib/community.actions";
 import { sendFormDirect } from "@/lib/upload-direct";
+import {
+  press,
+  staggerItem,
+  staggerParent,
+  staggerParentFast,
+} from "@/lib/motion-presets";
 
 /**
  * Everything an owner can do to their community, reachable from one ⋯
@@ -82,16 +88,17 @@ export function ManageCommunity({
 
   return (
     <div className="relative">
-      <button
+      <motion.button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label={t("community.manage")}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-raised hover:text-primary"
+        {...press}
+        className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-raised hover:text-primary"
       >
         <DotsThree size={20} weight="bold" />
-      </button>
+      </motion.button>
 
       {/* The owner menu, on the standard overlay grammar's `anchored` panel —
           the variant for menus. `aria-haspopup` says "dialog" now because the
@@ -119,8 +126,13 @@ export function ManageCommunity({
                 onClose={close}
                 closeLabel={t("common.close")}
               />
-              <div
+              {/* Three rows cascading behind the panel. They are clickable
+                  from the first frame; the cascade never gates the menu. */}
+              <motion.div
                 role="menu"
+                variants={staggerParent}
+                initial="hidden"
+                animate="show"
                 className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[calc(8px+var(--ws-safe-bottom))]"
               >
                 {[
@@ -146,10 +158,11 @@ export function ManageCommunity({
                     run: () => setConfirmDelete(true),
                   },
                 ].map((item) => (
-                  <button
+                  <motion.button
                     key={item.id}
                     type="button"
                     role="menuitem"
+                    variants={staggerItem}
                     onClick={() => {
                       setOpen(false);
                       item.run();
@@ -161,9 +174,9 @@ export function ManageCommunity({
                   >
                     <item.icon size={15} weight="bold" />
                     {item.label}
-                  </button>
+                  </motion.button>
                 ))}
-              </div>
+              </motion.div>
             </OverlayPanel>
           )}
         </AnimatePresence>
@@ -263,7 +276,7 @@ function EditCommunitySheet({
     // A form that wants the width: the grammar's `sheet`.
     <ConfirmModalPortal>
       <OverlayScrim onClose={onClose} label={t("common.back")} />
-      <OverlayPanel dragClose={close} variant="sheet" label={t("community.edit")}>
+      <OverlayPanel dragClose={onClose} variant="sheet" label={t("community.edit")}>
         <OverlayHeader
           title={t("community.edit")}
           onClose={onClose}
@@ -328,11 +341,12 @@ function EditCommunitySheet({
           </span>
           <div className="mt-1.5 flex max-h-32 flex-wrap gap-1.5 overflow-y-auto">
             {TAXONOMY.slice(0, 30).map((c) => (
-              <button
+              <motion.button
                 key={c.id}
                 type="button"
                 onClick={() => setCategory(c.id)}
                 aria-pressed={category === c.id}
+                {...press}
                 className={clsx(
                   "h-7 cursor-pointer rounded-pill px-2.5 font-sans text-[calc(12px*var(--ws-fs))] font-medium transition-colors",
                   category === c.id
@@ -341,18 +355,19 @@ function EditCommunitySheet({
                 )}
               >
                 {c.label}
-              </button>
+              </motion.button>
             ))}
           </div>
 
-          <button
+          <motion.button
             type="button"
             onClick={save}
             disabled={saving}
+            {...press}
             className="mt-5 flex h-11 w-full cursor-pointer items-center justify-center rounded-pill bg-primary font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-page transition-colors hover:bg-muted disabled:opacity-50"
           >
             {t("voice.saveChanges")}
-          </button>
+          </motion.button>
         </div>
       </OverlayPanel>
     </ConfirmModalPortal>
@@ -376,6 +391,8 @@ function MembersSheet({
   const [members, setMembers] = useState<CommunityMemberRow[]>([]);
   const [nextOffset, setNextOffset] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  // Set by "show more": later pages land in place, only the first cascades.
+  const [paged, setPaged] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<CommunityMemberRow | null>(
     null,
   );
@@ -417,7 +434,7 @@ function MembersSheet({
     // The roster is a flow that wants the width: the grammar's `sheet`.
     <ConfirmModalPortal>
       <OverlayScrim onClose={onClose} label={t("common.back")} />
-      <OverlayPanel dragClose={close} variant="sheet" label={t("community.members.title")}>
+      <OverlayPanel dragClose={onClose} variant="sheet" label={t("community.members.title")}>
         <OverlayHeader
           title={t("community.members.title")}
           onClose={onClose}
@@ -428,9 +445,22 @@ function MembersSheet({
           {loading ? (
             <p className="py-8 text-center font-sans text-sm text-subtle">…</p>
           ) : (
-            members.map((m) => (
-              <div
+            // No `layout` on the rows: a roster can run long. A removed
+            // member fades out and the list closes up behind it.
+            <motion.div
+              variants={staggerParentFast}
+              initial="hidden"
+              animate="show"
+            >
+            <AnimatePresence>
+            {members.map((m) => (
+              <motion.div
                 key={m.id}
+                variants={staggerItem}
+                initial={paged ? false : undefined}
+                // An object, not the "exit" label: a label would make the
+                // row its own variant root and drop it from the cascade.
+                exit={staggerItem.exit}
                 className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-raised/50"
               >
                 <span className="relative h-9 w-9 shrink-0 overflow-hidden rounded-pill bg-raised">
@@ -457,14 +487,19 @@ function MembersSheet({
                     <UserMinus size={16} />
                   </button>
                 )}
-              </div>
-            ))
+              </motion.div>
+            ))}
+            </AnimatePresence>
+            </motion.div>
           )}
 
           {nextOffset !== null && (
             <button
               type="button"
-              onClick={() => void load(nextOffset)}
+              onClick={() => {
+                setPaged(true);
+                void load(nextOffset);
+              }}
               className="mx-auto my-2 block h-9 cursor-pointer rounded-pill bg-raised px-4 font-sans text-[calc(13px*var(--ws-fs))] font-medium text-muted transition-colors hover:text-primary"
             >
               {t("rail.showMore")}

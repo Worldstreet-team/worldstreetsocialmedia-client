@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { Megaphone } from "@phosphor-icons/react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useT } from "@/i18n/client";
 import {
 	getMyCampaignsAction,
@@ -10,6 +11,15 @@ import {
 } from "@/lib/campaign.actions";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { PageHead, fmt } from "@/components/studio/studio-ui";
+import {
+	DUR,
+	EASE_OUT_EXPO,
+	press,
+	reveal,
+	staggerItem,
+	staggerParentFast,
+	swap,
+} from "@/lib/motion-presets";
 
 interface Campaign {
 	_id: string;
@@ -89,7 +99,10 @@ export default function StudioPromotions() {
 					))}
 				</div>
 			) : campaigns.length === 0 ? (
-				<div className="rounded-2xl bg-[#171614] p-8 text-center">
+				<motion.div
+					{...reveal(0)}
+					className="rounded-2xl bg-[#171614] p-8 text-center"
+				>
 					<span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-pill bg-[#fafaf9]/[0.07] glass-ink-faint">
 						<Megaphone size={22} />
 					</span>
@@ -99,9 +112,17 @@ export default function StudioPromotions() {
 					<p className="font-sans text-[calc(12.5px*var(--ws-fs))] glass-ink-faint mt-1">
 						{t("studio.promo.emptyHint")}
 					</p>
-				</div>
+				</motion.div>
 			) : (
-				<div className="flex flex-col gap-2.5">
+				// Mounted with its cards, so the cascade is first load only: the
+				// load() after a pause or a top-up keeps the keys and replays
+				// nothing.
+				<motion.div
+					variants={staggerParentFast}
+					initial="hidden"
+					animate="show"
+					className="flex flex-col gap-2.5"
+				>
 					{campaigns.map((c) => {
 						const pct = Math.min(
 							100,
@@ -112,24 +133,32 @@ export default function StudioPromotions() {
 								? usd(c.spentUsdMinor / c.stats.engagements)
  : "";
 						return (
-							<div key={c._id} className="rounded-2xl bg-[#171614] p-4">
+							<motion.div
+								key={c._id}
+								variants={staggerItem}
+								className="rounded-2xl bg-[#171614] p-4"
+							>
 								<div className="flex items-start justify-between gap-3">
 									<p className="font-sans text-[calc(14px*var(--ws-fs))] glass-ink line-clamp-1 min-w-0">
 										{c.post?.content || t("studio.mediaPost")}
 									</p>
-									<span
-										className={clsx(
-											"shrink-0 rounded-pill px-2.5 py-0.5 text-[calc(11px*var(--ws-fs))] font-bold uppercase tracking-wide font-sans",
-											c.status === "active" &&
-												"bg-success/10 text-success",
-											c.status === "paused" &&
-												"bg-[#fafaf9]/[0.09] glass-ink-dim",
-											c.status === "exhausted" &&
-												"bg-danger/10 text-danger",
-										)}
-									>
-										{t(`studio.promo.${c.status}`)}
-									</span>
+									<AnimatePresence mode="wait" initial={false}>
+										<motion.span
+											key={c.status}
+											{...swap}
+											className={clsx(
+												"shrink-0 rounded-pill px-2.5 py-0.5 text-[calc(11px*var(--ws-fs))] font-bold uppercase tracking-wide font-sans",
+												c.status === "active" &&
+													"bg-success/10 text-success",
+												c.status === "paused" &&
+													"bg-[#fafaf9]/[0.09] glass-ink-dim",
+												c.status === "exhausted" &&
+													"bg-danger/10 text-danger",
+											)}
+										>
+											{t(`studio.promo.${c.status}`)}
+										</motion.span>
+									</AnimatePresence>
 								</div>
 
 								<div className="mt-3">
@@ -142,14 +171,19 @@ export default function StudioPromotions() {
 										</span>
 									</div>
 									<div className="h-1.5 rounded-pill bg-[#fafaf9]/[0.08] overflow-hidden">
-										<div
+										{/* A full-width fill slid under the track's clip, not
+										    a width: a top-up now travels, on transform only,
+										    and the cap stays round. */}
+										<motion.div
 											className={clsx(
-												"h-full rounded-pill",
+												"h-full w-full rounded-pill",
 												c.status === "exhausted"
 													? "bg-danger/70"
 													: "bg-gradient-to-r from-gold/60 to-gold",
 											)}
-											style={{ width: `${pct}%` }}
+											initial={false}
+											animate={{ x: `${pct - 100}%` }}
+											transition={{ duration: DUR.travel, ease: EASE_OUT_EXPO }}
 										/>
 									</div>
 								</div>
@@ -170,7 +204,8 @@ export default function StudioPromotions() {
 									</div>
 									<div className="flex items-center gap-2">
 										{c.status !== "exhausted" && (
-											<button
+											<motion.button
+												{...press}
 												type="button"
 												disabled={busyId === c._id}
 												onClick={() =>
@@ -183,12 +218,21 @@ export default function StudioPromotions() {
 												}
 												className="h-8 px-3.5 rounded-pill bg-[#fafaf9]/[0.06] glass-ink-dim hover:glass-ink hover:bg-[#fafaf9]/[0.1] font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold transition-colors cursor-pointer disabled:opacity-50"
 											>
-												{c.status === "active"
-													? t("studio.promo.pause")
-													: t("studio.promo.resume")}
-											</button>
+												<AnimatePresence mode="wait" initial={false}>
+													<motion.span
+														key={c.status}
+														{...swap}
+														className="inline-block"
+													>
+														{c.status === "active"
+															? t("studio.promo.pause")
+															: t("studio.promo.resume")}
+													</motion.span>
+												</AnimatePresence>
+											</motion.button>
 										)}
-										<button
+										<motion.button
+											{...press}
 											type="button"
 											disabled={busyId === c._id}
 											onClick={() =>
@@ -200,13 +244,13 @@ export default function StudioPromotions() {
 											className="h-8 px-3.5 rounded-pill bg-[#fafaf9] text-[#0c0a09] hover:bg-white font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold transition-colors cursor-pointer disabled:opacity-50 active:brightness-95"
 										>
 											{t("studio.promo.topUp")}
-										</button>
+										</motion.button>
 									</div>
 								</div>
-							</div>
+							</motion.div>
 						);
 					})}
-				</div>
+				</motion.div>
 			)}
 		</div>
 	);

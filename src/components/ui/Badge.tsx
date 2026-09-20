@@ -1,6 +1,8 @@
 "use client";
 
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
+import { pop, swap } from "@/lib/motion-presets";
 
 export type BadgeTone = "brand" | "danger" | "neutral";
 
@@ -65,31 +67,52 @@ export function Badge({
   className,
 }: BadgeProps) {
   const n = count ?? 0;
-  if (!dot && n <= 0) return null;
+  const text =
+    n > max
+      ? `${max}+`
+      : n >= 1000
+        ? `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k`
+        : String(n);
 
-  if (dot) {
-    return (
-      <span
-        role="status"
-        className={clsx(BASE_DOT, TONE[tone], ring && "ring-2 ring-page", className)}
-      >
-        <span className="sr-only">{label ?? "unread"}</span>
-      </span>
-    );
-  }
-
+  // The presence outlives the pill so the pill can leave. `initial={false}`:
+  // a count that is already there on load is not news, only one that ARRIVES
+  // gets the pop. Same for the digits: they roll when the number moves, and
+  // other people's activity is what moves it, so it rolls, it never pops.
   return (
-    <span
-      role="status"
-      aria-label={label ?? `${n} unread`}
-      className={clsx(BASE_COUNT, TONE[tone], ring && "ring-1 ring-page", className)}
-    >
-      {n > max
-        ? `${max}+`
-        : n >= 1000
-          ? `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k`
-          : n}
-    </span>
+    <AnimatePresence initial={false}>
+      {dot ? (
+        <motion.span
+          key="dot"
+          role="status"
+          {...pop}
+          className={clsx(BASE_DOT, TONE[tone], ring && "ring-2 ring-page", className)}
+        >
+          <span className="sr-only">{label ?? "unread"}</span>
+        </motion.span>
+      ) : n > 0 ? (
+        <motion.span
+          key="count"
+          role="status"
+          aria-label={label ?? `${n} unread`}
+          {...pop}
+          className={clsx(
+            BASE_COUNT,
+            "overflow-hidden",
+            TONE[tone],
+            ring && "ring-1 ring-page",
+            className,
+          )}
+        >
+          <span className="relative inline-flex">
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.span key={text} {...swap} className="inline-block">
+                {text}
+              </motion.span>
+            </AnimatePresence>
+          </span>
+        </motion.span>
+      ) : null}
+    </AnimatePresence>
   );
 }
 

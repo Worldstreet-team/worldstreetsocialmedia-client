@@ -4,8 +4,10 @@ import { formatCompact } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Eye } from "@phosphor-icons/react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Radio } from "lucide-react";
 import { listLiveStreamsAction } from "@/lib/live.actions";
+import { staggerItem, staggerParentFast, swap } from "@/lib/motion-presets";
 
 import { useT } from "@/i18n/client";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -66,37 +68,65 @@ export default function LiveNowPage() {
 					caption={t("liveNow.emptyCaption")}
 				/>
 			) : (
-				<div className="p-3 flex flex-col gap-2.5">
-					{rows.map((row) => (
-						<Link
-							key={row.id}
-							href={`/live?tab=live&s=${row.id}`}
-							className="flex items-center gap-3.5 rounded-xl border border-hairline bg-surface/60 px-4 py-3 hover:bg-raised/40 transition-colors"
-						>
-							<span className="relative w-12 h-12 rounded-pill p-[2px] bg-danger shrink-0">
-								<span className="relative block w-full h-full rounded-pill overflow-hidden border-2 border-page bg-raised">
-									<SafeAvatar src={row.avatar} className="object-cover" />
-								</span>
-							</span>
-							<span className="min-w-0 flex-1">
-								<span className="block font-sans text-[calc(14.5px*var(--ws-fs))] font-semibold text-primary truncate">
-									{row.title}
-								</span>
-								<span className="block font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle truncate">
-									@{row.username}
-									{row.category ? ` · ${row.category}` : ""}
-								</span>
-							</span>
-							<span className="flex items-center gap-1.5 font-sans text-[calc(12.5px*var(--ws-fs))] text-muted tabular-nums shrink-0">
-								<Eye size={14} />
-								{formatCompact(row.viewers)}
-							</span>
-							<span className="shrink-0 flex items-center gap-1 rounded-[4px] bg-danger px-1.5 py-px text-[calc(10px*var(--ws-fs))] font-bold tracking-wide text-white font-sans">
-								{t("live.badge")}
-							</span>
-						</Link>
-					))}
-				</div>
+				// The cascade is the first load only: the 20s poll keeps the same
+				// keys, so a refresh moves nothing. A broadcast that starts later
+				// rises in on its own, one that ends fades out.
+				<motion.div
+					variants={staggerParentFast}
+					initial="hidden"
+					animate="show"
+					className="p-3 flex flex-col gap-2.5"
+				>
+					<AnimatePresence>
+						{rows.map((row, i) => (
+							<motion.div
+								key={row.id}
+								// The first screenful only, so row 20 is not late.
+								variants={i < 8 ? staggerItem : undefined}
+								exit="exit"
+							>
+								<Link
+									href={`/live?tab=live&s=${row.id}`}
+									className="flex items-center gap-3.5 rounded-xl border border-hairline bg-surface/60 px-4 py-3 hover:bg-raised/40 transition-colors"
+								>
+									<span className="relative w-12 h-12 rounded-pill p-[2px] bg-danger shrink-0">
+										<span className="relative block w-full h-full rounded-pill overflow-hidden border-2 border-page bg-raised">
+											<SafeAvatar src={row.avatar} className="object-cover" />
+										</span>
+									</span>
+									<span className="min-w-0 flex-1">
+										<span className="block font-sans text-[calc(14.5px*var(--ws-fs))] font-semibold text-primary truncate">
+											{row.title}
+										</span>
+										<span className="block font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle truncate">
+											@{row.username}
+											{row.category ? ` · ${row.category}` : ""}
+										</span>
+									</span>
+									<span className="flex items-center gap-1.5 font-sans text-[calc(12.5px*var(--ws-fs))] text-muted tabular-nums shrink-0">
+										<Eye size={14} />
+										{/* Other people arriving: the number rolls, keyed by
+										    the shown text so 1,204 to 1,205 stays still. */}
+										<span className="relative inline-flex overflow-hidden">
+											<AnimatePresence mode="popLayout" initial={false}>
+												<motion.span
+													key={formatCompact(row.viewers)}
+													{...swap}
+													className="inline-block"
+												>
+													{formatCompact(row.viewers)}
+												</motion.span>
+											</AnimatePresence>
+										</span>
+									</span>
+									<span className="shrink-0 flex items-center gap-1 rounded-[4px] bg-danger px-1.5 py-px text-[calc(10px*var(--ws-fs))] font-bold tracking-wide text-white font-sans">
+										{t("live.badge")}
+									</span>
+								</Link>
+							</motion.div>
+						))}
+					</AnimatePresence>
+				</motion.div>
 			)}
 		</div>
 	);

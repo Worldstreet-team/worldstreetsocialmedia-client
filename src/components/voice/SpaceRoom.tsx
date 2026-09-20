@@ -58,6 +58,15 @@ import {
   type RoomMember,
   useSpaceRoom,
 } from "@/hooks/useSpaceRoom";
+import {
+  menuStagger,
+  pop,
+  press,
+  staggerItem,
+  staggerParent,
+  staggerPop,
+  swap,
+} from "@/lib/motion-presets";
 import { useT } from "@/i18n/client";
 import { pendingDraftAtom } from "@/store/drafts.atom";
 import { userAtom } from "@/store/user.atom";
@@ -595,8 +604,10 @@ export default function SpaceRoom({
           : t("voice.listeners")
     }`;
     return (
-      <button
+      // A seat filling or emptying lands; no layout, the grid can be long.
+      <motion.button
         key={m.id}
+        {...pop}
         type="button"
         onClick={() => (canManage ? setMenuFor(m) : viewProfile(m))}
         aria-label={label}
@@ -622,16 +633,26 @@ export default function SpaceRoom({
             >
               <SafeAvatar src={m.avatar} />
             </span>
-            {m.hand && !onStage && (
-              <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-pill bg-[#fafaf9] text-[#0c0a09]">
-                <HandPalm size={11} weight="fill" />
-              </span>
-            )}
-            {onStage && !cohostIds.has(m.id) && (
-              <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-pill bg-success text-[#0c0a09]">
-                <Microphone size={11} weight="fill" />
-              </span>
-            )}
+            <AnimatePresence initial={false}>
+              {m.hand && !onStage && (
+                <motion.span
+                  key="hand"
+                  {...pop}
+                  className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-pill bg-[#fafaf9] text-[#0c0a09]"
+                >
+                  <HandPalm size={11} weight="fill" />
+                </motion.span>
+              )}
+              {onStage && !cohostIds.has(m.id) && (
+                <motion.span
+                  key="mic"
+                  {...pop}
+                  className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-pill bg-success text-[#0c0a09]"
+                >
+                  <Microphone size={11} weight="fill" />
+                </motion.span>
+              )}
+            </AnimatePresence>
           </span>
         </span>
         <span className="flex max-w-full items-center gap-0.5">
@@ -650,14 +671,37 @@ export default function SpaceRoom({
             />
           )}
         </span>
-        {cohostIds.has(m.id) && (
-          <span className="rounded-pill bg-brand/15 px-1.5 py-px font-sans text-[calc(8.5px*var(--ws-fs))] font-bold uppercase tracking-[0.1em] text-gold">
-            {tf("voice.cohostBadge", "Co-host")}
-          </span>
-        )}
-      </button>
+        <AnimatePresence initial={false}>
+          {cohostIds.has(m.id) && (
+            <motion.span
+              key="cohost"
+              {...pop}
+              className="rounded-pill bg-brand/15 px-1.5 py-px font-sans text-[calc(8.5px*var(--ws-fs))] font-bold uppercase tracking-[0.1em] text-gold"
+            >
+              {tf("voice.cohostBadge", "Co-host")}
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </motion.button>
     );
   };
+
+  const audioLine =
+    audio === "connecting"
+      ? t("voice.audioConnecting")
+      : audio === "reconnecting"
+        ? tf("voice.reconnecting", "Reconnecting to the room…")
+        : audio === "listening"
+          ? canSpeak
+            ? muted
+              ? t("voice.youAreMuted")
+              : t("voice.youAreLive")
+            : t("voice.listenOnly")
+          : audio === "unavailable"
+            ? t("voice.audioUnavailable")
+            : audio === "failed"
+              ? t("voice.audioFailed")
+              : t("voice.listenOnly");
 
   const chatPane = (
     <ChatPane
@@ -726,37 +770,43 @@ export default function SpaceRoom({
                     <LinkSimple size={14} weight="bold" />
                     {t("voice.share")}
                   </button>
-                  {shareOpen && (
-                    <div
-                      role="menu"
-                      className="absolute right-0 top-full z-20 mt-2 w-[196px] overflow-hidden rounded-xl border border-[#fafaf9]/10 bg-[#1c1917] py-1 shadow-nav"
-                    >
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setShareOpen(false);
-                          void copyLink();
-                        }}
-                        className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-[#fafaf9] transition-colors hover:bg-[#fafaf9]/8 cursor-pointer"
+                  <AnimatePresence>
+                    {shareOpen && (
+                      <motion.div
+                        key="share-menu"
+                        role="menu"
+                        {...menuStagger("top-right")}
+                        className="absolute right-0 top-full z-20 mt-2 w-[196px] overflow-hidden rounded-xl border border-[#fafaf9]/10 bg-[#1c1917] py-1 shadow-nav"
                       >
-                        <LinkSimple size={15} weight="bold" />
-                        {tf("voice.copyLink", "Copy link")}
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setShareOpen(false);
-                          postAbout();
-                        }}
-                        className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-[#fafaf9] transition-colors hover:bg-[#fafaf9]/8 cursor-pointer"
-                      >
-                        <NotePencil size={15} weight="bold" />
-                        {tf("voice.postAbout", "Post about it")}
-                      </button>
-                    </div>
-                  )}
+                        <motion.button
+                          variants={staggerItem}
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setShareOpen(false);
+                            void copyLink();
+                          }}
+                          className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-[#fafaf9] transition-colors hover:bg-[#fafaf9]/8 cursor-pointer"
+                        >
+                          <LinkSimple size={15} weight="bold" />
+                          {tf("voice.copyLink", "Copy link")}
+                        </motion.button>
+                        <motion.button
+                          variants={staggerItem}
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setShareOpen(false);
+                            postAbout();
+                          }}
+                          className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-[#fafaf9] transition-colors hover:bg-[#fafaf9]/8 cursor-pointer"
+                        >
+                          <NotePencil size={15} weight="bold" />
+                          {tf("voice.postAbout", "Post about it")}
+                        </motion.button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
                 <button
                   type="button"
@@ -780,7 +830,17 @@ export default function SpaceRoom({
               <EqBars className="text-gold" />
               <span className="flex items-center gap-1 font-semibold tabular-nums">
                 <Users size={13} weight="bold" />
-                {formatCompact(listenerCount)} {t("voice.listeners")}
+                {/* People coming and going is not your doing: it rolls. */}
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.span
+                    key={formatCompact(listenerCount)}
+                    {...swap}
+                    className="inline-block"
+                  >
+                    {formatCompact(listenerCount)}
+                  </motion.span>
+                </AnimatePresence>{" "}
+                {t("voice.listeners")}
               </span>
               {row.community && (
                 <span className="truncate rounded-pill bg-[#fafaf9]/12 px-2 py-px text-[calc(10.5px*var(--ws-fs))] font-medium">
@@ -831,7 +891,9 @@ export default function SpaceRoom({
                       {tf("voice.stageTier", "On stage")}
                     </h3>
                     <div className="mt-2 grid grid-cols-3 gap-x-1 gap-y-2 sm:grid-cols-4">
-                      {onStageMembers.map((m) => memberCell(m, true, true))}
+                      <AnimatePresence initial={false}>
+                        {onStageMembers.map((m) => memberCell(m, true, true))}
+                      </AnimatePresence>
                     </div>
                   </div>
                 )}
@@ -844,7 +906,11 @@ export default function SpaceRoom({
                   {realtime && audienceShown.length > 0 ? (
                     <>
                       <div className="mt-2 grid grid-cols-4 gap-x-1 gap-y-2 sm:grid-cols-5">
-                        {audienceShown.map((m) => memberCell(m, false, false))}
+                        <AnimatePresence initial={false}>
+                          {audienceShown.map((m) =>
+                            memberCell(m, false, false),
+                          )}
+                        </AnimatePresence>
                       </div>
                       {audienceOverflow > 0 && (
                         <p className="mt-2 font-sans text-[calc(11.5px*var(--ws-fs))] glass-ink-faint">
@@ -912,18 +978,25 @@ export default function SpaceRoom({
 
               {/* Autoplay was refused (iOS until a gesture): the honest fix
                   is a tap, so offer the tap. */}
-              {needsUnlock && audio === "listening" && (
-                <div className="pointer-events-none absolute inset-x-0 bottom-20 flex justify-center">
-                  <button
-                    type="button"
-                    onClick={() => void unlockAudio()}
-                    className="pointer-events-auto flex h-10 items-center gap-2 rounded-pill bg-brand px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on shadow-nav transition-colors hover:bg-brand-active cursor-pointer"
+              <AnimatePresence>
+                {needsUnlock && audio === "listening" && (
+                  <div
+                    key="unlock"
+                    className="pointer-events-none absolute inset-x-0 bottom-20 flex justify-center"
                   >
-                    <SpeakerHigh size={15} weight="fill" />
-                    {tf("voice.tapToListen", "Tap to listen")}
-                  </button>
-                </div>
-              )}
+                    <motion.button
+                      {...pop}
+                      {...press}
+                      type="button"
+                      onClick={() => void unlockAudio()}
+                      className="pointer-events-auto flex h-10 items-center gap-2 rounded-pill bg-brand px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on shadow-nav transition-colors hover:bg-brand-active cursor-pointer"
+                    >
+                      <SpeakerHigh size={15} weight="fill" />
+                      {tf("voice.tapToListen", "Tap to listen")}
+                    </motion.button>
+                  </div>
+                )}
+              </AnimatePresence>
 
               {/* New-chat ticker (phones): the latest line slides in above
                   the dock so the stage never hides a conversation. */}
@@ -963,7 +1036,8 @@ export default function SpaceRoom({
                     {canSpeak ? (
                       // On stage: a real mic. The token grants publish, so
                       // this is never a dead control.
-                      <button
+                      <motion.button
+                        {...press}
                         type="button"
                         disabled={audio !== "listening"}
                         onClick={toggleMute}
@@ -979,16 +1053,26 @@ export default function SpaceRoom({
                               : "bg-danger text-white cursor-pointer",
                         )}
                       >
-                        {muted ? (
-                          <MicrophoneSlash size={16} weight="bold" />
-                        ) : (
-                          <Microphone size={16} weight="fill" />
-                        )}
-                      </button>
+                        {/* Keyed, no exit: the new glyph lands at once. A mic
+                            state must never wait on the old one leaving. */}
+                        <motion.span
+                          key={muted ? "muted" : "live"}
+                          initial={pop.initial}
+                          animate={pop.animate}
+                          className="flex"
+                        >
+                          {muted ? (
+                            <MicrophoneSlash size={16} weight="bold" />
+                          ) : (
+                            <Microphone size={16} weight="fill" />
+                          )}
+                        </motion.span>
+                      </motion.button>
                     ) : (
                       // In the audience: no publish rights, so no mic at all —
                       // the honest control is asking for one.
-                      <button
+                      <motion.button
+                        {...press}
                         type="button"
                         onClick={toggleHand}
                         aria-pressed={hand}
@@ -998,23 +1082,43 @@ export default function SpaceRoom({
                         )}
                       >
                         <HandPalm size={15} weight={hand ? "fill" : "bold"} />
-                        {hand
-                          ? t("voice.lowerHand")
-                          : tf("voice.requestSpeak", "Request to speak")}
-                      </button>
+                        <AnimatePresence mode="wait" initial={false}>
+                          <motion.span
+                            key={hand ? "lower" : "raise"}
+                            {...swap}
+                            className="inline-block"
+                          >
+                            {hand
+                              ? t("voice.lowerHand")
+                              : tf("voice.requestSpeak", "Request to speak")}
+                          </motion.span>
+                        </AnimatePresence>
+                      </motion.button>
                     )}
                     <span className="mx-1 h-5 w-px bg-[#fafaf9]/12" />
-                    {REACTION_SET.map(({ kind, Icon, tint, label }) => (
-                      <button
-                        key={kind}
-                        type="button"
-                        onClick={() => react(kind)}
-                        aria-label={`React: ${label}`}
-                        className="flex h-10 w-10 items-center justify-center rounded-pill transition-colors hover:bg-[#fafaf9]/10 cursor-pointer"
-                      >
-                        <Icon size={17} weight="fill" className={tint} />
-                      </button>
-                    ))}
+                    {/* display:contents, so the cascade parent adds no box
+                        to the wrapping dock row. Plays once, as the room
+                        opens. */}
+                    <motion.div
+                      variants={staggerParent}
+                      initial="hidden"
+                      animate="show"
+                      className="contents"
+                    >
+                      {REACTION_SET.map(({ kind, Icon, tint, label }) => (
+                        <motion.button
+                          key={kind}
+                          variants={staggerPop}
+                          {...press}
+                          type="button"
+                          onClick={() => react(kind)}
+                          aria-label={`React: ${label}`}
+                          className="flex h-10 w-10 items-center justify-center rounded-pill transition-colors hover:bg-[#fafaf9]/10 cursor-pointer"
+                        >
+                          <Icon size={17} weight="fill" className={tint} />
+                        </motion.button>
+                      ))}
+                    </motion.div>
                     {/* The text lane, for phones — desktop seats it beside
                         the stage instead. */}
                     <button
@@ -1028,57 +1132,63 @@ export default function SpaceRoom({
                       )}
                     >
                       <ChatCircle size={16} weight={chatOpen ? "fill" : "bold"} />
-                      {unread > 0 && !chatOpen && (
-                        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-pill bg-brand px-1 font-sans text-[calc(9px*var(--ws-fs))] font-bold text-brand-on tabular-nums">
-                          {unread > 9 ? "9+" : unread}
-                        </span>
-                      )}
+                      <AnimatePresence>
+                        {unread > 0 && !chatOpen && (
+                          <motion.span
+                            key="unread"
+                            {...pop}
+                            className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-pill bg-brand px-1 font-sans text-[calc(9px*var(--ws-fs))] font-bold text-brand-on tabular-nums"
+                          >
+                            {unread > 9 ? "9+" : unread}
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
                     </button>
                   </div>
                   {row.isHost ? (
-                    <button
+                    <motion.button
+                      {...press}
                       type="button"
                       onClick={() => onEnd(row)}
                       className="flex items-center gap-1.5 rounded-pill bg-danger/90 px-4 h-10 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-white hover:bg-danger transition-colors cursor-pointer"
                     >
                       {t("voice.end")}
-                    </button>
+                    </motion.button>
                   ) : (
-                    <button
+                    <motion.button
+                      {...press}
                       type="button"
                       onClick={onLeave}
                       className="flex items-center gap-1.5 rounded-pill glass-chip px-4 h-10 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold transition-colors cursor-pointer"
                     >
                       <SignOut size={14} weight="bold" />
                       {t("voice.leave")}
-                    </button>
+                    </motion.button>
                   )}
                 </div>
                 <p className="mt-2 flex items-center justify-center gap-2 text-center font-sans text-[calc(10.5px*var(--ws-fs))] glass-ink-faint">
-                  {audio === "connecting"
-                    ? t("voice.audioConnecting")
-                    : audio === "reconnecting"
-                      ? tf("voice.reconnecting", "Reconnecting to the room…")
-                      : audio === "listening"
-                        ? canSpeak
-                          ? muted
-                            ? t("voice.youAreMuted")
-                            : t("voice.youAreLive")
-                          : t("voice.listenOnly")
-                        : audio === "unavailable"
-                          ? t("voice.audioUnavailable")
-                          : audio === "failed"
-                            ? t("voice.audioFailed")
-                            : t("voice.listenOnly")}
-                  {audio === "failed" && (
-                    <button
-                      type="button"
-                      onClick={reconnect}
-                      className="rounded-pill glass-chip px-2.5 py-0.5 font-sans text-[calc(10.5px*var(--ws-fs))] font-semibold glass-ink transition-colors cursor-pointer"
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.span
+                      key={audioLine}
+                      {...swap}
+                      className="inline-block"
                     >
-                      {tf("voice.rejoin", "Rejoin")}
-                    </button>
-                  )}
+                      {audioLine}
+                    </motion.span>
+                  </AnimatePresence>
+                  <AnimatePresence>
+                    {audio === "failed" && (
+                      <motion.button
+                        key="rejoin"
+                        {...pop}
+                        type="button"
+                        onClick={reconnect}
+                        className="rounded-pill glass-chip px-2.5 py-0.5 font-sans text-[calc(10.5px*var(--ws-fs))] font-semibold glass-ink transition-colors cursor-pointer"
+                      >
+                        {tf("voice.rejoin", "Rejoin")}
+                      </motion.button>
+                    )}
+                  </AnimatePresence>
                 </p>
               </div>
             </div>
@@ -1166,7 +1276,12 @@ export default function SpaceRoom({
                     </span>
                   </span>
                 </OverlayHeader>
-                <div className="flex flex-col gap-0.5 px-2 pb-3">
+                <motion.div
+                  variants={staggerParent}
+                  initial="hidden"
+                  animate="show"
+                  className="flex flex-col gap-0.5 px-2 pb-3"
+                >
                   {(() => {
                     const m = menuFor;
                     const targetCohost = cohostIds.has(m.id);
@@ -1182,7 +1297,8 @@ export default function SpaceRoom({
                             host, and through the role, not the mic. */}
                         {targetCohost ? (
                           row.isHost && (
-                            <button
+                            <motion.button
+                              variants={staggerItem}
                               type="button"
                               onClick={run(() =>
                                 void cohostTarget(m.id, m.username, false),
@@ -1191,11 +1307,12 @@ export default function SpaceRoom({
                             >
                               <MicrophoneSlash size={16} weight="bold" />
                               {tf("voice.removeCohost", "Remove co-host")}
-                            </button>
+                            </motion.button>
                           )
                         ) : menuOnStage ? (
                           <>
-                            <button
+                            <motion.button
+                              variants={staggerItem}
                               type="button"
                               onClick={run(() =>
                                 void muteTarget(m.id, m.username),
@@ -1204,8 +1321,9 @@ export default function SpaceRoom({
                             >
                               <MicrophoneSlash size={16} weight="bold" />
                               {tf("voice.mute", "Mute")}
-                            </button>
-                            <button
+                            </motion.button>
+                            <motion.button
+                              variants={staggerItem}
                               type="button"
                               onClick={run(() =>
                                 void revokeMic(m.id, m.username),
@@ -1214,10 +1332,11 @@ export default function SpaceRoom({
                             >
                               <HandPalm size={16} weight="bold" />
                               {tf("voice.removeFromStage", "Remove from stage")}
-                            </button>
+                            </motion.button>
                           </>
                         ) : m.hand ? (
-                          <button
+                          <motion.button
+                            variants={staggerItem}
                             type="button"
                             onClick={run(() =>
                               void grantMic(m.id, m.username),
@@ -1226,9 +1345,10 @@ export default function SpaceRoom({
                           >
                             <Microphone size={16} weight="bold" />
                             {tf("voice.bringToStage", "Bring to stage")}
-                          </button>
+                          </motion.button>
                         ) : (
-                          <button
+                          <motion.button
+                            variants={staggerItem}
                             type="button"
                             onClick={run(() =>
                               void inviteToSpeak(m.id, m.username),
@@ -1237,13 +1357,14 @@ export default function SpaceRoom({
                           >
                             <Microphone size={16} weight="bold" />
                             {tf("voice.invite", "Invite to speak")}
-                          </button>
+                          </motion.button>
                         )}
                         {/* Deputies: host only, two seats. */}
                         {row.isHost &&
                           !targetCohost &&
                           (row.cohosts?.length ?? 0) < 2 && (
-                            <button
+                            <motion.button
+                              variants={staggerItem}
                               type="button"
                               onClick={run(() =>
                                 void cohostTarget(m.id, m.username, true),
@@ -1252,28 +1373,31 @@ export default function SpaceRoom({
                             >
                               <Users size={16} weight="bold" />
                               {tf("voice.makeCohost", "Make co-host")}
-                            </button>
+                            </motion.button>
                           )}
-                        <button
+                        <motion.button
+                          variants={staggerItem}
                           type="button"
                           onClick={run(() => viewProfile(m))}
                           className={clsx(item, "text-primary")}
                         >
                           <ArrowSquareOut size={16} weight="bold" />
                           {tf("voice.viewProfile", "View profile")}
-                        </button>
-                        <button
+                        </motion.button>
+                        <motion.button
+                          variants={staggerItem}
                           type="button"
                           onClick={run(() => setReportFor(m))}
                           className={clsx(item, "text-primary")}
                         >
                           <Flag size={16} weight="bold" />
                           {tf("voice.report", "Report")}
-                        </button>
+                        </motion.button>
                         {/* Removal: a ban, not a shove. Co-hosts can't
                             remove co-hosts; that is the host's call. */}
                         {(row.isHost || !targetCohost) && (
-                          <button
+                          <motion.button
+                            variants={staggerItem}
                             type="button"
                             onClick={run(() =>
                               void removeTarget(m.id, m.username),
@@ -1282,12 +1406,12 @@ export default function SpaceRoom({
                           >
                             <SignOut size={16} weight="bold" />
                             {tf("voice.removeFromSpace", "Remove from space")}
-                          </button>
+                          </motion.button>
                         )}
                       </>
                     );
                   })()}
-                </div>
+                </motion.div>
               </OverlayPanel>
             </div>
           )}

@@ -2,8 +2,10 @@
 
 import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Pause, Play } from "@phosphor-icons/react";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import { press, swap } from "@/lib/motion-presets";
 
 /**
  * The voice-note post player. The waveform IS the scrubber (SoundCloud's
@@ -146,18 +148,31 @@ export function AudioCard({
 			)}
 
 			<div className="relative flex items-center gap-3 px-3.5 py-4">
-				<button
+				<motion.button
+					{...press}
 					type="button"
 					aria-label={playing ? "Pause voice note" : "Play voice note"}
 					onClick={toggle}
 					className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-primary text-page transition-colors hover:opacity-90"
 				>
-					{playing ? (
-						<Pause size={18} weight="fill" />
-					) : (
-						<Play size={18} weight="fill" className="translate-x-px" />
-					)}
-				</button>
+					{/* The glyph rolls to the other state; the audio itself never
+					    waits on it. */}
+					<span className="relative inline-flex">
+						<AnimatePresence mode="popLayout" initial={false}>
+							<motion.span
+								key={playing ? "pause" : "play"}
+								{...swap}
+								className="inline-flex"
+							>
+								{playing ? (
+									<Pause size={18} weight="fill" />
+								) : (
+									<Play size={18} weight="fill" className="translate-x-px" />
+								)}
+							</motion.span>
+						</AnimatePresence>
+					</span>
+				</motion.button>
 
 				{/* biome-ignore lint/a11y/useKeyWithClickEvents: seek surface; play button is the keyboard path */}
 				<div

@@ -7,11 +7,13 @@ import {
   Play,
   Stop,
 } from "@phosphor-icons/react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   loadBackdropImage,
   type StoryCanvas,
 } from "@/lib/editor/storyBackgrounds";
+import { pop, reveal, swap } from "@/lib/motion-presets";
 import {
   analyseTake,
   drawVoiceFrame,
@@ -322,9 +324,15 @@ export default function VoiceRecorder({
       {micState === "ready" && !take && (
         <div className="absolute top-4 inset-x-0 flex justify-center">
           <span className="rounded-pill glass-chip-canvas backdrop-blur-md px-3 py-1 font-sans text-xs font-semibold tabular-nums">
-            {recording && (
-              <span className="mr-2 inline-block h-2 w-2 rounded-pill bg-danger align-middle animate-pulse" />
-            )}
+            <AnimatePresence initial={false}>
+              {recording && (
+                <motion.span
+                  key="rec-dot"
+                  {...pop}
+                  className="mr-2 inline-block h-2 w-2 rounded-pill bg-danger align-middle animate-pulse"
+                />
+              )}
+            </AnimatePresence>
             {formatClock(seconds)} / {formatClock(VOICE_MAX_SECONDS)}
           </span>
         </div>
@@ -337,17 +345,33 @@ export default function VoiceRecorder({
             type="button"
             onClick={recording ? stopRecording : startRecording}
             aria-label={recording ? "Stop recording" : "Start recording"}
-            className="flex h-16 w-16 items-center justify-center rounded-pill glass-cta transition-colors cursor-pointer active:brightness-95"
+            className="relative flex h-16 w-16 items-center justify-center rounded-pill glass-cta transition-colors cursor-pointer active:brightness-95"
           >
-            {recording ? (
-              <Stop size={24} weight="fill" className="text-danger" />
-            ) : (
-              <Microphone size={26} weight="bold" />
-            )}
+            {/* popLayout, not wait: the new glyph must not queue behind
+                the old one when the tap starts a recording. */}
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.span
+                key={recording ? "stop" : "mic"}
+                {...pop}
+                className="flex"
+              >
+                {recording ? (
+                  <Stop size={24} weight="fill" className="text-danger" />
+                ) : (
+                  <Microphone size={26} weight="bold" />
+                )}
+              </motion.span>
+            </AnimatePresence>
           </button>
-          <span className="font-sans text-xs glass-ink-dim">
-            {recording ? "Tap to finish" : "Tap to record"}
-          </span>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span
+              key={recording ? "finish" : "record"}
+              {...swap}
+              className="font-sans text-xs glass-ink-dim"
+            >
+              {recording ? "Tap to finish" : "Tap to record"}
+            </motion.span>
+          </AnimatePresence>
         </div>
       )}
 
@@ -361,7 +385,10 @@ export default function VoiceRecorder({
 
       {/* Review: play it back, scrub it, or start over. */}
       {take && (
-        <div className="absolute bottom-5 inset-x-0 px-5 space-y-3">
+        <motion.div
+          {...reveal()}
+          className="absolute bottom-5 inset-x-0 px-5 space-y-3"
+        >
           <button
             type="button"
             aria-label="Scrub"
@@ -393,23 +420,34 @@ export default function VoiceRecorder({
               type="button"
               onClick={togglePlay}
               aria-label={playing ? "Pause" : "Play"}
-              className="flex h-14 w-14 items-center justify-center rounded-pill glass-cta transition-colors cursor-pointer active:brightness-95"
+              className="relative flex h-14 w-14 items-center justify-center rounded-pill glass-cta transition-colors cursor-pointer active:brightness-95"
             >
-              {playing ? (
-                <Pause size={20} weight="fill" />
-              ) : (
-                <Play size={20} weight="fill" />
-              )}
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.span
+                  key={playing ? "pause" : "play"}
+                  {...pop}
+                  className="flex"
+                >
+                  {playing ? (
+                    <Pause size={20} weight="fill" />
+                  ) : (
+                    <Play size={20} weight="fill" />
+                  )}
+                </motion.span>
+              </AnimatePresence>
             </button>
             <span className="flex h-10 min-w-10 items-center justify-center rounded-pill glass-chip-canvas backdrop-blur-md px-3 font-sans text-[calc(11px*var(--ws-fs))] font-semibold tabular-nums">
               {formatClock(take.duration)}
             </span>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {micState === "denied" && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-8 text-center">
+        <motion.div
+          {...reveal()}
+          className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-8 text-center"
+        >
           <span className="flex h-14 w-14 items-center justify-center rounded-pill glass-chip backdrop-blur-md backdrop-saturate-150">
             <Microphone size={24} />
           </span>
@@ -419,7 +457,7 @@ export default function VoiceRecorder({
           <p className="font-sans text-xs glass-ink-dim">
             Allow the mic in your browser&apos;s site settings, then try again.
           </p>
-        </div>
+        </motion.div>
       )}
     </div>
   );

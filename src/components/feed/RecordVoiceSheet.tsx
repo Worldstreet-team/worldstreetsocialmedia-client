@@ -1,8 +1,8 @@
 "use client";
 
 import clsx from "clsx";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { AnimatePresence } from "framer-motion";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
 	Microphone,
 	Pause,
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/Overlay";
 import { AudioCard } from "@/components/feed/AudioCard";
 import { analyzeAudioFile } from "@/lib/audio-analyze";
+import { press, reveal, swap, thumbSpring } from "@/lib/motion-presets";
 
 /**
  * The in-app voice recorder for feed posts — the suite's first station.
@@ -71,6 +72,8 @@ export function RecordVoiceSheet({
 	const ctxRef = useRef<AudioContext | null>(null);
 	const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 	const elapsedRef = useRef(0);
+	// Per instance, so a second sheet could never throw its thumb at this one.
+	const thumbId = useId();
 
 	const cleanup = useCallback(() => {
 		cancelAnimationFrame(rafRef.current);
@@ -285,7 +288,7 @@ export function RecordVoiceSheet({
 									{/* WYSIWYG: this IS the feed card — same component,
 									    same waveform, same ground — playable right here.
 									    What gets approved is what gets rendered. */}
-									<div className="w-full">
+									<motion.div {...reveal(0)} className="w-full">
 										<AudioCard
 											key={`${blurBg}-${reviewMeta ? "m" : "x"}`}
 											audio={{
@@ -298,51 +301,76 @@ export function RecordVoiceSheet({
 											}}
 											avatar={avatar}
 										/>
-									</div>
+									</motion.div>
 
 									{/* The background is chosen HERE, on the preview,
 									    where the choice is visible — not on a chip in
 									    the composer after the sheet is gone. */}
-									<div className="-mt-1 flex w-full items-center justify-between">
+									<motion.div
+										{...reveal(1)}
+										className="-mt-1 flex w-full items-center justify-between"
+									>
 										<span className="font-sans text-[calc(12.5px*var(--ws-fs))] text-muted">
 											Background
 										</span>
+										{/* The brand fill is ONE element sliding between the
+										    two pills, not a background each switches on. */}
 										<div className="flex gap-1.5">
 											<button
 												type="button"
 												onClick={() => setBlurBg(true)}
 												className={clsx(
-													"cursor-pointer rounded-pill px-3.5 py-1.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
+													"relative cursor-pointer rounded-pill px-3.5 py-1.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
 													blurBg
-														? "bg-brand text-brand-on"
+														? "text-brand-on"
 														: "bg-raised text-muted hover:bg-chip",
 												)}
 											>
-												Your photo, blurred
+												{blurBg && (
+													<motion.span
+														aria-hidden
+														layoutId={thumbId}
+														transition={thumbSpring}
+														className="absolute inset-0 rounded-pill bg-brand"
+													/>
+												)}
+												<span className="relative">Your photo, blurred</span>
 											</button>
 											<button
 												type="button"
 												onClick={() => setBlurBg(false)}
 												className={clsx(
-													"cursor-pointer rounded-pill px-3.5 py-1.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
+													"relative cursor-pointer rounded-pill px-3.5 py-1.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
 													!blurBg
-														? "bg-brand text-brand-on"
+														? "text-brand-on"
 														: "bg-raised text-muted hover:bg-chip",
 												)}
 											>
-												Flat
+												{!blurBg && (
+													<motion.span
+														aria-hidden
+														layoutId={thumbId}
+														transition={thumbSpring}
+														className="absolute inset-0 rounded-pill bg-brand"
+													/>
+												)}
+												<span className="relative">Flat</span>
 											</button>
 										</div>
-									</div>
+									</motion.div>
 
-									<div className="flex items-center gap-3">
-										<button
+									<motion.div
+										{...reveal(2)}
+										className="flex items-center gap-3"
+									>
+										<motion.button
+											{...press}
 											type="button"
 											onClick={use}
 											className="h-12 cursor-pointer rounded-pill bg-brand px-7 font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:opacity-90"
 										>
 											Use voice note
-										</button>
+										</motion.button>
 										<button
 											type="button"
 											aria-label="Record again"
@@ -360,19 +388,20 @@ export function RecordVoiceSheet({
 										>
 											<ArrowCounterClockwise size={18} />
 										</button>
-									</div>
+									</motion.div>
 								</>
 							) : (
 								<div className="flex items-center gap-3">
 									{phase === "idle" || phase === "denied" ? (
-										<button
+										<motion.button
+											{...press}
 											type="button"
 											onClick={start}
 											className="flex h-14 cursor-pointer items-center gap-2.5 rounded-pill bg-danger px-7 font-sans text-[calc(14.5px*var(--ws-fs))] font-semibold text-white transition-colors hover:opacity-90"
 										>
 											<Microphone size={20} weight="fill" />
 											{phase === "denied" ? "Try again" : "Record"}
-										</button>
+										</motion.button>
 									) : (
 										<>
 											<button
@@ -383,13 +412,26 @@ export function RecordVoiceSheet({
 												onClick={pauseResume}
 												className="flex h-14 w-14 cursor-pointer items-center justify-center rounded-pill bg-raised text-primary transition-colors hover:bg-chip"
 											>
-												{phase === "recording" ? (
-													<Pause size={20} weight="fill" />
-												) : (
-													<Microphone size={20} weight="fill" />
-												)}
+												{/* The person's own toggle: the glyph rolls
+												    instead of blinking to the other state. */}
+												<span className="relative inline-flex">
+													<AnimatePresence mode="popLayout" initial={false}>
+														<motion.span
+															key={phase === "recording" ? "pause" : "resume"}
+															{...swap}
+															className="inline-flex"
+														>
+															{phase === "recording" ? (
+																<Pause size={20} weight="fill" />
+															) : (
+																<Microphone size={20} weight="fill" />
+															)}
+														</motion.span>
+													</AnimatePresence>
+												</span>
 											</button>
-											<button
+											<motion.button
+												{...press}
 												type="button"
 												aria-label="Finish recording"
 												onClick={() => recRef.current?.stop()}
@@ -397,7 +439,7 @@ export function RecordVoiceSheet({
 											>
 												<Stop size={18} weight="fill" />
 												Finish
-											</button>
+											</motion.button>
 										</>
 									)}
 								</div>

@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import { createPortal } from "react-dom";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence } from "framer-motion";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
 	ArrowSquareOut,
 	Broadcast,
@@ -38,6 +38,17 @@ import {
 	useOverlayDismiss,
 } from "@/components/ui/Overlay";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import {
+	collapse,
+	menuStagger,
+	press,
+	reveal,
+	staggerItem,
+	staggerParentFast,
+	staggerPop,
+	swap,
+	thumbSpring,
+} from "@/lib/motion-presets";
 
 /** Old preset values (socials 5-list / Xstream 6-enum) → taxonomy labels. */
 const LEGACY_PRESET_CATEGORY: Record<string, string> = {
@@ -120,20 +131,28 @@ function GlassSelect({
 					className={clsx("shrink-0 transition-transform", open && "rotate-180")}
 				/>
 			</button>
+			{/* The click-away catcher leaves at once; only the panel has an exit. */}
 			{open && (
-				<>
-					<button
-						type="button"
-						aria-label="Close"
-						className="fixed inset-0 cursor-default"
-						onClick={() => setOpen(false)}
-					/>
-					{/* No blur of its own: the sheet panel already carries the
-					    one backdrop pass in this stack. */}
-					<div className="absolute bottom-10 left-0 right-0 glass-panel !rounded-xl py-1 max-h-44 overflow-y-auto">
+				<button
+					type="button"
+					aria-label="Close"
+					className="fixed inset-0 cursor-default"
+					onClick={() => setOpen(false)}
+				/>
+			)}
+			{/* No blur of its own: the sheet panel already carries the one
+			    backdrop pass in this stack. Unfolds upward from its trigger. */}
+			<AnimatePresence>
+				{open && (
+					<motion.div
+						key="options"
+						{...menuStagger("bottom")}
+						className="absolute bottom-10 left-0 right-0 glass-panel !rounded-xl py-1 max-h-44 overflow-y-auto"
+					>
 						{options.map((o) => (
-							<button
+							<motion.button
 								key={o.id}
+								variants={staggerItem}
 								type="button"
 								onClick={() => {
 									onChange(o.id);
@@ -145,11 +164,11 @@ function GlassSelect({
 								{o.id === value && (
 									<Check size={12} weight="bold" className="shrink-0" />
 								)}
-							</button>
+							</motion.button>
 						))}
-					</div>
-				</>
-			)}
+					</motion.div>
+				)}
+			</AnimatePresence>
 		</div>
 	);
 }
@@ -210,6 +229,8 @@ export function GoLiveSheet({
 	const [copied, setCopied] = useState<"url" | "key" | null>(null);
 	const videoRef = useRef<HTMLVideoElement>(null);
 	const streamRef = useRef<MediaStream | null>(null);
+	// Per instance, so the source thumb can never jump to another control.
+	const sourceThumbId = useId();
 
 	const byVertical = useMemo(() => {
 		const map = new Map<string, typeof TAXONOMY>();
@@ -405,7 +426,12 @@ export function GoLiveSheet({
 								</p>
 							</div>
 						</OverlayHeader>
-						<div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5 pt-2">
+						{/* The credentials arriving is the moment: the body rises
+						    in rather than cutting from the setup form. */}
+						<motion.div
+							{...reveal()}
+							className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5 pt-2"
+						>
 
 						{(
 							[
@@ -437,15 +463,25 @@ export function GoLiveSheet({
 										aria-label={t("golive.obs.copy")}
 										className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-chip text-muted transition-colors hover:text-primary cursor-pointer"
 									>
-										{copied === row.kind ? (
-											<Check
-												size={15}
-												weight="bold"
-												className="text-success"
-											/>
-										) : (
-											<Copy size={15} />
-										)}
+										<span className="relative inline-flex">
+											<AnimatePresence mode="popLayout" initial={false}>
+												<motion.span
+													key={copied === row.kind ? "done" : "copy"}
+													{...swap}
+													className="inline-flex"
+												>
+													{copied === row.kind ? (
+														<Check
+															size={15}
+															weight="bold"
+															className="text-success"
+														/>
+													) : (
+														<Copy size={15} />
+													)}
+												</motion.span>
+											</AnimatePresence>
+										</span>
 									</button>
 								</div>
 							</div>
@@ -471,7 +507,7 @@ export function GoLiveSheet({
 								{t("golive.obs.done")}
 							</button>
 						</div>
-						</div>
+						</motion.div>
 					</>
 				) : (
 					<>
@@ -596,15 +632,25 @@ export function GoLiveSheet({
 								) : (
 									<span className="h-2 w-2 shrink-0 rounded-pill bg-danger" />
 								)}
-								<span className="text-muted truncate">
-									{link.kind === "checking" && t("golive.link.checking")}
-									{link.kind === "linked" && (
-										<span className="text-primary font-medium">
-											@{link.name ?? me?.username}
-										</span>
-									)}
-									{link.kind === "failed" &&
-										(link.message ?? t("golive.link.failed"))}
+								{/* The check resolving rolls the line in place. The block
+								    child keeps the ellipsis a bare inline-block would lose. */}
+								<span className="relative min-w-0 text-muted">
+									<AnimatePresence mode="popLayout" initial={false}>
+										<motion.span
+											key={link.kind}
+											{...swap}
+											className="block truncate"
+										>
+											{link.kind === "checking" && t("golive.link.checking")}
+											{link.kind === "linked" && (
+												<span className="text-primary font-medium">
+													@{link.name ?? me?.username}
+												</span>
+											)}
+											{link.kind === "failed" &&
+												(link.message ?? t("golive.link.failed"))}
+										</motion.span>
+									</AnimatePresence>
 								</span>
 								{link.kind === "failed" && (
 									<button
@@ -625,17 +671,29 @@ export function GoLiveSheet({
 										type="button"
 										onClick={() => setSource(value)}
 										className={clsx(
-											"flex items-center justify-center gap-1.5 rounded-pill h-9 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors cursor-pointer",
+											"relative flex items-center justify-center rounded-pill h-9 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors cursor-pointer",
 											source === value
-												? "bg-primary text-page"
+												? "text-page"
 												: "bg-chip text-muted transition-colors hover:text-primary",
 										)}
 									>
-										<Icon
-											size={14}
-											weight={source === value ? "fill" : "regular"}
-										/>
-										{t(labelKey)}
+										{/* ONE fill sliding between the three, not a
+										    background each switches on. */}
+										{source === value && (
+											<motion.span
+												aria-hidden
+												layoutId={sourceThumbId}
+												transition={thumbSpring}
+												className="absolute inset-0 rounded-pill bg-primary"
+											/>
+										)}
+										<span className="relative flex items-center gap-1.5">
+											<Icon
+												size={14}
+												weight={source === value ? "fill" : "regular"}
+											/>
+											{t(labelKey)}
+										</span>
 									</button>
 								))}
 							</div>
@@ -680,8 +738,15 @@ export function GoLiveSheet({
 									/>
 								</button>
 
+								{/* OBS has no "from Social" choice: the row folds away
+								    rather than blinking out of the group. */}
+								<AnimatePresence initial={false}>
 								{source !== "obs" && (
-									<>
+									<motion.div
+										key="native-row"
+										{...collapse}
+										className="overflow-hidden"
+									>
 										<div className="h-px bg-hairline" />
 										<button
 											type="button"
@@ -714,8 +779,9 @@ export function GoLiveSheet({
 												/>
 											</span>
 										</button>
-									</>
+									</motion.div>
 								)}
+								</AnimatePresence>
 
 								<div className="h-px bg-hairline" />
 								<button
@@ -744,7 +810,13 @@ export function GoLiveSheet({
 
 							{/* Category picker sheet */}
 							<div>
+								<AnimatePresence initial={false}>
 								{pickerOpen && (
+									<motion.div
+										key="category-picker"
+										{...collapse}
+										className="overflow-hidden"
+									>
 									<div className="rounded-xl bg-chip p-2.5">
 										<div className="relative mb-2">
 											<MagnifyingGlass
@@ -815,11 +887,26 @@ export function GoLiveSheet({
 																	)}
 																/>
 															</button>
+															{/* The group opens and its chips land in a quick cascade.
+															    The parent mounts with the group, so typing in the
+															    title or any other re-render never replays it. */}
+															<AnimatePresence initial={false}>
 															{open && (
-																<div className="flex flex-wrap gap-1.5 px-2 py-1.5">
+																<motion.div
+																	key="cats"
+																	{...collapse}
+																	className="overflow-hidden"
+																>
+																<motion.div
+																	variants={staggerParentFast}
+																	initial="hidden"
+																	animate="show"
+																	className="flex flex-wrap gap-1.5 px-2 py-1.5"
+																>
 																	{cats.map((c) => (
-																		<button
+																		<motion.button
 																			key={c.id}
+																			variants={staggerPop}
 																			type="button"
 																			onClick={() => {
 																				setCategory(c.label);
@@ -836,25 +923,32 @@ export function GoLiveSheet({
 																				{VERTICAL_ICON[v.id] ?? ""}
 																			</span>
 																			{c.label}
-																		</button>
+																		</motion.button>
 																	))}
-																</div>
+																</motion.div>
+																</motion.div>
 															)}
+															</AnimatePresence>
 														</div>
 													);
 												})
 											)}
 										</div>
 									</div>
+									</motion.div>
 								)}
+								</AnimatePresence>
 							</div>
 
 							{/* CTA */}
-							<button
+							{/* Flat danger, no gradient: #C22D2D was the only off-token
+							    red here, and in light mode it made the fill get lighter. */}
+							<motion.button
+								{...press}
 								type="button"
 								disabled={!canStart}
 								onClick={start}
-								className="w-full h-12 shine flex items-center justify-center gap-2 rounded-pill font-sans font-semibold text-[calc(15px*var(--ws-fs))] text-white bg-gradient-to-b from-danger to-[#C22D2D] hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+								className="w-full h-12 shine flex items-center justify-center gap-2 rounded-pill font-sans font-semibold text-[calc(15px*var(--ws-fs))] text-white bg-danger hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
 							>
 								<Broadcast size={17} weight="fill" />
 								{starting
@@ -862,7 +956,7 @@ export function GoLiveSheet({
 									: source === "obs"
 										? t("golive.startObs")
 										: t("golive.start")}
-							</button>
+							</motion.button>
 
 						</div>
 					</>

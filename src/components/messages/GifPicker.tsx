@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -9,6 +9,7 @@ import {
 	OverlayScrim,
 	useOverlayDismiss,
 } from "@/components/ui/Overlay";
+import { staggerItem, staggerParentFast } from "@/lib/motion-presets";
 
 /**
  * GIFs, via GIPHY's free tier.
@@ -81,6 +82,16 @@ export function GifPicker({
 		};
 	}, [open, query]);
 
+	// The tiles cascade once per open, for the first set that paints. After
+	// that a search swaps tiles in at rest: results driven by typing never
+	// wait for a flourish. `initial` is only read when a tile mounts, so
+	// disarming this later cannot disturb tiles already on screen.
+	const introRef = useRef(true);
+	useEffect(() => {
+		if (!open) introRef.current = true;
+		else if (gifs.length > 0) introRef.current = false;
+	}, [open, gifs]);
+
 	if (!GIPHY_KEY) return null;
 
 	return (
@@ -108,27 +119,38 @@ export function GifPicker({
 									))}
 								</div>
 							) : (
-								<div className="grid grid-cols-3 gap-1.5">
-									{gifs.map((g) => (
-										<button
+								<motion.div
+									variants={staggerParentFast}
+									initial="hidden"
+									animate="show"
+									className="grid grid-cols-3 gap-1.5"
+								>
+									{gifs.map((g, i) => (
+										<motion.button
 											key={g.id}
+											variants={staggerItem}
+											// Only what the panel can show at once joins the
+											// cascade; the rest, and every later set, is at rest.
+											initial={introRef.current && i < 15 ? undefined : false}
 											type="button"
 											onClick={() => {
 												onPick(g.full);
 												onClose();
 											}}
-											className="aspect-square cursor-pointer overflow-hidden rounded-[7px] bg-sunken transition-opacity hover:opacity-85"
+											className="group/gif aspect-square cursor-pointer overflow-hidden rounded-[7px] bg-sunken"
 										>
+											{/* The hover dim lives on the image: the cascade leaves
+											    an inline opacity on the tile that would mute it. */}
 											{/* eslint-disable-next-line @next/next/no-img-element */}
 											<img
 												src={g.preview}
 												alt={g.alt}
 												loading="lazy"
-												className="h-full w-full object-cover"
+												className="h-full w-full object-cover transition-opacity group-hover/gif:opacity-85"
 											/>
-										</button>
+										</motion.button>
 									))}
-								</div>
+								</motion.div>
 							)}
 						</div>
 					</OverlayPanel>

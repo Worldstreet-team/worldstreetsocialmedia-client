@@ -3,7 +3,7 @@
 import { UserBadges } from "@/components/ui/UserBadges";
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
 import { ImageSquare, VideoCamera, X } from "@phosphor-icons/react";
 import { useT } from "@/i18n/client";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/Overlay";
 
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import { collapse, press, staggerItem } from "@/lib/motion-presets";
 
 const MAX_CHARS = 280;
 const MAX_IMAGES = 4;
@@ -152,47 +153,68 @@ export function QuoteModal({
 						className="w-full resize-none rounded-xl bg-sunken px-3.5 py-3 font-sans text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised sm:text-[calc(15px*var(--ws-fs))]"
 					/>
 
-					{attachments.length > 0 && (
-						<div
-							className={clsx(
-								"mt-3 grid gap-2",
-								attachments.length === 1 ? "grid-cols-1" : "grid-cols-2",
-							)}
-						>
-							{attachments.map((a, i) => (
+					{/* The region opens rather than shoving the pinned original
+					    down in one frame; the first tile rides that, later ones
+					    rise in and removed ones fade out. */}
+					<AnimatePresence initial={false}>
+						{attachments.length > 0 && (
+							<motion.div
+								key="quote-attachments"
+								{...collapse}
+								className="overflow-hidden"
+							>
 								<div
-									key={a.url}
-									className="relative overflow-hidden rounded-xl bg-chip"
-								>
-									{a.kind === "video" ? (
-										// eslint-disable-next-line jsx-a11y/media-has-caption
-										<video
-											src={a.url}
-											className="aspect-video w-full object-cover"
-											muted
-											playsInline
-										/>
-									) : (
-										<img
-											src={a.url}
-											alt=""
-											className="aspect-square w-full object-cover"
-										/>
+									className={clsx(
+										"relative mt-3 grid gap-2",
+										attachments.length === 1
+											? "grid-cols-1"
+											: "grid-cols-2",
 									)}
-									{/* Sits ON the artwork, so it keeps the fixed-dark
-									    canvas chip rather than a theme tint. */}
-									<button
-										type="button"
-										onClick={() => removeAt(i)}
-										aria-label={t("common.close")}
-										className="absolute right-1.5 top-1.5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-pill glass-chip-canvas transition-colors"
-									>
-										<X size={12} weight="bold" />
-									</button>
+								>
+									{/* popLayout: a leaving tile steps out of the grid, so
+									    the 2-to-1 column change cannot stack it full width. */}
+									<AnimatePresence initial={false} mode="popLayout">
+										{attachments.map((a, i) => (
+											<motion.div
+												key={a.url}
+												variants={staggerItem}
+												initial="hidden"
+												animate="show"
+												exit="exit"
+												className="relative overflow-hidden rounded-xl bg-chip"
+											>
+												{a.kind === "video" ? (
+													// eslint-disable-next-line jsx-a11y/media-has-caption
+													<video
+														src={a.url}
+														className="aspect-video w-full object-cover"
+														muted
+														playsInline
+													/>
+												) : (
+													<img
+														src={a.url}
+														alt=""
+														className="aspect-square w-full object-cover"
+													/>
+												)}
+												{/* Sits ON the artwork, so it keeps the fixed-dark
+												    canvas chip rather than a theme tint. */}
+												<button
+													type="button"
+													onClick={() => removeAt(i)}
+													aria-label={t("common.close")}
+													className="absolute right-1.5 top-1.5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-pill glass-chip-canvas transition-colors"
+												>
+													<X size={12} weight="bold" />
+												</button>
+											</motion.div>
+										))}
+									</AnimatePresence>
 								</div>
-							))}
-						</div>
-					)}
+							</motion.div>
+						)}
+					</AnimatePresence>
 
 					{/* the original, pinned */}
 					<div className="mt-3 rounded-xl bg-chip p-3">
@@ -222,7 +244,8 @@ export function QuoteModal({
 
 				<div className="flex shrink-0 items-center justify-between gap-3 px-4 pb-[calc(16px+var(--ws-safe-bottom))] pt-3">
 					<div className="flex items-center gap-1">
-						<button
+						<motion.button
+							{...press}
 							type="button"
 							onClick={() => imageInputRef.current?.click()}
 							disabled={hasVideo || imageCount >= MAX_IMAGES}
@@ -230,8 +253,9 @@ export function QuoteModal({
 							className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill bg-chip text-muted transition-colors hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
 						>
 							<ImageSquare size={17} />
-						</button>
-						<button
+						</motion.button>
+						<motion.button
+							{...press}
 							type="button"
 							onClick={() => videoInputRef.current?.click()}
 							disabled={imageCount > 0}
@@ -239,7 +263,7 @@ export function QuoteModal({
 							className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill bg-chip text-muted transition-colors hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
 						>
 							<VideoCamera size={17} />
-						</button>
+						</motion.button>
 						<span
 							className={clsx(
 								"ml-1.5 font-sans text-[calc(12px*var(--ws-fs))] tabular-nums",
@@ -250,14 +274,15 @@ export function QuoteModal({
 						</span>
 					</div>
 
-					<button
+					<motion.button
+						{...press}
 						type="button"
 						disabled={!canPost}
 						onClick={submit}
 						className="h-10 cursor-pointer rounded-pill bg-brand px-6 font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active disabled:cursor-not-allowed disabled:opacity-40"
 					>
 						{busy ? t("quote.posting") : t("composer.post")}
-					</button>
+					</motion.button>
 				</div>
 
 				<input

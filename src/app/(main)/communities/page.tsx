@@ -28,6 +28,7 @@ import {
 	getCommunityHomeAction,
 	toggleCommunityAction,
 } from "@/lib/community.actions";
+import { press, swap } from "@/lib/motion-presets";
 import { sendFormDirect } from "@/lib/upload-direct";
 import { mapApiPost as mapPost } from "@/lib/post-mapper";
 import {
@@ -234,13 +235,18 @@ export default function CommunitiesPage() {
 
 	return (
 		<div className="flex min-h-dvh flex-col pb-nav md:pb-10">
-			{creating && (
-				<CreateCommunitySheet
-					busy={busy}
-					onClose={() => setCreating(false)}
-					onCreate={create}
-				/>
-			)}
+			{/* Inside AnimatePresence so the sheet's own exit gets to play;
+			    mounted bare it snapped shut. */}
+			<AnimatePresence>
+				{creating && (
+					<CreateCommunitySheet
+						key="create"
+						busy={busy}
+						onClose={() => setCreating(false)}
+						onCreate={create}
+					/>
+				)}
+			</AnimatePresence>
 
 			<header className="sticky top-0 z-sticky border-b border-hairline bg-page md:top-0">
 				<div className="flex items-end justify-between gap-3 px-4 pb-3 pt-5">
@@ -252,14 +258,15 @@ export default function CommunitiesPage() {
 							{t("nav.communities")}
 						</h1>
 					</div>
-					<button
+					<motion.button
 						type="button"
+						{...press}
 						onClick={() => setCreating(true)}
 						aria-label={t("community.create")}
 						className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-brand text-brand-on transition-colors hover:bg-brand-active"
 					>
 						<Plus size={16} weight="bold" />
-					</button>
+					</motion.button>
 				</div>
 
 				<Tabs
@@ -270,8 +277,11 @@ export default function CommunitiesPage() {
 				/>
 			</header>
 
+			{/* The new tab body rises in; the old one is cut. No exit on
+			    purpose: a tab switch, often from the keyboard, never waits for
+			    the old body to leave. */}
 			{tab === "home" ? (
-				<>
+				<motion.div key="home" initial={swap.initial} animate={swap.animate}>
 					{mine.length > 0 && (
 						<section
 							className="animate-rise border-b border-hairline px-4 py-4"
@@ -316,9 +326,13 @@ export default function CommunitiesPage() {
 							{loadingMore && <PostSkeleton />}
 						</>
 					)}
-				</>
+				</motion.div>
 			) : (
-				<>
+				<motion.div
+					key="explore"
+					initial={swap.initial}
+					animate={swap.animate}
+				>
 					<div className="border-b border-hairline px-4 py-3">
 						<div className="group relative">
 							<MagnifyingGlass
@@ -373,7 +387,7 @@ export default function CommunitiesPage() {
 							</AnimatePresence>
 						</div>
 					)}
-				</>
+				</motion.div>
 			)}
 		</div>
 	);

@@ -9,10 +9,11 @@ import {
   X,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import { useToast } from "@/components/ui/Toast/ToastContext";
+import { pop, press, swap } from "@/lib/motion-presets";
 
 interface VideoEditorProps {
   file: File;
@@ -205,24 +206,35 @@ export default function VideoEditor({
                 {title}
               </h2>
             </div>
-            <button
+            <motion.button
               type="button"
               onClick={handleSave}
               disabled={exporting || duration === 0}
+              {...press}
               className="shrink-0 flex items-center gap-2 glass-cta px-5 sm:px-6 h-10 sm:h-9 rounded-pill font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-sans cursor-pointer tabular-nums"
             >
-              {exporting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-[#0c0a09]/25 border-t-[#0c0a09] rounded-full animate-spin" />
-                  {exportPct}%
-                </>
-              ) : (
-                <>
-                  <Check size={16} weight="bold" />
-                  Save
-                </>
-              )}
-            </button>
+              {/* Keyed by state, never by the percent: the number ticks in
+                  place and only Save / exporting swaps. */}
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span
+                  key={exporting ? "busy" : "save"}
+                  {...swap}
+                  className="flex items-center gap-2"
+                >
+                  {exporting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-[#0c0a09]/25 border-t-[#0c0a09] rounded-full animate-spin" />
+                      {exportPct}%
+                    </>
+                  ) : (
+                    <>
+                      <Check size={16} weight="bold" />
+                      Save
+                    </>
+                  )}
+                </motion.span>
+              </AnimatePresence>
+            </motion.button>
           </div>
 
           {/* Player */}
@@ -248,21 +260,31 @@ export default function VideoEditor({
                 }}
               />
             )}
-            <button
+            <motion.button
               type="button"
               onClick={togglePlay}
               aria-label={playing ? "Pause" : "Play"}
+              {...press}
               className="absolute bottom-3 left-3 flex h-11 w-11 items-center justify-center rounded-pill glass-chip cursor-pointer"
             >
-              {playing ? (
-                <Pause size={18} weight="fill" />
-              ) : (
-                <Play size={18} weight="fill" />
-              )}
-            </button>
-            <button
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.span
+                  key={playing ? "pause" : "play"}
+                  {...pop}
+                  className="flex"
+                >
+                  {playing ? (
+                    <Pause size={18} weight="fill" />
+                  ) : (
+                    <Play size={18} weight="fill" />
+                  )}
+                </motion.span>
+              </AnimatePresence>
+            </motion.button>
+            <motion.button
               type="button"
               onClick={() => setMuted((m) => !m)}
+              {...press}
               disabled={!supported}
               aria-label={muted ? "Unmute" : "Mute"}
               aria-pressed={muted}
@@ -271,12 +293,20 @@ export default function VideoEditor({
                 muted ? "glass-chip-active" : "glass-chip ",
               )}
             >
-              {muted ? (
-                <SpeakerSimpleSlash size={18} weight="bold" />
-              ) : (
-                <SpeakerSimpleHigh size={18} weight="bold" />
-              )}
-            </button>
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.span
+                  key={muted ? "muted" : "sound"}
+                  {...pop}
+                  className="flex"
+                >
+                  {muted ? (
+                    <SpeakerSimpleSlash size={18} weight="bold" />
+                  ) : (
+                    <SpeakerSimpleHigh size={18} weight="bold" />
+                  )}
+                </motion.span>
+              </AnimatePresence>
+            </motion.button>
           </div>
 
           {/* Trim bar */}

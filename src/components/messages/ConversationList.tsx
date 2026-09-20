@@ -1,8 +1,15 @@
 "use client";
 
 import clsx from "clsx";
-import { useEffect, useMemo, useState, useRef } from "react";
+import {
+	useEffect,
+	useMemo,
+	useState,
+	useRef,
+	useSyncExternalStore,
+} from "react";
 import { useAtomValue } from "jotai";
+import { AnimatePresence, motion } from "framer-motion";
 import {
 	RiImageFill,
 	RiVoiceprintFill,
@@ -18,6 +25,15 @@ import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { useT } from "@/i18n/client";
 import { formatTimeAgo } from "@/lib/utils";
+import {
+	pop,
+	reveal,
+	staggerItem,
+	staggerParent,
+	staggerParentFast,
+	staggerPop,
+	swap,
+} from "@/lib/motion-presets";
 import { useGatewayRead } from "@/hooks/useGateway";
 import {
 	conversationIdentity,
@@ -115,6 +131,9 @@ const sectionTitle =
  *  its line with a control. */
 const sectionTitleBare =
 	"font-display text-[calc(20px*var(--ws-fs))] font-semibold leading-6 tracking-[-0.01em] text-primary";
+
+/** A store that never changes; see `clientMount` in the list. */
+const subscribeNever = () => () => {};
 
 export function InboxThumb() {
 	return (
@@ -216,6 +235,28 @@ export function ConversationList({
 		return [...out.values()];
 	}, [conversations, people, online, query, myProfileId]);
 
+	// The cascades belong to the first paint only. A search, a tab switch or
+	// an emptied shelf remounts the block, and those must cut, so each flag
+	// flips once its cascade has been given a commit to start in.
+	const rowsPlayed = useRef(false);
+	const railPlayed = useRef(false);
+	// False on the server and while hydrating, true for a mount that happens
+	// on the client (navigating here, the dock opening). The messages page
+	// server-renders its rows: hiding rows the server already painted, just
+	// to cascade them once the script lands, would blank the inbox on a
+	// hard load.
+	const clientMount = useSyncExternalStore(
+		subscribeNever,
+		() => true,
+		() => false,
+	);
+	useEffect(() => {
+		if (!loading && rows.length > 0) rowsPlayed.current = true;
+	}, [loading, rows.length]);
+	useEffect(() => {
+		if (onlineNow.length > 0) railPlayed.current = true;
+	}, [onlineNow.length]);
+
 	// Every hook lives ABOVE the early returns below. `onlineNow` used to sit
 	// under them, so the first search with no match rendered fewer hooks than
 	// the render before it and took the whole Messages page down (found
@@ -266,9 +307,17 @@ export function ConversationList({
 					{filter && !query.trim() && (
 						<div className="mb-1 px-1">{filter}</div>
 					)}
-					<p className="px-6 py-8 text-center font-sans text-[calc(15px*var(--ws-fs))] text-subtle">
+					{/* Rises when a shelf turns out empty; a search that finds
+					    nothing is typed, so that one cuts, and so does a line
+					    the server already painted (it would sit invisible until
+					    the script landed). Keyed per case. */}
+					<motion.p
+						key={query.trim() ? "search" : "shelf"}
+						{...(query.trim() || !clientMount ? {} : reveal())}
+						className="px-6 py-8 text-center font-sans text-[calc(15px*var(--ws-fs))] text-subtle"
+					>
 						{query.trim() ? t("messages.noMatches") : t("messages.empty")}
-					</p>
+					</motion.p>
 				</div>
 			</div>
 		);
@@ -276,7 +325,14 @@ export function ConversationList({
 
 	return (
 		<div className="flex flex-col px-2">
-			<div className="flex flex-col rounded-2xl px-2 pb-2 pt-4 glass-frost backdrop-blur-xl">
+			{/* The parent only times its rows: it carries no transform or fade
+			    of its own, because the block is the blurred pane. */}
+			<motion.div
+				variants={staggerParentFast}
+				initial={clientMount && !rowsPlayed.current ? "hidden" : false}
+				animate="show"
+				className="flex flex-col rounded-2xl px-2 pb-2 pt-4 glass-frost backdrop-blur-xl"
+			>
 			{heading && !query.trim() && (
 				<div className="mb-3 flex items-center justify-between gap-2 px-4">
 					<h2 className={sectionTitleBare}>{heading}</h2>
@@ -304,16 +360,24 @@ export function ConversationList({
 			{/* Who is on, right inside the chats block: faces only, no header
 			    of its own (owner 2026-09-20). */}
 			{onlineNow.length > 0 && !query.trim() && (
-				<div
+				<motion.div
 					aria-label={t("messages.onlineNow")}
+					// Its own root, not a child of the rows' cascade: presence
+					// often lands after the chats have painted.
+					variants={staggerParent}
+					initial={railPlayed.current ? false : "hidden"}
+					animate="show"
 					className="mb-1 flex gap-1 overflow-x-auto px-2 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 				>
 					{onlineNow.map(({ key, user: peer, conv }) => {
 						const first = (peer.firstName || peer.username || "").split(" ")[0];
 						return (
-							<button
+							<motion.button
 								key={key}
 								type="button"
+								// Every face, always: the late ones are off the edge
+								// of the rail, so nobody waits on them.
+								variants={staggerPop}
 								onClick={() => (conv ? onOpen(conv) : onOpenPerson?.(peer))}
 								className="flex w-[62px] shrink-0 cursor-pointer flex-col items-center gap-1 rounded-[10px] py-1 text-center transition-colors hover:bg-primary/5"
 							>
@@ -329,15 +393,15 @@ export function ConversationList({
 								<span className="w-full truncate font-sans text-[calc(11px*var(--ws-fs))] font-medium text-muted">
 									{first}
 								</span>
-							</button>
+							</motion.button>
 						);
 					})}
-				</div>
+				</motion.div>
 			)}
 			{/* A thumb between who is on and the chats themselves. */}
 			{onlineNow.length > 0 && !query.trim() && rows.length > 0 && <InboxThumb />}
 
-			{rows.map((conv) => {
+			{rows.map((conv, i) => {
 				const identity = conversationIdentity(conv);
 				const isGroup = identity.kind === "group";
 				const u = conv.otherParticipant;
@@ -352,10 +416,11 @@ export function ConversationList({
 						: conv.lastMessage?.sender?._id;
 				const mine = !!senderId && !!myProfileId && senderId === myProfileId;
 				const Glyph = kind?.glyph;
-
 				return (
+					// A wrapper AROUND the swipe row, so its drag transform is
+					// untouched.
+					<CascadeRow key={conv._id} index={i}>
 					<SwipeRow
-						key={conv._id}
 						onDelete={onDelete ? () => onDelete(conv) : undefined}
 						onArchive={onArchive ? () => onArchive(conv) : undefined}
 						archiveLabel={
@@ -388,12 +453,18 @@ export function ConversationList({
 								)}
 							</span>
 							{/* Presence is a 1:1 fact — a group has many. */}
-							{!isGroup && u && online.has(u._id) && (
-								<span
-									aria-label="Online"
-									className="absolute bottom-0 right-0 h-2 w-2 rounded-pill bg-success ring-2 ring-sunken ws-cue-online"
-								/>
-							)}
+							{/* initial={false}: a dot already there at mount is a
+							    fact, not an event. Only a change pops. */}
+							<AnimatePresence initial={false}>
+								{!isGroup && u && online.has(u._id) && (
+									<motion.span
+										key="online"
+										{...pop}
+										aria-label="Online"
+										className="absolute bottom-0 right-0 h-2 w-2 rounded-pill bg-success ring-2 ring-sunken ws-cue-online"
+									/>
+								)}
+							</AnimatePresence>
 						</span>
 
 						<span className="min-w-0 flex-1">
@@ -448,7 +519,10 @@ export function ConversationList({
 								{Glyph && conv.lastMessage?.type !== "system" && (
 									<Glyph size={15} className="shrink-0 text-subtle" />
 								)}
-								<span className="truncate">
+								<PreviewRoll
+									stamp={conv.lastMessage?.createdAt ?? "none"}
+									roll={!mine}
+								>
 									{conv.lastMessage?.type === "system"
 										? conv.lastMessage.systemEvent
 											? systemEventCopy(
@@ -469,7 +543,7 @@ export function ConversationList({
 												: t(kind.key)
 											: conv.lastMessage?.content ||
 												t("messages.noMessages")}
-								</span>
+								</PreviewRoll>
 								{/* The time rides the preview line ("Heyy · 3d"),
 								    which frees the top line for the name alone. */}
 								{rowTime(conv) && (
@@ -482,19 +556,79 @@ export function ConversationList({
 						</span>
 						{/* The house numeric badge on the trailing edge — how many
 						    is part of the signal, not just that. */}
-						{unread && (
-							<span className="ml-2 flex shrink-0 items-center gap-1.5">
-								{/* One signal (owner pick): a dot, the row already bolds. */}
-								<span aria-label={`${conv.unreadCount} unread`} className="h-2 w-2 rounded-pill bg-brand" />
-							</span>
-						)}
+						<AnimatePresence initial={false}>
+							{unread && (
+								<motion.span
+									key="unread"
+									{...pop}
+									className="ml-2 flex shrink-0 items-center gap-1.5"
+								>
+									{/* One signal (owner pick): a dot, the row already bolds. */}
+									<span aria-label={`${conv.unreadCount} unread`} className="h-2 w-2 rounded-pill bg-brand" />
+								</motion.span>
+							)}
+						</AnimatePresence>
 					</button>
 					</SwipeRow>
+					</CascadeRow>
 				);
 			})}
-			</div>
+			</motion.div>
 		</div>
 	);
+}
+
+/**
+ * The one-line preview. A line from the other side rises in; my own send
+ * cuts, because sending is too frequent to earn motion. Keyed on the
+ * message's stamp alone, NOT on whose it is: the inbox learns who "me" is a
+ * beat after it paints, and a key that flipped then rolled every row at once.
+ * No exit half, so a row carries no presence of its own for this.
+ */
+function PreviewRoll({
+	stamp,
+	roll,
+	children,
+}: {
+	stamp: string;
+	roll: boolean;
+	children: React.ReactNode;
+}) {
+	// False for the row's first paint: a line already there is not news.
+	const mounted = useRef(false);
+	useEffect(() => {
+		mounted.current = true;
+	}, []);
+	return (
+		<motion.span
+			key={stamp}
+			initial={mounted.current && roll ? swap.initial : false}
+			animate={swap.animate}
+			className="truncate"
+		>
+			{children}
+		</motion.span>
+	);
+}
+
+/**
+ * One row of a first-open cascade, under a `staggerParentFast` parent. Only
+ * the first screenful takes part, so row 40 is not a second late, and whether
+ * a row does is fixed at mount: a mounted motion element must never lose its
+ * `variants`, because framer sends a value it can no longer see back to where
+ * it started, and these rows start invisible. Exported for the message
+ * sheets, whose people lists cascade the same way.
+ */
+export function CascadeRow({
+	index,
+	children,
+}: {
+	index: number;
+	children: React.ReactNode;
+}) {
+	const [cascades] = useState(index < 12);
+	if (!cascades) return <>{children}</>;
+	return <motion.div variants={staggerItem}>{children}</motion.div>;
 }
 
 /** People to start a chat with, shown when a search matches no thread. */

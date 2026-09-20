@@ -3,11 +3,11 @@
 import clsx from "clsx";
 import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 import Link from "next/link";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { OverlayPanel, OverlayScrim } from "@/components/ui/Overlay";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { MagnifyingGlass, X } from "@phosphor-icons/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Check, MagnifyingGlass, X } from "@phosphor-icons/react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { CATEGORIES, VERTICALS } from "@/data/categories";
 import { useT } from "@/i18n/client";
@@ -20,6 +20,7 @@ import { formatTimeAgo, formatCompact } from "@/lib/utils";
 import { followingIdsAtom, searchOpenAtom, searchSeedAtom } from "@/store/ui.atom";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";
+import { pop, press, thumbSpring } from "@/lib/motion-presets";
 
 type Filter = "all" | "people" | "posts" | "communities" | "topics";
 
@@ -81,6 +82,10 @@ export function SearchWindow() {
 	const [posts, setPosts] = useState<any[]>([]);
 	const [communities, setCommunities] = useState<any[]>([]);
 	const [loading, setLoading] = useState(false);
+	// Follows made in this window. Only these get the landing tick: a row
+	// that was already followed has nothing to celebrate.
+	const [justFollowed, setJustFollowed] = useState<string[]>([]);
+	const thumbId = useId();
 
 	const inputRef = useRef<HTMLInputElement>(null);
 
@@ -211,8 +216,12 @@ export function SearchWindow() {
 
 	const follow = async (id: string) => {
 		setFollowedIds((prev) => [...prev, id]);
+		setJustFollowed((prev) => [...prev, id]);
 		const res = await followUserDirect(id);
-		if (!res.success) setFollowedIds((prev) => prev.filter((x) => x !== id));
+		if (!res.success) {
+			setFollowedIds((prev) => prev.filter((x) => x !== id));
+			setJustFollowed((prev) => prev.filter((x) => x !== id));
+		}
 	};
 
 	const show = (f: Filter) => filter === "all" || filter === f;
@@ -251,7 +260,14 @@ export function SearchWindow() {
 						</div>
 
 						{/* ── filters ── */}
-						<div className="flex shrink-0 gap-1.5 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+						{/* Results below never animate in: this window is typed into,
+						    and rows have to be there the moment they resolve. The
+						    motion here is for the two things a person does on
+						    purpose, switching a filter and following someone. */}
+						<motion.div
+							layoutScroll
+							className="flex shrink-0 gap-1.5 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+						>
 							{FILTERS.map((f) => {
 								const n = counts[f.id];
 								const active = filter === f.id;
@@ -262,20 +278,32 @@ export function SearchWindow() {
 										onClick={() => setFilter(f.id)}
 										aria-pressed={active}
 										className={clsx(
-											"flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors",
-											active
-												? "bg-primary text-page"
-												: "bg-chip text-muted hover:text-primary",
+											"relative flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-pill bg-chip px-3 font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors",
+											active ? "text-page" : "text-muted hover:text-primary",
 										)}
 									>
-										{t(f.key)}
-										{!!n && !active && (
-											<span className="tabular-nums text-subtle">{n}</span>
+										{active && (
+											<motion.span
+												aria-hidden
+												layoutId={thumbId}
+												// Counts resize the chips on every keystroke. The
+												// thumb only re-measures when the filter changes,
+												// so typing never sends it sliding.
+												layoutDependency={filter}
+												transition={thumbSpring}
+												className="absolute inset-0 rounded-pill bg-primary"
+											/>
 										)}
+										<span className="relative flex items-center gap-1.5">
+											{t(f.key)}
+											{!!n && !active && (
+												<span className="tabular-nums text-subtle">{n}</span>
+											)}
+										</span>
 									</button>
 								);
 							})}
-						</div>
+						</motion.div>
 
 						<div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
 							{!term && (
@@ -343,15 +371,32 @@ export function SearchWindow() {
 														@{u.username}
 													</span>
 												</Link>
-												{!followed && (
-													<button
-														type="button"
-														onClick={() => follow(u._id)}
-														className="h-8 shrink-0 cursor-pointer rounded-pill bg-primary px-3.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-bold text-page transition-opacity hover:opacity-90"
-													>
-														{t("rail.follow")}
-													</button>
-												)}
+												{/* Their own action, so it may land: the button
+												    leaves and a tick pops where it was. */}
+												<AnimatePresence mode="wait" initial={false}>
+													{!followed ? (
+														<motion.button
+															key="follow"
+															type="button"
+															onClick={() => follow(u._id)}
+															{...press}
+															exit={pop.exit}
+															className="h-8 shrink-0 cursor-pointer rounded-pill bg-primary px-3.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-bold text-page transition-opacity hover:opacity-90"
+														>
+															{t("rail.follow")}
+														</motion.button>
+													) : justFollowed.includes(u._id) ? (
+														<motion.span
+															key="followed"
+															{...pop}
+															role="img"
+															aria-label={t("rail.following")}
+															className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-primary/5 text-primary"
+														>
+															<Check size={14} weight="bold" />
+														</motion.span>
+													) : null}
+												</AnimatePresence>
 											</div>
 										);
 									})}

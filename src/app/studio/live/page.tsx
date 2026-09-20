@@ -11,6 +11,7 @@ import {
 	VideoCamera,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
 import { useT } from "@/i18n/client";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import GlassSelect from "@/components/ui/GlassSelect";
@@ -22,6 +23,15 @@ import {
 	updatePresetAction,
 } from "@/lib/creator.actions";
 import { CATEGORIES as TAXONOMY, VERTICALS } from "@/data/categories";
+import {
+	pop,
+	press,
+	reveal,
+	snappySpring,
+	staggerItem,
+	staggerParent,
+	thumbSpring,
+} from "@/lib/motion-presets";
 
 /**
  * Rows saved before the taxonomy hold the old six-item values. Map them for
@@ -167,20 +177,32 @@ export default function StudioLive() {
 								onClick={() => setSource(id)}
 								aria-pressed={source === id}
 								className={clsx(
-									"flex h-8 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
+									"relative flex h-8 cursor-pointer items-center rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
 									source === id
-										? "bg-[#fafaf9] text-[#0c0a09]"
+										? "text-[#0c0a09]"
 										: "glass-ink-faint hover:glass-ink",
 								)}
 							>
-								<Icon size={13} weight="bold" />
-								{label}
+								{/* The fill is one shared thumb, so it slides between
+								    the two sources. Page singleton: a fixed id is safe. */}
+								{source === id && (
+									<motion.span
+										layoutId="studio-live-source"
+										transition={thumbSpring}
+										className="absolute inset-0 rounded-pill bg-[#fafaf9]"
+									/>
+								)}
+								<span className="relative flex items-center gap-1.5">
+									<Icon size={13} weight="bold" />
+									{label}
+								</span>
 							</button>
 						))}
 					</div>
 
 					{/* notify followers */}
-					<button
+					<motion.button
+						{...press}
 						type="button"
 						onClick={() => setNotify((v) => !v)}
 						aria-pressed={notify}
@@ -191,22 +213,30 @@ export default function StudioLive() {
 								: "bg-[#fafaf9]/[0.05] glass-ink-faint hover:glass-ink",
 						)}
 					>
-						{notify ? (
-							<Bell size={13} weight="fill" />
-						) : (
-							<BellSlash size={13} weight="bold" />
-						)}
+						{/* Their own toggle, so the glyph may land with a pop. */}
+						<span className="relative flex">
+							<AnimatePresence mode="popLayout" initial={false}>
+								<motion.span key={notify ? "on" : "off"} {...pop} className="flex">
+									{notify ? (
+										<Bell size={13} weight="fill" />
+									) : (
+										<BellSlash size={13} weight="bold" />
+									)}
+								</motion.span>
+							</AnimatePresence>
+						</span>
 						{t("studio.live.notify")}
-					</button>
+					</motion.button>
 
-					<button
+					<motion.button
+						{...press}
 						type="button"
 						onClick={create}
 						disabled={!name.trim() || saving}
 						className="ml-auto h-9 cursor-pointer rounded-pill bg-[#fafaf9] px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-[#0c0a09] transition-colors hover:bg-white disabled:opacity-40"
 					>
 						{t("studio.live.save")}
-					</button>
+					</motion.button>
 				</div>
 			</section>
 
@@ -221,96 +251,126 @@ export default function StudioLive() {
 					))}
 				</div>
 			) : presets.length === 0 ? (
-				<div className="mt-3 rounded-2xl bg-[#171614] p-10 text-center">
+				<motion.div
+					{...reveal(0)}
+					className="mt-3 rounded-2xl bg-[#171614] p-10 text-center"
+				>
 					<span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-pill bg-[#fafaf9]/[0.07] glass-ink-faint">
 						<Broadcast size={22} />
 					</span>
 					<p className="font-sans text-sm glass-ink-dim">
 						{t("studio.live.empty")}
 					</p>
-				</div>
+				</motion.div>
 			) : (
-				<div className="mt-3 flex flex-col gap-2.5">
-					{presets.map((p) => (
-						<div
-							key={p.id}
-							className="flex items-center gap-3 rounded-2xl bg-[#171614] px-4 py-3.5"
-						>
-							<span
-								className={clsx(
-									"flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-									p.isDefault
-										? "bg-[var(--ws-brand-primary)] text-[#0c0a09]"
-										: "bg-[#fafaf9]/[0.06] glass-ink-dim",
-								)}
+				// Mounted with its first rows, so the cascade is first load only:
+				// load() after a save or a delete keeps the keys and replays
+				// nothing, and a preset saved later rises alone.
+				<motion.div
+					variants={staggerParent}
+					initial="hidden"
+					animate="show"
+					className="mt-3 flex flex-col gap-2.5"
+				>
+					<AnimatePresence>
+						{presets.map((p) => (
+							<motion.div
+								key={p.id}
+								variants={staggerItem}
+								// An object, not the "exit" label: a label would make the
+								// row own its variants and drop out of the cascade.
+								exit={staggerItem.exit}
+								// A short list, so the rows below may glide up on delete.
+								layout="position"
+								transition={{ layout: snappySpring }}
+								className="flex items-center gap-3 rounded-2xl bg-[#171614] px-4 py-3.5"
 							>
-								{p.source === "obs" ? (
-									<Monitor size={17} weight="bold" />
-								) : (
-									<VideoCamera size={17} weight="bold" />
-								)}
-							</span>
-
-							<div className="min-w-0 flex-1">
-								<p className="flex items-center gap-2 font-sans text-[calc(14.5px*var(--ws-fs))] font-semibold glass-ink">
-									<span className="truncate">{p.name}</span>
-									{p.isDefault && (
-										<span className="shrink-0 rounded-pill bg-[var(--ws-brand-primary)]/15 px-2 py-0.5 text-[calc(10px*var(--ws-fs))] font-bold uppercase tracking-[0.06em] text-[var(--ws-brand-primary)]">
-											{t("studio.live.default")}
-										</span>
+								<span
+									className={clsx(
+										"flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+										p.isDefault
+											? "bg-[var(--ws-brand-primary)] text-[#0c0a09]"
+											: "bg-[#fafaf9]/[0.06] glass-ink-dim",
 									)}
-								</p>
-								{/* Every attribute the preset will hand the sheet. */}
-								<p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 font-sans text-[calc(12px*var(--ws-fs))] glass-ink-faint">
-									<span>{categoryLabel(p.category)}</span>
-									<span aria-hidden>·</span>
-									<span>
-										{p.source === "obs"
-											? t("studio.live.obs")
-											: t("studio.live.camera")}
-									</span>
-									<span aria-hidden>·</span>
-									<span className="flex items-center gap-1">
-										{p.notifyFollowers ? (
-											<Bell size={11} weight="fill" />
-										) : (
-											<BellSlash size={11} weight="bold" />
-										)}
-										{p.notifyFollowers
-											? t("studio.live.notifyOn")
-											: t("studio.live.notifyOff")}
-									</span>
-								</p>
-							</div>
+								>
+									{p.source === "obs" ? (
+										<Monitor size={17} weight="bold" />
+									) : (
+										<VideoCamera size={17} weight="bold" />
+									)}
+								</span>
 
-							{!p.isDefault && (
-								<button
+								<div className="min-w-0 flex-1">
+									<p className="flex items-center gap-2 font-sans text-[calc(14.5px*var(--ws-fs))] font-semibold glass-ink">
+										<span className="truncate">{p.name}</span>
+										{/* initial={false}: it pops when they star a preset,
+										    not on every load. */}
+										<AnimatePresence initial={false}>
+											{p.isDefault && (
+												<motion.span
+													key="default"
+													{...pop}
+													className="shrink-0 rounded-pill bg-[var(--ws-brand-primary)]/15 px-2 py-0.5 text-[calc(10px*var(--ws-fs))] font-bold uppercase tracking-[0.06em] text-[var(--ws-brand-primary)]"
+												>
+													{t("studio.live.default")}
+												</motion.span>
+											)}
+										</AnimatePresence>
+									</p>
+									{/* Every attribute the preset will hand the sheet. */}
+									<p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 font-sans text-[calc(12px*var(--ws-fs))] glass-ink-faint">
+										<span>{categoryLabel(p.category)}</span>
+										<span aria-hidden>·</span>
+										<span>
+											{p.source === "obs"
+												? t("studio.live.obs")
+												: t("studio.live.camera")}
+										</span>
+										<span aria-hidden>·</span>
+										<span className="flex items-center gap-1">
+											{p.notifyFollowers ? (
+												<Bell size={11} weight="fill" />
+											) : (
+												<BellSlash size={11} weight="bold" />
+											)}
+											{p.notifyFollowers
+												? t("studio.live.notifyOn")
+												: t("studio.live.notifyOff")}
+										</span>
+									</p>
+								</div>
+
+								{!p.isDefault && (
+									<motion.button
+										{...press}
+										type="button"
+										onClick={async () => {
+											await updatePresetAction(p.id, { isDefault: true });
+											await load();
+										}}
+										aria-label={t("studio.live.makeDefault")}
+										title={t("studio.live.makeDefault")}
+										className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill glass-ink-faint transition-colors hover:bg-[var(--ws-brand-primary)]/10 hover:text-[var(--ws-brand-primary)]"
+									>
+										<Star size={17} />
+									</motion.button>
+								)}
+								<motion.button
+									{...press}
 									type="button"
 									onClick={async () => {
-										await updatePresetAction(p.id, { isDefault: true });
+										await deletePresetAction(p.id);
 										await load();
 									}}
-									aria-label={t("studio.live.makeDefault")}
-									title={t("studio.live.makeDefault")}
-									className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill glass-ink-faint transition-colors hover:bg-[var(--ws-brand-primary)]/10 hover:text-[var(--ws-brand-primary)]"
+									aria-label={t("studio.live.delete")}
+									className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill glass-ink-faint transition-colors hover:bg-danger/10 hover:text-danger"
 								>
-									<Star size={17} />
-								</button>
-							)}
-							<button
-								type="button"
-								onClick={async () => {
-									await deletePresetAction(p.id);
-									await load();
-								}}
-								aria-label={t("studio.live.delete")}
-								className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill glass-ink-faint transition-colors hover:bg-danger/10 hover:text-danger"
-							>
-								<Trash size={17} />
-							</button>
-						</div>
-					))}
-				</div>
+									<Trash size={17} />
+								</motion.button>
+							</motion.div>
+						))}
+					</AnimatePresence>
+				</motion.div>
 			)}
 		</div>
 	);

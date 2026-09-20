@@ -3,11 +3,13 @@
 import { formatCompact } from "@/lib/utils";
 import { BellRinging, CalendarBlank, Users } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import Countdown, { CountdownInline } from "@/components/voice/Countdown";
 import HostSpaceMenu from "@/components/voice/HostSpaceMenu";
 import { useT } from "@/i18n/client";
+import { press, swap } from "@/lib/motion-presets";
 import {
   STORY_BACKGROUNDS,
   storyCanvasCss,
@@ -152,7 +154,16 @@ export function LiveSpaceCard({
           <EqBars className="text-gold" />
           <span className="flex items-center gap-1 font-sans text-[calc(12px*var(--ws-fs))] font-semibold tabular-nums">
             <Users size={13} weight="bold" />
-            {formatCompact(spaceListenerCount(row))}
+            {/* Heads arriving is other people's doing: the number rolls. */}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={formatCompact(spaceListenerCount(row))}
+                {...swap}
+                className="inline-block"
+              >
+                {formatCompact(spaceListenerCount(row))}
+              </motion.span>
+            </AnimatePresence>
           </span>
         </span>
       </span>
@@ -276,16 +287,18 @@ export function NextUpCard({
               {onEdit && onCancel && (
                 <HostSpaceMenu row={row} onEdit={onEdit} onCancel={onCancel} />
               )}
-              <button
+              <motion.button
+                {...press}
                 type="button"
                 onClick={() => onStart(row)}
                 className="rounded-pill bg-danger px-4 h-10 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-white hover:opacity-90 transition-opacity cursor-pointer"
               >
                 {t("voice.start")}
-              </button>
+              </motion.button>
             </div>
           ) : (
-            <button
+            <motion.button
+              {...press}
               type="button"
               disabled={row.joined}
               onClick={() => onRemind(row)}
@@ -297,8 +310,16 @@ export function NextUpCard({
               )}
             >
               <BellRinging size={14} weight="bold" />
-              {row.joined ? t("voice.going") : t("voice.remind")}
-            </button>
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span
+                  key={row.joined ? "going" : "remind"}
+                  {...swap}
+                  className="inline-block"
+                >
+                  {row.joined ? t("voice.going") : t("voice.remind")}
+                </motion.span>
+              </AnimatePresence>
+            </motion.button>
           )}
         </div>
       </div>
@@ -376,16 +397,18 @@ export function UpcomingSpaceRow({
               tone="dark"
             />
           )}
-          <button
+          <motion.button
+            {...press}
             type="button"
             onClick={() => onStart(row)}
             className="shrink-0 rounded-pill bg-danger px-3.5 h-8 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-white hover:opacity-90 transition-opacity cursor-pointer"
           >
             {t("voice.start")}
-          </button>
+          </motion.button>
         </div>
       ) : (
-        <button
+        <motion.button
+          {...press}
           type="button"
           disabled={row.joined}
           onClick={() => onRemind(row)}
@@ -396,8 +419,16 @@ export function UpcomingSpaceRow({
               : "bg-primary text-page hover:bg-muted cursor-pointer",
           )}
         >
-          {row.joined ? t("voice.going") : t("voice.remind")}
-        </button>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span
+              key={row.joined ? "going" : "remind"}
+              {...swap}
+              className="inline-block"
+            >
+              {row.joined ? t("voice.going") : t("voice.remind")}
+            </motion.span>
+          </AnimatePresence>
+        </motion.button>
       )}
     </div>
   );

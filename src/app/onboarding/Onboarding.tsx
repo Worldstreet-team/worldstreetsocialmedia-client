@@ -2,7 +2,8 @@
 
 import { captureAcquisition, readAcquisition } from "@/lib/acquisition";
 import { UserBadges } from "@/components/ui/UserBadges";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 import { ArrowRight } from "lucide-react";
 import {
@@ -31,8 +32,28 @@ import { useT } from "@/i18n/client";
 import { useSetAtom } from "jotai";
 import { userAtom } from "@/store/user.atom";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import {
+	DUR,
+	EASE,
+	collapse,
+	press,
+	staggerItem,
+	staggerParent,
+	staggerParentFast,
+	swap,
+} from "@/lib/motion-presets";
 
 const TOTAL_STEPS = 5;
+/** The username status line: what it says, and in which tone. */
+const HANDLE_LINE = {
+	checking: { text: "Checking…", tone: "text-subtle" },
+	ok: { text: "Available", tone: "text-success" },
+	taken: { text: "That username is taken", tone: "text-danger" },
+	invalid: {
+		text: "3-20 letters, numbers or underscores",
+		tone: "text-danger",
+	},
+} as const;
 /**
  * Bio cap. The field had none, which is how a profile ends up with a bio long
  * enough to need a "See more" — this is the cheapest place to stop that, at
@@ -96,6 +117,16 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 	const t = useT();
 	const [followedUsers, setFollowedUsers] = useState<string[]>([]);
 	const setActiveUser = useSetAtom(userAtom);
+	// A step's cascade is for the first look at it; coming Back replays
+	// nothing. Marked on the way OUT, so a re-render while the step is still
+	// waiting to mount cannot cancel its one cascade.
+	const seenSteps = useRef(new Set<number>());
+	useEffect(
+		() => () => {
+			seenSteps.current.add(step);
+		},
+		[step],
+	);
 
 	const [formData, setFormData] = useState({
 		id: "",
@@ -309,302 +340,374 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 						{Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((s) => (
 							<span
 								key={s}
-								className={clsx(
-									"h-1 flex-1 rounded-pill transition-colors",
-									step >= s ? "bg-brand" : "bg-primary/12",
-								)}
-							/>
+								className="h-1 flex-1 overflow-hidden rounded-pill bg-primary/12"
+							>
+								{/* The fill sweeps in from the left; the colour used to
+								    flip. scaleX, so it is still transform only. */}
+								<motion.span
+									className="block h-full origin-left rounded-pill bg-brand"
+									initial={false}
+									animate={{ scaleX: step >= s ? 1 : 0 }}
+									transition={{ duration: DUR.slow, ease: EASE }}
+								/>
+							</span>
 						))}
 					</div>
 
 					{/* The error was stored and never rendered — every failure relied
 					    on a toast, which is exactly the wrong surface for a blocked
 					    submit: it disappears, and it can be missed entirely. This
-					    stays until the next attempt. */}
-					{error && (
-						<p
-							role="alert"
-							className="w-full rounded-lg bg-danger/10 px-4 py-3 text-left font-sans text-[calc(13px*var(--ws-fs))] text-danger"
-						>
-							{error}
-						</p>
-					)}
-
-					{/* STEP 1: IDENTITY */}
-					{step === 1 && (
-						<div className="space-y-8 w-full animate-rise">
-							<div className="space-y-2">
-								<h1 className="font-display text-2xl font-semibold text-primary">
-									Who are you?
-								</h1>
-								<p className="text-muted text-sm font-sans">
-									Pick a username and tell people what you're about.
-								</p>
-							</div>
-
-							<div className="w-full space-y-6">
-								<div className="space-y-2 text-left">
-									<label
-										htmlFor="username"
-										className={fieldLabel}
-									>
-										Username
-									</label>
-									<div className="relative">
-										<span className="absolute left-4 top-1/2 -translate-y-1/2 text-subtle font-medium font-sans">
-											@
-										</span>
-										<input
-											id="username"
-											type="text"
-											value={username}
-											onChange={(e) => {
-												const val = e.target.value;
-												if (/^[a-zA-Z0-9_]*$/.test(val)) setUsername(val);
-											}}
-											placeholder="sarah_codes"
-											aria-describedby="username-status"
-											aria-invalid={
-												handleState === "taken" || handleState === "invalid"
-											}
-											className={clsx(fieldShell, "h-13 pl-8 font-medium")}
-										/>
-									</div>
-									{/* Says WHY Continue is disabled. aria-live because this is
-									    the one field that can block the whole flow, and
-									    min-h-4 so the card does not jump as it changes. */}
+					    stays until the next attempt.
+					    -mb-7 outside, pb-7 inside: a wrapper at height 0 would still
+					    claim one of the column's gaps, and the card would jump by it
+					    before the alert had opened at all. */}
+					<AnimatePresence initial={false}>
+						{error && (
+							<motion.div
+								key="error"
+								{...collapse}
+								className="-mb-7 w-full overflow-hidden"
+							>
+								<div className="pb-7">
 									<p
-										id="username-status"
-										aria-live="polite"
-										className={clsx(
-											"min-h-4 pl-4 font-sans text-[calc(12px*var(--ws-fs))]",
-											handleState === "taken" || handleState === "invalid"
-												? "text-danger"
-												: handleState === "ok"
-													? "text-success"
-													: "text-subtle",
-										)}
+										role="alert"
+										className="w-full rounded-lg bg-danger/10 px-4 py-3 text-left font-sans text-[calc(13px*var(--ws-fs))] text-danger"
 									>
-										{handleState === "checking" && "Checking…"}
-										{handleState === "ok" && "Available"}
-										{handleState === "taken" && "That username is taken"}
-										{handleState === "invalid" &&
-											"3-20 letters, numbers or underscores"}
+										{error}
+									</p>
+								</div>
+							</motion.div>
+						)}
+					</AnimatePresence>
+
+					{/* Steps hand over through framer: animate-rise is switched off
+					    1.6s into the session, so every Continue was a hard cut.
+					    initial={false}: step 1 already rises with the card. */}
+					<AnimatePresence mode="wait" initial={false}>
+						{/* STEP 1: IDENTITY */}
+						{step === 1 && (
+							<motion.div key="step-1" {...swap} className="space-y-8 w-full">
+								<div className="space-y-2">
+									<h1 className="font-display text-2xl font-semibold text-primary">
+										Who are you?
+									</h1>
+									<p className="text-muted text-sm font-sans">
+										Pick a username and tell people what you're about.
 									</p>
 								</div>
 
-								<div className="space-y-2 text-left">
-									<label
-										htmlFor="bio"
-										className={clsx(fieldLabel, "flex items-baseline justify-between")}
-									>
-										<span>Bio</span>
-										{/* tabular-nums: any number that changes, per 02-typography
-										    — a proportional counter jitters as it counts. */}
-										<span
-											className={clsx(
-												"font-sans text-[calc(11px*var(--ws-fs))] font-medium tabular-nums tracking-normal normal-case",
-												bio.length >= BIO_MAX ? "text-danger" : "text-subtle",
-											)}
+								<div className="w-full space-y-6">
+									<div className="space-y-2 text-left">
+										<label
+											htmlFor="username"
+											className={fieldLabel}
 										>
-											{bio.length}/{BIO_MAX}
-										</span>
-									</label>
-									<textarea
-										id="bio"
-										value={bio}
-										onChange={(e) => setBio(e.target.value)}
-										placeholder="Markets, code, and everything in between"
-										rows={3}
-										maxLength={BIO_MAX}
-										className={clsx(fieldShell, "resize-none py-3.5")}
-									/>
+											Username
+										</label>
+										<div className="relative">
+											<span className="absolute left-4 top-1/2 -translate-y-1/2 text-subtle font-medium font-sans">
+												@
+											</span>
+											<input
+												id="username"
+												type="text"
+												value={username}
+												onChange={(e) => {
+													const val = e.target.value;
+													if (/^[a-zA-Z0-9_]*$/.test(val)) setUsername(val);
+												}}
+												placeholder="sarah_codes"
+												aria-describedby="username-status"
+												aria-invalid={
+													handleState === "taken" || handleState === "invalid"
+												}
+												className={clsx(fieldShell, "h-13 pl-8 font-medium")}
+											/>
+										</div>
+										{/* Says WHY Continue is disabled. aria-live because this is
+										    the one field that can block the whole flow, and
+										    min-h-4 so the card does not jump as it changes. */}
+										<p
+											id="username-status"
+											aria-live="polite"
+											className="relative min-h-4 pl-4 font-sans text-[calc(12px*var(--ws-fs))]"
+										>
+											<AnimatePresence mode="popLayout" initial={false}>
+												{handleState !== "idle" && (
+													<motion.span
+														key={handleState}
+														{...swap}
+														// Only the verdict rises. "Checking" and
+														// "invalid" answer a keystroke, and typing
+														// never waits on motion: they cut in.
+														initial={
+															handleState === "ok" || handleState === "taken"
+																? swap.initial
+																: false
+														}
+														// The tone rides the line, so the outgoing one
+														// keeps its own colour while it leaves.
+														className={clsx(
+															"block",
+															HANDLE_LINE[handleState].tone,
+														)}
+													>
+														{HANDLE_LINE[handleState].text}
+													</motion.span>
+												)}
+											</AnimatePresence>
+										</p>
+									</div>
+
+									<div className="space-y-2 text-left">
+										<label
+											htmlFor="bio"
+											className={clsx(fieldLabel, "flex items-baseline justify-between")}
+										>
+											<span>Bio</span>
+											{/* tabular-nums: any number that changes, per 02-typography.
+											    A proportional counter jitters as it counts. */}
+											<span
+												className={clsx(
+													"font-sans text-[calc(11px*var(--ws-fs))] font-medium tabular-nums tracking-normal normal-case",
+													bio.length >= BIO_MAX ? "text-danger" : "text-subtle",
+												)}
+											>
+												{bio.length}/{BIO_MAX}
+											</span>
+										</label>
+										<textarea
+											id="bio"
+											value={bio}
+											onChange={(e) => setBio(e.target.value)}
+											placeholder="Markets, code, and everything in between"
+											rows={3}
+											maxLength={BIO_MAX}
+											className={clsx(fieldShell, "resize-none py-3.5")}
+										/>
+									</div>
 								</div>
-							</div>
 
-							<button
-								onClick={handleContinue}
-								disabled={
-									!username ||
-									handleState === "taken" ||
-									handleState === "invalid" ||
-									handleState === "checking"
-								}
-								className={primaryBtn}
-								type="button"
-							>
-								<span>Continue</span>
-								<ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-							</button>
-						</div>
-					)}
-
-					{/* STEP 2: REGION */}
-					{step === 2 && (
-						<div className="space-y-8 w-full animate-rise">
-							<div className="space-y-2">
-								<h1 className="font-display text-2xl font-semibold text-primary">
-									Where are you?
-								</h1>
-								<p className="text-muted text-sm font-sans">
-									We surface what's happening near you. This is separate from
-									your topics — you'll still see the world.
-								</p>
-							</div>
-
-							<div className="grid grid-cols-2 gap-2 max-h-[min(360px,42dvh)] overflow-y-auto overscroll-contain pr-1">
-								{REGIONS.map((r) => {
-									const on = formData.region === r.id;
-									return (
-										<button
-											key={r.id}
-											type="button"
-											onClick={() =>
-												setFormData((prev) => ({ ...prev, region: r.id }))
-											}
-											aria-pressed={on}
-											className={clsx(
-												"min-h-12 px-3 rounded-lg font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-colors cursor-pointer",
-												on
-													? "glass-tile glass-tile-on text-primary"
-													: "glass-tile text-muted hover:text-primary",
-											)}
-										>
-											{r.label}
-										</button>
-									);
-								})}
-							</div>
-
-							<div className="flex gap-3">
 								<button
-									onClick={() => setStep(1)}
-									className={backBtn}
-									type="button"
-								>
-									Back
-								</button>
-								<button
-									onClick={() => setStep(3)}
-									className={clsx(primaryBtn, "flex-[2] w-auto")}
+									onClick={handleContinue}
+									disabled={
+										!username ||
+										handleState === "taken" ||
+										handleState === "invalid" ||
+										handleState === "checking"
+									}
+									className={primaryBtn}
 									type="button"
 								>
 									<span>Continue</span>
 									<ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
 								</button>
-							</div>
-						</div>
-					)}
+							</motion.div>
+						)}
 
-					{/* STEP 3: INTERESTS */}
-					{step === 3 && (
-						<div className="space-y-6 w-full animate-rise">
-							<div className="space-y-2">
-								<h1 className="font-display text-2xl font-semibold text-primary">
-									What are you into?
-								</h1>
-								<p className="text-muted text-sm font-sans">
-									Pick at least {MIN_INTERESTS}. These tune your feed and you
-									can change them any time.
-								</p>
-							</div>
+						{/* STEP 2: REGION */}
+						{step === 2 && (
+							<motion.div key="step-2" {...swap} className="space-y-8 w-full">
+								<div className="space-y-2">
+									<h1 className="font-display text-2xl font-semibold text-primary">
+										Where are you?
+									</h1>
+									<p className="text-muted text-sm font-sans">
+										We surface what's happening near you. This is separate from
+										your topics. You'll still see the world.
+									</p>
+								</div>
 
-							<InterestPicker
-								selected={formData.interests}
-								onToggle={toggleInterest}
-							/>
-
-							<p className="font-sans text-[calc(12px*var(--ws-fs))] text-subtle tabular-nums">
-								{formData.interests.length} / {MAX_INTERESTS} selected
-							</p>
-
-							<div className="flex gap-3">
-								<button
-									onClick={() => setStep(2)}
-									className={backBtn}
-									type="button"
+								<motion.div
+									variants={staggerParentFast}
+									initial={seenSteps.current.has(2) ? false : "hidden"}
+									animate="show"
+									className="grid grid-cols-2 gap-2 max-h-[min(360px,42dvh)] overflow-y-auto overscroll-contain pr-1"
 								>
-									Back
-								</button>
-								<button
-									onClick={() => submitProfile()}
-									disabled={
-										loading || formData.interests.length < MIN_INTERESTS
-									}
-									className={clsx(primaryBtn, "flex-[2] w-auto")}
-									type="button"
-								>
-									{loading ? (
-										<div className="w-5 h-5 border-2 border-brand-on/30 border-t-brand-on rounded-full animate-spin" />
-									) : (
-										<span>Create profile</span>
-									)}
-								</button>
-							</div>
-						</div>
-					)}
+									{REGIONS.map((r) => {
+										const on = formData.region === r.id;
+										return (
+											<motion.button
+												key={r.id}
+												variants={staggerItem}
+												{...press}
+												type="button"
+												onClick={() =>
+													setFormData((prev) => ({ ...prev, region: r.id }))
+												}
+												aria-pressed={on}
+												className={clsx(
+													"min-h-12 px-3 rounded-lg font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-colors cursor-pointer",
+													on
+														? "glass-tile glass-tile-on text-primary"
+														: "glass-tile text-muted hover:text-primary",
+												)}
+											>
+												{r.label}
+											</motion.button>
+										);
+									})}
+								</motion.div>
 
-					{/* STEP 4: WHAT'S NEW */}
-					{step === 4 && (
-						<div className="space-y-6 w-full animate-rise">
-							<div className="space-y-2">
-								<h1 className="font-display text-2xl font-semibold text-primary">
-									The Space has a new look
-								</h1>
-								<p className="text-muted text-sm font-sans">
-									WorldStreet is more than a timeline now. Here's what's
-									waiting for you.
-								</p>
-							</div>
-
-							<div className="space-y-2 text-left max-h-[min(360px,42dvh)] overflow-y-auto overscroll-contain pr-1">
-								{WHATS_NEW.map((f, i) => (
-									<div
-										key={f.title}
-										className="glass-tile rounded-lg p-3 flex items-start gap-3 animate-rise"
-										style={{ animationDelay: `${60 + i * 45}ms` }}
+								<div className="flex gap-3">
+									<motion.button
+										{...press}
+										onClick={() => setStep(1)}
+										className={backBtn}
+										type="button"
 									>
-										<span className="shrink-0 flex h-9 w-9 items-center justify-center rounded-lg bg-brand/[0.13] text-gold">
-											<f.icon size={18} weight="duotone" />
-										</span>
-										<div className="min-w-0">
-											<p className="font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
-												{f.title}
-											</p>
-											<p className="font-sans text-[calc(12.5px*var(--ws-fs))] text-muted leading-snug">
-												{f.blurb}
-											</p>
-										</div>
-									</div>
-								))}
-							</div>
+										Back
+									</motion.button>
+									<button
+										onClick={() => setStep(3)}
+										className={clsx(primaryBtn, "flex-[2] w-auto")}
+										type="button"
+									>
+										<span>Continue</span>
+										<ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+									</button>
+								</div>
+							</motion.div>
+						)}
 
-							<button
-								onClick={() => setStep(5)}
-								className={primaryBtn}
-								type="button"
-							>
-								<span>Nice — who should I follow?</span>
-								<ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-							</button>
-						</div>
-					)}
+						{/* STEP 3: INTERESTS */}
+						{step === 3 && (
+							<motion.div key="step-3" {...swap} className="space-y-6 w-full">
+								<div className="space-y-2">
+									<h1 className="font-display text-2xl font-semibold text-primary">
+										What are you into?
+									</h1>
+									<p className="text-muted text-sm font-sans">
+										Pick at least {MIN_INTERESTS}. These tune your feed and you
+										can change them any time.
+									</p>
+								</div>
 
-					{/* STEP 5: FOLLOW */}
-					{step === 5 && (
-						<div className="space-y-8 w-full animate-rise">
-							<div className="space-y-2">
-								<h1 className="font-display text-2xl font-semibold text-primary">
-									Follow people
-								</h1>
-								<p className="text-muted text-sm font-sans">
-									Build your community.
+								<InterestPicker
+									selected={formData.interests}
+									onToggle={toggleInterest}
+								/>
+
+								<p className="font-sans text-[calc(12px*var(--ws-fs))] text-subtle tabular-nums">
+									<span className="relative inline-block">
+										<AnimatePresence mode="popLayout" initial={false}>
+											<motion.span
+												key={formData.interests.length}
+												{...swap}
+												className="inline-block"
+											>
+												{formData.interests.length}
+											</motion.span>
+										</AnimatePresence>
+									</span>{" "}
+									/ {MAX_INTERESTS} selected
 								</p>
-							</div>
 
-							<div className="space-y-3">
-								{loadingSuggestions
-									? Array.from({ length: 3 }).map((_, i) => (
+								<div className="flex gap-3">
+									<motion.button
+										{...press}
+										onClick={() => setStep(2)}
+										className={backBtn}
+										type="button"
+									>
+										Back
+									</motion.button>
+									<button
+										onClick={() => submitProfile()}
+										disabled={
+											loading || formData.interests.length < MIN_INTERESTS
+										}
+										className={clsx(primaryBtn, "flex-[2] w-auto")}
+										type="button"
+									>
+										<AnimatePresence mode="wait" initial={false}>
+											{loading ? (
+												// The wrapper moves, the ring inside spins: both
+												// want the transform, so they cannot share a box.
+												<motion.span key="busy" {...swap} className="flex">
+													<span className="w-5 h-5 border-2 border-brand-on/30 border-t-brand-on rounded-full animate-spin" />
+												</motion.span>
+											) : (
+												<motion.span
+													key="label"
+													{...swap}
+													className="inline-block"
+												>
+													Create profile
+												</motion.span>
+											)}
+										</AnimatePresence>
+									</button>
+								</div>
+							</motion.div>
+						)}
+
+						{/* STEP 4: WHAT'S NEW */}
+						{step === 4 && (
+							<motion.div key="step-4" {...swap} className="space-y-6 w-full">
+								<div className="space-y-2">
+									<h1 className="font-display text-2xl font-semibold text-primary">
+										The Space has a new look
+									</h1>
+									<p className="text-muted text-sm font-sans">
+										WorldStreet is more than a timeline now. Here's what's
+										waiting for you.
+									</p>
+								</div>
+
+								<motion.div
+									variants={staggerParent}
+									initial="hidden"
+									animate="show"
+									className="space-y-2 text-left max-h-[min(360px,42dvh)] overflow-y-auto overscroll-contain pr-1"
+								>
+									{WHATS_NEW.map((f) => (
+										<motion.div
+											key={f.title}
+											variants={staggerItem}
+											className="glass-tile rounded-lg p-3 flex items-start gap-3"
+										>
+											<span className="shrink-0 flex h-9 w-9 items-center justify-center rounded-lg bg-brand/[0.13] text-gold">
+												<f.icon size={18} weight="duotone" />
+											</span>
+											<div className="min-w-0">
+												<p className="font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
+													{f.title}
+												</p>
+												<p className="font-sans text-[calc(12.5px*var(--ws-fs))] text-muted leading-snug">
+													{f.blurb}
+												</p>
+											</div>
+										</motion.div>
+									))}
+								</motion.div>
+
+								<button
+									onClick={() => setStep(5)}
+									className={primaryBtn}
+									type="button"
+								>
+									<span>Nice. Who should I follow?</span>
+									<ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+								</button>
+							</motion.div>
+						)}
+
+						{/* STEP 5: FOLLOW */}
+						{step === 5 && (
+							<motion.div key="step-5" {...swap} className="space-y-8 w-full">
+								<div className="space-y-2">
+									<h1 className="font-display text-2xl font-semibold text-primary">
+										Follow people
+									</h1>
+									<p className="text-muted text-sm font-sans">
+										Build your community.
+									</p>
+								</div>
+
+								<div className="space-y-3">
+									{loadingSuggestions ? (
+										Array.from({ length: 3 }).map((_, i) => (
 											<div
 												key={i}
 												className="glass-tile flex items-center justify-between p-3 rounded-lg"
@@ -619,58 +722,83 @@ export default function Onboarding({ initialUser }: { initialUser: any }) {
 												<div className="h-8 w-20 skeleton rounded-pill" />
 											</div>
 										))
-									: suggestedUsers.map((user) => (
-											<div
-												key={user._id}
-												className="glass-tile flex items-center justify-between p-3 rounded-lg transition-colors"
-											>
-												<div className="flex items-center gap-3 min-w-0">
-													<div className="relative w-10 h-10 shrink-0 rounded-full overflow-hidden border border-hairline">
-														<SafeAvatar src={user.avatar} className="object-cover" alt={user.username} />
-													</div>
-													<div className="text-left min-w-0">
-														<p className="flex items-center gap-1 font-semibold text-primary text-sm font-sans truncate">
-															<span className="min-w-0 truncate">{user.firstName}</span>
-															<UserBadges
-																isVerified={(user as any).isVerified}
-																verification={(user as any).verification}
-																badges={(user as any).badges}
-																size={13}
-															/>
-														</p>
-														<p className="text-xs text-muted font-sans truncate">
-															@{user.username}
-														</p>
-													</div>
-												</div>
-												<button
-													onClick={() => handleFollow(user._id)}
-													className={clsx(
-														"shrink-0 px-4 h-10 rounded-pill text-xs font-semibold transition-colors font-sans cursor-pointer",
-														followedUsers.includes(user._id)
-															? "bg-primary text-page"
-															: "glass-tile text-primary",
-													)}
-													type="button"
-												>
-													{followedUsers.includes(user._id)
-														? t("profile.followingState")
-														: t("profile.follow")}
-												</button>
-											</div>
-										))}
-							</div>
+									) : (
+										// Mounted with its rows, so they cascade in as the
+										// skeletons hand over.
+										<motion.div
+											variants={staggerParent}
+											initial="hidden"
+											animate="show"
+											className="space-y-3"
+										>
+											{suggestedUsers.map((user) => {
+												const following = followedUsers.includes(user._id);
+												return (
+													<motion.div
+														key={user._id}
+														variants={staggerItem}
+														className="glass-tile flex items-center justify-between p-3 rounded-lg transition-colors"
+													>
+														<div className="flex items-center gap-3 min-w-0">
+															<div className="relative w-10 h-10 shrink-0 rounded-full overflow-hidden border border-hairline">
+																<SafeAvatar src={user.avatar} className="object-cover" alt={user.username} />
+															</div>
+															<div className="text-left min-w-0">
+																<p className="flex items-center gap-1 font-semibold text-primary text-sm font-sans truncate">
+																	<span className="min-w-0 truncate">{user.firstName}</span>
+																	<UserBadges
+																		isVerified={(user as any).isVerified}
+																		verification={(user as any).verification}
+																		badges={(user as any).badges}
+																		size={13}
+																	/>
+																</p>
+																<p className="text-xs text-muted font-sans truncate">
+																	@{user.username}
+																</p>
+															</div>
+														</div>
+														<motion.button
+															{...press}
+															onClick={() => handleFollow(user._id)}
+															className={clsx(
+																"relative shrink-0 px-4 h-10 rounded-pill text-xs font-semibold transition-colors font-sans cursor-pointer",
+																following
+																	? "bg-primary text-page"
+																	: "glass-tile text-primary",
+															)}
+															type="button"
+														>
+															<AnimatePresence mode="popLayout" initial={false}>
+																<motion.span
+																	key={following ? "on" : "off"}
+																	{...swap}
+																	className="inline-block"
+																>
+																	{following
+																		? t("profile.followingState")
+																		: t("profile.follow")}
+																</motion.span>
+															</AnimatePresence>
+														</motion.button>
+													</motion.div>
+												);
+											})}
+										</motion.div>
+									)}
+								</div>
 
-							<button
-								onClick={finishOnboarding}
-								className={primaryBtn}
-								type="button"
-							>
-								<span>Go to your feed</span>
-								<ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-							</button>
-						</div>
-					)}
+								<button
+									onClick={finishOnboarding}
+									className={primaryBtn}
+									type="button"
+								>
+									<span>Go to your feed</span>
+									<ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+								</button>
+							</motion.div>
+						)}
+					</AnimatePresence>
 				</div>
 			</div>
 		</div>

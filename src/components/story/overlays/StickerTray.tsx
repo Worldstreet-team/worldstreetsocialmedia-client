@@ -3,12 +3,14 @@
 import { MagnifyingGlass, X } from "@phosphor-icons/react";
 import clsx from "clsx";
 import EmojiPicker, { type EmojiClickData, Theme } from "emoji-picker-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { UserBadges } from "@/components/ui/UserBadges";
 import type { MentionUser } from "@/components/feed/MentionAutocomplete";
 
 import { CASHTAG_COLORS, MENTION_COLORS } from "@/lib/editor/overlays";
+import { menu, pop, thumbSpring } from "@/lib/motion-presets";
 import { searchUsersAction } from "@/lib/user.actions";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
@@ -45,6 +47,7 @@ export default function StickerTray({
   const [people, setPeople] = useState<MentionUser[]>([]);
   const [searching, setSearching] = useState(false);
   const { resolvedTheme } = useTheme();
+  const thumbId = useId();
   const valid = SYMBOL_RE.test(symbol);
 
   // Debounced people search — the gateway 400s on an empty query, so a blank
@@ -79,7 +82,15 @@ export default function StickerTray({
   };
 
   return (
-    <div className="absolute inset-x-0 bottom-0 z-30 glass-dock backdrop-blur-2xl backdrop-saturate-150 glass-ink rounded-b-none rounded-t-2xl flex flex-col max-h-[78%]">
+    // Unfolds from the stage's bottom edge; the host's AnimatePresence gives
+    // it the exit.
+    <motion.div
+      {...menu("bottom")}
+      // The tray grows upward when a taller tab opens; as the layout root,
+      // the tab fill slides sideways only and ignores that jump.
+      layoutRoot
+      className="absolute inset-x-0 bottom-0 z-30 glass-dock backdrop-blur-2xl backdrop-saturate-150 glass-ink rounded-b-none rounded-t-2xl flex flex-col max-h-[78%]"
+    >
       <div className="flex shrink-0 items-center justify-between gap-2 px-3 py-2">
         <div className="flex items-center gap-1">
           {TABS.map((t) => (
@@ -89,13 +100,19 @@ export default function StickerTray({
               onClick={() => setTab(t.id)}
               aria-pressed={tab === t.id}
               className={clsx(
-                "h-8 px-3 rounded-pill font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors cursor-pointer",
-                tab === t.id
-                  ? "glass-chip-active"
-                  : "glass-chip ",
+                "relative h-8 px-3 rounded-pill font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors cursor-pointer",
+                tab === t.id ? "text-[#0c0a09]" : "glass-chip",
               )}
             >
-              {t.label}
+              {/* The white fill is one element that slides between tabs. */}
+              {tab === t.id && (
+                <motion.span
+                  layoutId={`${thumbId}-tab`}
+                  transition={thumbSpring}
+                  className="pointer-events-none absolute inset-0 rounded-pill glass-chip-active"
+                />
+              )}
+              <span className="relative">{t.label}</span>
             </button>
           ))}
         </div>
@@ -213,9 +230,13 @@ export default function StickerTray({
               Add
             </button>
           </div>
+          {/* Lands once, on the first valid letter; later letters retype
+              it in place. */}
+          <AnimatePresence initial={false}>
           {symbol && valid && (
-            <div className="mt-3 flex justify-center">
-              <span
+            <div key="chip-preview" className="mt-3 flex justify-center">
+              <motion.span
+                {...pop}
                 className="rounded-pill px-3 py-1 text-sm font-semibold tabular-nums"
                 style={{
                   color: CASHTAG_COLORS.text,
@@ -226,9 +247,10 @@ export default function StickerTray({
                 }}
               >
                 ${symbol.toUpperCase()}
-              </span>
+              </motion.span>
             </div>
           )}
+          </AnimatePresence>
         </div>
       )}
 
@@ -245,6 +267,6 @@ export default function StickerTray({
           />
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

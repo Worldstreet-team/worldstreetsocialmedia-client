@@ -16,6 +16,7 @@ import {
 	useSyncExternalStore,
 } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { press, swap } from "@/lib/motion-presets";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { feedAtom } from "@/store/feed.atom";
 import { type FeedTab, feedTabAtom } from "@/store/ui.atom";
@@ -1026,14 +1027,29 @@ export default function Feed({
 							</span>
 						)}
 
+						{/* Other people posting rolls the number; nothing pops. Not on
+						    the pill's own entrance, which is already the event. */}
 						<span className="tabular-nums">
-							{refreshing
-								? t("feed.newPosts.loading")
-								: `${pending.length} ${
-										pending.length === 1
-											? t("feed.newPosts.one")
-											: t("feed.newPosts")
-									}`}
+							{refreshing ? (
+								t("feed.newPosts.loading")
+							) : (
+								<>
+									<span className="relative inline-flex">
+										<AnimatePresence mode="popLayout" initial={false}>
+											<motion.span
+												key={pending.length}
+												{...swap}
+												className="inline-block"
+											>
+												{pending.length}
+											</motion.span>
+										</AnimatePresence>
+									</span>{" "}
+									{pending.length === 1
+										? t("feed.newPosts.one")
+										: t("feed.newPosts")}
+								</>
+							)}
 						</span>
 					</motion.button>
 				)}
@@ -1135,13 +1151,14 @@ export default function Feed({
 								{t("feed.loading")}
 							</span>
 						) : (
-							<button
+							<motion.button
+								{...press}
 								type="button"
 								onClick={loadMore}
 								className="h-9 px-4 rounded-pill border border-hairline bg-surface hover:bg-raised font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors cursor-pointer"
 							>
 								{t("feed.loadmore")}
-							</button>
+							</motion.button>
 						)}
 					</div>
 				)}

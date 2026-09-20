@@ -1,7 +1,7 @@
 "use client";
 
 import { CaretUp, Check, Waveform, X } from "@phosphor-icons/react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -29,6 +29,7 @@ import { useSpaceAudio } from "@/hooks/useSpaceAudio";
 import { useSpaceHeartbeat } from "@/hooks/useSpaceHeartbeat";
 import { useSpaceRoom } from "@/hooks/useSpaceRoom";
 import { isDemoId } from "@/lib/demoSeed";
+import { press, swap } from "@/lib/motion-presets";
 import { formatCompact } from "@/lib/utils";
 import {
   endSpaceAction,
@@ -314,7 +315,8 @@ export default function VoiceRoomHost() {
                         size={12}
                       />
                     </span>
-                    <button
+                    <motion.button
+                      {...press}
                       type="button"
                       disabled={followBusy || alreadyFollowing}
                       onClick={() => void followHost()}
@@ -324,15 +326,23 @@ export default function VoiceRoomHost() {
                           : "flex h-8 shrink-0 items-center rounded-pill bg-primary px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-page transition-colors hover:bg-muted cursor-pointer disabled:opacity-60"
                       }
                     >
-                      {alreadyFollowing ? (
-                        <>
-                          <Check size={12} weight="bold" />
-                          {tf("voice.followingHost", "Following")}
-                        </>
-                      ) : (
-                        tf("voice.followHost", "Follow")
-                      )}
-                    </button>
+                      <AnimatePresence mode="wait" initial={false}>
+                        <motion.span
+                          key={alreadyFollowing ? "following" : "follow"}
+                          {...swap}
+                          className="flex items-center gap-1"
+                        >
+                          {alreadyFollowing ? (
+                            <>
+                              <Check size={12} weight="bold" />
+                              {tf("voice.followingHost", "Following")}
+                            </>
+                          ) : (
+                            tf("voice.followHost", "Follow")
+                          )}
+                        </motion.span>
+                      </AnimatePresence>
+                    </motion.button>
                   </div>
                   <button
                     type="button"
@@ -395,9 +405,8 @@ export default function VoiceRoomHost() {
     <>
       {createPortal(
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+          initial={swap.initial}
+          animate={swap.animate}
           className="fixed bottom-nav right-4 z-toast md:bottom-4"
         >
           <div className="flex items-center gap-2 rounded-pill glass-dock backdrop-blur-xl backdrop-saturate-150 py-2 pl-2 pr-2.5 shadow-nav">

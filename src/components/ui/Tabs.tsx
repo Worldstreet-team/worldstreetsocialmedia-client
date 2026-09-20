@@ -1,8 +1,11 @@
 "use client";
 
 import clsx from "clsx";
+import { motion } from "framer-motion";
 import type { Icon } from "@phosphor-icons/react";
+import { useId } from "react";
 import { Badge } from "@/components/ui/Badge";
+import { thumbSpring } from "@/lib/motion-presets";
 
 export interface TabItem<K extends string = string> {
 	key: K;
@@ -29,6 +32,10 @@ export interface TabItem<K extends string = string> {
  *
  * The row scrolls rather than wraps: five tabs in a long locale will not fit
  * a 320px phone, and a wrapped second row reads as a different control.
+ *
+ * The active fill is ONE element that slides between chips (shared layoutId),
+ * not a background each chip switches on. The id is per instance: two tab
+ * rows on one page sharing an id would throw the thumb from one to the other.
  */
 export function Tabs<K extends string>({
 	items,
@@ -46,10 +53,14 @@ export function Tabs<K extends string>({
 	size?: "md" | "lg";
 	className?: string;
 }) {
+	const thumbId = useId();
 	return (
-		<div
+		<motion.div
 			role="tablist"
 			aria-label={ariaLabel}
+			// The row scrolls sideways; without this the thumb is measured as
+			// if it did not, and slides from the wrong place.
+			layoutScroll
 			className={clsx(
 				"flex gap-1.5 overflow-x-auto px-2 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
 				className,
@@ -69,22 +80,33 @@ export function Tabs<K extends string>({
 								? "relative flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-pill px-4 font-sans text-[calc(15px*var(--ws-fs))] transition-colors"
 								: "relative flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-pill px-3.5 font-sans text-[calc(13.5px*var(--ws-fs))] transition-colors",
 							active
-								? "bg-raised font-semibold text-primary"
+								? "font-semibold text-primary"
 								: "cursor-pointer font-medium text-muted hover:bg-raised/50 hover:text-primary",
 						)}
 					>
-						{Icon && (
-							<Icon
-								size={15}
-								weight={active ? "fill" : "regular"}
-								className={active ? "text-gold" : undefined}
+						{active && (
+							<motion.span
+								aria-hidden
+								layoutId={thumbId}
+								transition={thumbSpring}
+								className="absolute inset-0 rounded-pill bg-raised"
 							/>
 						)}
-						{label}
-						<Badge tone="neutral" count={badge} max={badgeMax} ring={false} />
+						{/* Positioned, so it paints above the thumb. */}
+						<span className="relative flex items-center gap-1.5">
+							{Icon && (
+								<Icon
+									size={15}
+									weight={active ? "fill" : "regular"}
+									className={active ? "text-gold" : undefined}
+								/>
+							)}
+							{label}
+							<Badge tone="neutral" count={badge} max={badgeMax} ring={false} />
+						</span>
 					</button>
 				);
 			})}
-		</div>
+		</motion.div>
 	);
 }

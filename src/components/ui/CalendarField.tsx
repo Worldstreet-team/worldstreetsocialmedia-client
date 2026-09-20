@@ -2,8 +2,10 @@
 
 import { CaretLeft, CaretRight, Clock } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useState } from "react";
 import GlassSelect from "@/components/ui/GlassSelect";
+import { pop, press, swap } from "@/lib/motion-presets";
 
 interface CalendarFieldProps {
   /** Local value, "YYYY-MM-DDTHH:mm", or "" when unset. */
@@ -71,7 +73,19 @@ export default function CalendarField({ value, onChange }: CalendarFieldProps) {
     return out;
   }, []);
 
-  const pickDay = (d: Date) => onChange(`${iso(d)}T${timePart || "19:00"}`);
+  // The day the person just tapped, so ONLY that disc pops. A selection that
+  // was already there on open, or one the grid re-mounts when paging months,
+  // is not an event and must not replay the landing.
+  const [picked, setPicked] = useState<string | null>(null);
+
+  const pickDay = (d: Date) => {
+    setPicked(iso(d));
+    onChange(`${iso(d)}T${timePart || "19:00"}`);
+  };
+  const goMonth = (step: number) => {
+    setPicked(null);
+    setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + step, 1));
+  };
 
   const monthLabel = cursor.toLocaleDateString([], {
     month: "long",
@@ -84,84 +98,113 @@ export default function CalendarField({ value, onChange }: CalendarFieldProps) {
 
   return (
     <div className="space-y-2">
-      <div className="rounded-xl glass-input p-3">
+      {/* Theme ink and fills: this sits inside sheets that turn white in
+          light mode, where the fixed-white creator glass it used to wear
+          made every numeral vanish. Same well as the GlassSelect below. */}
+      <div className="rounded-xl bg-sunken p-3 text-primary">
         <div className="flex items-center justify-between">
-          <button
+          {/* The glyph target is 28px; the ::before carries the press area
+              out to 40 without moving the header. */}
+          <motion.button
             type="button"
             disabled={!canGoBack}
-            onClick={() =>
-              setCursor(
-                new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1),
-              )
-            }
+            onClick={() => goMonth(-1)}
             aria-label="Previous month"
-            className="flex h-7 w-7 items-center justify-center rounded-pill transition-colors hover:bg-[#fafaf9]/10 disabled:opacity-25 disabled:hover:bg-transparent cursor-pointer disabled:cursor-default"
+            {...press}
+            className="relative flex h-7 w-7 items-center justify-center rounded-pill transition-colors before:absolute before:-inset-1.5 before:content-[''] hover:bg-primary/10 disabled:opacity-25 disabled:hover:bg-transparent cursor-pointer disabled:cursor-default"
           >
             <CaretLeft size={12} weight="bold" />
-          </button>
-          <span className="font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold glass-ink">
-            {monthLabel}
+          </motion.button>
+          <span className="relative inline-flex font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-primary">
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.span
+                key={monthLabel}
+                {...swap}
+                className="inline-block whitespace-nowrap"
+              >
+                {monthLabel}
+              </motion.span>
+            </AnimatePresence>
           </span>
-          <button
+          <motion.button
             type="button"
-            onClick={() =>
-              setCursor(
-                new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1),
-              )
-            }
+            onClick={() => goMonth(1)}
             aria-label="Next month"
-            className="flex h-7 w-7 items-center justify-center rounded-pill transition-colors hover:bg-[#fafaf9]/10 cursor-pointer"
+            {...press}
+            className="relative flex h-7 w-7 items-center justify-center rounded-pill transition-colors before:absolute before:-inset-1.5 before:content-[''] hover:bg-primary/10 cursor-pointer"
           >
             <CaretRight size={12} weight="bold" />
-          </button>
+          </motion.button>
         </div>
 
-        <div className="mt-2 grid grid-cols-7 gap-y-1">
+        {/* 9.5px is under the floor for text-subtle, so the initials take
+            muted. */}
+        <div className="mt-2 grid grid-cols-7">
           {WEEKDAYS.map((d, i) => (
             <span
               // biome-ignore lint/suspicious/noArrayIndexKey: weekday initials repeat by design.
               key={`${d}-${i}`}
-              className="text-center font-sans text-[calc(9.5px*var(--ws-fs))] font-bold uppercase tracking-[0.08em] text-[#fafaf9]/35"
+              className="text-center font-sans text-[calc(9.5px*var(--ws-fs))] font-bold uppercase tracking-[0.08em] text-muted"
             >
               {d}
             </span>
           ))}
-          {grid.map((d, i) => {
-            if (!d) {
-              return (
-                <span
-                  // biome-ignore lint/suspicious/noArrayIndexKey: leading blanks are positional.
-                  key={`pad-${i}`}
-                />
-              );
-            }
-            const past = d < today;
-            const isToday = d.getTime() === today.getTime();
-            const isSelected = !!selected && d.getTime() === selected.getTime();
-            return (
-              <button
-                key={iso(d)}
-                type="button"
-                disabled={past}
-                onClick={() => pickDay(d)}
-                aria-label={d.toDateString()}
-                aria-pressed={isSelected}
-                className={clsx(
-                  "mx-auto flex h-8 w-8 items-center justify-center rounded-pill font-sans text-[calc(12.5px*var(--ws-fs))] tabular-nums transition-colors",
-                  past && "opacity-25 cursor-default",
-                  !past &&
-                    !isSelected &&
-                    "hover:bg-[#fafaf9]/10 cursor-pointer",
-                  isSelected
-                    ? "bg-[#fafaf9] font-bold text-[#0c0a09]"
-                    : "glass-ink",
-                  isToday && !isSelected && "ring-1 ring-gold/60",
-                )}
-              >
-                {d.getDate()}
-              </button>
-            );
-          })}
+        </div>
+
+        {/* The days are their own grid so a month change swaps them and
+            leaves the weekday row standing. */}
+        <div className="relative mt-1">
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.div
+              key={`${cursor.getFullYear()}-${cursor.getMonth()}`}
+              {...swap}
+              className="grid grid-cols-7 gap-y-1"
+            >
+              {grid.map((d, i) => {
+                if (!d) {
+                  return (
+                    <span
+                      // biome-ignore lint/suspicious/noArrayIndexKey: leading blanks are positional.
+                      key={`pad-${i}`}
+                    />
+                  );
+                }
+                const past = d < today;
+                const isToday = d.getTime() === today.getTime();
+                const isSelected = !!selected && d.getTime() === selected.getTime();
+                return (
+                  <button
+                    key={iso(d)}
+                    type="button"
+                    disabled={past}
+                    onClick={() => pickDay(d)}
+                    aria-label={d.toDateString()}
+                    aria-pressed={isSelected}
+                    className={clsx(
+                      "relative mx-auto flex h-8 w-8 items-center justify-center rounded-pill font-sans text-[calc(12.5px*var(--ws-fs))] tabular-nums transition-colors",
+                      past && "opacity-25 cursor-default",
+                      !past &&
+                        !isSelected &&
+                        "hover:bg-primary/10 cursor-pointer",
+                      isSelected ? "font-bold text-page" : "text-primary",
+                      isToday && !isSelected && "ring-1 ring-gold/60",
+                    )}
+                  >
+                    {isSelected && (
+                      <motion.span
+                        aria-hidden
+                        // No exit: the disc is not in a presence of its own.
+                        initial={picked === iso(d) ? pop.initial : false}
+                        animate={pop.animate}
+                        className="absolute inset-0 rounded-pill bg-primary"
+                      />
+                    )}
+                    <span className="relative">{d.getDate()}</span>
+                  </button>
+                );
+              })}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
 

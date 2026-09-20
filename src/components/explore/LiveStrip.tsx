@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { useLiveNow } from "@/hooks/useLiveNow";
 import { useT } from "@/i18n/client";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { StageAvatar } from "@/components/live/StageAvatar";
 import { ExploreSection, Rail } from "./ExploreSection";
+import { staggerItem, staggerParent, staggerPop } from "@/lib/motion-presets";
 
 /**
  * Who is broadcasting, right now. Ably-backed via useLiveNow, so a stream
@@ -33,11 +35,21 @@ export function LiveStrip({ delay }: { delay: number }) {
                 <div className="skeleton h-3 w-12 rounded-sm" />
               </div>
             ))
-          : entries.map((row) => (
+          : (
+            // `contents` keeps the rings as the rail's own flex children. A
+            // ring that goes live later mounts into a settled tree and rises
+            // by itself, so the cascade only ever plays once.
+            <motion.div
+              className="contents"
+              variants={staggerParent}
+              initial="hidden"
+              animate="show"
+            >
+            {entries.map((row) => (
+              <motion.div key={row.id} variants={staggerItem} className="shrink-0">
               <Link
-                key={row.id}
                 href={`/live?tab=live&s=${row.id}`}
-                className="flex w-[68px] shrink-0 flex-col items-center gap-1.5"
+                className="flex w-[68px] flex-col items-center gap-1.5"
                 title={row.title}
               >
                 <span className="relative block h-16 w-16 rounded-pill p-[3px] ring-2 ring-danger">
@@ -49,16 +61,22 @@ export function LiveStrip({ delay }: { delay: number }) {
                   {/* The badge doubles as the live dot — a red ring alone
                       reads as "unseen" on a surface that also has story
                       rings, so the word stays. */}
-                  <span className="absolute -bottom-1 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-[4px] bg-danger px-1.5 py-px font-sans text-[calc(9px*var(--ws-fs))] font-bold tracking-wide text-white">
+                  <motion.span
+                    variants={staggerPop}
+                    className="absolute -bottom-1 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-[4px] bg-danger px-1.5 py-px font-sans text-[calc(9px*var(--ws-fs))] font-bold tracking-wide text-white"
+                  >
                     <span className="h-1 w-1 animate-pulse rounded-pill bg-white" />
                     {t("live.badge")}
-                  </span>
+                  </motion.span>
                 </span>
                 <span className="block w-full truncate text-center font-sans text-[calc(12px*var(--ws-fs))] font-medium text-muted">
                   @{row.username}
                 </span>
               </Link>
+              </motion.div>
             ))}
+            </motion.div>
+          )}
       </Rail>
     </ExploreSection>
   );

@@ -11,7 +11,8 @@ import {
   Spinner,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useId, useRef, useState } from "react";
 import CalendarField from "@/components/ui/CalendarField";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import {
@@ -27,6 +28,7 @@ import {
   STORY_BACKGROUNDS,
   storyCanvasCss,
 } from "@/lib/editor/storyBackgrounds";
+import { collapse, pop, press, swap, thumbSpring } from "@/lib/motion-presets";
 import { sendFormDirect } from "@/lib/upload-direct";
 
 /** The scheduled space being edited, when the sheet opens in edit mode. */
@@ -166,6 +168,8 @@ export default function CreateSpaceSheet({
   const [uploading, setUploading] = useState(false);
   const [coverError, setCoverError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  // Per instance, so two sheets could never share one sliding thumb.
+  const thumbId = useId();
 
   const valid = title.trim().length >= 3 && (mode === "now" || when.length > 0);
 
@@ -286,11 +290,19 @@ export default function CreateSpaceSheet({
                       )}
                       style={{ background: storyCanvasCss(option) }}
                     >
-                      {active && (
-                        <span className="absolute inset-0 flex items-center justify-center text-[#fafaf9]">
-                          <Check size={13} weight="bold" />
-                        </span>
-                      )}
+                      {/* initial={false}: the saved choice is simply there
+                          when the sheet opens; only a new pick lands. */}
+                      <AnimatePresence initial={false}>
+                        {active && (
+                          <motion.span
+                            key="check"
+                            {...pop}
+                            className="absolute inset-0 flex items-center justify-center text-[#fafaf9]"
+                          >
+                            <Check size={13} weight="bold" />
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
                     </button>
                   );
                 })}
@@ -351,30 +363,44 @@ export default function CreateSpaceSheet({
                 />
               </div>
 
-              {coverImage && !uploading && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCoverImage("");
-                    setCoverError("");
-                  }}
-                  className="mt-2 cursor-pointer font-sans text-[calc(12px*var(--ws-fs))] text-muted underline underline-offset-2 transition-colors hover:text-primary"
-                >
-                  {t("voice.removeCover")}
-                </button>
-              )}
-              {coverError && (
-                <p
-                  role="alert"
-                  className="mt-2 flex items-center gap-1 font-sans text-[calc(12px*var(--ws-fs))] text-danger"
-                >
-                  {/* A glyph, not just the hue: under achromatopsia danger
-                      resolves darker than text-subtle, so this line read
-                      quieter than the placeholder sitting above it. */}
-                  <RiErrorWarningFill size={13} className="shrink-0" />
-                  {coverError}
-                </p>
-              )}
+              <AnimatePresence initial={false}>
+                {coverImage && !uploading && (
+                  <motion.div
+                    key="remove-cover"
+                    {...collapse}
+                    className="overflow-hidden"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCoverImage("");
+                        setCoverError("");
+                      }}
+                      className="mt-2 cursor-pointer font-sans text-[calc(12px*var(--ws-fs))] text-muted underline underline-offset-2 transition-colors hover:text-primary"
+                    >
+                      {t("voice.removeCover")}
+                    </button>
+                  </motion.div>
+                )}
+                {coverError && (
+                  <motion.div
+                    key="cover-error"
+                    {...collapse}
+                    className="overflow-hidden"
+                  >
+                    <p
+                      role="alert"
+                      className="mt-2 flex items-center gap-1 font-sans text-[calc(12px*var(--ws-fs))] text-danger"
+                    >
+                      {/* A glyph, not just the hue: under achromatopsia danger
+                          resolves darker than text-subtle, so this line read
+                          quieter than the placeholder sitting above it. */}
+                      <RiErrorWarningFill size={13} className="shrink-0" />
+                      {coverError}
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             <div>
@@ -400,22 +426,38 @@ export default function CreateSpaceSheet({
                     onClick={() => setMode(id)}
                     aria-pressed={mode === id}
                     className={clsx(
-                      "flex items-center justify-center gap-2 rounded-xl px-3 py-3 font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-colors cursor-pointer",
-                      mode === id
-                        ? "bg-primary text-page"
-                        : "bg-chip text-muted hover:text-primary",
+                      "relative flex items-center justify-center gap-2 rounded-xl bg-chip px-3 py-3 font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-colors cursor-pointer",
+                      mode === id ? "text-page" : "text-muted hover:text-primary",
                     )}
                   >
-                    <Icon size={15} weight="bold" />
-                    {label}
+                    {/* The fill is a thumb that slides between the two, not
+                        a class that jumps. */}
+                    {mode === id && (
+                      <motion.span
+                        layoutId={`${thumbId}-when`}
+                        transition={thumbSpring}
+                        aria-hidden
+                        className="absolute inset-0 rounded-xl bg-primary"
+                      />
+                    )}
+                    <Icon size={15} weight="bold" className="relative" />
+                    <span className="relative">{label}</span>
                   </button>
                 ))}
               </div>
-              {(mode === "later" || isEdit) && (
-                <div className="mt-2">
-                  <CalendarField value={when} onChange={setWhen} />
-                </div>
-              )}
+              <AnimatePresence initial={false}>
+                {(mode === "later" || isEdit) && (
+                  <motion.div
+                    key="when"
+                    {...collapse}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-2">
+                      <CalendarField value={when} onChange={setWhen} />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {!isEdit && (
@@ -460,7 +502,8 @@ export default function CreateSpaceSheet({
         </div>
 
         <div className="shrink-0 px-4 pb-[calc(16px+var(--ws-safe-bottom))] pt-2">
-          <button
+          <motion.button
+            {...press}
             type="button"
             disabled={busy || uploading || !valid}
             onClick={() => {
@@ -505,12 +548,20 @@ export default function CreateSpaceSheet({
             ) : (
               <Broadcast size={16} weight="bold" />
             )}
-            {isEdit
-              ? t("voice.saveChanges")
-              : mode === "later"
-                ? t("voice.schedule")
-                : t("voice.goLiveNow")}
-          </button>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={isEdit ? "save" : mode}
+                {...swap}
+                className="inline-block"
+              >
+                {isEdit
+                  ? t("voice.saveChanges")
+                  : mode === "later"
+                    ? t("voice.schedule")
+                    : t("voice.goLiveNow")}
+              </motion.span>
+            </AnimatePresence>
+          </motion.button>
         </div>
       </OverlayPanel>
     </ConfirmModalPortal>

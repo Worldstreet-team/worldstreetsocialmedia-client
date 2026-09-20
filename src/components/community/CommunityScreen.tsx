@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, UsersThree } from "@phosphor-icons/react";
 import { MessageSquarePlus, Search } from "lucide-react";
 
@@ -28,6 +29,13 @@ import { ManageCommunity } from "@/components/community/ManageCommunity";
 import { resolveCategoryLabel } from "@/lib/categories";
 import { mapApiPost as mapPost } from "@/lib/post-mapper";
 import { useT } from "@/i18n/client";
+import {
+	press,
+	reveal,
+	staggerParent,
+	staggerPop,
+	swap,
+} from "@/lib/motion-presets";
 
 interface CommunityDetail {
 	id: string;
@@ -185,6 +193,13 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 		});
 	}, [loadPosts]);
 
+	// The first page rises once, when the skeleton hands over. Pagination, a
+	// refetch after posting and a header refresh all land without it.
+	const postsIntro = useRef(true);
+	useEffect(() => {
+		if (!loading && !postsLoading) postsIntro.current = false;
+	}, [loading, postsLoading]);
+
 	if (notFound) {
 		return (
 			<div className="flex min-h-[60dvh] flex-col items-center justify-center">
@@ -286,12 +301,13 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 								)}
 							</div>
 
-							<button
+							<motion.button
 								type="button"
 								onClick={toggleJoin}
 								disabled={joinBusy || community.isOwner}
+								{...press}
 								className={clsx(
-									"h-10 shrink-0 self-start rounded-pill px-5 font-sans text-[calc(14px*var(--ws-fs))] font-semibold transition-colors",
+									"h-10 shrink-0 self-start overflow-hidden rounded-pill px-5 font-sans text-[calc(14px*var(--ws-fs))] font-semibold transition-colors",
 									community.isOwner
 										? "cursor-default bg-raised text-muted"
 										: community.joined
@@ -299,12 +315,26 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 											: "cursor-pointer bg-primary text-page hover:bg-muted",
 								)}
 							>
-								{community.isOwner
-									? t("community.owner")
-									: community.joined
-										? t("community.joined")
-										: t("community.join")}
-							</button>
+								<AnimatePresence mode="wait" initial={false}>
+									<motion.span
+										key={
+											community.isOwner
+												? "owner"
+												: community.joined
+													? "joined"
+													: "join"
+										}
+										{...swap}
+										className="block"
+									>
+										{community.isOwner
+											? t("community.owner")
+											: community.joined
+												? t("community.joined")
+												: t("community.join")}
+									</motion.span>
+								</AnimatePresence>
+							</motion.button>
 						</div>
 
 						{community.description && (
@@ -314,23 +344,39 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 						)}
 
 						<div className="mt-3.5 flex flex-wrap items-center gap-4">
-							<span className="flex items-center gap-2">
+							<motion.span
+								className="flex items-center gap-2"
+								variants={staggerParent}
+								initial="hidden"
+								animate="show"
+							>
 								{(community.memberPreview ?? []).slice(0, 5).map((m, i) => (
-									<span
+									<motion.span
 										key={m.userId}
+										variants={staggerPop}
 										className="relative -ml-2 h-6 w-6 shrink-0 overflow-hidden rounded-pill bg-raised ring-2 ring-page first:ml-0"
 										style={{ zIndex: 5 - i }}
 									>
 										<SafeAvatar src={m.avatar} />
-									</span>
+									</motion.span>
 								))}
 								<span className="font-sans text-[calc(14px*var(--ws-fs))] text-muted">
-									<span className="font-semibold tabular-nums text-primary">
-										{formatCompact(community.membersCount)}
+									{/* Rolls with the optimistic join. The header repeats
+									    this number and stays still: one roll per press. */}
+									<span className="relative inline-flex overflow-hidden align-bottom font-semibold tabular-nums text-primary">
+										<AnimatePresence mode="popLayout" initial={false}>
+											<motion.span
+												key={community.membersCount}
+												{...swap}
+												className="inline-block"
+											>
+												{formatCompact(community.membersCount)}
+											</motion.span>
+										</AnimatePresence>
 									</span>{" "}
 									{t("community.members")}
 								</span>
-							</span>
+							</motion.span>
 							{community.createdAt && (
 								<span className="font-sans text-[calc(14px*var(--ws-fs))] text-subtle">
 									{t("community.created.on")}{" "}
@@ -343,8 +389,16 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 						</div>
 					</section>
 
+					{/* initial={false}: whatever is true on load is simply there. Only
+					    a join made here brings the composer in. It rises, it does
+					    not unfold: a clipping wrapper would cut off its popovers. */}
+					<AnimatePresence mode="wait" initial={false}>
 					{community.joined ? (
-						<div className="border-b border-hairline">
+						<motion.div
+							key="composer"
+							{...reveal()}
+							className="border-b border-hairline"
+						>
 							<PostComposer
 								community={{
 									id: community.id,
@@ -354,17 +408,22 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 								}}
 								onPostSuccess={onPosted}
 							/>
-						</div>
+						</motion.div>
 					) : (
-						<button
+						<motion.button
+							key="join-to-post"
 							type="button"
 							onClick={toggleJoin}
+							// No press scale: this is a full-width row, not a button
+							// shaped thing, and a row that shrinks reads as a glitch.
+							exit={swap.exit}
 							className="flex cursor-pointer items-center justify-center gap-2.5 px-4 py-5 font-sans text-[calc(15.5px*var(--ws-fs))] font-semibold text-muted transition-colors hover:bg-surface hover:text-primary"
 						>
 							<UsersThree size={20} weight="duotone" className="text-gold" />
 							{t("community.joinToPost")}
-						</button>
+						</motion.button>
 					)}
+					</AnimatePresence>
 
 					<div className="flex flex-col">
 						{postsLoading ? (
@@ -382,9 +441,20 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 						) : (
 							<>
 								{posts.map((post, i) => (
-									<ImpressionSensor key={post.id} meta={{ post: post.id, author: post.author?.id ?? "", surface: "community", position: i }}>
-										<PostCard post={post} />
-									</ImpressionSensor>
+									// `initial` is only read at mount, and the target never
+									// changes, so a re-render mid-rise (the sentinel firing,
+									// a join) cannot strand a card half faded.
+									<motion.div
+										key={post.id}
+										initial={
+											postsIntro.current && i < 6 ? reveal(i).initial : false
+										}
+										animate={reveal(Math.min(i, 5)).animate}
+									>
+										<ImpressionSensor meta={{ post: post.id, author: post.author?.id ?? "", surface: "community", position: i }}>
+											<PostCard post={post} />
+										</ImpressionSensor>
+									</motion.div>
 								))}
 								<div ref={sentinel} className="h-px" />
 								{loadingMore && <PostSkeleton />}

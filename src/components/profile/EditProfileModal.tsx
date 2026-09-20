@@ -4,6 +4,8 @@ import dynamic from "next/dynamic";
 import { compressImage } from "@/lib/image-compress";
 
 import { useState, useRef, useMemo } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { collapse, pop, press, swap } from "@/lib/motion-presets";
 import Image from "next/image";
 import { sendFormDirect } from "@/lib/upload-direct";
 import { updateMyProfileAction } from "@/lib/user.actions";
@@ -276,14 +278,25 @@ export default function EditProfileModal({
 							How you appear across WorldStreet.
 						</p>
 					</div>
-					<button
+					<motion.button
+						{...press}
 						type="button"
 						onClick={handleSave}
 						disabled={isLoading}
 						className="h-8 shrink-0 cursor-pointer rounded-pill bg-brand px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active disabled:cursor-not-allowed disabled:opacity-60"
 					>
-						{isLoading ? "Saving…" : "Save"}
-					</button>
+						<span className="relative inline-flex justify-center">
+							<AnimatePresence mode="popLayout" initial={false}>
+								<motion.span
+									key={isLoading ? "saving" : "save"}
+									{...swap}
+									className="inline-block"
+								>
+									{isLoading ? "Saving…" : "Save"}
+								</motion.span>
+							</AnimatePresence>
+						</span>
+					</motion.button>
 				</OverlayHeader>
 
 				{/* Scrollable Content */}
@@ -317,19 +330,24 @@ export default function EditProfileModal({
 							>
 								<Camera className="w-5 h-5" />
 							</button>
-							{bannerPreview && bannerPreview !== user.banner && (
-								<button
-									type="button"
-									onClick={() => {
-										setBannerFile(null);
-										setBannerPreview(user.banner || "");
-									}}
-									aria-label="Undo banner change"
-									className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-pill glass-chip-canvas transition-colors sm:h-10 sm:w-10"
-								>
-									<X className="w-5 h-5" />
-								</button>
-							)}
+							{/* The undo chip lands when a new banner is picked. */}
+							<AnimatePresence initial={false}>
+								{bannerPreview && bannerPreview !== user.banner && (
+									<motion.button
+										key="undo-banner"
+										{...pop}
+										type="button"
+										onClick={() => {
+											setBannerFile(null);
+											setBannerPreview(user.banner || "");
+										}}
+										aria-label="Undo banner change"
+										className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-pill glass-chip-canvas transition-colors sm:h-10 sm:w-10"
+									>
+										<X className="w-5 h-5" />
+									</motion.button>
+								)}
+							</AnimatePresence>
 						</div>
 						<input
 							type="file"
@@ -476,22 +494,33 @@ export default function EditProfileModal({
 								</span>
 							</button>
 
-							{topicsOpen && (
-								<div className="mt-2.5">
-									<InterestPicker
-										selected={interests}
-										onToggle={(id) =>
-											setInterests((prev) =>
-												prev.includes(id)
-													? prev.filter((x) => x !== id)
-													: prev.length >= MAX_INTERESTS
-														? prev
-														: [...prev, id],
-											)
-										}
-									/>
-								</div>
-							)}
+							{/* Opens with height, to match the caret that already
+							    turns. The side padding keeps focus rings clear of
+							    the clip. */}
+							<AnimatePresence initial={false}>
+								{topicsOpen && (
+									<motion.div
+										key="topics"
+										{...collapse}
+										className="-mx-1 overflow-hidden px-1"
+									>
+										<div className="mt-2.5">
+											<InterestPicker
+												selected={interests}
+												onToggle={(id) =>
+													setInterests((prev) =>
+														prev.includes(id)
+															? prev.filter((x) => x !== id)
+															: prev.length >= MAX_INTERESTS
+																? prev
+																: [...prev, id],
+													)
+												}
+											/>
+										</div>
+									</motion.div>
+								)}
+							</AnimatePresence>
 						</div>
 					</div>
 				</div>

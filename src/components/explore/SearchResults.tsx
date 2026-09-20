@@ -3,6 +3,7 @@
 import type { ProfileBadge } from "@/components/ui/UserBadges";
 
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { Search } from "lucide-react";
 import { PostCard, type PostProps } from "@/components/feed/PostCard";
 import { ImpressionSensor } from "@/components/feed/ImpressionSensor";
@@ -12,6 +13,7 @@ import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { CATEGORIES } from "@/data/categories";
 import { useT } from "@/i18n/client";
+import { press } from "@/lib/motion-presets";
 
 export interface UserResult {
   userId: string;
@@ -104,15 +106,18 @@ export function SearchResults({
 
   const topics = topicHits.length > 0 && (
     <div className="flex flex-wrap gap-2 border-b border-hairline px-4 py-3">
+      {/* Press only. These re-filter on every keystroke, so an entrance
+          here would replay while the person is still typing. */}
       {topicHits.map((c) => (
-        <button
+        <motion.button
           key={c.id}
           type="button"
           onClick={() => onPickTopic(c.label)}
+          {...press}
           className="flex h-9 cursor-pointer items-center rounded-pill bg-raised px-3.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-muted transition-colors hover:bg-chip hover:text-primary"
         >
           {c.label}
-        </button>
+        </motion.button>
       ))}
     </div>
   );

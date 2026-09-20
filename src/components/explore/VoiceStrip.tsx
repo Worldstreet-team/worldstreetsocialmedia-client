@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { useT } from "@/i18n/client";
 import {
   LiveSpaceCard,
@@ -8,6 +9,7 @@ import {
   type SpaceRow,
 } from "@/components/voice/SpaceCard";
 import { ExploreSection, SectionLink } from "./ExploreSection";
+import { staggerItem, staggerParent } from "@/lib/motion-presets";
 
 /**
  * Live and scheduled rooms. Explore is a directory, so opening a card routes
@@ -46,27 +48,32 @@ export function VoiceStrip({
           ))}
         </div>
       ) : (
-        <>
+        // One tree for cards and rows, four items at most, so the skeleton
+        // hands over in a single short cascade.
+        <motion.div variants={staggerParent} initial="hidden" animate="show">
           {live.length > 0 && (
             <div className="grid gap-3 sm:grid-cols-2">
               {live.slice(0, 2).map((row) => (
-                <LiveSpaceCard key={row.id} row={row} onOpen={open} />
+                <motion.div key={row.id} variants={staggerItem}>
+                  <LiveSpaceCard row={row} onOpen={open} />
+                </motion.div>
               ))}
             </div>
           )}
           {upcoming.length > 0 && (
             <div className="mt-2.5 flex flex-col gap-2.5">
               {upcoming.slice(0, 2).map((row) => (
-                <UpcomingSpaceRow
-                  key={row.id}
-                  row={row}
-                  onRemind={onRemind}
-                  onStart={open}
-                />
+                <motion.div key={row.id} variants={staggerItem}>
+                  <UpcomingSpaceRow
+                    row={row}
+                    onRemind={onRemind}
+                    onStart={open}
+                  />
+                </motion.div>
               ))}
             </div>
           )}
-        </>
+        </motion.div>
       )}
     </ExploreSection>
   );

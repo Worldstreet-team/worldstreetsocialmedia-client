@@ -4,7 +4,8 @@ import { useGatewayRead } from "@/hooks/useGateway";
 import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import { press, swap } from "@/lib/motion-presets";
 import { Tabs } from "@/components/ui/Tabs";
 import {
 	OverlayHeader,
@@ -46,6 +47,59 @@ interface UserItem {
 	bio: string;
 	isVerified: boolean;
 	isFollowing: boolean; // Computed from backend
+}
+
+/**
+ * The per-row follow pill. Its hover label lives in state: the old version
+ * wrote into the button's textContent, which edits a node React owns and
+ * desynchronises on the next render (ProfileHeader's comment names the same
+ * bug). The label rolls on the follow state only; the hover preview cuts.
+ */
+function FollowPill({
+	following,
+	onToggle,
+}: {
+	following: boolean;
+	onToggle: () => void;
+}) {
+	const t = useT();
+	const [hovering, setHovering] = useState(false);
+	return (
+		<motion.button
+			{...press}
+			type="button"
+			onClick={(e) => {
+				e.stopPropagation();
+				onToggle();
+			}}
+			onMouseEnter={() => setHovering(true)}
+			onMouseLeave={() => setHovering(false)}
+			onFocus={() => setHovering(true)}
+			onBlur={() => setHovering(false)}
+			className={clsx(
+				"rounded-pill px-4 py-1.5 font-semibold text-[calc(13px*var(--ws-fs))] transition-colors min-w-[90px] border font-sans",
+				following
+					? "border-hairline bg-transparent text-primary hover:border-danger hover:text-danger"
+					: "bg-primary text-page border-transparent hover:bg-muted",
+			)}
+		>
+			<span className="relative inline-flex justify-center">
+				<AnimatePresence mode="popLayout" initial={false}>
+					<motion.span
+						key={following ? "following" : "follow"}
+						{...swap}
+						className="inline-block"
+					>
+						{following
+							? hovering
+								? t("profile.unfollow")
+								: t("profile.followingState")
+							: t("profile.follow")}
+					</motion.span>
+				</AnimatePresence>
+			</span>
+		</motion.button>
+	);
 }
 
 export default function FollowsModal({
@@ -288,32 +342,13 @@ export default function FollowsModal({
 													)}
 												</div>
 												{currentUser?._id !== user._id && (
-													<button
-														type="button"
-														onClick={(e) => {
-															e.stopPropagation();
-															handleFollowToggle(user);
-														}}
-														className={clsx(
-															"rounded-pill px-4 py-1.5 font-semibold text-[calc(13px*var(--ws-fs))] transition-colors min-w-[90px] border font-sans",
-															effectiveFollowing(user._id, user.isFollowing)
-																? "border-hairline bg-transparent text-primary hover:border-danger hover:text-danger"
-																: "bg-primary text-page border-transparent hover:bg-muted",
+													<FollowPill
+														following={effectiveFollowing(
+															user._id,
+															user.isFollowing,
 														)}
-														onMouseEnter={(e) => {
-															if (effectiveFollowing(user._id, user.isFollowing))
-																e.currentTarget.textContent = t("profile.unfollow");
-														}}
-														onMouseLeave={(e) => {
-															if (effectiveFollowing(user._id, user.isFollowing))
-																e.currentTarget.textContent =
-																	t("profile.followingState");
-														}}
-													>
-														{effectiveFollowing(user._id, user.isFollowing)
-																					? t("profile.followingState")
-																					: t("profile.follow")}
-													</button>
+														onToggle={() => handleFollowToggle(user)}
+													/>
 												)}
 											</div>
 										))}

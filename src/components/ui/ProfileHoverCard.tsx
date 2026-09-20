@@ -4,6 +4,7 @@ import Image from "next/image";
 import { effectiveFollowing } from "@/lib/engagementStore";
 import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 import Link from "next/link";
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSetAtom } from "jotai";
@@ -17,6 +18,7 @@ import { useT } from "@/i18n/client";
 import { formatCompact } from "@/lib/utils";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { overlayPanelClass } from "@/components/ui/Overlay";
+import { menu, press, swap } from "@/lib/motion-presets";
 
 /**
  * Glass profile preview on hovering an @handle.
@@ -103,7 +105,11 @@ export function ProfileHoverCard({
 }) {
 	const [open, setOpen] = useState(false);
 	const [profile, setProfile] = useState<HoverProfile | null>(null);
-	const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+	const [pos, setPos] = useState<{
+		top: number;
+		left: number;
+		above: boolean;
+	} | null>(null);
 	const t = useT();
 	const [following, setFollowing] = useState(false);
 	const setFollowedIds = useSetAtom(followingIdsAtom);
@@ -119,11 +125,11 @@ export function ProfileHoverCard({
 			window.innerWidth - CARD_W - 8,
 		);
 		const below = rect.bottom + 8;
-		const top =
-			below + CARD_EST_H > window.innerHeight
-				? Math.max(8, rect.top - CARD_EST_H - 8)
-				: below;
-		setPos({ top, left });
+		const above = below + CARD_EST_H > window.innerHeight;
+		const top = above ? Math.max(8, rect.top - CARD_EST_H - 8) : below;
+		// `above` is kept so the card can unfold from the corner that
+		// touches the chip, whichever side it landed on.
+		setPos({ top, left, above });
 	};
 
 	const scheduleOpen = () => {
@@ -194,6 +200,7 @@ export function ProfileHoverCard({
 		? [profile.firstName, profile.lastName].filter(Boolean).join(" ") ||
 			`@${profile.username}`
 		: "";
+	const cardMotion = menu(pos?.above ? "bottom-left" : "top-left");
 
 	return (
 		// biome-ignore lint/a11y/noStaticElementInteractions: hover-intent wrapper around a real link; it adds a pointer-only preview and removes no keyboard or screen-reader path
@@ -204,107 +211,141 @@ export function ProfileHoverCard({
 			className="inline-flex"
 		>
 			{children}
-			{open &&
-				profile &&
+			{/* The portal exists once a card has been fetched and placed, and the
+			    presence inside it decides whether the card is there: it used to
+			    wear `animate-rise`, which is switched off after the intro, so it
+			    appeared and vanished with no motion at all. Only chips that
+			    have been hovered ever mount this. */}
+			{profile &&
 				pos &&
 				createPortal(
-					// biome-ignore lint/a11y/noStaticElementInteractions: hover grace zone for a pointer-only affordance; all actions inside are real buttons/links
-					<div
-						onMouseEnter={() => window.clearTimeout(timers.current.close)}
-						onMouseLeave={scheduleClose}
-						style={{ top: pos.top, left: pos.left, width: CARD_W }}
-						/* z-dropdown, not z-modal: nothing dismisses this, so it must
-						   never outrank a real overlay that does. */
-						className={`${overlayPanelClass} fixed z-dropdown rounded-xl animate-rise`}
-					>
-						{/* Banner well. Without a banner this is a gold wash rather
-						    than dead space — a brand moment, never a gold fill. */}
-						<div className="relative h-16 w-full overflow-hidden">
-							{profile.banner ? (
-								<>
-									<Image
-										src={profile.banner}
-										alt=""
-										fill
-										className="object-cover opacity-80"
-									/>
-									<span className="absolute inset-0 bg-gradient-to-b from-transparent to-black/45" />
-								</>
-							) : (
-								<span className="absolute inset-0 bg-gradient-to-br from-brand/25 via-brand/[0.06] to-transparent" />
-							)}
-						</div>
-
-						<div className="px-4 pb-4">
-							<div className="-mt-8 flex items-end justify-between">
-								<Link
-									href={`/profile/${profile.username}`}
-									className="relative block h-16 w-16 overflow-hidden rounded-pill bg-raised ring-2 ring-page"
-								>
-									<SafeAvatar src={profile.avatar} className="object-cover" />
-								</Link>
-								{!following ? (
-									<button
-										type="button"
-										onClick={handleFollow}
-										disabled={busy}
-										/* Follow is a REPEATED action, so it takes the
-										   bg-primary/text-page pattern the rest of the app
-										   uses for it — gold stays reserved for the one
-										   primary CTA on a surface. */
-										className="h-9 shrink-0 cursor-pointer rounded-pill bg-primary px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-page transition-colors hover:bg-muted disabled:opacity-60"
-									>
-										{t("profile.follow")}
-									</button>
-								) : (
-									<span className="h-9 shrink-0 rounded-pill bg-chip px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold leading-9 text-primary">
-										{t("profile.followingState")}
-									</span>
-								)}
-							</div>
-
-							<Link
-								href={`/profile/${profile.username}`}
-								className="mt-2.5 block min-w-0"
+					<AnimatePresence>
+						{open && (
+							// biome-ignore lint/a11y/noStaticElementInteractions: hover grace zone for a pointer-only affordance; all actions inside are real buttons/links
+							<motion.div
+								key="hover-card"
+								onMouseEnter={() => window.clearTimeout(timers.current.close)}
+								onMouseLeave={scheduleClose}
+								{...cardMotion}
+								style={{
+									...cardMotion.style,
+									top: pos.top,
+									left: pos.left,
+									width: CARD_W,
+								}}
+								/* z-dropdown, not z-modal: nothing dismisses this, so it must
+								   never outrank a real overlay that does. */
+								className={`${overlayPanelClass} fixed z-dropdown rounded-xl`}
 							>
-								<span className="flex min-w-0 items-center gap-1">
-									<span className="truncate font-sans text-[calc(15px*var(--ws-fs))] font-bold text-primary hover:underline">
-										{name}
-									</span>
-									<UserBadges
-										isVerified={profile.isVerified}
-										verification={profile.verification}
-										badges={profile.badges as never}
-										size={14}
-									/>
-								</span>
-								<span className="block truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
-									@{profile.username}
-								</span>
-							</Link>
+								{/* Banner well. Without a banner this is a gold wash rather
+								    than dead space: a brand moment, never a gold fill. */}
+								<div className="relative h-16 w-full overflow-hidden">
+									{profile.banner ? (
+										<>
+											<Image
+												src={profile.banner}
+												alt=""
+												fill
+												className="object-cover opacity-80"
+											/>
+											<span className="absolute inset-0 bg-gradient-to-b from-transparent to-black/45" />
+										</>
+									) : (
+										<span className="absolute inset-0 bg-gradient-to-br from-brand/25 via-brand/[0.06] to-transparent" />
+									)}
+								</div>
 
-							{profile.bio && (
-								<p className="mt-2 line-clamp-2 font-sans text-[calc(13px*var(--ws-fs))] leading-snug text-primary opacity-90">
-									{profile.bio}
-								</p>
-							)}
+								<div className="px-4 pb-4">
+									<div className="-mt-8 flex items-end justify-between">
+										<Link
+											href={`/profile/${profile.username}`}
+											className="relative block h-16 w-16 overflow-hidden rounded-pill bg-raised ring-2 ring-page"
+										>
+											<SafeAvatar src={profile.avatar} className="object-cover" />
+										</Link>
+										{/* Button and chip trade places instead of blinking.
+										    The swap rides a wrapper so the button keeps its
+										    own opacity for `disabled:`; anchored right, since
+										    that is the edge the row pins them to. */}
+										<span className="relative flex shrink-0">
+											<AnimatePresence
+												mode="popLayout"
+												initial={false}
+												anchorX="right"
+											>
+												{!following ? (
+													<motion.span key="follow" {...swap} className="flex">
+														<motion.button
+															type="button"
+															onClick={handleFollow}
+															disabled={busy}
+															{...press}
+															/* Follow is a REPEATED action, so it takes the
+															   bg-primary/text-page pattern the rest of the app
+															   uses for it. Gold stays reserved for the one
+															   primary CTA on a surface. */
+															className="h-9 shrink-0 cursor-pointer rounded-pill bg-primary px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-page transition-colors hover:bg-muted disabled:opacity-60"
+														>
+															{t("profile.follow")}
+														</motion.button>
+													</motion.span>
+												) : (
+													<motion.span
+														key="following"
+														{...swap}
+														className="h-9 shrink-0 whitespace-nowrap rounded-pill bg-chip px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold leading-9 text-primary"
+													>
+														{t("profile.followingState")}
+													</motion.span>
+												)}
+											</AnimatePresence>
+										</span>
+									</div>
 
-							<div className="mt-3 flex gap-4 border-t border-hairline pt-2.5 font-sans text-[calc(13px*var(--ws-fs))]">
-								<span className="tabular-nums text-muted">
-									<strong className="font-semibold text-primary">
-										{formatCompact(profile.followersCount ?? 0)}
-									</strong>{" "}
-									{t("profile.followers")}
-								</span>
-								<span className="tabular-nums text-muted">
-									<strong className="font-semibold text-primary">
-										{formatCompact(profile.followingCount ?? 0)}
-									</strong>{" "}
-									{t("profile.following")}
-								</span>
-							</div>
-						</div>
-					</div>,
+									<Link
+										href={`/profile/${profile.username}`}
+										className="mt-2.5 block min-w-0"
+									>
+										<span className="flex min-w-0 items-center gap-1">
+											<span className="truncate font-sans text-[calc(15px*var(--ws-fs))] font-bold text-primary hover:underline">
+												{name}
+											</span>
+											<UserBadges
+												isVerified={profile.isVerified}
+												verification={profile.verification}
+												badges={profile.badges as never}
+												size={14}
+											/>
+										</span>
+										<span className="block truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
+											@{profile.username}
+										</span>
+									</Link>
+
+									{profile.bio && (
+										<p className="mt-2 line-clamp-2 font-sans text-[calc(13px*var(--ws-fs))] leading-snug text-primary opacity-90">
+											{profile.bio}
+										</p>
+									)}
+
+									<div className="mt-3 flex gap-4 border-t border-hairline pt-2.5 font-sans text-[calc(13px*var(--ws-fs))]">
+										<span className="tabular-nums text-muted">
+											<strong className="font-semibold text-primary">
+												{formatCompact(profile.followersCount ?? 0)}
+											</strong>{" "}
+											{t("profile.followers")}
+										</span>
+										<span className="tabular-nums text-muted">
+											<strong className="font-semibold text-primary">
+												{formatCompact(profile.followingCount ?? 0)}
+											</strong>{" "}
+											{t("profile.following")}
+										</span>
+									</div>
+								</div>
+							</motion.div>
+						)}
+					</AnimatePresence>,
 					document.body,
 				)}
 		</span>

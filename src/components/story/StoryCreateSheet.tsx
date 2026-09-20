@@ -13,6 +13,7 @@ import {
   STORY_BACKGROUNDS,
   storyCanvasCss,
 } from "@/lib/editor/storyBackgrounds";
+import { press } from "@/lib/motion-presets";
 
 export type StoryKind = "media" | "text" | "voice";
 
@@ -132,6 +133,9 @@ export default function StoryCreateSheet({
                   ease: EASE,
                   delay: reduce ? 0 : 0.06 + i * 0.05,
                 }}
+                // Carries its own transition so the press never inherits
+                // the entrance delay above.
+                whileTap={{ ...press.whileTap, transition: press.transition }}
                 // Flat by request: a plain wash, no sheen, no chrome.
                 className="flex cursor-pointer flex-col items-center gap-2.5 rounded-xl bg-chip px-3 pt-4 pb-3.5 text-center transition-colors hover:bg-raised"
               >

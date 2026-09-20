@@ -1,8 +1,10 @@
 "use client";
 
 import { Waveform } from "@phosphor-icons/react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useT } from "@/i18n/client";
+import { collapse, swap } from "@/lib/motion-presets";
 import { formatCompact } from "@/lib/utils";
 import {
   EqBars,
@@ -32,40 +34,56 @@ export function SpaceLiveBar() {
     return v === key ? fallback : v;
   };
 
-  if (live.length === 0) return null;
   const row = live[0];
   const others = live.length - 1;
 
+  // Opens and closes instead of snapping: this row sits above the timeline,
+  // and a room going live should not jolt whatever is being read.
   return (
-    <button
-      type="button"
-      onClick={() => setSession({ row, minimized: false })}
-      className="flex w-full items-center gap-3 border-b border-hairline px-4 py-2.5 text-left transition-colors hover:bg-raised cursor-pointer"
-    >
-      <span
-        className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg"
-        style={{ background: spaceBackground(row) }}
-      >
-        <span className="absolute inset-0 bg-[#0c0a09]/35" />
-        <Waveform size={14} weight="fill" className="relative text-[#fafaf9]" />
-      </span>
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span className="flex min-w-0 items-center gap-1.5">
-          <EqBars className="h-3 shrink-0 text-danger" />
-          <span className="min-w-0 truncate font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-primary">
-            {row.title}
-          </span>
-        </span>
-        <span className="truncate font-sans text-[calc(11.5px*var(--ws-fs))] text-muted tabular-nums">
-          {hostName(row.host)} · {formatCompact(spaceListenerCount(row))}{" "}
-          {t("voice.listeners")}
-          {others > 0 &&
-            ` · +${others} ${tf("voice.moreRooms", "more live")}`}
-        </span>
-      </span>
-      <span className="shrink-0 rounded-pill bg-primary px-3.5 py-1.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-page">
-        {t("voice.join")}
-      </span>
-    </button>
+    <AnimatePresence initial={false}>
+      {row && (
+        <motion.div key="live-bar" {...collapse} className="overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setSession({ row, minimized: false })}
+            className="flex w-full items-center gap-3 border-b border-hairline px-4 py-2.5 text-left transition-colors hover:bg-raised cursor-pointer"
+          >
+            <span
+              className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg"
+              style={{ background: spaceBackground(row) }}
+            >
+              <span className="absolute inset-0 bg-[#0c0a09]/35" />
+              <Waveform size={14} weight="fill" className="relative text-[#fafaf9]" />
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="flex min-w-0 items-center gap-1.5">
+                <EqBars className="h-3 shrink-0 text-danger" />
+                <span className="min-w-0 truncate font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-primary">
+                  {row.title}
+                </span>
+              </span>
+              <span className="truncate font-sans text-[calc(11.5px*var(--ws-fs))] text-muted tabular-nums">
+                {hostName(row.host)} ·{" "}
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.span
+                    key={formatCompact(spaceListenerCount(row))}
+                    {...swap}
+                    className="inline-block"
+                  >
+                    {formatCompact(spaceListenerCount(row))}
+                  </motion.span>
+                </AnimatePresence>{" "}
+                {t("voice.listeners")}
+                {others > 0 &&
+                  ` · +${others} ${tf("voice.moreRooms", "more live")}`}
+              </span>
+            </span>
+            <span className="shrink-0 rounded-pill bg-primary px-3.5 py-1.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-page">
+              {t("voice.join")}
+            </span>
+          </button>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

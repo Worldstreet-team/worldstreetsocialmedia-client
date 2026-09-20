@@ -1,6 +1,7 @@
 "use client";
 
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import { press } from "@/lib/motion-presets";
 import ConfirmModalPortal from "./ConfirmModalPortal";
 import { OverlayPanel, OverlayScrim, useOverlayDismiss } from "./Overlay";
 
@@ -60,19 +61,21 @@ export default function ConfirmModal({
 							</p>
 						</div>
 						<div className="flex flex-row gap-3 p-6 pt-0">
-							<button
+							<motion.button
 								type="button"
 								onClick={onClose}
+								{...press}
 								className="flex-1 h-11 rounded-pill font-sans font-semibold text-[calc(15px*var(--ws-fs))] border border-hairline text-primary hover:bg-raised transition-colors cursor-pointer"
 							>
 								{cancelText}
-							</button>
-							<button
+							</motion.button>
+							<motion.button
 								type="button"
 								onClick={() => {
 									onConfirm();
 									onClose();
 								}}
+								{...press}
 								className={`flex-1 h-11 rounded-pill font-sans font-semibold text-[calc(15px*var(--ws-fs))] transition-colors cursor-pointer ${
 									isDestructive
 										? "bg-danger text-primary hover:opacity-90"
@@ -80,7 +83,7 @@ export default function ConfirmModal({
 								}`}
 							>
 								{confirmText}
-							</button>
+							</motion.button>
 						</div>
 					</OverlayPanel>
 				)}

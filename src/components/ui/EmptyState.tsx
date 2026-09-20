@@ -15,6 +15,11 @@ interface EmptyStateProps {
  * one small Primary button.
  *
  * "Never more than one action" is enforced by the prop shape.
+ *
+ * The entrance is the CSS `animate-pop` utility on purpose. This file has no
+ * "use client", so framer is not available to it, and `animate-rise` is
+ * switched off for the session once the intro has played: an empty state
+ * that arrives after a load would simply blink in.
  */
 export function EmptyState({
 	icon: Icon,
@@ -23,7 +28,7 @@ export function EmptyState({
 	action,
 }: EmptyStateProps) {
 	return (
-		<div className="flex flex-col items-center gap-3 px-6 py-8 text-center">
+		<div className="flex animate-pop flex-col items-center gap-3 px-6 py-8 text-center">
 			<div className="flex h-16 w-16 items-center justify-center rounded-pill bg-raised">
 				<Icon className="h-[26px] w-[26px] text-muted" strokeWidth={2} />
 			</div>

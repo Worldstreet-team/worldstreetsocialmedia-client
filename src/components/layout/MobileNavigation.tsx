@@ -8,6 +8,12 @@ import { useCallback, useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+	collapse,
+	staggerItem,
+	staggerParentFast,
+	swap,
+} from "@/lib/motion-presets";
+import {
 	ArrowUpRight,
 	CaretDown,
 	MagnifyingGlass,
@@ -215,7 +221,14 @@ export function MobileNavigation() {
 							</div>
 
 							{/* Navigation Links */}
-							<nav className="flex flex-col gap-1">
+							{/* Mounts with the drawer, so the rows cascade once per
+							    open and never on a badge re-render. */}
+							<motion.nav
+								variants={staggerParentFast}
+								initial="hidden"
+								animate="show"
+								className="flex flex-col gap-1"
+							>
 							{sidebarList
 								// Studio is creator-only; mirror the desktop rail's gate.
 								.filter(
@@ -249,7 +262,7 @@ export function MobileNavigation() {
 								// links, not a route — href="#" renders an inert row.
 								if (item.isDropdown) {
 									return (
-										<div key={item.labelKey}>
+										<motion.div key={item.labelKey} variants={staggerItem}>
 											<button
 												type="button"
 												onClick={() => setProductsOpen((v) => !v)}
@@ -266,20 +279,31 @@ export function MobileNavigation() {
 													)}
 												/>
 											</button>
-											{productsOpen &&
-												item.dropdownItems?.map((product) => (
-													<a
-														key={product.title}
-														href={product.link}
-														target="_blank"
-														rel="noopener noreferrer"
-														className="flex items-center gap-2 pl-[52px] pr-4 py-2.5 rounded-pill text-muted hover:text-primary hover:bg-primary/5 transition-colors font-sans text-sm"
+											{/* Opens with height like the desktop rail's
+											    disclosure, instead of shoving the rows below. */}
+											<AnimatePresence initial={false}>
+												{productsOpen && (
+													<motion.div
+														key="products"
+														{...collapse}
+														className="overflow-hidden"
 													>
-														{product.title}
-														<ArrowUpRight size={13} />
-													</a>
-												))}
-										</div>
+														{item.dropdownItems?.map((product) => (
+															<a
+																key={product.title}
+																href={product.link}
+																target="_blank"
+																rel="noopener noreferrer"
+																className="flex items-center gap-2 pl-[52px] pr-4 py-2.5 rounded-pill text-muted hover:text-primary hover:bg-primary/5 transition-colors font-sans text-sm"
+															>
+																{product.title}
+																<ArrowUpRight size={13} />
+															</a>
+														))}
+													</motion.div>
+												)}
+											</AnimatePresence>
+										</motion.div>
 									);
 								}
 
@@ -297,20 +321,21 @@ export function MobileNavigation() {
 								);
 
 								return (
-									<Link
-										key={item.labelKey}
-										href={href}
-										className={rowClasses(isActive)}
-										onClick={closeDrawer}
-									>
-										<BadgedIcon count={badgeCount} label={t(item.labelKey)}>
-											<item.icon isActive={isActive} />
-										</BadgedIcon>
-										<span>{t(item.labelKey)}</span>
-									</Link>
+									<motion.div key={item.labelKey} variants={staggerItem}>
+										<Link
+											href={href}
+											className={rowClasses(isActive)}
+											onClick={closeDrawer}
+										>
+											<BadgedIcon count={badgeCount} label={t(item.labelKey)}>
+												<item.icon isActive={isActive} />
+											</BadgedIcon>
+											<span>{t(item.labelKey)}</span>
+										</Link>
+									</motion.div>
 								);
 							})}
-							</nav>
+							</motion.nav>
 						</div>
 
 						{/* Footer Actions. The bottom edge is the phone's, so the
@@ -351,8 +376,16 @@ export function MobileNavigation() {
 								}
 								className="w-full flex items-center gap-3 px-4 py-3 rounded-pill text-muted hover:text-primary hover:bg-primary/5 transition-colors font-sans font-medium text-[calc(15px*var(--ws-fs))] cursor-pointer"
 							>
-								{mounted && isLight ? <Moon size={20} /> : <Sun size={20} />}
-								{mounted && isLight ? t("nav.darkMode") : t("nav.lightMode")}
+								<AnimatePresence mode="wait" initial={false}>
+									<motion.span
+										key={mounted && isLight ? "to-dark" : "to-light"}
+										{...swap}
+										className="flex items-center gap-3"
+									>
+										{mounted && isLight ? <Moon size={20} /> : <Sun size={20} />}
+										{mounted && isLight ? t("nav.darkMode") : t("nav.lightMode")}
+									</motion.span>
+								</AnimatePresence>
 							</button>
 							<div className="pb-1">
 								<LanguageMenu

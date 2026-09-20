@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useImageZoom } from "@/hooks/useImageZoom";
 import { OverlayHeader, useOverlayDismiss } from "@/components/ui/Overlay";
+import { press, swap } from "@/lib/motion-presets";
 
 export interface MediaItem {
 	url: string;
@@ -145,24 +146,33 @@ export default function MediaModal({
 					}}
 				>
 					{/* Navigation Arrows */}
+					{/* The wrapper holds the position and the button takes the
+					    press: framer owns the button's inline transform, and the
+					    centring translate must not share an element with it. */}
 					{media.length > 1 && (
 						<>
-							<button
-								type="button"
-								onClick={handlePrev}
-								aria-label="Previous item"
-								className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
-							>
-								<ChevronLeft className="w-8 h-8" />
-							</button>
-							<button
-								type="button"
-								onClick={handleNext}
-								aria-label="Next item"
-								className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
-							>
-								<ChevronRight className="w-8 h-8" />
-							</button>
+							<div className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-10">
+								<motion.button
+									type="button"
+									onClick={handlePrev}
+									aria-label="Previous item"
+									{...press}
+									className="w-12 h-12 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
+								>
+									<ChevronLeft className="w-8 h-8" />
+								</motion.button>
+							</div>
+							<div className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-10">
+								<motion.button
+									type="button"
+									onClick={handleNext}
+									aria-label="Next item"
+									{...press}
+									className="w-12 h-12 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
+								>
+									<ChevronRight className="w-8 h-8" />
+								</motion.button>
+							</div>
 						</>
 					)}
 
@@ -237,8 +247,20 @@ export default function MediaModal({
 
 						{/* Counter */}
 						{media.length > 1 && (
-							<div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-raised text-primary px-3 py-1 rounded-pill text-[calc(13px*var(--ws-fs))] font-medium border border-hairline font-sans tabular-nums">
-								{currentIndex + 1} / {media.length}
+							<div className="absolute bottom-6 left-1/2 -translate-x-1/2 overflow-hidden bg-raised text-primary px-3 py-1 rounded-pill text-[calc(13px*var(--ws-fs))] font-medium border border-hairline font-sans tabular-nums">
+								{/* Only the index rolls; the total stands still. */}
+								<span className="relative inline-flex">
+									<AnimatePresence mode="popLayout" initial={false}>
+										<motion.span
+											key={currentIndex}
+											{...swap}
+											className="inline-block"
+										>
+											{currentIndex + 1}
+										</motion.span>
+									</AnimatePresence>
+								</span>{" "}
+								/ {media.length}
 							</div>
 						)}
 					</div>

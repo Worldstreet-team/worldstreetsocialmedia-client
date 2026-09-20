@@ -5,9 +5,10 @@ import { Plus } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotionConfig } from "framer-motion";
 import { useT } from "@/i18n/client";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import { EASE, press } from "@/lib/motion-presets";
 
 /** One easing for the rail breathing when a refresh lands. */
-const LIST_TRANSITION = { duration: 0.26, ease: [0.2, 0, 0, 1] as const };
+const LIST_TRANSITION = { duration: 0.26, ease: EASE };
 
 export interface RailCommunity {
   id: string;
@@ -66,9 +67,10 @@ export function MyCommunitiesRail({
       ))}
       </AnimatePresence>
 
-      <button
+      <motion.button
         type="button"
         onClick={onCreate}
+        {...press}
         className="flex w-[112px] shrink-0 cursor-pointer flex-col gap-1.5"
       >
         <span className="flex aspect-[4/3] w-full items-center justify-center rounded-xl border border-dashed border-hairline bg-surface text-muted transition-colors hover:border-gold hover:text-gold">
@@ -77,7 +79,7 @@ export function MyCommunitiesRail({
         <span className="truncate text-left font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-muted">
           {t("community.create")}
         </span>
-      </button>
+      </motion.button>
     </div>
   );
 }

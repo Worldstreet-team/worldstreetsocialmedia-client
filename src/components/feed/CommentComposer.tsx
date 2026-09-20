@@ -2,7 +2,7 @@
 
 import { useCallback, useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import {
 	RiImageLine,
@@ -25,6 +25,7 @@ import { useToast } from "@/components/ui/Toast/ToastContext";
 import EmojiPicker, { type EmojiClickData, Theme } from "emoji-picker-react";
 import { useTheme } from "next-themes";
 import clsx from "clsx";
+import { collapse, press, staggerItem } from "@/lib/motion-presets";
 
 interface CommentComposerProps {
 	postId: string;
@@ -272,44 +273,64 @@ export const CommentComposer = ({
 						rows={1}
 					/>
 
-					{/* Media Preview Grid */}
-					{mediaItems.length > 0 && (
-						<div
-							className={clsx(
-								"grid gap-2 mt-3 mb-2 rounded-xl overflow-hidden relative",
-								mediaItems.length === 1 ? "grid-cols-1" : "grid-cols-2",
-							)}
-						>
-							{mediaItems.map((item, index) => (
+					{/* Media Preview Grid. The region opens instead of snapping the
+					    composer taller; the first tile rides that, later ones rise. */}
+					<AnimatePresence initial={false}>
+						{mediaItems.length > 0 && (
+							<motion.div
+								key="media-preview"
+								{...collapse}
+								className="overflow-hidden"
+							>
 								<div
-									key={item.url}
 									className={clsx(
-										"relative bg-surface border border-hairline",
-										mediaItems.length > 1 ? "aspect-square" : "aspect-video",
+										"grid gap-2 mt-3 mb-2 rounded-xl overflow-hidden relative",
+										mediaItems.length === 1 ? "grid-cols-1" : "grid-cols-2",
 									)}
 								>
-									<Image
-										src={item.url}
-										alt="Preview"
-										fill
-										className="object-cover"
-									/>
-									<button
-										type="button"
-										onClick={() => removeMedia(index)}
-										aria-label="Remove attachment"
-										className="absolute top-1.5 right-1.5 flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors"
-									>
-										<RiCloseLine className="w-4 h-4" />
-									</button>
+									{/* popLayout: a leaving tile steps out of the grid, so
+									    the 2-to-1 column change cannot stack it full width. */}
+									<AnimatePresence initial={false} mode="popLayout">
+										{mediaItems.map((item, index) => (
+											<motion.div
+												key={item.url}
+												variants={staggerItem}
+												initial="hidden"
+												animate="show"
+												exit="exit"
+												className={clsx(
+													"relative bg-surface border border-hairline",
+													mediaItems.length > 1
+														? "aspect-square"
+														: "aspect-video",
+												)}
+											>
+												<Image
+													src={item.url}
+													alt="Preview"
+													fill
+													className="object-cover"
+												/>
+												<button
+													type="button"
+													onClick={() => removeMedia(index)}
+													aria-label="Remove attachment"
+													className="absolute top-1.5 right-1.5 flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors"
+												>
+													<RiCloseLine className="w-4 h-4" />
+												</button>
+											</motion.div>
+										))}
+									</AnimatePresence>
 								</div>
-							))}
-						</div>
-					)}
+							</motion.div>
+						)}
+					</AnimatePresence>
 
 					<div className="relative mt-1 flex items-center justify-between">
 						<div className="relative flex gap-1">
-							<button
+							<motion.button
+								{...press}
 								type="button"
 								onClick={() => fileInputRef.current?.click()}
 								aria-label="Attach media"
@@ -319,7 +340,7 @@ export const CommentComposer = ({
 								<span className="hidden sm:block absolute -bottom-8 left-1/2 -translate-x-1/2 text-[calc(10px*var(--ws-fs))] bg-raised text-primary px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
 									Media
 								</span>
-							</button>
+							</motion.button>
 							<input
 								type="file"
 								ref={fileInputRef}
@@ -330,7 +351,8 @@ export const CommentComposer = ({
 								disabled={isPosting || mediaItems.length >= 4}
 							/>
 
-							<button
+							<motion.button
+								{...press}
 								type="button"
 								onClick={() => setShowEmojiPicker(!showEmojiPicker)}
 								aria-label="Insert emoji"
@@ -345,7 +367,7 @@ export const CommentComposer = ({
 								<span className="hidden sm:block absolute -bottom-8 left-1/2 -translate-x-1/2 text-[calc(10px*var(--ws-fs))] bg-raised text-primary px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
 									Emoji
 								</span>
-							</button>
+							</motion.button>
 
 							{/* A picker, not a modal: bottom sheet on a phone,
 							    floating card on desktop, and the page behind
@@ -389,7 +411,8 @@ export const CommentComposer = ({
 							</ConfirmModalPortal>
 						</div>
 
-						<button
+						<motion.button
+							{...press}
 							type="button"
 							onClick={handleSubmit}
 							disabled={
@@ -410,7 +433,7 @@ export const CommentComposer = ({
 									<RiSendPlane2Fill className="w-3 h-3" />
 								</>
 							)}
-						</button>
+						</motion.button>
 					</div>
 				</div>
 			</div>

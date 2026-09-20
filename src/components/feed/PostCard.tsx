@@ -51,6 +51,14 @@ import {
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { TimeAgo } from "@/components/ui/TimeAgo";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+    collapse,
+    menuStagger,
+    pop,
+    press,
+    staggerItem,
+    swap,
+} from "@/lib/motion-presets";
 import { useRouter } from "next/navigation";
 import { userAtom } from "@/store/user.atom";
 import { bookmarksAtom } from "@/store/bookmarks.atom";
@@ -274,6 +282,25 @@ export interface PostProps {
    the action row, so the wrapper only preserves that. */
 const formatCount = (n: number) => (!n ? "" : formatCompact(n));
 
+/**
+ * A live count that rolls when it changes, the same grammar the like count
+ * already had. Other people's actions tick a number; they never pop. Keyed by
+ * the LABEL, so 1,204 to 1,205 behind the same "1.2K" does not move, and
+ * initial={false} keeps a card's first paint still.
+ */
+function RollingCount({ value }: { value: number }) {
+    const label = formatCount(value);
+    return (
+        <span className="relative overflow-hidden text-[calc(13.5px*var(--ws-fs))] font-medium font-sans tabular-nums sm:text-[calc(14px*var(--ws-fs))]">
+            <AnimatePresence mode="wait" initial={false}>
+                <motion.span key={label} {...swap} className="inline-block">
+                    {label}
+                </motion.span>
+            </AnimatePresence>
+        </span>
+    );
+}
+
 export const PostCard = memo(
     ({
         post: postProp,
@@ -301,6 +328,9 @@ export const PostCard = memo(
     const [quoteOpen, setQuoteOpen] = useState(false);
     const [reposted, setReposted] = useState(false);
     const [repostDelta, setRepostDelta] = useState(0);
+    // Bumped only by the viewer's own repost, so the glyph pops for their tap
+    // and stays still when the shared store flips it on a remount.
+    const [repostPulse, setRepostPulse] = useState(0);
     const [isLiked, setIsLiked] = useState(post.isLiked);
     const [likeCount, setLikeCount] = useState(post.stats.likes);
 
@@ -468,6 +498,16 @@ export const PostCard = memo(
         at: number;
         timer: ReturnType<typeof setTimeout> | null;
     }>({ at: 0, timer: null });
+    // A double-tap like lands a heart on the photo: the viewer's own action,
+    // so it may pop. Placed from the tapped tile's rect, relative to the
+    // article, so it rides the scroll instead of hanging in the viewport.
+    const articleRef = useRef<HTMLElement>(null);
+    const [heartBurst, setHeartBurst] = useState<{
+        x: number;
+        y: number;
+        n: number;
+    } | null>(null);
+    const heartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     // Mouse drag-to-scroll for the media strip (touch scrolls natively).
     // `moved` gates the tap handlers so releasing a drag never zooms.
     const stripDragRef = useRef({
@@ -486,6 +526,7 @@ export const PostCard = memo(
                 clearTimeout(navTimerRef.current);
                 navTimerRef.current = null;
             }
+            if (heartTimerRef.current) clearTimeout(heartTimerRef.current);
         },
         [],
     );
@@ -552,6 +593,23 @@ export const PostCard = memo(
             state.at = 0;
             if (state.timer) clearTimeout(state.timer);
             state.timer = null;
+            // The heart answers the gesture even on an already-liked photo.
+            // Clamped inside the card: a tile scrolled half off the strip
+            // must not push a glyph past the page edge.
+            const host = articleRef.current?.getBoundingClientRect();
+            if (currentUser && host) {
+                const cx = rect.left + rect.width / 2 - host.left;
+                setHeartBurst({
+                    x: Math.min(Math.max(cx, 40), host.width - 40),
+                    y: rect.top + rect.height / 2 - host.top,
+                    n: now,
+                });
+                if (heartTimerRef.current) clearTimeout(heartTimerRef.current);
+                heartTimerRef.current = setTimeout(
+                    () => setHeartBurst(null),
+                    700,
+                );
+            }
             if (!isLiked) void handleLike();
             return;
         }
@@ -849,12 +907,26 @@ export const PostCard = memo(
        roughly 2:1; at 320px it squashed every tile into a letterbox and
        cropped faces out of the frame. Ratios keep the same proportions at
        every width. */
-    if (isDeleted) return null;
-
     return (
-        // px-4 is the spec's minimum edge gutter on small screens; the old px-3
-        // put post text 12px from the viewport edge.
-        <article className="relative block px-4 py-3 sm:py-3.5 hover:bg-surface/40 transition-colors">
+        // Deleting or blocking folds the row shut instead of snapping it away.
+        // Exit only: a card in a scrolling feed gets no entrance of its own.
+        // The shell has no padding, so its height can reach zero, and it clips
+        // only while it closes, so the menus above stay free at rest.
+        // No initial={false} here: the shell has nothing to play on mount, and
+        // that flag rides the presence context for the card's whole life,
+        // where it would mute every pop inside (the repost glyph, for one).
+        <AnimatePresence>
+        {!isDeleted && (
+        <motion.div
+            key="card"
+            exit={{ ...collapse.exit, overflow: "hidden" }}
+        >
+        {/* px-4 is the spec's minimum edge gutter on small screens; the old px-3
+            put post text 12px from the viewport edge. */}
+        <article
+            ref={articleRef}
+            className="relative block px-4 py-3 sm:py-3.5 hover:bg-surface/40 transition-colors"
+        >
             {/* ... Rest of the component remains the same ... */}
             <Link
                 href={`/post/${post.id}`}
@@ -1110,19 +1182,29 @@ export const PostCard = memo(
                                     {t("promo.label")}
                                 </span>
                             )}
-                            {isLiveNow && (
-                                <span className="shrink-0 flex items-center gap-1 rounded-[4px] bg-danger px-1.5 py-px text-[calc(10px*var(--ws-fs))] font-bold tracking-wide text-white font-sans">
-                                    <span className="w-1.5 h-1.5 rounded-pill bg-white animate-pulse" />
-                                    {t("live.badge")}
-                                </span>
-                            )}
+                            {/* initial={false}: a card that mounts live is
+                                still. The badge only ever leaves (the stream
+                                ends), and it leaves as a badge, not a snap. */}
+                            <AnimatePresence initial={false}>
+                                {isLiveNow && (
+                                    <motion.span
+                                        key="live-badge"
+                                        {...pop}
+                                        className="shrink-0 flex items-center gap-1 rounded-[4px] bg-danger px-1.5 py-px text-[calc(10px*var(--ws-fs))] font-bold tracking-wide text-white font-sans"
+                                    >
+                                        <span className="w-1.5 h-1.5 rounded-pill bg-white animate-pulse" />
+                                        {t("live.badge")}
+                                    </motion.span>
+                                )}
+                            </AnimatePresence>
                         </div>
 
                         <div
                             className="relative pointer-events-auto shrink-0"
                             ref={menuRef}
                         >
-                            <button
+                            <motion.button
+                                {...press}
                                 type="button"
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -1135,35 +1217,22 @@ export const PostCard = memo(
                                 )}
                             >
                                 <RiMoreLine size={20} />
-                            </button>
+                            </motion.button>
 
                             <AnimatePresence>
                                 {isMenuOpen && (
                                     <motion.div
-                                        initial={{
-                                            opacity: 0,
-                                            scale: 0.98,
-                                            y: -8,
-                                        }}
-                                        animate={{
-                                            opacity: 1,
-                                            scale: 1,
-                                            y: 0,
-                                        }}
-                                        exit={{
-                                            opacity: 0,
-                                            transition: { duration: 0.12 },
-                                        }}
-                                        transition={{
-                                            duration: 0.2,
-                                            ease: [0.2, 0, 0, 1],
-                                        }}
+                                        // Unfolds from the corner under the
+                                        // dots, rows cascading behind it.
+                                        // Clickable throughout.
+                                        {...menuStagger("top-right")}
                                         className="absolute right-0 top-8 w-[220px] bg-surface rounded-lg border border-hairline shadow-nav z-dropdown overflow-hidden py-1.5"
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         {isOwnPost ? (
                                             <>
-                                                <button
+                                                <motion.button
+                                                    variants={staggerItem}
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -1175,8 +1244,9 @@ export const PostCard = memo(
                                                 >
                                                     <Copy className="w-4 h-4" />
                                                     Copy link
-                                                </button>
-                                                <button
+                                                </motion.button>
+                                                <motion.button
+                                                    variants={staggerItem}
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -1191,8 +1261,9 @@ export const PostCard = memo(
                                                     {autoTranslate
                                                         ? t("post.autoTranslateOff")
                                                         : t("post.autoTranslateOn")}
-                                                </button>
-                                                <button
+                                                </motion.button>
+                                                <motion.button
+                                                    variants={staggerItem}
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -1202,8 +1273,9 @@ export const PostCard = memo(
                                                 >
                                                     <Pin className="w-4 h-4" />
                                                     Pin to profile
-                                                </button>
-                                                <button
+                                                </motion.button>
+                                                <motion.button
+                                                    variants={staggerItem}
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -1215,9 +1287,10 @@ export const PostCard = memo(
                                                 >
                                                     <BarChart3 className="w-4 h-4" />
                                                     View activity
-                                                </button>
+                                                </motion.button>
                                                 <div className="my-1 border-t border-hairline" />
-                                                <button
+                                                <motion.button
+                                                    variants={staggerItem}
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -1229,12 +1302,13 @@ export const PostCard = memo(
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                     Delete post
-                                                </button>
+                                                </motion.button>
                                                 {/* Everyone may promote their own post
                                                     (owner ruling 2026-09-03) — the wallet
                                                     charge is the gate, not a membership
                                                     tier. */}
-                                                <button
+                                                <motion.button
+                                                    variants={staggerItem}
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -1249,11 +1323,12 @@ export const PostCard = memo(
                                                 >
                                                     <Megaphone className="w-4 h-4" />
                                                     {t("promo.menu")}
-                                                </button>
+                                                </motion.button>
                                             </>
                                         ) : (
                                             <>
-                                                <button
+                                                <motion.button
+                                                    variants={staggerItem}
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -1265,8 +1340,9 @@ export const PostCard = memo(
                                                 >
                                                     <Ban className="w-4 h-4" />
                                                     Not interested
-                                                </button>
-                                                <button
+                                                </motion.button>
+                                                <motion.button
+                                                    variants={staggerItem}
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -1278,8 +1354,9 @@ export const PostCard = memo(
                                                 >
                                                     <Copy className="w-4 h-4" />
                                                     Copy link
-                                                </button>
-                                                <button
+                                                </motion.button>
+                                                <motion.button
+                                                    variants={staggerItem}
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -1294,9 +1371,10 @@ export const PostCard = memo(
                                                     {autoTranslate
                                                         ? t("post.autoTranslateOff")
                                                         : t("post.autoTranslateOn")}
-                                                </button>
+                                                </motion.button>
                                                 <div className="my-1 border-t border-hairline" />
-                                                <button
+                                                <motion.button
+                                                    variants={staggerItem}
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -1309,8 +1387,9 @@ export const PostCard = memo(
                                                     <Ban className="w-4 h-4" />
                                                     Block @
                                                     {post.author.username}
-                                                </button>
-                                                <button
+                                                </motion.button>
+                                                <motion.button
+                                                    variants={staggerItem}
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -1322,7 +1401,7 @@ export const PostCard = memo(
                                                 >
                                                     <Flag className="w-4 h-4" />
                                                     Report post
-                                                </button>
+                                                </motion.button>
                                             </>
                                         )}
                                     </motion.div>
@@ -1345,33 +1424,44 @@ export const PostCard = memo(
                         while the broadcast is actually on; the post's text
                         (the stream title) stays either way. Re-enable by
                         dropping the isLiveNow gate once replays exist. */}
-                    {post.live && isLiveNow && (
-                        <Link
-                            href={`/live?tab=live&s=${post.live.streamId}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="relative z-10 pointer-events-auto mb-2 flex items-center gap-3 rounded-lg border border-hairline bg-raised/40 hover:bg-raised px-3.5 py-3 transition-colors"
-                        >
-                            <span
-                                className={
-                                    isLiveNow
-                                        ? "flex h-9 w-9 items-center justify-center rounded-pill bg-danger/15 text-danger shrink-0"
-                                        : "flex h-9 w-9 items-center justify-center rounded-pill bg-raised text-muted shrink-0"
-                                }
+                    {/* The stream ending folds the attachment away, so the
+                        text below is not yanked up a row in one frame.
+                        initial={false}: a card that mounts live is still. */}
+                    <AnimatePresence initial={false}>
+                        {post.live && isLiveNow && (
+                            <motion.div
+                                key="live-card"
+                                {...collapse}
+                                className="overflow-hidden"
                             >
-                                <Radio className="w-4.5 h-4.5" />
-                            </span>
-                            <span className="min-w-0">
-                                <span className="block text-sm font-semibold text-primary font-sans truncate">
-                                    {post.live.title || post.content}
-                                </span>
-                                <span className="block text-[calc(13px*var(--ws-fs))] text-muted font-sans">
-                                    {isLiveNow
-                                        ? t("live.watch")
-                                        : `${t("live.replay")}${post.live.viewerPeak ? ` · ${post.live.viewerPeak} ${t("live.viewers")}` : ""}`}
-                                </span>
-                            </span>
-                        </Link>
-                    )}
+                                <Link
+                                    href={`/live?tab=live&s=${post.live.streamId}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="relative z-10 pointer-events-auto mb-2 flex items-center gap-3 rounded-lg border border-hairline bg-raised/40 hover:bg-raised px-3.5 py-3 transition-colors"
+                                >
+                                    <span
+                                        className={
+                                            isLiveNow
+                                                ? "flex h-9 w-9 items-center justify-center rounded-pill bg-danger/15 text-danger shrink-0"
+                                                : "flex h-9 w-9 items-center justify-center rounded-pill bg-raised text-muted shrink-0"
+                                        }
+                                    >
+                                        <Radio className="w-4.5 h-4.5" />
+                                    </span>
+                                    <span className="min-w-0">
+                                        <span className="block text-sm font-semibold text-primary font-sans truncate">
+                                            {post.live.title || post.content}
+                                        </span>
+                                        <span className="block text-[calc(13px*var(--ws-fs))] text-muted font-sans">
+                                            {isLiveNow
+                                                ? t("live.watch")
+                                                : `${t("live.replay")}${post.live.viewerPeak ? ` · ${post.live.viewerPeak} ${t("live.viewers")}` : ""}`}
+                                        </span>
+                                    </span>
+                                </Link>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                     {/* The paywall. The gateway already stripped the body for
                         non-buyers, so the "blurred post" behind the glass is
                         staged — skeleton lines standing in for text nobody has
@@ -1402,23 +1492,35 @@ export const PostCard = memo(
                                     ? ` · ${t("post.forSale.sold").replace("{count}", formatCompact(post.sale.salesCount))}`
                                     : ""}
                             </span>
-                            <button
+                            <motion.button
+                                {...press}
                                 type="button"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     setPreviewAsBuyer((v) => !v);
                                 }}
-                                className="relative z-10 pointer-events-auto flex h-7 items-center gap-1 rounded-pill bg-raised px-2 font-sans text-[calc(11px*var(--ws-fs))] font-medium text-muted transition-colors hover:text-primary cursor-pointer"
+                                className="relative z-10 pointer-events-auto flex h-7 items-center overflow-hidden rounded-pill bg-raised px-2 font-sans text-[calc(11px*var(--ws-fs))] font-medium text-muted transition-colors hover:text-primary cursor-pointer"
                             >
-                                {previewAsBuyer ? (
-                                    <RiEyeOffLine size={12} />
-                                ) : (
-                                    <RiEyeLine size={12} />
-                                )}
-                                {previewAsBuyer
-                                    ? t("post.forSale.exitPreview")
-                                    : t("post.forSale.preview")}
-                            </button>
+                                {/* Glyph and label change hands as one
+                                    piece; the button itself stays put so
+                                    keyboard focus survives the toggle. */}
+                                <AnimatePresence mode="wait" initial={false}>
+                                    <motion.span
+                                        key={previewAsBuyer ? "exit" : "preview"}
+                                        {...swap}
+                                        className="flex items-center gap-1"
+                                    >
+                                        {previewAsBuyer ? (
+                                            <RiEyeOffLine size={12} />
+                                        ) : (
+                                            <RiEyeLine size={12} />
+                                        )}
+                                        {previewAsBuyer
+                                            ? t("post.forSale.exitPreview")
+                                            : t("post.forSale.preview")}
+                                    </motion.span>
+                                </AnimatePresence>
+                            </motion.button>
                         </div>
                     )}
 
@@ -1468,6 +1570,16 @@ export const PostCard = memo(
                                         className="flex items-center gap-1.5 text-[calc(12.5px*var(--ws-fs))] font-sans text-subtle hover:text-gold transition-colors cursor-pointer"
                                     >
                                         <RiTranslate2 size={13} />
+                                        {/* Only the reader's own toggle rolls
+                                            the label. The button stays mounted
+                                            so focus holds, and a background
+                                            translation landing stays still. */}
+                                        <AnimatePresence mode="wait" initial={false}>
+                                        <motion.span
+                                            key={showOriginal ? "original" : "translated"}
+                                            {...swap}
+                                            className="inline-block"
+                                        >
                                         {showOriginal ? (
                                             t("post.showTranslation")
                                         ) : (
@@ -1484,6 +1596,8 @@ export const PostCard = memo(
                                                 {t("post.showOriginal")}
                                             </>
                                         )}
+                                        </motion.span>
+                                        </AnimatePresence>
                                     </button>
                                 ) : translating ? (
                                     <span className="flex items-center gap-1.5 text-[calc(12.5px*var(--ws-fs))] font-sans text-subtle">
@@ -1840,24 +1954,39 @@ export const PostCard = memo(
                                 )}
                             >
                                 <span className="flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-success/10 transition group-active:scale-[0.98]">
-                                    {reposted ? (
-                                        <RiRepeatFill size={26} />
-                                    ) : (
-                                        <RiRepeatLine size={26} />
-                                    )}
+                                    {/* The glyph lands when the viewer's own
+                                        repost comes back. Pulse 0 is a mount,
+                                        and a mount is still. */}
+                                    <motion.span
+                                        key={repostPulse}
+                                        initial={repostPulse ? pop.initial : false}
+                                        animate={pop.animate}
+                                        className="flex"
+                                    >
+                                        {reposted ? (
+                                            <RiRepeatFill size={26} />
+                                        ) : (
+                                            <RiRepeatLine size={26} />
+                                        )}
+                                    </motion.span>
                                 </span>
-                                <span className="text-[calc(13.5px*var(--ws-fs))] font-medium font-sans tabular-nums sm:text-[calc(14px*var(--ws-fs))]">
-                                    {formatCount(
-                                        (shownReposts ?? 0) + repostDelta,
-                                    )}
-                                </span>
+                                <RollingCount
+                                    value={(shownReposts ?? 0) + repostDelta}
+                                />
                             </button>
+                            {/* animate-rise is switched off once the intro has
+                                played, so this used to snap open and had no
+                                way out at all. */}
+                            <AnimatePresence>
                             {repostMenuOpen && (
-                                <div
-                                    className="absolute bottom-11 left-0 z-dropdown card-depth rounded-xl overflow-hidden py-1 w-40 animate-rise"
+                                <motion.div
+                                    key="repost-menu"
+                                    {...menuStagger("bottom-left")}
+                                    className="absolute bottom-11 left-0 z-dropdown card-depth rounded-xl overflow-hidden py-1 w-40"
                                     onClick={(e) => e.stopPropagation()}
                                 >
-                                    <button
+                                    <motion.button
+                                        variants={staggerItem}
                                         type="button"
                                         onClick={async () => {
                                             setRepostMenuOpen(false);
@@ -1865,6 +1994,7 @@ export const PostCard = memo(
                                                 post.id,
                                             );
                                             if (res.success) {
+                                                setRepostPulse((n) => n + 1);
                                                 setReposted(
                                                     Boolean(res.reposted),
                                                 );
@@ -1888,8 +2018,9 @@ export const PostCard = memo(
                                     >
                                         <RiRepeatLine size={16} />
                                         {t("post.repost")}
-                                    </button>
-                                    <button
+                                    </motion.button>
+                                    <motion.button
+                                        variants={staggerItem}
                                         type="button"
                                         onClick={() => {
                                             setRepostMenuOpen(false);
@@ -1899,9 +2030,10 @@ export const PostCard = memo(
                                     >
                                         <RiChat3Line size={16} />
                                         {t("post.quote")}
-                                    </button>
-                                </div>
+                                    </motion.button>
+                                </motion.div>
                             )}
+                            </AnimatePresence>
                         </div>
                         <Link
                             // #comments: the post page scrolls to the reply
@@ -1915,9 +2047,7 @@ export const PostCard = memo(
                             <span className="flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-primary/10 transition group-active:scale-[0.98]">
                                 <RiChat3Line size={26} />
                             </span>
-                            <span className="text-[calc(13.5px*var(--ws-fs))] font-medium font-sans tabular-nums sm:text-[calc(14px*var(--ws-fs))]">
-                                {formatCount(shownReplies)}
-                            </span>
+                            <RollingCount value={shownReplies} />
                         </Link>
                         <button
                             type="button"
@@ -2136,8 +2266,12 @@ export const PostCard = memo(
                                 </AnimatePresence>
                             </span>
                         </button>
+                        {/* ShareMenu carries an exit; it only plays from
+                            inside a presence. */}
+                        <AnimatePresence>
                         {shareOpen && (
                             <ShareMenu
+                                key="share-menu"
                                 url={`${typeof window !== "undefined" ? window.location.origin : ""}/post/${post.id}`}
                                 text={post.content?.trim()}
                                 onClose={() => setShareOpen(false)}
@@ -2153,6 +2287,7 @@ export const PostCard = memo(
                                 }}
                             />
                         )}
+                        </AnimatePresence>
                         </div>
 
                         <div
@@ -2202,7 +2337,24 @@ export const PostCard = memo(
                     onClose={() => setQuoteOpen(false)}
                 />
             )}
+            {/* The double-tap heart, over the photo that was tapped. */}
+            <AnimatePresence>
+                {heartBurst && (
+                    <motion.span
+                        key={heartBurst.n}
+                        {...pop}
+                        aria-hidden
+                        className="pointer-events-none absolute z-20 -ml-8 -mt-8 flex h-16 w-16 items-center justify-center text-danger"
+                        style={{ left: heartBurst.x, top: heartBurst.y }}
+                    >
+                        <RiHeartFill size={64} />
+                    </motion.span>
+                )}
+            </AnimatePresence>
         </article>
+        </motion.div>
+        )}
+        </AnimatePresence>
     );
 });
 
@@ -2363,7 +2515,8 @@ function SaleStorefront({
                         ? `${(sale.salesCount ?? 0).toLocaleString()} unlocked`
                         : "Locked"}
                 </span>
-                <button
+                <motion.button
+                    {...press}
                     type="button"
                     disabled={unlocking || isSeller}
                     onClick={(e) => {
@@ -2374,10 +2527,20 @@ function SaleStorefront({
                     // Money CTA in money green; text-page flips with the theme
                     // (near-black on the bright dark-mode green, white-ish on
                     // the deep light-mode green) so it reads on both.
-                    className="h-9 cursor-pointer rounded-pill bg-credit px-4 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-page transition-colors hover:opacity-90 disabled:opacity-60"
+                    className="h-9 cursor-pointer overflow-hidden rounded-pill bg-credit px-4 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-page transition-colors hover:opacity-90 disabled:opacity-60"
                 >
-                    {unlocking ? "Unlocking…" : `Unlock for ${priceLabel}`}
-                </button>
+                    {/* The label hands over once the wallet is being asked:
+                        proof the tap was heard before the network answers. */}
+                    <AnimatePresence mode="wait" initial={false}>
+                        <motion.span
+                            key={unlocking ? "busy" : "idle"}
+                            {...swap}
+                            className="inline-block"
+                        >
+                            {unlocking ? "Unlocking…" : `Unlock for ${priceLabel}`}
+                        </motion.span>
+                    </AnimatePresence>
+                </motion.button>
             </div>
         </div>
     );

@@ -2,11 +2,13 @@
 
 import clsx from "clsx";
 import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { RiCheckLine } from "@remixicon/react";
 
 import { postJsonDirect } from "@/lib/upload-direct";
 import { formatCompact } from "@/lib/utils";
 import { useT } from "@/i18n/client";
+import { DUR, EASE_OUT_EXPO, pop, press, swap } from "@/lib/motion-presets";
 
 export interface PollData {
 	options: { text: string; count: number }[];
@@ -44,6 +46,9 @@ export function PostPoll({
 	const t = useT();
 	const [poll, setPoll] = useState<PollData>(initial);
 	const [busy, setBusy] = useState(false);
+	// Results animate in only for the vote cast here. A poll that arrives
+	// already voted or closed is a feed row scrolling past: it gets nothing.
+	const [justVoted, setJustVoted] = useState(false);
 
 	const showResults = poll.myVote !== null || poll.ended;
 	const max = Math.max(...poll.options.map((o) => o.count), 1);
@@ -52,6 +57,7 @@ export function PostPoll({
 	const vote = async (index: number) => {
 		if (busy || poll.ended || poll.myVote === index) return;
 		setBusy(true);
+		setJustVoted(true);
 		// Optimistic: move my vote instantly; the response is the server's
 		// truth and replaces it.
 		const prev = poll;
@@ -97,7 +103,8 @@ export function PostPoll({
 				if (!showResults) {
 					// Pre-vote: the outline pill. The whole row is the target.
 					return (
-						<button
+						<motion.button
+							{...press}
 							// biome-ignore lint/suspicious/noArrayIndexKey: options are positional
 							key={i}
 							type="button"
@@ -106,13 +113,15 @@ export function PostPoll({
 							className="flex h-10 w-full cursor-pointer items-center justify-center rounded-pill border border-gold/60 px-4 font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-gold transition-colors hover:bg-gold/10"
 						>
 							<span className="truncate">{o.text}</span>
-						</button>
+						</motion.button>
 					);
 				}
 
-				// Voted / ended: the gold-wash result bar.
+				// Voted / ended: the gold-wash result bar. A motion.button like
+				// the pill above, so React keeps the node (and keyboard focus)
+				// when a vote turns one into the other.
 				return (
-					<button
+					<motion.button
 						// biome-ignore lint/suspicious/noArrayIndexKey: options are positional
 						key={i}
 						type="button"
@@ -123,13 +132,20 @@ export function PostPoll({
 							!poll.ended && "cursor-pointer",
 						)}
 					>
-						<span
+						{/* Grows from the left edge on the vote just cast. There is
+						    no preset for a bar filling, so this is scaleX on the
+						    file's own slow beat and expo curve; later changes of
+						    width ride the CSS transition as before. */}
+						<motion.span
 							aria-hidden
+							initial={justVoted ? { scaleX: 0 } : false}
+							animate={{ scaleX: 1 }}
+							transition={{ duration: DUR.slow, ease: EASE_OUT_EXPO }}
 							className={clsx(
 								"absolute inset-y-0 left-0 rounded-[10px] transition-[width]",
 								winning ? "bg-brand/25" : "bg-raised",
 							)}
-							style={{ width: `${Math.max(pct, 3)}%` }}
+							style={{ width: `${Math.max(pct, 3)}%`, originX: 0 }}
 						/>
 						<span className="relative z-10 flex h-full items-center justify-between gap-2 px-3.5">
 							<span
@@ -142,21 +158,41 @@ export function PostPoll({
 							>
 								<span className="truncate">{o.text}</span>
 								{mine && (
-									<RiCheckLine
-										size={15}
-										className="shrink-0 text-gold"
-									/>
+									// The person's own tick may pop; one that was already
+									// there when the row mounted does not.
+									<motion.span
+										{...pop}
+										initial={justVoted ? pop.initial : false}
+										className="flex shrink-0"
+									>
+										<RiCheckLine size={15} className="text-gold" />
+									</motion.span>
 								)}
 							</span>
-							<span className="shrink-0 font-sans text-[calc(13px*var(--ws-fs))] font-medium tabular-nums text-muted">
-								{pct}%
+							<span className="relative inline-flex shrink-0 font-sans text-[calc(13px*var(--ws-fs))] font-medium tabular-nums text-muted">
+								{/* A share that moves rolls; its first appearance does not. */}
+								<AnimatePresence mode="popLayout" initial={false}>
+									<motion.span key={pct} {...swap} className="inline-block">
+										{pct}%
+									</motion.span>
+								</AnimatePresence>
 							</span>
 						</span>
-					</button>
+					</motion.button>
 				);
 			})}
 			<span className="font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle">
-				{formatCompact(poll.totalVotes)}{" "}
+				<span className="relative inline-flex tabular-nums">
+					<AnimatePresence mode="popLayout" initial={false}>
+						<motion.span
+							key={poll.totalVotes}
+							{...swap}
+							className="inline-block"
+						>
+							{formatCompact(poll.totalVotes)}
+						</motion.span>
+					</AnimatePresence>
+				</span>{" "}
 				{poll.totalVotes === 1 ? t("poll.vote") : t("poll.votes")}
 				{poll.ended
 					? ` · ${t("poll.finalResults")}`

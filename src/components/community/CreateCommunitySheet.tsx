@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
 import { Camera, Check } from "@phosphor-icons/react";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import {
@@ -14,6 +15,13 @@ import GlassSelect from "@/components/ui/GlassSelect";
 import { CATEGORIES, VERTICALS, type VerticalId } from "@/data/categories";
 import { checkSlugAction } from "@/lib/community.actions";
 import { useT } from "@/i18n/client";
+import {
+  pop,
+  press,
+  staggerItem,
+  staggerParentFast,
+  swap,
+} from "@/lib/motion-presets";
 
 const MAX_NAME = 48;
 const MAX_DESC = 280;
@@ -133,13 +141,25 @@ export default function CreateCommunitySheet({
                 aria-label={t("community.field.avatarAdd")}
                 className="relative h-16 w-16 shrink-0 cursor-pointer overflow-hidden rounded-xl bg-sunken transition-opacity hover:opacity-90"
               >
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <span className="flex h-full w-full items-center justify-center text-subtle">
-                    <Camera size={20} weight="duotone" />
-                  </span>
-                )}
+                <AnimatePresence mode="wait" initial={false}>
+                  {avatarUrl ? (
+                    <motion.img
+                      key={avatarUrl}
+                      {...swap}
+                      src={avatarUrl}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <motion.span
+                      key="empty"
+                      {...swap}
+                      className="flex h-full w-full items-center justify-center text-subtle"
+                    >
+                      <Camera size={20} weight="duotone" />
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </button>
               <div className="min-w-0">
                 <span className={field}>{t("community.field.avatar")}</span>
@@ -153,19 +173,23 @@ export default function CreateCommunitySheet({
                       ? t("community.field.avatarChange")
                       : t("community.field.avatarAdd")}
                   </button>
-                  {avatarUrl && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        URL.revokeObjectURL(avatarUrl);
-                        setAvatar(null);
-                        setAvatarUrl(null);
-                      }}
-                      className="h-7 cursor-pointer rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-muted transition-colors hover:text-primary"
-                    >
-                      {t("community.field.avatarRemove")}
-                    </button>
-                  )}
+                  <AnimatePresence initial={false}>
+                    {avatarUrl && (
+                      <motion.button
+                        key="remove"
+                        type="button"
+                        {...pop}
+                        onClick={() => {
+                          URL.revokeObjectURL(avatarUrl);
+                          setAvatar(null);
+                          setAvatarUrl(null);
+                        }}
+                        className="h-7 cursor-pointer rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-muted transition-colors hover:text-primary"
+                      >
+                        {t("community.field.avatarRemove")}
+                      </motion.button>
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
               <input
@@ -236,15 +260,25 @@ export default function CreateCommunitySheet({
                   options={VERTICALS.map((v) => ({ id: v.id, label: v.label }))}
                 />
               </div>
-              <div className="mt-2.5 flex max-h-[132px] flex-wrap gap-1.5 overflow-y-auto">
+              {/* Keyed by vertical: a new vertical deals a new set of chips.
+                  Picking one never replays it. */}
+              <motion.div
+                key={vertical}
+                variants={staggerParentFast}
+                initial="hidden"
+                animate="show"
+                className="mt-2.5 flex max-h-[132px] flex-wrap gap-1.5 overflow-y-auto"
+              >
                 {categoriesInVertical.map((c) => {
                   const on = category === c.id;
                   return (
-                    <button
+                    <motion.button
                       key={c.id}
                       type="button"
                       onClick={() => setCategory(on ? "" : c.id)}
                       aria-pressed={on}
+                      variants={staggerItem}
+                      {...press}
                       className={clsx(
                         "flex h-8 cursor-pointer items-center gap-1 rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-medium transition-colors",
                         on
@@ -252,12 +286,16 @@ export default function CreateCommunitySheet({
                           : "bg-chip text-muted hover:text-primary",
                       )}
                     >
-                      {on && <Check size={11} weight="bold" />}
+                      {on && (
+                        <motion.span {...pop} className="flex">
+                          <Check size={11} weight="bold" />
+                        </motion.span>
+                      )}
                       {c.label}
-                    </button>
+                    </motion.button>
                   );
                 })}
-              </div>
+              </motion.div>
               <p className="mt-1.5 font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
                 {t("community.field.topicHint")}
               </p>
@@ -273,9 +311,10 @@ export default function CreateCommunitySheet({
           >
             {t("common.cancel")}
           </button>
-          <button
+          <motion.button
             type="button"
             disabled={!valid}
+            {...press}
             onClick={() =>
               onCreate({
                 name: trimmed,
@@ -294,8 +333,12 @@ export default function CreateCommunitySheet({
             {busy && (
               <span className="h-3.5 w-3.5 animate-spin rounded-pill border-2 border-current/30 border-t-current" />
             )}
-            {busy ? t("community.creating") : t("community.new.submit")}
-          </button>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span key={busy ? "busy" : "idle"} {...swap} className="block">
+                {busy ? t("community.creating") : t("community.new.submit")}
+              </motion.span>
+            </AnimatePresence>
+          </motion.button>
         </div>
       </OverlayPanel>
     </ConfirmModalPortal>

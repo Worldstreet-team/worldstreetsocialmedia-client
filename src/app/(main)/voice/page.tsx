@@ -33,6 +33,7 @@ import { useT } from "@/i18n/client";
 import { getCategory, VERTICAL_BY_ID } from "@/lib/categories";
 import { getCommunitiesAction } from "@/lib/community.actions";
 import { demoLiveSpaces, demoUpcomingSpaces, isDemoId } from "@/lib/demoSeed";
+import { press, thumbSpring } from "@/lib/motion-presets";
 import {
   cancelSpaceAction,
   createSpaceAction,
@@ -391,14 +392,15 @@ function VoiceDirectory() {
             )}
           </h1>
         </div>
-        <button
+        <motion.button
+          {...press}
           type="button"
           onClick={() => setCreating(true)}
           className="flex h-10 shrink-0 items-center gap-1.5 rounded-pill bg-brand px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active cursor-pointer"
         >
           <Plus size={14} weight="bold" />
           {t("voice.create")}
-        </button>
+        </motion.button>
       </div>
 
       {loading ? (
@@ -427,8 +429,11 @@ function VoiceDirectory() {
                   className="h-10 w-full rounded-pill bg-sunken pl-10 pr-4 font-sans text-[calc(13.5px*var(--ws-fs))] text-primary placeholder:text-subtle outline-none"
                 />
               </label>
-              {/* Topic rail — the 14 verticals, "All" first. */}
-              <div
+              {/* Topic rail: the 14 verticals, "All" first. layoutScroll,
+                  because the thumb is measured inside a rail that scrolls
+                  sideways. */}
+              <motion.div
+                layoutScroll
                 aria-label={tf("voice.topics", "Topics")}
                 className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-4 px-4"
               >
@@ -445,16 +450,25 @@ function VoiceDirectory() {
                       onClick={() => setVertical(chip.id)}
                       className={clsx(
                         "h-10 shrink-0 rounded-pill px-3.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold transition-colors cursor-pointer",
+                        // Only the selected chip is positioned, so its thumb
+                        // paints over the chips it crosses in either direction.
                         selected
-                          ? "bg-primary text-page"
+                          ? "relative text-page"
                           : "bg-chip text-muted hover:text-primary",
                       )}
                     >
-                      {chip.label}
+                      {selected && (
+                        <motion.span
+                          layoutId="voice-topic-thumb"
+                          transition={thumbSpring}
+                          className="absolute inset-0 rounded-pill bg-primary"
+                        />
+                      )}
+                      <span className="relative">{chip.label}</span>
                     </button>
                   );
                 })}
-              </div>
+              </motion.div>
             </div>
           )}
 

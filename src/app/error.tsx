@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
+import { motion } from "framer-motion";
 import { RefreshCw } from "lucide-react";
+import { press, reveal } from "@/lib/motion-presets";
 
 /* Route error boundary — catches render/data errors below the root layout and
    offers recovery instead of a white screen. Styled like EmptyState. */
@@ -17,32 +19,38 @@ export default function ErrorBoundary({
   }, [error]);
 
   return (
-    <div className="min-h-dvh bg-page flex flex-col items-center justify-center p-6 text-center animate-rise">
-      <div className="flex h-16 w-16 items-center justify-center rounded-pill bg-raised">
-        <RefreshCw className="h-[26px] w-[26px] text-muted" strokeWidth={2} />
-      </div>
+    <div className="min-h-dvh bg-page flex flex-col items-center justify-center p-6 text-center">
+      {/* framer, not animate-rise: that utility is switched off once the
+          intro has played, which is nearly always by the time a page breaks.
+          The content rises, not the full-height ground. */}
+      <motion.div {...reveal()} className="flex flex-col items-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-pill bg-raised">
+          <RefreshCw className="h-[26px] w-[26px] text-muted" strokeWidth={2} />
+        </div>
 
-      <h1 className="mt-4 font-display text-lg font-semibold text-primary">
-        Something went wrong
-      </h1>
-      <p className="mt-2 max-w-[38ch] font-sans text-[calc(13px*var(--ws-fs))] leading-relaxed text-muted">
-        The page hit an unexpected error. Your data is fine try loading it
-        again.
-      </p>
-      {error.digest && (
-        <p className="mt-2 font-sans text-[calc(11px*var(--ws-fs))] uppercase tracking-[1px] text-subtle tabular-nums">
-          Error {error.digest}
+        <h1 className="mt-4 font-display text-lg font-semibold text-primary">
+          Something went wrong
+        </h1>
+        <p className="mt-2 max-w-[38ch] font-sans text-[calc(13px*var(--ws-fs))] leading-relaxed text-muted">
+          The page hit an unexpected error. Your data is fine try loading it
+          again.
         </p>
-      )}
+        {error.digest && (
+          <p className="mt-2 font-sans text-[calc(11px*var(--ws-fs))] uppercase tracking-[1px] text-subtle tabular-nums">
+            Error {error.digest}
+          </p>
+        )}
 
-      <button
-        type="button"
-        onClick={reset}
-        className="mt-6 h-10 inline-flex items-center gap-2 rounded-pill bg-brand px-5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active cursor-pointer"
-      >
-        <RefreshCw className="h-4 w-4" strokeWidth={2.5} />
-        Try again
-      </button>
+        <motion.button
+          type="button"
+          {...press}
+          onClick={reset}
+          className="mt-6 h-10 inline-flex items-center gap-2 rounded-pill bg-brand px-5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active cursor-pointer"
+        >
+          <RefreshCw className="h-4 w-4" strokeWidth={2.5} />
+          Try again
+        </motion.button>
+      </motion.div>
     </div>
   );
 }

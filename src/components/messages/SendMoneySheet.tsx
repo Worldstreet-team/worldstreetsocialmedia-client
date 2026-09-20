@@ -1,8 +1,8 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import { AnimatePresence } from "framer-motion";
-import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 
 import {
 	OverlayHeader,
@@ -13,6 +13,14 @@ import {
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { BACKEND_URL } from "@/const";
+import {
+	press,
+	staggerParent,
+	staggerParentFast,
+	staggerPop,
+	swap,
+} from "@/lib/motion-presets";
+import { CascadeRow } from "./ConversationList";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? BACKEND_URL;
 
@@ -99,6 +107,16 @@ export function SendMoneySheet({
 		typeof balanceMinor === "number" && amountMinor > balanceMinor;
 	const valid = amountMinor >= MIN_MINOR && !tooBig && !overBalance;
 
+	const step =
+		groupMode && !recipient ? "who" : confirming ? "confirm" : "amount";
+	// The quick amounts cascade the first time the amount step shows in an
+	// open, not again on the way Back from Confirm.
+	const chipsPlayed = useRef(false);
+	useEffect(() => {
+		if (!open) chipsPlayed.current = false;
+		else if (step === "amount") chipsPlayed.current = true;
+	}, [open, step]);
+
 	const send = async () => {
 		if (!valid || sending) return;
 		setSending(true);
@@ -146,21 +164,40 @@ export function SendMoneySheet({
 					<OverlayPanel variant="center" label="Send money">
 						<OverlayHeader onClose={onClose}>
 							<span className="font-sans text-[calc(15px*var(--ws-fs))] font-semibold text-primary">
-								{confirming
-									? "Confirm"
-									: groupMode && !recipient
-										? "Who's it for?"
-										: `Send to ${targetName}`}
+								<AnimatePresence mode="wait" initial={false}>
+									<motion.span key={step} {...swap} className="inline-block">
+										{confirming
+											? "Confirm"
+											: groupMode && !recipient
+												? "Who's it for?"
+												: `Send to ${targetName}`}
+									</motion.span>
+								</AnimatePresence>
 							</span>
 						</OverlayHeader>
 
+						{/* One step leaves before the next arrives. No
+						    initial={false} here: it would also silence the
+						    cascades inside the first step. */}
+						<AnimatePresence mode="wait">
 						{groupMode && !recipient ? (
 							/* Step 0, groups only: money needs a name before an
-							   amount — a room is not a recipient. */
-							<div className="max-h-[50vh] overflow-y-auto overscroll-contain pb-2">
-								{members?.map((m) => (
+							   amount: a room is not a recipient. Only ever the
+							   opening step, so it has an exit and no entrance: its
+							   rows are the entrance. */
+							<motion.div
+								key="who"
+								exit={swap.exit}
+								className="max-h-[50vh] overflow-y-auto overscroll-contain pb-2"
+							>
+								<motion.div
+									variants={staggerParentFast}
+									initial="hidden"
+									animate="show"
+								>
+								{members?.map((m, i) => (
+									<CascadeRow key={m.id} index={i}>
 									<button
-										key={m.id}
 										type="button"
 										onClick={() => setRecipient(m)}
 										className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-primary/5"
@@ -179,10 +216,12 @@ export function SendMoneySheet({
 											)}
 										</span>
 									</button>
+									</CascadeRow>
 								))}
-							</div>
+								</motion.div>
+							</motion.div>
 						) : confirming ? (
-							<div className="px-5 pb-5">
+							<motion.div key="confirm" {...swap} className="px-5 pb-5">
 								<p className="font-sans text-[calc(15px*var(--ws-fs))] leading-relaxed text-primary">
 									Send <span className="font-semibold">{fmt(amountMinor)}</span>{" "}
 									to {targetName}
@@ -210,9 +249,16 @@ export function SendMoneySheet({
 										{sending ? "Sending…" : "Proceed with payment"}
 									</button>
 								</div>
-							</div>
+							</motion.div>
 						) : (
-							<div className="px-5 pb-5">
+							<motion.div
+								key="amount"
+								{...swap}
+								// As the opening step it rides the panel's own entrance;
+								// it only swaps in after Who, or on the way Back.
+								initial={groupMode || chipsPlayed.current ? swap.initial : false}
+								className="px-5 pb-5"
+							>
 								<div className="flex items-baseline justify-center gap-1 py-3">
 									<span className="font-display text-[calc(34px*var(--ws-fs))] font-semibold text-subtle">
 										$
@@ -230,18 +276,25 @@ export function SendMoneySheet({
 									/>
 								</div>
 
-								<div className="flex justify-center gap-2">
+								<motion.div
+									variants={staggerParent}
+									initial={chipsPlayed.current ? false : "hidden"}
+									animate="show"
+									className="flex justify-center gap-2"
+								>
 									{QUICK.map((q) => (
-										<button
+										<motion.button
 											key={q}
+											variants={staggerPop}
+											{...press}
 											type="button"
 											onClick={() => setRaw(String(q))}
 											className="h-8 cursor-pointer rounded-pill bg-chip px-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-muted transition-colors hover:text-primary"
 										>
 											{fmt(q)}
-										</button>
+										</motion.button>
 									))}
-								</div>
+								</motion.div>
 
 								<input
 									value={note}
@@ -283,8 +336,9 @@ export function SendMoneySheet({
 								>
 									Review payment
 								</button>
-							</div>
+							</motion.div>
 						)}
+						</AnimatePresence>
 					</OverlayPanel>
 				</>
 			)}
