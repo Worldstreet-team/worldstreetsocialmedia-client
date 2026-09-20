@@ -321,6 +321,18 @@ components, a proper sidebar, icons, headers and master search. The result:
   (a `router.push` from inside the same catch-all route is a no-op). The
   open section reads by the wash behind its row and by the glyph's weight,
   never by a filled chip.
+- **The landing is an Overview, never a section** (owner 2026-09-20, asking
+  what a person wants to see first). `/settings` renders
+  `SettingsOverview`, in this order: who you are and the way out, then the
+  few things most people came to change (Notifications, Theme, Text size,
+  Who can start a chat with you, Data saver), with the map always beside it
+  in the sidebar and search above that. It used to open on Account, so the
+  first screen was a username field and Delete account. `SECTIONS` is
+  ordered by how often a section is the REASON someone opened settings
+  (notifications, safety, display, data, topics, then account and premium);
+  destructive things stay furthest from the door. A new top task goes in
+  the Overview only if it is a control someone can change right there, not
+  a link that repeats the map.
 - **No taglines** (owner 2026-09-20: "remove the tagline in the
   settings"). A section row is its name; the header pill is the section
   title. The one-line `hint` on `SectionDef` is kept as data but is not

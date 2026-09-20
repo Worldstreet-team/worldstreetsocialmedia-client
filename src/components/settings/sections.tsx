@@ -32,25 +32,13 @@ export interface SectionDef {
 	icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
 }
 
+/**
+ * Ordered by how often a section is the REASON someone opened settings
+ * (owner 2026-09-20): stop the pings, then who can reach me, then how it
+ * reads, then what it costs in data, then what I see. Identity and billing
+ * are last: rare, and the destructive things live behind them.
+ */
 export const SECTIONS: SectionDef[] = [
-	{
-		id: "account",
-		labelKey: "settings.tab.account",
-		hint: "Username, email and account controls",
-		icon: UserCircle,
-	},
-	{
-		id: "premium",
-		labelKey: "settings.tab.premium",
-		hint: "Your subscription and verification",
-		icon: BadgeCheck,
-	},
-	{
-		id: "topics",
-		labelKey: "settings.tab.topics",
-		hint: "What you want more and less of",
-		icon: SlidersHorizontal,
-	},
 	{
 		id: "notifications",
 		labelKey: "settings.tab.notifications",
@@ -74,6 +62,24 @@ export const SECTIONS: SectionDef[] = [
 		labelKey: "settings.tab.data",
 		hint: "Data saver, timeline and messaging",
 		icon: Gauge,
+	},
+	{
+		id: "topics",
+		labelKey: "settings.tab.topics",
+		hint: "What you want more and less of",
+		icon: SlidersHorizontal,
+	},
+	{
+		id: "account",
+		labelKey: "settings.tab.account",
+		hint: "Username, email and account controls",
+		icon: UserCircle,
+	},
+	{
+		id: "premium",
+		labelKey: "settings.tab.premium",
+		hint: "Your subscription and verification",
+		icon: BadgeCheck,
 	},
 ];
 

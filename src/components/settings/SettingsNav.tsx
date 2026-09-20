@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAtomValue } from "jotai";
 import { CaretDown, CaretRight, MagnifyingGlass, X } from "@phosphor-icons/react";
+import { LayoutGrid } from "lucide-react";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { collapse, staggerItem, staggerParentFast, thumbSpring } from "@/lib/motion-presets";
@@ -17,6 +18,7 @@ import {
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { userAtom } from "@/store/user.atom";
 import { useT } from "@/i18n/client";
+import { SettingsOverview } from "./SettingsOverview";
 
 /**
  * The settings sidebar, built the way the Messages inbox is (owner
@@ -37,8 +39,8 @@ import { useT } from "@/i18n/client";
 
 /** The label that opens above a section, by the section it precedes. */
 const RAIL_LABELS: Partial<Record<SectionId, string>> = {
-	account: "You",
 	notifications: "App",
+	account: "Account",
 };
 
 export function SettingsNav({
@@ -46,7 +48,8 @@ export function SettingsNav({
 	activeGroup,
 	onGroup,
 }: {
-	activeId: SectionId;
+	/** Undefined at `/settings`, where the Overview is what is open. */
+	activeId?: SectionId;
 	/** The group currently in view, lit in the sub-list. */
 	activeGroup?: string;
 	/** Tap a group: the page scrolls the detail to it. */
@@ -144,6 +147,15 @@ export function SettingsNav({
 				</label>
 			</div>
 
+			{/* On a phone `/settings` is this column, so the landing's quick
+			    settings sit here, above the map. Desktop gets them in the
+			    detail pane instead. */}
+			{!searching && (
+				<div className="flex flex-col gap-2 lg:hidden">
+					<SettingsOverview variant="hub" />
+				</div>
+			)}
+
 			{/* The map, or the results while a search is running. */}
 			<div className="rounded-2xl px-2 pb-2 pt-2 glass-frost backdrop-blur-xl">
 				{searching ? (
@@ -203,6 +215,43 @@ export function SettingsNav({
 						animate="show"
 						className="flex flex-col gap-0.5"
 					>
+						{/* The landing is addressable, so it is a row like any
+						    other. Desktop only: on a phone `/settings` IS the hub,
+						    and the overview is rendered inline above this map. */}
+						<motion.div variants={staggerItem} className="hidden lg:flex lg:flex-col">
+							<Link
+								href="/settings"
+								aria-current={!activeId ? "page" : undefined}
+								className={clsx(
+									"relative flex min-h-[44px] items-center gap-3 rounded-xl px-3 transition-colors",
+									activeId && "hover:bg-primary/5",
+								)}
+							>
+								{!activeId && (
+									<motion.span
+										aria-hidden
+										layoutId="settings-nav-active"
+										transition={thumbSpring}
+										className="absolute inset-0 rounded-xl bg-primary/10"
+									/>
+								)}
+								<LayoutGrid
+									className={clsx(
+										"relative h-[18px] w-[18px] shrink-0",
+										activeId ? "text-muted" : "text-primary",
+									)}
+									strokeWidth={activeId ? 2 : 2.5}
+								/>
+								<span
+									className={clsx(
+										"relative truncate font-sans text-[calc(14px*var(--ws-fs))] text-primary",
+										activeId ? "font-medium" : "font-semibold",
+									)}
+								>
+									Overview
+								</span>
+							</Link>
+						</motion.div>
 						{SECTIONS.map(({ id, labelKey, icon: Icon }) => {
 							const active = id === activeId;
 							const subs = GROUPS[id];
@@ -217,8 +266,7 @@ export function SettingsNav({
 									{RAIL_LABELS[id] && (
 										<span
 											className={clsx(
-												"px-3 pb-1.5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary",
-												id === "account" ? "pt-2" : "pt-4",
+												"px-3 pb-1.5 pt-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary",
 											)}
 										>
 											{RAIL_LABELS[id]}

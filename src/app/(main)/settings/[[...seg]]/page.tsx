@@ -32,11 +32,13 @@ import { InterestPicker } from "@/components/onboarding/InterestPicker";
 import { BlockedAccounts } from "@/components/settings/BlockedAccounts";
 import { AccountLifecycle } from "@/components/settings/AccountLifecycle";
 import { UsernameSetting } from "@/components/settings/UsernameSetting";
+import { LayoutGrid } from "lucide-react";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { NotificationPrefs } from "@/components/settings/NotificationPrefs";
 import { PaletteSetting } from "@/components/settings/PaletteSetting";
 import { SettingsNav } from "@/components/settings/SettingsNav";
+import { SettingsOverview } from "@/components/settings/SettingsOverview";
 import {
 	SelectRow,
 	SettingGroup,
@@ -282,7 +284,9 @@ export default function SettingsPage() {
 					valid ? "hidden" : "block w-full",
 				)}
 			>
-				<SettingsNav activeId={activeId} activeGroup={activeGroup} onGroup={scrollToGroup} />
+				{/* `valid`, not `activeId`: at /settings nothing is a section, the
+				    Overview is what is open. */}
+				<SettingsNav activeId={valid} activeGroup={activeGroup} onGroup={scrollToGroup} />
 			</div>
 
 			{/* The open section. Hidden on mobile at the hub. */}
@@ -308,12 +312,19 @@ export default function SettingsPage() {
 						>
 							<ArrowLeft className="h-5 w-5" strokeWidth={2.5} />
 						</Link>
-						<activeDef.icon
-							className="ml-2 hidden h-[19px] w-[19px] shrink-0 text-primary lg:block"
-							strokeWidth={2.25}
-						/>
+						{valid ? (
+							<activeDef.icon
+								className="ml-2 hidden h-[19px] w-[19px] shrink-0 text-primary lg:block"
+								strokeWidth={2.25}
+							/>
+						) : (
+							<LayoutGrid
+								className="ml-2 hidden h-[19px] w-[19px] shrink-0 text-primary lg:block"
+								strokeWidth={2.25}
+							/>
+						)}
 						<h2 className="min-w-0 flex-1 truncate font-display text-[calc(17px*var(--ws-fs))] font-semibold tracking-tight text-primary">
-							{t(activeDef.labelKey)}
+							{valid ? t(activeDef.labelKey) : "Overview"}
 						</h2>
 						<span className="mr-3 hidden shrink-0 items-center gap-1.5 font-sans text-[calc(12.5px*var(--ws-fs))] text-muted sm:flex">
 							<span className="h-1.5 w-1.5 rounded-pill bg-success" />
@@ -323,7 +334,7 @@ export default function SettingsPage() {
 					{/* The sub-nav on a phone: the section's groups as chips, tap to
 					    scroll. The desktop list carries the same groups under the
 					    open section, so this strip is mobile only. */}
-					{groups.length > 1 && (
+					{valid && groups.length > 1 && (
 						<nav
 							aria-label="On this page"
 							className="mt-2 flex w-fit max-w-full gap-1 overflow-x-auto rounded-pill p-1 glass-frost backdrop-blur-xl [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden"
@@ -359,7 +370,13 @@ export default function SettingsPage() {
 				</header>
 
 				<div ref={detailRef} className="flex w-full max-w-[980px] flex-col gap-2 p-2 md:gap-3 md:p-3">
-					{activeId === "account" && (
+					{/* The landing (owner 2026-09-20): who you are, then the few
+					    things most people came to change. It used to open on
+					    Account, so the first screen was a username field and a
+					    Delete account button. */}
+					{!valid && <SettingsOverview />}
+
+					{valid && activeId === "account" && (
 						<>
 							{/* Identity card: gives the page a subject rather than
 							    opening on a bare label/value list. */}
@@ -417,7 +434,7 @@ export default function SettingsPage() {
 						</>
 					)}
 
-					{activeId === "premium" && (
+					{valid && activeId === "premium" && (
 						<Section
 							id="plan"
 							icon={BadgeCheck}
@@ -467,7 +484,7 @@ export default function SettingsPage() {
 						</Section>
 					)}
 
-					{activeId === "topics" && (
+					{valid && activeId === "topics" && (
 						<Section
 							id="interests"
 							icon={SlidersHorizontal}
@@ -516,7 +533,7 @@ export default function SettingsPage() {
 						</Section>
 					)}
 
-					{activeId === "notifications" && (
+					{valid && activeId === "notifications" && (
 						<>
 							<Section
 								id="alerts"
@@ -539,7 +556,7 @@ export default function SettingsPage() {
 						</>
 					)}
 
-					{activeId === "safety" && (
+					{valid && activeId === "safety" && (
 						<>
 							<Section
 								id="privacy"
@@ -562,7 +579,7 @@ export default function SettingsPage() {
 						</>
 					)}
 
-					{activeId === "data" && (
+					{valid && activeId === "data" && (
 						<>
 							<Section
 								id="usage"
@@ -593,7 +610,7 @@ export default function SettingsPage() {
 						</>
 					)}
 
-					{activeId === "display" && (
+					{valid && activeId === "display" && (
 						<>
 							<Section
 								id="accessibility"
