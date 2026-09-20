@@ -334,6 +334,8 @@ export function ConversationList({
 					})}
 				</div>
 			)}
+			{/* A thumb between who is on and the chats themselves. */}
+			{onlineNow.length > 0 && !query.trim() && rows.length > 0 && <InboxThumb />}
 
 			{rows.map((conv) => {
 				const identity = conversationIdentity(conv);

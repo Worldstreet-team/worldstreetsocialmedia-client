@@ -2731,7 +2731,10 @@ export const MessageBox = ({
 							// the thread's own background, phone and desktop alike.
 							// No blur of its own — the card underneath carries one,
 							// and blur inside blur blurs the card's own fill.
-							"relative z-10 mx-2 mt-2 flex h-14 shrink-0 items-center gap-2 rounded-pill glass-frost px-3 md:mx-3 md:mt-3 md:px-4",
+							// The avatar is 40px in a 56px pill, so the ring of space
+							// around it is 8px top and bottom; the sides match it now
+							// instead of running 12-16px wide (owner 2026-09-20).
+							"relative z-10 mx-2 mt-2 flex h-14 shrink-0 items-center gap-2 rounded-pill glass-frost px-2 md:mx-3 md:mt-3",
 						)}
 					>
 						<div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3">
@@ -2762,7 +2765,7 @@ export const MessageBox = ({
 								<button
 									type="button"
 									onClick={() => !iLeftGroup && setGroupSheetOpen(true)}
-									className="flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 text-left transition-colors hover:bg-primary/5 md:gap-3"
+									className="-my-1 flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 text-left transition-colors hover:bg-primary/5 md:gap-3"
 								>
 									<span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-pill bg-raised">
 										{headerIdentity.avatar ? (
@@ -2778,15 +2781,15 @@ export const MessageBox = ({
 										)}
 									</span>
 									<div className="min-w-0">
-										<h2 className="truncate font-semibold text-[calc(17px*var(--ws-fs))]">
+										<h2 className="truncate font-semibold leading-tight text-[calc(17px*var(--ws-fs))]">
 											{headerIdentity.title}
 										</h2>
 										{chat.typers.length > 0 ? (
-											<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
+											<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] leading-tight text-muted">
 												{groupActivityLine(chat.typers)}
 											</p>
 										) : (
-											<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
+											<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] leading-tight text-muted">
 												{headerIdentity.memberCount ?? 0} members
 											</p>
 										)}
@@ -2795,7 +2798,7 @@ export const MessageBox = ({
 							) : (
 								<Link
 									href={`/profile/${activeConversation.otherParticipant?.username ?? ""}`}
-									className="flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 transition-colors hover:bg-primary/5 md:gap-3"
+									className="-my-1 flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 transition-colors hover:bg-primary/5 md:gap-3"
 								>
 								<span className="relative shrink-0">
 									<SafeAvatar
@@ -2841,22 +2844,22 @@ export const MessageBox = ({
 											Waiting for network…
 										</p>
 									) : chat.peerRecording ? (
-										<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
+										<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] leading-tight text-muted">
 											recording audio…
 										</p>
 									) : chat.peerTyping ? (
-                          <p className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
+                          <p className="truncate font-sans text-[calc(13px*var(--ws-fs))] leading-tight text-muted">
                             typing…
                           </p>
 									) : peerOnline ? (
 										// No dot here — the avatar already carries one, and
 										// two green dots for one fact read as two facts.
-                          <p className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
+                          <p className="truncate font-sans text-[calc(13px*var(--ws-fs))] leading-tight text-muted">
                             Online
                           </p>
 									) : (activeConversation.otherParticipant as any)
 											?.lastSeenAt ? (
-										<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
+										<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] leading-tight text-muted">
 											Last seen{" "}
 											{formatLastSeen(
 												(activeConversation.otherParticipant as any)
@@ -2864,7 +2867,7 @@ export const MessageBox = ({
 											)}
 										</p>
 									) : (
-										<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
+										<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] leading-tight text-muted">
 											@{activeConversation.otherParticipant?.username}
 										</p>
 									)}
