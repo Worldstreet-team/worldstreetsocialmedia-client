@@ -749,6 +749,7 @@ export const MessageBox = ({
 	const [kindFilter, setKindFilter] = useState<"all" | "people" | "groups">(
 		"all",
 	);
+	const [fabOpen, setFabOpen] = useState(false);
 	const showRequests = inboxTab === "requests";
 	const shelfConversations =
 		inboxTab === "requests"
@@ -2474,6 +2475,46 @@ export const MessageBox = ({
 					sectionHasPicture && "bg-page/70",
 				)}
 			>
+				{/* New chat and new group live in a FAB over the list now
+				    (owner 2026-09-20), not as icons on the title row. */}
+				<div className="pointer-events-none absolute bottom-4 right-4 z-20 flex flex-col items-end gap-2 md:bottom-6 md:right-6">
+					{fabOpen && (
+						<>
+							<button
+								type="button"
+								onClick={() => {
+									setFabOpen(false);
+									setShowGroupCreate(true);
+								}}
+								className="pointer-events-auto flex h-11 cursor-pointer items-center gap-2 rounded-pill glass-frost px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary shadow-nav animate-rise"
+							>
+								<RiGroupLine size={18} />
+								{t("messages.newGroup")}
+							</button>
+							<button
+								type="button"
+								onClick={() => {
+									setFabOpen(false);
+									setShowNewConversationModal(true);
+								}}
+								className="pointer-events-auto flex h-11 cursor-pointer items-center gap-2 rounded-pill glass-frost px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary shadow-nav animate-rise"
+							>
+								<RiChatNewLine size={18} />
+								{t("messages.newChat")}
+							</button>
+						</>
+					)}
+					<button
+						type="button"
+						onClick={() => setFabOpen((v) => !v)}
+						aria-expanded={fabOpen}
+						aria-label={t("messages.newChat")}
+						className="pointer-events-auto flex h-14 w-14 cursor-pointer items-center justify-center rounded-pill bg-brand text-brand-on shadow-nav transition-transform hover:scale-[1.02]"
+					>
+						<RiChatNewLine size={22} className={fabOpen ? "rotate-12" : undefined} />
+					</button>
+				</div>
+
 				{/* The inbox reads as a stack of blocks (owner 2026-09-19):
 				    messages-and-story, the filter, Online now and the chats
 				    each carry their own ground, the same sunken fill the chat
@@ -2501,30 +2542,6 @@ export const MessageBox = ({
 								{totalUnread}
 							</span>
 						)}
-						{/* One segmented pill (owner 2026-09-06): the paired controls
-						    share a card split by a hairline — not two floating
-						    chips. No outer border; the fill is the same faint
-						    white wash as the active chat chip. */}
-						<span className="ml-auto flex items-center overflow-hidden rounded-pill bg-primary/5">
-							<button
-								type="button"
-								onClick={() => setShowGroupCreate(true)}
-								aria-label="New group"
-								title="New group"
-								className="flex h-10 w-11 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/10 hover:text-primary"
-							>
-								<RiGroupLine size={19} />
-							</button>
-							<span aria-hidden className="h-5 w-px bg-hairline" />
-							<button
-								type="button"
-								onClick={() => setShowNewConversationModal(true)}
-								aria-label={t("messages.newChat")}
-								className="flex h-10 w-11 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/10 hover:text-primary"
-							>
-								<RiChatNewLine size={19} />
-							</button>
-						</span>
 					</div>
 					<div className="relative">
               <RiSearchLine
@@ -2625,7 +2642,7 @@ export const MessageBox = ({
 											className={clsx(
 												"flex h-7 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
 												kindFilter === key
-													? "bg-raised text-primary"
+													? "bg-primary/15 text-primary"
 													: "text-muted hover:text-primary",
 											)}
 										>

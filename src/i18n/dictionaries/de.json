@@ -735,6 +735,7 @@
   "messages.kind.file": "Datei",
   "messages.kind.call": "Anruf",
   "messages.newChat": "Neue Nachricht",
+  "messages.newGroup": "Neue Gruppe",
   "voice.requestSpeak": "Ums Wort bitten",
   "voice.onStage": "Du bist auf der Bühne",
   "voice.bringToStage": "Auf die Bühne holen",

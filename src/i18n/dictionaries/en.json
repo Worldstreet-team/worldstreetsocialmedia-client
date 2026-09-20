@@ -794,6 +794,7 @@
   "messages.kind.file": "File",
   "messages.kind.call": "Call",
   "messages.newChat": "New message",
+  "messages.newGroup": "New group",
   "voice.requestSpeak": "Request to speak",
   "voice.onStage": "You're on stage",
   "voice.bringToStage": "Bring to stage",

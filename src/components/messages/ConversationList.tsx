@@ -276,7 +276,7 @@ export function ConversationList({
 
 	return (
 		<div className="flex flex-col px-2">
-			<div className="flex flex-col rounded-2xl pb-2 pt-4 glass-frost backdrop-blur-xl">
+			<div className="flex flex-col rounded-2xl px-2 pb-2 pt-4 glass-frost backdrop-blur-xl">
 			{heading && !query.trim() && (
 				<div className="mb-3 flex items-center justify-between gap-2 px-4">
 					<h2 className={sectionTitleBare}>{heading}</h2>
@@ -289,11 +289,17 @@ export function ConversationList({
 				// Five chips do not fit a 340px column: the row scrolls
 				// sideways rather than clipping Requests and Archived off the
 				// edge (owner 2026-09-20).
-				// A track, not loose chips (owner 2026-09-20): the pills ride in
-				// one rounded rail, so the row reads as a control.
-				<div className="mx-4 mb-2 overflow-x-auto rounded-pill bg-primary/5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:min-w-max [&>*]:!px-1 [&>*]:!py-1">
-					{filter}
-				</div>
+				// A rail around the CHIPS, not the column (owner 2026-09-20),
+				// with the live pill a lighter shade so the thumb reads, and a
+				// thumb under the row to close it off.
+				<>
+					<div className="mx-2 mb-2 flex">
+						<div className="max-w-full overflow-x-auto rounded-pill bg-primary/5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:!px-1 [&>*]:!py-1 [&>*]:min-w-max [&_[aria-selected=true]]:bg-primary/15">
+							{filter}
+						</div>
+					</div>
+					<InboxThumb />
+				</>
 			)}
 			{/* Who is on, right inside the chats block: faces only, no header
 			    of its own (owner 2026-09-20). */}
@@ -364,9 +370,10 @@ export function ConversationList({
 							// wrapper's px-2 gives the radius air on both sides.
 							// Its fill is a FADED white (owner): the ink token
 							// at a wash, not raised-grey and not solid white.
-							// mx-2, so the selected chip never runs into the block's
-							// own edges (owner 2026-09-20).
-							"group relative mx-2 flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors",
+							// Full width inside the list's own px-2: the selected chip
+							// runs the whole row, inset from the block's edges but
+							// never short of the text (owner 2026-09-20).
+							"group relative flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors",
 							active ? "bg-primary/10" : "hover:bg-primary/5",
 						)}
 					>
