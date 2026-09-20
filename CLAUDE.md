@@ -201,6 +201,19 @@ Non-obvious rules the spec enforces, all of which this page now follows:
   footnote after the card. Do not reintroduce `uppercase tracking-[...]`
   for anything a person is meant to read; badges and the brand lockup
   eyebrow are the only uppercase left.
+- **No stone on the black theme** (owner 2026-09-20: "don't use the stone
+  background, not the faded stone gray, no no"). The `glass-*` fills were
+  literals from the pre-v2 stone palette and the black ladder override
+  never listed them, so every frosted block read as a warm grey panel.
+  `globals.css` now ends with `html[data-ws-theme="platform"]` rules that
+  neutralise them at the same lightness: frost `rgb(20 20 20 / .82)`, nav
+  `rgb(22 22 22 / .72)`, toast `rgb(38 38 38 / .72)`, plus
+  `--ws-bg-track: #111111` (the last stone in the ladder, under every Tabs
+  thumb). `--chat-frost` in `chat-chrome.css` mirrors the frost value;
+  change them together. Light mode keeps its warmth, and the sanctioned
+  fixed-dark creator surfaces (`.glass-dock`, `.glass-veil`, the Studio's
+  `#0F0E0D` / `#171614`, the Story stage) are untouched because they sit
+  over photos and video.
 - **Ink is white and its variations** on the black theme: primary `#FFFFFF`,
   muted white 62%, subtle white 42% (globals.css override, alpha on purpose
   so the same ink reads over page, surface and chip). The stone greys are

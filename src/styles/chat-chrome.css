@@ -25,9 +25,10 @@
  */
 
 /* The app's frost as a value, so the house theme's chrome can BE it. Same
-   numbers as .glass-frost in globals.css; change them together. */
+   numbers as .glass-frost in globals.css; change them together. Neutral,
+   never the old stone tint (owner 2026-09-20). */
 :root {
-	--chat-frost: rgb(20 18 17 / 0.82);
+	--chat-frost: rgb(20 20 20 / 0.82);
 }
 html[data-ws-theme="platform-light"] {
 	--chat-frost: rgb(255 255 255 / 0.86);

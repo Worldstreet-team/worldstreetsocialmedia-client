@@ -1564,3 +1564,33 @@ html[data-ws-cues] .ws-cue-online { box-shadow: 0 0 0 2px var(--ws-bg-page), 0 0
 
 /* Data saver: no autoplay, no decorative motion, cheaper media. */
 html[data-ws-saver] video[autoplay] { animation: none; }
+
+/* ── The black theme has no stone in it (owner 2026-09-20) ───────────────
+   "don't use the stone background, not the faded stone gray, no no".
+
+   The glass family still carried the pre-v2 stone tints: frost rgb(20 18
+   17), the nav bar rgb(22 20 18), the toast rgb(41 37 36). Those are warm
+   greys, and over the black page every frosted block, the inbox and
+   settings blocks included, read as a faded stone panel instead of a step
+   above black. The values below are the same LIGHTNESS, so nothing moves
+   in the ladder; only the warmth is gone. Light mode is untouched: paper
+   is meant to be warm.
+
+   Class rules, not tokens, because the glass fills are literals by design
+   (a frost is a fill plus an alpha, not a surface step). html[...] to
+   outrank the bare class, and last in the file so nothing folds it away. */
+html[data-ws-theme="platform"] .glass-frost {
+  background: rgb(20 20 20 / 0.82);
+}
+html[data-ws-theme="platform"] .glass-nav {
+  background: rgb(22 22 22 / 0.72);
+}
+html[data-ws-theme="platform"] .glass-toast {
+  background: rgb(38 38 38 / 0.72);
+}
+/* The segmented-control track was the last stone in the ladder: #141110
+   from the vendored token file, which the 2026-09-15 black override never
+   listed. It sits under every Tabs thumb. */
+html[data-ws-theme="platform"] {
+  --ws-bg-track: #111111;
+}
