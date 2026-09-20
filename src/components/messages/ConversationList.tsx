@@ -289,7 +289,9 @@ export function ConversationList({
 				// Five chips do not fit a 340px column: the row scrolls
 				// sideways rather than clipping Requests and Archived off the
 				// edge (owner 2026-09-20).
-				<div className="mb-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:min-w-max">
+				// A track, not loose chips (owner 2026-09-20): the pills ride in
+				// one rounded rail, so the row reads as a control.
+				<div className="mx-4 mb-2 overflow-x-auto rounded-pill bg-primary/5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:min-w-max [&>*]:!px-1 [&>*]:!py-1">
 					{filter}
 				</div>
 			)}

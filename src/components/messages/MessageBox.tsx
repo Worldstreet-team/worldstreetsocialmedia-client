@@ -2443,7 +2443,7 @@ export const MessageBox = ({
 		// so the composer sat below the fold until the bar collapsed.
 		<div
 			style={themeVars(sectionTheme)}
-			className="ws-chat-scale relative flex h-[100dvh] gap-2 bg-page p-2 text-primary overflow-hidden md:gap-0 md:p-0"
+			className="ws-chat-scale relative flex h-[100dvh] bg-page text-primary overflow-hidden"
 		>
 			{/* The section's own ground, when the profile theme has one. */}
 			<ThemeBackdrop wallpaper={sectionTheme.wallpaper} />
@@ -2470,7 +2470,7 @@ export const MessageBox = ({
 				className={clsx(
 					// The column keeps the grid border that divides it from the
 					// chat; the CARD lives inside it (owner 2026-09-19).
-					"relative z-10 flex w-full shrink-0 min-w-0 flex-col md:w-[372px] md:p-3",
+					"relative z-10 flex w-full shrink-0 min-w-0 flex-col gap-2 p-2 md:w-[372px] md:gap-3 md:p-3",
 					sectionHasPicture && "bg-page/70",
 				)}
 			>
@@ -2479,7 +2479,7 @@ export const MessageBox = ({
 				    each carry their own ground, the same sunken fill the chat
 				    card uses, with a thumb between them. */}
 				<div className="flex min-h-0 flex-1 flex-col md:overflow-hidden">
-				<div className="rounded-2xl glass-frost backdrop-blur-xl px-4 pb-3 pt-4 [&:has(+*>.ws-inbox-story)]:rounded-b-none">
+				<div className="shrink-0 rounded-2xl glass-frost backdrop-blur-xl px-4 pb-3 pt-4 [&:has(+*>.ws-inbox-story)]:rounded-b-none">
 					<div className="mb-3 flex items-center gap-2">
 						{/* Phones only. On desktop the inbox sits inside the app
 						    shell with the rail right there; on a phone it fills
@@ -2611,7 +2611,7 @@ export const MessageBox = ({
 							/>
 						}
 						headerAside={
-							<span className="flex items-center gap-1">
+							<span className="flex items-center gap-1 rounded-pill bg-primary/5 p-1">
 								{([["people", t("messages.people"), User] as const,
 									["groups", t("messages.groups"), UsersThree] as const] as const).map(
 									([key, label, Icon]) => (
@@ -2623,10 +2623,10 @@ export const MessageBox = ({
 											}
 											aria-pressed={kindFilter === key}
 											className={clsx(
-												"flex h-8 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
+												"flex h-7 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
 												kindFilter === key
-													? "bg-primary/10 text-primary"
-													: "text-muted hover:bg-primary/5 hover:text-primary",
+													? "bg-raised text-primary"
+													: "text-muted hover:text-primary",
 											)}
 										>
 											<Icon size={15} />
@@ -2714,7 +2714,7 @@ export const MessageBox = ({
 							// the thread's own background, phone and desktop alike.
 							// No blur of its own — the card underneath carries one,
 							// and blur inside blur blurs the card's own fill.
-							"relative z-10 mx-2 mt-2 flex h-14 shrink-0 items-center gap-2 rounded-pill bg-page/70 px-3 md:mx-3 md:mt-3 md:px-4",
+							"relative z-10 mx-2 mt-2 flex h-14 shrink-0 items-center gap-2 rounded-pill glass-frost px-3 md:mx-3 md:mt-3 md:px-4",
 						)}
 					>
 						<div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3">
