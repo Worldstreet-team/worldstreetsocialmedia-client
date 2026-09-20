@@ -131,11 +131,29 @@ export default function SettingsPage() {
 		for (const el of targets) io.observe(el);
 		return () => io.disconnect();
 	}, [activeId]);
+	// Scroll the column by hand rather than through scrollIntoView: the
+	// header is a floating sticky pill, and a block that lands at the
+	// container's top edge lands UNDER it. Measuring the pill also keeps
+	// this right when the phone's chip strip is there and when text size
+	// makes both taller.
 	const scrollToGroup = useCallback((id: string) => {
 		const el = document.getElementById(`group-${id}`);
 		if (!el) return;
 		setActiveGroup(id);
-		el.scrollIntoView({ behavior: motionReduced() ? "auto" : "smooth", block: "start" });
+		const behavior = motionReduced() ? ("auto" as const) : ("smooth" as const);
+		const root = document.getElementById("ws-main-scroll");
+		const header = document.querySelector<HTMLElement>("[data-settings-header]");
+		const offset = (header?.offsetHeight ?? 0) + 10;
+		if (!root) {
+			el.scrollIntoView({ behavior, block: "start" });
+			return;
+		}
+		const top =
+			el.getBoundingClientRect().top -
+			root.getBoundingClientRect().top +
+			root.scrollTop -
+			offset;
+		root.scrollTo({ top: Math.max(0, top), behavior });
 	}, []);
 
 	// Master search hands over with a hash (#group-<id>): go to that block
@@ -152,9 +170,18 @@ export default function SettingsPage() {
 			// Spent: a later section change must not replay it.
 			history.replaceState(null, "", window.location.pathname);
 		};
-		const id = window.setTimeout(land, 80);
+		// Two frames, then a beat: the router does its own scroll to the
+		// fragment on arrival, and landing before that one only to be
+		// overruled by it put the block back under the header.
+		let id = 0;
+		const raf = requestAnimationFrame(() =>
+			requestAnimationFrame(() => {
+				id = window.setTimeout(land, 120);
+			}),
+		);
 		window.addEventListener("hashchange", land);
 		return () => {
+			cancelAnimationFrame(raf);
 			window.clearTimeout(id);
 			window.removeEventListener("hashchange", land);
 		};
@@ -269,7 +296,10 @@ export default function SettingsPage() {
 				    floating over the blocks, with the section's own icon. The
 				    pill blurs what scrolls under it; the blocks are its siblings,
 				    never its children, so no blur sits inside another. */}
-				<header className="sticky top-0 z-sticky px-2 pt-2 md:px-3 md:pt-3">
+				<header
+					data-settings-header
+					className="sticky top-0 z-sticky px-2 pt-2 md:px-3 md:pt-3"
+				>
 					<div className="flex h-14 items-center gap-2.5 rounded-pill px-2 glass-frost backdrop-blur-xl">
 						<Link
 							href="/settings"
@@ -282,14 +312,9 @@ export default function SettingsPage() {
 							className="ml-2 hidden h-[19px] w-[19px] shrink-0 text-primary lg:block"
 							strokeWidth={2.25}
 						/>
-						<div className="min-w-0 flex-1">
-							<h2 className="truncate font-display text-[calc(17px*var(--ws-fs))] font-semibold leading-tight tracking-tight text-primary">
-								{t(activeDef.labelKey)}
-							</h2>
-							<p className="truncate font-sans text-[calc(12.5px*var(--ws-fs))] leading-tight text-muted">
-								{activeDef.hint}
-							</p>
-						</div>
+						<h2 className="min-w-0 flex-1 truncate font-display text-[calc(17px*var(--ws-fs))] font-semibold tracking-tight text-primary">
+							{t(activeDef.labelKey)}
+						</h2>
 						<span className="mr-3 hidden shrink-0 items-center gap-1.5 font-sans text-[calc(12.5px*var(--ws-fs))] text-muted sm:flex">
 							<span className="h-1.5 w-1.5 rounded-pill bg-success" />
 							Synced to your account

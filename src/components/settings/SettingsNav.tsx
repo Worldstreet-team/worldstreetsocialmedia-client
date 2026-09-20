@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAtomValue } from "jotai";
-import { CaretRight, MagnifyingGlass, X } from "@phosphor-icons/react";
+import { CaretDown, CaretRight, MagnifyingGlass, X } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { collapse, staggerItem, staggerParentFast, thumbSpring } from "@/lib/motion-presets";
@@ -57,10 +57,18 @@ export function SettingsNav({
 	const user = useAtomValue(userAtom);
 	const [query, setQuery] = useState("");
 	const [cursor, setCursor] = useState(0);
+	// Sections the person has shut. Empty by default: the sidebar opens
+	// showing everything it holds.
+	const [collapsed, setCollapsed] = useState<Set<SectionId>>(new Set());
 	const inputRef = useRef<HTMLInputElement>(null);
 	const results = useMemo(() => searchSettings(query), [query]);
 	const searching = query.trim().length > 0;
 	useEffect(() => setCursor(0), [query]);
+
+	const subRow =
+		"flex h-10 w-full cursor-pointer items-center rounded-[10px] px-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] transition-colors";
+	const subRowOn = "font-semibold text-primary";
+	const subRowOff = "text-muted hover:bg-primary/5 hover:text-primary";
 
 	const hrefOf = (r: { section: SectionId; group: string }) =>
 		`/settings/${r.section}#group-${r.group}`;
@@ -159,7 +167,7 @@ export function SettingsNav({
 												onClick={() => setQuery("")}
 												onMouseEnter={() => setCursor(i)}
 												className={clsx(
-													"flex min-h-[52px] items-center gap-3 rounded-xl px-3 transition-colors",
+													"flex min-h-[48px] items-center gap-3 rounded-xl px-3 transition-colors",
 													i === cursor ? "bg-primary/10" : "hover:bg-primary/5",
 												)}
 											>
@@ -195,9 +203,15 @@ export function SettingsNav({
 						animate="show"
 						className="flex flex-col gap-0.5"
 					>
-						{SECTIONS.map(({ id, labelKey, hint, icon: Icon }) => {
+						{SECTIONS.map(({ id, labelKey, icon: Icon }) => {
 							const active = id === activeId;
 							const subs = GROUPS[id];
+							// Every section shows what is inside it (owner 2026-09-20:
+							// "showing the sub items by default with a caret to switch
+							// back up"), so the map is the whole map, not a drawer that
+							// only opens where you already are. Collapsing is per person
+							// and per session; the set holds only what they shut.
+							const open = subs.length > 1 && !collapsed.has(id);
 							return (
 								<motion.div key={id} variants={staggerItem} className="flex flex-col">
 									{RAIL_LABELS[id] && (
@@ -210,12 +224,13 @@ export function SettingsNav({
 											{RAIL_LABELS[id]}
 										</span>
 									)}
-									<Link
-										href={`/settings/${id}`}
-										aria-current={active ? "page" : undefined}
+									{/* The row is a link and a disclosure side by side, not a
+									    button inside a link: a caret nested in an anchor is
+									    invalid, and a tap meant for one would fire the other. */}
+									<div
 										className={clsx(
-											"relative flex min-h-[52px] w-full items-center gap-3 rounded-xl px-3 transition-colors",
-											active ? "text-primary" : "text-muted hover:bg-primary/5 hover:text-primary",
+											"relative flex min-h-[44px] items-center rounded-xl transition-colors",
+											!active && "hover:bg-primary/5",
 										)}
 									>
 										{/* One pressed wash that slides between sections. The
@@ -229,48 +244,78 @@ export function SettingsNav({
 												className="absolute inset-0 rounded-xl bg-primary/10"
 											/>
 										)}
-										{/* Bare glyphs (owner 2026-09-20). The open section is told
-										    by the sliding wash behind the row and by weight, not by a
-										    filled chip. */}
-										<Icon
-											className={clsx(
-												"relative h-[18px] w-[18px] shrink-0 transition-colors",
-												active ? "text-primary" : "text-muted",
-											)}
-											strokeWidth={active ? 2.5 : 2}
-										/>
-										<span className="relative flex min-w-0 flex-1 flex-col">
+										<Link
+											href={`/settings/${id}`}
+											aria-current={active ? "page" : undefined}
+											className="relative flex min-w-0 flex-1 items-center gap-3 self-stretch rounded-xl pl-3 pr-1"
+										>
+											{/* Bare glyphs (owner 2026-09-20). The open section is
+											    told by the sliding wash behind the row and by
+											    weight, not by a filled chip. */}
+											<Icon
+												className={clsx(
+													"h-[18px] w-[18px] shrink-0 transition-colors",
+													active ? "text-primary" : "text-muted",
+												)}
+												strokeWidth={active ? 2.5 : 2}
+											/>
+											{/* The name alone (owner 2026-09-20: "remove the tagline
+											    in the settings"). What is in a section is told by the
+											    sub-items under it now, not by a line of prose. */}
 											<span
 												className={clsx(
-													"truncate font-sans text-[calc(14px*var(--ws-fs))] text-primary",
+													"min-w-0 flex-1 truncate py-2 font-sans text-[calc(14px*var(--ws-fs))] text-primary",
 													active ? "font-semibold" : "font-medium",
 												)}
 											>
 												{t(labelKey)}
 											</span>
-											<span className="truncate font-sans text-[calc(12.5px*var(--ws-fs))] text-muted">
-												{hint}
-											</span>
-										</span>
-										<CaretRight
-											size={14}
-											weight="bold"
-											className="relative shrink-0 text-subtle lg:hidden"
-										/>
-									</Link>
-									{/* The open section's groups (desktop): tap to scroll, the
-									    one in view lit. Opens and closes so the rows below
-									    glide. initial={false}: a deep link arrives open. */}
+										</Link>
+										{subs.length > 1 ? (
+											<button
+												type="button"
+												onClick={() =>
+													setCollapsed((prev) => {
+														const next = new Set(prev);
+														if (next.has(id)) next.delete(id);
+														else next.add(id);
+														return next;
+													})
+												}
+												aria-expanded={open}
+												aria-controls={`settings-subs-${id}`}
+												aria-label={`${open ? "Hide" : "Show"} what is in ${t(labelKey)}`}
+												className="relative mr-1 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-subtle transition-colors hover:text-primary"
+											>
+												<CaretDown
+													size={13}
+													weight="bold"
+													className={clsx("transition-transform", !open && "-rotate-90")}
+												/>
+											</button>
+										) : (
+											<CaretRight
+												size={13}
+												weight="bold"
+												className="relative mr-4 shrink-0 text-subtle lg:hidden"
+											/>
+										)}
+									</div>
+									{/* What is inside the section: tap to go there. Inside the
+									    open section the one in view is lit and tapping scrolls;
+									    anywhere else it opens that section on that group.
+									    initial={false}: a first paint arrives already open. */}
 									<AnimatePresence initial={false}>
-										{active && subs.length > 1 && (
+										{open && (
 											<motion.div
 												key="subs"
+												id={`settings-subs-${id}`}
 												{...collapse}
-												className="hidden overflow-hidden lg:block"
+												className="overflow-hidden"
 											>
 												<ul className="my-1 ml-[26px] flex flex-col border-l border-hairline pl-4">
 													{subs.map((g) => {
-														const on = g.id === activeGroup;
+														const on = active && g.id === activeGroup;
 														return (
 															<li key={g.id} className="relative">
 																{/* The id carries the section: a closing list
@@ -284,19 +329,28 @@ export function SettingsNav({
 																		className="absolute -left-[17px] bottom-2 top-2 w-[2px] rounded-pill bg-primary"
 																	/>
 																)}
-																<button
-																	type="button"
-																	aria-current={on ? "true" : undefined}
-																	onClick={() => onGroup?.(g.id)}
-																	className={clsx(
-																		"flex h-10 w-full cursor-pointer items-center rounded-[10px] px-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] transition-colors",
-																		on
-																			? "font-semibold text-primary"
-																			: "text-muted hover:bg-primary/5 hover:text-primary",
-																	)}
-																>
-																	{g.label}
-																</button>
+																{/* Inside the open section this scrolls, so it is a
+																    button; anywhere else it opens that section on
+																    that group, which is a link and has to be one:
+																    router.push is a no-op here, the row is already
+																    inside the same catch-all route. */}
+																{active ? (
+																	<button
+																		type="button"
+																		aria-current={on ? "true" : undefined}
+																		onClick={() => onGroup?.(g.id)}
+																		className={clsx(subRow, on ? subRowOn : subRowOff)}
+																	>
+																		{g.label}
+																	</button>
+																) : (
+																	<Link
+																		href={`/settings/${id}#group-${g.id}`}
+																		className={clsx(subRow, subRowOff)}
+																	>
+																		{g.label}
+																	</Link>
+																)}
 															</li>
 														);
 													})}

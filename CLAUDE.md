@@ -312,10 +312,24 @@ components, a proper sidebar, icons, headers and master search. The result:
   `SettingRows.tsx` are thin names over them. Never a native `<select>`,
   never a row of option chips, never a bespoke block.
 - `SettingsNav` is the inbox column: a masthead block (title, identity,
-  master search well) and a map block (You / App labels, bare icon + name +
-  hint rows, one sliding pressed wash, the open section's groups folded
-  out). The open section reads by the wash behind its row and by the
-  glyph's weight, never by a filled chip.
+  master search well) and a map block (You / App labels, bare icon + name,
+  one sliding pressed wash). It is a REAL sidebar (owner 2026-09-20):
+  every section shows its groups by default, with a caret that collapses
+  one back up; the `collapsed` set holds only what the person shut. A
+  group inside the open section is a button that scrolls; a group anywhere
+  else is a `<Link>` to `/settings/<section>#group-<id>` and has to be one
+  (a `router.push` from inside the same catch-all route is a no-op). The
+  open section reads by the wash behind its row and by the glyph's weight,
+  never by a filled chip.
+- **No taglines** (owner 2026-09-20: "remove the tagline in the
+  settings"). A section row is its name; the header pill is the section
+  title. The one-line `hint` on `SectionDef` is kept as data but is not
+  rendered. Group captions stay: they explain what a group does, which is
+  not a tagline.
+- Jumping to a group scrolls `#ws-main-scroll` by hand with the header
+  pill's measured height as the offset, never `scrollIntoView`: the header
+  floats, and a block that lands at the container's top edge lands under
+  it.
 - Master search: `SEARCH_INDEX` in `sections.tsx` lists EVERY row by its
   visible name with its `group`. A result links to
   `/settings/<section>#group-<id>`; the page scrolls there, rings the block
