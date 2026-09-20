@@ -12,7 +12,6 @@ import { Info, Phone, Video, Plus, ArrowLeft, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Badge } from "@/components/ui/Badge";
-import { Tabs } from "@/components/ui/Tabs";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import axios from "axios";
 import { useUser, useAuth } from "@clerk/nextjs";
@@ -131,10 +130,11 @@ import {
 	RiFileCopyLine,
 	RiRestartLine,
 } from "@remixicon/react";
-// Tray stays Phosphor: it feeds the shared Tabs component (feed tabs use it
-// too), which is Phosphor-typed and drives its own active weight. The Remix
-// swap is for the chat MESSAGE glyphs, not the tab chrome.
-import { Archive, Tray, User, UsersThree } from "@phosphor-icons/react";
+// Tray and Archive stay Phosphor: they label the two shelves, the requests
+// row and the archived door. The Remix swap was for the chat MESSAGE glyphs,
+// not for chrome like these.
+import { Archive, Tray } from "@phosphor-icons/react";
+import { RiArrowRightSLine } from "@remixicon/react";
 import { SendMoneySheet } from "@/components/messages/SendMoneySheet";
 import { GroupSheet } from "@/components/messages/GroupSheet";
 import { GroupCreateModal } from "@/components/messages/GroupCreateModal";
@@ -767,12 +767,17 @@ export const MessageBox = ({
 	const [inboxTab, setInboxTab] = useState<"primary" | "requests" | "archived">(
 		"primary",
 	);
-	/** People or Groups, beside the block's own header (owner 2026-09-20).
-	 *  A second axis, not a shelf: it narrows whichever shelf is open, and
-	 *  tapping the live one again clears it. */
-	const [kindFilter, setKindFilter] = useState<"all" | "people" | "groups">(
-		"all",
-	);
+	/** The scope of the list, offered under the search field at the moment
+	 *  someone is narrowing something (owner 2026-09-20, directions D + A).
+	 *  It is not a shelf: it narrows whichever shelf is open. */
+	const [kindFilter, setKindFilter] = useState<
+		"all" | "people" | "groups" | "unread"
+	>("all");
+	const [searchFocused, setSearchFocused] = useState(false);
+	// The row stays while a scope is live, or a filter would go on working
+	// after the control that set it had folded away.
+	const scopeOpen =
+		searchFocused || searchQuery.trim().length > 0 || kindFilter !== "all";
 	const [fabOpen, setFabOpen] = useState(false);
 	const showRequests = inboxTab === "requests";
 	const shelfConversations =
@@ -785,8 +790,17 @@ export const MessageBox = ({
 		kindFilter === "all"
 			? shelfConversations
 			: shelfConversations.filter((c) =>
-					kindFilter === "groups" ? c.kind === "group" : c.kind !== "group",
+					kindFilter === "unread"
+						? c.unreadCount > 0
+						: kindFilter === "groups"
+							? c.kind === "group"
+							: c.kind !== "group",
 				);
+	/** The first two names waiting in Requests, for the row that announces it. */
+	const requestNames = requestConversations
+		.slice(0, 2)
+		.map((c) => conversationIdentity(c as never).title)
+		.join(", ");
 
 	/** Put a thread away, or take it back. Optimistic; the gateway keeps the
 	 *  flag per member, so it never touches the other person's inbox. */
@@ -2624,12 +2638,64 @@ export const MessageBox = ({
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
 							ref={searchInputRef}
+							onFocus={() => setSearchFocused(true)}
+							onBlur={() => setSearchFocused(false)}
 							// text-base below sm stops iOS zooming the pane on focus.
 							// Same faint white wash as the control pills and the
 							// active chat chip — one fill across the header.
 							className="h-10 w-full rounded-pill bg-primary/5 pl-10 pr-4 text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-primary/10 sm:text-[calc(14px*var(--ws-fs))]"
 						/>
 					</div>
+					{/* The scope of the list, offered at the one moment a person
+					    is narrowing something and folded away the rest of the
+					    time (owner 2026-09-20). Nothing here is a shelf: the
+					    shelves announce themselves in the list instead. */}
+					<AnimatePresence initial={false}>
+						{scopeOpen && (
+							<motion.div key="scope" {...collapse} className="overflow-hidden">
+								<div className="flex gap-1.5 pt-2">
+									{(
+										[
+											["all", t("messages.all")],
+											["people", t("messages.people")],
+											["groups", t("messages.groups")],
+											["unread", t("messages.unread")],
+										] as const
+									).map(([key, label]) => {
+										const on = kindFilter === key;
+										return (
+											<motion.button
+												key={key}
+												type="button"
+												{...press}
+												// Pointer down, not click: a click on a chip
+												// blurs the field first, which would fold the
+												// row away underneath the finger.
+												onMouseDown={(e) => e.preventDefault()}
+												onClick={() => setKindFilter(key)}
+												aria-pressed={on}
+												className={clsx(
+													"relative flex h-8 shrink-0 cursor-pointer items-center rounded-pill px-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold transition-colors",
+													on ? "text-primary" : "text-muted hover:text-primary",
+												)}
+											>
+												{on && (
+													<motion.span
+														aria-hidden
+														layoutId="inbox-scope-thumb"
+														layoutDependency={kindFilter}
+														transition={thumbSpring}
+														className="absolute inset-0 rounded-pill bg-primary/10"
+													/>
+												)}
+												<span className="relative">{label}</span>
+											</motion.button>
+										);
+									})}
+								</div>
+							</motion.div>
+						)}
+					</AnimatePresence>
 				</div>
 
 				{/* pb-nav: the conversation list is the one messages view where the
@@ -2675,69 +2741,60 @@ export const MessageBox = ({
 						/>
 					)}
 					<ConversationList
-						filter={
-							<Tabs
-								ariaLabel="Inbox sections"
-								value={inboxTab}
-								onChange={(k) => setInboxTab(k)}
-								items={[
-									{ key: "primary" as const, label: "Primary" },
-									{
-										key: "requests" as const,
-										label: t("messages.requests"),
-										Icon: Tray,
-										badge: requestConversations.length,
-									},
-									{
-										key: "archived" as const,
-										label: t("messages.archived"),
-										Icon: Archive,
-									},
-								]}
-								className="px-3"
-							/>
+						banner={
+							inboxTab === "primary" && requestConversations.length > 0 ? (
+								<motion.button
+									type="button"
+									{...press}
+									onClick={() => setInboxTab("requests")}
+									className="mx-2 mb-2 flex cursor-pointer items-center gap-3 rounded-xl bg-primary/5 px-2 py-2 text-left transition-colors hover:bg-primary/10"
+								>
+									<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary/10 text-primary">
+										<Tray size={17} />
+									</span>
+									<span className="min-w-0 flex-1">
+										<span className="block font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-primary">
+											{requestConversations.length}{" "}
+											{requestConversations.length === 1
+												? "message request"
+												: "message requests"}
+										</span>
+										<span className="block truncate font-sans text-[calc(12px*var(--ws-fs))] text-muted">
+											{requestNames}
+											{requestConversations.length > 2
+												? ` and ${requestConversations.length - 2} more`
+												: ""}
+										</span>
+									</span>
+									<RiArrowRightSLine size={18} className="shrink-0 text-subtle" />
+								</motion.button>
+							) : null
+						}
+						footer={
+							inboxTab === "primary" && archivedConversations.length > 0 ? (
+								<button
+									type="button"
+									onClick={() => setInboxTab("archived")}
+									className="mx-2 mt-1 flex cursor-pointer items-center gap-2.5 rounded-xl border-t border-hairline px-3 py-3 text-left font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-muted transition-colors hover:text-primary"
+								>
+									<Archive size={16} />
+									{t("messages.archived")}
+									<span className="ml-auto flex items-center gap-1 font-normal tabular-nums text-subtle">
+										{archivedConversations.length}
+										<RiArrowRightSLine size={16} />
+									</span>
+								</button>
+							) : null
+						}
+						onBack={
+							inboxTab === "primary" ? undefined : () => setInboxTab("primary")
 						}
 						headerAside={
-							<span className="flex items-center gap-1 rounded-pill bg-primary/5 p-1">
-								{([["people", t("messages.people"), User] as const,
-									["groups", t("messages.groups"), UsersThree] as const] as const).map(
-									([key, label, Icon]) => (
-										<button
-											key={key}
-											type="button"
-											onClick={() =>
-												setKindFilter((v) => (v === key ? "all" : key))
-											}
-											aria-pressed={kindFilter === key}
-											className={clsx(
-												"relative flex h-7 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
-												kindFilter === key
-													? "text-primary"
-													: "text-muted hover:text-primary",
-											)}
-										>
-											{/* One fill that slides between the two, as in Tabs.
-											    A fixed id is safe, this pane is a page singleton;
-											    layoutDependency stops a component this busy from
-											    re-measuring it on every render. */}
-											{kindFilter === key && (
-												<motion.span
-													aria-hidden
-													layoutId="inbox-kind-thumb"
-													layoutDependency={kindFilter}
-													transition={thumbSpring}
-													className="absolute inset-0 rounded-pill bg-primary/15"
-												/>
-											)}
-											{/* Positioned, so it paints above the thumb. */}
-											<span className="relative flex items-center gap-1.5">
-												<Icon size={15} />
-												{label}
-											</span>
-										</button>
-									),
-								)}
-							</span>
+							inboxTab === "primary" && listConversations.length > 0 ? (
+								<span className="font-sans text-[calc(12.5px*var(--ws-fs))] tabular-nums text-subtle">
+									{listConversations.length}
+								</span>
+							) : null
 						}
 						heading={
 								inboxTab === "requests"

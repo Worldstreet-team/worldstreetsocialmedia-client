@@ -763,6 +763,8 @@
   "messages.members": "membros",
   "messages.nobodyOnline": "Ninguém está online agora.",
   "messages.people": "Pessoas",
+  "messages.all": "Todos",
+  "messages.unread": "Não lidas",
   "messages.suggested": "Sugestões",
   "messages.message": "Mensagem",
   "messages.chats": "Conversas",

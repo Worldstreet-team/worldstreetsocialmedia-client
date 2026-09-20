@@ -18,6 +18,7 @@ import {
 	RiUserSharedFill,
 	RiPhoneFill,
 	RiVideoOnFill,
+	RiArrowLeftSLine,
 } from "@remixicon/react";
 
 import { Badge } from "@/components/ui/Badge";
@@ -143,6 +144,20 @@ export function InboxThumb() {
 	);
 }
 
+/** The way back off a shelf. A chip, not an arrow alone: it says where to. */
+function BackChip({ onBack }: { onBack: () => void }) {
+	return (
+		<button
+			type="button"
+			onClick={onBack}
+			aria-label="Back to all chats"
+			className="-ml-1.5 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
+		>
+			<RiArrowLeftSLine size={22} />
+		</button>
+	);
+}
+
 export function ConversationList({
 	conversations,
 	loading,
@@ -155,7 +170,9 @@ export function ConversationList({
 	people,
 	onOpenPerson,
 	heading,
-	filter,
+	banner,
+	footer,
+	onBack,
 	headerAside,
 }: {
 	conversations: ConversationRow[];
@@ -175,10 +192,15 @@ export function ConversationList({
 	onOpenPerson?: (u: ConversationRowUser) => void;
 	/** Names the list of rows ("Chats"), styled like "Online now". */
 	heading?: string;
-	/** The Primary / Requests pills, rendered inside the chats block under
-	 *  its title (owner 2026-09-19) rather than as a block of their own. */
-	filter?: React.ReactNode;
-	/** Sits on the header's own row, hard right: the People / Groups chips. */
+	/** A state that has announced itself, above the rows: the requests row
+	 *  (owner 2026-09-20). Nothing renders here when nothing is waiting. */
+	banner?: React.ReactNode;
+	/** A door at the bottom of the list: the archived shelf. */
+	footer?: React.ReactNode;
+	/** On a shelf, the way back to the inbox. The shelf tabs are gone, so
+	 *  this back chip is the only way out and must always render. */
+	onBack?: () => void;
+	/** Sits on the header's own row, hard right: a count, usually. */
 	headerAside?: React.ReactNode;
 }) {
 	const t = useT();
@@ -298,15 +320,14 @@ export function ConversationList({
 		return (
 			<div className="flex flex-col px-2">
 				<div className="flex flex-col rounded-2xl pb-6 pt-4 md:bg-sunken">
-					{heading && !query.trim() && (
-						<div className="mb-3 flex items-center justify-between gap-2 px-4">
-							<h2 className={sectionTitleBare}>{heading}</h2>
+					{heading && (!query.trim() || onBack) && (
+						<div className="mb-3 flex items-center gap-2 px-4">
+							{onBack && <BackChip onBack={onBack} />}
+							<h2 className={clsx(sectionTitleBare, "flex-1")}>{heading}</h2>
 							{headerAside}
 						</div>
 					)}
-					{filter && !query.trim() && (
-						<div className="mb-1 px-1">{filter}</div>
-					)}
+					{!query.trim() && banner}
 					{/* Rises when a shelf turns out empty; a search that finds
 					    nothing is typed, so that one cuts, and so does a line
 					    the server already painted (it would sit invisible until
@@ -333,30 +354,19 @@ export function ConversationList({
 				animate="show"
 				className="flex flex-col rounded-2xl px-2 pb-2 pt-4 glass-frost backdrop-blur-xl"
 			>
-			{heading && !query.trim() && (
-				<div className="mb-3 flex items-center justify-between gap-2 px-4">
-					<h2 className={sectionTitleBare}>{heading}</h2>
+			{/* The back chip is the only way off a shelf now, so the header
+			    survives a search there; in the inbox a search still owns the
+			    block (owner 2026-09-19, caught the first version of this). */}
+			{heading && (!query.trim() || onBack) && (
+				<div className="mb-3 flex items-center gap-2 px-4">
+					{onBack && <BackChip onBack={onBack} />}
+					<h2 className={clsx(sectionTitleBare, "flex-1")}>{heading}</h2>
 					{headerAside}
 				</div>
 			)}
-			{/* Always, in every view: the pills are the only way back from
-			    Requests or the Archived shelf. */}
-			{filter && !query.trim() && (
-				// Five chips do not fit a 340px column: the row scrolls
-				// sideways rather than clipping Requests and Archived off the
-				// edge (owner 2026-09-20).
-				// A rail around the CHIPS, not the column (owner 2026-09-20),
-				// with the live pill a lighter shade so the thumb reads, and a
-				// thumb under the row to close it off.
-				<>
-					<div className="mx-2 mb-2 flex">
-						<div className="max-w-full overflow-x-auto rounded-pill bg-primary/5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:!px-1 [&>*]:!py-1 [&>*]:min-w-max [&_[aria-selected=true]]:bg-primary/15">
-							{filter}
-						</div>
-					</div>
-					<InboxThumb />
-				</>
-			)}
+			{/* A state, not a filter (owner 2026-09-20): it is here when
+			    something is waiting and absent when nothing is. */}
+			{!query.trim() && banner}
 			{/* Who is on, right inside the chats block: faces only, no header
 			    of its own (owner 2026-09-20). */}
 			{onlineNow.length > 0 && !query.trim() && (
@@ -573,6 +583,7 @@ export function ConversationList({
 					</CascadeRow>
 				);
 			})}
+			{!query.trim() && footer}
 			</motion.div>
 		</div>
 	);

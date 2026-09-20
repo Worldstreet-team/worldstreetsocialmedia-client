@@ -866,6 +866,8 @@
   "messages.members": "members",
   "messages.nobodyOnline": "Nobody is online right now.",
   "messages.people": "People",
+  "messages.all": "All",
+  "messages.unread": "Unread",
   "messages.suggested": "Suggested",
   "messages.message": "Message",
   "messages.chats": "Chats",

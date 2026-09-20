@@ -683,6 +683,30 @@ The two lightboxes (`ImageModal`, `MediaModal`) take the header and the
 dismiss hook but keep their own opaque ground: no variant models full-bleed
 media, and a viewer wants black behind it, not a 50% wash.
 
+## The inbox has no filter rows (owner pick 2026-09-20)
+
+The Chats block carried People / Groups on its header row and Primary /
+Requests / Archive under it: 96px of controls before the first chat, in two
+visual languages, for two shelves that are usually empty. The owner picked
+directions D + A from a mocked set
+(https://claude.ai/artifact/G2aygXWjYA7PvT7h4QTwur). Both rows are gone.
+
+- **Scope lives on the search** (D). Focusing the search field unfolds one
+  row of chips: All / People / Groups / Unread, driving `kindFilter` in
+  `MessageBox`. It folds away on blur, EXCEPT while a scope other than All
+  is live, or a filter would keep working after its control disappeared.
+  The chips use `onMouseDown` preventDefault, since a click would blur the
+  field and fold the row away under the finger.
+- **Requests and Archive are states, not filters** (A). Requests is a row
+  above the list carrying its count and the first names waiting, rendered
+  only when there are any; Archived is a door under the list with its
+  count. Both set `inboxTab`, and the shelf is left through the back chip
+  in `ConversationList`'s header, which is why that header renders during
+  a search when `onBack` is set. The shelf tabs are gone: do not
+  reintroduce a permanent control for a state that is usually empty.
+- `ConversationList` takes `banner`, `footer` and `onBack` for this. The
+  old `filter` prop is gone.
+
 ## Presence: who is online (added 2026-08-27)
 
 One global Ably channel, `presence`, entered once on connect by
