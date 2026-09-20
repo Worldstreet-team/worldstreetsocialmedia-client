@@ -276,21 +276,34 @@ Three independent colour axes, and they must stay independent:
   the card selected. The gallery is three shelves: Colour, Artwork,
   Photographs.
 
-## Settings is the Inspector (owner pick 2026-09-20)
+## Settings wears the Messages makeover (owner 2026-09-20)
 
-The owner rejected the pill-chip, card-on-card Settings ("child's play") and
-chose the Inspector from four mocked directions. The grammar lives in
-`src/components/settings/inspector.tsx`: `SettingGroup` (a quiet 13px label
-with its caption on the same line, then hairline rows; no card, no icon
-chip), `SettingRow` (name | what it does | control at the right edge; on a
-phone the explanation drops under the name), `SelectRow` (a native
-`<select>` on purpose: the phone gets its own picker and there is no overlay
-to build), `ToggleRow`, `ValueRow`, and the `rowButton` class. `Choice` and
-`Toggle` in `SettingRows.tsx` are thin names over those, so every group
-inherits it. The rail (`SettingsNav`) has search on every width, two labels
-(You / App), 40px text rows and no icons. Controls are 7px-radius bordered
-boxes; pills are gone from Settings. A new setting is a row from that file,
-never a bespoke block, and never a row of option chips.
+Two rounds the same day. First the owner rejected the pill-chip, card-on-card
+Settings ("child's play") and picked the Inspector row shape from four mocked
+directions; then asked for "the make over we gave the messages", with custom
+components, a proper sidebar, icons, headers and master search. The result:
+
+- `src/components/settings/inspector.tsx` is the kit. `SettingGroup` is a
+  frosted block (`rounded-2xl glass-frost backdrop-blur-xl`, the inbox
+  block) with an icon in a wash chip, a 17px display title and its caption.
+  `SettingRow` is name with the explanation under it, control at the right
+  edge, hairline between rows. `Select` is the designed dropdown: a pill
+  trigger on the rest wash, a PORTALLED menu (a block with backdrop-filter is
+  a stacking context, so an in-block menu is painted over by the next
+  block) that unfolds with `menuStagger`, arrows / Home / End / typeahead /
+  Escape, focus returned to the trigger. `SelectRow`, `ToggleRow`,
+  `ValueRow`, `rowButton` build on those. `Choice` and `Toggle` in
+  `SettingRows.tsx` are thin names over them. Never a native `<select>`,
+  never a row of option chips, never a bespoke block.
+- `SettingsNav` is the inbox column: a masthead block (title, identity,
+  master search well) and a map block (You / App labels, icon chip + name +
+  hint rows, one sliding pressed wash, the open section's groups folded out).
+- Master search: `SEARCH_INDEX` in `sections.tsx` lists EVERY row by its
+  visible name with its `group`. A result links to
+  `/settings/<section>#group-<id>`; the page scrolls there, rings the block
+  for a moment and clears the hash. A new row needs a line in that index.
+- The page header is the thread header's frosted pill (section icon, title,
+  hint, sync status), floating over a padded column of blocks.
 
 ## Finance-native feed layer (added 2026-08-02)
 

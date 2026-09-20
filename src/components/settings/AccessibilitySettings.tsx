@@ -118,7 +118,7 @@ export function AccessibilitySettings() {
 				onChange={(v) => setPrefs({ a11y: { reduceTransparency: v } })}
 			/>
 
-			<div className="flex min-h-[52px] items-center justify-between gap-3 py-1.5">
+			<div className="flex min-h-[56px] items-center justify-between gap-3 py-2">
 				{/* The save landing is the one event on this screen worth a beat.
 				    initial={false}: a page that opens already saved just says so. */}
 				<AnimatePresence mode="wait" initial={false}>

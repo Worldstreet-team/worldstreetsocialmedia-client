@@ -138,6 +138,28 @@ export default function SettingsPage() {
 		el.scrollIntoView({ behavior: motionReduced() ? "auto" : "smooth", block: "start" });
 	}, []);
 
+	// Master search hands over with a hash (#group-<id>): go to that block
+	// and ring it for a moment, so the eye lands where the result pointed.
+	useEffect(() => {
+		const land = () => {
+			const m = window.location.hash.match(/^#group-([\w-]+)$/);
+			if (!m) return;
+			const el = document.getElementById(`group-${m[1]}`);
+			if (!el) return;
+			scrollToGroup(m[1]);
+			el.classList.add("ring-2", "ring-brand/60");
+			window.setTimeout(() => el.classList.remove("ring-2", "ring-brand/60"), 1600);
+			// Spent: a later section change must not replay it.
+			history.replaceState(null, "", window.location.pathname);
+		};
+		const id = window.setTimeout(land, 80);
+		window.addEventListener("hashchange", land);
+		return () => {
+			window.clearTimeout(id);
+			window.removeEventListener("hashchange", land);
+		};
+	}, [activeId, scrollToGroup]);
+
 	const setPremiumOpen = useSetAtom(premiumOpenAtom);
 	const [subState, setSubState] = useState<SubscriptionState | null>(null);
 	const [interests, setInterests] = useState<string[]>([]);
@@ -229,7 +251,7 @@ export default function SettingsPage() {
 			    section is open so the detail owns the screen. */}
 			<div
 				className={clsx(
-					"pb-nav lg:sticky lg:top-0 lg:block lg:w-[236px] lg:shrink-0 lg:border-r lg:border-hairline lg:pb-0",
+					"pb-nav lg:sticky lg:top-0 lg:block lg:w-[356px] lg:shrink-0 lg:border-r lg:border-hairline lg:pb-0",
 					valid ? "hidden" : "block w-full",
 				)}
 			>
@@ -243,20 +265,32 @@ export default function SettingsPage() {
 					valid ? "block" : "hidden lg:block",
 				)}
 			>
-				<header className="sticky top-0 z-sticky border-b border-hairline bg-page">
-					<div className="flex items-center gap-2 px-4 py-3 lg:px-8">
+				{/* The Messages thread's grammar: the title rides in a frosted pill
+				    floating over the blocks, with the section's own icon. The
+				    pill blurs what scrolls under it; the blocks are its siblings,
+				    never its children, so no blur sits inside another. */}
+				<header className="sticky top-0 z-sticky px-2 pt-2 md:px-3 md:pt-3">
+					<div className="flex h-14 items-center gap-2.5 rounded-pill px-2 glass-frost backdrop-blur-xl">
 						<Link
 							href="/settings"
 							aria-label="Back to settings"
-							className="-ml-1 flex h-9 w-9 items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary lg:hidden"
+							className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary lg:hidden"
 						>
 							<ArrowLeft className="h-5 w-5" strokeWidth={2.5} />
 						</Link>
-						<h2 className="font-display text-[calc(20px*var(--ws-fs))] font-semibold tracking-tight text-primary lg:text-[calc(17px*var(--ws-fs))] lg:font-medium">
-							{t(activeDef.labelKey)}
-						</h2>
-						{/* The inspector's status line: where these settings live. */}
-						<span className="ml-auto hidden font-sans text-[calc(12.5px*var(--ws-fs))] text-muted lg:block">
+						<span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-pill bg-primary text-page lg:flex">
+							<activeDef.icon className="h-[18px] w-[18px]" strokeWidth={2.5} />
+						</span>
+						<div className="min-w-0 flex-1">
+							<h2 className="truncate font-display text-[calc(17px*var(--ws-fs))] font-semibold leading-tight tracking-tight text-primary">
+								{t(activeDef.labelKey)}
+							</h2>
+							<p className="truncate font-sans text-[calc(12.5px*var(--ws-fs))] leading-tight text-muted">
+								{activeDef.hint}
+							</p>
+						</div>
+						<span className="mr-3 hidden shrink-0 items-center gap-1.5 font-sans text-[calc(12.5px*var(--ws-fs))] text-muted sm:flex">
+							<span className="h-1.5 w-1.5 rounded-pill bg-success" />
 							Synced to your account
 						</span>
 					</div>
@@ -266,7 +300,7 @@ export default function SettingsPage() {
 					{groups.length > 1 && (
 						<nav
 							aria-label="On this page"
-							className="flex gap-1.5 overflow-x-auto px-4 pb-2.5 [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden"
+							className="mt-2 flex w-fit max-w-full gap-1 overflow-x-auto rounded-pill p-1 glass-frost backdrop-blur-xl [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden"
 						>
 							{groups.map((g) => {
 								const on = g.id === activeGroup;
@@ -298,14 +332,14 @@ export default function SettingsPage() {
 					)}
 				</header>
 
-				<div ref={detailRef} className="flex w-full max-w-[960px] flex-col gap-9 px-4 py-5 lg:px-8 lg:py-7">
+				<div ref={detailRef} className="flex w-full max-w-[980px] flex-col gap-2 p-2 md:gap-3 md:p-3">
 					{activeId === "account" && (
 						<>
 							{/* Identity card: gives the page a subject rather than
 							    opening on a bare label/value list. */}
 							<motion.div
 								{...reveal(0)}
-								className="flex items-center gap-3.5"
+								className="flex items-center gap-3.5 rounded-2xl p-4 glass-frost backdrop-blur-xl lg:px-5"
 							>
 								<span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-pill bg-sunken">
 									<SafeAvatar src={user?.avatar} />
@@ -397,7 +431,7 @@ export default function SettingsPage() {
 									type="button"
 									{...press}
 									onClick={() => setPremiumOpen(true)}
-									className="h-10 cursor-pointer rounded-[7px] bg-brand px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-opacity hover:opacity-90"
+									className="h-10 cursor-pointer rounded-pill bg-brand px-5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-opacity hover:opacity-90"
 								>
 									{subState?.subscription
 										? t("premium.manageTitle")
@@ -438,7 +472,7 @@ export default function SettingsPage() {
 									{...press}
 									onClick={saveTopics}
 									disabled={!dirty || savingTopics}
-									className="h-10 cursor-pointer rounded-[7px] bg-brand px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+									className="h-10 cursor-pointer rounded-pill bg-brand px-5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
 								>
 									<AnimatePresence mode="wait" initial={false}>
 										<motion.span
@@ -583,14 +617,14 @@ export default function SettingsPage() {
 }
 
 /**
- * A settings group in the Inspector layout (owner 2026-09-20): a quiet label
- * with its explanation on the same line, then hairline rows. No card, no
- * icon chip. `icon` is still accepted so the call sites did not all churn;
- * it is not drawn.
+ * A settings group: a frosted block with an icon header, the same
+ * architecture as the Messages inbox blocks (owner 2026-09-20). The block
+ * itself lives in settings/inspector.tsx; this adds the first-open rise.
  */
 function Section({
 	id,
 	order = 0,
+	icon,
 	title,
 	caption,
 	children,
@@ -609,7 +643,7 @@ function Section({
 }) {
 	return (
 		<motion.div {...reveal(order)}>
-			<SettingGroup id={id} title={title} caption={caption} tone={tone}>
+			<SettingGroup id={id} icon={icon} title={title} caption={caption} tone={tone}>
 				{children}
 			</SettingGroup>
 		</motion.div>

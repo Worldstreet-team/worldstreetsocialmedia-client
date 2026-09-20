@@ -108,7 +108,7 @@ export function UsernameSetting() {
 	return (
 		// The Inspector row, with a field where a dropdown would sit: name,
 		// the handle and its verdict, Save at the right edge.
-		<div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 gap-y-2 border-b border-hairline py-2.5 lg:grid-cols-[minmax(0,220px)_minmax(0,1fr)_auto] lg:gap-x-6">
+		<div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 gap-y-2 border-b border-t border-hairline py-2.5">
 			<span className="flex h-10 items-center font-sans text-[calc(13.5px*var(--ws-fs))] font-medium text-primary">
 				Username
 			</span>
@@ -116,7 +116,7 @@ export function UsernameSetting() {
 				type="button"
 				onClick={save}
 				disabled={!canSave}
-				className="col-start-2 row-start-1 h-10 shrink-0 cursor-pointer rounded-[7px] bg-primary px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-page transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 lg:col-start-3"
+				className="col-start-2 row-start-1 h-10 shrink-0 cursor-pointer rounded-pill bg-primary px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-page transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
 			>
 				{/* inline-block: a transform does nothing on an inline box. */}
 				<AnimatePresence mode="wait" initial={false}>
@@ -129,8 +129,8 @@ export function UsernameSetting() {
 					</motion.span>
 				</AnimatePresence>
 			</button>
-			<div className="col-span-2 min-w-0 lg:col-span-1 lg:col-start-2 lg:row-start-1">
-			<div className="flex h-10 items-center gap-2 rounded-[7px] border border-hairline px-3 focus-within:border-primary/40">
+			<div className="col-span-2 min-w-0">
+			<div className="flex h-10 items-center gap-2 rounded-pill bg-primary/5 px-4 transition-colors focus-within:bg-primary/10">
 				<span className="font-sans text-[calc(14px*var(--ws-fs))] text-subtle">@</span>
 				<input
 					value={trimmed}

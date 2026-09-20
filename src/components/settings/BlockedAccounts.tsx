@@ -139,7 +139,7 @@ export function BlockedAccounts() {
 							type="button"
 							onClick={() => unblock(user)}
 							disabled={busyId === user._id}
-							className="h-10 shrink-0 cursor-pointer rounded-[7px] border border-hairline px-3.5 font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/5 disabled:opacity-50"
+							className="h-10 shrink-0 cursor-pointer rounded-pill bg-primary/5 px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
 						>
 							{busyId === user._id
 								? t("settings.blocked.unblocking")

@@ -20,7 +20,7 @@ export function InstallAppRow() {
 	if (isStandalone || (!canPrompt && !isIOS)) return null;
 
 	return (
-		<div className="flex flex-col border-b border-hairline">
+		<div className="flex flex-col border-b border-t border-hairline">
 			{/* An Inspector row whose whole width is the button. */}
 			<button
 				type="button"
@@ -28,15 +28,15 @@ export function InstallAppRow() {
 					if (canPrompt) void promptInstall();
 					else setShowIOSSteps((v) => !v);
 				}}
-				className="grid min-h-[52px] w-full cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 py-1.5 text-left lg:grid-cols-[minmax(0,220px)_minmax(0,1fr)_auto] lg:gap-x-6"
+				className="grid min-h-[52px] w-full cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 py-2 text-left"
 			>
 				<span className="font-sans text-[calc(13.5px*var(--ws-fs))] font-medium text-primary">
 					Install the app
 				</span>
-				<span className="col-start-1 row-start-2 font-sans text-[calc(12.5px*var(--ws-fs))] leading-snug text-muted lg:col-start-2 lg:row-start-1">
+				<span className="col-start-1 row-start-2 font-sans text-[calc(12.5px*var(--ws-fs))] leading-snug text-muted">
 					WorldSpace on your home screen, with its own icon and badge
 				</span>
-				<span className="col-start-2 row-span-2 row-start-1 flex h-10 items-center gap-2 rounded-[7px] border border-hairline px-3.5 font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary lg:col-start-3 lg:row-span-1">
+				<span className="col-start-2 row-span-2 row-start-1 flex h-10 items-center gap-2 rounded-pill bg-primary/5 px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
 					<MonitorDown className="h-4 w-4 text-muted" />
 					Install
 				</span>

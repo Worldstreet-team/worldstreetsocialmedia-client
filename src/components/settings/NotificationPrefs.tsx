@@ -131,19 +131,19 @@ function Toggle({
 			onClick={onChange}
 			// The Inspector row (settings/inspector.tsx), as one switch button:
 			// name, what it does, the control at the right edge.
-			className="grid min-h-[52px] cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 border-b border-hairline py-1.5 text-left disabled:opacity-60 lg:grid-cols-[minmax(0,220px)_minmax(0,1fr)_auto] lg:gap-x-6"
+			className="grid min-h-[52px] cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 border-b border-hairline py-2 text-left first:border-t disabled:opacity-60"
 		>
 			<span className="font-sans text-[calc(13.5px*var(--ws-fs))] font-medium text-primary">
 				{label}
 			</span>
-			<span className="col-start-1 row-start-2 font-sans text-[calc(12.5px*var(--ws-fs))] leading-snug text-muted lg:col-start-2 lg:row-start-1">
+			<span className="col-start-1 row-start-2 font-sans text-[calc(12.5px*var(--ws-fs))] leading-snug text-muted">
 				{caption}
 			</span>
 			{/* Track + knob. No scale on press — the surface ladder does state. */}
 			<span
 				aria-hidden="true"
 				className={clsx(
-					"relative col-start-2 row-span-2 row-start-1 h-6 w-10 shrink-0 rounded-pill transition-colors lg:col-start-3 lg:row-span-1",
+					"relative col-start-2 row-span-2 row-start-1 h-6 w-10 shrink-0 rounded-pill transition-colors",
 					checked ? "bg-brand" : "bg-chip",
 				)}
 			>

@@ -240,7 +240,7 @@ function Action({
 	return (
 		// An Inspector row (settings/inspector.tsx): name, what it does, the
 		// action at the right edge. No icon; the red title carries the warning.
-		<div className="grid min-h-[52px] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 border-b border-hairline py-1.5 lg:grid-cols-[minmax(0,220px)_minmax(0,1fr)_auto] lg:gap-x-6">
+		<div className="grid min-h-[52px] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 border-b border-hairline py-2 first:border-t">
 			<span
 				className={`font-sans text-[calc(13.5px*var(--ws-fs))] font-medium ${
 					destructive ? "text-danger" : "text-primary"
@@ -248,17 +248,17 @@ function Action({
 			>
 				{title}
 			</span>
-			<span className="col-start-1 row-start-2 font-sans text-[calc(12.5px*var(--ws-fs))] leading-snug text-muted lg:col-start-2 lg:row-start-1">
+			<span className="col-start-1 row-start-2 font-sans text-[calc(12.5px*var(--ws-fs))] leading-snug text-muted">
 				{caption}
 			</span>
 			<button
 				type="button"
 				onClick={onClick}
 				disabled={disabled}
-				className={`col-start-2 row-span-2 row-start-1 h-10 shrink-0 cursor-pointer rounded-[7px] border px-3.5 font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors disabled:opacity-50 lg:col-start-3 lg:row-span-1 ${
+				className={`col-start-2 row-span-2 row-start-1 h-10 shrink-0 cursor-pointer rounded-pill px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-colors disabled:opacity-50 ${
 					destructive
-						? "border-danger/40 text-danger hover:bg-danger/10"
-						: "border-hairline text-primary hover:bg-primary/5"
+						? "bg-danger/10 text-danger hover:bg-danger/15"
+						: "bg-primary/5 text-primary hover:bg-primary/10"
 				}`}
 			>
 				{/* Download to Building…: the label rolls so the button visibly
