@@ -111,6 +111,10 @@ const KIND: Record<string, { glyph: any; key: string }> = {
  *  rather than a label (owner 2026-09-19). */
 const sectionTitle =
 	"mb-3 px-4 font-display text-[calc(20px*var(--ws-fs))] font-semibold leading-6 tracking-[-0.01em] text-primary";
+/** The same title without the row's own padding, for a header that shares
+ *  its line with a control. */
+const sectionTitleBare =
+	"font-display text-[calc(20px*var(--ws-fs))] font-semibold leading-6 tracking-[-0.01em] text-primary";
 
 export function InboxThumb() {
 	return (
@@ -133,6 +137,7 @@ export function ConversationList({
 	onOpenPerson,
 	heading,
 	filter,
+	headerAside,
 }: {
 	conversations: ConversationRow[];
 	loading: boolean;
@@ -154,6 +159,8 @@ export function ConversationList({
 	/** The Primary / Requests pills, rendered inside the chats block under
 	 *  its title (owner 2026-09-19) rather than as a block of their own. */
 	filter?: React.ReactNode;
+	/** Sits on the header's own row, hard right: the People / Groups chips. */
+	headerAside?: React.ReactNode;
 }) {
 	const t = useT();
 	const online = useAtomValue(onlineIdsAtom);
@@ -251,7 +258,10 @@ export function ConversationList({
 			<div className="flex flex-col px-2">
 				<div className="flex flex-col rounded-2xl pb-6 pt-4 md:bg-sunken">
 					{heading && !query.trim() && (
-						<h2 className={sectionTitle}>{heading}</h2>
+						<div className="mb-3 flex items-center justify-between gap-2 px-4">
+							<h2 className={sectionTitleBare}>{heading}</h2>
+							{headerAside}
+						</div>
 					)}
 					{filter && !query.trim() && (
 						<div className="mb-1 px-1">{filter}</div>
@@ -266,43 +276,57 @@ export function ConversationList({
 
 	return (
 		<div className="flex flex-col px-2">
-			{onlineNow.length > 0 && (
-				<section aria-label={t("messages.onlineNow")} className="mb-2 rounded-2xl px-1 pb-3 pt-4 md:bg-sunken">
-					<h2 className={sectionTitle}>{t("messages.onlineNow")}</h2>
-					<div className="flex gap-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-						{onlineNow.map(({ key, user: peer, conv }) => {
-							const first = (peer.firstName || peer.username || "").split(" ")[0];
-							return (
-								<button
-									key={key}
-									type="button"
-									onClick={() => (conv ? onOpen(conv) : onOpenPerson?.(peer))}
-									className="flex w-[72px] shrink-0 cursor-pointer flex-col items-center gap-1.5 rounded-[10px] py-1 text-center transition-colors hover:bg-primary/5"
-								>
-									<span className="relative">
-										<span className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-pill bg-raised">
-											<SafeAvatar src={peer.avatar} />
-										</span>
-										<span
-											aria-hidden
-											className="ws-cue-online absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-pill bg-success ring-2 ring-page"
-										/>
-									</span>
-									<span className="w-full truncate font-sans text-[calc(12px*var(--ws-fs))] font-medium text-primary">
-										{first}
-									</span>
-								</button>
-							);
-						})}
-					</div>
-				</section>
+			<div className="flex flex-col rounded-2xl pb-2 pt-4 glass-frost backdrop-blur-xl">
+			{heading && !query.trim() && (
+				<div className="mb-3 flex items-center justify-between gap-2 px-4">
+					<h2 className={sectionTitleBare}>{heading}</h2>
+					{headerAside}
+				</div>
 			)}
-			{onlineNow.length > 0 && rows.length > 0 && <InboxThumb />}
-			<div className="flex flex-col rounded-2xl pb-2 pt-4 md:bg-sunken">
-			{heading && !query.trim() && <h2 className={sectionTitle}>{heading}</h2>}
 			{/* Always, in every view: the pills are the only way back from
 			    Requests or the Archived shelf. */}
-			{filter && !query.trim() && <div className="mb-1 px-1">{filter}</div>}
+			{filter && !query.trim() && (
+				// Five chips do not fit a 340px column: the row scrolls
+				// sideways rather than clipping Requests and Archived off the
+				// edge (owner 2026-09-20).
+				<div className="mb-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:min-w-max">
+					{filter}
+				</div>
+			)}
+			{/* Who is on, right inside the chats block: faces only, no header
+			    of its own (owner 2026-09-20). */}
+			{onlineNow.length > 0 && !query.trim() && (
+				<div
+					aria-label={t("messages.onlineNow")}
+					className="mb-1 flex gap-1 overflow-x-auto px-2 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+				>
+					{onlineNow.map(({ key, user: peer, conv }) => {
+						const first = (peer.firstName || peer.username || "").split(" ")[0];
+						return (
+							<button
+								key={key}
+								type="button"
+								onClick={() => (conv ? onOpen(conv) : onOpenPerson?.(peer))}
+								className="flex w-[62px] shrink-0 cursor-pointer flex-col items-center gap-1 rounded-[10px] py-1 text-center transition-colors hover:bg-primary/5"
+							>
+								<span className="relative">
+									<span className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-pill bg-raised">
+										<SafeAvatar src={peer.avatar} />
+									</span>
+									<span
+										aria-hidden
+										className="ws-cue-online absolute bottom-0 right-0 h-2 w-2 rounded-pill bg-success ring-2 ring-sunken"
+									/>
+								</span>
+								<span className="w-full truncate font-sans text-[calc(11px*var(--ws-fs))] font-medium text-muted">
+									{first}
+								</span>
+							</button>
+						);
+					})}
+				</div>
+			)}
+
 			{rows.map((conv) => {
 				const identity = conversationIdentity(conv);
 				const isGroup = identity.kind === "group";
@@ -338,7 +362,9 @@ export function ConversationList({
 							// wrapper's px-2 gives the radius air on both sides.
 							// Its fill is a FADED white (owner): the ink token
 							// at a wash, not raised-grey and not solid white.
-							"group relative flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors",
+							// mx-2, so the selected chip never runs into the block's
+							// own edges (owner 2026-09-20).
+							"group relative mx-2 flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors",
 							active ? "bg-primary/10" : "hover:bg-primary/5",
 						)}
 					>
@@ -354,7 +380,7 @@ export function ConversationList({
 							{!isGroup && u && online.has(u._id) && (
 								<span
 									aria-label="Online"
-									className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-pill bg-success ring-2 ring-page ws-cue-online"
+									className="absolute bottom-0 right-0 h-2 w-2 rounded-pill bg-success ring-2 ring-sunken ws-cue-online"
 								/>
 							)}
 						</span>

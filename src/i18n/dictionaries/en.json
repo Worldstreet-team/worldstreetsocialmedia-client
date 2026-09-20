@@ -868,6 +868,7 @@
   "messages.suggested": "Suggested",
   "messages.message": "Message",
   "messages.chats": "Chats",
+  "messages.groups": "Groups",
   "messages.archived": "Archived",
   "messages.archive": "Archive",
   "messages.unarchive": "Unarchive",

@@ -7,21 +7,8 @@ import Link from "next/link";
 
 import dynamic from "next/dynamic";
 
-import {
-	useState,
-	useEffect,
-	useRef,
-	useCallback,
-	useMemo,
-} from "react";
-import {
-	Info,
-	Phone,
-	Video,
-	Plus,
-	ArrowLeft,
-	Users,
-} from "lucide-react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { Info, Phone, Video, Plus, ArrowLeft, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Badge } from "@/components/ui/Badge";
@@ -48,17 +35,19 @@ import MediaModal from "../ui/MediaModal";
 // client code in the app and they render only when someone opens one. The
 // host renders them conditionally, so next/dynamic defers the chunk until
 // that first render.
-const MediaEditor = dynamic(
-	() => import("@/components/editor/MediaEditor"),
-	{ ssr: false },
-);
+const MediaEditor = dynamic(() => import("@/components/editor/MediaEditor"), {
+  ssr: false,
+});
 import { ConversationList, InboxThumb } from "./ConversationList";
 import { StoriesRail } from "@/components/feed/StoriesRail";
 import { GIPHY_KEY, GifPicker } from "./GifPicker";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCall } from "@/providers/CallProvider";
 import { useChatSignals } from "@/hooks/useChatSignals";
-import { ThreadList, type ThreadListHandle } from "@/components/messages/thread/ThreadList";
+import {
+  ThreadList,
+  type ThreadListHandle,
+} from "@/components/messages/thread/ThreadList";
 import {
 	type ChatTheme,
 	type ThemeByMode,
@@ -69,9 +58,15 @@ import {
 import { ThemeBackdrop } from "@/components/messages/theme/ThemeBackdrop";
 import { ThemeGallery } from "@/components/messages/theme/ThemeGallery";
 import { ThemeStudio } from "@/components/messages/theme/ThemeStudio";
-import { AttachSheet, type AttachAnchor } from "@/components/messages/AttachSheet";
+import {
+  AttachSheet,
+  type AttachAnchor,
+} from "@/components/messages/AttachSheet";
 import type { ConversationRowUser } from "@/components/messages/ConversationList";
-import { ContactPicker, type PickedUser } from "@/components/messages/ContactPicker";
+import {
+  ContactPicker,
+  type PickedUser,
+} from "@/components/messages/ContactPicker";
 import {
 	fetchGlobalTheme,
 	saveChatTheme,
@@ -123,8 +118,7 @@ import {
 // Tray stays Phosphor: it feeds the shared Tabs component (feed tabs use it
 // too), which is Phosphor-typed and drives its own active weight. The Remix
 // swap is for the chat MESSAGE glyphs, not the tab chrome.
-import {
-	Archive, Tray } from "@phosphor-icons/react";
+import { Archive, Tray, User, UsersThree } from "@phosphor-icons/react";
 import { SendMoneySheet } from "@/components/messages/SendMoneySheet";
 import { GroupSheet } from "@/components/messages/GroupSheet";
 import { GroupCreateModal } from "@/components/messages/GroupCreateModal";
@@ -135,7 +129,11 @@ import { useAtom, useSetAtom } from "jotai";
 import { useAtomValue } from "jotai";
 import { onlineIdsAtom } from "@/store/ui.atom";
 import { userAtom } from "@/store/user.atom";
-import { activeConversationIdAtom, messageCacheAtom, unreadMessagesCountAtom } from "@/store/messageCache";
+import {
+  activeConversationIdAtom,
+  messageCacheAtom,
+  unreadMessagesCountAtom,
+} from "@/store/messageCache";
 import NewConversationModal from "./NewConversationModal";
 
 // Helper component for conditional channel subscription
@@ -229,9 +227,22 @@ interface Message {
 	sender: UserProfile;
 	content: string;
 	// "call" is a finished call logged into the thread, not something typed.
-	type: "text" | "image" | "video" | "audio" | "file" | "call" | "payment" | "contact";
+  type:
+    | "text"
+    | "image"
+    | "video"
+    | "audio"
+    | "file"
+    | "call"
+    | "payment"
+    | "contact";
 	/** A shared account: the bubble is a card with a Message action. */
-	contact?: { profile: string; name: string; username?: string; avatar?: string };
+  contact?: {
+    profile: string;
+    name: string;
+    username?: string;
+    avatar?: string;
+  };
 	/** USD minor units, payment messages only. */
 	amountMinor?: number;
 	/** Voice-note length, so a quoted voice note can say how long it is. */
@@ -304,11 +315,20 @@ function dayLabel(iso: string) {
 	yday.setDate(today.getDate() - 1);
 	if (d.toDateString() === today.toDateString()) return "Today";
 	if (d.toDateString() === yday.toDateString()) return "Yesterday";
-	return format(d, d.getFullYear() === today.getFullYear() ? "MMM d" : "MMM d, yyyy");
+  return format(
+    d,
+    d.getFullYear() === today.getFullYear() ? "MMM d" : "MMM d, yyyy",
+  );
 }
 
-const displayNameOf = (u?: { firstName?: string; lastName?: string; username?: string }) =>
-	[u?.firstName, u?.lastName].filter(Boolean).join(" ") || u?.username || "This account";
+const displayNameOf = (u?: {
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+}) =>
+  [u?.firstName, u?.lastName].filter(Boolean).join(" ") ||
+  u?.username ||
+  "This account";
 
 interface Conversation {
 	_id: string;
@@ -372,9 +392,7 @@ export const MessageBox = ({
 	// onto thread state.
 	useEffect(() => {
 		const onPop = () => {
-			const m = window.location.pathname.match(
-				/\/messages\/([a-f0-9]{24})/i,
-			);
+      const m = window.location.pathname.match(/\/messages\/([a-f0-9]{24})/i);
 			if (!m) {
 				setActiveConversation(null);
 				return;
@@ -423,7 +441,9 @@ export const MessageBox = ({
 	// variables on the thread pane, so a theme change re-paints without
 	// re-rendering a single memoised bubble.
 	const [globalTheme, setGlobalTheme] = useState<ThemeByMode>({});
-	const [themeSheet, setThemeSheet] = useState<null | "gallery" | { studio: ThemeScope }>(null);
+  const [themeSheet, setThemeSheet] = useState<
+    null | "gallery" | { studio: ThemeScope }
+  >(null);
 	const [themeSaving, setThemeSaving] = useState(false);
 	const [sendPulse, setSendPulse] = useState(0);
 	const hasMoreOlderRef = useRef(true);
@@ -501,17 +521,14 @@ export const MessageBox = ({
 		return () => window.removeEventListener("keydown", onKey);
 	}, [replyTarget]);
 
-	const jumpToMessage = useCallback(
-		(id: string) => {
+  const jumpToMessage = useCallback((id: string) => {
 			const conv = activeIdRef.current;
 			const list = conv ? messageCacheRef.current[conv] || [] : [];
 			if (!list.some((mm) => mm._id === id)) return;
 			virtuosoRef.current?.scrollToMessage(id, "smooth");
 			setFlashedId(id);
 			setTimeout(() => setFlashedId((cur) => (cur === id ? null : cur)), 1200);
-		},
-		[],
-	);
+  }, []);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [isLoadingConversations, setIsLoadingConversations] = useState(
 		initialConversations.length === 0,
@@ -534,7 +551,8 @@ export const MessageBox = ({
 			const seen = new Map<string, ConversationRowUser>();
 			for (const list of [a?.data, b?.data]) {
 				if (!Array.isArray(list)) continue;
-				for (const u of list) if (u?._id && !seen.has(u._id)) seen.set(u._id, u);
+        for (const u of list)
+          if (u?._id && !seen.has(u._id)) seen.set(u._id, u);
 			}
 			setPeople([...seen.values()]);
 		});
@@ -598,7 +616,9 @@ export const MessageBox = ({
 								...c,
 								members: (c.members ?? []).map((mm) => {
 									const pid =
-										typeof mm.profile === "string" ? mm.profile : mm.profile?._id;
+                    typeof mm.profile === "string"
+                      ? mm.profile
+                      : mm.profile?._id;
 									return String(pid) === String(myProfileId)
 										? { ...mm, theme: next }
 										: mm;
@@ -614,7 +634,8 @@ export const MessageBox = ({
 			setThemeSaving(false);
 		}
 	};
-	const [showNewConversationModal, setShowNewConversationModal] = useState(false);
+  const [showNewConversationModal, setShowNewConversationModal] =
+    useState(false);
 	// The header count is the sum of the rows, derived — never its own state.
 	// A second copy of a number that is already on screen is a number that
 	// will disagree with it.
@@ -716,17 +737,31 @@ export const MessageBox = ({
 	const requestConversations = conversations.filter(
 		(c) => c.isRequestForMe && !(c as any).archived,
 	);
-	const archivedConversations = conversations.filter((c) => (c as any).archived);
+  const archivedConversations = conversations.filter(
+    (c) => (c as any).archived,
+  );
 	const [inboxTab, setInboxTab] = useState<"primary" | "requests" | "archived">(
 		"primary",
 	);
+	/** People or Groups, beside the block's own header (owner 2026-09-20).
+	 *  A second axis, not a shelf: it narrows whichever shelf is open, and
+	 *  tapping the live one again clears it. */
+	const [kindFilter, setKindFilter] = useState<"all" | "people" | "groups">(
+		"all",
+	);
 	const showRequests = inboxTab === "requests";
-	const listConversations =
+	const shelfConversations =
 		inboxTab === "requests"
 			? requestConversations
 			: inboxTab === "archived"
 				? archivedConversations
 				: inboxConversations;
+	const listConversations =
+		kindFilter === "all"
+			? shelfConversations
+			: shelfConversations.filter((c) =>
+					kindFilter === "groups" ? c.kind === "group" : c.kind !== "group",
+				);
 
 	/** Put a thread away, or take it back. Optimistic; the gateway keeps the
 	 *  flag per member, so it never touches the other person's inbox. */
@@ -759,9 +794,7 @@ export const MessageBox = ({
 			if (!convoId) return;
 			setMessageCache((prev) => ({
 				...prev,
-				[convoId]: (prev[convoId] ?? []).filter(
-					(m) => m._id !== message._id,
-				),
+        [convoId]: (prev[convoId] ?? []).filter((m) => m._id !== message._id),
 			}));
 			try {
 				const token = await getToken();
@@ -778,8 +811,7 @@ export const MessageBox = ({
 					...prev,
 					[convoId]: [...(prev[convoId] ?? []), message].sort(
 						(a, b) =>
-							new Date(a.createdAt).getTime() -
-							new Date(b.createdAt).getTime(),
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
 					),
 				}));
 				toast.error("Couldn't unsend that message");
@@ -834,9 +866,7 @@ export const MessageBox = ({
 					// Mutating local state anyway made rows vanish and then
 					// resurrect on the next fetch (audit finding 4).
 					const body = await res.json().catch(() => null);
-					toast.error(
-						body?.message || "Couldn't remove the conversation",
-					);
+          toast.error(body?.message || "Couldn't remove the conversation");
 					return;
 				}
 				setConversations((prev) =>
@@ -945,7 +975,10 @@ export const MessageBox = ({
 	// Failed TEXT sends keep their bubble (owner pick); this remembers what
 	// to resend when the red mark is tapped.
 	const textRetryRef = useRef(
-		new Map<string, { text: string; convId: string; replyTo: Message | null }>(),
+    new Map<
+      string,
+      { text: string; convId: string; replyTo: Message | null }
+    >(),
 	);
 	// Empty inbox = people you follow, one tap from a first message (owner
 	// pick: "suggested people" instead of a lone empty note).
@@ -1019,7 +1052,8 @@ export const MessageBox = ({
 		() =>
 			subscribeVoicePlayback((st) => {
 				const fill = voiceBarFillRef.current;
-				if (fill) fill.style.transform = `scaleX(${Math.min(1, Math.max(0, st.frac))})`;
+        if (fill)
+          fill.style.transform = `scaleX(${Math.min(1, Math.max(0, st.frac))})`;
 				setVoiceBar((prev) =>
 					prev?.id !== st.id ||
 					prev?.playing !== st.playing ||
@@ -1052,9 +1086,7 @@ export const MessageBox = ({
 	const removeByClientKey = (convId: string, clientKey: string) => {
 		setMessageCache((prev) => ({
 			...prev,
-			[convId]: (prev[convId] || []).filter(
-				(m) => m.clientKey !== clientKey,
-			),
+      [convId]: (prev[convId] || []).filter((m) => m.clientKey !== clientKey),
 		}));
 	};
 
@@ -1288,7 +1320,8 @@ export const MessageBox = ({
 		if (!activeConversation || !myProfileId) return;
 		const convId = activeConversation._id;
 		const clientKey = newKey();
-		const name = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.username || "";
+    const name =
+      [u.firstName, u.lastName].filter(Boolean).join(" ") || u.username || "";
 		setMessageCache((prev) => ({
 			...prev,
 			[convId]: [
@@ -1306,7 +1339,12 @@ export const MessageBox = ({
 					},
 					content: "",
 					type: "contact" as const,
-					contact: { profile: u._id, name, username: u.username, avatar: u.avatar },
+          contact: {
+            profile: u._id,
+            name,
+            username: u.username,
+            avatar: u.avatar,
+          },
 					createdAt: new Date().toISOString(),
 				} as Message,
 			],
@@ -1352,7 +1390,10 @@ export const MessageBox = ({
 		const btn =
 			(threadPaneRef.current ?? document).querySelector<HTMLButtonElement>(
 				'button[aria-label="Attach a file"]',
-			) ?? document.querySelector<HTMLButtonElement>('button[aria-label="Attach a file"]');
+      ) ??
+      document.querySelector<HTMLButtonElement>(
+        'button[aria-label="Attach a file"]',
+      );
 		const r = btn?.getBoundingClientRect();
 		setAttachAnchor(r ? { left: r.left, top: r.top } : null);
 		setShowAttachMenu(true);
@@ -1361,7 +1402,9 @@ export const MessageBox = ({
 	/** Android Chrome's contact picker; the row only renders where it exists. */
 	const sendPhoneContact = async () => {
 		try {
-			const picked = await (navigator as any).contacts.select(["name", "tel"], { multiple: false });
+      const picked = await (navigator as any).contacts.select(["name", "tel"], {
+        multiple: false,
+      });
 			const c = picked?.[0];
 			if (!c) return;
 			const name = Array.isArray(c.name) ? c.name[0] : c.name;
@@ -1423,16 +1466,12 @@ export const MessageBox = ({
 						}),
 					);
 					fd.append("conversationId", convId);
-					const up = await sendFormProgress(
-						"/api/messages/upload",
-						fd,
-						{
+          const up = await sendFormProgress("/api/messages/upload", fd, {
 							onProgress: (pct) =>
 								patchByClientKey(convId, clientKey, {
 									uploadPct: pct,
 								}),
-						},
-					);
+          });
 					if (up.success) mediaUrl = up.data.key ?? up.data.url;
 				}
 			}
@@ -1489,13 +1528,10 @@ export const MessageBox = ({
 	 */
 	const addFiles = useCallback(
 		(incoming: File[]) => {
-			const media = incoming.filter((f) =>
-				/^(image|video)\//.test(f.type),
-			);
+      const media = incoming.filter((f) => /^(image|video)\//.test(f.type));
 			if (media.length === 0) return;
 			const room = 8 - attachments.length;
-			if (media.length > room)
-				toast.error("Up to 8 attachments per send");
+      if (media.length > room) toast.error("Up to 8 attachments per send");
 			const accepted = media.slice(0, Math.max(0, room));
 			if (accepted.length === 0) return;
 			const items: PendingAttachment[] = accepted.map((f) => ({
@@ -1515,9 +1551,7 @@ export const MessageBox = ({
 								? await imageMeta(item.file)
 								: await videoMeta(item.file);
 						setAttachments((prev) =>
-							prev.map((a) =>
-								a.id === item.id ? { ...a, ...meta } : a,
-							),
+              prev.map((a) => (a.id === item.id ? { ...a, ...meta } : a)),
 						);
 					} catch {
 						/* geometry is a garnish */
@@ -1573,7 +1607,9 @@ export const MessageBox = ({
 	};
 
 	const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
-		virtuosoRef.current?.scrollToBottom(behavior === "auto" ? "auto" : "smooth");
+    virtuosoRef.current?.scrollToBottom(
+      behavior === "auto" ? "auto" : "smooth",
+    );
 	}, []);
 
 	const markAsRead = async (conversationId: string, upTo?: string) => {
@@ -1643,9 +1679,7 @@ export const MessageBox = ({
 								{ headers: { Authorization: `Bearer ${token}` } },
 							);
 							setMessageCache((prev) =>
-								prev[c._id]?.length
-									? prev
-									: { ...prev, [c._id]: r.data },
+                prev[c._id]?.length ? prev : { ...prev, [c._id]: r.data },
 							);
 						} catch {
 							/* a cold thread just loads on open like before */
@@ -1706,10 +1740,7 @@ export const MessageBox = ({
 					);
 					setMessageCache((prev) => ({
 						...prev,
-						[conversationId]: mergeMessages(
-							prev[conversationId] || [],
-							r.data,
-						),
+            [conversationId]: mergeMessages(prev[conversationId] || [], r.data),
 					}));
 				} catch {
 					// Silent: the cached copy is already on screen.
@@ -1725,12 +1756,16 @@ export const MessageBox = ({
 			// Bounded: a vault that cannot answer must never hold a chat back.
 			const saved = await Promise.race([
 				vaultLoadRef.current.catch(() => ({}) as Record<string, Message[]>),
-				new Promise<Record<string, Message[]>>((r) => setTimeout(() => r({}), 1500)),
+        new Promise<Record<string, Message[]>>((r) =>
+          setTimeout(() => r({}), 1500),
+        ),
 			]);
 			const hit = saved[conversationId];
 			if (hit?.length) {
 				setMessageCache((prev) =>
-					prev[conversationId]?.length ? prev : { ...prev, [conversationId]: hit },
+          prev[conversationId]?.length
+            ? prev
+            : { ...prev, [conversationId]: hit },
 				);
 				try {
 					const token = await getToken();
@@ -1802,7 +1837,9 @@ export const MessageBox = ({
 	const onMessage = useCallback((ablyMessage: any) => {
 		if (ablyMessage?.data?.type === "theme:updated") {
 			// Another tab or device saved the profile theme.
-			void fetchGlobalTheme(getToken).then(setGlobalTheme).catch(() => {});
+      void fetchGlobalTheme(getToken)
+        .then(setGlobalTheme)
+        .catch(() => {});
 			return;
 		}
 		if (
@@ -1856,9 +1893,7 @@ export const MessageBox = ({
 							...c,
 							members: (c.members ?? []).map((mm) => {
 								const pid =
-									typeof mm.profile === "string"
-										? mm.profile
-										: mm.profile?._id;
+                  typeof mm.profile === "string" ? mm.profile : mm.profile?._id;
 								return String(pid) === String(readerId)
 									? { ...mm, readUpTo, readUpToAt: new Date().toISOString() }
 									: mm;
@@ -1886,8 +1921,7 @@ export const MessageBox = ({
 				if (newMessage.clientKey) {
 					const ti = currentMessages.findIndex(
 						(m) =>
-							m.clientKey === newMessage.clientKey ||
-							m._id === newMessage._id,
+              m.clientKey === newMessage.clientKey || m._id === newMessage._id,
 					);
 					if (ti >= 0) {
 						const copy = [...currentMessages];
@@ -1922,8 +1956,7 @@ export const MessageBox = ({
 			// role). Refetch so the header, roster, mention candidates and
 			// the composer lock reflect it for every member, not only the
 			// actor whose sheet refetched (audit 2026-09-10).
-			if (!known || newMessage?.type === "system")
-				void fetchConversations();
+      if (!known || newMessage?.type === "system") void fetchConversations();
 
 			setConversations((prev) => {
 				const index = prev.findIndex((c) => c._id === conversationId);
@@ -1963,8 +1996,17 @@ export const MessageBox = ({
 			setFlight({
 				key: clientKey,
 				text,
-				from: { left: fromRect.left, top: fromRect.top, width: fromRect.width, height: fromRect.height },
-				to: { left: paneRect.right - width - 24, top: paneRect.bottom - 48, width },
+        from: {
+          left: fromRect.left,
+          top: fromRect.top,
+          width: fromRect.width,
+          height: fromRect.height,
+        },
+        to: {
+          left: paneRect.right - width - 24,
+          top: paneRect.bottom - 48,
+          width,
+        },
 			});
 		}
 		const optimisticMessage: Message = {
@@ -2033,9 +2075,7 @@ export const MessageBox = ({
 				// place instead of remounting (register item 10).
 				return {
 					...prev,
-					[convId]: currentMsgs.map((m) =>
-						m._id === tempId ? server : m,
-					),
+          [convId]: currentMsgs.map((m) => (m._id === tempId ? server : m)),
 				};
 			});
 			// The wallpaper takes one breath per sent message (register 49).
@@ -2049,9 +2089,7 @@ export const MessageBox = ({
 				);
 			} else {
 				console.error("Failed to send", error);
-				toast.error(
-					error?.response?.data?.message || "Failed to send message",
-				);
+        toast.error(error?.response?.data?.message || "Failed to send message");
 			}
 			// The bubble STAYS (owner pick): red mark + tap to retry, instead of
 			// vanishing into a toast and reappearing in the composer.
@@ -2110,8 +2148,7 @@ export const MessageBox = ({
 			const chain = (async () => {
 				for (const att of queue) await runAttachmentUpload(att.id);
 			})();
-			if (text && !textUsed)
-				void sendText(text, convId, null, chain);
+      if (text && !textUsed) void sendText(text, convId, null, chain);
 			return true;
 		}
 
@@ -2133,12 +2170,11 @@ export const MessageBox = ({
 			const meId = myProfileIdRef.current;
 			if (!convId || !meId || m._id.startsWith("temp-")) return;
 			const cur =
-				(messageCache[convId] || []).find((x) => x._id === m._id)
-					?.reactions ?? [];
+        (messageCache[convId] || []).find((x) => x._id === m._id)?.reactions ??
+        [];
 			const mine = cur.find((r) => r.profile === meId);
 			const next = cur.filter((r) => r.profile !== meId);
-			if (!mine || mine.emoji !== emoji)
-				next.push({ profile: meId, emoji });
+      if (!mine || mine.emoji !== emoji) next.push({ profile: meId, emoji });
 			setMessageCache((prev) => ({
 				...prev,
 				[convId]: (prev[convId] || []).map((x) =>
@@ -2220,8 +2256,7 @@ export const MessageBox = ({
 	const iLeftGroup = useMemo(() => {
 		if (!isGroupThread || !activeConversation || !myProfileId) return false;
 		const mine = (activeConversation.members ?? []).find((m) => {
-			const pid =
-				typeof m.profile === "string" ? m.profile : m.profile?._id;
+      const pid = typeof m.profile === "string" ? m.profile : m.profile?._id;
 			return String(pid) === String(myProfileId);
 		}) as { leftAt?: string } | undefined;
 		return !mine || Boolean(mine.leftAt);
@@ -2234,16 +2269,13 @@ export const MessageBox = ({
 			(activeConversation.members ?? [])
 				.filter((m) => !(m as { leftAt?: string }).leftAt)
 				.map((m) =>
-					String(
-						typeof m.profile === "string" ? m.profile : m.profile?._id,
-					),
+          String(typeof m.profile === "string" ? m.profile : m.profile?._id),
 				),
 		);
 		return (activeConversation.participants ?? [])
 			.filter(
 				(p) =>
-					activeIds.has(String(p._id)) &&
-					String(p._id) !== String(myProfileId),
+          activeIds.has(String(p._id)) && String(p._id) !== String(myProfileId),
 			)
 			.map((p) => ({
 				id: String(p._id),
@@ -2262,22 +2294,16 @@ export const MessageBox = ({
 		(typers: { id: string; kind: "typing" | "recording" }[]) => {
 			if (typers.length === 0) return null;
 			const names = typers
-				.map(
-					(t) =>
-						groupRoster.find((m) => m.id === t.id)?.name?.split(" ")[0],
-				)
+        .map((t) => groupRoster.find((m) => m.id === t.id)?.name?.split(" ")[0])
 				.filter(Boolean) as string[];
 			if (names.length === 1)
 				return typers[0].kind === "recording"
 					? `${names[0]} is recording audio…`
 					: `${names[0]} is typing…`;
-			if (names.length === 2)
-				return `${names[0]} and ${names[1]} are typing…`;
+      if (names.length === 2) return `${names[0]} and ${names[1]} are typing…`;
 			if (names.length > 2) return "several people are typing…";
 			// Roster miss (someone just added): stay generic rather than wrong.
-			return typers[0].kind === "recording"
-				? "recording audio…"
-				: "typing…";
+      return typers[0].kind === "recording" ? "recording audio…" : "typing…";
 		},
 		[groupRoster],
 	);
@@ -2299,8 +2325,7 @@ export const MessageBox = ({
 					);
 				})
 				.map((x) => (x.readUpTo ? String(x.readUpTo) : null));
-			if (marks.length === 0 || marks.some((m) => m === null))
-				return null;
+      if (marks.length === 0 || marks.some((m) => m === null)) return null;
 			return (marks as string[]).sort()[0];
 		}
 		const peerId = activeConversation?.otherParticipant?._id;
@@ -2327,9 +2352,8 @@ export const MessageBox = ({
 	}, []);
 
 	const selectedAtt =
-		attachments.find(
-			(a) => a.id === (selectedAttId ?? attachments[0]?.id),
-		) ?? null;
+    attachments.find((a) => a.id === (selectedAttId ?? attachments[0]?.id)) ??
+    null;
 	const editingAtt = attachments.find((a) => a.id === editingAttId) ?? null;
 
 	const bubbleHandlers = useMemo(
@@ -2343,8 +2367,11 @@ export const MessageBox = ({
 			onCancelUpload: cancelUpload,
 			onReact: reactTo,
 			onMessageContact: (profileId: string) => void openPerson(profileId),
-			onStory: (ref: { story: string; thumbnail: string; authorUsername: string }) =>
-				void openStoryRef(ref),
+      onStory: (ref: {
+        story: string;
+        thumbnail: string;
+        authorUsername: string;
+      }) => void openStoryRef(ref),
 			onCallBack: (video: boolean) => {
 				if (!activeConversation) return;
 				// Same branch as the header buttons: a group call-back was
@@ -2380,7 +2407,14 @@ export const MessageBox = ({
 			},
 		}),
 		// biome-ignore lint/correctness/useExhaustiveDependencies: identity by thread
-		[replyAndFocus, jumpToMessage, retryUpload, cancelUpload, reactTo, activeConversation?._id],
+    [
+      replyAndFocus,
+      jumpToMessage,
+      retryUpload,
+      cancelUpload,
+      reactTo,
+      activeConversation?._id,
+    ],
 	);
 
 	useEffect(() => {
@@ -2404,13 +2438,12 @@ export const MessageBox = ({
 		if (activeConversation) fetchMessages(activeConversation._id);
 	}, [activeConversation?._id]); // Only trigger when ID changes
 
-
 	return (
 		// 100dvh, not 100vh: on mobile 100vh is the address-bar-expanded height,
 		// so the composer sat below the fold until the bar collapsed.
 		<div
 			style={themeVars(sectionTheme)}
-			className="ws-chat-scale relative flex h-[100dvh] bg-page text-primary overflow-hidden"
+			className="ws-chat-scale relative flex h-[100dvh] gap-2 bg-page p-2 text-primary overflow-hidden md:gap-0 md:p-0"
 		>
 			{/* The section's own ground, when the profile theme has one. */}
 			<ThemeBackdrop wallpaper={sectionTheme.wallpaper} />
@@ -2446,7 +2479,7 @@ export const MessageBox = ({
 				    each carry their own ground, the same sunken fill the chat
 				    card uses, with a thumb between them. */}
 				<div className="flex min-h-0 flex-1 flex-col md:overflow-hidden">
-				<div className="px-4 pb-1 pt-4 md:rounded-2xl md:bg-sunken md:pb-3 md:[&:has(+*>.ws-inbox-story)]:rounded-b-none">
+				<div className="rounded-2xl glass-frost backdrop-blur-xl px-4 pb-3 pt-4 [&:has(+*>.ws-inbox-story)]:rounded-b-none">
 					<div className="mb-3 flex items-center gap-2">
 						{/* Phones only. On desktop the inbox sits inside the app
 						    shell with the rail right there; on a phone it fills
@@ -2494,7 +2527,10 @@ export const MessageBox = ({
 						</span>
 					</div>
 					<div className="relative">
-						<RiSearchLine size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-subtle" />
+              <RiSearchLine
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-subtle"
+              />
 						<input
 							type="text"
 							placeholder={t("messages.searchPlaceholder")}
@@ -2515,7 +2551,7 @@ export const MessageBox = ({
 					{/* Stories of the people you're aligned with — messaging is
 					    where you already are when you want to reply to one. */}
 					{prefs.messaging.inboxStories && (
-						<div className="ws-inbox-story px-1 pt-1 md:rounded-2xl md:rounded-t-none md:bg-sunken md:px-1 md:pb-1">
+						<div className="ws-inbox-story rounded-2xl rounded-t-none glass-frost backdrop-blur-xl px-1 pb-1 pt-1">
 							<StoriesRail compact="thumbs" />
 						</div>
 					)}
@@ -2573,6 +2609,32 @@ export const MessageBox = ({
 								]}
 								className="px-3"
 							/>
+						}
+						headerAside={
+							<span className="flex items-center gap-1">
+								{([["people", t("messages.people"), User] as const,
+									["groups", t("messages.groups"), UsersThree] as const] as const).map(
+									([key, label, Icon]) => (
+										<button
+											key={key}
+											type="button"
+											onClick={() =>
+												setKindFilter((v) => (v === key ? "all" : key))
+											}
+											aria-pressed={kindFilter === key}
+											className={clsx(
+												"flex h-8 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
+												kindFilter === key
+													? "bg-primary/10 text-primary"
+													: "text-muted hover:bg-primary/5 hover:text-primary",
+											)}
+										>
+											<Icon size={15} />
+											{label}
+										</button>
+									),
+								)}
+							</span>
 						}
 						heading={
 								inboxTab === "requests"
@@ -2634,27 +2696,25 @@ export const MessageBox = ({
 					key={activeConversation._id}
 					{...threadSlide}
 					style={themeVars(chatTheme)}
-					className="absolute inset-0 z-10 flex min-w-0 flex-col bg-page md:relative md:inset-auto md:z-auto md:flex-1 md:border-l md:border-hairline md:p-3"
+					className="absolute inset-0 z-10 flex min-w-0 flex-col p-2 md:relative md:inset-auto md:z-auto md:flex-1 md:border-l md:border-hairline md:p-3"
 				>
 					{/* The long card, same architecture as the inbox: everything
 					    from the header to the composer rides inside one rounded
 					    surface, inset from the column's edges. */}
-					<div className="relative flex min-h-0 flex-1 flex-col overflow-hidden md:rounded-2xl md:bg-sunken">
+					<div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl glass-frost backdrop-blur-xl">
 					{/* This chat's picture (per-chat theme, else the profile's).
 					    Only the message list floats on it: the header and the
 					    composer keep a band of the page colour, or the chrome
 					    reads as mush over the photograph. */}
-					<ThemeBackdrop wallpaper={chatTheme.wallpaper} />
+					<ThemeBackdrop wallpaper={chatTheme.wallpaper} houseDoodle />
 					<div
 						className={clsx(
-							// Floating chrome (owner 2026-09-19): the background
-							// runs to the card's own edges and the header rides on
-							// top of it, so the thread reads as one surface with
-							// controls above it rather than three stacked bands.
-							"relative z-10 flex h-14 shrink-0 items-center gap-2 px-2 md:px-5",
-							hasPicture
-								? "bg-gradient-to-b from-page/75 to-transparent"
-								: "border-b border-hairline/60",
+							// A pill, not a band (owner 2026-09-20): the name and
+							// the actions ride in one rounded container floating on
+							// the thread's own background, phone and desktop alike.
+							// No blur of its own — the card underneath carries one,
+							// and blur inside blur blurs the card's own fill.
+							"relative z-10 mx-2 mt-2 flex h-14 shrink-0 items-center gap-2 rounded-pill bg-page/70 px-3 md:mx-3 md:mt-3 md:px-4",
 						)}
 					>
 						<div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3">
@@ -2768,11 +2828,15 @@ export const MessageBox = ({
 											recording audio…
 										</p>
 									) : chat.peerTyping ? (
-										<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">typing…</p>
+                          <p className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
+                            typing…
+                          </p>
 									) : peerOnline ? (
 										// No dot here — the avatar already carries one, and
 										// two green dots for one fact read as two facts.
-										<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">Online</p>
+                          <p className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
+                            Online
+                          </p>
 									) : (activeConversation.otherParticipant as any)
 											?.lastSeenAt ? (
 										<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
@@ -2856,14 +2920,20 @@ export const MessageBox = ({
 									startCall({
 										conversationId: activeConversation._id,
 										peer: {
-											id: activeConversation.otherParticipant?._id || "",
+                                id:
+                                  activeConversation.otherParticipant?._id ||
+                                  "",
 											name:
 												`${activeConversation.otherParticipant?.firstName || ""} ${activeConversation.otherParticipant?.lastName || ""}`.trim() ||
-												activeConversation.otherParticipant?.username ||
+                                  activeConversation.otherParticipant
+                                    ?.username ||
+                                  "",
+                                avatar:
+                                  activeConversation.otherParticipant?.avatar ||
 												"",
-											avatar: activeConversation.otherParticipant?.avatar || "",
 											username:
-												activeConversation.otherParticipant?.username || "",
+                                  activeConversation.otherParticipant
+                                    ?.username || "",
 										},
 										isVideo: false,
 									})
@@ -2880,14 +2950,20 @@ export const MessageBox = ({
 									startCall({
 										conversationId: activeConversation._id,
 										peer: {
-											id: activeConversation.otherParticipant?._id || "",
+                                id:
+                                  activeConversation.otherParticipant?._id ||
+                                  "",
 											name:
 												`${activeConversation.otherParticipant?.firstName || ""} ${activeConversation.otherParticipant?.lastName || ""}`.trim() ||
-												activeConversation.otherParticipant?.username ||
+                                  activeConversation.otherParticipant
+                                    ?.username ||
+                                  "",
+                                avatar:
+                                  activeConversation.otherParticipant?.avatar ||
 												"",
-											avatar: activeConversation.otherParticipant?.avatar || "",
 											username:
-												activeConversation.otherParticipant?.username || "",
+                                  activeConversation.otherParticipant
+                                    ?.username || "",
 										},
 										isVideo: true,
 									})
@@ -2984,7 +3060,8 @@ export const MessageBox = ({
 					<div
 						className={clsx(
 							"relative z-10 shrink-0 px-3 pb-safe pt-2 sm:px-4",
-							hasPicture && "bg-gradient-to-t from-page/75 to-transparent pb-3",
+                  hasPicture &&
+                    "bg-gradient-to-t from-page/75 to-transparent pb-3",
 						)}
 					>
 						{/* What you are answering, above the input, with a way out.
@@ -3019,7 +3096,10 @@ export const MessageBox = ({
 						    scroll or read; the bar keeps its controls in reach. */}
 						{voiceBar?.id && voiceBar.playing && (
 							<div className="mb-2 flex items-center gap-2 rounded-[10px] bg-raised/90 px-2 py-1.5">
-								<RiVoiceprintFill size={16} className="ml-1 shrink-0 text-gold" />
+                    <RiVoiceprintFill
+                      size={16}
+                      className="ml-1 shrink-0 text-gold"
+                    />
 								<button
 									type="button"
 									onClick={() => voiceBar.id && jumpToMessage(voiceBar.id)}
@@ -3182,7 +3262,9 @@ export const MessageBox = ({
 								</span>
 								<button
 									type="button"
-									onClick={() => void declineRequest(activeConversation._id)}
+                      onClick={() =>
+                        void declineRequest(activeConversation._id)
+                      }
 									className="h-8 shrink-0 cursor-pointer rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-medium text-danger transition-colors hover:bg-primary/5"
 								>
 									Delete
@@ -3275,18 +3357,8 @@ export const MessageBox = ({
 						"hidden md:flex md:border-l md:border-hairline md:p-3",
 					)}
 				>
-					<div className="flex min-h-0 flex-1 flex-col items-center justify-center rounded-2xl bg-sunken p-8">
-					<div className="flex max-w-sm flex-col items-center text-center">
-						<div className="relative h-52 w-52" aria-hidden="true">
-							<Image
-								src="/images/empty-states/chat-empty.webp"
-								alt=""
-								fill
-								sizes="208px"
-								className="object-contain"
-								priority
-							/>
-						</div>
+					<div className="ws-default-chat-wallpaper relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden rounded-2xl p-8">
+						<div className="flex max-w-sm flex-col items-center rounded-xl bg-page/75 px-8 py-7 text-center">
 						<div className="space-y-2">
 							<h3 className="font-display text-lg font-semibold text-primary">
 								{t("messages.selectTitle")}
@@ -3368,9 +3440,7 @@ export const MessageBox = ({
 						// is exactly how a left group reopened with a live
 						// composer (audit finding 3).
 						const goneId = activeConversation._id;
-						setConversations((prev) =>
-							prev.filter((c) => c._id !== goneId),
-						);
+            setConversations((prev) => prev.filter((c) => c._id !== goneId));
 						setMessageCache((prev) => {
 							const { [goneId]: _gone, ...rest } = prev;
 							return rest;
@@ -3458,9 +3528,7 @@ export const MessageBox = ({
 										pendingDeleteConv.kind === "group" &&
 										pendingDeleteConv.myRole !== "owner"
 									) {
-										void leaveGroupFromList(
-											pendingDeleteConv._id,
-										);
+                    void leaveGroupFromList(pendingDeleteConv._id);
 									} else {
 										void declineRequest(pendingDeleteConv._id);
 									}
@@ -3478,7 +3546,8 @@ export const MessageBox = ({
 				</div>
 			)}
 
-			{msgMenu && (() => {
+      {msgMenu &&
+        (() => {
 				// Long-press grammar (owner pick, Instagram): the thread dims
 				// and blurs; the PRESSED bubble is repainted sharp above the
 				// scrim (its live DOM sits under the blur), with the reaction
@@ -3488,19 +3557,34 @@ export const MessageBox = ({
 				const r = msgMenu.lift?.rect;
 				const alignRight = msgMenu.lift?.mine ?? false;
 				const barLeft = r
-					? Math.max(8, Math.min(alignRight ? r.left + r.width - 292 : r.left, vw - 300))
+            ? Math.max(
+                8,
+                Math.min(
+                  alignRight ? r.left + r.width - 292 : r.left,
+                  vw - 300,
+                ),
+              )
 					: Math.max(8, Math.min(msgMenu.x - 120, vw - 300));
 				const barTop = r
 					? Math.max(8, r.top - 54)
 					: Math.max(8, msgMenu.y - 62);
 				const menuLeft = r
-					? Math.max(8, Math.min(alignRight ? r.left + r.width - 190 : r.left, vw - 198))
+            ? Math.max(
+                8,
+                Math.min(
+                  alignRight ? r.left + r.width - 190 : r.left,
+                  vw - 198,
+                ),
+              )
 					: Math.min(msgMenu.x, vw - 200);
 				const menuTop = r
 					? Math.min(r.top + r.height + 8, vh - 260)
 					: Math.min(msgMenu.y + 8, vh - 220);
 				return (
-				<div className="fixed inset-0 z-modal" onClick={() => setMsgMenu(null)}>
+            <div
+              className="fixed inset-0 z-modal"
+              onClick={() => setMsgMenu(null)}
+            >
 					<div className="absolute inset-0 bg-black/45 backdrop-blur-[2px] animate-pop" />
 					{msgMenu.lift && (
 						<div
@@ -3730,13 +3814,17 @@ function SuggestedPeople({
 				</p>
 			)}
 			{rows.map((u) => (
-				<div key={u._id} className="flex items-center gap-3 rounded-xl px-2 py-2">
+        <div
+          key={u._id}
+          className="flex items-center gap-3 rounded-xl px-2 py-2"
+        >
 					<span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-pill bg-raised">
 						<SafeAvatar src={u.avatar} eager />
 					</span>
 					<span className="min-w-0 flex-1">
 						<span className="block truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
-							{[u.firstName, u.lastName].filter(Boolean).join(" ") || u.username}
+              {[u.firstName, u.lastName].filter(Boolean).join(" ") ||
+                u.username}
 						</span>
 						{u.username && (
 							<span className="block truncate font-sans text-[calc(12px*var(--ws-fs))] text-muted">
