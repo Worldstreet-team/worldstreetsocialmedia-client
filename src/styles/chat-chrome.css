@@ -1,0 +1,53 @@
+/*
+ * .chat-chrome: the thread's top bar, the composer and the bars that open
+ * above it, wearing the chat's theme (owner 2026-09-20).
+ *
+ * The fill and inks come from themeVars() in chatTheme.ts, which always
+ * emits the whole --chat-chrome-* set on the thread pane. This scope then
+ * re-points the app's INK tokens at them, and because globals.css maps
+ * tokens with `@theme inline`, every `text-muted`, `bg-primary/5`,
+ * `hover:bg-primary/10` and `border-hairline` inside re-themes with no
+ * class churn, hover and pressed states included.
+ *
+ * Three rules:
+ * - Ink tokens only. Never re-point --ws-bg-* in here: the surface ladder
+ *   inside a bar (menus, the recorder) must stay the app's own.
+ * - No blur. The thread card carries the one blur this stack is allowed,
+ *   so this is a plain alpha fill. `.chat-chrome-solid` is the opaque twin
+ *   for anything that must hide what is under it (the voice recorder).
+ * - Never on the element that carries themeVars(). This block reads
+ *   --chat-chrome-ink and writes --ws-text-primary; on the token branch
+ *   --chat-chrome-ink IS var(--ws-text-primary), resolved on the ancestor.
+ *   Put both on one element and the property reaches itself, which CSS
+ *   treats as a cycle and throws away (the --ws-fs incident).
+ *
+ * Outside a thread the fallbacks make this exactly glass-frost.
+ */
+
+/* The app's frost as a value, so the house theme's chrome can BE it. Same
+   numbers as .glass-frost in globals.css; change them together. */
+:root {
+	--chat-frost: rgb(20 18 17 / 0.82);
+}
+html[data-ws-theme="platform-light"] {
+	--chat-frost: rgb(255 255 255 / 0.86);
+}
+
+.chat-chrome,
+.chat-chrome-solid {
+	color: var(--chat-chrome-ink, var(--ws-text-primary));
+	--ws-text-primary: var(--chat-chrome-ink);
+	--ws-text-muted: var(--chat-chrome-ink-muted);
+	--ws-text-subtle: var(--chat-chrome-ink-subtle);
+	--ws-border-hairline: var(--chat-chrome-hairline);
+}
+.chat-chrome {
+	background: var(--chat-chrome-bg, var(--chat-frost));
+}
+.chat-chrome-solid {
+	background: var(--chat-chrome-solid, var(--ws-bg-raised));
+}
+/* Reduce transparency: the bar goes opaque, same as the glass families. */
+html[data-ws-flat] .chat-chrome {
+	background: var(--chat-chrome-solid, var(--ws-bg-surface));
+}

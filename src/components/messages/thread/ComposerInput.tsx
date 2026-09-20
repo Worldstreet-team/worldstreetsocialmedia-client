@@ -164,7 +164,7 @@ export const ComposerInput = forwardRef<
 							e.preventDefault();
 							insertMention(c);
 						}}
-						className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-pill bg-raised py-1 pl-1 pr-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/5"
+						className="chat-chrome-solid flex shrink-0 cursor-pointer items-center gap-1.5 rounded-pill py-1 pl-1 pr-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium transition-opacity hover:opacity-90"
 					>
 						<span className="relative h-5 w-5 overflow-hidden rounded-pill bg-chip">
 							<SafeAvatar src={c.avatar} eager />
@@ -174,7 +174,7 @@ export const ComposerInput = forwardRef<
 				))}
 			</div>
 		)}
-		<div className="relative flex min-w-0 items-end gap-1 rounded-pill bg-primary/5 py-1 pl-1.5 pr-1.5 transition-colors focus-within:bg-primary/10 sm:gap-1.5">
+		<div className="chat-chrome relative flex min-w-0 items-end gap-1 rounded-pill py-1 pl-1.5 pr-1.5 ring-1 ring-inset ring-transparent focus-within:ring-hairline sm:gap-1.5">
 			<button
 				type="button"
 				onClick={onAttach}

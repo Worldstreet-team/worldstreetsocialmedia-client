@@ -35,6 +35,7 @@ import { UsernameSetting } from "@/components/settings/UsernameSetting";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { NotificationPrefs } from "@/components/settings/NotificationPrefs";
+import { PaletteSetting } from "@/components/settings/PaletteSetting";
 import { SettingsNav } from "@/components/settings/SettingsNav";
 import {
 	GROUPS,
@@ -523,6 +524,8 @@ export default function SettingsPage() {
 										})}
 									</div>
 								</div>
+
+								<PaletteSetting />
 
 								<div className="border-t border-hairline px-4 py-3">
 									<span className="font-sans text-[calc(15px*var(--ws-fs))] font-medium text-primary">

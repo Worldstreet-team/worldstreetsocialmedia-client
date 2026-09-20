@@ -21,6 +21,7 @@ export const PREFS_CACHE_KEY = "ws-prefs-v1";
  * applyPrefsToDocument() in preferences.ts — change both together.
  */
 export const PREPAINT_PREFS = `try{var c=JSON.parse(localStorage.getItem("${PREFS_CACHE_KEY}")||"{}"),a=c.a11y||{},h=document.documentElement,m=function(q){return window.matchMedia&&window.matchMedia(q).matches};
+var pl=(c.appearance||{}).palette;if(typeof pl==="string"&&pl!=="tide"&&/^[a-z]{3,12}$/.test(pl))h.dataset.wsPalette=pl;
 var s=a.textScale;s=(s==null||s==="auto")?1:Math.max(.9,Math.min(1.75,s/100));h.style.setProperty("--ws-fs-app",String(s));
 var ct=a.chatTextScale;h.style.setProperty("--ws-fs-chat",(ct==null||ct==="match")?"1":String(ct/100));
 var t=function(v,q){return v==="on"||((v==null||v==="auto")&&m(q))};

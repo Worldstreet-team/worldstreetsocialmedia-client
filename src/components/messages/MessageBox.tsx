@@ -92,6 +92,7 @@ import {
 	sendFormProgress,
 } from "@/lib/upload-direct";
 import { loadThreads, saveThread } from "@/lib/chat-vault";
+import { menuStagger, staggerItem, staggerPop } from "@/lib/motion-presets";
 import {
 	VoiceRecorder,
 	type RecorderStart,
@@ -2734,7 +2735,11 @@ export const MessageBox = ({
 							// The avatar is 40px in a 56px pill, so the ring of space
 							// around it is 8px top and bottom; the sides match it now
 							// instead of running 12-16px wide (owner 2026-09-20).
-							"relative z-10 mx-2 mt-2 flex h-14 shrink-0 items-center gap-2 rounded-pill glass-frost px-2 md:mx-3 md:mt-3",
+							// chat-chrome, not glass-frost (owner 2026-09-20): the chat's own
+							// theme reaches the bar. On the house theme the two are the
+							// same fill; on any other the bar takes the ground's colour
+							// and its own ink (see chromeOf in chatTheme.ts).
+							"chat-chrome relative z-10 mx-2 mt-2 flex h-14 shrink-0 items-center gap-2 rounded-pill px-2 md:mx-3 md:mt-3",
 						)}
 					>
 						<div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3">
@@ -3080,8 +3085,9 @@ export const MessageBox = ({
 					<div
 						className={clsx(
 							"relative z-10 shrink-0 px-3 pb-safe pt-2 sm:px-4",
-                  hasPicture &&
-                    "bg-gradient-to-t from-page/75 to-transparent pb-3",
+							// No band of page colour behind this any more: every bar in
+							// the zone carries the theme's own near-opaque chrome fill.
+							hasPicture && "pb-3",
 						)}
 					>
 						{/* What you are answering, above the input, with a way out.
@@ -3090,7 +3096,7 @@ export const MessageBox = ({
 						{replyTarget && (
 							/* Same modern quote grammar as the bubbles: soft inset
 							   chip, gold name, no border bar. */
-							<div className="mb-2 flex items-center gap-2 rounded-[10px] bg-sunken px-3 py-2">
+							<div className="chat-chrome mb-2 flex items-center gap-2 rounded-[10px] px-3 py-2">
 								<span className="flex min-w-0 flex-1 flex-col gap-0.5">
 									<span className="truncate font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-muted">
 										Replying to{" "}
@@ -3115,10 +3121,10 @@ export const MessageBox = ({
 						{/* Mini player (register 88): the note keeps playing while you
 						    scroll or read; the bar keeps its controls in reach. */}
 						{voiceBar?.id && voiceBar.playing && (
-							<div className="mb-2 flex items-center gap-2 rounded-[10px] bg-raised/90 px-2 py-1.5">
+							<div className="chat-chrome mb-2 flex items-center gap-2 rounded-[10px] px-2 py-1.5">
                     <RiVoiceprintFill
                       size={16}
-                      className="ml-1 shrink-0 text-gold"
+                      className="ml-1 shrink-0 text-primary"
                     />
 								<button
 									type="button"
@@ -3128,10 +3134,10 @@ export const MessageBox = ({
 									<span className="block truncate font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-primary">
 										Voice note
 									</span>
-									<span className="mt-1 block h-[3px] w-full overflow-hidden rounded-pill bg-chip">
+									<span className="mt-1 block h-[3px] w-full overflow-hidden rounded-pill bg-primary/10">
 										<span
 											ref={voiceBarFillRef}
-											className="block h-full w-full origin-left rounded-pill bg-brand"
+											className="block h-full w-full origin-left rounded-pill [background:var(--chat-chrome-ink)]"
 											// Initial value only; the subscription above paints it
 											// every frame. A constant, so React never overwrites it.
 											style={{ transform: "scaleX(0)" }}
@@ -3155,7 +3161,7 @@ export const MessageBox = ({
 						{/* The tray (register 62-63): thumbs, per-image caption for
 						    the selected one, HD chip, and the editor a tap away. */}
 						{attachments.length > 0 && (
-							<div className="mb-2 rounded-xl bg-sunken/80 p-2">
+							<div className="chat-chrome mb-2 rounded-xl p-2">
 								<div className="flex items-center gap-2 overflow-x-auto pb-0.5">
 									{attachments.map((att) => (
 										<div
@@ -3232,7 +3238,7 @@ export const MessageBox = ({
 										className={clsx(
 											"ml-auto flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center self-center rounded-pill transition-colors",
 											hdSend
-												? "bg-brand text-brand-on"
+												? "[background:var(--chat-mine)] [color:var(--chat-mine-ink)]"
 												: "bg-primary/10 text-muted hover:text-primary",
 										)}
 									>
@@ -3276,7 +3282,7 @@ export const MessageBox = ({
 						{activeConversation.isRequestForMe ? (
 							// The decision sits where the reply would (owner pick,
 							// Instagram): a slim bar in the composer's place.
-							<div className="flex items-center gap-2 rounded-xl bg-raised/70 px-3 py-2">
+							<div className="chat-chrome flex items-center gap-2 rounded-xl px-3 py-2">
 								<span className="min-w-0 flex-1 font-sans text-[calc(12px*var(--ws-fs))] text-muted">
 									Accept to reply. They won't know you've seen this.
 								</span>
@@ -3292,13 +3298,13 @@ export const MessageBox = ({
 								<button
 									type="button"
 									onClick={() => void acceptRequest(activeConversation._id)}
-									className="h-8 shrink-0 cursor-pointer rounded-pill bg-brand px-3.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active"
+									className="h-8 shrink-0 cursor-pointer rounded-pill px-3.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-opacity [background:var(--chat-mine)] [color:var(--chat-mine-ink)] hover:opacity-90"
 								>
 									Accept
 								</button>
 							</div>
 						) : iLeftGroup ? (
-							<div className="flex h-[52px] items-center justify-center rounded-2xl bg-raised/70 px-4">
+							<div className="chat-chrome flex h-[52px] items-center justify-center rounded-2xl px-4">
 								<span className="font-sans text-[calc(13px*var(--ws-fs))] text-muted">
 									You left this group
 								</span>
@@ -3306,7 +3312,7 @@ export const MessageBox = ({
 						) : isGroupThread &&
 						activeConversation.adminsOnly &&
 						activeConversation.myRole === "member" ? (
-							<div className="flex h-[52px] items-center justify-center rounded-2xl bg-raised/70 px-4">
+							<div className="chat-chrome flex h-[52px] items-center justify-center rounded-2xl px-4">
 								<span className="font-sans text-[calc(13px*var(--ws-fs))] text-muted">
 									Only admins can send messages in this group
 								</span>
@@ -3600,6 +3606,14 @@ export const MessageBox = ({
 				const menuTop = r
 					? Math.min(r.top + r.height + 8, vh - 260)
 					: Math.min(msgMenu.y + 8, vh - 220);
+				// Both unfold from the corner nearest the pressed bubble, and
+				// their children cascade (owner 2026-09-20): emoji land one by
+				// one with a touch of overshoot, actions rise in sequence.
+				const reactionBar = menuStagger(
+					alignRight ? "bottom-right" : "bottom-left",
+					0.03,
+				);
+				const actionMenu = menuStagger(alignRight ? "top-right" : "top-left");
 				return (
             <div
               className="fixed inset-0 z-modal"
@@ -3622,17 +3636,21 @@ export const MessageBox = ({
 						/>
 					)}
 					{!msgMenu.message._id.startsWith("temp-") && (
-						<div
+						<motion.div
+							{...reactionBar}
 							style={{
+								...reactionBar.style,
 								left: barLeft,
 								top: barTop,
 							}}
-							className="absolute flex items-center gap-0.5 rounded-pill card-depth px-1.5 py-1 animate-pop"
+							className="absolute flex items-center gap-0.5 rounded-pill card-depth px-1.5 py-1"
 							onClick={(e) => e.stopPropagation()}
 						>
 							{QUICK_REACTIONS.map((emoji) => (
-								<button
+								<motion.button
 									key={emoji}
+									variants={staggerPop}
+									whileTap={{ scale: 0.82 }}
 									type="button"
 									onClick={() => {
 										reactTo(msgMenu.message, emoji);
@@ -3642,25 +3660,28 @@ export const MessageBox = ({
 									className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-[calc(20px*var(--ws-fs))] transition-colors hover:bg-primary/5"
 								>
 									{emoji}
-								</button>
+								</motion.button>
 							))}
-							<button
+							<motion.button
+								variants={staggerPop}
 								type="button"
 								onClick={() => setMenuPicker((v) => !v)}
 								aria-label="More reactions"
 								className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
 							>
 								<Plus className="h-4 w-4" />
-							</button>
-						</div>
+							</motion.button>
+						</motion.div>
 					)}
-				<div
+				<motion.div
 					role="menu"
+					{...actionMenu}
 					style={{
+						...actionMenu.style,
 						left: menuLeft,
 						top: menuTop,
 					}}
-					className="absolute w-[190px] overflow-hidden rounded-xl card-depth animate-pop"
+					className="absolute w-[190px] overflow-hidden rounded-xl card-depth"
 					onClick={(e) => e.stopPropagation()}
 				>
 					{menuPicker && (
@@ -3680,7 +3701,8 @@ export const MessageBox = ({
 						</div>
 					)}
 					<div className="py-1">
-					<button
+					<motion.button
+						variants={staggerItem}
 						type="button"
 						role="menuitem"
 						onClick={() => {
@@ -3691,9 +3713,10 @@ export const MessageBox = ({
 					>
 						<RiReplyLine size={16} />
 						Reply
-					</button>
+					</motion.button>
 					{msgMenu.message.content && (
-						<button
+						<motion.button
+						variants={staggerItem}
 							type="button"
 							role="menuitem"
 							onClick={() => {
@@ -3707,12 +3730,13 @@ export const MessageBox = ({
 						>
 							<RiFileCopyLine size={16} />
 							Copy text
-						</button>
+						</motion.button>
 					)}
 					{(typeof msgMenu.message.sender === "string"
 						? msgMenu.message.sender === myProfileId
 						: (msgMenu.message.sender as any)?._id === myProfileId) && (
-						<button
+						<motion.button
+						variants={staggerItem}
 							type="button"
 							role="menuitem"
 							onClick={() => {
@@ -3723,10 +3747,10 @@ export const MessageBox = ({
 						>
 							<RiRestartLine size={16} />
 							Unsend
-						</button>
+						</motion.button>
 					)}
 				</div>
-					</div>
+					</motion.div>
 				</div>
 				);
 			})()}

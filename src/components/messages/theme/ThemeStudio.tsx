@@ -227,7 +227,8 @@ export function ThemeStudio({
 									<section>
 										<p className={clsx(heading, "mb-2")}>Picture</p>
 										<div className="grid grid-cols-4 gap-2">
-											{WALLPAPERS.map((p) => (
+											{/* This mode's pictures first: a dark chat wants the dark ones in reach. */}
+											{[...WALLPAPERS].sort((a, b) => Number(b.tone === mode) - Number(a.tone === mode)).map((p) => (
 												<button
 													key={p.id}
 													type="button"

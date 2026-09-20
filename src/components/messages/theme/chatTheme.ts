@@ -56,21 +56,52 @@ export type ThemeByMode = Partial<Record<ThemeMode, ChatTheme>>;
 export type ThemeScope = "chat" | "all";
 
 /* ------------------------------------------------------------------ */
-/* Curated wallpapers. Free-licence photographs (credits.json beside). */
+/* Curated wallpapers. Free-licence photographs (credits.json beside), and
+ * a generated set (owner 2026-09-20: ten more themes "with good images").
+ *
+ * `tint` is the picture's measured average colour. Nothing is sampled at
+ * runtime (an own photo taints the canvas anyway); the thread's top bar and
+ * composer derive their fill from this, so a theme reaches the chrome too.
+ *
+ * The generated set lives in /wallpapers/gen: drawn for this app, one dark
+ * and one light per theme, low-frequency on purpose because a wallpaper
+ * sits BEHIND text. Dark ones hold 90% of their pixels under 3.5% relative
+ * luminance and light ones above 80%, so they need no frost and no dim. */
 
 export const WALLPAPERS: {
 	id: string;
 	label: string;
 	src: string;
 	tone: ThemeMode;
+	tint: string;
 }[] = [
-	{ id: "forest", label: "Forest", src: "/wallpapers/forest.jpg", tone: "dark" },
-	{ id: "fogwood", label: "Fogwood", src: "/wallpapers/fogwood.jpg", tone: "dark" },
-	{ id: "milkyway", label: "Milky Way", src: "/wallpapers/milkyway.jpg", tone: "dark" },
-	{ id: "dusk", label: "Dusk", src: "/wallpapers/dusk.jpg", tone: "dark" },
-	{ id: "mist", label: "Mist", src: "/wallpapers/mist.jpg", tone: "light" },
-	{ id: "lonetree", label: "Lone tree", src: "/wallpapers/lonetree.jpg", tone: "light" },
-	{ id: "pier", label: "Pier", src: "/wallpapers/pier.jpg", tone: "light" },
+	{ id: "forest", label: "Forest", src: "/wallpapers/forest.jpg", tone: "dark", tint: "#B7B5B0" },
+	{ id: "fogwood", label: "Fogwood", src: "/wallpapers/fogwood.jpg", tone: "dark", tint: "#969696" },
+	{ id: "milkyway", label: "Milky Way", src: "/wallpapers/milkyway.jpg", tone: "dark", tint: "#161516" },
+	{ id: "dusk", label: "Dusk", src: "/wallpapers/dusk.jpg", tone: "dark", tint: "#5480C4" },
+	{ id: "mist", label: "Mist", src: "/wallpapers/mist.jpg", tone: "light", tint: "#C0C0C1" },
+	{ id: "lonetree", label: "Lone tree", src: "/wallpapers/lonetree.jpg", tone: "light", tint: "#C6C6C6" },
+	{ id: "pier", label: "Pier", src: "/wallpapers/pier.jpg", tone: "light", tint: "#728BAF" },
+	{ id: "peony-dark", label: "Peony", src: "/wallpapers/gen/peony-dark.webp", tone: "dark", tint: "#451127" },
+	{ id: "peony-light", label: "Peony", src: "/wallpapers/gen/peony-light.webp", tone: "light", tint: "#F5D8E1" },
+	{ id: "kiln-dark", label: "Kiln", src: "/wallpapers/gen/kiln-dark.webp", tone: "dark", tint: "#331409" },
+	{ id: "kiln-light", label: "Kiln", src: "/wallpapers/gen/kiln-light.webp", tone: "light", tint: "#E7CFC0" },
+	{ id: "dune-sea-dark", label: "Dune Sea", src: "/wallpapers/gen/dune-sea-dark.webp", tone: "dark", tint: "#19140C" },
+	{ id: "dune-sea-light", label: "Dune Sea", src: "/wallpapers/gen/dune-sea-light.webp", tone: "light", tint: "#F4ECDC" },
+	{ id: "cellar-dark", label: "Cellar", src: "/wallpapers/gen/cellar-dark.webp", tone: "dark", tint: "#471122" },
+	{ id: "cellar-light", label: "Cellar", src: "/wallpapers/gen/cellar-light.webp", tone: "light", tint: "#F3E2E8" },
+	{ id: "glasshouse-dark", label: "Glasshouse", src: "/wallpapers/gen/glasshouse-dark.webp", tone: "dark", tint: "#082A21" },
+	{ id: "glasshouse-light", label: "Glasshouse", src: "/wallpapers/gen/glasshouse-light.webp", tone: "light", tint: "#E0F3EB" },
+	{ id: "wisteria-dark", label: "Wisteria", src: "/wallpapers/gen/wisteria-dark.webp", tone: "dark", tint: "#1C1A42" },
+	{ id: "wisteria-light", label: "Wisteria", src: "/wallpapers/gen/wisteria-light.webp", tone: "light", tint: "#E4E4F8" },
+	{ id: "cirrus-dark", label: "Cirrus", src: "/wallpapers/gen/cirrus-dark.webp", tone: "dark", tint: "#0B253E" },
+	{ id: "cirrus-light", label: "Cirrus", src: "/wallpapers/gen/cirrus-light.webp", tone: "light", tint: "#D7E7F6" },
+	{ id: "arcade-dark", label: "Arcade", src: "/wallpapers/gen/arcade-dark.webp", tone: "dark", tint: "#1D0B3B" },
+	{ id: "arcade-light", label: "Arcade", src: "/wallpapers/gen/arcade-light.webp", tone: "light", tint: "#EAE0F8" },
+	{ id: "lichen-dark", label: "Lichen", src: "/wallpapers/gen/lichen-dark.webp", tone: "dark", tint: "#1F2A14" },
+	{ id: "lichen-light", label: "Lichen", src: "/wallpapers/gen/lichen-light.webp", tone: "light", tint: "#E7ECD8" },
+	{ id: "foundry-dark", label: "Foundry", src: "/wallpapers/gen/foundry-dark.webp", tone: "dark", tint: "#171A1F" },
+	{ id: "foundry-light", label: "Foundry", src: "/wallpapers/gen/foundry-light.webp", tone: "light", tint: "#D5D8DD" },
 ];
 
 /** The painted (non-photographic) ground, or null when there is none. */
@@ -339,6 +370,144 @@ const CARDS: {
 			wallpaper: { type: "preset", preset: "lonetree", frost: 16, hue: "none", dim: 10 },
 			bubbles: { mine: { kind: "solid", color: "#F0F2F3" }, theirs: { color: "#191C1E" } },
 		},
+	},	/*
+	 * The second set (owner 2026-09-20): ten more, each on its own drawn
+	 * picture. Chosen to fill the hue families the first twelve left empty
+	 * (rose, clay, sand, wine, mint, periwinkle, sky, neon, sage, steel),
+	 * warm through cool to neutral. Same rules: one idea per card, a picture
+	 * on one card per mode, no shape. Checked: white ink on every mine stop
+	 * is 4.7:1 or better, their ink on their fill 9:1 or better, and their
+	 * fill stands 1.2:1 (light) to 1.6:1 (dark) off the measured ground.
+	 */
+	{
+		id: "peony",
+		label: "Peony",
+		blurb: "Blush and deep rose. Soft, never loud.",
+		dark: {
+			wallpaper: { type: "preset", preset: "peony-dark", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#C2255C", "#9C1F6B"], angle: 140 }, theirs: { color: "#63374A" } },
+		},
+		light: {
+			wallpaper: { type: "preset", preset: "peony-light", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#C2255C", "#9C1F6B"], angle: 140 }, theirs: { color: "#EDBBCC" } },
+		},
+	},
+	{
+		id: "kiln",
+		label: "Kiln",
+		blurb: "Fired clay ridges, terracotta heat.",
+		dark: {
+			wallpaper: { type: "preset", preset: "kiln-dark", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#B8431F", "#9A2F2A"], angle: 140 }, theirs: { color: "#543A30" } },
+		},
+		light: {
+			wallpaper: { type: "preset", preset: "kiln-light", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#B8431F", "#9A2F2A"], angle: 140 }, theirs: { color: "#DDB4A1" } },
+		},
+	},
+	{
+		id: "dune-sea",
+		label: "Dune Sea",
+		blurb: "Desert contour lines at dusk. Quiet sand.",
+		dark: {
+			wallpaper: { type: "preset", preset: "dune-sea-dark", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#8A6A3B" }, theirs: { color: "#3E3A33" } },
+		},
+		light: {
+			wallpaper: { type: "preset", preset: "dune-sea-light", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#8A6A3B" }, theirs: { color: "#DFD3BD" } },
+		},
+	},
+	{
+		id: "cellar",
+		label: "Cellar",
+		blurb: "Deep wine and low lights out of focus.",
+		dark: {
+			wallpaper: { type: "preset", preset: "cellar-dark", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#7A1F3D", "#5A1A4A"], angle: 140 }, theirs: { color: "#643745" } },
+		},
+		light: {
+			wallpaper: { type: "preset", preset: "cellar-light", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#7A1F3D", "#5A1A4A"], angle: 140 }, theirs: { color: "#E0C3CD" } },
+		},
+	},
+	{
+		id: "glasshouse",
+		label: "Glasshouse",
+		blurb: "Mint and humid green light through glass.",
+		dark: {
+			wallpaper: { type: "preset", preset: "glasshouse-dark", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#0F7B62", "#0B6A74"], angle: 140 }, theirs: { color: "#304C45" } },
+		},
+		light: {
+			wallpaper: { type: "preset", preset: "glasshouse-light", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#0F7B62", "#0B6A74"], angle: 140 }, theirs: { color: "#BFE0D5" } },
+		},
+	},
+	{
+		id: "wisteria",
+		label: "Wisteria",
+		blurb: "A periwinkle haze. The calm evening one.",
+		dark: {
+			wallpaper: { type: "preset", preset: "wisteria-dark", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#5B5FC7", "#7A4FBF"], angle: 140 }, theirs: { color: "#403F60" } },
+		},
+		light: {
+			wallpaper: { type: "preset", preset: "wisteria-light", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#5B5FC7", "#7A4FBF"], angle: 140 }, theirs: { color: "#C9CBEE" } },
+		},
+	},
+	{
+		id: "cirrus",
+		label: "Cirrus",
+		blurb: "Open sky, high thin cloud, daylight blue.",
+		dark: {
+			wallpaper: { type: "preset", preset: "cirrus-dark", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#1F6FB5" }, theirs: { color: "#32485D" } },
+		},
+		light: {
+			wallpaper: { type: "preset", preset: "cirrus-light", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#1F6FB5" }, theirs: { color: "#B4D0EA" } },
+		},
+	},
+	{
+		id: "arcade",
+		label: "Arcade",
+		blurb: "Neon violet into blue under a few stars.",
+		dark: {
+			wallpaper: { type: "preset", preset: "arcade-dark", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#C026D3", "#2563EB"], angle: 140 }, theirs: { color: "#41325A" } },
+		},
+		light: {
+			wallpaper: { type: "preset", preset: "arcade-light", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#C026D3", "#2563EB"], angle: 140 }, theirs: { color: "#E3C2F2" } },
+		},
+	},
+	{
+		id: "lichen",
+		label: "Lichen",
+		blurb: "Sage and stone. Grounded, unhurried.",
+		dark: {
+			wallpaper: { type: "preset", preset: "lichen-dark", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#5F6F3A" }, theirs: { color: "#434C3A" } },
+		},
+		light: {
+			wallpaper: { type: "preset", preset: "lichen-light", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#5F6F3A" }, theirs: { color: "#CCD4BA" } },
+		},
+	},
+	{
+		id: "foundry",
+		label: "Foundry",
+		blurb: "Graphite and brushed steel. Precise.",
+		dark: {
+			wallpaper: { type: "preset", preset: "foundry-dark", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#475569" }, theirs: { color: "#3C3F43" } },
+		},
+		light: {
+			wallpaper: { type: "preset", preset: "foundry-light", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#475569" }, theirs: { color: "#BEC3CA" } },
+		},
 	},
 ];
 
@@ -347,13 +516,28 @@ const stamp = (t: CardTheme): ChatTheme => ({
 	wallpaper: t.wallpaper,
 	bubbles: { ...t.bubbles, shape: "rounded" },
 });
+export type CardGroup = "colour" | "photo" | "art";
+/** Which shelf of the gallery a card sits on: decided by its dark ground. */
+const groupOf = (c: (typeof CARDS)[number]): CardGroup => {
+	const w = c.dark.wallpaper;
+	if (w.type !== "preset") return "colour";
+	return WALLPAPERS.find((p) => p.id === w.preset)?.src.startsWith("/wallpapers/gen/")
+		? "art"
+		: "photo";
+};
 export const THEME_CARDS: {
 	id: string;
 	label: string;
 	blurb: string;
+	group: CardGroup;
 	dark: ChatTheme;
 	light: ChatTheme;
-}[] = CARDS.map((c) => ({ ...c, dark: stamp(c.dark), light: stamp(c.light) }));
+}[] = CARDS.map((c) => ({ ...c, group: groupOf(c), dark: stamp(c.dark), light: stamp(c.light) }));
+export const CARD_GROUPS: { id: CardGroup; label: string }[] = [
+	{ id: "colour", label: "Colour" },
+	{ id: "art", label: "Artwork" },
+	{ id: "photo", label: "Photographs" },
+];
 
 /**
  * The painted grounds Advanced offers, per mode: every solid and gradient
@@ -487,6 +671,118 @@ export function inkFor(fillOrColor: MineFill | string): string {
 	return l > 0.42 ? "#1C1917" : "#FFFFFF";
 }
 
+/* ── chrome: the top bar and the composer wear the theme ─────────────── */
+
+const toRgb = (hex: string): [number, number, number] => {
+	const n = Number.parseInt(hex.slice(1), 16);
+	return [n >> 16, (n >> 8) & 255, n & 255];
+};
+const toHex = (c: number[]) =>
+	`#${c.map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, "0")).join("")}`;
+/** `t` of the way from a to b, in sRGB: these are small UI tints, not blends of light. */
+function mixHex(a: string, b: string, t: number): string {
+	const A = toRgb(a);
+	const B = toRgb(b);
+	return toHex(A.map((v, i) => v * (1 - t) + B[i] * t));
+}
+function contrast(a: string, b: string): number {
+	const la = luminance(a);
+	const lb = luminance(b);
+	return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+const INK_LIGHT = "#FFFFFF";
+const INK_DARK = "#1C1917";
+
+/**
+ * The fill and inks of the thread's chrome (the top bar pill, the composer
+ * and the bars that open above it) for one theme (owner 2026-09-20: "the
+ * selected theme should affect the message input box and the top bar").
+ *
+ * The rule, from the research pass: the accent stays at full strength on
+ * glyph-sized things only (send, links, my bubbles). A bar-sized surface
+ * gets the GROUND's colour with a tenth of the accent in it, lifted one
+ * step toward its ink so it reads as a layer, at 88% so the wallpaper
+ * still breathes behind it. No blur: the thread card already carries the
+ * one blur this stack is allowed.
+ *
+ * Ink is chosen by the chrome's OWN fill, never by the app mode or the
+ * picture: the Studio lets a pale ground live under dark mode, and the
+ * forest photograph is near white across the band the top bar sits on.
+ * The 0.42 threshold `inkFor` uses is a bubble taste call (it leaves white
+ * on mid-tones at about 2.2:1); here the ink is whichever of the two wins
+ * on contrast, and the fill is pushed away from it until it clears 7.5:1.
+ *
+ * A theme with no colour of its own to read (the flat house ground, an own
+ * photo, a token fill) takes the token branch: the app surface with a
+ * trace of the accent, inks from the app tokens, so it follows light and
+ * dark and the app palette by itself.
+ */
+function chromeOf(t: ChatTheme): Record<string, string> {
+	const w = t.wallpaper;
+	const accent = accentOf(t.bubbles.mine);
+	let base: string | null = null;
+	let ink: string | null = null;
+	if (w.type === "solid" && w.color && HEX.test(w.color)) base = w.color;
+	else if (w.type === "gradient" && w.stops && w.stops.every((c) => HEX.test(c)))
+		base = mixHex(w.stops[0], w.stops[1], 0.5);
+	else if (w.type === "preset") {
+		const row = WALLPAPERS.find((p) => p.id === w.preset);
+		if (row) {
+			// A picture has a tone it was chosen for; take the ink from that and
+			// walk the tint to that pole until it holds the ink comfortably.
+			ink = row.tone === "dark" ? INK_LIGHT : INK_DARK;
+			const pole = row.tone === "dark" ? "#000000" : "#FFFFFF";
+			base = mixHex(row.tint, "#000000", w.dim / 100);
+			// 12:1, not the 7.5 floor below: a photograph's average says little
+			// about the band the bar sits on, so the bar goes well into its pole.
+			for (let i = 0; i < 10 && contrast(base, ink) < 12; i++)
+				base = mixHex(base, pole, 0.15);
+		}
+	}
+	if (!base || !HEX.test(accent)) {
+		// The flat house ground is the app itself, so its chrome is exactly the
+		// app's frost (the owner turned down a cyan tint on these surfaces on
+		// 2026-09-20). An own photo gets the surface with a trace of the accent.
+		const flat = w.type === "flat";
+		const solid = flat
+			? "var(--ws-bg-surface)"
+			: `color-mix(in srgb, ${accent} 8%, var(--ws-bg-surface))`;
+		return {
+			"--chat-chrome-solid": solid,
+			"--chat-chrome-bg": flat
+				? "var(--chat-frost)"
+				: `color-mix(in srgb, ${solid} 86%, transparent)`,
+			"--chat-chrome-ink": "var(--ws-text-primary)",
+			"--chat-chrome-ink-muted": "var(--ws-text-muted)",
+			"--chat-chrome-ink-subtle": "var(--ws-text-subtle)",
+			"--chat-chrome-hairline": "var(--ws-border-hairline)",
+		};
+	}
+	if (!ink)
+		ink = contrast(base, INK_LIGHT) >= contrast(base, INK_DARK) ? INK_LIGHT : INK_DARK;
+	const away = ink === INK_LIGHT ? "#000000" : "#FFFFFF";
+	// On a dark ground a layer is one step LIGHTER (toward its ink). On a
+	// pale ground it is lighter too, which there means AWAY from the ink:
+	// paper stacks white on cream, and a bar that went greyer than its
+	// ground read as dirty. Accent: a tenth in the dark, 6% on paper.
+	let solid =
+		ink === INK_LIGHT
+			? mixHex(mixHex(base, accent, 0.1), ink, 0.07)
+			: mixHex(mixHex(base, "#FFFFFF", 0.55), accent, 0.06);
+	for (let i = 0; i < 6 && contrast(solid, ink) < 7.5; i++)
+		solid = mixHex(solid, away, 0.12);
+	const inkAt = (pct: number) => `color-mix(in srgb, ${ink} ${pct}%, transparent)`;
+	return {
+		"--chat-chrome-solid": solid,
+		"--chat-chrome-bg": `color-mix(in srgb, ${solid} 88%, transparent)`,
+		"--chat-chrome-ink": ink,
+		"--chat-chrome-ink-muted": inkAt(66),
+		"--chat-chrome-ink-subtle": inkAt(46),
+		"--chat-chrome-hairline": inkAt(12),
+	};
+}
+
 /**
  * The variables the whole messages surface reads.
  *
@@ -535,6 +831,11 @@ export function themeVars(t: ChatTheme): CSSProperties {
 			t.wallpaper.type === "flat" ? "var(--ws-text-subtle)" : "var(--ws-text-muted)",
 		"--chat-r": `${s.r}px`,
 		"--chat-r-in": `${s.rin}px`,
+		// Always the whole set, so the `.chat-chrome` scope never meets an
+		// undefined variable. Never put `.chat-chrome` on the element that
+		// carries these: it re-points --ws-text-* at them, and a property that
+		// reaches itself is a cycle CSS throws away (see the --ws-fs note).
+		...chromeOf(t),
 	} as CSSProperties;
 }
 

@@ -40,5 +40,11 @@
   "artist": "Richard Palmer",
   "license": "CC BY-SA 3.0",
   "source": "https://commons.wikimedia.org/wiki/File:Lake_mapourika_NZ.jpeg"
+ },
+ "gen/*": {
+  "title": "WorldSpace generated wallpaper set (Peony, Kiln, Dune Sea, Cellar, Glasshouse, Wisteria, Cirrus, Arcade, Lichen, Foundry; dark and light)",
+  "artist": "WorldSpace, drawn procedurally for this app (2026-09-20)",
+  "license": "Own work",
+  "source": "n/a"
  }
 }

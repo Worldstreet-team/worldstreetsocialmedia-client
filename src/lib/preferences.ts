@@ -19,6 +19,7 @@
 // the server component that renders the inline <script> can import them.
 export { PREFS_CACHE_KEY, PREPAINT_PREFS } from "./preferences-prepaint";
 import { PREFS_CACHE_KEY } from "./preferences-prepaint";
+import { DEFAULT_PALETTE, PALETTE_IDS, type PaletteId } from "@/data/palettes";
 
 /* ------------------------------------------------------------------ */
 /* Schema */
@@ -53,6 +54,8 @@ export interface Preferences {
 	};
 	appearance: {
 		mode: Appearance;
+		/** The app's brand colour. Orthogonal to mode and to a chat's theme. */
+		palette: PaletteId;
 	};
 	data: {
 		/** Tri-state: "auto" follows the device's own data-saver signal. */
@@ -107,7 +110,7 @@ export const DEFAULTS: Preferences = {
 		underlineLinks: false,
 		chatTextScale: "match",
 	},
-	appearance: { mode: "dark" },
+	appearance: { mode: "dark", palette: DEFAULT_PALETTE },
 	data: {
 		// Automatic, not off: a phone that has asked the web to save data has
 		// already told us what this person wants.
@@ -200,6 +203,7 @@ export function normalizePrefs(raw: unknown): Preferences {
 		},
 		appearance: {
 			mode: oneOf(["dark", "light", "system"] as const, ap.mode, DEFAULTS.appearance.mode),
+			palette: oneOf(PALETTE_IDS, ap.palette, DEFAULTS.appearance.palette),
 		},
 		data: {
 			saver: oneOf(["auto", "on", "off"] as const, d.saver, DEFAULTS.data.saver),
@@ -290,6 +294,9 @@ export function applyPrefsToDocument(p: Preferences) {
 	h.dataset.wsUnderline =
 		p.a11y.underlineLinks || p.a11y.colorVision !== "off" ? "1" : "";
 	h.dataset.wsSaver = saverOn(p) ? "1" : "";
+	// The default palette carries no attribute: it is the token file itself.
+	h.dataset.wsPalette =
+		p.appearance.palette === DEFAULT_PALETTE ? "" : p.appearance.palette;
 
 	for (const k of Object.keys(h.dataset)) {
 		if (k.startsWith("ws") && h.dataset[k] === "") delete h.dataset[k];

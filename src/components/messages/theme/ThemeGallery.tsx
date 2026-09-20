@@ -1,7 +1,8 @@
 "use client";
 
 import clsx from "clsx";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import { staggerItem, staggerParent } from "@/lib/motion-presets";
 import { useState } from "react";
 import { Tabs } from "@/components/ui/Tabs";
 import {
@@ -11,6 +12,7 @@ import {
 	useOverlayDismiss,
 } from "@/components/ui/Overlay";
 import {
+	CARD_GROUPS,
 	type ChatTheme,
 	THEME_CARDS,
 	type ThemeMode,
@@ -63,40 +65,57 @@ export function ThemeGallery({
 				<OverlayHeader title="Chat theme" onClose={onClose} />
 				<div className="flex flex-col gap-4 overflow-y-auto px-4 pb-[calc(16px+var(--ws-safe-bottom))]">
 					<ScopeSwitch scope={scope} onChange={setScope} isGroup={isGroup} />
-					<div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
-						{THEME_CARDS.map((card) => {
-							const t = card[mode];
-							const on = sameTheme(t, current);
-							return (
-								<button
-									key={card.id}
-									type="button"
-									disabled={saving}
-									title={card.blurb}
-									onClick={() => onApply(t, scope)}
-									className={clsx(
-										"group flex cursor-pointer flex-col gap-1.5 rounded-xl p-1 text-left transition-colors",
-										on ? "bg-brand/12" : "hover:bg-primary/5",
-									)}
-								>
-									<ThemePreview
-										theme={t}
-										frame="card"
-										compact
-										className={clsx(on && "outline outline-2 outline-brand")}
-									/>
-									<span
-										className={clsx(
-											"px-1 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium",
-											on ? "text-brand" : "text-primary",
-										)}
-									>
-										{card.label}
-									</span>
-								</button>
-							);
-						})}
-					</div>
+					{/* Three shelves (22 cards is too many for one unlabelled grid):
+					    colour, the drawn set, then photographs. They cascade in as
+					    shelves, not as 22 tiles: a whole cascade fits in 300ms. */}
+					<motion.div
+						variants={staggerParent}
+						initial="hidden"
+						animate="show"
+						className="flex flex-col gap-4"
+					>
+						{CARD_GROUPS.map((g) => (
+							<motion.section key={g.id} variants={staggerItem}>
+								<p className="mb-2 px-1 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
+									{g.label}
+								</p>
+								<div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
+									{THEME_CARDS.filter((card) => card.group === g.id).map((card) => {
+									const t = card[mode];
+									const on = sameTheme(t, current);
+									return (
+										<button
+											key={card.id}
+											type="button"
+											disabled={saving}
+											title={card.blurb}
+											onClick={() => onApply(t, scope)}
+											className={clsx(
+												"group flex cursor-pointer flex-col gap-1.5 rounded-xl p-1 text-left transition-colors",
+												on ? "bg-brand/12" : "hover:bg-primary/5",
+											)}
+										>
+											<ThemePreview
+												theme={t}
+												frame="card"
+												compact
+												className={clsx(on && "outline outline-2 outline-brand")}
+											/>
+											<span
+												className={clsx(
+													"px-1 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium",
+													on ? "text-brand" : "text-primary",
+												)}
+											>
+												{card.label}
+											</span>
+										</button>
+									);
+								})}
+								</div>
+							</motion.section>
+						))}
+					</motion.div>
 					<div className="flex items-center justify-between gap-3 pt-1">
 						<button
 							type="button"

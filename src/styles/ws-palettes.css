@@ -1,0 +1,141 @@
+/*
+ * App palettes: the brand colour of the whole app, chosen in Settings >
+ * Appearance (owner 2026-09-20). Registry and reasoning: src/data/palettes.ts.
+ *
+ * RULES, each of which has bitten this codebase before:
+ *
+ * 1. A palette may declare ONLY these six properties:
+ *      --ws-brand-primary  --ws-brand-on-primary  --ws-brand-active
+ *      --ws-brand-dim      --ws-brand-gold-text   --ws-glow-brand
+ *    Never money, status, the focus ring, accents, chart colours, text or
+ *    borders. These blocks are specificity (0,2,1); the High contrast and
+ *    colour-vision blocks in globals.css are (0,1,1). A palette that
+ *    declared --ws-status-danger or --ws-text-subtle would silently switch
+ *    those accessibility modes off for everyone who picked it.
+ *
+ * 2. Always the two-attribute form, one block per mode:
+ *      html[data-ws-palette="x"][data-ws-theme="platform"]
+ *      html[data-ws-palette="x"][data-ws-theme="platform-light"]
+ *    A bare [data-ws-palette] block gets folded or tied on order by the CSS
+ *    optimiser (the black-ladder note in globals.css), and a single
+ *    mode-agnostic block would put a dark-mode ink on paper: the brand as
+ *    TEXT needs a different value per mode (a light fill is about 2:1 as
+ *    text on white).
+ *
+ * 3. Never encode the palette into data-ws-theme. next-themes and a dozen
+ *    `[data-ws-theme='platform-light']` variants depend on its two values.
+ *
+ * 4. The default (Tide) has no block and no attribute: it IS the token file.
+ *
+ * "--ws-brand-gold-text" keeps its historic name; it means "brand ink",
+ * the brand colour as text or glyph.
+ */
+
+/* Cobalt */
+html[data-ws-palette="cobalt"][data-ws-theme="platform"] {
+	--ws-brand-primary: #60A5FA;
+	--ws-brand-on-primary: #0C0A09;
+	--ws-brand-active: #93C5FD;
+	--ws-brand-dim: #3B82F6;
+	--ws-brand-gold-text: #93C5FD;
+	--ws-glow-brand: rgba(96, 165, 250, 0.10);
+}
+html[data-ws-palette="cobalt"][data-ws-theme="platform-light"] {
+	--ws-brand-primary: #60A5FA;
+	--ws-brand-on-primary: #0C0A09;
+	--ws-brand-active: #3B82F6;
+	--ws-brand-dim: #2563EB;
+	--ws-brand-gold-text: #1D4ED8;
+	--ws-glow-brand: rgba(37, 99, 235, 0.06);
+}
+
+/* Iris */
+html[data-ws-palette="iris"][data-ws-theme="platform"] {
+	--ws-brand-primary: #A78BFA;
+	--ws-brand-on-primary: #0C0A09;
+	--ws-brand-active: #C4B5FD;
+	--ws-brand-dim: #7C3AED;
+	--ws-brand-gold-text: #C4B5FD;
+	--ws-glow-brand: rgba(167, 139, 250, 0.10);
+}
+html[data-ws-palette="iris"][data-ws-theme="platform-light"] {
+	--ws-brand-primary: #A78BFA;
+	--ws-brand-on-primary: #0C0A09;
+	--ws-brand-active: #8B5CF6;
+	--ws-brand-dim: #7C3AED;
+	--ws-brand-gold-text: #6D28D9;
+	--ws-glow-brand: rgba(124, 58, 237, 0.06);
+}
+
+/* Orchid */
+html[data-ws-palette="orchid"][data-ws-theme="platform"] {
+	--ws-brand-primary: #E879F9;
+	--ws-brand-on-primary: #0C0A09;
+	--ws-brand-active: #F0ABFC;
+	--ws-brand-dim: #C026D3;
+	--ws-brand-gold-text: #F0ABFC;
+	--ws-glow-brand: rgba(232, 121, 249, 0.10);
+}
+html[data-ws-palette="orchid"][data-ws-theme="platform-light"] {
+	--ws-brand-primary: #E879F9;
+	--ws-brand-on-primary: #0C0A09;
+	--ws-brand-active: #D946EF;
+	--ws-brand-dim: #C026D3;
+	--ws-brand-gold-text: #A21CAF;
+	--ws-glow-brand: rgba(192, 38, 211, 0.06);
+}
+
+/* Sunset */
+html[data-ws-palette="sunset"][data-ws-theme="platform"] {
+	--ws-brand-primary: #FB923C;
+	--ws-brand-on-primary: #0C0A09;
+	--ws-brand-active: #FDBA74;
+	--ws-brand-dim: #EA580C;
+	--ws-brand-gold-text: #FDBA74;
+	--ws-glow-brand: rgba(251, 146, 60, 0.10);
+}
+html[data-ws-palette="sunset"][data-ws-theme="platform-light"] {
+	--ws-brand-primary: #FB923C;
+	--ws-brand-on-primary: #0C0A09;
+	--ws-brand-active: #F97316;
+	--ws-brand-dim: #EA580C;
+	--ws-brand-gold-text: #9A3412;
+	--ws-glow-brand: rgba(234, 88, 12, 0.06);
+}
+
+/* Heritage: the ecosystem's original gold. Coincides with the convert and
+   warning ambers by design; that overlap is what the brand was for years. */
+html[data-ws-palette="heritage"][data-ws-theme="platform"] {
+	--ws-brand-primary: #EAB308;
+	--ws-brand-on-primary: #0C0A09;
+	--ws-brand-active: #FACC15;
+	--ws-brand-dim: #CA8A04;
+	--ws-brand-gold-text: #FACC15;
+	--ws-glow-brand: rgba(234, 179, 8, 0.10);
+}
+html[data-ws-palette="heritage"][data-ws-theme="platform-light"] {
+	--ws-brand-primary: #EAB308;
+	--ws-brand-on-primary: #0C0A09;
+	--ws-brand-active: #CA8A04;
+	--ws-brand-dim: #A16207;
+	--ws-brand-gold-text: #785A00;
+	--ws-glow-brand: rgba(161, 98, 7, 0.06);
+}
+
+/* Mono: the brand is the ink, so the fill flips with the mode. */
+html[data-ws-palette="mono"][data-ws-theme="platform"] {
+	--ws-brand-primary: #FAFAFA;
+	--ws-brand-on-primary: #0C0A09;
+	--ws-brand-active: #FFFFFF;
+	--ws-brand-dim: #A1A1AA;
+	--ws-brand-gold-text: #FFFFFF;
+	--ws-glow-brand: rgba(255, 255, 255, 0.06);
+}
+html[data-ws-palette="mono"][data-ws-theme="platform-light"] {
+	--ws-brand-primary: #18181B;
+	--ws-brand-on-primary: #FFFFFF;
+	--ws-brand-active: #27272A;
+	--ws-brand-dim: #52525B;
+	--ws-brand-gold-text: #18181B;
+	--ws-glow-brand: rgba(24, 24, 27, 0.04);
+}

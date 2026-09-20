@@ -454,7 +454,7 @@ export function VoiceRecorder({
 
 	if (phase === "review" && review) {
 		return (
-			<div className="absolute inset-0 z-10 flex items-center gap-1 rounded-xl bg-raised px-2">
+			<div className="chat-chrome-solid absolute inset-0 z-10 flex items-center gap-1 rounded-pill px-2">
 				<button
 					type="button"
 					onClick={discardReview}
@@ -494,7 +494,7 @@ export function VoiceRecorder({
 					type="button"
 					onClick={sendReview}
 					aria-label="Send voice message"
-					className="ml-1 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-brand text-brand-on transition-colors hover:bg-brand-active"
+					className="ml-1 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill transition-opacity [background:var(--chat-mine,var(--ws-brand-primary))] [color:var(--chat-mine-ink,var(--ws-brand-on-primary))] hover:opacity-90"
 				>
 					<RiSendPlane2Fill size={16} />
 				</button>
@@ -512,7 +512,7 @@ export function VoiceRecorder({
 	}
 
 	return (
-		<div className="absolute inset-0 z-10 flex items-center gap-2 rounded-xl bg-raised px-3">
+		<div className="chat-chrome-solid absolute inset-0 z-10 flex items-center gap-2 rounded-pill px-3">
 			{/* Sanctioned live-state loop: opacity-only pulse (06-motion). */}
 			<span
 				className={clsx(
@@ -525,7 +525,7 @@ export function VoiceRecorder({
 			</span>
 			<canvas
 				ref={canvasRef}
-				className="h-8 min-w-0 flex-1 text-gold"
+				className="h-8 min-w-0 flex-1 text-primary"
 				aria-hidden
 			/>
 			{locked ? (
@@ -558,7 +558,7 @@ export function VoiceRecorder({
 						type="button"
 						onClick={() => finish("send")}
 						aria-label="Send voice message"
-						className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-brand text-brand-on transition-colors hover:bg-brand-active"
+						className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill transition-opacity [background:var(--chat-mine,var(--ws-brand-primary))] [color:var(--chat-mine-ink,var(--ws-brand-on-primary))] hover:opacity-90"
 					>
 						<RiSendPlane2Fill size={16} />
 					</button>
