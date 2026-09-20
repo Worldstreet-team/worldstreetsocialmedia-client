@@ -197,8 +197,11 @@ Non-obvious rules the spec enforces, all of which this page now follows:
   label is `font-sans text-[calc(13px*var(--ws-fs))] font-semibold
   text-primary`, sentence case, no tracking; a page title is 20-22px
   display semibold; a settings group header is a 15px title with the icon
-  in a `bg-primary/5` chip and its caption directly UNDER it, not as a
-  footnote after the card. Do not reintroduce `uppercase tracking-[...]`
+  and its caption directly UNDER it, not as a footnote after the card.
+  The icon beside a header is a BARE GLYPH (owner 2026-09-20: "i don't
+  want the background in the icons just clean icons") - no chip, no wash,
+  no filled square behind it. Depth around an icon comes from the row or
+  block it sits in, never from a tile under the glyph. Do not reintroduce `uppercase tracking-[...]`
   for anything a person is meant to read; badges and the brand lockup
   eyebrow are the only uppercase left.
 - **No stone on the black theme** (owner 2026-09-20: "don't use the stone
@@ -298,7 +301,7 @@ components, a proper sidebar, icons, headers and master search. The result:
 
 - `src/components/settings/inspector.tsx` is the kit. `SettingGroup` is a
   frosted block (`rounded-2xl glass-frost backdrop-blur-xl`, the inbox
-  block) with an icon in a wash chip, a 17px display title and its caption.
+  block) with a bare icon glyph, a 17px display title and its caption.
   `SettingRow` is name with the explanation under it, control at the right
   edge, hairline between rows. `Select` is the designed dropdown: a pill
   trigger on the rest wash, a PORTALLED menu (a block with backdrop-filter is
@@ -309,8 +312,10 @@ components, a proper sidebar, icons, headers and master search. The result:
   `SettingRows.tsx` are thin names over them. Never a native `<select>`,
   never a row of option chips, never a bespoke block.
 - `SettingsNav` is the inbox column: a masthead block (title, identity,
-  master search well) and a map block (You / App labels, icon chip + name +
-  hint rows, one sliding pressed wash, the open section's groups folded out).
+  master search well) and a map block (You / App labels, bare icon + name +
+  hint rows, one sliding pressed wash, the open section's groups folded
+  out). The open section reads by the wash behind its row and by the
+  glyph's weight, never by a filled chip.
 - Master search: `SEARCH_INDEX` in `sections.tsx` lists EVERY row by its
   visible name with its `group`. A result links to
   `/settings/<section>#group-<id>`; the page scrolls there, rings the block

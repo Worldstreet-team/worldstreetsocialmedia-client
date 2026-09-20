@@ -159,14 +159,15 @@ export function SettingsNav({
 												onClick={() => setQuery("")}
 												onMouseEnter={() => setCursor(i)}
 												className={clsx(
-													"flex min-h-[52px] items-center gap-3 rounded-xl px-2 transition-colors",
+													"flex min-h-[52px] items-center gap-3 rounded-xl px-3 transition-colors",
 													i === cursor ? "bg-primary/10" : "hover:bg-primary/5",
 												)}
 											>
 												{Icon && (
-													<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary/5 text-primary">
-														<Icon className="h-[17px] w-[17px]" strokeWidth={2} />
-													</span>
+													<Icon
+														className="h-[18px] w-[18px] shrink-0 text-muted"
+														strokeWidth={2}
+													/>
 												)}
 												<span className="flex min-w-0 flex-col">
 													<span className="truncate font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary">
@@ -213,7 +214,7 @@ export function SettingsNav({
 										href={`/settings/${id}`}
 										aria-current={active ? "page" : undefined}
 										className={clsx(
-											"relative flex min-h-[52px] w-full items-center gap-3 rounded-xl px-2 transition-colors",
+											"relative flex min-h-[52px] w-full items-center gap-3 rounded-xl px-3 transition-colors",
 											active ? "text-primary" : "text-muted hover:bg-primary/5 hover:text-primary",
 										)}
 									>
@@ -228,14 +229,16 @@ export function SettingsNav({
 												className="absolute inset-0 rounded-xl bg-primary/10"
 											/>
 										)}
-										<span
+										{/* Bare glyphs (owner 2026-09-20). The open section is told
+										    by the sliding wash behind the row and by weight, not by a
+										    filled chip. */}
+										<Icon
 											className={clsx(
-												"relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] transition-colors",
-												active ? "bg-primary text-page" : "bg-primary/5 text-primary",
+												"relative h-[18px] w-[18px] shrink-0 transition-colors",
+												active ? "text-primary" : "text-muted",
 											)}
-										>
-											<Icon className="h-[17px] w-[17px]" strokeWidth={active ? 2.5 : 2} />
-										</span>
+											strokeWidth={active ? 2.5 : 2}
+										/>
 										<span className="relative flex min-w-0 flex-1 flex-col">
 											<span
 												className={clsx(

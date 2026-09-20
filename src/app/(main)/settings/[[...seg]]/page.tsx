@@ -278,9 +278,10 @@ export default function SettingsPage() {
 						>
 							<ArrowLeft className="h-5 w-5" strokeWidth={2.5} />
 						</Link>
-						<span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-pill bg-primary text-page lg:flex">
-							<activeDef.icon className="h-[18px] w-[18px]" strokeWidth={2.5} />
-						</span>
+						<activeDef.icon
+							className="ml-2 hidden h-[19px] w-[19px] shrink-0 text-primary lg:block"
+							strokeWidth={2.25}
+						/>
 						<div className="min-w-0 flex-1">
 							<h2 className="truncate font-display text-[calc(17px*var(--ws-fs))] font-semibold leading-tight tracking-tight text-primary">
 								{t(activeDef.labelKey)}

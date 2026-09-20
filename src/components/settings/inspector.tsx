@@ -61,15 +61,17 @@ export function SettingGroup({
 			)}
 		>
 			<div className="flex items-start gap-3 pb-3">
+				{/* A bare glyph, never a chip (owner 2026-09-20: "i don't want the
+				    background in the icons just clean icons"). Optically aligned
+				    to the title's cap height rather than its line box. */}
 				{Icon && (
-					<span
+					<Icon
 						className={clsx(
-							"flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-							tone === "danger" ? "bg-danger/10 text-danger" : "bg-primary/5 text-primary",
+							"mt-[3px] h-[19px] w-[19px] shrink-0",
+							tone === "danger" ? "text-danger" : "text-primary",
 						)}
-					>
-						<Icon className="h-[18px] w-[18px]" strokeWidth={2} />
-					</span>
+						strokeWidth={2}
+					/>
 				)}
 				<div className="min-w-0 pt-px">
 					<h3
