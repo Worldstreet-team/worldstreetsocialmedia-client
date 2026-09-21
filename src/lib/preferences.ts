@@ -93,6 +93,10 @@ export interface Preferences {
 		 *  new"), so a person sees each once per ACCOUNT, not once per
 		 *  browser (owner 2026-09-21). Keys are the old localStorage keys. */
 		seenTours: string[];
+		/** Settings sections whose group list the person folded shut. Empty
+		 *  means the sidebar opens showing everything, which is the default
+		 *  (owner 2026-09-21: a collapse that flips back is not a collapse). */
+		collapsedSettings: string[];
 	};
 	content: {
 		defaultFeed: FeedTab;
@@ -147,7 +151,7 @@ export const DEFAULTS: Preferences = {
 		showLikes: true,
 	},
 	notifications: { messageAlerts: true, defaultTab: "all" },
-	advanced: { seenTours: [] },
+	advanced: { seenTours: [], collapsedSettings: [] },
 	content: {
 		defaultFeed: "foryou",
 		showStories: true,
@@ -244,6 +248,13 @@ export function normalizePrefs(raw: unknown): Preferences {
 			),
 		},
 		advanced: {
+			collapsedSettings: Array.isArray(
+				(p.advanced as { collapsedSettings?: unknown })?.collapsedSettings,
+			)
+				? (p.advanced as { collapsedSettings: unknown[] }).collapsedSettings
+						.filter((k): k is string => typeof k === "string" && k.length <= 32)
+						.slice(0, 20)
+				: [],
 			seenTours: Array.isArray((p.advanced as { seenTours?: unknown })?.seenTours)
 				? ((p.advanced as { seenTours: unknown[] }).seenTours
 						.filter((k): k is string => typeof k === "string" && k.length <= 64)

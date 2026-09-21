@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAtomValue } from "jotai";
@@ -61,8 +62,23 @@ export function SettingsNav({
 	const [query, setQuery] = useState("");
 	const [cursor, setCursor] = useState(0);
 	// Sections the person has shut. Empty by default: the sidebar opens
-	// showing everything it holds.
-	const [collapsed, setCollapsed] = useState<Set<SectionId>>(new Set());
+	// showing everything it holds. Kept on the ACCOUNT, not in component
+	// state (owner 2026-09-21: "if i close or collapse sumn it doesn't
+	// persist, it just flips back to default") — a reload, a second tab or
+	// another device all find the rail the way it was left.
+	const { prefs, setPrefs } = usePreferences();
+	const collapsed = useMemo(
+		() => new Set(prefs.advanced.collapsedSettings),
+		[prefs.advanced.collapsedSettings],
+	);
+	const toggleCollapsed = (id: SectionId) => {
+		const next = new Set(collapsed);
+		if (next.has(id)) next.delete(id);
+		else next.add(id);
+		// Optimistic, like every other preference: it paints now and saves
+		// behind the tap.
+		setPrefs({ advanced: { collapsedSettings: [...next] } });
+	};
 	const inputRef = useRef<HTMLInputElement>(null);
 	const results = useMemo(() => searchSettings(query), [query]);
 	const searching = query.trim().length > 0;
@@ -268,7 +284,7 @@ export function SettingsNav({
 							// "showing the sub items by default with a caret to switch
 							// back up"), so the map is the whole map, not a drawer that
 							// only opens where you already are. Collapsing is per person
-							// and per session; the set holds only what they shut.
+							// per person; the set holds only what they shut, on the account.
 							const open = subs.length > 1 && !collapsed.has(id);
 							return (
 								<motion.div key={id} variants={staggerItem} className="flex flex-col">
@@ -331,14 +347,7 @@ export function SettingsNav({
 										{subs.length > 1 ? (
 											<button
 												type="button"
-												onClick={() =>
-													setCollapsed((prev) => {
-														const next = new Set(prev);
-														if (next.has(id)) next.delete(id);
-														else next.add(id);
-														return next;
-													})
-												}
+												onClick={() => toggleCollapsed(id)}
 												aria-expanded={open}
 												aria-controls={`settings-subs-${id}`}
 												aria-label={`${open ? "Hide" : "Show"} what is in ${t(labelKey)}`}

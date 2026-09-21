@@ -354,6 +354,13 @@ components, a proper sidebar, icons, headers and master search. The result:
   Ten settings were ten paragraphs, and the screen read as a document.
 - The global create button (`CreateFab`) is hidden on `/settings`: it sat
   over the last hub rows and the right-edge controls.
+- **UI state a person sets by hand belongs on the account too.** The
+  settings sidebar's collapsed sections live in
+  `prefs.advanced.collapsedSettings`, not component state, so a reload, a
+  second tab or another device finds the rail as it was left (owner
+  2026-09-21: "if i close or collapse sumn it doesn't persist, it just
+  flips back to default"). `setPrefs` is optimistic, so the caret still
+  answers instantly.
 - **One-time cards are seen once per ACCOUNT** (owner 2026-09-21). The
   welcome tour and both what's-new cards used a localStorage flag, so every
   new browser or phone replayed them. `useTourSeen(key)` in
