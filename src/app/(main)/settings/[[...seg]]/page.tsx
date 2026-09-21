@@ -280,7 +280,11 @@ export default function SettingsPage() {
 			    section is open so the detail owns the screen. */}
 			<div
 				className={clsx(
-					"pb-nav lg:sticky lg:top-0 lg:block lg:w-[288px] lg:shrink-0 lg:border-r lg:border-hairline lg:pb-0",
+					// Full height on a desktop (owner 2026-09-20): the rail and its
+					// border run to the bottom of the window however short the
+					// open section is, and it scrolls on its own when the map,
+					// with every group folded out, is taller than the window.
+					"pb-nav lg:sticky lg:top-0 lg:block lg:h-dvh lg:w-[288px] lg:shrink-0 lg:overflow-y-auto lg:border-r lg:border-hairline lg:pb-0 lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden",
 					valid ? "hidden" : "block w-full",
 				)}
 			>

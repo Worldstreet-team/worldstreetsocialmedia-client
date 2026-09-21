@@ -79,7 +79,7 @@ export function SettingsNav({
 		[user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.username;
 
 	return (
-		<div className="flex flex-col gap-2 p-2 md:gap-3 md:p-3">
+		<div className="flex min-h-full flex-col gap-2 p-2 md:gap-3 md:p-3">
 			{/* Masthead: title, identity, master search. */}
 			<div className="rounded-2xl px-4 pb-4 pt-4 glass-frost backdrop-blur-xl">
 				<div className="flex items-center gap-3">
@@ -157,7 +157,8 @@ export function SettingsNav({
 			)}
 
 			{/* The map, or the results while a search is running. */}
-			<div className="rounded-2xl px-2 pb-2 pt-2 glass-frost backdrop-blur-xl">
+			{/* flex-1: the map block runs to the bottom of the rail. */}
+			<div className="rounded-2xl px-2 pb-2 pt-2 glass-frost backdrop-blur-xl lg:flex-1">
 				{searching ? (
 					<div id="settings-search-results" role="listbox" aria-label="Search results">
 						{results.length === 0 ? (
