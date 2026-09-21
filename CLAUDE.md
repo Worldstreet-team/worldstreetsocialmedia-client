@@ -807,6 +807,19 @@ directions D + A from a mocked set
   under three different sections. Plain groups on the sheet's own surface,
   never the frosted `SettingGroup`: the sheet is already the one blur. A
   new messaging preference gets a row in BOTH places.
+- **The swipe row is the iOS Mail grammar, on a spring** (owner 2026-09-22,
+  after the first version). `SwipeRow` in `ConversationList`: framer drag on
+  x, direction-locked so a diagonal scroll scrolls; one coloured well under
+  the row in the trailing action's colour, actions as icon-over-label
+  76px buttons, Delete (red) then Archive (brand) at the trailing edge.
+  A short pull parks open (both tappable); past `OPEN + 72` the trailing
+  action grows to fill the well with a haptic tick and release commits it;
+  a fling commits too. Archive is the trailing action ON PURPOSE: a full
+  swipe performs the reversible thing, Delete is tap-only and keeps its
+  confirm. One row open at a time (module-level `closeOpenRow`), tapping
+  outside or on the row shuts it. Touch only (`pointer: coarse`); a mouse
+  has the right-click menu. The row takes `bg-surface` only while it is
+  off its rest position, so the well never reads through it at rest.
 - `ConversationList` takes `banner`, `footer` and `onBack` for this. The
   old `filter` prop is gone.
 

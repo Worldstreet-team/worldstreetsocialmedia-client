@@ -2,6 +2,7 @@
 
 import clsx from "clsx";
 import {
+	useCallback,
 	useEffect,
 	useMemo,
 	useState,
@@ -9,7 +10,14 @@ import {
 	useSyncExternalStore,
 } from "react";
 import { useAtomValue } from "jotai";
-import { AnimatePresence, motion } from "framer-motion";
+import {
+	AnimatePresence,
+	animate,
+	motion,
+	useMotionValue,
+	useMotionValueEvent,
+	useTransform,
+} from "framer-motion";
 import {
 	RiImageFill,
 	RiVoiceprintFill,
@@ -45,6 +53,7 @@ import {
 	staggerParentFast,
 	staggerPop,
 	swap,
+	snappySpring,
 } from "@/lib/motion-presets";
 import { useGatewayRead } from "@/hooks/useGateway";
 import {
@@ -510,6 +519,7 @@ export function ConversationList({
 						archiveLabel={
 							conv.archived ? t("messages.unarchive") : t("messages.archive")
 						}
+						archived={!!conv.archived}
 					>
 					<button
 						type="button"
@@ -867,104 +877,180 @@ function PeopleToChat({
  * pointer devices lose nothing — they get the same action from the
  * message-request chips and the thread header.
  */
+/** The one row open across the whole inbox; opening another shuts it. */
+let closeOpenRow: (() => void) | null = null;
+
+const ACTION_W = 76;
+
+/**
+ * Swipe a chat row (owner 2026-09-22, after the first version: "terrible").
+ * The iOS Mail grammar, done properly:
+ *
+ * - The row slides on a spring, direction-locked, so a diagonal scroll
+ *   scrolls and only a horizontal pull swipes. Pulling right rubber-bands.
+ * - Under it, one coloured well in the trailing action's colour, with the
+ *   actions as icon-over-label buttons: Delete (red), then Archive (brand)
+ *   at the trailing edge. Archive is the reversible one, so it is the one
+ *   a full swipe commits; Delete is tap-only and still goes through its
+ *   confirm.
+ * - A short pull parks the row open with both actions tappable. Past the
+ *   commit line the trailing action grows to fill the well with a tick of
+ *   haptic, and letting go performs it. A fling commits too.
+ * - One row open at a time: opening another, tapping anywhere else, or
+ *   tapping the row itself shuts it.
+ * - Touch only. A mouse has the right-click menu; dragging list rows with
+ *   a mouse is not a thing anyone expects.
+ */
 function SwipeRow({
 	children,
 	onDelete,
 	onArchive,
 	archiveLabel,
+	archived,
 }: {
 	children: React.ReactNode;
 	onDelete?: () => void;
 	/** Archive, or unarchive when the row is already on the shelf. */
 	onArchive?: () => void;
 	archiveLabel?: string;
+	archived?: boolean;
 }) {
-	const [dx, setDx] = useState(0);
-	const startX = useRef<number | null>(null);
-	const startY = useRef<number | null>(null);
-	const committed = useRef(false);
+	const x = useMotionValue(0);
+	const rootRef = useRef<HTMLDivElement>(null);
+	const [open, setOpen] = useState(false);
+	const [expanded, setExpanded] = useState(false);
+	const [coarse, setCoarse] = useState(false);
+	useEffect(() => {
+		setCoarse(window.matchMedia?.("(pointer: coarse)").matches ?? false);
+	}, []);
 
-	if (!onDelete && !onArchive) return <>{children}</>;
-
-	// The iOS shape (owner 2026-09-19): the actions sit under the row and are
-	// uncovered as it slides; a short pull parks the row open so either can be
-	// tapped, a long pull commits the nearest one outright.
 	const actions = [
+		onDelete && { key: "delete", label: "Delete", run: onDelete },
 		onArchive && {
 			key: "archive",
 			label: archiveLabel ?? "Archive",
-			cls: "bg-raised text-primary",
 			run: onArchive,
 		},
-		onDelete && { key: "delete", label: "Delete", cls: "bg-danger text-white", run: onDelete },
-	].filter(Boolean) as { key: string; label: string; cls: string; run: () => void }[];
-	const OPEN = actions.length * 88;
-	const COMMIT = OPEN + 56;
+	].filter(Boolean) as { key: string; label: string; run: () => void }[];
+	const trailing = actions[actions.length - 1];
+	const OPEN = actions.length * ACTION_W;
+	const COMMIT = OPEN + 72;
 
-	const close = () => setDx(0);
+	// The well shows only once the row has moved: at rest the row is
+	// transparent on the frosted block and the well must not read through it.
+	const wellOpacity = useTransform(x, (v) => (v < -1 ? 1 : 0));
+	const wellWidth = useTransform(x, (v) => Math.max(0, -v));
+	const rowFill = useTransform(x, (v) =>
+		v < -1 ? "var(--ws-bg-surface)" : "transparent",
+	);
+	useMotionValueEvent(x, "change", (v) => {
+		const past = v <= -COMMIT;
+		setExpanded((was) => {
+			if (past && !was) navigator.vibrate?.(8);
+			return past;
+		});
+	});
+
+	// Stable, because the one-open registry compares it by identity.
+	const close = useCallback(() => {
+		animate(x, 0, snappySpring);
+		setOpen(false);
+		if (closeOpenRow === close) closeOpenRow = null;
+	}, [x]);
+	const settle = (to: number) => {
+		if (to === 0) return close();
+		animate(x, to, snappySpring);
+		setOpen(true);
+		if (closeOpenRow && closeOpenRow !== close) closeOpenRow();
+		closeOpenRow = close;
+	};
+
+	// Anything tapped outside an open row shuts it.
+	useEffect(() => {
+		if (!open) return;
+		const onDown = (e: PointerEvent) => {
+			if (!rootRef.current?.contains(e.target as Node)) close();
+		};
+		document.addEventListener("pointerdown", onDown, true);
+		return () => document.removeEventListener("pointerdown", onDown, true);
+	}, [open, close]);
+
+	if (!coarse || actions.length === 0) return <>{children}</>;
 
 	return (
-		<div className="relative overflow-hidden rounded-xl">
-			<div aria-hidden className="absolute inset-y-0 right-0 flex">
-				{actions.map((a) => (
-					<button
-						key={a.key}
-						type="button"
-						tabIndex={-1}
-						onClick={() => {
-							close();
-							a.run();
-						}}
-						className={clsx(
-							"flex w-[88px] cursor-pointer items-center justify-center font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold transition-opacity",
-							a.cls,
-							dx < -10 ? "opacity-100" : "opacity-0",
-						)}
-					>
-						{a.label}
-					</button>
-				))}
-			</div>
-			<div
-				style={{
-					transform: `translateX(${dx}px)`,
-					transition:
-						startX.current === null ? "transform 200ms var(--ws-ease)" : "none",
-				}}
-				onTouchStart={(e) => {
-					startX.current = e.touches[0].clientX - dx;
-					startY.current = e.touches[0].clientY;
-					committed.current = false;
-				}}
-				onTouchMove={(e) => {
-					if (startX.current === null) return;
-					const ddx = e.touches[0].clientX - startX.current;
-					const ddy = Math.abs(e.touches[0].clientY - (startY.current ?? 0));
-					// Vertical intent scrolls the list; only a clearly
-					// horizontal drag becomes the gesture.
-					if (ddy > 30) {
-						startX.current = null;
-						setDx(0);
+		<div ref={rootRef} className="relative overflow-hidden rounded-xl">
+			<motion.div
+				aria-hidden
+				style={{ opacity: wellOpacity, width: wellWidth }}
+				className={clsx(
+					"absolute inset-y-0 right-0 flex justify-end overflow-hidden",
+					trailing.key === "delete" ? "bg-danger" : "bg-brand",
+				)}
+			>
+				{actions.map((a) => {
+					const isTrailing = a === trailing;
+					const hidden = expanded && !isTrailing;
+					return (
+						<motion.button
+							key={a.key}
+							type="button"
+							tabIndex={-1}
+							layout
+							transition={snappySpring}
+							onClick={() => {
+								close();
+								a.run();
+							}}
+							className={clsx(
+								"flex h-full shrink-0 cursor-pointer flex-col items-center justify-center gap-1 font-sans text-[calc(11px*var(--ws-fs))] font-semibold",
+								a.key === "delete" ? "bg-danger text-white" : "bg-brand text-brand-on",
+								expanded && isTrailing ? "flex-1" : "",
+								hidden && "w-0 overflow-hidden opacity-0",
+							)}
+							style={hidden ? undefined : { minWidth: ACTION_W }}
+						>
+							{a.key === "delete" ? (
+								<RiDeleteBinLine size={22} />
+							) : archived ? (
+								<RiInboxUnarchiveLine size={22} />
+							) : (
+								<RiArchiveLine size={22} />
+							)}
+							{a.label}
+						</motion.button>
+					);
+				})}
+			</motion.div>
+			<motion.div
+				drag="x"
+				dragDirectionLock
+				dragConstraints={{ left: -COMMIT - 40, right: 0 }}
+				dragElastic={{ left: 0.25, right: 0.06 }}
+				dragMomentum={false}
+				style={{ x, backgroundColor: rowFill }}
+				onDragEnd={(_, info) => {
+					const v = x.get();
+					if (v <= -COMMIT || info.velocity.x < -900) {
+						settle(0);
+						trailing.run();
 						return;
 					}
-					// Rubber band past the open width so the commit has a feel.
-					setDx(Math.min(0, ddx > 0 ? 0 : Math.max(ddx, -COMMIT - 24)));
+					settle(v <= -OPEN / 2 ? -OPEN : 0);
 				}}
-				onTouchEnd={() => {
-					startX.current = null;
-					startY.current = null;
-					if (dx <= -COMMIT) {
-						committed.current = true;
-						setDx(0);
-						actions[0].run();
-						return;
-					}
-					// Park open past half, otherwise spring shut.
-					setDx(dx <= -OPEN / 2 ? -OPEN : 0);
-				}}
+				className="relative"
 			>
 				{children}
-			</div>
+				{/* While parked open the row itself is a way to shut it, and
+				    must not open the chat. */}
+				{open && (
+					<button
+						type="button"
+						aria-label="Close"
+						onClick={close}
+						className="absolute inset-0 cursor-default"
+					/>
+				)}
+			</motion.div>
 		</div>
 	);
 }
