@@ -1594,3 +1594,34 @@ html[data-ws-theme="platform"] .glass-toast {
 html[data-ws-theme="platform"] {
   --ws-bg-track: #111111;
 }
+
+/* ── The house wallpaper wears the palette (owner 2026-09-20) ───────────
+   "in the wallpaper is there a way for it to conform with the theme,
+   changing the hue as well".
+
+   The doodle shipped as two flat WebPs, one per mode, with the line art
+   baked in at a fixed colour, so it could never follow anything. The art
+   is line work on a solid ground covering about 5% of the pixels, so it
+   derives cleanly into an alpha mask: one file, painted by the brand
+   token. It then follows the palette AND light/dark with no second asset
+   and nothing to re-bake, and Mono gets a white or black doodle for free.
+
+   Opacity is per mode because the ink is: a light brand fill on the black
+   page, the same fill on paper. Both are held well under the bubbles, the
+   wallpaper's whole job being to sit behind text. */
+html[data-ws-theme] .ws-default-chat-wallpaper::before {
+  background-color: var(--ws-brand-primary);
+  background-image: none;
+  mask-image: url("/images/backgrounds/worldspace-doodle-mask.webp");
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: cover;
+  -webkit-mask-image: url("/images/backgrounds/worldspace-doodle-mask.webp");
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: cover;
+  opacity: 0.2;
+}
+html[data-ws-theme="platform-light"] .ws-default-chat-wallpaper::before {
+  opacity: 0.14;
+}

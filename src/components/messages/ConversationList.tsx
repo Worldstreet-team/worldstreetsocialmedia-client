@@ -284,17 +284,54 @@ export function ConversationList({
 	// the render before it and took the whole Messages page down (found
 	// 2026-09-19, shipped 09-15).
 	if (loading) {
+		// The stand-in is the real thing with its data missing (owner
+		// 2026-09-20: the old one did not match the layout). Same block, same
+		// heading, the faces rail, the thumb, and rows at the row's own
+		// geometry: 48px avatar, gap-3, px-3 py-2. Anything known is drawn
+		// for real; only what the network owes is grey.
 		return (
-			<div className="flex flex-col">
-				{[0, 1, 2, 3, 4].map((i) => (
-					<div key={i} className="flex items-center gap-3 px-4 py-1.5">
-						<span className="skeleton h-[52px] w-[52px] shrink-0 rounded-pill" />
-						<span className="flex min-w-0 flex-1 flex-col gap-2">
-							<span className="skeleton h-[18px] w-1/3 rounded-[4px]" />
-							<span className="skeleton h-[15px] w-2/3 rounded-[4px]" />
-						</span>
+			<div className="flex flex-col px-2">
+				<div className="flex flex-col rounded-2xl px-2 pb-2 pt-4 glass-frost backdrop-blur-xl">
+					{heading && (
+						<div className="mb-3 flex items-center gap-2 px-4">
+							<h2 className={clsx(sectionTitleBare, "flex-1")}>{heading}</h2>
+						</div>
+					)}
+					<div
+						aria-hidden
+						className="mb-1 flex gap-1 overflow-hidden px-2 pb-2"
+					>
+						{[0, 1, 2, 3, 4].map((i) => (
+							<span
+								key={i}
+								className="flex w-[62px] shrink-0 flex-col items-center gap-1 py-1"
+							>
+								<span className="skeleton h-12 w-12 rounded-pill" />
+								<span className="skeleton h-[11px] w-9 rounded-[4px]" />
+							</span>
+						))}
 					</div>
-				))}
+					<InboxThumb />
+					{[0, 1, 2, 3, 4, 5, 6].map((i) => (
+						<div
+							key={i}
+							className="flex w-full items-center gap-3 rounded-xl px-3 py-2"
+						>
+							<span className="skeleton h-12 w-12 shrink-0 rounded-pill" />
+							<span className="flex min-w-0 flex-1 flex-col gap-1.5">
+								<span
+									className="skeleton h-[15px] rounded-[4px]"
+									style={{ width: `${[46, 62, 38, 54, 44, 58, 40][i]}%` }}
+								/>
+								<span
+									className="skeleton h-[13px] rounded-[4px]"
+									style={{ width: `${[70, 52, 64, 44, 74, 48, 60][i]}%` }}
+								/>
+							</span>
+							<span className="skeleton h-[11px] w-7 shrink-0 rounded-[4px]" />
+						</div>
+					))}
+				</div>
 			</div>
 		);
 	}

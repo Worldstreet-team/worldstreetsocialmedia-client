@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useRef } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { groundCss, type ThemeWallpaper, wallpaperSrc } from "./chatTheme";
 
 /**
@@ -31,6 +31,31 @@ import { groundCss, type ThemeWallpaper, wallpaperSrc } from "./chatTheme";
  * `resolution` is the working width of that canvas. The pane wants the
  * full 1280; a gallery card is 150px wide and wants nothing like it.
  */
+/**
+ * The resolved brand colour, while a theme actually uses it. `data-ws-theme`
+ * and `data-ws-palette` both move it, and a CSS variable change fires no
+ * event, so the attributes are what is watched.
+ */
+function useBrandColor(active: boolean): string {
+	const [brand, setBrand] = useState("");
+	useEffect(() => {
+		if (!active) return;
+		const root = document.documentElement;
+		const read = () =>
+			setBrand(
+				getComputedStyle(root).getPropertyValue("--ws-brand-primary").trim(),
+			);
+		read();
+		const mo = new MutationObserver(read);
+		mo.observe(root, {
+			attributes: true,
+			attributeFilter: ["data-ws-theme", "data-ws-palette"],
+		});
+		return () => mo.disconnect();
+	}, [active]);
+	return brand;
+}
+
 export const ThemeBackdrop = memo(function ThemeBackdrop({
 	wallpaper,
 	resolution = 1280,
@@ -42,6 +67,11 @@ export const ThemeBackdrop = memo(function ThemeBackdrop({
 	const painted = groundCss(wallpaper);
 	const ref = useRef<HTMLCanvasElement>(null);
 	const { frost, hue, dim } = wallpaper;
+	// The brand tint is read off the element at bake time, so a palette or
+	// mode change has to re-bake or the picture keeps yesterday's colour
+	// (owner 2026-09-20, asking the wallpaper to follow the theme). Watched
+	// here rather than inside bake(): the effect below is what re-runs.
+	const brand = useBrandColor(hue === "cyan");
 	useEffect(() => {
 		const canvas = ref.current;
 		if (!src || !canvas) return;
@@ -60,7 +90,7 @@ export const ThemeBackdrop = memo(function ThemeBackdrop({
 		return () => {
 			gone = true;
 		};
-	}, [src, frost, hue, dim, resolution]);
+	}, [src, frost, hue, dim, resolution, brand]);
 
 	// A painted ground needs no image, no blur and no dim - it IS the colour.
 	if (!src)

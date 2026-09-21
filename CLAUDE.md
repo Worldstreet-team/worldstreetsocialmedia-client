@@ -683,6 +683,26 @@ The two lightboxes (`ImageModal`, `MediaModal`) take the header and the
 dismiss hook but keep their own opaque ground: no variant models full-bleed
 media, and a viewer wants black behind it, not a 50% wash.
 
+## The wallpaper follows the palette (owner 2026-09-20)
+
+- **The house doodle is a MASK, not a picture.** It shipped as two flat
+  WebPs with the line colour baked in, so it could never follow anything.
+  The art is line work on a solid ground over about 5% of the pixels, so
+  it derives into one alpha file,
+  `public/images/backgrounds/worldspace-doodle-mask.webp`, which
+  `globals.css` paints with `var(--ws-brand-primary)` through
+  `mask-image`. It then follows the palette and light/dark with no second
+  asset and nothing to re-bake. Opacity is per mode (0.2 dark, 0.14 light)
+  and stays low: a wallpaper's whole job is to sit behind text.
+- **A brand-tinted photo re-bakes when the palette moves.**
+  `ThemeBackdrop` reads `--ws-brand-primary` off the element at bake time,
+  and a CSS variable change fires no event, so `useBrandColor` watches
+  `data-ws-theme` and `data-ws-palette` on `<html>` and feeds the result
+  into the bake deps. Without it a `hue: "cyan"` wallpaper kept yesterday's
+  colour until something else forced a re-bake.
+- The ten drawn wallpapers stay their own colour on purpose: a theme
+  chosen for its colour should not change colour underneath the person.
+
 ## The inbox has no filter rows (owner pick 2026-09-20)
 
 The Chats block carried People / Groups on its header row and Primary /

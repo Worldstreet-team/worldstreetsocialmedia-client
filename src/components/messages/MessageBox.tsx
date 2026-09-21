@@ -2771,7 +2771,12 @@ export const MessageBox = ({
 							) : null
 						}
 						footer={
-							inboxTab === "primary" && archivedConversations.length > 0 ? (
+							// Always, even at zero (owner 2026-09-20: "where is the
+							// archives?"). It sits UNDER the list, so a door that is
+							// always there still costs nothing before the first chat,
+							// and a thing you can only find once you have used it is
+							// not findable at all.
+							inboxTab === "primary" ? (
 								<button
 									type="button"
 									onClick={() => setInboxTab("archived")}
@@ -2780,7 +2785,7 @@ export const MessageBox = ({
 									<Archive size={16} />
 									{t("messages.archived")}
 									<span className="ml-auto flex items-center gap-1 font-normal tabular-nums text-subtle">
-										{archivedConversations.length}
+										{archivedConversations.length || ""}
 										<RiArrowRightSLine size={16} />
 									</span>
 								</button>
