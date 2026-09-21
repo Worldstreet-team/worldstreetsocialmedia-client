@@ -354,6 +354,19 @@ components, a proper sidebar, icons, headers and master search. The result:
   Ten settings were ten paragraphs, and the screen read as a document.
 - The global create button (`CreateFab`) is hidden on `/settings`: it sat
   over the last hub rows and the right-edge controls.
+- **The Settings what's-new card** (`SettingsFeatureTour`, mounted in the
+  settings layout, gate `ws-settings-whats-new-v1`) follows the Messages
+  one, with three owner notes from 2026-09-21: the colour slide carries the
+  seven palette samples LIVE (picking one recolours the app behind the
+  card); the text section is its own `bg-surface` with a 28px curved top
+  that rides over the artwork, and the artwork box runs 28px past its 16:9
+  so the corners open onto art, not bare ground; and the artwork wears the
+  chosen colour through a `mix-blend-hue` layer of `--ws-brand-primary`.
+  That works because the art is paper-cut greys with ONE saturated accent:
+  a grey has no saturation for a hue blend to act on. It is skipped on the
+  default palette and on the colour slide, whose fan is seven different
+  colours on purpose. New artwork for this card must keep to greys plus a
+  single accent or the blend will repaint it.
 - **No taglines** (owner 2026-09-20: "remove the tagline in the
   settings"). A section row is its name; the header pill is the section
   title. The one-line `hint` on `SectionDef` is kept as data but is not
