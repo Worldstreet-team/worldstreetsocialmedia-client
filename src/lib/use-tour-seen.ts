@@ -22,7 +22,9 @@ import { usePreferences } from "@/components/providers/PreferencesProvider";
  */
 export function useTourSeen(key: string) {
 	const { prefs, setPrefs, synced } = usePreferences();
-	const onAccount = prefs.advanced.seenTours.includes(key);
+	// Only the account's own copy counts as "on the account": until it has
+	// loaded, `prefs` is the cache, which is a guess about this device.
+	const onAccount = synced && prefs.advanced.seenTours.includes(key);
 	const onDevice =
 		typeof window !== "undefined" && !!window.localStorage.getItem(key);
 
@@ -44,14 +46,18 @@ export function useTourSeen(key: string) {
 	}, [synced, onDevice, onAccount, markSeen]);
 
 	// And the reverse, so the local echo is right on the next cold start.
+	// Gated on `synced` as well: before the account answers, `prefs` is the
+	// LOCALSTORAGE CACHE, and writing the echo from that then let the
+	// migration effect above upload it again, so a card cleared on the
+	// account came straight back (caught 2026-09-21 trying to reopen one).
 	useEffect(() => {
-		if (!onAccount || onDevice) return;
+		if (!synced || !onAccount || onDevice) return;
 		try {
 			window.localStorage.setItem(key, "1");
 		} catch {
 			/* ignore */
 		}
-	}, [onAccount, onDevice, key]);
+	}, [synced, onAccount, onDevice, key]);
 
 	return { ready: synced, seen: onAccount || onDevice, markSeen };
 }

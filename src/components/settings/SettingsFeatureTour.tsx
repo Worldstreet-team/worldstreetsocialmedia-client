@@ -181,6 +181,20 @@ export function SettingsFeatureTour() {
     leavingRef.current = false;
   }, [open]);
 
+  // Replay on request: /settings#whats-new opens the card whatever the
+  // account remembers, the way the welcome tour can be replayed from the
+  // palette. The hash is spent at once so a reload does not reopen it.
+  useEffect(() => {
+    const replay = () => {
+      if (window.location.hash !== "#whats-new") return;
+      history.replaceState(null, "", window.location.pathname);
+      setOpen(true);
+    };
+    replay();
+    window.addEventListener("hashchange", replay);
+    return () => window.removeEventListener("hashchange", replay);
+  }, []);
+
   const markSeen = tour.markSeen;
   const close = useCallback(() => {
     markSeen();
