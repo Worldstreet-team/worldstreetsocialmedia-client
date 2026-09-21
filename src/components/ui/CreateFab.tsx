@@ -76,6 +76,10 @@ export function CreateFab() {
     pathname === "/live" ||
     pathname.startsWith("/live/") ||
     (pathname.startsWith("/messages/") && pathname.split("/").length > 2) ||
+    // Settings is for changing things, not posting: the button sat on top
+    // of the last rows of the phone hub and of every right-edge control.
+    pathname === "/settings" ||
+    pathname.startsWith("/settings/") ||
     pathname.startsWith("/sign-in") ||
     pathname.startsWith("/sign-up") ||
     pathname.startsWith("/onboarding");

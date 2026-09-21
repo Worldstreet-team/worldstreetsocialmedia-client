@@ -13,7 +13,17 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Switch } from "@/components/ui/Switch";
-import { menuStagger, staggerItem, staggerPop, swap } from "@/lib/motion-presets";
+import {
+	DUR,
+	EASE,
+	EASE_IN,
+	menuStagger,
+	sheetSpring,
+	staggerItem,
+	staggerParentFast,
+	staggerPop,
+	swap,
+} from "@/lib/motion-presets";
 
 /**
  * The settings grammar (owner 2026-09-20, second pass: "the make over we
@@ -94,7 +104,14 @@ export function SettingGroup({
 	);
 }
 
-/** One setting. `children` is the control; it sits at the right edge. */
+/**
+ * One setting. `children` is the control; it sits at the right edge.
+ *
+ * On a desktop the explanation is always under the name. On a phone it is
+ * behind a tap on the name (mobile direction A): a section of ten settings
+ * was ten two-line paragraphs, and the screen read as a document. The name
+ * is only a button where there is something to open.
+ */
 export function SettingRow({
 	label,
 	hint,
@@ -106,6 +123,8 @@ export function SettingRow({
 	disabled?: boolean;
 	children?: React.ReactNode;
 }) {
+	const [open, setOpen] = useState(false);
+	const hintId = useId();
 	return (
 		<div
 			className={clsx(
@@ -113,23 +132,150 @@ export function SettingRow({
 				disabled && "opacity-60",
 			)}
 		>
-			<span className="font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary">
-				{label}
-			</span>
-			{/* Under the name on a phone, its own column on a desktop. Always
-			    rendered on a desktop so the control column stays put. */}
-			<span
-				className={clsx(
-					"col-start-1 row-start-2 font-sans text-[calc(12.5px*var(--ws-fs))] leading-snug text-muted max-w-[60ch]",
-					!hint && "hidden",
-				)}
-			>
-				{hint}
-			</span>
+			{hint ? (
+				<button
+					type="button"
+					onClick={() => setOpen((v) => !v)}
+					aria-expanded={open}
+					aria-controls={hintId}
+					className="flex min-h-[40px] cursor-pointer items-center gap-1.5 text-left font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary lg:pointer-events-none lg:min-h-0 lg:cursor-default"
+				>
+					{label}
+					<ChevronDown
+						aria-hidden
+						className={clsx(
+							"h-3.5 w-3.5 shrink-0 text-subtle transition-transform lg:hidden",
+							open && "rotate-180",
+						)}
+						strokeWidth={2.25}
+					/>
+				</button>
+			) : (
+				<span className="font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary">
+					{label}
+				</span>
+			)}
+			{hint && (
+				<span
+					id={hintId}
+					className={clsx(
+						"col-start-1 row-start-2 max-w-[60ch] pb-1 font-sans text-[calc(12.5px*var(--ws-fs))] leading-snug text-muted lg:block lg:pb-0",
+						!open && "hidden",
+					)}
+				>
+					{hint}
+				</span>
+			)}
 			<span className="col-start-2 row-span-2 row-start-1 flex items-center justify-end">
 				{children}
 			</span>
 		</div>
+	);
+}
+
+/** A phone is anything under Tailwind's `lg`, where Settings turns into the
+ *  hub and its pushes. Read at the moment of opening, never stored. */
+export const isPhoneWidth = () =>
+	typeof window !== "undefined" && window.innerWidth < 1024;
+
+/**
+ * A choice on a phone (owner 2026-09-20, mobile directions A + B): the
+ * options rise as a bottom sheet instead of a menu hanging off a pill. A
+ * thumb reaches the bottom of a phone, not a 40px target under its own
+ * finger, and a sheet has room for every option at 48px.
+ */
+export function PickerSheet<V extends string | number>({
+	open,
+	title,
+	value,
+	options,
+	onPick,
+	onClose,
+}: {
+	open: boolean;
+	title: string;
+	value: V;
+	options: readonly (readonly [V, string])[];
+	onPick: (v: V) => void;
+	onClose: () => void;
+}) {
+	useEffect(() => {
+		if (!open) return;
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === "Escape") onClose();
+		};
+		window.addEventListener("keydown", onKey);
+		const prev = document.body.style.overflow;
+		document.body.style.overflow = "hidden";
+		return () => {
+			window.removeEventListener("keydown", onKey);
+			document.body.style.overflow = prev;
+		};
+	}, [open, onClose]);
+	if (typeof document === "undefined") return null;
+	return createPortal(
+		<AnimatePresence>
+			{open && (
+				<motion.div key="picker" className="fixed inset-0 z-modal flex items-end">
+					<motion.button
+						type="button"
+						aria-label="Close"
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1, transition: { duration: DUR.base, ease: EASE } }}
+						exit={{ opacity: 0, transition: { duration: DUR.fast, ease: EASE_IN } }}
+						onClick={onClose}
+						className="absolute inset-0 cursor-default bg-scrim"
+					/>
+					<motion.div
+						role="listbox"
+						aria-label={title}
+						initial={{ y: "100%" }}
+						animate={{ y: 0, transition: sheetSpring }}
+						exit={{ y: "100%", transition: { duration: DUR.base, ease: EASE_IN } }}
+						drag="y"
+						dragConstraints={{ top: 0, bottom: 0 }}
+						dragElastic={{ top: 0, bottom: 0.6 }}
+						onDragEnd={(_, info) => {
+							if (info.offset.y > 90 || info.velocity.y > 600) onClose();
+						}}
+						className="relative max-h-[78dvh] w-full overflow-y-auto rounded-t-[22px] bg-raised px-2 pb-[calc(12px+var(--ws-safe-bottom,0px))] pt-2 shadow-sheet"
+					>
+						<span aria-hidden className="mx-auto mb-2 block h-1 w-9 rounded-pill bg-primary/15" />
+						<h3 className="px-3 pb-2 pt-1 font-display text-[calc(16px*var(--ws-fs))] font-semibold text-primary">
+							{title}
+						</h3>
+						<motion.div variants={staggerParentFast} initial="hidden" animate="show">
+							{options.map(([v, l]) => {
+								const active = v === value;
+								return (
+									<motion.button
+										key={String(v)}
+										type="button"
+										role="option"
+										aria-selected={active}
+										variants={staggerItem}
+										onClick={() => {
+											onPick(v);
+											onClose();
+										}}
+										className={clsx(
+											"flex min-h-[48px] w-full cursor-pointer items-center gap-3 rounded-xl px-3 text-left font-sans text-[calc(15px*var(--ws-fs))] transition-colors",
+											active
+												? "bg-primary/10 font-semibold text-primary"
+												: "font-medium text-muted",
+										)}
+									>
+										<span className="min-w-0 flex-1 truncate">{l}</span>
+										{active && <Check className="h-4 w-4 shrink-0 text-gold" strokeWidth={3} />}
+									</motion.button>
+								);
+							})}
+						</motion.div>
+					</motion.div>
+				</motion.div>
+			)}
+		</AnimatePresence>,
+		document.body,
 	);
 }
 
@@ -153,6 +299,8 @@ export function Select<V extends string | number>({
 	disabled?: boolean;
 }) {
 	const [open, setOpen] = useState(false);
+	// Decided when it opens: a sheet on a phone, the hanging menu otherwise.
+	const [asSheet, setAsSheet] = useState(false);
 	const [rect, setRect] = useState<DOMRect | null>(null);
 	const triggerRef = useRef<HTMLButtonElement>(null);
 	const menuRef = useRef<HTMLDivElement>(null);
@@ -176,7 +324,7 @@ export function Select<V extends string | number>({
 	}, []);
 
 	useEffect(() => {
-		if (!open) return;
+		if (!open || asSheet) return;
 		const onDown = (e: PointerEvent) => {
 			const t = e.target as Node;
 			if (!triggerRef.current?.contains(t) && !menuRef.current?.contains(t))
@@ -195,7 +343,7 @@ export function Select<V extends string | number>({
 			window.removeEventListener("resize", place);
 			window.removeEventListener("scroll", onScroll, true);
 		};
-	}, [open, place, close]);
+	}, [open, asSheet, place, close]);
 
 	// Focus lands on the chosen option, so arrows start from where you are.
 	useEffect(() => {
@@ -243,7 +391,10 @@ export function Select<V extends string | number>({
 				ref={triggerRef}
 				type="button"
 				disabled={disabled}
-				onClick={() => setOpen((v) => !v)}
+				onClick={() => {
+					setAsSheet(isPhoneWidth());
+					setOpen((v) => !v);
+				}}
 				onKeyDown={(e) => {
 					if (e.key === "ArrowDown" || e.key === "ArrowUp") {
 						e.preventDefault();
@@ -281,11 +432,19 @@ export function Select<V extends string | number>({
 
 			{/* The portal stays once the trigger has been measured; the
 			    presence inside it is what lets the exit play. */}
+			<PickerSheet
+				open={open && asSheet}
+				title={label}
+				value={value}
+				options={options}
+				onPick={onPick}
+				onClose={() => close(false)}
+			/>
 			{rect &&
 				typeof document !== "undefined" &&
 				createPortal(
 					<AnimatePresence>
-						{open && (
+						{open && !asSheet && (
 							<motion.div
 								key="menu"
 								ref={menuRef}

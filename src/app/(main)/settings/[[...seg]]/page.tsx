@@ -338,39 +338,9 @@ export default function SettingsPage() {
 					{/* The sub-nav on a phone: the section's groups as chips, tap to
 					    scroll. The desktop list carries the same groups under the
 					    open section, so this strip is mobile only. */}
-					{valid && groups.length > 1 && (
-						<nav
-							aria-label="On this page"
-							className="mt-2 flex w-fit max-w-full gap-1 overflow-x-auto rounded-pill p-1 glass-frost backdrop-blur-xl [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden"
-						>
-							{groups.map((g) => {
-								const on = g.id === activeGroup;
-								return (
-									<button
-										key={g.id}
-										type="button"
-										aria-current={on ? "true" : undefined}
-										onClick={() => scrollToGroup(g.id)}
-										className={clsx(
-											"relative h-8 shrink-0 cursor-pointer whitespace-nowrap rounded-pill px-3 font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors",
-											on ? "text-primary" : "text-muted hover:bg-primary/5 hover:text-primary",
-										)}
-									>
-										{/* The wash slides as the scroll-spy moves, so the strip
-										    answers "where am I" without a jump. Page singleton. */}
-										{on && (
-											<motion.span
-												layoutId="settings-group-chip"
-												transition={thumbSpring}
-												className="absolute inset-0 rounded-pill bg-primary/10"
-											/>
-										)}
-										<span className="relative">{g.label}</span>
-									</button>
-								);
-							})}
-						</nav>
-					)}
+					{/* No chip strip on a phone any more (mobile direction A): a
+					    section is a back arrow, a title and its blocks. The
+					    sidebar carries the groups on a desktop. */}
 				</header>
 
 				<div ref={detailRef} className="flex w-full max-w-[980px] flex-col gap-2 p-2 md:gap-3 md:p-3">

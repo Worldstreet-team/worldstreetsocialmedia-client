@@ -18,7 +18,7 @@ import {
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { userAtom } from "@/store/user.atom";
 import { useT } from "@/i18n/client";
-import { SettingsOverview } from "./SettingsOverview";
+import { SettingsHub } from "./SettingsHub";
 
 /**
  * The settings sidebar, built the way the Messages inbox is (owner
@@ -147,18 +147,26 @@ export function SettingsNav({
 				</label>
 			</div>
 
-			{/* On a phone `/settings` is this column, so the landing's quick
-			    settings sit here, above the map. Desktop gets them in the
-			    detail pane instead. */}
+			{/* On a phone `/settings` IS this column (owner 2026-09-20, mobile
+			    directions A + B): tiles for the common changes, then the
+			    sections as a list that says what each is set to. The tree
+			    below is a desktop idiom and stays on the desktop. */}
 			{!searching && (
-				<div className="flex flex-col gap-2 lg:hidden">
-					<SettingsOverview variant="hub" />
+				<div className="lg:hidden">
+					<SettingsHub />
 				</div>
 			)}
 
 			{/* The map, or the results while a search is running. */}
 			{/* flex-1: the map block runs to the bottom of the rail. */}
-			<div className="rounded-2xl px-2 pb-2 pt-2 glass-frost backdrop-blur-xl lg:flex-1">
+			<div
+				className={clsx(
+					"rounded-2xl px-2 pb-2 pt-2 glass-frost backdrop-blur-xl lg:flex-1",
+					// The tree is the desktop's; a phone shows this block only
+					// for search results.
+					!searching && "hidden lg:block",
+				)}
+			>
 				{searching ? (
 					<div id="settings-search-results" role="listbox" aria-label="Search results">
 						{results.length === 0 ? (

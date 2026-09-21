@@ -333,6 +333,27 @@ components, a proper sidebar, icons, headers and master search. The result:
   destructive things stay furthest from the door. A new top task goes in
   the Overview only if it is a control someone can change right there, not
   a link that repeats the map.
+- **On a phone, Settings is a hub and its pushes, not the sidebar**
+  (owner 2026-09-20, picked mobile directions A + B from
+  https://claude.ai/artifact/4B2ffmPRP4fm7MkV85LKLi). The first phone flow
+  was the desktop tree squeezed into 440px: 1.7 screens, a five-row quick
+  block of two-line explanations, indented sub-rows, and no row saying what
+  it was set to. Under `lg`, `SettingsNav` renders `SettingsHub`: four
+  tiles (Theme, Text size, Data saver, Who can message) that show their
+  value and open a `PickerSheet`; then the sections as a grouped list where
+  every row carries a live summary ("Dark · 100% · English"); then Sign
+  out. It fits one screen. The tree block renders on a phone only for
+  search results. A section page on a phone is a back arrow, a title and
+  its blocks: no chip strip.
+- **`Select` is a bottom sheet on a phone.** `isPhoneWidth()` is read when
+  it opens; under `lg` the options rise as `PickerSheet` (drag or scrim to
+  close, 48px rows), otherwise the hanging menu. Never build a second
+  dropdown for a phone.
+- **Row explanations fold on a phone.** `SettingRow`'s name is a button
+  under `lg` that opens the explanation; on a desktop it is always shown.
+  Ten settings were ten paragraphs, and the screen read as a document.
+- The global create button (`CreateFab`) is hidden on `/settings`: it sat
+  over the last hub rows and the right-edge controls.
 - **No taglines** (owner 2026-09-20: "remove the tagline in the
   settings"). A section row is its name; the header pill is the section
   title. The one-line `hint` on `SectionDef` is kept as data but is not
