@@ -94,6 +94,33 @@ const copy = {
   leave: { opacity: 0, y: -8, transition: { duration: 0.2, ease: EASE_IN } },
 };
 
+// Word by word (owner 2026-09-21): the headline's words rise out of their
+// own masks, then the line under it follows the same way, quicker and
+// closer together because there are four times as many of them. On the way
+// out everything leaves faster than it came, last word first.
+const block = {
+  hidden: {},
+  enter: { transition: { staggerChildren: 0.045, delayChildren: 0.1 } },
+  leave: { transition: { staggerChildren: 0.012, staggerDirection: -1 } },
+};
+const line = {
+  hidden: {},
+  enter: { transition: { staggerChildren: 0.016 } },
+  leave: { transition: { staggerChildren: 0.004, staggerDirection: -1 } },
+};
+const word = {
+  hidden: { y: "115%" },
+  enter: { y: "0%", transition: { duration: 0.6, ease: EASE } },
+  leave: { y: "-115%", transition: { duration: 0.22, ease: EASE_IN } },
+};
+const smallWord = {
+  hidden: { y: "110%", opacity: 0 },
+  enter: { y: "0%", opacity: 1, transition: { duration: 0.45, ease: EASE } },
+  leave: { y: "-60%", opacity: 0, transition: { duration: 0.16, ease: EASE_IN } },
+};
+const MASK =
+  "-mb-[0.14em] inline-block overflow-hidden pb-[0.14em] align-bottom";
+
 const controls = {
   hidden: { opacity: 0, y: 12 },
   enter: {
@@ -306,17 +333,31 @@ export function SettingsFeatureTour() {
                 <AnimatePresence mode="wait" initial>
                   <motion.div
                     key={current.key}
-                    variants={copy}
+                    variants={block}
                     initial="hidden"
                     animate={phase}
                     exit="leave"
                   >
-                    <h2 className="max-w-[20ch] font-display text-[calc(28px*var(--ws-fs))] font-semibold leading-[1.15] tracking-[-0.035em] text-primary sm:text-[calc(32px*var(--ws-fs))]">
-                      {current.title}
+                    <h2 aria-label={current.title} className="max-w-[20ch] font-display text-[calc(28px*var(--ws-fs))] font-semibold leading-[1.15] tracking-[-0.035em] text-primary sm:text-[calc(32px*var(--ws-fs))]">
+                      {current.title.split(" ").map((w, i) => (
+                        // biome-ignore lint/suspicious/noArrayIndexKey: words are positional
+                        <span key={i} aria-hidden className={`${MASK} mr-[0.26em]`}>
+                          <motion.span className="inline-block" variants={word}>
+                            {w}
+                          </motion.span>
+                        </span>
+                      ))}
                     </h2>
-                    <p className="mt-3 max-w-[54ch] font-sans text-[calc(14px*var(--ws-fs))] leading-relaxed text-muted">
-                      {current.body}
-                    </p>
+                    <motion.p variants={line} aria-label={current.body} className="mt-3 max-w-[54ch] font-sans text-[calc(14px*var(--ws-fs))] leading-relaxed text-muted">
+                      {current.body.split(" ").map((w, i) => (
+                        // biome-ignore lint/suspicious/noArrayIndexKey: words are positional
+                        <span key={i} aria-hidden className={`${MASK} mr-[0.28em]`}>
+                          <motion.span className="inline-block" variants={smallWord}>
+                            {w}
+                          </motion.span>
+                        </span>
+                      ))}
+                    </motion.p>
                     {/* Try it here (owner 2026-09-21): the seven colours, live.
                         Picking one recolours the app behind the card, the
                         button below and the artwork above, which is the whole
