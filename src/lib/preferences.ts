@@ -87,6 +87,13 @@ export interface Preferences {
 		messageAlerts: boolean;
 		defaultTab: "all" | "mentions" | "follows" | "verified";
 	};
+	/** Housekeeping the account remembers, not settings a person sets. */
+	advanced: {
+		/** One-time cards already dismissed (the welcome tour, each "what's
+		 *  new"), so a person sees each once per ACCOUNT, not once per
+		 *  browser (owner 2026-09-21). Keys are the old localStorage keys. */
+		seenTours: string[];
+	};
 	content: {
 		defaultFeed: FeedTab;
 		showStories: boolean;
@@ -140,6 +147,7 @@ export const DEFAULTS: Preferences = {
 		showLikes: true,
 	},
 	notifications: { messageAlerts: true, defaultTab: "all" },
+	advanced: { seenTours: [] },
 	content: {
 		defaultFeed: "foryou",
 		showStories: true,
@@ -234,6 +242,13 @@ export function normalizePrefs(raw: unknown): Preferences {
 				nt.defaultTab,
 				DEFAULTS.notifications.defaultTab,
 			),
+		},
+		advanced: {
+			seenTours: Array.isArray((p.advanced as { seenTours?: unknown })?.seenTours)
+				? ((p.advanced as { seenTours: unknown[] }).seenTours
+						.filter((k): k is string => typeof k === "string" && k.length <= 64)
+						.slice(-40))
+				: [],
 		},
 		content: {
 			defaultFeed: oneOf(["foryou", "following", "newest"] as const, c.defaultFeed, DEFAULTS.content.defaultFeed),

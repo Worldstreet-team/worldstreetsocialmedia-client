@@ -354,6 +354,16 @@ components, a proper sidebar, icons, headers and master search. The result:
   Ten settings were ten paragraphs, and the screen read as a document.
 - The global create button (`CreateFab`) is hidden on `/settings`: it sat
   over the last hub rows and the right-edge controls.
+- **One-time cards are seen once per ACCOUNT** (owner 2026-09-21). The
+  welcome tour and both what's-new cards used a localStorage flag, so every
+  new browser or phone replayed them. `useTourSeen(key)` in
+  `src/lib/use-tour-seen.ts` keeps the list in `prefs.advanced.seenTours`
+  (the gateway already stores and syncs the `advanced` namespace, no
+  gateway change). A card must wait for `ready` (the account's copy has
+  loaded) before opening, or a new device flashes it; localStorage stays
+  as a fast echo and as the migration path, written up to the account the
+  first time it is found. Any new one-time surface uses this hook, never a
+  bare localStorage flag.
 - **The Settings what's-new card** (`SettingsFeatureTour`, mounted in the
   settings layout, gate `ws-settings-whats-new-v1`) follows the Messages
   one, with three owner notes from 2026-09-21: the colour slide carries the

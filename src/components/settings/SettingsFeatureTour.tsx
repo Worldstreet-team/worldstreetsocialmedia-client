@@ -14,6 +14,7 @@ import {
 import { usePreferences } from "@/components/providers/PreferencesProvider";
 import { DEFAULT_PALETTE, PALETTES } from "@/data/palettes";
 import { motionReduced } from "@/lib/motion";
+import { useTourSeen } from "@/lib/use-tour-seen";
 import { staggerParent, staggerPop, thumbSpring } from "@/lib/motion-presets";
 import { withThemeTransition } from "@/lib/theme-transition";
 
@@ -152,23 +153,25 @@ export function SettingsFeatureTour() {
   const [leaving, setLeaving] = useState(false);
   const leavingRef = useRef(false);
 
+  // Seen once per ACCOUNT, not once per browser (owner 2026-09-21): the
+  // answer lives on the profile, so nothing opens until it has loaded.
+  const tour = useTourSeen(SEEN_KEY);
+  const welcome = useTourSeen(WELCOME_SEEN_KEY);
+  const { ready, seen } = tour;
+  const welcomed = welcome.seen;
   useEffect(() => {
+    if (!ready || seen) return;
     let timer = 0;
     const reveal = () => {
-      if (window.localStorage.getItem(SEEN_KEY)) return;
-      if (
-        !window.localStorage.getItem(WELCOME_SEEN_KEY) ||
-        document.querySelector('[role="dialog"]')
-      ) {
+      if (!welcomed || document.querySelector('[role="dialog"]')) {
         timer = window.setTimeout(reveal, 900);
         return;
       }
       setOpen(true);
     };
-
     timer = window.setTimeout(reveal, 700);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [ready, seen, welcomed]);
 
   useEffect(() => {
     if (!open) return;
@@ -178,10 +181,11 @@ export function SettingsFeatureTour() {
     leavingRef.current = false;
   }, [open]);
 
+  const markSeen = tour.markSeen;
   const close = useCallback(() => {
-    window.localStorage.setItem(SEEN_KEY, "1");
+    markSeen();
     setOpen(false);
-  }, []);
+  }, [markSeen]);
 
   const requestClose = useCallback(() => {
     if (leavingRef.current) return;

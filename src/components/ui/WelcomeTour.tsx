@@ -1,5 +1,6 @@
 "use client";
 
+import { useTourSeen } from "@/lib/use-tour-seen";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "@phosphor-icons/react";
 import { useAtom } from "jotai";
@@ -159,11 +160,13 @@ export function WelcomeTour() {
   const [step, setStep] = useState(0);
 
   // First visit: open once, after the page intro has settled.
+  // Once per account, not per browser: wait for the account's answer.
+  const { ready, seen, markSeen } = useTourSeen(SEEN_KEY);
   useEffect(() => {
-    if (localStorage.getItem(SEEN_KEY)) return;
+    if (!ready || seen) return;
     const timer = setTimeout(() => setOpen(true), 900);
     return () => clearTimeout(timer);
-  }, [setOpen]);
+  }, [ready, seen, setOpen]);
 
   useEffect(() => {
     if (open) setStep(0);
@@ -171,7 +174,7 @@ export function WelcomeTour() {
 
   const finish = useCallback(
     (thenFocusComposer = false) => {
-      localStorage.setItem(SEEN_KEY, "1");
+      markSeen();
       setOpen(false);
       if (thenFocusComposer) {
         const el = document.querySelector<HTMLTextAreaElement>(
@@ -183,7 +186,7 @@ export function WelcomeTour() {
         }
       }
     },
-    [setOpen],
+    [setOpen, markSeen],
   );
 
   // Esc + the page scroll lock behind the overlay. Skipping the tour with
