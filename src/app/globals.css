@@ -24,7 +24,11 @@
 [data-ws-theme="platform"],
 [data-ws-theme="platform-light"] {
   --ws-font-display: var(--font-poppins), "Poppins", system-ui, sans-serif;
-  --ws-font-ui: var(--font-public-sans), "Public Sans", system-ui, sans-serif;
+  /* Instrument Sans first (owner 2026-09-22); Public Sans stays in the
+     stack as the loaded fallback, then the system face. */
+  --ws-font-ui:
+    var(--font-instrument-sans), "Instrument Sans", var(--font-public-sans),
+    "Public Sans", system-ui, sans-serif;
   /* Creator-only voices — the Story Studio font picker reads these. App
        chrome never uses them. */
   --ws-font-editorial:
@@ -1378,7 +1382,9 @@ video,
   /* Text-size multipliers. --ws-fs scales every text-[Npx] in the app;
      --ws-fs-chat multiplies again inside the messages surface, because
      chat is read one-handed at arm's length. */
-  --ws-fs-app: 1;
+  /* 1.15 is the default text size (owner 2026-09-22); the pre-paint script
+     and preferences overwrite it the moment they run. */
+  --ws-fs-app: 1.15;
   --ws-fs-chat: 1;
   /* The value every text-[calc(Npx*var(--ws-fs))] reads. Derived, never
      set directly: JS writes --ws-fs-app, and the chat surface re-derives

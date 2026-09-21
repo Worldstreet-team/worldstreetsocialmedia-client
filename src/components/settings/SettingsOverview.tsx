@@ -134,6 +134,7 @@ export function SettingsOverview({ variant = "page" }: { variant?: "page" | "hub
 						[90, "90%"],
 						[100, "100%"],
 						[110, "110%"],
+						[115, "115%"],
 						[125, "125%"],
 						[150, "150%"],
 						[175, "175%"],

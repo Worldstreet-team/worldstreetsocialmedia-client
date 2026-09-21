@@ -44,6 +44,7 @@ import {
     Archivo_Black,
     Bebas_Neue,
     Caveat,
+    Instrument_Sans,
     Instrument_Serif,
     JetBrains_Mono,
     Poppins,
@@ -58,6 +59,19 @@ const publicSans = Public_Sans({
     subsets: ["latin"],
     weight: ["400", "500", "600", "700"],
     variable: "--font-public-sans",
+});
+
+// The app's reading face (owner 2026-09-22). It was named nowhere and
+// shipped nowhere: the UI token fell through to Public Sans, and on a phone
+// where that failed to apply people saw their handset's own font. Loaded
+// through next/font so the files are SELF-HOSTED with the build, which is
+// what makes it the same face on every device instead of "whatever the
+// phone has". A variable font, so one file covers 400 to 700.
+const instrumentSans = Instrument_Sans({
+    subsets: ["latin"],
+    weight: ["400", "500", "600", "700"],
+    variable: "--font-instrument-sans",
+    display: "swap",
 });
 
 const poppins = Poppins({
@@ -205,9 +219,23 @@ export default async function RootLayout({
                 },
             }}
         >
-            <html lang={locale} data-ws-theme="platform" suppressHydrationWarning>
+            {/* The next/font variables live on <html>, NOT <body> (found
+                2026-09-22). The font TOKENS (--ws-font-ui, --ws-font-display)
+                are declared on [data-ws-theme], which is this element, and a
+                custom property is resolved where it is declared: with the
+                variables one level down on <body>, every var(--font-*) inside
+                the tokens was undefined, the tokens computed to nothing, and
+                the whole app rendered in the device's own system font. That
+                is San Francisco on a Mac, which hid it, and whatever the
+                handset ships on a phone, which did not. */}
+            <html
+                lang={locale}
+                data-ws-theme="platform"
+                suppressHydrationWarning
+                className={`${instrumentSans.variable} ${publicSans.variable} ${poppins.variable} ${instrumentSerif.variable} ${archivoBlack.variable} ${bebasNeue.variable} ${caveat.variable} ${jetbrainsMono.variable}`}
+            >
                 <body
-                    className={`${publicSans.variable} ${poppins.variable} ${instrumentSerif.variable} ${archivoBlack.variable} ${bebasNeue.variable} ${caveat.variable} ${jetbrainsMono.variable} antialiased`}
+                    className={`antialiased`}
                 >
                     {/* The intro cascade plays once per browser session.
                         Inline + synchronous so the ws-intro-done stamp lands

@@ -134,7 +134,8 @@ import {
 // row and the archived door. The Remix swap was for the chat MESSAGE glyphs,
 // not for chrome like these.
 import { Archive, Tray } from "@phosphor-icons/react";
-import { RiArrowRightSLine } from "@remixicon/react";
+import { RiArrowRightSLine, RiSettings3Line } from "@remixicon/react";
+import { MessageSettingsSheet } from "@/components/messages/MessageSettingsSheet";
 import { SendMoneySheet } from "@/components/messages/SendMoneySheet";
 import { GroupSheet } from "@/components/messages/GroupSheet";
 import { GroupCreateModal } from "@/components/messages/GroupCreateModal";
@@ -779,6 +780,7 @@ export const MessageBox = ({
 	const scopeOpen =
 		searchFocused || searchQuery.trim().length > 0 || kindFilter !== "all";
 	const [fabOpen, setFabOpen] = useState(false);
+	const [msgSettingsOpen, setMsgSettingsOpen] = useState(false);
 	const showRequests = inboxTab === "requests";
 	const shelfConversations =
 		inboxTab === "requests"
@@ -2626,6 +2628,17 @@ export const MessageBox = ({
 								</motion.span>
 							)}
 						</AnimatePresence>
+						{/* Message settings, where the messages are (owner
+						    2026-09-22). Hard right of the title, a 40px target. */}
+						<motion.button
+							type="button"
+							{...press}
+							onClick={() => setMsgSettingsOpen(true)}
+							aria-label="Message settings"
+							className="-mr-2 ml-auto flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
+						>
+							<RiSettings3Line size={19} />
+						</motion.button>
 					</div>
 					<div className="relative">
               <RiSearchLine
@@ -3776,6 +3789,10 @@ export const MessageBox = ({
 					void fetchConversations();
 					router.push(`/messages/${cid}`);
 				}}
+			/>
+			<MessageSettingsSheet
+				open={msgSettingsOpen}
+				onClose={() => setMsgSettingsOpen(false)}
 			/>
 			{activeConversation && (
 				<SendMoneySheet

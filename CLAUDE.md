@@ -141,10 +141,23 @@ Rules that bite:
   actions (Follow) use `bg-primary text-page` so gold keeps its meaning.
 - **The palette has no blue or pink.** Post actions map to what exists: reply =
   neutral `text-primary` hover, like = `text-danger`, bookmark = `text-gold`.
-- Fonts: Poppins (display) + Public Sans (UI), both loaded via `next/font` in
-  `layout.tsx`. `globals.css` re-points `--ws-font-*` at the hashed families
-  next/font generates, otherwise the literal `"Poppins"` in the token file never
-  matches anything.
+- Fonts: Poppins (display) + **Instrument Sans (UI, owner 2026-09-22)**, with
+  Public Sans kept in the stack as the loaded fallback, all through
+  `next/font` in `layout.tsx` so the files are self-hosted. `globals.css`
+  re-points `--ws-font-*` at the hashed families next/font generates.
+  **The next/font variable classes MUST sit on `<html>`, not `<body>`.** The
+  font tokens are declared on `[data-ws-theme]`, which is `<html>`, and a
+  custom property resolves where it is declared: with the variables on
+  `<body>` every `var(--font-*)` inside the tokens was undefined, the tokens
+  computed to nothing, and the WHOLE app rendered in the device's system
+  font from the day the tokens were wired until 2026-09-22. San Francisco on
+  a Mac hid it; on a phone people saw their handset's font. To check a font
+  is really applied, read `getComputedStyle(document.body).fontFamily` in
+  the browser, never the stylesheet.
+- **Default text size is 115%** (owner 2026-09-22): `DEFAULTS.a11y.textScale`,
+  the pre-paint script's unset case and the CSS fallback `--ws-fs-app` all
+  say 1.15. "Match my device" (`auto`) and every explicit choice are
+  untouched; only someone who never chose gets the new default.
 
 Non-obvious rules the spec enforces, all of which this page now follows:
 
@@ -786,6 +799,14 @@ directions D + A from a mocked set
   stacking context. A hold is cancelled by 8px of movement so it never
   fights the scroll or the iOS swipe, and the click the lifting finger
   produces is swallowed (`heldRef`, plus a 350ms grace on the scrim).
+- **Message settings live in Messages too** (owner 2026-09-22): the gear in
+  the masthead opens `MessageSettingsSheet`. It is NOT a second settings
+  store: the same `prefs`, through the same `SelectRow` / `ToggleRow`,
+  regrouped by what someone in a chat is thinking about (Chats, Voice
+  notes, Who reaches you and what they see), where Settings files them
+  under three different sections. Plain groups on the sheet's own surface,
+  never the frosted `SettingGroup`: the sheet is already the one blur. A
+  new messaging preference gets a row in BOTH places.
 - `ConversationList` takes `banner`, `footer` and `onBack` for this. The
   old `filter` prop is gone.
 

@@ -24,7 +24,7 @@ import { DEFAULT_PALETTE, PALETTE_IDS, type PaletteId } from "@/data/palettes";
 /* ------------------------------------------------------------------ */
 /* Schema */
 
-export type TextScale = "auto" | 90 | 100 | 110 | 125 | 150 | 175;
+export type TextScale = "auto" | 90 | 100 | 110 | 115 | 125 | 150 | 175;
 export type ColorVision = "off" | "deuteran" | "protan" | "tritan" | "achroma";
 export type TriState = "auto" | "on" | "off";
 export type Appearance = "dark" | "light" | "system";
@@ -111,7 +111,11 @@ export const DEFAULTS: Preferences = {
 	a11y: {
 		// "auto" is the honest default: the person already told their phone
 		// how big they need type. Reading that beats making them ask twice.
-		textScale: "auto",
+		// 115%, not "auto" (owner 2026-09-22): the app's type read small at
+		// the browser's 16px on most phones here, so someone who has never
+		// opened Settings starts a step up. Anyone who chose a size keeps it,
+		// and "Match my device" is still one tap away.
+		textScale: 115,
 		colorVision: "off",
 		nonColorCues: false,
 		contrast: "auto",
@@ -181,7 +185,7 @@ export function saverOn(p: Preferences): boolean {
 /* ------------------------------------------------------------------ */
 /* Normalising */
 
-const SCALES: TextScale[] = ["auto", 90, 100, 110, 125, 150, 175];
+const SCALES: TextScale[] = ["auto", 90, 100, 110, 115, 125, 150, 175];
 const CHAT_SCALES = ["match", 100, 115, 130, 150, 175] as const;
 const oneOf = <T,>(list: readonly T[], v: unknown, d: T): T =>
 	(list as readonly unknown[]).includes(v) ? (v as T) : d;
