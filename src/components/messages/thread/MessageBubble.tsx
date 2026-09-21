@@ -576,7 +576,14 @@ export const MessageBubble = memo(function MessageBubble({
 					"group/msg relative mx-auto flex w-full max-w-[52rem] flex-col scroll-mt-24 touch-pan-y px-4 sm:px-6",
 					// Three tiers (audit #5): 2px inside a run, 8px between
 					// runs, the centred stamp carries the big gap.
-					sameRunAsPrev ? "mt-[2px]" : "mt-2",
+					// PADDING, never margin (owner 2026-09-21: "if a chat is very
+					// long the scroll starts bouncing"). This row is the first
+					// child of virtuoso's item wrapper, so a top margin collapses
+					// OUT of the wrapper: the list measured every row 2 to 8px
+					// short, the error grew with the thread, and scrolling a long
+					// one made virtuoso correct its offsets over and over, which
+					// is the bounce. Padding is inside the box it measures.
+					sameRunAsPrev ? "pt-[2px]" : "pt-2",
 					isMe ? "items-end" : "items-start",
 				)}
 			>

@@ -43,7 +43,9 @@ export function CallLogRow({
 	const Icon = missed ? RiPhoneLine : video ? RiVideoOnFill : RiPhoneFill;
 
 	return (
-		<div className={clsx("my-2 flex px-4 sm:px-6", mine ? "justify-end" : "justify-start")}>
+		// py, not my: this renders inside a virtuoso item, and a margin at the
+		// edge of an item collapses out of the box the list measures.
+		<div className={clsx("flex px-4 py-2 sm:px-6", mine ? "justify-end" : "justify-start")}>
 			<div className="flex items-center gap-3 rounded-[22px] bg-raised py-2 pl-2.5 pr-3">
 				<span
 					className={clsx(

@@ -782,6 +782,15 @@ directions D + A from a mocked set
 - `ConversationList` takes `banner`, `footer` and `onBack` for this. The
   old `filter` prop is gone.
 
+**No margins at the edge of a virtuoso item** (2026-09-21, the long-chat
+bounce). A message row is the first child of virtuoso's item wrapper, so a
+top or bottom MARGIN on it collapses out of the wrapper and the list
+measures the row short. `mt-2` / `mt-[2px]` on `MessageBubble` and `my-2`
+on `CallLogRow` cost 2 to 8px per row; the error grows with the thread,
+and scrolling a long one made virtuoso re-correct its offsets again and
+again, which the owner saw as the scroll bouncing. Spacing between rows is
+PADDING on the row. Margins inside a row are fine.
+
 ## Presence: who is online (added 2026-08-27)
 
 One global Ably channel, `presence`, entered once on connect by
