@@ -59,9 +59,12 @@ function useBrandColor(active: boolean): string {
 export const ThemeBackdrop = memo(function ThemeBackdrop({
 	wallpaper,
 	resolution = 1280,
+	houseDoodle = false,
 }: {
 	wallpaper: ThemeWallpaper;
 	resolution?: number;
+	/** Paint the WorldSpace house wallpaper when this theme is still flat. */
+	houseDoodle?: boolean;
 }) {
 	const src = wallpaperSrc(wallpaper);
 	const painted = groundCss(wallpaper);
@@ -92,6 +95,17 @@ export const ThemeBackdrop = memo(function ThemeBackdrop({
 		};
 	}, [src, frost, hue, dim, resolution, brand]);
 
+	// The house default is a real WorldSpace ground, not an empty colour.
+	// It stays CSS-driven so light/dark can switch without rebuilding a canvas;
+	// chosen wallpapers still take the existing baked-image path below.
+	if (houseDoodle && wallpaper.type === "flat")
+		return (
+			<div
+				aria-hidden
+				className="ws-default-chat-wallpaper pointer-events-none absolute inset-0"
+			/>
+		);
+
 	// A painted ground needs no image, no blur and no dim - it IS the colour.
 	if (!src)
 		return painted ? (
@@ -102,7 +116,10 @@ export const ThemeBackdrop = memo(function ThemeBackdrop({
 			/>
 		) : null;
 	return (
-		<div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+		<div
+			aria-hidden
+			className="pointer-events-none absolute inset-0 overflow-hidden"
+		>
 			<canvas
 				ref={ref}
 				className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity"

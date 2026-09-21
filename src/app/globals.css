@@ -1595,6 +1595,35 @@ html[data-ws-theme="platform"] {
   --ws-bg-track: #111111;
 }
 
+/* The house chat ground: a flat theme still gets a real WorldSpace
+   wallpaper rather than an empty colour. The block below repaints its
+   line art with the brand token. */
+.ws-default-chat-wallpaper {
+  --ws-chat-doodle: url("/images/backgrounds/worldspace-doodle-dark-page.webp");
+
+  background-color: var(--ws-bg-page);
+}
+
+.ws-default-chat-wallpaper::before {
+  position: absolute;
+  inset: 0;
+  background-image: var(--ws-chat-doodle);
+  background-position: center;
+  background-size: cover;
+  content: "";
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.ws-default-chat-wallpaper > * {
+  position: relative;
+  z-index: 1;
+}
+
+[data-ws-theme="platform-light"] .ws-default-chat-wallpaper {
+  --ws-chat-doodle: url("/images/backgrounds/worldspace-doodle-light-page.webp");
+}
+
 /* ── The house wallpaper wears the palette (owner 2026-09-20) ───────────
    "in the wallpaper is there a way for it to conform with the theme,
    changing the hue as well".
