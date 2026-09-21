@@ -19,7 +19,14 @@ import {
 	RiPhoneFill,
 	RiVideoOnFill,
 	RiArrowLeftSLine,
+	RiChat3Line,
+	RiUserLine,
+	RiArchiveLine,
+	RiInboxUnarchiveLine,
+	RiDeleteBinLine,
 } from "@remixicon/react";
+import { createPortal } from "react-dom";
+import Link from "next/link";
 
 import { Badge } from "@/components/ui/Badge";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
@@ -27,6 +34,10 @@ import { UserBadges } from "@/components/ui/UserBadges";
 import { useT } from "@/i18n/client";
 import { formatTimeAgo } from "@/lib/utils";
 import {
+	DUR,
+	EASE,
+	EASE_IN,
+	menuStagger,
 	pop,
 	reveal,
 	staggerItem,
@@ -281,6 +292,28 @@ export function ConversationList({
 		if (onlineNow.length > 0) railPlayed.current = true;
 	}, [onlineNow.length]);
 
+	// The held row's menu (owner 2026-09-20: "holding a chat should have
+	// options or a custom context menu ... highlights the chat properly").
+	// `html` is a snapshot of the row as it was drawn, so the lifted copy is
+	// exactly the chat that was pressed, not a second render of it.
+	const [rowMenu, setRowMenu] = useState<{
+		conv: ConversationRow;
+		rect: DOMRect;
+		html: string;
+	} | null>(null);
+	const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const holdStart = useRef<{ x: number; y: number } | null>(null);
+	// A hold ends with the finger lifting, which the browser reports as a
+	// click on the row: that click must not open the chat behind the menu.
+	const heldRef = useRef(false);
+	const openRowMenu = (el: HTMLElement, conv: ConversationRow) =>
+		setRowMenu({ conv, rect: el.getBoundingClientRect(), html: el.outerHTML });
+	const cancelHold = () => {
+		if (holdTimer.current) clearTimeout(holdTimer.current);
+		holdTimer.current = null;
+		holdStart.current = null;
+	};
+
 	// Every hook lives ABOVE the early returns below. `onlineNow` used to sit
 	// under them, so the first search with no match rendered fewer hooks than
 	// the render before it and took the whole Messages page down (found
@@ -480,7 +513,36 @@ export function ConversationList({
 					>
 					<button
 						type="button"
-						onClick={() => onOpen(conv)}
+						onClick={() => {
+							if (heldRef.current) {
+								heldRef.current = false;
+								return;
+							}
+							onOpen(conv);
+						}}
+						onContextMenu={(e) => {
+							e.preventDefault();
+							openRowMenu(e.currentTarget, conv);
+						}}
+						onTouchStart={(e) => {
+							const el = e.currentTarget;
+							const p = e.touches[0];
+							holdStart.current = { x: p.clientX, y: p.clientY };
+							holdTimer.current = setTimeout(() => {
+								heldRef.current = true;
+								navigator.vibrate?.(8);
+								openRowMenu(el, conv);
+							}, 450);
+						}}
+						onTouchMove={(e) => {
+							// Any real movement is a scroll or the swipe, not a hold.
+							const s0 = holdStart.current;
+							const p = e.touches[0];
+							if (s0 && Math.hypot(p.clientX - s0.x, p.clientY - s0.y) > 8)
+								cancelHold();
+						}}
+						onTouchEnd={cancelHold}
+						onTouchCancel={cancelHold}
 						aria-current={active ? "true" : undefined}
 						className={clsx(
 							// The selected chat is a contained chip, not a
@@ -625,6 +687,13 @@ export function ConversationList({
 				);
 			})}
 			</motion.div>
+		<ChatRowMenu
+				menu={rowMenu}
+				onClose={() => setRowMenu(null)}
+				onOpen={onOpen}
+				onArchive={onArchive}
+				onDelete={onDelete}
+			/>
 		</div>
 	);
 }
@@ -897,5 +966,166 @@ function SwipeRow({
 				{children}
 			</div>
 		</div>
+	);
+}
+
+/**
+ * The menu a held (or right-clicked) chat opens. The thread behind dims
+ * under a scrim, the pressed row is lifted over it as a copy at the exact
+ * place it was pressed, and the actions unfold from its corner. Portalled:
+ * the chats block is a blurred stacking context, and a menu inside it
+ * would be clipped by the list and painted under the next block.
+ */
+function ChatRowMenu({
+	menu,
+	onClose,
+	onOpen,
+	onArchive,
+	onDelete,
+}: {
+	menu: { conv: ConversationRow; rect: DOMRect; html: string } | null;
+	onClose: () => void;
+	onOpen: (conv: ConversationRow) => void;
+	onArchive?: (conv: ConversationRow) => void;
+	onDelete?: (conv: ConversationRow) => void;
+}) {
+	const t = useT();
+	const openedAt = useRef(0);
+	useEffect(() => {
+		if (!menu) return;
+		openedAt.current = Date.now();
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === "Escape") onClose();
+		};
+		window.addEventListener("keydown", onKey);
+		// A list that scrolls under a fixed copy of one of its rows is a lie.
+		window.addEventListener("scroll", onClose, true);
+		return () => {
+			window.removeEventListener("keydown", onKey);
+			window.removeEventListener("scroll", onClose, true);
+		};
+	}, [menu, onClose]);
+
+	if (typeof document === "undefined") return null;
+	const conv = menu?.conv;
+	const rect = menu?.rect;
+	const identity = conv ? conversationIdentity(conv) : null;
+	const username = conv?.otherParticipant?.username;
+	const MENU_W = 228;
+	const rows =
+		1 + (identity?.kind !== "group" && username ? 1 : 0) + (onArchive ? 1 : 0) + (onDelete ? 1 : 0);
+	const need = rows * 44 + 20;
+	const below = rect ? window.innerHeight - rect.bottom : 0;
+	const flip = rect ? below < need + 12 : false;
+	const menuMotion = menuStagger(flip ? "bottom-left" : "top-left");
+	const item =
+		"flex min-h-[44px] w-full cursor-pointer items-center gap-3 rounded-xl px-3 text-left font-sans text-[calc(14px*var(--ws-fs))] font-medium transition-colors";
+
+	return createPortal(
+		<AnimatePresence>
+			{menu && conv && rect && (
+				<motion.div key="chat-row-menu" className="fixed inset-0 z-modal">
+					<motion.button
+						type="button"
+						aria-label="Close"
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1, transition: { duration: DUR.base, ease: EASE } }}
+						exit={{ opacity: 0, transition: { duration: DUR.fast, ease: EASE_IN } }}
+						onClick={() => {
+							// The finger lifting off the hold lands here as a click.
+							if (Date.now() - openedAt.current < 350) return;
+							onClose();
+						}}
+						className="absolute inset-0 cursor-default bg-scrim"
+					/>
+					{/* The pressed chat, lifted: the same pixels, on the raised
+					    step so it stands clear of the dimmed list. */}
+					<div
+						aria-hidden
+						className="pointer-events-none fixed overflow-hidden rounded-xl bg-raised shadow-nav [&>*]:!bg-transparent"
+						style={{ left: rect.left, top: rect.top, width: rect.width, height: rect.height }}
+						// biome-ignore lint/security/noDangerouslySetInnerHtml: a snapshot of our own rendered row
+						dangerouslySetInnerHTML={{ __html: menu.html }}
+					/>
+					<motion.div
+						role="menu"
+						aria-label={identity?.title}
+						{...menuMotion}
+						style={{
+							...menuMotion.style,
+							position: "fixed",
+							left: Math.min(rect.left, window.innerWidth - MENU_W - 12),
+							width: MENU_W,
+							...(flip
+								? { bottom: window.innerHeight - rect.top + 8 }
+								: { top: rect.bottom + 8 }),
+						}}
+						className="rounded-2xl p-1.5 shadow-nav glass-frost backdrop-blur-2xl"
+					>
+						<motion.button
+							type="button"
+							role="menuitem"
+							variants={staggerItem}
+							onClick={() => {
+								onClose();
+								onOpen(conv);
+							}}
+							className={clsx(item, "text-primary hover:bg-primary/5")}
+						>
+							<RiChat3Line size={18} className="text-muted" />
+							{t("messages.openChat")}
+						</motion.button>
+						{identity?.kind !== "group" && username && (
+							<motion.div variants={staggerItem}>
+								<Link
+									href={`/profile/${username}`}
+									role="menuitem"
+									onClick={onClose}
+									className={clsx(item, "text-primary hover:bg-primary/5")}
+								>
+									<RiUserLine size={18} className="text-muted" />
+									{t("messages.viewProfile")}
+								</Link>
+							</motion.div>
+						)}
+						{onArchive && (
+							<motion.button
+								type="button"
+								role="menuitem"
+								variants={staggerItem}
+								onClick={() => {
+									onClose();
+									onArchive(conv);
+								}}
+								className={clsx(item, "text-primary hover:bg-primary/5")}
+							>
+								{conv.archived ? (
+									<RiInboxUnarchiveLine size={18} className="text-muted" />
+								) : (
+									<RiArchiveLine size={18} className="text-muted" />
+								)}
+								{conv.archived ? t("messages.unarchive") : t("messages.archive")}
+							</motion.button>
+						)}
+						{onDelete && (
+							<motion.button
+								type="button"
+								role="menuitem"
+								variants={staggerItem}
+								onClick={() => {
+									onClose();
+									onDelete(conv);
+								}}
+								className={clsx(item, "text-danger hover:bg-danger/10")}
+							>
+								<RiDeleteBinLine size={18} />
+								{t("messages.deleteChat")}
+							</motion.button>
+						)}
+					</motion.div>
+				</motion.div>
+			)}
+		</AnimatePresence>,
+		document.body,
 	);
 }

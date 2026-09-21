@@ -726,6 +726,15 @@ directions D + A from a mocked set
   in `ConversationList`'s header, which is why that header renders during
   a search when `onBack` is set. The shelf tabs are gone: do not
   reintroduce a permanent control for a state that is usually empty.
+- **Holding a chat opens its menu** (owner 2026-09-20). A 450ms touch hold
+  or a right-click on a row opens `ChatRowMenu` (in `ConversationList`):
+  a `bg-scrim` dims everything, the pressed row is lifted as an HTML
+  snapshot at its exact rect on the raised step, and Open chat / View
+  profile / Archive / Delete chat unfold from its corner with
+  `menuStagger`. Portalled to body, since the chats block is a blurred
+  stacking context. A hold is cancelled by 8px of movement so it never
+  fights the scroll or the iOS swipe, and the click the lifting finger
+  produces is swallowed (`heldRef`, plus a 350ms grace on the scrim).
 - `ConversationList` takes `banner`, `footer` and `onBack` for this. The
   old `filter` prop is gone.
 

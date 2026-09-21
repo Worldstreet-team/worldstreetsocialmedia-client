@@ -280,7 +280,7 @@ export default function SettingsPage() {
 			    section is open so the detail owns the screen. */}
 			<div
 				className={clsx(
-					"pb-nav lg:sticky lg:top-0 lg:block lg:w-[356px] lg:shrink-0 lg:border-r lg:border-hairline lg:pb-0",
+					"pb-nav lg:sticky lg:top-0 lg:block lg:w-[288px] lg:shrink-0 lg:border-r lg:border-hairline lg:pb-0",
 					valid ? "hidden" : "block w-full",
 				)}
 			>

@@ -771,6 +771,9 @@
   "messages.groups": "Grupos",
   "messages.archived": "Arquivadas",
   "messages.archive": "Arquivar",
+  "messages.openChat": "Abrir conversa",
+  "messages.viewProfile": "Ver perfil",
+  "messages.deleteChat": "Apagar conversa",
   "messages.unarchive": "Desarquivar",
   "messages.requests": "Pedidos",
   "profile.alignedTo": "Alinhado com"
