@@ -171,7 +171,7 @@ export function ConversationList({
 	onOpenPerson,
 	heading,
 	banner,
-	footer,
+	door,
 	onBack,
 	headerAside,
 }: {
@@ -195,8 +195,10 @@ export function ConversationList({
 	/** A state that has announced itself, above the rows: the requests row
 	 *  (owner 2026-09-20). Nothing renders here when nothing is waiting. */
 	banner?: React.ReactNode;
-	/** A door at the bottom of the list: the archived shelf. */
-	footer?: React.ReactNode;
+	/** The archived shelf, at the TOP beside the banner (owner 2026-09-20).
+	 *  A shelf is a place, and places belong with the other places, not
+	 *  under the list they are not part of. */
+	door?: React.ReactNode;
 	/** On a shelf, the way back to the inbox. The shelf tabs are gone, so
 	 *  this back chip is the only way out and must always render. */
 	onBack?: () => void;
@@ -365,6 +367,7 @@ export function ConversationList({
 						</div>
 					)}
 					{!query.trim() && banner}
+					{!query.trim() && door}
 					{/* Rises when a shelf turns out empty; a search that finds
 					    nothing is typed, so that one cuts, and so does a line
 					    the server already painted (it would sit invisible until
@@ -404,6 +407,7 @@ export function ConversationList({
 			{/* A state, not a filter (owner 2026-09-20): it is here when
 			    something is waiting and absent when nothing is. */}
 			{!query.trim() && banner}
+			{!query.trim() && door}
 			{/* Who is on, right inside the chats block: faces only, no header
 			    of its own (owner 2026-09-20). */}
 			{onlineNow.length > 0 && !query.trim() && (
@@ -620,7 +624,6 @@ export function ConversationList({
 					</CascadeRow>
 				);
 			})}
-			{!query.trim() && footer}
 			</motion.div>
 		</div>
 	);

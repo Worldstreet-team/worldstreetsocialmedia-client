@@ -2770,25 +2770,32 @@ export const MessageBox = ({
 								</motion.button>
 							) : null
 						}
-						footer={
+						door={
 							// Always, even at zero (owner 2026-09-20: "where is the
-							// archives?"). It sits UNDER the list, so a door that is
-							// always there still costs nothing before the first chat,
-							// and a thing you can only find once you have used it is
-							// not findable at all.
+							// archives?"), and at the TOP beside the requests row
+							// rather than under the list: the two shelves are places,
+							// and they read as a pair. Quieter than requests, which is
+							// the one actually asking for something.
 							inboxTab === "primary" ? (
-								<button
+								<motion.button
 									type="button"
+									{...press}
 									onClick={() => setInboxTab("archived")}
-									className="mx-2 mt-1 flex cursor-pointer items-center gap-2.5 rounded-xl border-t border-hairline px-3 py-3 text-left font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-muted transition-colors hover:text-primary"
+									className="mx-2 mb-2 flex cursor-pointer items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-primary/5"
 								>
-									<Archive size={16} />
-									{t("messages.archived")}
-									<span className="ml-auto flex items-center gap-1 font-normal tabular-nums text-subtle">
-										{archivedConversations.length || ""}
-										<RiArrowRightSLine size={16} />
+									<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary/5 text-muted">
+										<Archive size={17} />
 									</span>
-								</button>
+									<span className="flex-1 font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-primary">
+										{t("messages.archived")}
+									</span>
+									{archivedConversations.length > 0 && (
+										<span className="font-sans text-[calc(12.5px*var(--ws-fs))] tabular-nums text-subtle">
+											{archivedConversations.length}
+										</span>
+									)}
+									<RiArrowRightSLine size={18} className="shrink-0 text-subtle" />
+								</motion.button>
 							) : null
 						}
 						onBack={

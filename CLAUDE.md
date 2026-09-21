@@ -717,10 +717,12 @@ directions D + A from a mocked set
   is live, or a filter would keep working after its control disappeared.
   The chips use `onMouseDown` preventDefault, since a click would blur the
   field and fold the row away under the finger.
-- **Requests and Archive are states, not filters** (A). Requests is a row
-  above the list carrying its count and the first names waiting, rendered
-  only when there are any; Archived is a door under the list with its
-  count. Both set `inboxTab`, and the shelf is left through the back chip
+- **Requests and Archive are states, not filters** (A). Both sit at the
+  TOP of the chats block, above the list, as a pair of shelf rows.
+  Requests carries its count and the first names waiting and renders only
+  when there are any; Archived is always there, with its count when it has
+  one, because a door you can only find after you have used it is not
+  findable. Both set `inboxTab`, and the shelf is left through the back chip
   in `ConversationList`'s header, which is why that header renders during
   a search when `onBack` is set. The shelf tabs are gone: do not
   reintroduce a permanent control for a state that is usually empty.
