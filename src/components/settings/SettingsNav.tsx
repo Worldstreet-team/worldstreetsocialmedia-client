@@ -69,7 +69,7 @@ export function SettingsNav({
 	useEffect(() => setCursor(0), [query]);
 
 	const subRow =
-		"flex h-10 w-full cursor-pointer items-center rounded-[10px] px-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] transition-colors";
+		"flex h-8 w-full cursor-pointer items-center rounded-[8px] px-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] transition-colors";
 	const subRowOn = "font-semibold text-primary";
 	const subRowOff = "text-muted hover:bg-primary/5 hover:text-primary";
 
@@ -79,9 +79,9 @@ export function SettingsNav({
 		[user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.username;
 
 	return (
-		<div className="flex min-h-full flex-col gap-2 p-2 md:gap-3 md:p-3">
+		<div className="flex min-h-full flex-col gap-2 p-2 md:gap-2 md:p-2.5">
 			{/* Masthead: title, identity, master search. */}
-			<div className="rounded-2xl px-4 pb-4 pt-4 glass-frost backdrop-blur-xl">
+			<div className="rounded-2xl px-3 pb-3 pt-3 glass-frost backdrop-blur-xl">
 				<div className="flex items-center gap-3">
 					<div className="min-w-0 flex-1">
 						<h1 className="font-display text-[calc(20px*var(--ws-fs))] font-semibold tracking-tight text-primary">
@@ -95,11 +95,11 @@ export function SettingsNav({
 						<SafeAvatar src={user?.avatar} />
 					</span>
 				</div>
-				<label className="relative mt-3 block">
+				<label className="relative mt-2.5 block">
 					<MagnifyingGlass
 						size={16}
 						weight="bold"
-						className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-subtle"
+						className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-subtle"
 					/>
 					<input
 						ref={inputRef}
@@ -129,7 +129,7 @@ export function SettingsNav({
 						aria-autocomplete="list"
 						placeholder={t("settings.search.placeholder")}
 						aria-label={t("settings.search.placeholder")}
-						className="h-11 w-full rounded-pill bg-primary/5 pl-11 pr-11 font-sans text-[calc(14px*var(--ws-fs))] text-primary transition-colors placeholder:text-subtle focus:bg-primary/10 focus:outline-none"
+						className="h-10 w-full rounded-pill bg-primary/5 pl-10 pr-10 font-sans text-[calc(14px*var(--ws-fs))] text-primary transition-colors placeholder:text-subtle focus:bg-primary/10 focus:outline-none"
 					/>
 					{searching && (
 						<button
@@ -139,7 +139,7 @@ export function SettingsNav({
 								setQuery("");
 								inputRef.current?.focus();
 							}}
-							className="absolute right-0.5 top-1/2 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:text-primary"
+							className="absolute right-0 top-1/2 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:text-primary"
 						>
 							<X size={14} weight="bold" />
 						</button>
@@ -161,7 +161,7 @@ export function SettingsNav({
 			{/* flex-1: the map block runs to the bottom of the rail. */}
 			<div
 				className={clsx(
-					"rounded-2xl px-2 pb-2 pt-2 glass-frost backdrop-blur-xl lg:flex-1",
+					"rounded-2xl px-1.5 pb-1.5 pt-1.5 glass-frost backdrop-blur-xl lg:flex-1",
 					// The tree is the desktop's; a phone shows this block only
 					// for search results.
 					!searching && "hidden lg:block",
@@ -188,7 +188,7 @@ export function SettingsNav({
 												onClick={() => setQuery("")}
 												onMouseEnter={() => setCursor(i)}
 												className={clsx(
-													"flex min-h-[48px] items-center gap-3 rounded-xl px-3 transition-colors",
+													"flex min-h-[42px] items-center gap-2.5 rounded-[10px] px-2.5 transition-colors",
 													i === cursor ? "bg-primary/10" : "hover:bg-primary/5",
 												)}
 											>
@@ -222,7 +222,7 @@ export function SettingsNav({
 						variants={staggerParentFast}
 						initial="hidden"
 						animate="show"
-						className="flex flex-col gap-0.5"
+						className="flex flex-col"
 					>
 						{/* The landing is addressable, so it is a row like any
 						    other. Desktop only: on a phone `/settings` IS the hub,
@@ -232,7 +232,7 @@ export function SettingsNav({
 								href="/settings"
 								aria-current={!activeId ? "page" : undefined}
 								className={clsx(
-									"relative flex min-h-[44px] items-center gap-3 rounded-xl px-3 transition-colors",
+									"relative flex min-h-[34px] items-center gap-2.5 rounded-[10px] px-2.5 transition-colors",
 									activeId && "hover:bg-primary/5",
 								)}
 							>
@@ -241,7 +241,7 @@ export function SettingsNav({
 										aria-hidden
 										layoutId="settings-nav-active"
 										transition={thumbSpring}
-										className="absolute inset-0 rounded-xl bg-primary/10"
+										className="absolute inset-0 rounded-[10px] bg-primary/10"
 									/>
 								)}
 								<LayoutGrid
@@ -275,7 +275,7 @@ export function SettingsNav({
 									{RAIL_LABELS[id] && (
 										<span
 											className={clsx(
-												"px-3 pb-1.5 pt-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary",
+												"px-2.5 pb-1 pt-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-muted",
 											)}
 										>
 											{RAIL_LABELS[id]}
@@ -286,7 +286,7 @@ export function SettingsNav({
 									    invalid, and a tap meant for one would fire the other. */}
 									<div
 										className={clsx(
-											"relative flex min-h-[44px] items-center rounded-xl transition-colors",
+											"relative flex min-h-[34px] items-center rounded-[10px] transition-colors",
 											!active && "hover:bg-primary/5",
 										)}
 									>
@@ -298,13 +298,13 @@ export function SettingsNav({
 												aria-hidden
 												layoutId="settings-nav-active"
 												transition={thumbSpring}
-												className="absolute inset-0 rounded-xl bg-primary/10"
+												className="absolute inset-0 rounded-[10px] bg-primary/10"
 											/>
 										)}
 										<Link
 											href={`/settings/${id}`}
 											aria-current={active ? "page" : undefined}
-											className="relative flex min-w-0 flex-1 items-center gap-3 self-stretch rounded-xl pl-3 pr-1"
+											className="relative flex min-w-0 flex-1 items-center gap-2.5 self-stretch rounded-[10px] pl-2.5 pr-1"
 										>
 											{/* Bare glyphs (owner 2026-09-20). The open section is
 											    told by the sliding wash behind the row and by
@@ -321,7 +321,7 @@ export function SettingsNav({
 											    sub-items under it now, not by a line of prose. */}
 											<span
 												className={clsx(
-													"min-w-0 flex-1 truncate py-2 font-sans text-[calc(14px*var(--ws-fs))] text-primary",
+													"min-w-0 flex-1 truncate py-1 font-sans text-[calc(13.5px*var(--ws-fs))] text-primary",
 													active ? "font-semibold" : "font-medium",
 												)}
 											>
@@ -342,7 +342,7 @@ export function SettingsNav({
 												aria-expanded={open}
 												aria-controls={`settings-subs-${id}`}
 												aria-label={`${open ? "Hide" : "Show"} what is in ${t(labelKey)}`}
-												className="relative mr-1 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-subtle transition-colors hover:text-primary"
+												className="relative mr-0.5 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-pill text-subtle transition-colors hover:text-primary"
 											>
 												<CaretDown
 													size={13}
@@ -354,7 +354,7 @@ export function SettingsNav({
 											<CaretRight
 												size={13}
 												weight="bold"
-												className="relative mr-4 shrink-0 text-subtle lg:hidden"
+												className="relative mr-3 shrink-0 text-subtle lg:hidden"
 											/>
 										)}
 									</div>
@@ -370,7 +370,7 @@ export function SettingsNav({
 												{...collapse}
 												className="overflow-hidden"
 											>
-												<ul className="my-1 ml-[26px] flex flex-col border-l border-hairline pl-4">
+												<ul className="mb-1 ml-[21px] flex flex-col border-l border-hairline pl-3">
 													{subs.map((g) => {
 														const on = active && g.id === activeGroup;
 														return (
@@ -383,7 +383,7 @@ export function SettingsNav({
 																		aria-hidden
 																		layoutId={`settings-subnav-marker-${id}`}
 																		transition={thumbSpring}
-																		className="absolute -left-[17px] bottom-2 top-2 w-[2px] rounded-pill bg-primary"
+																		className="absolute -left-[13px] bottom-1 top-1 w-[2px] rounded-pill bg-primary"
 																	/>
 																)}
 																{/* Inside the open section this scrolls, so it is a
