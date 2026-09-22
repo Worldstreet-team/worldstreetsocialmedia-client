@@ -19,6 +19,7 @@ import {
   useOverlayDismiss,
 } from "@/components/ui/Overlay";
 import { DUR, EASE, pop, press } from "@/lib/motion-presets";
+import { BrandMark } from "@/components/layout/BrandRitual";
 import { welcomeTourOpenAtom } from "@/store/ui.atom";
 
 /**
@@ -58,24 +59,7 @@ const ALL_STEPS = [
       // exactly the kind of moment a pop is for.
       // No exit: the step swap is keyed, not inside a presence.
       <motion.span initial={pop.initial} animate={pop.animate} className="flex">
-        <Image
-          src="/images/worldspace-mark-dark.png"
-          alt=""
-          width={72}
-          height={72}
-          aria-hidden
-          unoptimized
-          className="object-contain [[data-ws-theme='platform-light']_&]:hidden"
-        />
-        <Image
-          src="/images/worldspace-mark-light.png"
-          alt=""
-          width={72}
-          height={72}
-          aria-hidden
-          unoptimized
-          className="hidden object-contain [[data-ws-theme='platform-light']_&]:block"
-        />
+        <BrandMark size={72} />
       </motion.span>
     ),
   },

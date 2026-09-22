@@ -480,6 +480,14 @@ noted below is fixed).
   4-step first-run modal, gated by localStorage `ws-social-welcome-v1`,
   replayable via the palette action "Replay the welcome tour"
   (`welcomeTourOpenAtom`).
+- **The astronaut helmet is retired** (owner 2026-09-22: "remove the
+  worldstreet austronaut"). `worldspace-mark{,-dark,-light}.png` are
+  deleted. The brand mark everywhere is `BrandMark` in
+  `layout/BrandRitual.tsx`, the stroked W SVG: it draws itself on the
+  lockup's track and follows `--ws-brand-primary`, neither of which a PNG
+  could. The rail lockup, the mobile bar and the welcome tour all use it;
+  an empty profile banner is now the bare sunken ground. Do not
+  reintroduce a raster mark.
 - **Verified badge**: `src/assets/icons/VerifiedIcon.tsx` is now Phosphor
   `SealCheck` filled in gold (never blue) and is THE badge everywhere —
   PostCard, Profile, explore, modals all route through it. Its `color` prop

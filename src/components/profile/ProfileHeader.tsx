@@ -201,15 +201,10 @@ export function ProfileHeader({
       <div className="relative">
         {/* 3:1, so a banner uploaded at the usual aspect isn't cropped to a strip. */}
         <div className="relative aspect-[3/1] max-h-[210px] w-full overflow-hidden bg-sunken">
-          {banner ? (
+          {/* No banner is the sunken ground alone: the astronaut helmet that
+              used to sit here was retired 2026-09-22. */}
+          {banner && (
             <Image src={banner} alt="" fill sizes="620px" className="object-cover" />
-          ) : (
-            <img
-              src="/images/worldspace-mark.png"
-              alt=""
-              aria-hidden="true"
-              className="pointer-events-none absolute left-1/2 top-1/2 w-12 -translate-x-1/2 -translate-y-1/2 select-none opacity-[0.08]"
-            />
           )}
         </div>
 

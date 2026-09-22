@@ -71,42 +71,12 @@ export function BrandRitual({
 		<span
 			className={clsx("inline-flex items-center gap-2 min-w-0", className)}
 		>
-			{/* TWO slots, swapped by CSS rather than by JS. The helmet reads on
-			    both grounds (white dome on dark, black ink on light), so both
-			    files carry the same art today; the slots stay because the cloud
-			    needed a cut per ground and a future mark may too. Reading the
-			    theme in JS would need the theme before first paint, which is a
-			    hydration mismatch waiting to happen; a CSS swap just works,
-			    including during SSR.
-
-			    `unoptimized`: ~11KB (a 256-colour palette PNG; the full-colour
-			    encode was 56KB, and the hidden slot downloads too, so keep it
-			    small) drawn at ~34px, so the responsive pipeline has nothing to
-			    optimise — and it previously BROKE the mark, which
-			    sat in the DOM with a valid srcset and `currentSrc === ""`, so the
-			    logo never appeared at all. */}
-			<Image
-				src="/images/worldspace-mark-dark.png"
-				alt=""
-				width={size}
-				height={size}
-				aria-hidden
-				priority
-				unoptimized
-				className="shrink-0 object-contain [[data-ws-theme='platform-light']_&]:hidden"
-				style={{ height: size, width: size }}
-			/>
-			<Image
-				src="/images/worldspace-mark-light.png"
-				alt=""
-				width={size}
-				height={size}
-				aria-hidden
-				priority
-				unoptimized
-				className="hidden shrink-0 object-contain [[data-ws-theme='platform-light']_&]:block"
-				style={{ height: size, width: size }}
-			/>
+			{/* The W, not the astronaut helmet (owner 2026-09-22: "remove the
+			    worldstreet austronaut"). It is the same mark the mobile bar
+			    already shows, it strokes itself on the lockup's own track, and
+			    it follows the brand token when the palette moves, which the
+			    two PNGs never could. */}
+			<BrandMark size={size} className="shrink-0" />
 
 			{eyebrow ? (
 				// One animated wrapper so the name and the eyebrow walk in
