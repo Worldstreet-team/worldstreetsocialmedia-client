@@ -75,7 +75,10 @@ export function CreateFab() {
   const immersive =
     pathname === "/live" ||
     pathname.startsWith("/live/") ||
-    (pathname.startsWith("/messages/") && pathname.split("/").length > 2) ||
+    // The inbox has its own floating button (new chat); two stacked on the
+    // same corner of a phone was the owner's "why is the fab that way".
+    pathname === "/messages" ||
+    pathname.startsWith("/messages/") ||
     // Settings is for changing things, not posting: the button sat on top
     // of the last rows of the phone hub and of every right-edge control.
     pathname === "/settings" ||

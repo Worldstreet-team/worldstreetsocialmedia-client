@@ -2517,7 +2517,10 @@ export const MessageBox = ({
 			>
 				{/* New chat and new group live in a FAB over the list now
 				    (owner 2026-09-20), not as icons on the title row. */}
-				<div className="pointer-events-none absolute bottom-4 right-4 z-20 flex flex-col items-end gap-2 md:bottom-6 md:right-6">
+				{/* On a phone the fixed bottom nav covers the column's last 64px plus
+				    the home indicator, so the button clears it; on a desktop there
+				    is no nav to clear. */}
+				<div className="pointer-events-none absolute right-4 z-20 flex flex-col items-end gap-2 bottom-[calc(var(--ws-nav-clearance)+12px)] md:bottom-6 md:right-6">
 					{/* animate-rise is switched off once the intro has played, so
 					    these used to appear with no motion and had no exit. They
 					    unfold from the FAB's corner and leave as one piece. */}
