@@ -23,11 +23,14 @@
 // Bump on any change to PRECACHE contents: the offline mark changed
 // from the cloud to the helmet (2026-09-11), and a same-URL precache
 // entry is never refetched until the cache name moves.
-const VERSION = "ws-v3";
+// v4: the astronaut PNG left the precache list (2026-09-22). A missing
+// entry makes addAll reject, which fails the whole install, so the version
+// bumps with any change to PRECACHE.
+const VERSION = "ws-v4";
 const STATIC_CACHE = `${VERSION}-static`;
 const MEDIA_CACHE = `${VERSION}-media`;
 const OFFLINE_URL = "/offline.html";
-const PRECACHE = [OFFLINE_URL, "/images/worldspace-mark.png"];
+const PRECACHE = [OFFLINE_URL];
 const MEDIA_HOSTS = new Set([
 	"pub-d4a7c1ef37d040829c8bb6d8b855705b.r2.dev",
 	"img.clerk.com",
