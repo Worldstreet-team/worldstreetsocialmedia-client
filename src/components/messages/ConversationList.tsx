@@ -889,10 +889,9 @@ const ACTION_W = 76;
  * - The row slides on a spring, direction-locked, so a diagonal scroll
  *   scrolls and only a horizontal pull swipes. Pulling right rubber-bands.
  * - Under it, one coloured well in the trailing action's colour, with the
- *   actions as icon-over-label buttons: Delete (red), then Archive (brand)
- *   at the trailing edge. Archive is the reversible one, so it is the one
- *   a full swipe commits; Delete is tap-only and still goes through its
- *   confirm.
+ *   actions as icon-over-label buttons: Archive (brand) on the left,
+ *   Delete (red) on the right, the owner's order. A full swipe reaches
+ *   Delete, which still goes through its confirm.
  * - A short pull parks the row open with both actions tappable. Past the
  *   commit line the trailing action grows to fill the well with a tick of
  *   haptic, and letting go performs it. A fling commits too.
@@ -924,13 +923,16 @@ function SwipeRow({
 		setCoarse(window.matchMedia?.("(pointer: coarse)").matches ?? false);
 	}, []);
 
+	// Archive on the left, Delete on the right (owner 2026-09-22). Delete is
+	// therefore the trailing action a full swipe reaches; it still opens its
+	// confirm, so a fling never deletes outright.
 	const actions = [
-		onDelete && { key: "delete", label: "Delete", run: onDelete },
 		onArchive && {
 			key: "archive",
 			label: archiveLabel ?? "Archive",
 			run: onArchive,
 		},
+		onDelete && { key: "delete", label: "Delete", run: onDelete },
 	].filter(Boolean) as { key: string; label: string; run: () => void }[];
 	const trailing = actions[actions.length - 1];
 	const OPEN = actions.length * ACTION_W;

@@ -811,12 +811,11 @@ directions D + A from a mocked set
   after the first version). `SwipeRow` in `ConversationList`: framer drag on
   x, direction-locked so a diagonal scroll scrolls; one coloured well under
   the row in the trailing action's colour, actions as icon-over-label
-  76px buttons, Delete (red) then Archive (brand) at the trailing edge.
+  76px buttons, Archive (brand) on the left, Delete (red) on the right.
   A short pull parks open (both tappable); past `OPEN + 72` the trailing
   action grows to fill the well with a haptic tick and release commits it;
-  a fling commits too. Archive is the trailing action ON PURPOSE: a full
-  swipe performs the reversible thing, Delete is tap-only and keeps its
-  confirm. One row open at a time (module-level `closeOpenRow`), tapping
+  a fling commits too. Delete is the trailing action (owner's order), and
+  a committed swipe still lands on its confirm, never a bare delete. One row open at a time (module-level `closeOpenRow`), tapping
   outside or on the row shuts it. Touch only (`pointer: coarse`); a mouse
   has the right-click menu. The row takes `bg-surface` only while it is
   off its rest position, so the well never reads through it at rest.
