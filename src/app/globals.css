@@ -1684,19 +1684,25 @@ html[data-ws-theme="platform-light"] .ws-default-chat-wallpaper::before {
    backwards, the fill draining, then the outline reeling back into its drop.
    The per-letter delay rides both ways, so the word leaves left to right the
    way it arrived, and the curve is symmetric, so backwards reads the same.
-   3.2s each way; about 0.2s with nothing on screen between loops.
 
-   Once the whole word has landed it glints (owner 2026-09-23: "the colors
-   of each one changes to the primary colors and quickly fades out ... like
-   a glimmer but doing it with the words"): each letter, line and fill
-   together, flashes to the brand colour and falls back to its ink, 60ms
-   behind the letter before it, so the flash runs left to right. Rise 100ms,
-   fall 320ms (--ws-motion-slow) on --ws-ease. The glint's cycle is the
-   whole loop (both iterations, 6.4s) in the normal direction, so it stays
-   locked to the loop and plays once a lap; its peak sits 2.55s in, 0.25s
-   after the last letter's fill has landed, well inside the hold. */
+   It is unhurried on purpose (owner 2026-09-23: "the general animation be
+   longer so it stays a bit instead of just doing it fast fast"). 5.6s each
+   way, 60ms between letters. One letter, forward: blank 0.4s, draws 0.4 to
+   2.2s, fills 2.0 to 2.9s, then holds; the word sits finished for about 5s
+   a lap, and is off screen for about 0.2s between laps.
+
+   Once the whole word has landed a glint crosses it (owner 2026-09-23: "the
+   colors ... change to the primary colors and quickly fade out ... like a
+   glimmer but doing it with the words", then "slant it so it doesn't just
+   look straight"). It is one band of brand colour, leaning 20 degrees (GLINT
+   in BrandRitual.tsx), masked to the letterforms, sliding left to right at
+   an even pace from 3.7 to 5.4s into the lap: a letter turns brand as the
+   band's middle crosses it and falls back to its ink behind it. Its cycle is
+   the whole lap (both iterations, 11.2s) in the normal direction, so it
+   stays locked to the loop and plays once a lap; the rest of the time it is
+   parked off the word, where the mask shows nothing. */
 .ws-wordmark {
-  --wm-dur: 3.2s;
+  --wm-dur: 5.6s;
   --wm-ease: cubic-bezier(0.65, 0, 0.35, 1);
   display: block;
   flex: none;
@@ -1704,8 +1710,7 @@ html[data-ws-theme="platform-light"] .ws-default-chat-wallpaper::before {
 }
 .ws-wm-letter {
   --wm-ink: var(--ws-text-primary);
-  --wm-delay: calc(var(--i) * 45ms);
-  --wm-glint-delay: calc(var(--i) * 60ms);
+  --wm-delay: calc(var(--i) * 60ms);
 }
 .ws-wm-letter.is-dot {
   --wm-ink: var(--ws-brand-gold-text);
@@ -1716,25 +1721,20 @@ html[data-ws-theme="platform-light"] .ws-default-chat-wallpaper::before {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-/* Base styles are the finished word (outline closed, fill in, no drop):
-   what reduced motion rests on, and what `both` hands back to the loop. */
+/* Base styles are the finished word (outline closed, fill in, no drop, the
+   glint parked): what reduced motion rests on, and what `both` hands back
+   to the loop. */
 .ws-wm-line {
   stroke: var(--wm-ink);
   stroke-width: 2.4;
   stroke-dasharray: 1000 2000;
-  animation:
-    ws-wm-line var(--wm-dur) var(--wm-ease) var(--wm-delay) infinite alternate
-      both,
-    ws-wm-glint-line calc(var(--wm-dur) * 2) var(--ws-ease)
-      var(--wm-glint-delay) infinite both;
+  animation: ws-wm-line var(--wm-dur) var(--wm-ease) var(--wm-delay) infinite
+    alternate both;
 }
 .ws-wm-fill {
   fill: var(--wm-ink);
-  animation:
-    ws-wm-fill var(--wm-dur) var(--wm-ease) var(--wm-delay) infinite alternate
-      both,
-    ws-wm-glint-fill calc(var(--wm-dur) * 2) var(--ws-ease)
-      var(--wm-glint-delay) infinite both;
+  animation: ws-wm-fill var(--wm-dur) var(--wm-ease) var(--wm-delay) infinite
+    alternate both;
 }
 .ws-wm-drop {
   stroke: var(--ws-brand-primary);
@@ -1742,67 +1742,59 @@ html[data-ws-theme="platform-light"] .ws-default-chat-wallpaper::before {
   animation: ws-wm-drop var(--wm-dur) var(--wm-ease) var(--wm-delay) infinite
     alternate both;
 }
+.ws-wm-glint {
+  transform: translateX(-110px);
+  animation: ws-wm-glint calc(var(--wm-dur) * 2) linear infinite both;
+}
+.ws-wm-glint-stop {
+  stop-color: var(--ws-brand-primary);
+}
 @keyframes ws-wm-line {
   0%,
-  10% {
+  7% {
     stroke-dashoffset: 1000;
   }
-  46%,
+  39%,
   100% {
     stroke-dashoffset: 0;
   }
 }
 @keyframes ws-wm-fill {
   0%,
-  42% {
+  36% {
     fill-opacity: 0;
   }
-  58%,
+  52%,
   100% {
     fill-opacity: 1;
   }
 }
 @keyframes ws-wm-drop {
   0%,
-  10% {
+  7% {
     stroke-dashoffset: 1000;
     opacity: 0;
   }
-  14%,
-  38% {
+  11%,
+  32% {
     opacity: 1;
   }
-  46%,
+  39%,
   100% {
     stroke-dashoffset: 0;
     opacity: 0;
   }
 }
-/* 6.4s: rise 38.28 to 39.84% (100ms), fall to 44.84% (320ms). */
-@keyframes ws-wm-glint-line {
+/* Over the 11.2s lap: parked left of the word until 3.7s, across it by
+   5.4s, parked right of it after. Both parks are outside the mask. */
+@keyframes ws-wm-glint {
   0%,
-  38.28% {
-    stroke: var(--wm-ink);
+  33% {
+    transform: translateX(-110px);
   }
-  39.84% {
-    stroke: var(--ws-brand-primary);
-  }
-  44.84%,
+  48%,
   100% {
-    stroke: var(--wm-ink);
-  }
-}
-@keyframes ws-wm-glint-fill {
-  0%,
-  38.28% {
-    fill: var(--wm-ink);
-  }
-  39.84% {
-    fill: var(--ws-brand-primary);
-  }
-  44.84%,
-  100% {
-    fill: var(--wm-ink);
+    transform: translateX(810px);
   }
 }
 /* Reduced motion, both triggers: stop the clock and the base styles are the
@@ -1811,12 +1803,14 @@ html[data-ws-theme="platform-light"] .ws-default-chat-wallpaper::before {
 @media (prefers-reduced-motion: reduce) {
   .ws-wm-line,
   .ws-wm-fill,
-  .ws-wm-drop {
+  .ws-wm-drop,
+  .ws-wm-glint {
     animation: none;
   }
 }
 html[data-ws-motion="reduce"] .ws-wm-line,
 html[data-ws-motion="reduce"] .ws-wm-fill,
-html[data-ws-motion="reduce"] .ws-wm-drop {
+html[data-ws-motion="reduce"] .ws-wm-drop,
+html[data-ws-motion="reduce"] .ws-wm-glint {
   animation: none;
 }

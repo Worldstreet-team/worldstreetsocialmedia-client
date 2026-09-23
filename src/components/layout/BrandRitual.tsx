@@ -51,7 +51,8 @@ export function BrandMark({
  *
  * Each contour is drawn once in `<defs>` and reused per layer: the line, then
  * the fill (all of the letter's contours, evenodd), then the drop on top.
- * The keyframes, the timing and the reasoning live with the CSS in
+ * Last comes the glint, a slanted band of brand colour masked to the
+ * letters. The keyframes, the timing and the reasoning live with the CSS in
  * globals.css (`.ws-wordmark`).
  */
 
@@ -72,6 +73,20 @@ const DROP = [
 	[36, 2.5, 0.14],
 ] as const;
 
+// The glint: a band this wide, leaning this far (skewX, degrees), whose
+// brand colour peaks in the middle and fades out to both edges.
+const GLINT = {
+	width: 190,
+	skew: -20,
+	stops: [
+		[0, 0],
+		[0.3, 0.5],
+		[0.5, 1],
+		[0.7, 0.5],
+		[1, 0],
+	],
+} as const;
+
 const fixed = (n: number) => n.toFixed(2).replace(/\.?0+$/, "");
 
 function BrandWord({ wordSize }: { wordSize: number }) {
@@ -81,8 +96,10 @@ function BrandWord({ wordSize }: { wordSize: number }) {
 	// height is the word's ink height, width follows the advance.
 	const height = wordSize * (WORDMARK_BOX.h / 100);
 	let n = 0;
-	const letters = WORDMARK_GLYPHS.map((glyph) => ({
+	const letters = WORDMARK_GLYPHS.map((glyph, i) => ({
 		...glyph,
+		id: `${uid}-wl${i}`,
+		d: glyph.contours.map((c) => c.d).join(""),
 		contours: glyph.contours.map((c) => ({ ...c, id: `${uid}-wm${n++}` })),
 	}));
 	return (
@@ -100,6 +117,40 @@ function BrandWord({ wordSize }: { wordSize: number }) {
 						<path key={c.id} id={c.id} d={c.d} pathLength={PATH_LENGTH} />
 					)),
 				)}
+				{letters.map((l) => (
+					<path key={l.id} id={l.id} d={l.d} fillRule="evenodd" />
+				))}
+				<linearGradient id={`${uid}-glint`} x1="0" x2="1" y1="0" y2="0">
+					{GLINT.stops.map(([offset, alpha]) => (
+						<stop
+							key={offset}
+							className="ws-wm-glint-stop"
+							offset={offset}
+							stopOpacity={alpha}
+						/>
+					))}
+				</linearGradient>
+				{/* The letters in white, outline included, so the glint shows
+				    on the letterforms and nowhere else. */}
+				<mask
+					id={`${uid}-mask`}
+					maskUnits="userSpaceOnUse"
+					x={-10}
+					y={-10}
+					width={WORDMARK_BOX.w + 20}
+					height={WORDMARK_BOX.h + 20}
+				>
+					{letters.map((l) => (
+						<use
+							key={l.id}
+							href={`#${l.id}`}
+							fill="#fff"
+							stroke="#fff"
+							strokeWidth={2.4}
+							strokeLinejoin="round"
+						/>
+					))}
+				</mask>
 			</defs>
 			{letters.map((l, i) => (
 				<g
@@ -112,11 +163,7 @@ function BrandWord({ wordSize }: { wordSize: number }) {
 					{l.contours.map((c) => (
 						<use key={c.id} href={`#${c.id}`} className="ws-wm-line" />
 					))}
-					<path
-						className="ws-wm-fill"
-						fillRule="evenodd"
-						d={l.contours.map((c) => c.d).join("")}
-					/>
+					<use href={`#${l.id}`} className="ws-wm-fill" />
 					{l.contours.flatMap((c) =>
 						DROP.map(([behind, width, alpha], j) => {
 							// A short contour (a counter, the full stop) keeps its
@@ -138,6 +185,18 @@ function BrandWord({ wordSize }: { wordSize: number }) {
 					)}
 				</g>
 			))}
+			<g mask={`url(#${uid}-mask)`}>
+				<g className="ws-wm-glint">
+					<rect
+						x={-GLINT.width / 2}
+						y={-30}
+						width={GLINT.width}
+						height={WORDMARK_BOX.h + 60}
+						transform={`skewX(${GLINT.skew})`}
+						fill={`url(#${uid}-glint)`}
+					/>
+				</g>
+			</g>
 		</svg>
 	);
 }

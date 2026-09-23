@@ -493,12 +493,15 @@ noted below is fixed).
   tip and fades back into the line: seven stacked dashes (`DROP` in
   BrandRitual) that share the line's offset through the
   `0, 1000 - t, t, 2000` dash trick, so they cannot drift out of step. The
-  loop is a palindrome (`alternate`, 3.2s each way): the exit is the
-  entrance played backwards, 45ms per letter both ways. Once the word has
-  landed it glints once a lap: each letter flashes to the brand colour and
-  falls back, 60ms behind the one before, so the flash runs left to right
-  (separate 6.4s `ws-wm-glint-*` animations, locked to the loop). Reasoning
-  and keyframes live with `.ws-wordmark` in globals.css. Reduced motion (both
+  loop is a palindrome (`alternate`): the exit is the entrance played
+  backwards, 60ms per letter both ways. It is slow on purpose (owner: "so
+  it stays a bit instead of just doing it fast fast"): 5.6s each way, the
+  word finished on screen for about 5s a lap. Once it has landed, a glint
+  crosses it once a lap: one band of brand colour leaning 20 degrees
+  ("slant it so it doesn't just look straight"; `GLINT` in BrandRitual),
+  masked to the letterforms, sliding left to right at an even pace, on its
+  own 11.2s animation locked to the loop. Reasoning and keyframes live with
+  `.ws-wordmark` in globals.css. Reduced motion (both
   triggers) stops the clock and rests on the finished word. After editing
   that CSS, check the served stylesheet: the Turbopack dev cache replayed
   the old one twice here.
