@@ -1,5 +1,6 @@
 import clsx from "clsx";
-import Image from "next/image";
+import { useId } from "react";
+import { WORDMARK_BOX, WORDMARK_GLYPHS } from "./wordmark-glyphs";
 
 /**
  * The W on its own, drawing itself on the same 5.2s track as the full lockup.
@@ -34,94 +35,131 @@ export function BrandMark({
 	);
 }
 
-/**
- * The WorldSpace lockup: the helmet mark plus the wordmark walking in beside
- * it (`.ws-brand-word`, still on the 5.2s track from globals.css).
- *
- * The mark is the HELMET (2026-09-11; it replaced the cloud), not the bare
- * ecosystem W. They are two different brands: this app is WorldSpace and the
- * helmet is its logo (the W sits on its visor as a nod to the parent), while
- * the bare W belongs to WorldStreet — which is why the mobile bar's
- * WorldStreet tab still renders `BrandMark` and this does not. Mixing them
- * made the app look like it was called WorldStreet.
- *
- * The helmet does not draw itself the way the W does: it is raster artwork,
- * and there is nothing to stroke. The wordmark keeps its entrance.
- */
 /*
- * The wordmark, as letterforms rather than a run of text (owner 2026-09-23:
- * "the worldspace text changes to svg the same way and animates the stroke
- * dash array first and fills each word with tight delay").
+ * The wordmark writes itself (owner 2026-09-23: "the worldspace text changes
+ * to svg ... animates the stroke dash array first and fills each word with
+ * tight delay"), then grew a drop of brand ink at the pen tip the same day:
+ * "the tip of the dash array will have the primary color and fades into the
+ * actual stroke, but the tip of it just like a water drop".
  *
- * It is SVG `<text>`, not converted paths: the glyphs stay Poppins, so the
- * wordmark cannot drift from the rest of the display type, and there are no
- * path data to re-cut when the face changes. Stroke properties apply to
- * `<tspan>`, so each letter carries its own dash, its own fill and its own
- * delay, which is what makes the word write itself left to right.
+ * Real letterforms, not `<text>`: every contour of Poppins 700 is its own
+ * path (wordmark-glyphs.ts, cut by scripts/wordmark-glyphs.py) with its own
+ * measured length. The first cut dashed `<text>` with one 430-unit dash for
+ * every glyph, and the W's outline is 546, so part of the W was already on
+ * screen before the draw began: the jump at the start of every loop. Paths
+ * also cannot swap font mid-draw, and a drop needs geometry to ride on.
  *
- * The box comes from MEASURING Poppins 700 in the browser at 100px:
- * "WorldSpace." advances 657 units, with 74 above the baseline and 27 below.
- * `textLength` pins the run to that measurement, so the lockup keeps its
- * width through a font swap instead of reflowing the rail when Poppins
- * lands.
+ * Each contour is drawn once in `<defs>` and reused per layer: the line, then
+ * the fill (all of the letter's contours, evenodd), then the drop on top.
+ * The keyframes, the timing and the reasoning live with the CSS in
+ * globals.css (`.ws-wordmark`).
  */
-const WORD_BOX = { w: 657, h: 101, baseline: 74, size: 100 } as const;
 
-function BrandWord({ word, wordSize }: { word: string; wordSize: number }) {
-	const letters = [...word, "."];
-	// The svg is sized in the same units the HTML text used, so nothing
-	// around it moves: height is the full em box, width follows the measure.
-	const height = wordSize * (WORD_BOX.h / WORD_BOX.size);
+// Dash units: every contour is measured in thousandths of itself, so the W
+// and the full stop close in the same beat.
+const PATH_LENGTH = 1000;
+
+// The drop: [length behind the tip, stroke width, opacity] in wordmark units
+// (font size 100; the line is 2.4). A bead, then ever narrower and fainter
+// lengths behind it, so the brand ink tapers back into the line.
+const DROP = [
+	[0.25, 6.4, 1],
+	[3, 6, 0.95],
+	[7, 5.2, 0.8],
+	[12, 4.3, 0.6],
+	[18, 3.5, 0.42],
+	[26, 2.9, 0.26],
+	[36, 2.5, 0.14],
+] as const;
+
+const fixed = (n: number) => n.toFixed(2).replace(/\.?0+$/, "");
+
+function BrandWord({ wordSize }: { wordSize: number }) {
+	// Ids for <use>; two lockups can share a page (the rail and a drawer).
+	const uid = useId().replace(/[^\w-]/g, "");
+	// Sized in the units the HTML text used, so nothing around it moves:
+	// height is the word's ink height, width follows the advance.
+	const height = wordSize * (WORDMARK_BOX.h / 100);
+	let n = 0;
+	const letters = WORDMARK_GLYPHS.map((glyph) => ({
+		...glyph,
+		contours: glyph.contours.map((c) => ({ ...c, id: `${uid}-wm${n++}` })),
+	}));
 	return (
 		<svg
-			className="ws-brand-letters"
-			viewBox={`0 0 ${WORD_BOX.w} ${WORD_BOX.h}`}
-			width={height * (WORD_BOX.w / WORD_BOX.h)}
+			className="ws-wordmark"
+			viewBox={`0 0 ${WORDMARK_BOX.w} ${WORDMARK_BOX.h}`}
+			width={height * (WORDMARK_BOX.w / WORDMARK_BOX.h)}
 			height={height}
 			role="img"
-			aria-label={`${word}.`}
+			aria-label="WorldSpace"
 		>
-			<text
-				x={0}
-				y={WORD_BOX.baseline}
-				textLength={WORD_BOX.w}
-				lengthAdjust="spacing"
-				fontSize={WORD_BOX.size}
-				fontWeight={700}
-				fontFamily="var(--ws-font-display)"
-			>
-				{letters.map((ch, i) => (
-					<tspan
-						// biome-ignore lint/suspicious/noArrayIndexKey: letters are positional
-						key={i}
-						// The delay rides the index, so the word writes itself
-						// rather than every letter drawing at once.
-						style={{ "--i": i } as React.CSSProperties}
-						className={i === letters.length - 1 ? "ws-brand-dot" : undefined}
-					>
-						{ch}
-					</tspan>
-				))}
-			</text>
+			<defs>
+				{letters.flatMap((l) =>
+					l.contours.map((c) => (
+						<path key={c.id} id={c.id} d={c.d} pathLength={PATH_LENGTH} />
+					)),
+				)}
+			</defs>
+			{letters.map((l, i) => (
+				<g
+					// biome-ignore lint/suspicious/noArrayIndexKey: letters are positional
+					key={i}
+					// The delay rides the index, both ways round the loop.
+					style={{ "--i": i } as React.CSSProperties}
+					className={clsx("ws-wm-letter", l.ch === "." && "is-dot")}
+				>
+					{l.contours.map((c) => (
+						<use key={c.id} href={`#${c.id}`} className="ws-wm-line" />
+					))}
+					<path
+						className="ws-wm-fill"
+						fillRule="evenodd"
+						d={l.contours.map((c) => c.d).join("")}
+					/>
+					{l.contours.flatMap((c) =>
+						DROP.map(([behind, width, alpha], j) => {
+							// A short contour (a counter, the full stop) keeps its
+							// drop under a third of its own length.
+							const t = Math.min(300, (behind * PATH_LENGTH) / c.len);
+							return (
+								<use
+									key={`${c.id}-${j}`}
+									href={`#${c.id}`}
+									className="ws-wm-drop"
+									strokeWidth={width}
+									strokeOpacity={alpha}
+									// Visible for t right behind the tip, at the SAME
+									// offset as the line: see globals.css.
+									strokeDasharray={`0 ${fixed(PATH_LENGTH - t)} ${fixed(t)} 2000`}
+								/>
+							);
+						}),
+					)}
+				</g>
+			))}
 		</svg>
 	);
 }
 
+/**
+ * The WorldSpace lockup: the wordmark, writing itself, with an optional gold
+ * eyebrow under it. The helmet (2026-09-22) and then the W (2026-09-23) were
+ * taken out of it by the owner; the W lives on as `BrandMark`.
+ *
+ * The word is fixed: it is cut from Poppins as paths, so it spells
+ * WorldSpace and nothing else. It used to take a `word` prop, from when it
+ * was hardcoded to "WorldStreet" with the product as the eyebrow; nothing
+ * passed one.
+ */
 export function BrandRitual({
-	size = 22,
 	wordSize = 14,
-	word = "WorldSpace",
 	eyebrow,
 	className,
 }: {
+	/** Unused since the mark left the lockup; kept so callers need not change. */
 	size?: number;
 	wordSize?: number;
-	/**
-	 * The wordmark. This app is WorldSpace, one word. It used to be hardcoded
-	 * to "WorldStreet" with the product as a gold eyebrow underneath, which
-	 * read as "WorldStreet's Space" rather than as a product name.
-	 */
-	word?: string;
 	/** Optional gold eyebrow under the wordmark. */
 	eyebrow?: string;
 	className?: string;
@@ -134,13 +172,13 @@ export function BrandRitual({
 			    mobile bar's brand tab and the welcome card. */}
 			{eyebrow ? (
 				<span className="flex flex-col leading-tight min-w-0">
-					<BrandWord word={word} wordSize={wordSize} />
+					<BrandWord wordSize={wordSize} />
 					<span className="ws-brand-word font-sans text-[calc(10px*var(--ws-fs))] font-semibold uppercase tracking-[2px] text-gold">
 						{eyebrow}
 					</span>
 				</span>
 			) : (
-				<BrandWord word={word} wordSize={wordSize} />
+				<BrandWord wordSize={wordSize} />
 			)}
 		</span>
 	);

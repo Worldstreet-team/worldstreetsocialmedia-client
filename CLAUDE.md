@@ -480,18 +480,25 @@ noted below is fixed).
   4-step first-run modal, gated by localStorage `ws-social-welcome-v1`,
   replayable via the palette action "Replay the welcome tour"
   (`welcomeTourOpenAtom`).
-- **The wordmark writes itself** (owner 2026-09-23). `BrandWord` in
-  `layout/BrandRitual.tsx` renders "WorldSpace." as SVG `<text>` with one
-  `<tspan>` per letter, NOT converted paths: the glyphs stay Poppins, so the
-  lockup can never drift from the display face. Each letter strokes on
-  (`stroke-dasharray` 430, one number for every glyph, so they all draw at
-  one pen speed and short letters simply finish sooner), then fills a beat
-  later, 45ms behind the letter before it, on the same 5.2s ritual track and
-  curve as the retired mark. `paint-order: stroke` keeps the finished word a
-  clean letterform. The box (657 x 101, baseline 74 at size 100) was
-  MEASURED from Poppins 700 in the browser, and `textLength` pins the run to
-  it so a font swap cannot reflow the rail. Reduced motion rests on the
-  finished word: filled, no outline.
+- **The wordmark writes itself, with a drop of ink at the pen tip** (owner
+  2026-09-23). `BrandWord` in `layout/BrandRitual.tsx` draws "WorldSpace."
+  from REAL PATHS: `layout/wordmark-glyphs.ts` is every contour of Poppins
+  700 as its own closed path with its measured length, cut by
+  `scripts/wordmark-glyphs.py` (re-run only if the display face changes;
+  never hand-edit). The first cut dashed SVG `<text>` with one 430-unit dash
+  for every glyph; the W's outline is 546, so part of the W was on screen
+  before the draw began, which the owner saw as the start "jumping to a
+  state". Each contour now has `pathLength` 1000, so every outline goes from
+  nothing to closed in the same beat. A brand-coloured drop rides each pen
+  tip and fades back into the line: seven stacked dashes (`DROP` in
+  BrandRitual) that share the line's offset through the
+  `0, 1000 - t, t, 2000` dash trick, so they cannot drift out of step. The
+  loop is a palindrome (`alternate`, 3.2s each way): the exit is the
+  entrance played backwards, 45ms per letter both ways. Reasoning and
+  keyframes live with `.ws-wordmark` in globals.css. Reduced motion (both
+  triggers) stops the clock and rests on the finished word. After editing
+  that CSS, check the served stylesheet: the Turbopack dev cache replayed
+  the old one twice here.
 - **The astronaut helmet is retired** (owner 2026-09-22: "remove the
   worldstreet austronaut"). `worldspace-mark{,-dark,-light}.png` are
   deleted. The brand mark everywhere is `BrandMark` in

@@ -1661,65 +1661,118 @@ html[data-ws-theme="platform-light"] .ws-default-chat-wallpaper::before {
   opacity: 0.14;
 }
 
-/* The wordmark writes itself (owner 2026-09-23). Each letter is a <tspan>
-   with its own dash, fill and delay: the outline draws, then the fill lands a
-   beat later, and the next letter is 45ms behind the one before it. Same 5.2s
-   ritual track and same curve as the mark it replaced, so the lockup keeps
-   its rhythm.
+/* The wordmark writes itself (owner 2026-09-23), then carries a drop of
+   brand ink at the pen tip: "the tip of the dash array will have the primary
+   color and fades into the actual stroke, but the tip of it just like a
+   water drop". Markup in BrandRitual.tsx, glyphs in wordmark-glyphs.ts.
 
-   `paint-order: stroke` puts the fill ON TOP of the stroke, so the finished
-   word is the clean letterform rather than a letter thickened by its own
-   outline. The dash length is one number for every glyph: letters differ in
-   perimeter, so this is a drawing gesture, not a plotter. */
-.ws-brand-letters {
+   Every contour is its own path with pathLength 1000, so every dash below is
+   in thousandths of that contour: the W (546 units round) and the full stop
+   (62) both go from nothing to closed in the same beat. The first cut used
+   one 430-unit dash on <text> for every letter, shorter than the W, so part
+   of the W was on screen before the draw began, and the loop opened on that
+   jump. The 2000 gap is longer than any contour, so nothing wraps round.
+
+   The drop is seven dashes on the same contour (DROP in BrandRitual.tsx): a
+   bead, then ever narrower and fainter lengths behind it. Each one dashes as
+   `0, 1000 - t, t, 2000`, which puts its t units right behind the tip at the
+   SAME offset as the line, so one offset drives line and drop together and
+   they cannot drift apart. It fades up as the pen sets off and dissolves as
+   the outline closes; the fill lands a beat later.
+
+   The loop is a palindrome (`alternate`): the exit is the entrance played
+   backwards, the fill draining, then the outline reeling back into its drop.
+   The per-letter delay rides both ways, so the word leaves left to right the
+   way it arrived, and the curve is symmetric, so backwards reads the same.
+   3.2s each way; about 0.2s with nothing on screen between loops. */
+.ws-wordmark {
+  --wm-dur: 3.2s;
+  --wm-ease: cubic-bezier(0.65, 0, 0.35, 1);
   display: block;
   flex: none;
   overflow: visible;
 }
-.ws-brand-letters tspan {
-  fill: var(--ws-text-primary);
-  fill-opacity: 0;
-  paint-order: stroke;
-  stroke: var(--ws-text-primary);
-  stroke-width: 2.4;
+.ws-wm-letter {
+  --wm-ink: var(--ws-text-primary);
+  --wm-delay: calc(var(--i) * 45ms);
+}
+.ws-wm-letter.is-dot {
+  --wm-ink: var(--ws-brand-gold-text);
+}
+.ws-wm-line,
+.ws-wm-drop {
+  fill: none;
+  stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-dasharray: 430;
-  stroke-dashoffset: 430;
-  animation: ws-brand-letter 5.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
-  animation-delay: calc(var(--i) * 0.045s);
 }
-.ws-brand-letters .ws-brand-dot {
-  fill: var(--ws-brand-gold-text);
-  stroke: var(--ws-brand-gold-text);
+/* Base styles are the finished word (outline closed, fill in, no drop):
+   what reduced motion rests on, and what `both` hands back to the loop. */
+.ws-wm-line {
+  stroke: var(--wm-ink);
+  stroke-width: 2.4;
+  stroke-dasharray: 1000 2000;
+  animation: ws-wm-line var(--wm-dur) var(--wm-ease) var(--wm-delay) infinite
+    alternate both;
 }
-@keyframes ws-brand-letter {
-  0% {
-    stroke-dashoffset: 430;
-    fill-opacity: 0;
-    opacity: 1;
+.ws-wm-fill {
+  fill: var(--wm-ink);
+  animation: ws-wm-fill var(--wm-dur) var(--wm-ease) var(--wm-delay) infinite
+    alternate both;
+}
+.ws-wm-drop {
+  stroke: var(--ws-brand-primary);
+  opacity: 0;
+  animation: ws-wm-drop var(--wm-dur) var(--wm-ease) var(--wm-delay) infinite
+    alternate both;
+}
+@keyframes ws-wm-line {
+  0%,
+  10% {
+    stroke-dashoffset: 1000;
   }
-  24% {
-    stroke-dashoffset: 0;
-    fill-opacity: 0;
-  }
-  32%,
-  82% {
-    stroke-dashoffset: 0;
-    fill-opacity: 1;
-    opacity: 1;
-  }
-  92%,
+  46%,
   100% {
-    stroke-dashoffset: 430;
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes ws-wm-fill {
+  0%,
+  42% {
     fill-opacity: 0;
+  }
+  58%,
+  100% {
+    fill-opacity: 1;
+  }
+}
+@keyframes ws-wm-drop {
+  0%,
+  10% {
+    stroke-dashoffset: 1000;
+    opacity: 0;
+  }
+  14%,
+  38% {
+    opacity: 1;
+  }
+  46%,
+  100% {
+    stroke-dashoffset: 0;
     opacity: 0;
   }
 }
-/* Reduced motion ends every animation on its RESTING style, so rest is the
-   finished word: filled, no outline, nothing to draw. */
-html[data-ws-motion="reduce"] .ws-brand-letters tspan {
+/* Reduced motion, both triggers: stop the clock and the base styles are the
+   finished word. The global flatten alone would hold each letter on its
+   hidden first frame through its delay. */
+@media (prefers-reduced-motion: reduce) {
+  .ws-wm-line,
+  .ws-wm-fill,
+  .ws-wm-drop {
+    animation: none;
+  }
+}
+html[data-ws-motion="reduce"] .ws-wm-line,
+html[data-ws-motion="reduce"] .ws-wm-fill,
+html[data-ws-motion="reduce"] .ws-wm-drop {
   animation: none;
-  fill-opacity: 1;
-  stroke: none;
-  stroke-dashoffset: 0;
 }
