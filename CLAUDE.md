@@ -499,7 +499,8 @@ noted below is fixed).
   word finished on screen for about 5s a lap. Once it has landed, a glint
   crosses it once a lap: one band of brand colour leaning 20 degrees
   ("slant it so it doesn't just look straight"; `GLINT` in BrandRitual),
-  masked to the letterforms, sliding left to right at an even pace, on its
+  solid across about a letter and a half, masked to the letterforms,
+  sliding left to right at an even pace in about 0.9s, on its
   own 11.2s animation locked to the loop. Reasoning and keyframes live with
   `.ws-wordmark` in globals.css. Reduced motion (both
   triggers) stops the clock and rests on the finished word. After editing

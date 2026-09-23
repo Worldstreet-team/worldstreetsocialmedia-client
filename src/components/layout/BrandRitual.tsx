@@ -73,16 +73,19 @@ const DROP = [
 	[36, 2.5, 0.14],
 ] as const;
 
-// The glint: a band this wide, leaning this far (skewX, degrees), whose
-// brand colour peaks in the middle and fades out to both edges.
+// The glint: a band this wide, leaning this far (skewX, degrees), solid
+// brand colour across its middle and fading out to both edges. The solid
+// core is about a letter and a half of the word (owner: "cover like 1 and
+// half text"); letters average 60 units.
 const GLINT = {
-	width: 190,
+	width: 260,
 	skew: -20,
 	stops: [
 		[0, 0],
-		[0.3, 0.5],
-		[0.5, 1],
-		[0.7, 0.5],
+		[0.25, 0.7],
+		[0.35, 1],
+		[0.65, 1],
+		[0.75, 0.7],
 		[1, 0],
 	],
 } as const;

@@ -1695,9 +1695,10 @@ html[data-ws-theme="platform-light"] .ws-default-chat-wallpaper::before {
    colors ... change to the primary colors and quickly fade out ... like a
    glimmer but doing it with the words", then "slant it so it doesn't just
    look straight"). It is one band of brand colour, leaning 20 degrees (GLINT
-   in BrandRitual.tsx), masked to the letterforms, sliding left to right at
-   an even pace from 3.7 to 5.4s into the lap: a letter turns brand as the
-   band's middle crosses it and falls back to its ink behind it. Its cycle is
+   in BrandRitual.tsx), solid across about a letter and a half, masked to
+   the letterforms, sliding left to right at an even pace from 3.7 to 4.6s
+   into the lap ("move faster"): a letter turns brand as the band crosses it
+   and falls back to its ink behind it. Its cycle is
    the whole lap (both iterations, 11.2s) in the normal direction, so it
    stays locked to the loop and plays once a lap; the rest of the time it is
    parked off the word, where the mask shows nothing. */
@@ -1743,7 +1744,7 @@ html[data-ws-theme="platform-light"] .ws-default-chat-wallpaper::before {
     alternate both;
 }
 .ws-wm-glint {
-  transform: translateX(-110px);
+  transform: translateX(-140px);
   animation: ws-wm-glint calc(var(--wm-dur) * 2) linear infinite both;
 }
 .ws-wm-glint-stop {
@@ -1786,15 +1787,15 @@ html[data-ws-theme="platform-light"] .ws-default-chat-wallpaper::before {
   }
 }
 /* Over the 11.2s lap: parked left of the word until 3.7s, across it by
-   5.4s, parked right of it after. Both parks are outside the mask. */
+   4.6s, parked right of it after. Both parks are outside the mask. */
 @keyframes ws-wm-glint {
   0%,
   33% {
-    transform: translateX(-110px);
+    transform: translateX(-140px);
   }
-  48%,
+  41%,
   100% {
-    transform: translateX(810px);
+    transform: translateX(830px);
   }
 }
 /* Reduced motion, both triggers: stop the clock and the base styles are the
