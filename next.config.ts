@@ -1,6 +1,28 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+	// The WorldSpace app's universal links. Apple fetches the AASA with no
+	// extension and wants JSON back; Next would otherwise serve it as an
+	// octet stream. Both files carry placeholders (TEAMID, the Android
+	// signing cert) until the first EAS build mints the credentials.
+	async headers() {
+		return [
+			{
+				source: "/.well-known/apple-app-site-association",
+				headers: [
+					{ key: "Content-Type", value: "application/json" },
+					{ key: "Cache-Control", value: "public, max-age=3600" },
+				],
+			},
+			{
+				source: "/.well-known/assetlinks.json",
+				headers: [
+					{ key: "Content-Type", value: "application/json" },
+					{ key: "Cache-Control", value: "public, max-age=3600" },
+				],
+			},
+		];
+	},
 	experimental: {
 		serverActions: {
 			bodySizeLimit: "20mb",

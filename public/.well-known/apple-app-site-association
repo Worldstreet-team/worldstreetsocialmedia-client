@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["TEAMID.com.worldstreet.worldspace"],
+        "components": [
+          { "/": "/post/*", "comment": "A post opens in the app" },
+          { "/": "/profile/*", "comment": "A profile opens in the app" },
+          { "/": "/messages/*", "comment": "A chat opens in the app" }
+        ]
+      }
+    ]
+  },
+  "webcredentials": { "apps": ["TEAMID.com.worldstreet.worldspace"] }
+}

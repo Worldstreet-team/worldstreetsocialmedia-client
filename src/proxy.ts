@@ -550,7 +550,10 @@ small{display:block;margin-top:16px;color:rgba(255,255,255,0.42);word-break:brea
 export const config = {
 	matcher: [
 		// Skip Next.js internals and all static files, unless found in search params
-		"/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+		// .well-known is public by construction: Apple and Google fetch the
+		// app-link files anonymously, and a Clerk redirect there breaks
+		// universal links for the WorldSpace app.
+		"/((?!_next|\\.well-known|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
 		// Always run for API routes
 		"/(api|trpc)(.*)",
 	],
