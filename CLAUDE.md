@@ -494,8 +494,11 @@ noted below is fixed).
   BrandRitual) that share the line's offset through the
   `0, 1000 - t, t, 2000` dash trick, so they cannot drift out of step. The
   loop is a palindrome (`alternate`, 3.2s each way): the exit is the
-  entrance played backwards, 45ms per letter both ways. Reasoning and
-  keyframes live with `.ws-wordmark` in globals.css. Reduced motion (both
+  entrance played backwards, 45ms per letter both ways. Once the word has
+  landed it glints once a lap: each letter flashes to the brand colour and
+  falls back, 60ms behind the one before, so the flash runs left to right
+  (separate 6.4s `ws-wm-glint-*` animations, locked to the loop). Reasoning
+  and keyframes live with `.ws-wordmark` in globals.css. Reduced motion (both
   triggers) stops the clock and rests on the finished word. After editing
   that CSS, check the served stylesheet: the Turbopack dev cache replayed
   the old one twice here.

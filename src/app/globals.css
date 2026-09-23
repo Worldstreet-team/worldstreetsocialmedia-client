@@ -1684,7 +1684,17 @@ html[data-ws-theme="platform-light"] .ws-default-chat-wallpaper::before {
    backwards, the fill draining, then the outline reeling back into its drop.
    The per-letter delay rides both ways, so the word leaves left to right the
    way it arrived, and the curve is symmetric, so backwards reads the same.
-   3.2s each way; about 0.2s with nothing on screen between loops. */
+   3.2s each way; about 0.2s with nothing on screen between loops.
+
+   Once the whole word has landed it glints (owner 2026-09-23: "the colors
+   of each one changes to the primary colors and quickly fades out ... like
+   a glimmer but doing it with the words"): each letter, line and fill
+   together, flashes to the brand colour and falls back to its ink, 60ms
+   behind the letter before it, so the flash runs left to right. Rise 100ms,
+   fall 320ms (--ws-motion-slow) on --ws-ease. The glint's cycle is the
+   whole loop (both iterations, 6.4s) in the normal direction, so it stays
+   locked to the loop and plays once a lap; its peak sits 2.55s in, 0.25s
+   after the last letter's fill has landed, well inside the hold. */
 .ws-wordmark {
   --wm-dur: 3.2s;
   --wm-ease: cubic-bezier(0.65, 0, 0.35, 1);
@@ -1695,6 +1705,7 @@ html[data-ws-theme="platform-light"] .ws-default-chat-wallpaper::before {
 .ws-wm-letter {
   --wm-ink: var(--ws-text-primary);
   --wm-delay: calc(var(--i) * 45ms);
+  --wm-glint-delay: calc(var(--i) * 60ms);
 }
 .ws-wm-letter.is-dot {
   --wm-ink: var(--ws-brand-gold-text);
@@ -1711,13 +1722,19 @@ html[data-ws-theme="platform-light"] .ws-default-chat-wallpaper::before {
   stroke: var(--wm-ink);
   stroke-width: 2.4;
   stroke-dasharray: 1000 2000;
-  animation: ws-wm-line var(--wm-dur) var(--wm-ease) var(--wm-delay) infinite
-    alternate both;
+  animation:
+    ws-wm-line var(--wm-dur) var(--wm-ease) var(--wm-delay) infinite alternate
+      both,
+    ws-wm-glint-line calc(var(--wm-dur) * 2) var(--ws-ease)
+      var(--wm-glint-delay) infinite both;
 }
 .ws-wm-fill {
   fill: var(--wm-ink);
-  animation: ws-wm-fill var(--wm-dur) var(--wm-ease) var(--wm-delay) infinite
-    alternate both;
+  animation:
+    ws-wm-fill var(--wm-dur) var(--wm-ease) var(--wm-delay) infinite alternate
+      both,
+    ws-wm-glint-fill calc(var(--wm-dur) * 2) var(--ws-ease)
+      var(--wm-glint-delay) infinite both;
 }
 .ws-wm-drop {
   stroke: var(--ws-brand-primary);
@@ -1759,6 +1776,33 @@ html[data-ws-theme="platform-light"] .ws-default-chat-wallpaper::before {
   100% {
     stroke-dashoffset: 0;
     opacity: 0;
+  }
+}
+/* 6.4s: rise 38.28 to 39.84% (100ms), fall to 44.84% (320ms). */
+@keyframes ws-wm-glint-line {
+  0%,
+  38.28% {
+    stroke: var(--wm-ink);
+  }
+  39.84% {
+    stroke: var(--ws-brand-primary);
+  }
+  44.84%,
+  100% {
+    stroke: var(--wm-ink);
+  }
+}
+@keyframes ws-wm-glint-fill {
+  0%,
+  38.28% {
+    fill: var(--wm-ink);
+  }
+  39.84% {
+    fill: var(--ws-brand-primary);
+  }
+  44.84%,
+  100% {
+    fill: var(--wm-ink);
   }
 }
 /* Reduced motion, both triggers: stop the clock and the base styles are the
