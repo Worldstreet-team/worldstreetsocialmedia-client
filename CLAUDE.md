@@ -687,8 +687,14 @@ Two planes, and it matters which is which:
 `user:*`, `post:*`, feed, live and spaces, but *not* `calls:*` — so a client
 subscribing to its own call channel was rejected and calls could never have
 rung even with working media. It now grants `calls:<profileId>` (subscribe
-only; the gateway publishes after checking conversation membership) and
-`conversation:*` (subscribe/publish/presence).
+only; the gateway publishes after checking conversation membership) and,
+since the 2026-09-24 security pass, each of the caller's OWN threads by
+name (`conversation:<id>`, subscribe/publish/presence) instead of
+`conversation:*`, which let anyone watch or forge typing and receipts in
+any thread they could guess. Tokens live an hour. A thread newer than the
+token is refused with Ably 40160; `useChatSignals` then calls
+`requestConversationAccess(id)` and re-authorizes, and the auth callback
+sends `?conversation=<id>` as a hint the gateway honours for a member.
 
 Typing, presence and delivery receipts (`hooks/useChatSignals.ts`) are
 **client-to-client** on `conversation:<id>` on purpose: a round trip through

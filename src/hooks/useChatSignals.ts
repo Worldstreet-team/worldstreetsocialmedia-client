@@ -3,7 +3,10 @@
 import { usePreferences } from "@/components/providers/PreferencesProvider";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { useRealtime } from "@/components/providers/RealtimeProvider";
+import {
+	requestConversationAccess,
+	useRealtime,
+} from "@/components/providers/RealtimeProvider";
 
 /**
  * The small realtime signals that make a chat feel like a conversation rather
@@ -196,10 +199,30 @@ export function useChatSignals({
 			}
 		};
 
-		void channel.subscribe(onSignal).catch(() => {});
-		void channel.presence.subscribe(["enter", "leave", "present"], refreshPresence).catch(() => {});
-		void channel.presence.enter({}).catch(() => {});
-		void refreshPresence();
+		const join = () => {
+			void channel.subscribe(onSignal).catch(() => {});
+			void channel.presence
+				.subscribe(["enter", "leave", "present"], refreshPresence)
+				.catch(() => {});
+			void channel.presence.enter({}).catch(() => {});
+			void refreshPresence();
+		};
+		// The token names the threads it may attach to. A thread newer than
+		// the token is refused with Ably's 40160; ask for a fresh token that
+		// includes it (the gateway checks membership) and try once more.
+		let retried = false;
+		void channel.attach().then(join, async (err: any) => {
+			if (retried || err?.code !== 40160) return;
+			retried = true;
+			requestConversationAccess(conversationId);
+			try {
+				await client.auth.authorize();
+				await channel.attach();
+				join();
+			} catch {
+				/* still refused: not a member, nothing to show */
+			}
+		});
 
 		return () => {
 			for (const t of typerTimersRef.current.values()) clearTimeout(t);

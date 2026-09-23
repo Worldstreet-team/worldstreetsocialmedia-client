@@ -23,6 +23,19 @@ const RealtimeContext = createContext<RealtimeContextType>({
 	client: null,
 });
 
+/**
+ * The realtime token names the threads it may attach to (the gateway scopes
+ * it per conversation since 2026-09-24), so a thread that did not exist when
+ * the token was minted is not in it. When an attach is refused for that
+ * reason, the hook below records the thread here and asks for a new token;
+ * the next auth request carries it as a hint the gateway honours for a
+ * member.
+ */
+let wantedConversation: string | null = null;
+export function requestConversationAccess(id: string) {
+	wantedConversation = id;
+}
+
 export const useRealtime = () => useContext(RealtimeContext);
 
 export default function RealtimeProvider({ children }: PropsWithChildren) {
@@ -46,7 +59,11 @@ export default function RealtimeProvider({ children }: PropsWithChildren) {
 				try {
 					// Get the session token from Clerk
 					const token = await window.Clerk?.session?.getToken();
-					const response = await fetch(`${API_URL}/api/messages/auth/token`, {
+					const hint = wantedConversation
+						? `?conversation=${encodeURIComponent(wantedConversation)}`
+						: "";
+					wantedConversation = null;
+					const response = await fetch(`${API_URL}/api/messages/auth/token${hint}`, {
 						headers: {
 							Authorization: `Bearer ${token}`,
 						},
