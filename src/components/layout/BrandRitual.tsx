@@ -68,16 +68,11 @@ export function BrandRitual({
 	className?: string;
 }) {
 	return (
-		<span
-			className={clsx("inline-flex items-center gap-2 min-w-0", className)}
-		>
-			{/* The W, not the astronaut helmet (owner 2026-09-22: "remove the
-			    worldstreet austronaut"). It is the same mark the mobile bar
-			    already shows, it strokes itself on the lockup's own track, and
-			    it follows the brand token when the palette moves, which the
-			    two PNGs never could. */}
-			<BrandMark size={size} className="shrink-0" />
-
+		<span className={clsx("inline-flex items-center min-w-0", className)}>
+			{/* No mark at all (owner 2026-09-23: "remove the w in the worldspace
+			    header"). The lockup is the word, animating on its own. The W
+			    lives on as `BrandMark` for the places that need an icon: the
+			    mobile bar's brand tab and the welcome card. */}
 			{eyebrow ? (
 				// One animated wrapper so the name and the eyebrow walk in
 				// together rather than on two out-of-step tracks.
