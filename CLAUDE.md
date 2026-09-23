@@ -480,6 +480,18 @@ noted below is fixed).
   4-step first-run modal, gated by localStorage `ws-social-welcome-v1`,
   replayable via the palette action "Replay the welcome tour"
   (`welcomeTourOpenAtom`).
+- **The wordmark writes itself** (owner 2026-09-23). `BrandWord` in
+  `layout/BrandRitual.tsx` renders "WorldSpace." as SVG `<text>` with one
+  `<tspan>` per letter, NOT converted paths: the glyphs stay Poppins, so the
+  lockup can never drift from the display face. Each letter strokes on
+  (`stroke-dasharray` 430, one number for every glyph, so they all draw at
+  one pen speed and short letters simply finish sooner), then fills a beat
+  later, 45ms behind the letter before it, on the same 5.2s ritual track and
+  curve as the retired mark. `paint-order: stroke` keeps the finished word a
+  clean letterform. The box (657 x 101, baseline 74 at size 100) was
+  MEASURED from Poppins 700 in the browser, and `textLength` pins the run to
+  it so a font swap cannot reflow the rail. Reduced motion rests on the
+  finished word: filled, no outline.
 - **The astronaut helmet is retired** (owner 2026-09-22: "remove the
   worldstreet austronaut"). `worldspace-mark{,-dark,-light}.png` are
   deleted. The brand mark everywhere is `BrandMark` in

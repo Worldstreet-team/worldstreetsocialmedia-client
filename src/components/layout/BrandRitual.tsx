@@ -48,6 +48,65 @@ export function BrandMark({
  * The helmet does not draw itself the way the W does: it is raster artwork,
  * and there is nothing to stroke. The wordmark keeps its entrance.
  */
+/*
+ * The wordmark, as letterforms rather than a run of text (owner 2026-09-23:
+ * "the worldspace text changes to svg the same way and animates the stroke
+ * dash array first and fills each word with tight delay").
+ *
+ * It is SVG `<text>`, not converted paths: the glyphs stay Poppins, so the
+ * wordmark cannot drift from the rest of the display type, and there are no
+ * path data to re-cut when the face changes. Stroke properties apply to
+ * `<tspan>`, so each letter carries its own dash, its own fill and its own
+ * delay, which is what makes the word write itself left to right.
+ *
+ * The box comes from MEASURING Poppins 700 in the browser at 100px:
+ * "WorldSpace." advances 657 units, with 74 above the baseline and 27 below.
+ * `textLength` pins the run to that measurement, so the lockup keeps its
+ * width through a font swap instead of reflowing the rail when Poppins
+ * lands.
+ */
+const WORD_BOX = { w: 657, h: 101, baseline: 74, size: 100 } as const;
+
+function BrandWord({ word, wordSize }: { word: string; wordSize: number }) {
+	const letters = [...word, "."];
+	// The svg is sized in the same units the HTML text used, so nothing
+	// around it moves: height is the full em box, width follows the measure.
+	const height = wordSize * (WORD_BOX.h / WORD_BOX.size);
+	return (
+		<svg
+			className="ws-brand-letters"
+			viewBox={`0 0 ${WORD_BOX.w} ${WORD_BOX.h}`}
+			width={height * (WORD_BOX.w / WORD_BOX.h)}
+			height={height}
+			role="img"
+			aria-label={`${word}.`}
+		>
+			<text
+				x={0}
+				y={WORD_BOX.baseline}
+				textLength={WORD_BOX.w}
+				lengthAdjust="spacing"
+				fontSize={WORD_BOX.size}
+				fontWeight={700}
+				fontFamily="var(--ws-font-display)"
+			>
+				{letters.map((ch, i) => (
+					<tspan
+						// biome-ignore lint/suspicious/noArrayIndexKey: letters are positional
+						key={i}
+						// The delay rides the index, so the word writes itself
+						// rather than every letter drawing at once.
+						style={{ "--i": i } as React.CSSProperties}
+						className={i === letters.length - 1 ? "ws-brand-dot" : undefined}
+					>
+						{ch}
+					</tspan>
+				))}
+			</text>
+		</svg>
+	);
+}
+
 export function BrandRitual({
 	size = 22,
 	wordSize = 14,
@@ -74,27 +133,14 @@ export function BrandRitual({
 			    lives on as `BrandMark` for the places that need an icon: the
 			    mobile bar's brand tab and the welcome card. */}
 			{eyebrow ? (
-				// One animated wrapper so the name and the eyebrow walk in
-				// together rather than on two out-of-step tracks.
-				<span className="ws-brand-word flex flex-col leading-tight min-w-0">
-					<span
-						className="font-display font-semibold text-primary tracking-tight truncate"
-						style={{ fontSize: wordSize }}
-					>
-						{word}
-					</span>
-					<span className="font-sans text-[calc(10px*var(--ws-fs))] font-semibold uppercase tracking-[2px] text-gold">
+				<span className="flex flex-col leading-tight min-w-0">
+					<BrandWord word={word} wordSize={wordSize} />
+					<span className="ws-brand-word font-sans text-[calc(10px*var(--ws-fs))] font-semibold uppercase tracking-[2px] text-gold">
 						{eyebrow}
 					</span>
 				</span>
 			) : (
-				<span
-					className="ws-brand-word font-display font-bold tracking-tight text-primary"
-					style={{ fontSize: wordSize }}
-				>
-					{word}
-					<i>.</i>
-				</span>
+				<BrandWord word={word} wordSize={wordSize} />
 			)}
 		</span>
 	);

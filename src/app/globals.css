@@ -1660,3 +1660,66 @@ html[data-ws-theme] .ws-default-chat-wallpaper::before {
 html[data-ws-theme="platform-light"] .ws-default-chat-wallpaper::before {
   opacity: 0.14;
 }
+
+/* The wordmark writes itself (owner 2026-09-23). Each letter is a <tspan>
+   with its own dash, fill and delay: the outline draws, then the fill lands a
+   beat later, and the next letter is 45ms behind the one before it. Same 5.2s
+   ritual track and same curve as the mark it replaced, so the lockup keeps
+   its rhythm.
+
+   `paint-order: stroke` puts the fill ON TOP of the stroke, so the finished
+   word is the clean letterform rather than a letter thickened by its own
+   outline. The dash length is one number for every glyph: letters differ in
+   perimeter, so this is a drawing gesture, not a plotter. */
+.ws-brand-letters {
+  display: block;
+  flex: none;
+  overflow: visible;
+}
+.ws-brand-letters tspan {
+  fill: var(--ws-text-primary);
+  fill-opacity: 0;
+  paint-order: stroke;
+  stroke: var(--ws-text-primary);
+  stroke-width: 2.4;
+  stroke-linejoin: round;
+  stroke-dasharray: 430;
+  stroke-dashoffset: 430;
+  animation: ws-brand-letter 5.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  animation-delay: calc(var(--i) * 0.045s);
+}
+.ws-brand-letters .ws-brand-dot {
+  fill: var(--ws-brand-gold-text);
+  stroke: var(--ws-brand-gold-text);
+}
+@keyframes ws-brand-letter {
+  0% {
+    stroke-dashoffset: 430;
+    fill-opacity: 0;
+    opacity: 1;
+  }
+  24% {
+    stroke-dashoffset: 0;
+    fill-opacity: 0;
+  }
+  32%,
+  82% {
+    stroke-dashoffset: 0;
+    fill-opacity: 1;
+    opacity: 1;
+  }
+  92%,
+  100% {
+    stroke-dashoffset: 430;
+    fill-opacity: 0;
+    opacity: 0;
+  }
+}
+/* Reduced motion ends every animation on its RESTING style, so rest is the
+   finished word: filled, no outline, nothing to draw. */
+html[data-ws-motion="reduce"] .ws-brand-letters tspan {
+  animation: none;
+  fill-opacity: 1;
+  stroke: none;
+  stroke-dashoffset: 0;
+}
