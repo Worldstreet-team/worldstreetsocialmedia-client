@@ -481,7 +481,10 @@ noted below is fixed).
   replayable via the palette action "Replay the welcome tour"
   (`welcomeTourOpenAtom`).
 - **The wordmark writes itself, with a drop of ink at the pen tip** (owner
-  2026-09-23). `BrandWord` in `layout/BrandRitual.tsx` draws "WorldSpace."
+  2026-09-23). PARKED the same day ("just put only the texts for now no
+  animation"): `ANIMATE = false` in BrandRitual renders the still word from
+  the same paths; flip it to bring everything below back. The shipped
+  animated version is the git tag `wordmark-animated`. `BrandWord` in `layout/BrandRitual.tsx` draws "WorldSpace."
   from REAL PATHS: `layout/wordmark-glyphs.ts` is every contour of Poppins
   700 as its own closed path with its measured length, cut by
   `scripts/wordmark-glyphs.py` (re-run only if the display face changes;

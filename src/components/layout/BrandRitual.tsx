@@ -90,6 +90,13 @@ const GLINT = {
 	],
 } as const;
 
+// Parked (owner 2026-09-23: "keep that and save somewhere, and just put
+// only the texts for now no animation"). The lockup shows the finished word,
+// still. Everything below still builds the animated one (draw, ink drop,
+// glint); set this to true to bring it back. The version that shipped is
+// tagged `wordmark-animated` (534bb34).
+const ANIMATE = false;
+
 const fixed = (n: number) => n.toFixed(2).replace(/\.?0+$/, "");
 
 function BrandWord({ wordSize }: { wordSize: number }) {
@@ -105,6 +112,30 @@ function BrandWord({ wordSize }: { wordSize: number }) {
 		d: glyph.contours.map((c) => c.d).join(""),
 		contours: glyph.contours.map((c) => ({ ...c, id: `${uid}-wm${n++}` })),
 	}));
+	if (!ANIMATE) {
+		return (
+			<svg
+				className="ws-wordmark"
+				viewBox={`0 0 ${WORDMARK_BOX.w} ${WORDMARK_BOX.h}`}
+				width={height * (WORDMARK_BOX.w / WORDMARK_BOX.h)}
+				height={height}
+				role="img"
+				aria-label="WorldSpace"
+			>
+				{letters.map((l) => (
+					<path
+						key={l.id}
+						d={l.d}
+						fillRule="evenodd"
+						className={clsx(
+							"ws-wm-letter ws-wm-still",
+							l.ch === "." && "is-dot",
+						)}
+					/>
+				))}
+			</svg>
+		);
+	}
 	return (
 		<svg
 			className="ws-wordmark"

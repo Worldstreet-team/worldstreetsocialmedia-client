@@ -1716,6 +1716,10 @@ html[data-ws-theme="platform-light"] .ws-default-chat-wallpaper::before {
 .ws-wm-letter.is-dot {
   --wm-ink: var(--ws-brand-gold-text);
 }
+/* The still word, while the animation is parked (ANIMATE in BrandRitual). */
+.ws-wm-still {
+  fill: var(--wm-ink);
+}
 .ws-wm-line,
 .ws-wm-drop {
   fill: none;
