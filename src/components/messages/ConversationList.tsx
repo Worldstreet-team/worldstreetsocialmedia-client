@@ -92,6 +92,9 @@ export interface ConversationRow {
 		sender?: string | { _id?: string; firstName?: string; username?: string };
 		/** Group membership events; the row renders their copy, not "". */
 		systemEvent?: { kind: string; params?: Record<string, unknown> };
+		poll?: { question?: string };
+		groupInvite?: { name?: string };
+		removedAt?: string;
 	};
 	/** Not sent by the gateway today — see `rowTime`. Kept for callers. */
 	lastMessageAt?: string;
@@ -680,7 +683,13 @@ export function ConversationList({
 														: undefined,
 												)
 											: t("messages.noMessages")
-										: kind
+										: conv.lastMessage?.removedAt
+											? "Message removed"
+											: conv.lastMessage?.type === "poll"
+												? `Poll: ${conv.lastMessage.poll?.question ?? ""}`
+												: conv.lastMessage?.type === "group_invite"
+													? `Invite to ${conv.lastMessage.groupInvite?.name ?? "a group"}`
+													: kind
 											? conv.lastMessage?.type === "audio" &&
 												conv.lastMessage?.durationSec
 												? `${Math.floor(conv.lastMessage.durationSec / 60)}:${String(Math.floor(conv.lastMessage.durationSec % 60)).padStart(2, "0")}`

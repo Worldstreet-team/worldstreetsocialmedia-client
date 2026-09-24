@@ -405,6 +405,40 @@ class CallManager {
 		}, RING_TIMEOUT_MS);
 	}
 
+	/**
+	 * Join a call already going in a group (audit G174): no ring, straight
+	 * into the room, then sync whoever is there. Counted as not the caller,
+	 * so nothing is logged twice.
+	 */
+	async joinCall(opts: { conversationId: string; peer: CallPeer; isVideo: boolean }) {
+		if (this.state.status !== "idle") return;
+		this.clearTimers();
+		this.set({
+			status: "connecting",
+			isIncoming: true,
+			peer: opts.peer,
+			isGroup: true,
+			groupCaller: null,
+			participantCount: 0,
+			conversationId: opts.conversationId,
+			isVideo: opts.isVideo,
+			minimized: false,
+			micOn: true,
+			camOn: opts.isVideo,
+			endReason: null,
+			error: null,
+			startedAt: null,
+		});
+		const joined = await this.joinRoom(opts.conversationId, opts.isVideo);
+		if (!joined) return;
+		this.syncRemote();
+		if (this.getState().status === "connecting") {
+			this.rejoinTimer = setTimeout(() => {
+				if (this.state.status === "connecting") this.finish("ended");
+			}, REJOIN_GRACE_MS);
+		}
+	}
+
 	/** Answer an incoming call. */
 	async acceptCall() {
 		const { status, isIncoming, conversationId, isVideo } = this.state;

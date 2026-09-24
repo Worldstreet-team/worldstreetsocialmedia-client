@@ -1,5 +1,8 @@
 "use client";
 
+import { PollBubble, type PollData } from "./PollBubble";
+import { GroupInviteBubble, type GroupInviteCard } from "./GroupInviteBubble";
+
 import clsx from "clsx";
 import { format } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
@@ -60,6 +63,16 @@ export interface BubbleMessage {
 	createdAt: string;
 	/** Which platform it was sent from (the gateway stamps it). */
 	source?: string;
+	mentions?: string[];
+	mentionAll?: boolean;
+	/** An admin removed it for everyone (audit G60): a tombstone. */
+	removedBy?: string;
+	removedAt?: string;
+	/** Edited by the sender (audit G90). */
+	editedAt?: string;
+	expiresAt?: string;
+	poll?: PollData;
+	groupInvite?: GroupInviteCard;
 }
 
 /**
@@ -326,6 +339,8 @@ export interface BubbleProps {
 	onReact?: (m: BubbleMessage, emoji: string) => void;
 	/** The Message action on a shared contact card. */
 	onMessageContact?: (profileId: string) => void;
+	/** Vote in a poll: the picks replace the last ones. */
+	onVote?: (messageId: string, optionIds: string[]) => Promise<void> | void;
 }
 
 /**
@@ -369,6 +384,7 @@ export const MessageBubble = memo(function MessageBubble({
 	onRetryUpload,
 	onCancelUpload,
 	onReact,
+	onVote,
 	onMessageContact,
 }: BubbleProps) {
 	const rowRef = useRef<HTMLDivElement | null>(null);
@@ -428,6 +444,17 @@ export const MessageBubble = memo(function MessageBubble({
 		armedRef.current = armed;
 	};
 
+	// A tombstone (audit G60): the row stays so the thread does not shrink
+	// under people, and says what happened.
+	if (m.removedAt) {
+		return (
+			<div className={clsx("flex w-full px-4 py-0.5", isMe ? "justify-end" : "justify-start")}>
+				<span className="rounded-pill bg-primary/5 px-3 py-1.5 font-sans text-[calc(12.5px*var(--ws-fs))] italic text-muted">
+					Message removed by an admin
+				</span>
+			</div>
+		);
+	}
 	if (m.type === "system") {
 		const copy = m.systemEvent
 			? systemEventCopy(
@@ -909,6 +936,17 @@ export const MessageBubble = memo(function MessageBubble({
 								</button>
 							</div>
 						)}
+						{m.type === "poll" && m.poll && (
+							<PollBubble messageId={m._id} poll={m.poll} onVote={(id, picks) => onVote?.(id, picks)} />
+						)}
+						{m.type === "group_invite" && m.groupInvite && (
+							<GroupInviteBubble
+								card={m.groupInvite}
+								isMe={isMe}
+								accentBg={isMe ? ON_MINE : ACCENT_18}
+								accentInk="var(--chat-accent, var(--ws-brand-primary))"
+							/>
+						)}
 						{m.storyRef && (
 							<button
 								type="button"
@@ -935,6 +973,9 @@ export const MessageBubble = memo(function MessageBubble({
 								)}
 							>
 								{linkify(m.content, isMe)}
+								{m.editedAt && (
+									<span className="ml-1.5 font-sans text-[calc(11px*var(--ws-fs))] opacity-60">edited</span>
+								)}
 							</p>
 						)}
 						{/* A WorldSpace post link renders as the post (owner pick),

@@ -84,7 +84,7 @@ export interface ThreadListProps {
 		| "onCancelUpload"
 		| "onReact"
 		| "onMessageContact"
-	>;
+	 | "onVote">;
 }
 
 /** Module-level so virtuoso does not see a new follow rule every render. */

@@ -17,7 +17,18 @@ export interface Message {
 	sender: UserProfile;
 	content: string;
 	// "call" is a finished call logged into the thread, not something typed.
-	type: "text" | "image" | "video" | "audio" | "file" | "call" | "payment" | "contact";
+	type:
+		| "text"
+		| "image"
+		| "video"
+		| "audio"
+		| "file"
+		| "call"
+		| "payment"
+		| "contact"
+		| "system"
+		| "poll"
+		| "group_invite";
 	/** A shared account (owner 2026-09-15): the bubble is a card with a Message action. */
 	contact?: { profile: string; name: string; username?: string; avatar?: string };
 	/** USD minor units, payment messages only. */
@@ -58,6 +69,28 @@ export interface Message {
 	/** Group payments name their target; DMs imply the peer. */
 	payTo?: string;
 	payToName?: string;
+	/** Groups: who this names, by id, and @everyone. */
+	mentions?: string[];
+	mentionAll?: boolean;
+	/** An admin removed it for everyone: a tombstone. */
+	removedBy?: string;
+	removedAt?: string;
+	editedAt?: string;
+	expiresAt?: string;
+	seq?: number;
+	poll?: {
+		question: string;
+		options: { id: string; text: string }[];
+		multi?: boolean;
+		anonymous?: boolean;
+		endsAt?: string;
+		counts?: Record<string, number>;
+		total?: number;
+		mine?: string[];
+		votes?: { option: string; profile: string; at: string }[];
+	};
+	groupInvite?: { conversation: string; name?: string; avatar?: string; memberCount: number; code: string };
+	systemEvent?: { kind: string; params?: Record<string, unknown> };
 }
 
 // Map conversationId -> Message[]

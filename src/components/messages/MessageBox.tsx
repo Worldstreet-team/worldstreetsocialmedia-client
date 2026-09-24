@@ -85,11 +85,7 @@ import {
 import { imageMeta, videoMeta } from "@/lib/media-meta";
 import { conversationIdentity } from "@/lib/conversation-identity";
 import { compressImage } from "@/lib/image-compress";
-import {
-	patchJsonDirect,
-	postJsonDirect,
-	sendFormProgress,
-} from "@/lib/upload-direct";
+import { deleteDirect, patchJsonDirect, postJsonDirect, sendFormProgress } from "@/lib/upload-direct";
 import { loadThreads, saveThread } from "@/lib/chat-vault";
 import {
 	DUR,
@@ -129,6 +125,11 @@ import {
 	RiUserAddLine,
 	RiFileCopyLine,
 	RiRestartLine,
+	RiPushpinLine,
+	RiEyeLine,
+	RiPencilLine as RiEditLine,
+	RiDeleteBinLine,
+	RiUnpinLine,
 } from "@remixicon/react";
 // Tray and Archive stay Phosphor: they label the two shelves, the requests
 // row and the archived door. The Remix swap was for the chat MESSAGE glyphs,
@@ -141,6 +142,12 @@ import { GroupSheet } from "@/components/messages/GroupSheet";
 import { GroupCreateModal } from "@/components/messages/GroupCreateModal";
 import { JoinRequestsSheet } from "@/components/messages/JoinRequestsSheet";
 import { InviteCard } from "@/components/messages/InviteCard";
+import { PinsBar } from "@/components/messages/PinsBar";
+import { CallJoinBar } from "@/components/messages/CallJoinBar";
+import { PollComposer, type PollDraft } from "@/components/messages/PollComposer";
+import { SeenBySheet } from "@/components/messages/SeenBySheet";
+import { ThreadSearchSheet } from "@/components/messages/ThreadSearchSheet";
+import { EditMessageSheet } from "@/components/messages/EditMessageSheet";
 import { BACKEND_ORIGIN } from "@/const";
 
 const API_URL = BACKEND_ORIGIN;
@@ -148,11 +155,7 @@ import { useAtom, useSetAtom } from "jotai";
 import { useAtomValue } from "jotai";
 import { onlineIdsAtom } from "@/store/ui.atom";
 import { userAtom } from "@/store/user.atom";
-import {
-  activeConversationIdAtom,
-  messageCacheAtom,
-  unreadMessagesCountAtom,
-} from "@/store/messageCache";
+import { activeConversationIdAtom, messageCacheAtom, unreadMessagesCountAtom, type Message as CachedMessage } from "@/store/messageCache";
 import NewConversationModal from "./NewConversationModal";
 
 // Helper component for conditional channel subscription
@@ -254,15 +257,7 @@ interface Message {
 	sender: UserProfile;
 	content: string;
 	// "call" is a finished call logged into the thread, not something typed.
-  type:
-    | "text"
-    | "image"
-    | "video"
-    | "audio"
-    | "file"
-    | "call"
-    | "payment"
-    | "contact";
+	type: CachedMessage["type"];
 	/** A shared account: the bubble is a card with a Message action. */
   contact?: {
     profile: string;
@@ -303,6 +298,15 @@ interface Message {
 	uploadPct?: number;
 	/** Transient, sender's tab only: send failed, retry offered. */
 	failed?: boolean;
+	mentions?: string[];
+	mentionAll?: boolean;
+	removedBy?: string;
+	removedAt?: string;
+	editedAt?: string;
+	expiresAt?: string;
+	poll?: CachedMessage["poll"];
+	groupInvite?: CachedMessage["groupInvite"];
+	systemEvent?: CachedMessage["systemEvent"];
 }
 
 /**
@@ -384,6 +388,12 @@ interface Conversation {
 	/** Groups I run: people asking to join (audit G38). */
 	requestCount?: number;
 	description?: string;
+	/** Pinned message ids (audit G88). */
+	pins?: string[];
+	/** A call in progress (audit G121). */
+	call?: { startedBy: string; startedAt: string; video: boolean } | null;
+	notifyLevel?: "all" | "mentions" | "none";
+	disappearSec?: number;
 	/** Group lock: only admins may post while true (register 99). */
 	adminsOnly?: boolean;
 	/** Member records with high-water read marks (gateway W1). */
@@ -546,6 +556,10 @@ export const MessageBox = ({
 	// the parent no longer re-renders the thread per touchmove.
 	/** Briefly highlighted after a jump, so the eye lands on the right bubble. */
 	const [flashedId, setFlashedId] = useState<string | null>(null);
+	const [pollOpen, setPollOpen] = useState(false);
+	const [seenByFor, setSeenByFor] = useState<string | null>(null);
+	const [searchOpen, setSearchOpen] = useState(false);
+	const [editFor, setEditFor] = useState<{ id: string; content: string } | null>(null);
 
 	/**
 	 * Scroll to a quoted message and flash it.
@@ -1946,6 +1960,17 @@ export const MessageBox = ({
 			// invite row itself).
 			const cid = String(ablyMessage.data.conversationId ?? "");
 			const patch = ablyMessage.data.patch;
+			// A call starting or ending lands on the row at once, so the
+			// join bar does not wait for the refetch.
+			if (cid && (ablyMessage.data.type === "call:started" || ablyMessage.data.type === "call:ended")) {
+				const call =
+					ablyMessage.data.type === "call:started"
+						? { startedBy: String(ablyMessage.data.by ?? ""), startedAt: new Date().toISOString(), video: Boolean(ablyMessage.data.video) }
+						: null;
+				const applyCall = (c: Conversation): Conversation => (c._id === cid ? { ...c, call } : c);
+				setConversations((prev) => prev.map(applyCall));
+				setActiveConversation((prev) => (prev ? applyCall(prev) : prev));
+			}
 			if (patch && cid) {
 				const apply = (c: Conversation): Conversation =>
 					c._id !== cid
@@ -1956,6 +1981,7 @@ export const MessageBox = ({
 								...(typeof patch.avatar === "string" ? { avatar: patch.avatar || undefined } : {}),
 								...(typeof patch.description === "string" ? { description: patch.description } : {}),
 								...(typeof patch.adminsOnly === "boolean" ? { adminsOnly: patch.adminsOnly } : {}),
+								...(Array.isArray(patch.pins) ? { pins: patch.pins.map(String) } : {}),
 							};
 				setConversations((prev) => prev.map(apply));
 				setActiveConversation((prev) => (prev ? apply(prev) : prev));
@@ -1992,6 +2018,43 @@ export const MessageBox = ({
 				else if (!ablyMessage.data.left)
 					toast.error("You were removed from the group");
 			}
+			return;
+		}
+		if (ablyMessage.name === "event" && ablyMessage.data.type === "message:edited") {
+			const { conversationId, messageId, content, editedAt } = ablyMessage.data;
+			setMessageCache((prev) => ({
+				...prev,
+				[conversationId]: (prev[conversationId] ?? []).map((m) =>
+					m._id !== messageId
+						? m
+						: m.type === "poll" && m.poll
+							? { ...m, editedAt, poll: { ...m.poll, question: content } }
+							: { ...m, content, editedAt },
+				),
+			}));
+			return;
+		}
+		if (ablyMessage.name === "event" && ablyMessage.data.type === "message:removed") {
+			// An admin removed it: the row becomes a tombstone in place.
+			const { conversationId, messageId, by } = ablyMessage.data;
+			setMessageCache((prev) => ({
+				...prev,
+				[conversationId]: (prev[conversationId] ?? []).map((m) =>
+					m._id === messageId
+						? { ...m, content: "", mediaUrl: undefined, reactions: [], removedBy: String(by), removedAt: new Date().toISOString() }
+						: m,
+				),
+			}));
+			return;
+		}
+		if (ablyMessage.name === "event" && ablyMessage.data.type === "poll:updated") {
+			const { conversationId, messageId, counts, total } = ablyMessage.data;
+			setMessageCache((prev) => ({
+				...prev,
+				[conversationId]: (prev[conversationId] ?? []).map((m) =>
+					m._id === messageId && m.poll ? { ...m, poll: { ...m.poll, counts, total } } : m,
+				),
+			}));
 			return;
 		}
 		if (
@@ -2184,6 +2247,14 @@ export const MessageBox = ({
 					// thread, so a stale id degrades to a plain message.
 					replyTo: currentReply?._id,
 					clientKey,
+					// Mentions travel as ids (audit G81): the roster names the
+					// @handles in the text; @everyone is its own flag.
+					mentions: isGroupThread
+						? groupRoster
+								.filter((r) => r.username && new RegExp(`@${r.username}\\b`, "i").test(text))
+								.map((r) => r.id)
+						: undefined,
+					mentionAll: isGroupThread && /@everyone\b/i.test(text) ? true : undefined,
 				},
 				{ headers: { Authorization: `Bearer ${token}` } },
 			);
@@ -2286,7 +2357,80 @@ export const MessageBox = ({
 	};
 
 	// --- Call Logic (Global) ---
-	const { startCall } = useCall();
+	const { startCall, joinCall } = useCall();
+
+	/** Vote in a poll (audit G89): the gateway's answer is the poll. */
+	const voteOn = useCallback(async (messageId: string, optionIds: string[]) => {
+		const convId = activeIdRef.current;
+		if (!convId) return;
+		const res = await postJsonDirect(`/api/messages/message/${messageId}/vote`, { optionIds });
+		if (!res.success) {
+			toast.error(res.message || "Couldn't vote");
+			return;
+		}
+		if (res.data?.poll)
+			setMessageCache((prev) => ({
+				...prev,
+				[convId]: (prev[convId] ?? []).map((m) => (m._id === messageId ? { ...m, poll: res.data.poll } : m)),
+			}));
+	}, [setMessageCache]);
+
+	/** Delete for me (audit G91): gone from my view, at any age. */
+	const hideForMe = useCallback(async (message: Message) => {
+		const convId = activeIdRef.current;
+		if (!convId) return;
+		setMessageCache((prev) => ({ ...prev, [convId]: (prev[convId] ?? []).filter((m) => m._id !== message._id) }));
+		const res = await deleteDirect(`/api/messages/message/${message._id}?scope=me`);
+		if (!res.success) {
+			setMessageCache((prev) => ({
+				...prev,
+				[convId]: [...(prev[convId] ?? []), message].sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1)),
+			}));
+			toast.error(res.message || "Couldn't delete that");
+		}
+	}, [setMessageCache]);
+
+	/** Pin or unpin (audit G88); the row's pins update from the answer. */
+	const setPinned = useCallback(async (messageId: string, on: boolean) => {
+		const convId = activeIdRef.current;
+		if (!convId) return;
+		const res = on
+			? await postJsonDirect(`/api/messages/conversations/${convId}/pins`, { messageId })
+			: await deleteDirect(`/api/messages/conversations/${convId}/pins/${messageId}`);
+		if (!res.success) {
+			toast.error(res.message || (on ? "Couldn't pin that" : "Couldn't unpin that"));
+			return;
+		}
+		const pins = Array.isArray(res.data?.pins) ? res.data.pins.map((x: any) => String(x.message ?? x)) : undefined;
+		if (pins) {
+			const apply = (c: Conversation): Conversation => (c._id === convId ? { ...c, pins } : c);
+			setConversations((prev) => prev.map(apply));
+			setActiveConversation((prev) => (prev ? apply(prev) : prev));
+		}
+	}, []);
+
+	/** A poll (audit G89): one POST, the stored row lands in the cache. */
+	const sendPoll = useCallback(async (draft: PollDraft): Promise<boolean> => {
+		const convId = activeIdRef.current;
+		if (!convId) return false;
+		const res = await postJsonDirect("/api/messages", {
+			conversationId: convId,
+			type: "poll",
+			poll: draft,
+			clientKey: newKey(),
+		});
+		if (!res.success || !res.data?._id) {
+			toast.error(res.message || "Couldn't send the poll");
+			return false;
+		}
+		setMessageCache((prev) => ({
+			...prev,
+			[convId]: (prev[convId] ?? []).some((m) => m._id === res.data._id) ? prev[convId] : [...(prev[convId] ?? []), res.data],
+		}));
+		setPendingNew(0);
+		scrollToBottom();
+		return true;
+	}, [setMessageCache]);
 
 	/**
 	 * Toggle MY reaction (register 132-134): optimistic replace-on-re-react
@@ -2502,6 +2646,7 @@ export const MessageBox = ({
         thumbnail: string;
         authorUsername: string;
       }) => void openStoryRef(ref),
+			onVote: voteOn,
 			onCallBack: (video: boolean) => {
 				if (!activeConversation) return;
 				// Same branch as the header buttons: a group call-back was
@@ -3347,6 +3492,16 @@ export const MessageBox = ({
 					<motion.button
 							{...press}
 							type="button"
+							onClick={() => setSearchOpen(true)}
+							aria-label="Search this chat"
+							title="Search this chat"
+							className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
+						>
+							<RiSearchLine size={20} />
+						</motion.button>
+						<motion.button
+							{...press}
+							type="button"
 							onClick={() => setThemeSheet("gallery")}
 							aria-label="Chat theme"
 							title="Chat theme"
@@ -3375,6 +3530,34 @@ export const MessageBox = ({
 							addFiles(Array.from(e.dataTransfer.files ?? []));
 						}}
 					>
+						{!activeConversation.isInvite && (
+							<div className="relative z-10 shrink-0">
+								{isGroupThread && (
+									<CallJoinBar
+										call={activeConversation.call}
+										starterName={
+											activeConversation.call?.startedBy === myProfileId
+												? "you"
+												: groupRoster.find((r) => r.id === activeConversation.call?.startedBy)?.name
+										}
+										onJoin={(video) =>
+											joinCall({
+												conversationId: activeConversation._id,
+												peer: { id: activeConversation._id, name: headerIdentity.title, avatar: headerIdentity.avatar, username: "" },
+												isVideo: video,
+											})
+										}
+									/>
+								)}
+								<PinsBar
+									conversationId={activeConversation._id}
+									pinIds={activeConversation.pins ?? []}
+									canUnpin={!isGroupThread || activeConversation.myRole !== "member"}
+									onJump={jumpToMessage}
+									onUnpin={(id) => setPinned(id, false)}
+								/>
+							</div>
+						)}
 						{/* The wash only fades, it is the size of the pane; the chip is
 						    the small thing that lands. */}
 						<AnimatePresence>
@@ -4257,24 +4440,108 @@ export const MessageBox = ({
 													Copy text
 												</motion.button>
 											)}
-											{(typeof msgMenu.message.sender === "string"
-												? msgMenu.message.sender === myProfileId
-												: (msgMenu.message.sender as any)?._id ===
-													myProfileId) && (
-												<motion.button
-													variants={staggerItem}
-													type="button"
-													role="menuitem"
-													onClick={() => {
-														void unsendMessage(msgMenu.message);
-														setMsgMenu(null);
-													}}
-													className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-danger transition-colors hover:bg-primary/5"
-												>
-													<RiRestartLine size={16} />
-													Unsend
-												</motion.button>
-											)}
+											{(() => {
+												const mine =
+													typeof msgMenu.message.sender === "string"
+														? msgMenu.message.sender === myProfileId
+														: (msgMenu.message.sender as any)?._id === myProfileId;
+												const age = Date.now() - new Date(msgMenu.message.createdAt).getTime();
+												const pinned = (activeConversation?.pins ?? []).includes(msgMenu.message._id);
+												const temp = msgMenu.message._id.startsWith("temp-");
+												const item =
+													"flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/5";
+												const dangerItem = item.replace("text-primary", "text-danger");
+												const editable =
+													mine &&
+													!msgMenu.message.removedAt &&
+													(msgMenu.message.type === "text" || msgMenu.message.type === "poll") &&
+													age < 15 * 60_000;
+												return (
+													<>
+														{!msgMenu.message.removedAt && !temp && (
+															<motion.button
+																variants={staggerItem}
+																type="button"
+																role="menuitem"
+																onClick={() => {
+																	void setPinned(msgMenu.message._id, !pinned);
+																	setMsgMenu(null);
+																}}
+																className={item}
+															>
+																{pinned ? <RiUnpinLine size={16} /> : <RiPushpinLine size={16} />}
+																{pinned ? "Unpin" : "Pin"}
+															</motion.button>
+														)}
+														{mine && isGroupThread && !temp && (
+															<motion.button
+																variants={staggerItem}
+																type="button"
+																role="menuitem"
+																onClick={() => {
+																	setSeenByFor(msgMenu.message._id);
+																	setMsgMenu(null);
+																}}
+																className={item}
+															>
+																<RiEyeLine size={16} />
+																Seen by
+															</motion.button>
+														)}
+														{editable && (
+															<motion.button
+																variants={staggerItem}
+																type="button"
+																role="menuitem"
+																onClick={() => {
+																	setEditFor({
+																		id: msgMenu.message._id,
+																		content:
+																			msgMenu.message.type === "poll"
+																				? (msgMenu.message.poll?.question ?? "")
+																				: (msgMenu.message.content ?? ""),
+																	});
+																	setMsgMenu(null);
+																}}
+																className={item}
+															>
+																<RiEditLine size={16} />
+																Edit
+															</motion.button>
+														)}
+														{!temp && (
+															<motion.button
+																variants={staggerItem}
+																type="button"
+																role="menuitem"
+																onClick={() => {
+																	void hideForMe(msgMenu.message);
+																	setMsgMenu(null);
+																}}
+																className={mine && age < 48 * 3600_000 ? item : dangerItem}
+															>
+																<RiDeleteBinLine size={16} />
+																Delete for me
+															</motion.button>
+														)}
+														{mine && !msgMenu.message.removedAt && age < 48 * 3600_000 && (
+															<motion.button
+																variants={staggerItem}
+																type="button"
+																role="menuitem"
+																onClick={() => {
+																	void unsendMessage(msgMenu.message);
+																	setMsgMenu(null);
+																}}
+																className={dangerItem}
+															>
+																<RiRestartLine size={16} />
+																Delete for everyone
+															</motion.button>
+														)}
+													</>
+												);
+											})()}
 										</div>
 									</motion.div>
 								</motion.div>
@@ -4292,6 +4559,37 @@ export const MessageBox = ({
 				onMoney={() => setShowSendMoney(true)}
 				onContact={() => setContactPickerOpen(true)}
 				onPhoneContact={() => void sendPhoneContact()}
+				onPoll={() => setPollOpen(true)}
+			/>
+			<PollComposer open={pollOpen} onClose={() => setPollOpen(false)} onSubmit={sendPoll} />
+			<SeenBySheet open={seenByFor !== null} onClose={() => setSeenByFor(null)} messageId={seenByFor} />
+			{activeConversation && (
+				<ThreadSearchSheet
+					open={searchOpen}
+					onClose={() => setSearchOpen(false)}
+					conversationId={activeConversation._id}
+					onJump={jumpToMessage}
+				/>
+			)}
+			<EditMessageSheet
+				open={editFor !== null}
+				onClose={() => setEditFor(null)}
+				messageId={editFor?.id ?? null}
+				initial={editFor?.content ?? ""}
+				onSaved={(id, content, editedAt) => {
+					const convId = activeIdRef.current;
+					if (!convId) return;
+					setMessageCache((prev) => ({
+						...prev,
+						[convId]: (prev[convId] ?? []).map((m) =>
+							m._id !== id
+								? m
+								: m.type === "poll" && m.poll
+									? { ...m, editedAt, poll: { ...m.poll, question: content } }
+									: { ...m, content, editedAt },
+						),
+					}));
+				}}
 			/>
 			<ContactPicker
 				open={contactPickerOpen}
