@@ -40,7 +40,9 @@ export function systemEventCopy(
 		case "group.created":
 			return `${actor} created "${(p.name as string) ?? "the group"}"`;
 		case "group.renamed":
-			return `${actor} renamed the group to "${(p.name as string) ?? ""}"`;
+			return p.from
+				? `${actor} renamed the group from "${p.from as string}" to "${(p.name as string) ?? ""}"`
+				: `${actor} renamed the group to "${(p.name as string) ?? ""}"`;
 		case "group.avatar":
 			return p.removed
 				? `${actor} removed the group photo`
@@ -54,12 +56,39 @@ export function systemEventCopy(
 				? `${actor} removed the description`
 				: `${actor} changed the description`;
 		case "group.history":
+			if (typeof p.share === "number")
+				return p.share > 0
+					? `${actor} set new members to see the last ${p.share} messages`
+					: `${actor} hid past messages from new members`;
 			return p.visible
 				? `${actor} let new members see past messages`
 				: `${actor} hid past messages from new members`;
+		case "group.slowmode":
+			return Number(p.seconds) > 0
+				? `${actor} turned on slow mode: one message every ${slowWords(p.seconds)}`
+				: `${actor} turned off slow mode`;
+		case "group.disappearing":
+			return Number(p.seconds) > 0
+				? `${actor} set messages to disappear after ${spanWords(p.seconds)}`
+				: `${actor} turned off disappearing messages`;
+		case "group.pinned":
+			return `${actor} pinned a message`;
+		case "group.unpinned":
+			return `${actor} unpinned a message`;
+		case "group.restricted":
+			return viewerIsSubject
+				? `${actor} paused your messages for a while`
+				: `${actor} paused ${subject}'s messages for a while`;
+		case "group.unrestricted":
+			return viewerIsSubject
+				? `${actor} let you send messages again`
+				: `${actor} let ${subject} send messages again`;
+		case "group.restored":
+			return `${actor} restored the group`;
 		case "group.settings":
 			return `${actor} changed who can ${settingWords(p.changed)}`;
 		case "group.left":
+			if (p.accountDeleted) return `${subject}'s account was deleted`;
 			return viewerIsSubject ? "You left the group" : `${subject} left`;
 		case "group.removed":
 			if (p.banned)
@@ -90,6 +119,20 @@ export function systemEventCopy(
 		default:
 			return "";
 	}
+}
+
+function slowWords(seconds: unknown): string {
+	const s = Number(seconds) || 0;
+	if (s >= 3600) return `${Math.round(s / 3600)} hour${s >= 7200 ? "s" : ""}`;
+	if (s >= 60) return `${Math.round(s / 60)} minute${s >= 120 ? "s" : ""}`;
+	return `${s} seconds`;
+}
+function spanWords(seconds: unknown): string {
+	const s = Number(seconds) || 0;
+	if (s >= 7776000) return "90 days";
+	if (s >= 604800) return "7 days";
+	if (s >= 86400) return "24 hours";
+	return `${s} seconds`;
 }
 
 const SETTING_WORDS: Record<string, string> = {
