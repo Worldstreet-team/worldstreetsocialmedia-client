@@ -58,6 +58,25 @@ export interface BubbleMessage {
 	} | null;
 	sender: { _id: string } & Record<string, unknown>;
 	createdAt: string;
+	/** Which platform it was sent from (the gateway stamps it). */
+	source?: string;
+}
+
+/**
+ * "via Xstream" under a message that crossed platforms (owner 2026-09-24:
+ * "know if someone sends a message from worldspace or xstream ... the same
+ * banner for both"). WorldSpace and its app are one home, so nothing is
+ * said for those; Xstream shows the mirror image, "via WorldSpace".
+ */
+const PLATFORM_LABELS: Record<string, string> = {
+	dashboard: "Dashboard",
+	academy: "Academy",
+	shop: "Shop",
+	xstream: "Xstream",
+};
+function viaLabel(source: string | undefined): string | null {
+	const name = source ? PLATFORM_LABELS[source] : undefined;
+	return name ? `via ${name}` : null;
 }
 
 function quotedPreview(r: {
@@ -748,6 +767,11 @@ export const MessageBubble = memo(function MessageBubble({
 								{(m.sender as { firstName?: string })?.firstName ||
 									(m.sender as { username?: string })?.username ||
 									"Member"}
+							</span>
+						)}
+						{viaLabel(m.source) && (
+							<span className="mb-0.5 block font-sans text-[calc(12px*var(--ws-fs))] opacity-60">
+								{viaLabel(m.source)}
 							</span>
 						)}
 						{album && album.length > 1 && (

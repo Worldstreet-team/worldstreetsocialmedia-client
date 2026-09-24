@@ -41,6 +41,8 @@ export interface Message {
 	/** Sender-generated dedup id — the stable list key across the
 	 *  optimistic→server swap (W1). */
 	clientKey?: string;
+	/** Which platform it was sent from; the bubble says "via Xstream". */
+	source?: string;
 	width?: number;
 	height?: number;
 	thumbhash?: string;
