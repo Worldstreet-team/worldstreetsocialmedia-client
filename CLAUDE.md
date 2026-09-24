@@ -895,7 +895,27 @@ a removal) keep people out of links and adds; `?quiet=1` on a leave posts
 no row; `/groups/:id/past` lists who left in 60 days. The group records a
 live call from the first ring (`call` on the row and on GroupInfo, events
 `call:started` / `call:ended`), reconciled against the LiveKit room when
-the group is read. Client UI for all of this is still to come.
+the group is read. Third round (same day, gateway `557a1b8`): admin
+rights per admin (`members[].rights`, `adminCan()`, owner-set; an admin
+with `addAdmins` may promote), restrict a member (`restrict` on the
+member PATCH), slow mode and disappearing messages and history share on
+the group PATCH (`slowModeSec`, `disappearSec`, `historyShare`), pins
+(`/conversations/:id/pins`, three, groups by the `pin` permission and DMs
+by either side), edit within 15 minutes (`PATCH /message/:id`), delete for
+me (`?scope=me`) and delete for everyone within 48h, polls (`type: "poll"`
++ `POST /message/:id/vote`), group invite cards (`type: "group_invite"`),
+the gallery and search (`/:conversationId/media`, `/search`), notification
+level per thread (`/conversations/:id/notifications`), an admin log
+(`/groups/:id/log`), soft delete with `POST /groups/:id/restore` inside 30
+days and an hourly sweeper (`messaging-sweep.service.ts`) that purges
+messages and media after, `seq` on every message, names cleaned by
+`cleanGroupName()` (no posing as the platform), 32 call seats and no ring
+past 32 members (`call:started` + a quiet push instead). System rows the
+client must render: `group.pinned/unpinned/slowmode/disappearing/
+restricted/unrestricted/restored`, `group.renamed` with `from`,
+`group.left` with `accountDeleted`, `group.history` with `share`. Message
+types `poll` and `group_invite` have NO bubble on any client yet. Client
+UI for all of this is still to come.
 
 **No margins at the edge of a virtuoso item** (2026-09-21, the long-chat
 bounce). A message row is the first child of virtuoso's item wrapper, so a
