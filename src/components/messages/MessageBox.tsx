@@ -3894,18 +3894,14 @@ export const MessageBox = ({
 					open={groupSheetOpen}
 					onClose={() => setGroupSheetOpen(false)}
 					conversationId={activeConversation._id}
-					name={headerIdentity.title}
-					avatar={headerIdentity.avatar}
-					adminsOnly={Boolean(activeConversation.adminsOnly)}
 					currentClerkId={user?.id || ""}
-					members={(activeConversation.members ?? []) as any}
-					participants={(activeConversation.participants ?? []) as any}
 					myProfileId={myProfileId}
-					// The sheet stays open: the refetch refreshes its roster in
-					// place, so an add can show what happened to each person.
+					// The sheet reads the group itself and stays open through
+					// every action; the inbox row and header refetch behind it.
 					onChanged={() => {
 						void fetchConversations();
 					}}
+					onOpenRequests={() => setJoinRequestsFor(activeConversation)}
 					onLeft={() => {
 						// Purge NOW — the refetch confirms, but stale local state
 						// is exactly how a left group reopened with a live
