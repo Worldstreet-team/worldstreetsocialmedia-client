@@ -881,6 +881,21 @@ Messages and rings push to phones now (no bell row), threads can be muted
 `GET /groups/:id` and `/groups/:id/members`. The SDK carries all of it.
 Owner-set Ably "revocable tokens" is what makes removal cut live access
 at once; until it is on, a removed member's token lasts up to an hour.
+Second round (same day): mentions travel as ids (`mentions[]`,
+`mentionAll`; `/unread` counts them), an admin removal leaves a tombstone
+(`removedBy`, event `message:removed`), "seen by" is `GET
+/message/:id/receipts` for the sender only. Invite links live at
+`/groups/:id/links` (title, 1d/7d/30d expiry, use limit, per-link
+approval, 20 live at most) and open at `/join/<code>` on every platform
+(`groupLinkPath()` in the contracts; the web route is NOT built yet);
+`GET /groups/links/:code` previews safely, `POST .../join` joins or,
+under `joinApproval`, files a request that admins answer at
+`/groups/:id/requests/:profileId`. Bans (`/groups/:id/bans`, `?ban=1` on
+a removal) keep people out of links and adds; `?quiet=1` on a leave posts
+no row; `/groups/:id/past` lists who left in 60 days. The group records a
+live call from the first ring (`call` on the row and on GroupInfo, events
+`call:started` / `call:ended`), reconciled against the LiveKit room when
+the group is read. Client UI for all of this is still to come.
 
 **No margins at the edge of a virtuoso item** (2026-09-21, the long-chat
 bounce). A message row is the first child of virtuoso's item wrapper, so a
