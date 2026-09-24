@@ -111,6 +111,8 @@ export interface ConversationRow {
 	};
 	/** Groups I run: people asking to join (audit G38). */
 	requestCount?: number;
+	/** A call in progress in this group (audit G121). */
+	call?: { startedBy: string; startedAt: string; video: boolean } | null;
 	/** On my Archived shelf (per member, from the gateway). */
 	archived?: boolean;
 }
@@ -653,6 +655,12 @@ export function ConversationList({
 									unread ? "font-medium text-primary" : "text-muted",
 								)}
 							>
+								{/* A live call outranks the last message (audit G182). */}
+								{conv.call && (
+									<span className="shrink-0 rounded-pill bg-success/15 px-1.5 py-px font-sans text-[calc(11px*var(--ws-fs))] font-semibold text-success">
+										{conv.call.video ? "Video call" : "Call"} on
+									</span>
+								)}
 								{mine && conv.lastMessage?.type !== "system" && (
 									<span className="shrink-0 text-subtle">
 										{t("messages.you")}
