@@ -913,9 +913,23 @@ messages and media after, `seq` on every message, names cleaned by
 past 32 members (`call:started` + a quiet push instead). System rows the
 client must render: `group.pinned/unpinned/slowmode/disappearing/
 restricted/unrestricted/restored`, `group.renamed` with `from`,
-`group.left` with `accountDeleted`, `group.history` with `share`. Message
-types `poll` and `group_invite` have NO bubble on any client yet. Client
-UI for all of this is still to come.
+`group.left` with `accountDeleted`, `group.history` with `share`. **Web UI (2026-09-24, Phase 4):** `PeoplePicker` (follows
+as suggestions, server search from two characters) is shared by
+`GroupCreateModal` and the group sheet; the gateway's per-person answer
+(`groupOutcomes` / `OUTCOME_WORDS`) is shown after every create or add,
+even a refused one (`postJsonDirect` now returns the failure body as
+`data`). `GroupSheet` reads `GET /groups/:id` and acts by
+`me.permissions`: views for members (row actions), settings, links, bans,
+past, log, leave (quiet, hand over), delete (typed name, restorable).
+`InviteCard` is the invite thread; `JoinRequestsSheet` answers requests
+and withdraws invites; the Requests banner counts both. Thread: `PinsBar`,
+`CallJoinBar` (`callManager.joinCall`, no ring), `PollBubble`,
+`GroupInviteBubble`, tombstones, "edited", the message menu (Pin, Seen by,
+Edit, Delete for me, Delete for everyone within 48h), `ThreadSearchSheet`
+(messages, photos, voice, links) behind the header's search button,
+`PollComposer` from the attach menu, mentions sent as ids, and
+`app/join/[code]` as the link landing. The phone app and Xstream have
+none of this yet; `poll` and `group_invite` bubbles exist on the web only.
 
 **No margins at the edge of a virtuoso item** (2026-09-21, the long-chat
 bounce). A message row is the first child of virtuoso's item wrapper, so a
