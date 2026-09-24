@@ -144,6 +144,28 @@ export async function patchJsonDirect(path: string, body?: unknown) {
 	}
 }
 
+/** The DELETE twin: withdrawing an invite, unpinning, dropping a link. */
+export async function deleteDirect(path: string) {
+	try {
+		const token = await (window as any).Clerk?.session?.getToken?.();
+		if (!token) return { success: false as const, message: "Unauthorized" };
+		const res = await fetch(`${API_URL}${path}`, {
+			method: "DELETE",
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		const payload = await res.json().catch(() => null);
+		if (!res.ok)
+			return {
+				success: false as const,
+				code: payload?.code as string | undefined,
+				message: payload?.message || "Request failed",
+			};
+		return { success: true as const, data: payload?.data ?? payload };
+	} catch {
+		return { success: false as const, message: "Network error" };
+	}
+}
+
 export async function postJsonDirect(path: string, body?: unknown) {
 	try {
 		const token = await (window as any).Clerk?.session?.getToken?.();
@@ -162,6 +184,9 @@ export async function postJsonDirect(path: string, body?: unknown) {
 				success: false as const,
 				code: payload?.code as string | undefined,
 				message: payload?.message || "Request failed",
+				// The refusal's own body, for callers that can show more than
+				// a sentence (an add answers per person even when nobody got in).
+				data: payload,
 			};
 		}
 		return { success: true as const, data: payload?.data ?? payload };

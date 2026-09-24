@@ -4,9 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
 	Check,
 	Crown,
+	Loader2,
 	LogOut,
 	Pencil,
-	Search,
 	Shield,
 	UserMinus,
 	UserPlus,
@@ -21,13 +21,19 @@ import {
 	useOverlayDismiss,
 } from "@/components/ui/Overlay";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
-import { sendFormDirect } from "@/lib/upload-direct";
+import { postJsonDirect, sendFormDirect } from "@/lib/upload-direct";
+import {
+	type AddOutcome,
+	groupOutcomes,
+	OUTCOME_WORDS,
+	PeoplePicker,
+	type PickedPerson,
+	personName,
+} from "./PeoplePicker";
 import { compressImage } from "@/lib/image-compress";
 import {
 	collapse,
 	snappySpring,
-	staggerItem,
-	staggerParent,
 	staggerParentFast,
 	swap,
 } from "@/lib/motion-presets";
@@ -60,27 +66,6 @@ async function del(path: string) {
 		const res = await fetch(`${API}${path}`, {
 			method: "DELETE",
 			headers: { Authorization: `Bearer ${token}` },
-		});
-		const body = await res.json().catch(() => null);
-		return { success: res.ok, message: body?.message };
-	} catch {
-		return { success: false, message: "Network error" };
-	}
-}
-
-async function post(path: string, data: unknown) {
-	try {
-		const token = await (window as any).Clerk?.session?.getToken?.();
-		const API =
-			process.env.NEXT_PUBLIC_API_URL ||
-			(await import("@/const")).BACKEND_URL;
-		const res = await fetch(`${API}${path}`, {
-			method: "POST",
-			headers: {
-				Authorization: `Bearer ${token}`,
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify(data),
 		});
 		const body = await res.json().catch(() => null);
 		return { success: res.ok, message: body?.message };
@@ -149,9 +134,8 @@ export function GroupSheet({
 	const [busy, setBusy] = useState<string | null>(null);
 	const photoInputRef = useRef<HTMLInputElement | null>(null);
 	const [addOpen, setAddOpen] = useState(false);
-	const [candidates, setCandidates] = useState<ParticipantUser[]>([]);
-	const [candidatesLoaded, setCandidatesLoaded] = useState(false);
-	const [addQuery, setAddQuery] = useState("");
+	const [addSelected, setAddSelected] = useState<Record<string, PickedPerson>>({});
+	const [addOutcome, setAddOutcome] = useState<{ status: AddOutcome; names: string[] }[]>([]);
 
 	const byId = useMemo(() => {
 		const m = new Map<string, ParticipantUser>();
@@ -234,38 +218,36 @@ export function GroupSheet({
 		else toast.error(res.message || "Couldn't change that");
 	};
 
-	/** People I follow who aren't in the room yet; the gateway keeps only
-	 *  mutuals on add, same as creation. Fetched once, on first open. */
-	const openAdd = async () => {
-		setAddOpen((v) => !v);
-		if (candidatesLoaded || !currentClerkId) return;
-		setCandidatesLoaded(true);
-		try {
-			const token = await (window as any).Clerk?.session?.getToken?.();
-			const API =
-				process.env.NEXT_PUBLIC_API_URL ||
-				(await import("@/const")).BACKEND_URL;
-			const res = await fetch(
-				`${API}/api/users/${currentClerkId}/following?limit=100`,
-				{ headers: { Authorization: `Bearer ${token}` } },
-			);
-			const body = await res.json().catch(() => null);
-			const rows = body?.data ?? [];
-			setCandidates(Array.isArray(rows) ? rows : []);
-		} catch {
-			/* the section just stays empty */
-		}
-	};
+	const activeIdSet = useMemo(() => new Set(active.map((a) => a.id)), [active]);
+	const toggleAdd = (u: PickedPerson) =>
+		setAddSelected((prev) => {
+			const next = { ...prev };
+			if (next[u._id]) delete next[u._id];
+			else next[u._id] = u;
+			return next;
+		});
 
-	const addMember = async (id: string) => {
-		setBusy(id);
-		const res = await post(
-			`/api/messages/groups/${conversationId}/members`,
-			{ memberIds: [id] },
-		);
+	/** Add the picks (audit G41, G169): the gateway answers per person, and
+	 *  the answer stays on screen so an invite never reads as a failure. */
+	const addPeople = async () => {
+		const picks = Object.values(addSelected);
+		if (picks.length === 0) return;
+		setBusy("add");
+		const res = await postJsonDirect(`/api/messages/groups/${conversationId}/members`, {
+			memberIds: picks.map((p) => p._id),
+		});
 		setBusy(null);
+		// "Nobody could be added" still says what happened to each person.
+		const results = (res.data?.results ?? []) as { id: string; status: AddOutcome }[];
+		if (!res.success && results.length === 0) {
+			toast.error(res.message || "Couldn't add them");
+			return;
+		}
+		setAddOutcome(
+			groupOutcomes(results, (id) => (addSelected[id] ? personName(addSelected[id]) : "Someone")),
+		);
+		setAddSelected({});
 		if (res.success) onChanged();
-		else toast.error(res.message || "Couldn't add them");
 	};
 
 	const setRole = async (id: string, role: "admin" | "member") => {
@@ -293,30 +275,14 @@ export function GroupSheet({
 		} else toast.error(res.message || "Couldn't remove");
 	};
 
-	// Who may be added, as the list below shows it: six at most.
-	const shownCandidates = candidates
-		.filter(
-			(c) =>
-				!active.some((a) => a.id === String(c._id)) &&
-				(!addQuery.trim() ||
-					`${c.firstName ?? ""} ${c.lastName ?? ""} ${c.username ?? ""}`
-						.toLowerCase()
-						.includes(addQuery.toLowerCase())),
-		)
-		.slice(0, 6);
 
 	// Each cascade plays once: the roster per open of the sheet, the
 	// candidates the first time they are shown. A refetch after a role change
 	// or a search remounts rows, and those must cut.
 	const rosterPlayed = useRef(false);
-	const candidatesPlayed = useRef(false);
 	useEffect(() => {
 		rosterPlayed.current = open;
 	}, [open]);
-	useEffect(() => {
-		if (open && addOpen && shownCandidates.length > 0)
-			candidatesPlayed.current = true;
-	}, [open, addOpen, shownCandidates.length]);
 
 	return (
 		<AnimatePresence>
@@ -453,7 +419,7 @@ export function GroupSheet({
 									</button>
 									<button
 										type="button"
-										onClick={() => void openAdd()}
+										onClick={() => setAddOpen((v) => !v)}
 										className="flex w-full cursor-pointer items-center gap-2.5 rounded-[10px] px-1 py-2.5 text-left font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/5"
 									>
 										<UserPlus className="h-4 w-4 text-muted" />
@@ -461,53 +427,38 @@ export function GroupSheet({
 									</button>
 									<AnimatePresence initial={false}>
 									{addOpen && (
-										<motion.div
-											key="add-people"
-											{...collapse}
-											className="overflow-hidden"
-										>
-										<div className="pb-2">
-											<div className="relative mb-1">
-												<Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-subtle" />
-												<input
-													value={addQuery}
-													onChange={(e) => setAddQuery(e.target.value)}
-													placeholder="Search people you follow"
-													className="w-full rounded-pill bg-primary/5 py-2 pl-9 pr-3 font-sans text-[calc(13px*var(--ws-fs))] text-primary outline-none transition-colors placeholder:text-subtle focus:bg-primary/10"
+										<motion.div key="add-people" {...collapse} className="overflow-hidden">
+											<div className="flex max-h-[46dvh] flex-col pb-2">
+												<PeoplePicker
+													myClerkId={currentClerkId ?? ""}
+													exclude={activeIdSet}
+													selected={addSelected}
+													onToggle={toggleAdd}
+													placeholder="Search anyone"
 												/>
-											</div>
-											{/* Mounted only once there is someone to show, so
-											    the parent is there to time its six rows. */}
-											{shownCandidates.length > 0 && (
-											<motion.div
-												variants={staggerParent}
-												initial={candidatesPlayed.current ? false : "hidden"}
-												animate="show"
-											>
-											{shownCandidates.map((c) => (
-												// A wrapper carries the rise: framer leaves
-												// opacity inline, which would beat the
-												// button's own disabled dim.
-												<motion.div key={String(c._id)} variants={staggerItem}>
+												{Object.keys(addSelected).length > 0 && (
 													<button
 														type="button"
-														onClick={() => void addMember(String(c._id))}
-														disabled={busy === String(c._id)}
-														className="flex w-full cursor-pointer items-center gap-2.5 rounded-[10px] px-1 py-1.5 text-left transition-colors hover:bg-primary/5 disabled:opacity-50"
+														onClick={() => void addPeople()}
+														disabled={busy === "add"}
+														className="mx-4 mt-2 flex h-10 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-pill bg-brand font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active disabled:opacity-50"
 													>
-														<span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-pill bg-raised">
-															<SafeAvatar src={c.avatar} eager />
-														</span>
-														<span className="min-w-0 flex-1 truncate font-sans text-[calc(13px*var(--ws-fs))] text-primary">
-															{`${c.firstName ?? ""} ${c.lastName ?? ""}`.trim() || c.username}
-														</span>
-														<UserPlus className="h-3.5 w-3.5 shrink-0 text-muted" />
+														{busy === "add" && <Loader2 className="h-4 w-4 animate-spin" />}
+														Add {Object.keys(addSelected).length}
 													</button>
-												</motion.div>
-												))}
-											</motion.div>
-											)}
-										</div>
+												)}
+												{addOutcome.length > 0 && (
+													<div className="mx-4 mt-2 space-y-1.5">
+														{addOutcome.map((g) => (
+															<p key={g.status} className="font-sans text-[calc(12.5px*var(--ws-fs))] text-muted">
+																<span className="font-semibold text-primary">{OUTCOME_WORDS[g.status].title}:</span>{" "}
+																{g.names.join(", ")}
+																{OUTCOME_WORDS[g.status].note ? `. ${OUTCOME_WORDS[g.status].note}` : ""}
+															</p>
+														))}
+													</div>
+												)}
+											</div>
 										</motion.div>
 									)}
 									</AnimatePresence>

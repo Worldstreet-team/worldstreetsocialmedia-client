@@ -99,6 +99,15 @@ export interface ConversationRow {
 	unreadCount: number;
 	/** Waiting on the Requests shelf — quiet until accepted. */
 	isRequestForMe?: boolean;
+	/** A group invite for me (audit G34), also on the Requests shelf. */
+	isInvite?: boolean;
+	invite?: {
+		by?: string | { _id?: string; firstName?: string; lastName?: string; username?: string; avatar?: string };
+		at?: string;
+		expiresAt?: string;
+	};
+	/** Groups I run: people asking to join (audit G38). */
+	requestCount?: number;
 	/** On my Archived shelf (per member, from the gateway). */
 	archived?: boolean;
 }
@@ -603,10 +612,17 @@ export function ConversationList({
 									{identity.title}
 								</span>
 								{isGroup ? (
-									<span className="flex shrink-0 items-center gap-0.5 font-sans text-[calc(13px*var(--ws-fs))] text-subtle">
-										<Users className="h-3 w-3" />
-										{identity.memberCount ?? ""}
-									</span>
+									<>
+										<span className="flex shrink-0 items-center gap-0.5 font-sans text-[calc(13px*var(--ws-fs))] text-subtle">
+											<Users className="h-3 w-3" />
+											{identity.memberCount ?? ""}
+										</span>
+										{(conv.requestCount ?? 0) > 0 && (
+											<span className="shrink-0 font-sans text-[calc(12px*var(--ws-fs))] font-semibold tabular-nums text-gold">
+												{conv.requestCount} asking
+											</span>
+										)}
+									</>
 								) : (
 									u && (
 										<>
@@ -642,7 +658,12 @@ export function ConversationList({
 								{Glyph && conv.lastMessage?.type !== "system" && (
 									<Glyph size={15} className="shrink-0 text-subtle" />
 								)}
-								<PreviewRoll
+								{conv.isInvite ? (
+									<span className="truncate">
+										{`Invited you${typeof conv.memberCount === "number" && conv.memberCount > 0 ? ` · ${conv.memberCount} members` : ""}`}
+									</span>
+								) : (
+<PreviewRoll
 									stamp={conv.lastMessage?.createdAt ?? "none"}
 									roll={!mine}
 								>
@@ -667,6 +688,7 @@ export function ConversationList({
 											: conv.lastMessage?.content ||
 												t("messages.noMessages")}
 								</PreviewRoll>
+								)}
 								{/* The time rides the preview line ("Heyy · 3d"),
 								    which frees the top line for the name alone. */}
 								{rowTime(conv) && (

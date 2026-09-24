@@ -139,6 +139,8 @@ import { MessageSettingsSheet } from "@/components/messages/MessageSettingsSheet
 import { SendMoneySheet } from "@/components/messages/SendMoneySheet";
 import { GroupSheet } from "@/components/messages/GroupSheet";
 import { GroupCreateModal } from "@/components/messages/GroupCreateModal";
+import { JoinRequestsSheet } from "@/components/messages/JoinRequestsSheet";
+import { InviteCard } from "@/components/messages/InviteCard";
 import { BACKEND_ORIGIN } from "@/const";
 
 const API_URL = BACKEND_ORIGIN;
@@ -371,6 +373,17 @@ interface Conversation {
 	avatar?: string;
 	memberCount?: number;
 	myRole?: "owner" | "admin" | "member";
+	/** A group invite for me (audit G34): waits on the Requests shelf; the
+	 *  thread is empty until I join. */
+	isInvite?: boolean;
+	invite?: {
+		by?: string | { _id?: string; firstName?: string; lastName?: string; username?: string; avatar?: string };
+		at?: string;
+		expiresAt?: string;
+	};
+	/** Groups I run: people asking to join (audit G38). */
+	requestCount?: number;
+	description?: string;
 	/** Group lock: only admins may post while true (register 99). */
 	adminsOnly?: boolean;
 	/** Member records with high-water read marks (gateway W1). */
@@ -498,6 +511,13 @@ export const MessageBox = ({
 	const [menuPicker, setMenuPicker] = useState(false);
 	const [groupSheetOpen, setGroupSheetOpen] = useState(false);
 	const [showGroupCreate, setShowGroupCreate] = useState(false);
+	/** The group whose join requests and invites are open in a sheet. */
+	const [joinRequestsFor, setJoinRequestsFor] = useState<Conversation | null>(null);
+	const [inviteBusy, setInviteBusy] = useState(false);
+	// The two loaders are defined below; the request handlers above them
+	// reach them through refs so a stale closure never runs an old loader.
+	const fetchConversationsRef = useRef<(() => Promise<Conversation[] | undefined>) | null>(null);
+	const fetchMessagesRef = useRef<((id: string) => Promise<void>) | null>(null);
 	useEffect(() => {
 		if (!msgMenu) setMenuPicker(false);
 	}, [msgMenu]);
@@ -803,6 +823,11 @@ export const MessageBox = ({
 		.slice(0, 2)
 		.map((c) => conversationIdentity(c as never).title)
 		.join(", ");
+	/** Groups I run with people asking to join (audit G38, G173). */
+	const askingGroups = conversations.filter(
+		(c) => c.kind === "group" && !c.isRequestForMe && !(c as any).archived && (c.requestCount ?? 0) > 0,
+	);
+	const askingTotal = askingGroups.reduce((n, c) => n + (c.requestCount ?? 0), 0);
 
 	/** Put a thread away, or take it back. Optimistic; the gateway keeps the
 	 *  flag per member, so it never touches the other person's inbox. */
@@ -865,13 +890,31 @@ export const MessageBox = ({
 		async (conversationId: string) => {
 			try {
 				const token = await getToken();
-				await fetch(
+				setInviteBusy(true);
+				const r = await fetch(
 					`${API_URL}/api/messages/conversations/${conversationId}/accept`,
 					{
 						method: "POST",
 						headers: { Authorization: `Bearer ${token}` },
 					},
 				);
+				const body = await r.json().catch(() => null);
+				if (!r.ok) {
+					toast.error(body?.message || "Couldn't accept that");
+					return;
+				}
+				if (body?.joined) {
+					// A group invite (audit G34): the row is a real group now.
+					// Refetch, then open it properly so the history and the
+					// composer arrive together.
+					const rows = await fetchConversationsRef.current?.();
+					const fresh = rows?.find((c) => c._id === conversationId);
+					if (fresh) {
+						setActiveConversation(fresh);
+						void fetchMessagesRef.current?.(conversationId);
+					}
+					return;
+				}
 				setConversations((prev) =>
 					prev.map((c) =>
 						c._id === conversationId
@@ -886,6 +929,8 @@ export const MessageBox = ({
 				);
 			} catch {
 				toast.error("Couldn't accept the request");
+			} finally {
+				setInviteBusy(false);
 			}
 		},
 		[getToken],
@@ -1743,6 +1788,7 @@ export const MessageBox = ({
 				);
 				if (target) setActiveConversation(target);
 			}
+			return response.data as Conversation[];
 		} catch (error) {
 			toast.error("Failed to load conversations");
 		} finally {
@@ -1875,7 +1921,50 @@ export const MessageBox = ({
 		}
 	}, [getToken]);
 
+	fetchConversationsRef.current = fetchConversations;
+	fetchMessagesRef.current = fetchMessages;
+
 	const onMessage = useCallback((ablyMessage: any) => {
+		if (
+			ablyMessage?.name === "event" &&
+			[
+				"invite:received",
+				"request:received",
+				"member:joined",
+				"member:left",
+				"member:removed",
+				"member:role",
+				"member:rights",
+				"member:restricted",
+				"group:updated",
+				"call:started",
+				"call:ended",
+			].includes(ablyMessage.data?.type)
+		) {
+			// The room changed shape (audit G152). A name or photo lands in
+			// place first; the refetch brings the rest (roster, counts, the
+			// invite row itself).
+			const cid = String(ablyMessage.data.conversationId ?? "");
+			const patch = ablyMessage.data.patch;
+			if (patch && cid) {
+				const apply = (c: Conversation): Conversation =>
+					c._id !== cid
+						? c
+						: {
+								...c,
+								...(typeof patch.name === "string" ? { name: patch.name } : {}),
+								...(typeof patch.avatar === "string" ? { avatar: patch.avatar || undefined } : {}),
+								...(typeof patch.description === "string" ? { description: patch.description } : {}),
+								...(typeof patch.adminsOnly === "boolean" ? { adminsOnly: patch.adminsOnly } : {}),
+							};
+				setConversations((prev) => prev.map(apply));
+				setActiveConversation((prev) => (prev ? apply(prev) : prev));
+			}
+			if (ablyMessage.data.type === "invite:received")
+				toast(`You're invited to ${ablyMessage.data.name ?? "a group"}`);
+			void fetchConversationsRef.current?.();
+			return;
+		}
 		if (ablyMessage?.data?.type === "theme:updated") {
 			// Another tab or device saved the profile theme.
       void fetchGlobalTheme(getToken)
@@ -2758,7 +2847,7 @@ export const MessageBox = ({
 					)}
 					<ConversationList
 						banner={
-							inboxTab === "primary" && requestConversations.length > 0 ? (
+							inboxTab === "primary" && (requestConversations.length > 0 || askingTotal > 0) ? (
 								<motion.button
 									type="button"
 									{...press}
@@ -2770,20 +2859,53 @@ export const MessageBox = ({
 									</span>
 									<span className="min-w-0 flex-1">
 										<span className="block font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-primary">
-											{requestConversations.length}{" "}
-											{requestConversations.length === 1
-												? "message request"
-												: "message requests"}
+											{requestConversations.length > 0
+												? `${requestConversations.length} ${requestConversations.length === 1 ? "message request" : "message requests"}`
+												: ""}
+											{requestConversations.length > 0 && askingTotal > 0 ? " · " : ""}
+											{askingTotal > 0 ? `${askingTotal} asking to join` : ""}
 										</span>
 										<span className="block truncate font-sans text-[calc(12px*var(--ws-fs))] text-muted">
-											{requestNames}
-											{requestConversations.length > 2
-												? ` and ${requestConversations.length - 2} more`
-												: ""}
+											{requestConversations.length > 0
+												? `${requestNames}${requestConversations.length > 2 ? ` and ${requestConversations.length - 2} more` : ""}`
+												: askingGroups.map((c) => conversationIdentity(c as never).title).slice(0, 2).join(", ")}
 										</span>
 									</span>
 									<RiArrowRightSLine size={18} className="shrink-0 text-subtle" />
 								</motion.button>
+							) : inboxTab === "requests" && askingGroups.length > 0 ? (
+								// Join requests for the groups I run (audit G173), a
+								// block above the strangers' openers.
+								<div className="mx-2 mb-2">
+									<p className="px-2 pb-1 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
+										Asking to join your groups
+									</p>
+									{askingGroups.map((c) => {
+										const id = conversationIdentity(c as never);
+										return (
+											<motion.button
+												key={c._id}
+												type="button"
+												{...press}
+												onClick={() => setJoinRequestsFor(c)}
+												className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-primary/5"
+											>
+												<span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-pill bg-raised">
+													{id.avatar ? <SafeAvatar src={id.avatar} /> : <Users className="h-5 w-5 text-muted" />}
+												</span>
+												<span className="min-w-0 flex-1">
+													<span className="block truncate font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary">
+														{id.title}
+													</span>
+													<span className="block font-sans text-[calc(12px*var(--ws-fs))] text-muted">
+														{c.requestCount} asking to join
+													</span>
+												</span>
+												<RiArrowRightSLine size={18} className="shrink-0 text-subtle" />
+											</motion.button>
+										);
+									})}
+								</div>
 							) : null
 						}
 						door={
@@ -3272,6 +3394,18 @@ export const MessageBox = ({
 							)}
 						</AnimatePresence>
 						<div className="relative z-10 flex min-h-0 flex-1 flex-col">
+						{activeConversation.isInvite ? (
+							<InviteCard
+								name={headerIdentity.title}
+								avatar={headerIdentity.avatar}
+								memberCount={activeConversation.memberCount}
+								invitedBy={activeConversation.invite?.by as any}
+								expiresAt={activeConversation.invite?.expiresAt}
+								busy={inviteBusy}
+								onJoin={() => void acceptRequest(activeConversation._id)}
+								onDecline={() => void declineRequest(activeConversation._id)}
+							/>
+						) : (
 						<ThreadList
 							ref={virtuosoRef}
 							threadId={activeConversation._id}
@@ -3312,6 +3446,7 @@ export const MessageBox = ({
 							onShowNew={() => scrollToBottom()}
 							handlers={bubbleHandlers}
 						/>
+						)}
 						</div>
 					</div>
 
@@ -3560,7 +3695,9 @@ export const MessageBox = ({
 								className="chat-chrome flex items-center gap-2 rounded-xl px-3 py-2"
 							>
 								<span className="min-w-0 flex-1 font-sans text-[calc(12px*var(--ws-fs))] text-muted">
-									Accept to reply. They won't know you've seen this.
+									{activeConversation.isInvite
+										? "Join to read what's been said."
+										: "Accept to reply. They won't know you've seen this."}
 								</span>
 								<button
 									type="button"
@@ -3569,14 +3706,14 @@ export const MessageBox = ({
                       }
 									className="h-8 shrink-0 cursor-pointer rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-medium text-danger transition-colors hover:bg-primary/5"
 								>
-									Delete
+									{activeConversation.isInvite ? "Decline" : "Delete"}
 								</button>
 								<button
 									type="button"
 									onClick={() => void acceptRequest(activeConversation._id)}
 									className="h-8 shrink-0 cursor-pointer rounded-pill px-3.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-opacity [background:var(--chat-mine)] [color:var(--chat-mine-ink)] hover:opacity-90"
 								>
-									Accept
+									{activeConversation.isInvite ? "Join" : "Accept"}
 								</button>
 							</motion.div>
 						) : iLeftGroup ? (
@@ -3764,8 +3901,9 @@ export const MessageBox = ({
 					members={(activeConversation.members ?? []) as any}
 					participants={(activeConversation.participants ?? []) as any}
 					myProfileId={myProfileId}
+					// The sheet stays open: the refetch refreshes its roster in
+					// place, so an add can show what happened to each person.
 					onChanged={() => {
-						setGroupSheetOpen(false);
 						void fetchConversations();
 					}}
 					onLeft={() => {
@@ -3797,6 +3935,15 @@ export const MessageBox = ({
 				open={msgSettingsOpen}
 				onClose={() => setMsgSettingsOpen(false)}
 			/>
+			{joinRequestsFor && (
+				<JoinRequestsSheet
+					open
+					onClose={() => setJoinRequestsFor(null)}
+					conversationId={joinRequestsFor._id}
+					name={conversationIdentity(joinRequestsFor as never).title}
+					onChanged={() => void fetchConversations()}
+				/>
+			)}
 			{activeConversation && (
 				<SendMoneySheet
 					open={showSendMoney}
