@@ -46,6 +46,8 @@ export function systemEventCopy(
 				? `${actor} removed the group photo`
 				: `${actor} changed the group photo`;
 		case "group.joined":
+			if (p.viaLink) return `${subject} joined by invite link`;
+			if (p.approved) return `${actor} let ${subject} in`;
 			return p.viaInvite ? `${subject} joined` : `${actor} added ${subject}`;
 		case "group.description":
 			return p.removed
@@ -60,9 +62,17 @@ export function systemEventCopy(
 		case "group.left":
 			return viewerIsSubject ? "You left the group" : `${subject} left`;
 		case "group.removed":
+			if (p.banned)
+				return viewerIsSubject
+					? `${actor} removed and banned you`
+					: `${actor} removed and banned ${subject}`;
 			return viewerIsSubject
 				? `${actor} removed you`
 				: `${actor} removed ${subject}`;
+		case "group.approval":
+			return p.on
+				? `${actor} turned on approval for new members`
+				: `${actor} turned off approval for new members`;
 		case "group.promoted":
 			return viewerIsSubject
 				? "You're an admin now"
@@ -74,7 +84,7 @@ export function systemEventCopy(
 				? "You own the group now"
 				: `${subject} owns the group now`;
 		case "group.locked":
-			return `${actor} locked the group — only admins can send`;
+			return `${actor} locked the group, only admins can send`;
 		case "group.unlocked":
 			return `${actor} unlocked the group`;
 		default:
