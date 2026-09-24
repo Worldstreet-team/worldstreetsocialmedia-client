@@ -131,9 +131,10 @@ export const DEFAULTS: Preferences = {
 		// already told us what this person wants.
 		saver: "auto",
 		// Autoplay is the biggest line on a metered bill, so it yields to
-		// Off by default (owner 2026-09-22): a video that starts on its own
-		// costs data and attention before anyone chose it. Tap to play.
-		autoplay: "never",
+		// On by default (owner 2026-09-24, reversing the 09-22 "off"): videos
+		// play on their own, muted, unless Data saver is on, which on "auto"
+		// follows the device's own save-data signal.
+		autoplay: "saver",
 		chatMedia: "auto",
 		preloadPosts: "auto",
 		uploadQuality: "auto",
