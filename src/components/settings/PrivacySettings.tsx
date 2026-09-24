@@ -48,6 +48,20 @@ export function PrivacySettings() {
 					setPrefs({ privacy: { dmFrom: v as Preferences["privacy"]["dmFrom"] } })
 				}
 			/>
+			<Choice
+				label="Who can add you to groups"
+				hint="Anyone outside this sends you an invite instead, which waits on your Requests shelf for three days."
+				value={p.groupAdd}
+				options={[
+					["everyone", "Anyone"],
+					["following", "People you follow"],
+					["allies", "Allies only"],
+					["nobody", "Nobody, always ask"],
+				]}
+				onPick={(v) =>
+					setPrefs({ privacy: { groupAdd: v as Preferences["privacy"]["groupAdd"] } })
+				}
+			/>
 			<Toggle
 				label="Show my likes on my profile"
 				hint="Anyone can open the Likes tab on your profile today. Off leaves it there for you alone."

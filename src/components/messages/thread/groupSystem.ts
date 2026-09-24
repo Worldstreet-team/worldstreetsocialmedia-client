@@ -42,9 +42,21 @@ export function systemEventCopy(
 		case "group.renamed":
 			return `${actor} renamed the group to "${(p.name as string) ?? ""}"`;
 		case "group.avatar":
-			return `${actor} changed the group photo`;
+			return p.removed
+				? `${actor} removed the group photo`
+				: `${actor} changed the group photo`;
 		case "group.joined":
-			return `${actor} added ${subject}`;
+			return p.viaInvite ? `${subject} joined` : `${actor} added ${subject}`;
+		case "group.description":
+			return p.removed
+				? `${actor} removed the description`
+				: `${actor} changed the description`;
+		case "group.history":
+			return p.visible
+				? `${actor} let new members see past messages`
+				: `${actor} hid past messages from new members`;
+		case "group.settings":
+			return `${actor} changed who can ${settingWords(p.changed)}`;
 		case "group.left":
 			return viewerIsSubject ? "You left the group" : `${subject} left`;
 		case "group.removed":
@@ -68,6 +80,24 @@ export function systemEventCopy(
 		default:
 			return "";
 	}
+}
+
+const SETTING_WORDS: Record<string, string> = {
+	send: "send messages",
+	media: "send media",
+	addMembers: "add people",
+	editInfo: "edit the group",
+	pin: "pin messages",
+	calls: "start calls",
+	mentionAll: "mention everyone",
+	money: "send money",
+};
+function settingWords(changed: unknown): string {
+	const keys = Array.isArray(changed) ? changed.map(String) : [];
+	const words = keys.map((k) => SETTING_WORDS[k] ?? k);
+	if (words.length === 0) return "do what";
+	if (words.length === 1) return words[0];
+	return `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
 }
 
 // Six brand-family hues, all AA on both the stone and paper grounds. No blue,

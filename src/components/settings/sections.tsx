@@ -162,6 +162,7 @@ export const SEARCH_INDEX: SearchItem[] = [
 	I("Pop-ups for new messages", "popups pop-ups toast new message behaviour", "notifications", "behaviour"),
 	I("Open notifications on", "notifications default tab open on behaviour", "notifications", "behaviour"),
 	I("Who can start a chat with you", "who can message me privacy dm messages everyone allies requests", "safety", "privacy"),
+	I("Who can add you to groups", "group add invite privacy groups following allies nobody", "safety", "privacy"),
 	I("Send read receipts", "read receipts seen privacy", "safety", "privacy"),
 	I("Show when I'm online", "status online presence last seen active privacy", "safety", "privacy"),
 	I("Show when I'm typing", "typing indicator privacy", "safety", "privacy"),

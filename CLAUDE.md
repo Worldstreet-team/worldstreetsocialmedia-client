@@ -865,6 +865,23 @@ directions D + A from a mocked set
 - `ConversationList` takes `banner`, `footer` and `onBack` for this. The
   old `filter` prop is gone.
 
+**Groups run on consent, not the follow graph** (gateway audit, 2026-09-24,
+register at https://claude.ai/artifact/STFhpGJ4mkZsSFZgbhRKdn, findings
+G1 to G215). Creating a group or adding to one no longer needs a mutual
+follow. Each person's `privacy.groupAdd` (everyone / following, the
+default / allies / nobody) says whether they are added or sent an invite
+that lasts three days; invites ride the Requests shelf and accept and
+decline through the same doors as a DM request, so the existing UI handles
+them. Group permissions are per action (`settings.send/media/addMembers/
+editInfo/pin/calls/mentionAll/money`, each everyone or admins); the old
+`adminsOnly` mirrors `send`. New groups hide history from before you
+joined (`historyVisible`); groups from before that date keep showing it.
+Messages and rings push to phones now (no bell row), threads can be muted
+(`PATCH /conversations/:id/mute`), and the group info and roster come from
+`GET /groups/:id` and `/groups/:id/members`. The SDK carries all of it.
+Owner-set Ably "revocable tokens" is what makes removal cut live access
+at once; until it is on, a removed member's token lasts up to an hour.
+
 **No margins at the edge of a virtuoso item** (2026-09-21, the long-chat
 bounce). A message row is the first child of virtuoso's item wrapper, so a
 top or bottom MARGIN on it collapses out of the wrapper and the list

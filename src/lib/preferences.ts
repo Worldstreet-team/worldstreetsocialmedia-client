@@ -81,6 +81,9 @@ export interface Preferences {
 		/** The Seen mark, both ways. */
 		readReceipts: boolean;
 		dmFrom: "everyone" | "allies";
+		/** Who may put you straight into a group; anyone else sends an
+		 *  invite you accept or decline (gateway audit G32). */
+		groupAdd: "everyone" | "following" | "allies" | "nobody";
 		showLikes: boolean;
 	};
 	notifications: {
@@ -154,6 +157,7 @@ export const DEFAULTS: Preferences = {
 		typingIndicators: true,
 		readReceipts: true,
 		dmFrom: "everyone",
+		groupAdd: "following",
 		showLikes: true,
 	},
 	notifications: { messageAlerts: true, defaultTab: "all" },
@@ -243,6 +247,11 @@ export function normalizePrefs(raw: unknown): Preferences {
 			typingIndicators: bool(pv.typingIndicators, DEFAULTS.privacy.typingIndicators),
 			readReceipts: bool(pv.readReceipts, DEFAULTS.privacy.readReceipts),
 			dmFrom: oneOf(["everyone", "allies"] as const, pv.dmFrom, DEFAULTS.privacy.dmFrom),
+			groupAdd: oneOf(
+				["everyone", "following", "allies", "nobody"] as const,
+				pv.groupAdd,
+				DEFAULTS.privacy.groupAdd,
+			),
 			showLikes: bool(pv.showLikes, DEFAULTS.privacy.showLikes),
 		},
 		notifications: {
