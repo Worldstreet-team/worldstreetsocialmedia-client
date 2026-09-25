@@ -19,7 +19,19 @@
 // the server component that renders the inline <script> can import them.
 export { PREFS_CACHE_KEY, PREPAINT_PREFS } from "./preferences-prepaint";
 import { PREFS_CACHE_KEY } from "./preferences-prepaint";
-import { DEFAULT_PALETTE, PALETTE_IDS, type PaletteId } from "@/data/palettes";
+import {
+	CUSTOM_PALETTE,
+	DEFAULT_PALETTE,
+	PALETTE_IDS,
+	type PaletteId,
+} from "@/data/palettes";
+import {
+	CUSTOM_PALETTE_KEYS,
+	CUSTOM_PALETTE_VARS,
+	type CustomPalette,
+	customPaletteVars,
+	isCustomPalette,
+} from "./palette-derive";
 
 /* ------------------------------------------------------------------ */
 /* Schema */
@@ -56,6 +68,12 @@ export interface Preferences {
 		mode: Appearance;
 		/** The app's brand colour. Orthogonal to mode and to a chat's theme. */
 		palette: PaletteId;
+		/** The twelve values behind `palette: "custom"`, derived from a
+		 *  picture (owner 2026-09-25). Kept when another palette is chosen,
+		 *  so the picture's colour is still on the account; painted only
+		 *  while the palette is "custom". Flat scalars: the gateway keeps
+		 *  one object level under a namespace. */
+		custom?: CustomPalette;
 	};
 	data: {
 		/** Tri-state: "auto" follows the device's own data-saver signal. */
@@ -197,6 +215,25 @@ const oneOf = <T,>(list: readonly T[], v: unknown, d: T): T =>
 	(list as readonly unknown[]).includes(v) ? (v as T) : d;
 const bool = (v: unknown, d: boolean) => (typeof v === "boolean" ? v : d);
 
+/**
+ * The palette and, when it is well formed, the custom one behind it. A
+ * "custom" palette with no valid values falls back to the default: the
+ * stamp alone would paint the Tide fallbacks in ws-palettes.css, but the
+ * picker would show the picture dot as chosen for a colour nobody sees.
+ */
+function customAppearance(
+	ap: Partial<Preferences["appearance"]>,
+): Pick<Preferences["appearance"], "palette" | "custom"> {
+	const custom = isCustomPalette(ap.custom)
+		? (Object.fromEntries(
+				CUSTOM_PALETTE_KEYS.map((k) => [k, (ap.custom as CustomPalette)[k]]),
+			) as unknown as CustomPalette)
+		: undefined;
+	let palette = oneOf(PALETTE_IDS, ap.palette, DEFAULTS.appearance.palette);
+	if (palette === CUSTOM_PALETTE && !custom) palette = DEFAULTS.appearance.palette;
+	return custom ? { palette, custom } : { palette };
+}
+
 /** Anything off the wire or out of the cache becomes a whole tree. */
 export function normalizePrefs(raw: unknown): Preferences {
 	const p = (raw ?? {}) as Partial<Preferences>;
@@ -225,7 +262,7 @@ export function normalizePrefs(raw: unknown): Preferences {
 		},
 		appearance: {
 			mode: oneOf(["dark", "light", "system"] as const, ap.mode, DEFAULTS.appearance.mode),
-			palette: oneOf(PALETTE_IDS, ap.palette, DEFAULTS.appearance.palette),
+			...customAppearance(ap),
 		},
 		data: {
 			saver: oneOf(["auto", "on", "off"] as const, d.saver, DEFAULTS.data.saver),
@@ -335,6 +372,16 @@ export function applyPrefsToDocument(p: Preferences) {
 	h.dataset.wsUnderline =
 		p.a11y.underlineLinks || p.a11y.colorVision !== "off" ? "1" : "";
 	h.dataset.wsSaver = saverOn(p) ? "1" : "";
+	// A custom palette carries its twelve values inline; the custom block
+	// in ws-palettes.css reads them. Any other palette clears them so a
+	// stale picture colour never leaks into a fallback.
+	if (p.appearance.palette === CUSTOM_PALETTE && p.appearance.custom) {
+		for (const [k, v] of Object.entries(customPaletteVars(p.appearance.custom))) {
+			h.style.setProperty(k, v);
+		}
+	} else {
+		for (const k of CUSTOM_PALETTE_VARS) h.style.removeProperty(k);
+	}
 	// The default palette carries no attribute: it is the token file itself.
 	h.dataset.wsPalette =
 		p.appearance.palette === DEFAULT_PALETTE ? "" : p.appearance.palette;

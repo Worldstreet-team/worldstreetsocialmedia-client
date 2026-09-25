@@ -193,3 +193,26 @@ html[data-ws-palette="parchment"][data-ws-theme="platform-light"] {
 	--ws-brand-gold-text: #4A3B28;
 	--ws-glow-brand: rgba(110, 90, 64, 0.06);
 }
+
+/* Custom: derived from a picture (owner 2026-09-25). The twelve
+   --ws-custom-* values are stamped inline on <html> by applyPrefsToDocument
+   and by the pre-paint script (src/lib/palette-derive.ts derives them, on
+   the same rules as every block above); these two blocks only map them
+   onto the six brand tokens per mode. The fallbacks are Tide, so a stamp
+   that arrives without its values paints the house colour, never nothing. */
+html[data-ws-palette="custom"][data-ws-theme="platform"] {
+	--ws-brand-primary: var(--ws-custom-d-primary, #22B8D6);
+	--ws-brand-on-primary: var(--ws-custom-d-on, #0C0A09);
+	--ws-brand-active: var(--ws-custom-d-active, #3FCFE8);
+	--ws-brand-dim: var(--ws-custom-d-dim, #1A93AB);
+	--ws-brand-gold-text: var(--ws-custom-d-text, #67DCF0);
+	--ws-glow-brand: var(--ws-custom-d-glow, rgba(34, 184, 214, 0.10));
+}
+html[data-ws-palette="custom"][data-ws-theme="platform-light"] {
+	--ws-brand-primary: var(--ws-custom-l-primary, #22B8D6);
+	--ws-brand-on-primary: var(--ws-custom-l-on, #0C0A09);
+	--ws-brand-active: var(--ws-custom-l-active, #1A93AB);
+	--ws-brand-dim: var(--ws-custom-l-dim, #14778B);
+	--ws-brand-gold-text: var(--ws-custom-l-text, #0E6273);
+	--ws-glow-brand: var(--ws-custom-l-glow, rgba(26, 147, 171, 0.06));
+}

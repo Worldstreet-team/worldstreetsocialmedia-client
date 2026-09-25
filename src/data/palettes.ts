@@ -34,9 +34,19 @@ export type PaletteId =
 	| "mono"
 	| "citrus"
 	| "steel"
-	| "parchment";
+	| "parchment"
+	| "custom";
 
 export const DEFAULT_PALETTE: PaletteId = "tide";
+
+/**
+ * The eleventh choice (owner 2026-09-25): a palette derived from a
+ * picture. It has no fixed swatch, so it is not in PALETTES; its twelve
+ * values live in `prefs.appearance.custom` (src/lib/palette-derive.ts)
+ * and are stamped inline on <html> as `--ws-custom-*`, which the custom
+ * block in ws-palettes.css maps onto the six brand tokens.
+ */
+export const CUSTOM_PALETTE = "custom" satisfies PaletteId;
 
 export const PALETTES: {
 	id: PaletteId;
@@ -122,4 +132,8 @@ export const PALETTES: {
 	},
 ];
 
-export const PALETTE_IDS = PALETTES.map((p) => p.id) as readonly PaletteId[];
+/** Every id normalizePrefs accepts: the ten swatches plus the custom one. */
+export const PALETTE_IDS = [
+	...PALETTES.map((p) => p.id),
+	CUSTOM_PALETTE,
+] as readonly PaletteId[];

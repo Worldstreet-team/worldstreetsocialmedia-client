@@ -76,3 +76,23 @@ html[data-ws-flat] .chat-chrome {
 	--ws-text-subtle: color-mix(in srgb, currentColor 52%, transparent);
 	--ws-border-hairline: color-mix(in srgb, currentColor 15%, transparent);
 }
+
+/* .chat-doodle: the house line art on a painted ground (owner 2026-09-25:
+   "the ones with a blank background should use the doodle, tinted to
+   match the theme"). The same alpha mask the house wallpaper uses in
+   globals.css, painted in the theme's accent as it reads on that ground
+   (--chat-doodle-ink, from themeVars) at the house opacities
+   (--chat-doodle-alpha: a fifth on a dark ground, 0.14 on paper). A
+   picture never gets it; the picture is the choice. */
+.chat-doodle {
+	background-color: var(--chat-doodle-ink, var(--ws-brand-primary));
+	mask-image: url("/images/backgrounds/worldspace-doodle-mask.webp");
+	mask-position: center;
+	mask-repeat: no-repeat;
+	mask-size: cover;
+	-webkit-mask-image: url("/images/backgrounds/worldspace-doodle-mask.webp");
+	-webkit-mask-position: center;
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-size: cover;
+	opacity: var(--chat-doodle-alpha, 0.2);
+}

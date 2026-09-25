@@ -28,6 +28,12 @@ export interface ThemeWallpaper {
 	/** Own photo: the private media key; the gateway presigns imageUrl. */
 	imageKey?: string;
 	imageUrl?: string;
+	/** An own photo's measured colour and the pole it sits nearest, sampled
+	 *  from the FILE at upload (the served copy is cross-origin and would
+	 *  taint a canvas). With these a picture derives its ground family the
+	 *  way a preset does; without them it takes the token branch. */
+	tint?: string;
+	tone?: ThemeMode;
 	/** Gaussian blur on the image itself, 0..100. */
 	frost: number;
 	hue: "none" | "cyan";
@@ -47,9 +53,18 @@ export interface ThemeBubbles {
 	shape: BubbleShape;
 }
 
+/** How much of the theme the bars wear. */
+export type ChromeLevel = "quiet" | "colour";
+
 export interface ChatTheme {
 	wallpaper: ThemeWallpaper;
 	bubbles: ThemeBubbles;
+	/** The top bar and the composer (owner 2026-09-25: "the theme should
+	 *  affect the chrome header where the input is, the colour"). `colour`,
+	 *  which is what unset means, paints them in the theme's own colour;
+	 *  `quiet` is the earlier look, the ground with a tenth of the accent.
+	 *  The flat house theme has no colour to wear and ignores it. */
+	chrome?: ChromeLevel;
 }
 
 export type ThemeByMode = Partial<Record<ThemeMode, ChatTheme>>;
@@ -894,6 +909,8 @@ export function normalizeTheme(x: unknown, mode: ThemeMode): ChatTheme {
 					: undefined,
 			imageKey: type === "image" ? w.imageKey : undefined,
 			imageUrl: type === "image" ? w.imageUrl : undefined,
+			tint: type === "image" && typeof w.tint === "string" && HEX.test(w.tint) ? w.tint : undefined,
+			tone: type === "image" && (w.tone === "dark" || w.tone === "light") ? w.tone : undefined,
 			frost: clamp(w.frost, 0, 100, d.wallpaper.frost),
 			hue: w.hue === "cyan" ? "cyan" : "none",
 			dim: clamp(w.dim, 0, 60, d.wallpaper.dim),
@@ -903,6 +920,9 @@ export function normalizeTheme(x: unknown, mode: ThemeMode): ChatTheme {
 			theirs: { color: okColor(b.theirs?.color, HOUSE_THEIRS) },
 			shape: b.shape && b.shape in SHAPES ? b.shape : "rounded",
 		},
+		// Only the non-default survives, so a card and a saved copy of it
+		// still compare equal (canon drops undefined keys).
+		chrome: t.chrome === "quiet" ? "quiet" : undefined,
 	};
 }
 
@@ -928,7 +948,7 @@ export function accentOf(f: MineFill): string {
 	return f.kind === "solid" ? f.color : f.stops[0];
 }
 
-function luminance(hex: string): number {
+export function luminance(hex: string): number {
 	const n = Number.parseInt(hex.slice(1), 16);
 	const c = [n >> 16, (n >> 8) & 255, n & 255].map((v) => {
 		const s = v / 255;
@@ -977,12 +997,12 @@ const toRgb = (hex: string): [number, number, number] => {
 const toHex = (c: number[]) =>
 	`#${c.map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, "0")).join("")}`;
 /** `t` of the way from a to b, in sRGB: these are small UI tints, not blends of light. */
-function mixHex(a: string, b: string, t: number): string {
+export function mixHex(a: string, b: string, t: number): string {
 	const A = toRgb(a);
 	const B = toRgb(b);
 	return toHex(A.map((v, i) => v * (1 - t) + B[i] * t));
 }
-function contrast(a: string, b: string): number {
+export function contrast(a: string, b: string): number {
 	const la = luminance(a);
 	const lb = luminance(b);
 	return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
@@ -1021,39 +1041,44 @@ const INK_DARK = "#1C1917";
  * toward its pole. null for the flat house ground, an own photo, or a
  * token fill, where everything derives from the app tokens instead.
  */
-function groundOf(t: ChatTheme): { base: string | null; ink: string | null } {
-	const w = t.wallpaper;
-	let base: string | null = null;
-	let ink: string | null = null;
-	if (w.type === "solid" && w.color && HEX.test(w.color)) base = w.color;
-	else if (w.type === "gradient" && w.stops && w.stops.every((c) => HEX.test(c)))
-		base = mixHex(w.stops[0], w.stops[1], 0.5);
-	else if (w.type === "preset") {
-		const row = WALLPAPERS.find((p) => p.id === w.preset);
-		if (row) {
-			// A picture has a tone it was chosen for; take the ink from that and
-			// walk the tint to that pole until it holds the ink comfortably.
-			ink = row.tone === "dark" ? INK_LIGHT : INK_DARK;
-			const pole = row.tone === "dark" ? "#000000" : "#FFFFFF";
-			base = mixHex(row.tint, "#000000", w.dim / 100);
-			// 12:1, not the 7.5 floor below: a photograph's average says little
-			// about the band the bar sits on, so the bar goes well into its pole.
-			for (let i = 0; i < 10 && contrast(base, ink) < 12; i++)
-				base = mixHex(base, pole, 0.15);
-		}
-	}
+/**
+ * The ground a picture can be read as: its measured tint, dimmed as the
+ * theme dims it, walked to the pole of its tone until it holds that pole's
+ * ink at 12:1 (not the 7.5 floor the chrome uses: a photograph's average
+ * says little about the band a bar sits on, so the ground goes well in).
+ */
+export function pictureGround(tint: string, tone: ThemeMode, dim: number): { base: string; ink: string } {
+	const ink = tone === "dark" ? INK_LIGHT : INK_DARK;
+	const pole = tone === "dark" ? "#000000" : "#FFFFFF";
+	let base = mixHex(tint, "#000000", dim / 100);
+	for (let i = 0; i < 10 && contrast(base, ink) < 12; i++) base = mixHex(base, pole, 0.15);
 	return { base, ink };
 }
 
+function groundOf(t: ChatTheme): { base: string | null; ink: string | null } {
+	const w = t.wallpaper;
+	if (w.type === "solid" && w.color && HEX.test(w.color)) return { base: w.color, ink: null };
+	if (w.type === "gradient" && w.stops && w.stops.every((c) => HEX.test(c)))
+		return { base: mixHex(w.stops[0], w.stops[1], 0.5), ink: null };
+	if (w.type === "preset") {
+		const row = WALLPAPERS.find((p) => p.id === w.preset);
+		if (row) return pictureGround(row.tint, row.tone, w.dim);
+	}
+	// An own photo sampled at upload carries its own tint and tone (2026-09-25).
+	if (w.type === "image" && w.tint && HEX.test(w.tint) && w.tone)
+		return pictureGround(w.tint, w.tone, w.dim);
+	return { base: null, ink: null };
+}
+
 /** Push `color` toward `toward` until it clears `ratio` against `against`. */
-function walkTo(color: string, toward: string, against: string, ratio: number): string {
+export function walkTo(color: string, toward: string, against: string, ratio: number): string {
 	let c = color;
 	for (let i = 0; i < 10 && contrast(c, against) < ratio; i++) c = mixHex(c, toward, 0.12);
 	return c;
 }
 
 /** The ink (white or near-black) that wins on a fill. */
-const inkOn = (fill: string) =>
+export const inkOn = (fill: string) =>
 	contrast(fill, INK_LIGHT) >= contrast(fill, INK_DARK) ? INK_LIGHT : INK_DARK;
 
 /** The app ladder as hexes, for contrast tests on the token branch only;
@@ -1092,15 +1117,26 @@ function chromeOf(t: ChatTheme): Record<string, string> {
 	if (!ink)
 		ink = contrast(base, INK_LIGHT) >= contrast(base, INK_DARK) ? INK_LIGHT : INK_DARK;
 	const away = ink === INK_LIGHT ? "#000000" : "#FFFFFF";
-	// On a dark ground a layer is one step LIGHTER (toward its ink). On a
-	// pale ground it is lighter too, which there means AWAY from the ink:
-	// paper stacks white on cream, and a bar that went greyer than its
-	// ground read as dirty. Accent: a tenth in the dark, 6% on paper.
-	let solid =
-		ink === INK_LIGHT
+	// Coloured bars (owner 2026-09-25, the default): on a dark ground the
+	// bar is the ground and the accent in equal parts, then walked into the
+	// dark until white holds at 7.5:1, so it keeps the accent's HUE and
+	// reads as a deep version of it. On paper it is a pastel: the ground
+	// lifted toward white with a third of the accent, walked lighter until
+	// the dark ink holds.
+	// Quiet bars (the 2026-09-20 rule): on a dark ground a layer is one step
+	// LIGHTER (toward its ink). On a pale ground it is lighter too, which
+	// there means AWAY from the ink: paper stacks white on cream, and a bar
+	// that went greyer than its ground read as dirty. Accent: a tenth in the
+	// dark, 6% on paper.
+	const bold = t.chrome !== "quiet";
+	let solid = bold
+		? ink === INK_LIGHT
+			? mixHex(mixHex(base, accent, 0.5), ink, 0.04)
+			: mixHex(mixHex(base, "#FFFFFF", 0.35), accent, 0.3)
+		: ink === INK_LIGHT
 			? mixHex(mixHex(base, accent, 0.1), ink, 0.07)
 			: mixHex(mixHex(base, "#FFFFFF", 0.55), accent, 0.06);
-	for (let i = 0; i < 6 && contrast(solid, ink) < 7.5; i++)
+	for (let i = 0; i < 10 && contrast(solid, ink) < 7.5; i++)
 		solid = mixHex(solid, away, 0.12);
 	const inkAt = (pct: number) => `color-mix(in srgb, ${ink} ${pct}%, transparent)`;
 	return {
@@ -1167,6 +1203,10 @@ function groundVars(t: ChatTheme, mode?: ThemeMode): Record<string, string> {
 			"--chat-pill-bg": flat ? "transparent" : "color-mix(in srgb, var(--ws-bg-page) 72%, transparent)",
 			"--chat-pill-ink": flat ? "var(--ws-text-subtle)" : "var(--ws-text-muted)",
 			"--chat-accent-on-ground": HEX.test(accent) ? accentOnGround : "var(--ws-brand-primary)",
+			// The house line art on a painted ground (owner 2026-09-25), in
+			// the accent as it reads here, at the house opacities per mode.
+			"--chat-doodle-ink": HEX.test(accent) ? accentOnGround : "var(--ws-brand-primary)",
+			"--chat-doodle-alpha": mode === "light" ? "0.14" : "0.2",
 			"--chat-reaction-bg": "var(--ws-bg-raised)",
 			"--chat-reaction-ink": "var(--ws-text-muted)",
 			"--chat-reaction-mine-bg": `color-mix(in srgb, ${accent} 40%, var(--ws-bg-page))`,
@@ -1196,6 +1236,8 @@ function groundVars(t: ChatTheme, mode?: ThemeMode): Record<string, string> {
 		"--chat-pill-bg": `color-mix(in srgb, ${pill} 82%, transparent)`,
 		"--chat-pill-ink": inkAt(70),
 		"--chat-accent-on-ground": walkTo(accent, ink, base, 4.5),
+		"--chat-doodle-ink": walkTo(accent, ink, base, 4.5),
+		"--chat-doodle-alpha": ink === INK_LIGHT ? "0.2" : "0.14",
 		"--chat-reaction-bg": mixHex(base, ink, 0.1),
 		"--chat-reaction-ink": inkAt(70),
 		"--chat-reaction-mine-bg": reactionMine,

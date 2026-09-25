@@ -2,9 +2,12 @@
 
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
+import { ImagePlus } from "lucide-react";
+import { useAuth } from "@clerk/nextjs";
 import { staggerItem, staggerParent } from "@/lib/motion-presets";
 import { useState } from "react";
 import { Tabs } from "@/components/ui/Tabs";
+import { useToast } from "@/components/ui/Toast/ToastContext";
 import {
 	OverlayHeader,
 	OverlayPanel,
@@ -20,34 +23,77 @@ import {
 	sameTheme,
 } from "./chatTheme";
 import { ThemePreview } from "./ThemePreview";
+import { sampleImage, themeFromSample } from "./imageTheme";
+import { uploadWallpaperImage } from "./themeApi";
 
 /**
  * The main entry (owner 2026-09-10: cards first, Advanced behind): a
  * gallery of finished wallpaper + bubble pairings, one tap each, applied
  * to this chat or to all chats. "Advanced" opens the studio for people
  * who want to change one thing or bring their own photo.
+ *
+ * "Your picture" (owner 2026-09-25) sits first on the Photographs shelf:
+ * pick any picture and a whole theme is read out of it (imageTheme.ts),
+ * then the studio opens on that draft so the person sees it on the stage
+ * before saving.
  */
 export function ThemeGallery({
 	mode,
 	current,
 	isGroup,
 	saving,
+	conversationId,
 	onClose,
 	onApply,
 	onAdvanced,
 	onReset,
+	onDerived,
 }: {
 	mode: ThemeMode;
 	current: ChatTheme;
 	isGroup: boolean;
 	saving: boolean;
+	conversationId: string;
 	onClose: () => void;
 	onApply: (theme: ChatTheme, scope: ThemeScope) => void;
 	onAdvanced: (scope: ThemeScope) => void;
 	onReset: (scope: ThemeScope) => void;
+	/** A theme read out of the person's own picture, ready for the studio. */
+	onDerived: (theme: ChatTheme, scope: ThemeScope) => void;
 }) {
 	const [scope, setScope] = useState<ThemeScope>("chat");
+	const [deriving, setDeriving] = useState(false);
+	const { getToken } = useAuth();
+	const { toast } = useToast();
 	useOverlayDismiss(true, onClose);
+
+	const pickPicture = () => {
+		const input = document.createElement("input");
+		input.type = "file";
+		input.accept = "image/*";
+		input.onchange = async () => {
+			const file = input.files?.[0];
+			if (!file) return;
+			setDeriving(true);
+			try {
+				// Sampled from the file (the served copy would taint a canvas),
+				// uploaded once, and the theme built from both.
+				const [sample, up] = await Promise.all([
+					sampleImage(file),
+					uploadWallpaperImage(getToken, file, conversationId),
+				]);
+				onDerived(
+					themeFromSample(sample, { type: "image", imageKey: up.key, imageUrl: up.url }),
+					scope,
+				);
+			} catch {
+				toast("Couldn't read that picture", { type: "error" });
+			} finally {
+				setDeriving(false);
+			}
+		};
+		input.click();
+	};
 
 	return (
 		<AnimatePresence>
@@ -80,6 +126,25 @@ export function ThemeGallery({
 									{g.label}
 								</p>
 								<div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
+									{g.id === "photo" && (
+										<button
+											type="button"
+											disabled={saving || deriving}
+											onClick={pickPicture}
+											title="Pick a picture; its colours become the theme"
+											className="group flex cursor-pointer flex-col gap-1.5 rounded-xl p-1 text-left transition-colors hover:bg-primary/5 disabled:cursor-default"
+										>
+											<span className="flex aspect-[9/13] w-full flex-col items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-hairline px-2 text-center text-muted transition-colors group-hover:text-primary">
+												<ImagePlus className="h-5 w-5" />
+												<span className="font-sans text-[calc(11px*var(--ws-fs))] leading-tight">
+													{deriving ? "Reading the picture…" : "Colours read from the picture"}
+												</span>
+											</span>
+											<span className="px-1 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-primary">
+												Your picture
+											</span>
+										</button>
+									)}
 									{THEME_CARDS.filter((card) => card.group === g.id).map((card) => {
 									const t = card[mode];
 									const on = sameTheme(t, current);

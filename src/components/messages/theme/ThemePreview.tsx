@@ -53,7 +53,15 @@ export function ThemePreview({
 				className,
 			)}
 		>
-			<ThemeBackdrop wallpaper={theme.wallpaper} resolution={compact ? 320 : 640} />
+			<ThemeBackdrop wallpaper={theme.wallpaper} resolution={compact ? 320 : 640} houseDoodle />
+			{/* A gallery card shows the bar the theme paints (owner 2026-09-25:
+			    the bars wear the colour), as a thin band at the top. */}
+			{compact && (
+				<div className="chat-chrome relative flex h-[14px] shrink-0 items-center gap-1 px-1.5">
+					<span className="h-[7px] w-[7px] rounded-pill [background:var(--chat-chrome-chip,var(--ws-bg-chip))]" />
+					<span className="h-[3px] w-6 rounded-pill bg-primary/40" />
+				</div>
+			)}
 			<div
 				className={clsx(
 					"relative flex flex-1 flex-col justify-end gap-1",

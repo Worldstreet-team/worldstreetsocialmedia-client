@@ -23,6 +23,7 @@ import {
 import {
 	type BubbleShape,
 	type ChatTheme,
+	type ChromeLevel,
 	GROUND_PRESETS,
 	HOUSE_DEFAULT,
 	HOUSE_THEIRS,
@@ -39,6 +40,7 @@ import {
 } from "./chatTheme";
 import { ScopeSwitch } from "./ThemeGallery";
 import { ThemePreview } from "./ThemePreview";
+import { sampleImage, themeFromSample } from "./imageTheme";
 import { uploadWallpaperImage } from "./themeApi";
 
 type Device = "phone" | "desktop" | "both";
@@ -96,6 +98,10 @@ export function ThemeStudio({
 	const [device, setDevice] = useState<Device | null>(null);
 	const [panel, setPanel] = useState<Panel>("wallpaper");
 	const [uploading, setUploading] = useState(false);
+	const [matching, setMatching] = useState(false);
+	// The file behind an own photo picked in THIS studio: the served copy is
+	// cross-origin and cannot be sampled, so "match the picture" needs it.
+	const pickedFile = useRef<File | null>(null);
 	useOverlayDismiss(true, onClose);
 	// The studio mounts per open, so "after the first commit" is "after the
 	// opening": the ground chips cascade once, and the first panel arrives
@@ -115,6 +121,7 @@ export function ThemeStudio({
 	const setMine = (m: MineFill) => bb({ mine: m });
 	const w = draft.wallpaper;
 	const hasPicture = w.type === "preset" || w.type === "image";
+	const canMatch = w.type === "preset" || (w.type === "image" && pickedFile.current !== null);
 	const groundId =
 		w.type === "flat"
 			? "flat"
@@ -130,7 +137,20 @@ export function ThemeStudio({
 			setUploading(true);
 			try {
 				const { key, url } = await uploadWallpaperImage(getToken, file, conversationId);
-				wp({ type: "image", imageKey: key, imageUrl: url, preset: undefined });
+				pickedFile.current = file;
+				const picture = { type: "image" as const, imageKey: key, imageUrl: url };
+				try {
+					// The picture brings its own colours (owner 2026-09-25); the
+					// shape and the bars stay as the person had them.
+					const derived = themeFromSample(await sampleImage(file), picture);
+					setDraft((d) => ({
+						...derived,
+						bubbles: { ...derived.bubbles, shape: d.bubbles.shape },
+						chrome: d.chrome,
+					}));
+				} catch {
+					wp({ ...picture, preset: undefined });
+				}
 			} catch {
 				toast("Couldn't upload that photo", { type: "error" });
 			} finally {
@@ -138,6 +158,35 @@ export function ThemeStudio({
 			}
 		};
 		input.click();
+	};
+
+	/** Read the current picture again and take its colours, keeping the treatment. */
+	const matchPicture = async () => {
+		const src =
+			w.type === "preset"
+				? WALLPAPERS.find((p) => p.id === w.preset)?.src
+				: pickedFile.current;
+		if (!src) return;
+		setMatching(true);
+		try {
+			const sample = await sampleImage(src);
+			const derived = themeFromSample(
+				sample,
+				w.type === "preset"
+					? { type: "preset", preset: w.preset }
+					: { type: "image", imageKey: w.imageKey, imageUrl: w.imageUrl },
+			);
+			setDraft((d) => ({
+				...derived,
+				wallpaper: { ...derived.wallpaper, frost: d.wallpaper.frost, hue: d.wallpaper.hue, dim: d.wallpaper.dim },
+				bubbles: { ...derived.bubbles, shape: d.bubbles.shape },
+				chrome: d.chrome,
+			}));
+		} catch {
+			toast("Couldn't read that picture", { type: "error" });
+		} finally {
+			setMatching(false);
+		}
 	};
 
 	const heading = "font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary";
@@ -290,13 +339,25 @@ export function ThemeStudio({
 											</button>
 										</div>
 										{hasPicture && (
-											<button
-												type="button"
-												onClick={() => wp({ type: "flat", preset: undefined, imageKey: undefined, imageUrl: undefined })}
-												className="mt-2 cursor-pointer font-sans text-[calc(12px*var(--ws-fs))] text-muted transition-colors hover:text-primary"
-											>
-												Remove picture
-											</button>
+											<div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+												{canMatch && (
+													<button
+														type="button"
+														disabled={matching}
+														onClick={() => void matchPicture()}
+														className="cursor-pointer font-sans text-[calc(12px*var(--ws-fs))] font-medium text-brand transition-opacity hover:opacity-80 disabled:opacity-50"
+													>
+														{matching ? "Reading the picture…" : "Colours from the picture"}
+													</button>
+												)}
+												<button
+													type="button"
+													onClick={() => wp({ type: "flat", preset: undefined, imageKey: undefined, imageUrl: undefined, tint: undefined, tone: undefined })}
+													className="cursor-pointer font-sans text-[calc(12px*var(--ws-fs))] text-muted transition-colors hover:text-primary"
+												>
+													Remove picture
+												</button>
+											</div>
 										)}
 
 									{/* Treatments exist only for a picture: a painted ground has
@@ -426,6 +487,30 @@ export function ThemeStudio({
 											/>
 										</div>
 									</section>
+
+									{/* The bars (owner 2026-09-25): coloured is what every theme
+									    ships; quiet is the ground with a trace of the accent. The
+									    flat house ground has no colour to wear, so no control. */}
+									{w.type !== "flat" && (
+										<section>
+											<p className={clsx(heading, "mb-2")}>Top bar and composer</p>
+											<Tabs<ChromeLevel>
+												ariaLabel="Bars"
+												value={draft.chrome ?? "colour"}
+												className="px-0 py-0"
+												onChange={(c) =>
+													setDraft((d) => ({ ...d, chrome: c === "quiet" ? "quiet" : undefined }))
+												}
+												items={[
+													{ key: "colour", label: "Coloured" },
+													{ key: "quiet", label: "Quiet" },
+												]}
+											/>
+											<p className="mt-1.5 font-sans text-[calc(11.5px*var(--ws-fs))] text-muted">
+												In the theme's own colour, or the ground with a trace of it.
+											</p>
+										</section>
+									)}
 
 									<section>
 										<p className={clsx(heading, "mb-2")}>Shape</p>

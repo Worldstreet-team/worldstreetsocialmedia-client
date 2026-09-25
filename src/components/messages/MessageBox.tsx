@@ -155,7 +155,8 @@ import { BACKEND_ORIGIN } from "@/const";
 const API_URL = BACKEND_ORIGIN;
 import { useAtom, useSetAtom } from "jotai";
 import { useAtomValue } from "jotai";
-import { onlineIdsAtom } from "@/store/ui.atom";
+import { browserChromeAtom, onlineIdsAtom } from "@/store/ui.atom";
+import { resolveCssColor } from "@/components/providers/ThemeColorSync";
 import { userAtom } from "@/store/user.atom";
 import { activeConversationIdAtom, messageCacheAtom, unreadMessagesCountAtom, type Message as CachedMessage } from "@/store/messageCache";
 import NewConversationModal from "./NewConversationModal";
@@ -491,9 +492,12 @@ export const MessageBox = ({
 	// variables on the thread pane, so a theme change re-paints without
 	// re-rendering a single memoised bubble.
 	const [globalTheme, setGlobalTheme] = useState<ThemeByMode>({});
-  const [themeSheet, setThemeSheet] = useState<
-    null | "gallery" | { studio: ThemeScope }
-  >(null);
+	// `draft` is a theme derived from a picture (2026-09-25): the studio
+	// opens on it instead of the chat's current theme, so the person sees
+	// the derived colours on the stage before saving.
+	const [themeSheet, setThemeSheet] = useState<
+		null | "gallery" | { studio: ThemeScope; draft?: ChatTheme }
+	>(null);
 	const [themeSaving, setThemeSaving] = useState(false);
 	const [sendPulse, setSendPulse] = useState(0);
 	const hasMoreOlderRef = useRef(true);
@@ -1077,6 +1081,21 @@ export const MessageBox = ({
 				transition: { duration: 0.32, ease: [0.2, 0, 0, 1] as const },
 			}
 		: {};
+	// The phone's status bar wears the open chat's top bar (owner
+	// 2026-09-25): the bar fills the top edge there, and a black strip over
+	// a coloured bar reads as a seam. ThemeColorSync writes it to the
+	// theme-color meta; null hands the bar back to the page colour.
+	const setBrowserChrome = useSetAtom(browserChromeAtom);
+	const activeId = activeConversation?._id;
+	useEffect(() => {
+		if (!phone || !activeId) {
+			setBrowserChrome(null);
+			return;
+		}
+		const vars = themeVars(chatTheme, themeMode) as Record<string, string>;
+		setBrowserChrome(resolveCssColor(vars["--chat-chrome-solid"] ?? ""));
+		return () => setBrowserChrome(null);
+	}, [phone, activeId, chatTheme, themeMode, setBrowserChrome]);
 	// Failed TEXT sends keep their bubble (owner pick); this remembers what
 	// to resend when the red mark is tapped.
 	const textRetryRef = useRef(
@@ -4674,16 +4693,18 @@ export const MessageBox = ({
 					current={chatTheme}
 					isGroup={isGroupThread}
 					saving={themeSaving}
+					conversationId={activeConversation._id}
 					onClose={() => setThemeSheet(null)}
 					onApply={(t, scope) => void applyTheme(t, scope)}
 					onReset={(scope) => void applyTheme(null, scope)}
 					onAdvanced={(scope) => setThemeSheet({ studio: scope })}
+					onDerived={(t, scope) => setThemeSheet({ studio: scope, draft: t })}
 				/>
 			)}
 			{themeSheet && themeSheet !== "gallery" && activeConversation && (
 				<ThemeStudio
 					mode={themeMode}
-					initial={chatTheme}
+					initial={themeSheet.draft ?? chatTheme}
 					scope={themeSheet.studio}
 					conversationId={activeConversation._id}
 					isGroup={isGroupThread}
