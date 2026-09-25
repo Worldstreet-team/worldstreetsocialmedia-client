@@ -1126,6 +1126,44 @@ Where it is wired (every category surface in the app):
 body fields today, so the transport is ready before the post model grows the
 column.
 
+## Delivery, phase 0 (2026-09-25)
+
+The CDN plan's code-only phase (research: no edge in front of either
+host, web on OVH London, gateway on Contabo France, a cold request from
+Lagos pays three round trips before the first byte). What is in place:
+
+- `next.config.ts` `headers()`: HSTS on everything; `/wallpapers` a year
+  immutable (names never change, files are only added); `/images` and
+  `/icons` a week with stale-while-revalidate; the manifest an hour.
+  `/sw.js` and `/offline.html` stay at `max-age=0` on purpose so a worker
+  kill lands. Next cannot stop the origin gzipping images; that is the
+  proxy on the box and goes away with an edge.
+- Heavy code is lazy: emoji-picker-react is `dynamic()` in all five
+  composers (`Theme` is a type import; the enum's string values are used
+  so the runtime enum never enters the chunk); PostHog loads on idle
+  through `src/lib/analytics.ts`, which queues capture and identify until
+  then (the first pageview used to be dropped); LiveKit was already lazy
+  (`loadLiveKit()` in call-manager). The three Story Studio faces (Archivo
+  Black, Bebas Neue, Caveat) live in `story/story-fonts.ts` and ride the
+  studio's root, not `<html>`; the studio redeclares the three font
+  tokens on its root because a custom property resolves where declared.
+- **The shared read cache persists per account** (`src/lib/cache.ts`):
+  `setCacheScope(profileId)` is called DURING JotaiHydrator's render (an
+  effect there runs after the pages' own effects, one beat too late) and
+  hydrates `localStorage["ws-cache-v1:<id>"]`; writes persist debounced,
+  a day old is dropped, one entry over 200 KB is never written, the file
+  stays under 1 MB. `useCachedResource` consumers get the warm start for
+  free; Explore seeds its atoms from `cacheKeys.exploreData()` when cold.
+  Never store anything personal to another account under a key: the
+  scope is the account.
+- Gateway (same day, `d5f9e3e`): every API answer is `private, no-store`;
+  openapi and the root are public an hour; keep-alive 65s (past the
+  proxy's 60s idle); R2 objects written `immutable`; `presignRead` signs
+  from the start of the UTC day with a two-day window, so a private URL
+  is the same all day and the browser, the worker and a CDN can hold it
+  (the shortest a private URL now lives is a day); the profile sync no
+  longer ships the follower, following, blocked or push-token arrays.
+
 ## Gotchas
 
 **`--ws-fs` is derived; never write it directly** (found 2026-09-16, shipped
