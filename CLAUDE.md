@@ -276,7 +276,8 @@ Three independent colour axes, and they must stay independent:
   Display): Tide (default, NO attribute, it is the token file), Cobalt,
   Iris, Orchid, Sunset, Heritage, Mono, and since 2026-09-25 Citrus,
   Steel, Parchment (the last two are inks that flip with the mode, like
-  Mono). A palette block may declare ONLY
+  Mono), plus `custom`, derived from a picture (below). A palette block
+  may declare ONLY
   the six brand tokens (`--ws-brand-primary`, `-on-primary`, `-active`,
   `-dim`, `--ws-brand-gold-text`, `--ws-glow-brand`), always as
   `html[data-ws-palette="x"][data-ws-theme="platform"]` plus the
@@ -322,6 +323,56 @@ Three independent colour axes, and they must stay independent:
   are `.chat-chrome-solid`. A card may set `group` to choose its shelf;
   the shelves are Colour, Places, Artwork, Photographs. `sameTheme`
   compares canonical (sorted, undefined-free) shapes.
+- **Themes read from a picture, coloured bars, the doodle on painted
+  grounds (owner 2026-09-25).** `theme/imageTheme.ts`: `sampleImage()`
+  reads a picture small (48px, cover) into a tint, a tone (dark under
+  0.35 mean luminance), the most vivid hue's colour (the mean of that
+  hue's most vivid sixth, never its plain mean, which lands on mud) and
+  a second hue at least 45 degrees away; `themeFromSample()` builds the
+  whole theme on the card rules (mine walked to 0.18 luminance for white
+  ink, theirs 1.6:1 off the ground in the dark and 1.2:1 on paper). An
+  own photo is sampled from the FILE at upload (the presigned copy would
+  taint a canvas) and stores `tint` and `tone` on the wallpaper, which
+  the gateway's `sanitizeTheme` keeps, so `groundOf` derives the family
+  for it like a preset. Doors: the "Your picture" tile, first on the
+  Photographs shelf (opens the studio on the derived draft), the upload
+  in the studio (derives on the way in) and "Colours from the picture"
+  under a preset or a just-picked photo. `chrome: "quiet"` on a theme is
+  the 2026-09-20 tinted bar; unset means COLOURED: on a dark ground the
+  bar is ground and accent in equal parts, walked into the dark until
+  white holds 7.5:1, on paper a pastel of the accent. The studio's "Top
+  bar and composer" tabs set it; a card never carries it (canon drops
+  undefined, so a saved card still matches). A solid or gradient ground
+  wears `.chat-doodle` (chat-chrome.css), the house mask painted in
+  `--chat-doodle-ink` (the accent as it reads on that ground) at
+  `--chat-doodle-alpha` (0.2 under light ink, 0.14 on paper); a picture
+  never does. Gallery cards show the bar band and the doodle
+  (`ThemePreview` compact, `houseDoodle`). The Artwork shelf gained the
+  comic-book set the same day (Rooftop, Gamma, Vigilante, Cosmic, Storm
+  Front, Symbiote, Multiverse, Arc Light): original drawn wallpapers in
+  those moods, no character, logo or trademarked name, because the
+  owner's "Spider-Man, Marvel" pictures cannot ship; a person who wants
+  the real art brings the picture and the theme is read from it.
+- **The browser's own chrome follows** (`providers/ThemeColorSync.tsx`
+  in the root layout, `browserChromeAtom`). The `theme-color` meta is
+  rewritten to the resolved page colour when the mode or palette moves,
+  and to the open chat's bar colour on a phone (MessageBox publishes
+  `--chat-chrome-solid` through `resolveCssColor`, which paints a probe
+  so `var()` and `color-mix()` resolve). A head observer puts the value
+  back after the router re-renders the layout's static black tag on
+  every navigation. Safari tints its tab bar with it, Chrome and Samsung
+  the address bar, an installed app its title bar.
+- **A custom app palette from a picture**: `palette: "custom"` with
+  `appearance.custom`, thirteen flat strings (seed and six tokens per
+  mode; the gateway keeps one object level of scalars under a
+  namespace). `src/lib/palette-derive.ts` `paletteFromSeed` keeps the
+  seed's hue and saturation and walks lightness until the dark ink holds
+  7.2:1, text 11:1 on black and 5.8:1 on paper; a near-grey seed becomes
+  Mono. The values ride inline on `<html>` as `--ws-custom-*` (stamped
+  by the pre-paint script and `applyPrefsToDocument`, both validating
+  every field) and the `custom` blocks in ws-palettes.css map the six
+  brand tokens to them. The picker's eleventh swatch, From a picture,
+  samples with `sampleImage` and takes its accent as the seed.
 - **Wallpapers**: `WALLPAPERS` rows carry a measured `tint`; nothing is
   sampled at runtime. The generated set lives in `public/wallpapers/gen`
   (dark under 3.5% luminance, light over 80%, so frost 0 / dim 0). Card
