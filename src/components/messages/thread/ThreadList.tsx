@@ -522,7 +522,7 @@ export const ThreadList = forwardRef<ThreadListHandle, ThreadListProps>(
 						}
 						{...pop}
 						{...press}
-						className="absolute bottom-3 right-4 z-10 flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill bg-surface text-primary shadow-nav transition-colors hover:bg-primary/5"
+						className="chat-chrome-solid absolute bottom-3 right-4 z-10 flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill shadow-nav transition-opacity hover:opacity-90"
 					>
 						<RiArrowDownLine size={17} />
 						<AnimatePresence>
@@ -530,7 +530,8 @@ export const ThreadList = forwardRef<ThreadListHandle, ThreadListProps>(
 								<motion.span
 									key="badge"
 									{...pop}
-									className="absolute -right-1 -top-1 overflow-hidden rounded-pill bg-brand px-1.5 font-sans text-[calc(10px*var(--ws-fs))] font-bold tabular-nums text-brand-on"
+									className="absolute -right-1 -top-1 overflow-hidden rounded-pill px-1.5 font-sans text-[calc(10px*var(--ws-fs))] font-bold tabular-nums"
+									style={{ background: "var(--chat-accent, var(--ws-brand-primary))", color: "var(--chat-accent-ink, var(--ws-brand-on-primary))" }}
 								>
 									<AnimatePresence mode="popLayout" initial={false}>
 										<motion.span key={pendingNew} className="inline-block" {...swap}>

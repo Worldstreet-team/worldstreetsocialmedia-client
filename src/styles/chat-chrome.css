@@ -52,3 +52,27 @@ html[data-ws-theme="platform-light"] {
 html[data-ws-flat] .chat-chrome {
 	background: var(--chat-chrome-solid, var(--ws-bg-surface));
 }
+
+/* .chat-ground: the floor between the bars (audit 2026-09-25). Put it on
+   the LIST wrapper, never on the pane that carries themeVars() (a property
+   that reaches itself is a cycle). Inside it, every `text-muted`,
+   `text-subtle`, `bg-primary/5` and `border-hairline` reads the theme's
+   ground inks: the "Replied to" label, the time on drag, the reply
+   button, the tick line, the typing label, the empty state. Bars inside
+   it (.chat-chrome) re-point again and win. */
+.chat-ground {
+	--ws-text-primary: var(--chat-ground-ink);
+	--ws-text-muted: var(--chat-ground-ink-muted);
+	--ws-text-subtle: var(--chat-ground-ink-subtle);
+	--ws-border-hairline: var(--chat-ground-hairline);
+}
+
+/* .chat-bubble-ink: inside a bubble, app ink classes mean the bubble's own
+   ink (the embedded post, a failed upload's Retry). The bubble sets its
+   colour inline; currentColor carries it down. */
+.chat-bubble-ink {
+	--ws-text-primary: currentColor;
+	--ws-text-muted: color-mix(in srgb, currentColor 72%, transparent);
+	--ws-text-subtle: color-mix(in srgb, currentColor 52%, transparent);
+	--ws-border-hairline: color-mix(in srgb, currentColor 15%, transparent);
+}

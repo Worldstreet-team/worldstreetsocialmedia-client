@@ -202,6 +202,7 @@ export const HOUSE_DEFAULT: Record<ThemeMode, ChatTheme> = {
  * opposite bubble and the ground behind it, and the values are unchanged
  * from the validated set; only the shape and one light variant moved.
  */
+export type CardGroup = "colour" | "places" | "photo" | "art";
 type CardTheme = {
 	wallpaper: ThemeWallpaper;
 	bubbles: Omit<ThemeBubbles, "shape">;
@@ -210,6 +211,8 @@ const CARDS: {
 	id: string;
 	label: string;
 	blurb: string;
+	/** A shelf chosen by hand; otherwise decided by the dark ground. */
+	group?: CardGroup;
 	dark: CardTheme;
 	light: CardTheme;
 }[] = [
@@ -509,6 +512,176 @@ const CARDS: {
 			bubbles: { mine: { kind: "solid", color: "#475569" }, theirs: { color: "#BEC3CA" } },
 		},
 	},
+
+	/* ── Places (curated 2026-09-25, an agent pass on atmosphere): whole
+	   systems, not one colour each. Dark grounds are black or a wash of it
+	   (no stone); every body pair was computed at 4.5:1 or better, both
+	   modes; no pure blue or pink accent. Painted grounds, so a drawn
+	   wallpaper can follow later without the card changing. ── */
+	{
+		id: "night-market",
+		label: "Night Market",
+		blurb: "Lagos after dark. Hot orange neon strung over black.",
+		group: "places",
+		dark: {
+			wallpaper: { type: "gradient", stops: ["#000000", "#140600"], angle: 170, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#D2400C", "#A5140F"], angle: 135 }, theirs: { color: "#3E2219" } },
+		},
+		light: {
+			wallpaper: { type: "gradient", stops: ["#FFF7EE", "#FFE3CC"], angle: 170, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#D2400C", "#A5140F"], angle: 135 }, theirs: { color: "#F3CDB2" } },
+		},
+	},
+	{
+		id: "sahara-dusk",
+		label: "Sahara Dusk",
+		blurb: "Sienna sky into plum, sand underfoot.",
+		group: "places",
+		dark: {
+			wallpaper: { type: "gradient", stops: ["#150710", "#000000"], angle: 180, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#B0501A", "#7E2A45"], angle: 150 }, theirs: { color: "#3F2719" } },
+		},
+		light: {
+			wallpaper: { type: "gradient", stops: ["#FBEFE6", "#F1D8C2"], angle: 180, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#B0501A", "#7E2A45"], angle: 150 }, theirs: { color: "#E6C6A3" } },
+		},
+	},
+	{
+		id: "atlantic-morning",
+		label: "Atlantic Morning",
+		blurb: "Sea-glass light on deep water. Your side is the morning.",
+		group: "places",
+		dark: {
+			wallpaper: { type: "gradient", stops: ["#000000", "#04161B"], angle: 180, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#D6EDE8" }, theirs: { color: "#113642" } },
+		},
+		light: {
+			wallpaper: { type: "gradient", stops: ["#F4FAF9", "#D9ECEB"], angle: 180, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#0F6F80" }, theirs: { color: "#BFDEDB" } },
+		},
+	},
+	{
+		id: "nairobi-green",
+		label: "Nairobi Green",
+		blurb: "Highland emerald, sisal and black soil.",
+		group: "places",
+		dark: {
+			wallpaper: { type: "gradient", stops: ["#000000", "#04120A"], angle: 180, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#0E8438", "#0B5E3B"], angle: 150 }, theirs: { color: "#17351F" } },
+		},
+		light: {
+			wallpaper: { type: "gradient", stops: ["#F3F9F1", "#E1EFDB"], angle: 180, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#0E8438", "#0B5E3B"], angle: 150 }, theirs: { color: "#E3DDC0" } },
+		},
+	},
+	{
+		id: "accra-gold",
+		label: "Accra Gold",
+		blurb: "Market gold on black cloth, oxblood beside it.",
+		group: "places",
+		dark: {
+			wallpaper: { type: "gradient", stops: ["#000000", "#120A00"], angle: 175, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#F2B72A", "#E39D12"], angle: 150 }, theirs: { color: "#4E1C17" } },
+		},
+		light: {
+			wallpaper: { type: "gradient", stops: ["#FFF9E8", "#F8E6BC"], angle: 175, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#9A6B06", "#7A5400"], angle: 150 }, theirs: { color: "#EAD3A2" } },
+		},
+	},
+	{
+		id: "rio-carnival",
+		label: "Rio Carnival",
+		blurb: "Purple into flame over green. Loud on purpose.",
+		group: "places",
+		dark: {
+			wallpaper: { type: "gradient", stops: ["#0B0414", "#000000"], angle: 160, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#A82DC4", "#C2410C"], angle: 135 }, theirs: { color: "#173821" } },
+		},
+		light: {
+			wallpaper: { type: "gradient", stops: ["#FFFBEE", "#FFE7A8"], angle: 160, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#A82DC4", "#C2410C"], angle: 135 }, theirs: { color: "#C2E4B3" } },
+		},
+	},
+	{
+		id: "tokyo-rain",
+		label: "Tokyo Rain",
+		blurb: "Teal into magenta neon on wet asphalt.",
+		group: "places",
+		dark: {
+			wallpaper: { type: "gradient", stops: ["#000000", "#040E14"], angle: 180, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#0C7C8C", "#A5177A"], angle: 135 }, theirs: { color: "#1E3040" } },
+		},
+		light: {
+			wallpaper: { type: "gradient", stops: ["#EEF3F6", "#D6E1E8"], angle: 180, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#0C7C8C", "#A5177A"], angle: 135 }, theirs: { color: "#C4D2DB" } },
+		},
+	},
+	/* ── Studies: one material each. ── */
+	{
+		id: "alpine-snow",
+		label: "Alpine Snow",
+		blurb: "Cold white, spruce-blue shadow. Crisp.",
+		dark: {
+			wallpaper: { type: "gradient", stops: ["#000000", "#030A10"], angle: 180, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#EDF3F7" }, theirs: { color: "#1A2E3E" } },
+		},
+		light: {
+			wallpaper: { type: "gradient", stops: ["#FFFFFF", "#E4EEF5"], angle: 180, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#295A73" }, theirs: { color: "#D7E4EC" } },
+		},
+	},
+	{
+		id: "ledger-paper",
+		label: "Ledger Paper",
+		blurb: "Buff paper and pen ink. Money keeps its own colours.",
+		dark: {
+			wallpaper: { type: "solid", color: "#000000", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#E6D7A8" }, theirs: { color: "#262626" } },
+		},
+		light: {
+			wallpaper: { type: "gradient", stops: ["#FCFAF3", "#F3EEDD"], angle: 180, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#1F2B36" }, theirs: { color: "#E9E2CB" } },
+		},
+	},
+	{
+		id: "phosphor-terminal",
+		label: "Phosphor Terminal",
+		blurb: "Green phosphor on black. The font stays.",
+		dark: {
+			wallpaper: { type: "solid", color: "#000000", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#2BD96A" }, theirs: { color: "#123020" } },
+		},
+		light: {
+			wallpaper: { type: "gradient", stops: ["#F5F7F1", "#E4EBDD"], angle: 180, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#0F5F35" }, theirs: { color: "#D3DECB" } },
+		},
+	},
+	{
+		id: "velvet-rope",
+		label: "Velvet Rope",
+		blurb: "Deep burgundy, low light, no queue.",
+		dark: {
+			wallpaper: { type: "gradient", stops: ["#14040A", "#000000"], angle: 165, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#9B1B3F", "#6B1230"], angle: 150 }, theirs: { color: "#4A1B2E" } },
+		},
+		light: {
+			wallpaper: { type: "gradient", stops: ["#FCF4F5", "#F3DEE3"], angle: 165, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#9B1B3F", "#6B1230"], angle: 150 }, theirs: { color: "#EBCBD3" } },
+		},
+	},
+	{
+		id: "chalk-slate",
+		label: "Chalk Slate",
+		blurb: "Green slate, chalk in your hand.",
+		dark: {
+			wallpaper: { type: "gradient", stops: ["#101A16", "#050807"], angle: 180, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#EDEBE3" }, theirs: { color: "#223530" } },
+		},
+		light: {
+			wallpaper: { type: "gradient", stops: ["#EEF2EE", "#DCE4DE"], angle: 180, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#2B4640" }, theirs: { color: "#C9D6CF" } },
+		},
+	},
 ];
 
 /** The owner's 22/8, stamped on every card: a theme never re-cuts the bubbles. */
@@ -516,9 +689,9 @@ const stamp = (t: CardTheme): ChatTheme => ({
 	wallpaper: t.wallpaper,
 	bubbles: { ...t.bubbles, shape: "rounded" },
 });
-export type CardGroup = "colour" | "photo" | "art";
-/** Which shelf of the gallery a card sits on: decided by its dark ground. */
+/** Which shelf of the gallery a card sits on: by hand, else by its dark ground. */
 const groupOf = (c: (typeof CARDS)[number]): CardGroup => {
+	if (c.group) return c.group;
 	const w = c.dark.wallpaper;
 	if (w.type !== "preset") return "colour";
 	return WALLPAPERS.find((p) => p.id === w.preset)?.src.startsWith("/wallpapers/gen/")
@@ -535,6 +708,7 @@ export const THEME_CARDS: {
 }[] = CARDS.map((c) => ({ ...c, group: groupOf(c), dark: stamp(c.dark), light: stamp(c.light) }));
 export const CARD_GROUPS: { id: CardGroup; label: string }[] = [
 	{ id: "colour", label: "Colour" },
+	{ id: "places", label: "Places" },
 	{ id: "art", label: "Artwork" },
 	{ id: "photo", label: "Photographs" },
 ];
@@ -671,6 +845,20 @@ export function inkFor(fillOrColor: MineFill | string): string {
 	return l > 0.42 ? "#1C1917" : "#FFFFFF";
 }
 
+/* ── the six sender hues (groups): pushed per theme toward their ink ── */
+
+/** Six brand-family hues for sender names in groups. No blue, no pink. A
+ *  theme walks each toward their bubble's ink until it clears 4.5:1 on
+ *  that fill, and the bubble reads `--chat-sender-N`. */
+export const SENDER_HUES = [
+	"#EAB308", // gold
+	"#F59E0B", // amber
+	"#10B981", // emerald
+	"#14B8A6", // teal
+	"#A3A375", // olive
+	"#D97706", // ochre
+] as const;
+
 /* ── chrome: the top bar and the composer wear the theme ─────────────── */
 
 const toRgb = (hex: string): [number, number, number] => {
@@ -718,9 +906,14 @@ const INK_DARK = "#1C1917";
  * trace of the accent, inks from the app tokens, so it follows light and
  * dark and the app palette by itself.
  */
-function chromeOf(t: ChatTheme): Record<string, string> {
+/**
+ * The one colour a theme's ground can be read as (audit 2026-09-25): the
+ * solid, the middle of the gradient, or a picture's measured tint walked
+ * toward its pole. null for the flat house ground, an own photo, or a
+ * token fill, where everything derives from the app tokens instead.
+ */
+function groundOf(t: ChatTheme): { base: string | null; ink: string | null } {
 	const w = t.wallpaper;
-	const accent = accentOf(t.bubbles.mine);
 	let base: string | null = null;
 	let ink: string | null = null;
 	if (w.type === "solid" && w.color && HEX.test(w.color)) base = w.color;
@@ -740,6 +933,32 @@ function chromeOf(t: ChatTheme): Record<string, string> {
 				base = mixHex(base, pole, 0.15);
 		}
 	}
+	return { base, ink };
+}
+
+/** Push `color` toward `toward` until it clears `ratio` against `against`. */
+function walkTo(color: string, toward: string, against: string, ratio: number): string {
+	let c = color;
+	for (let i = 0; i < 10 && contrast(c, against) < ratio; i++) c = mixHex(c, toward, 0.12);
+	return c;
+}
+
+/** The ink (white or near-black) that wins on a fill. */
+const inkOn = (fill: string) =>
+	contrast(fill, INK_LIGHT) >= contrast(fill, INK_DARK) ? INK_LIGHT : INK_DARK;
+
+/** The app ladder as hexes, for contrast tests on the token branch only;
+ *  the emitted values stay `var(--ws-*)` so the house look follows the
+ *  app palette and mode by itself. */
+const LADDER: Record<ThemeMode, { page: string; raised: string; ink: string }> = {
+	dark: { page: "#000000", raised: "#1A1A1A", ink: "#FFFFFF" },
+	light: { page: "#FFFFFF", raised: "#EFEFEF", ink: "#1C1917" },
+};
+
+function chromeOf(t: ChatTheme): Record<string, string> {
+	const w = t.wallpaper;
+	const accent = accentOf(t.bubbles.mine);
+	let { base, ink } = groundOf(t);
 	if (!base || !HEX.test(accent)) {
 		// The flat house ground is the app itself, so its chrome is exactly the
 		// app's frost (the owner turned down a cyan tint on these surfaces on
@@ -757,6 +976,8 @@ function chromeOf(t: ChatTheme): Record<string, string> {
 			"--chat-chrome-ink-muted": "var(--ws-text-muted)",
 			"--chat-chrome-ink-subtle": "var(--ws-text-subtle)",
 			"--chat-chrome-hairline": "var(--ws-border-hairline)",
+			"--chat-chrome-chip": "var(--ws-bg-chip)",
+			"--chat-chrome-accent": "var(--ws-brand-primary)",
 		};
 	}
 	if (!ink)
@@ -780,6 +1001,103 @@ function chromeOf(t: ChatTheme): Record<string, string> {
 		"--chat-chrome-ink-muted": inkAt(66),
 		"--chat-chrome-ink-subtle": inkAt(46),
 		"--chat-chrome-hairline": inkAt(12),
+		// A well inside a bar (an avatar, a thumb): one step from the bar.
+		"--chat-chrome-chip": mixHex(solid, ink, 0.1),
+		// The accent at glyph size on the bar (a pin, the review bars): pushed
+		// toward the ink until it reads at 3:1.
+		"--chat-chrome-accent": walkTo(accent, ink, solid, 3),
+	};
+}
+
+/**
+ * Everything BETWEEN the chrome and the bubbles (audit 2026-09-25): the
+ * stamps, system rows, reactions, ticks, the reply affordances and the
+ * jump disc sat on app tokens, so a theme reached the bars and the bubbles
+ * and nothing in the middle. These derive from the theme's ground; on the
+ * token branch (flat house ground, own photo) they are the app's own, so
+ * the house look keeps following mode and palette.
+ */
+function groundVars(t: ChatTheme, mode?: ThemeMode): Record<string, string> {
+	const accent = accentOf(t.bubbles.mine);
+	const theirs = t.bubbles.theirs.color;
+	const theirsInk = inkFor(theirs);
+	const { base } = groundOf(t);
+	const ladder = LADDER[mode ?? "dark"];
+	// Contrast tests need a hex for their bubble; a token fill takes the
+	// ladder's raised step for the test and keeps emitting the token.
+	const theirsHex = HEX.test(theirs) ? theirs : ladder.raised;
+	const theirsInkHex = HEX.test(theirs) ? theirsInk : ladder.ink;
+	const linkTheirs = HEX.test(accent) ? walkTo(accent, theirsInkHex, theirsHex, 4.5) : "var(--ws-brand-primary)";
+	const senders = Object.fromEntries(
+		SENDER_HUES.map((h, i) => [`--chat-sender-${i + 1}`, walkTo(h, theirsInkHex, theirsHex, 4.5)]),
+	);
+	const shared = {
+		"--chat-link-theirs": linkTheirs,
+		"--chat-mention-theirs-bg": `color-mix(in srgb, ${linkTheirs} 18%, transparent)`,
+		"--chat-link-mine": inkFor(t.bubbles.mine),
+		"--chat-on-theirs": `color-mix(in srgb, ${theirsInk} 22%, transparent)`,
+		"--chat-send-bg": mineCss(t.bubbles.mine),
+		"--chat-send-ink": inkFor(t.bubbles.mine),
+		...senders,
+	};
+	if (!base || !HEX.test(accent)) {
+		const flat = t.wallpaper.type === "flat";
+		const accentOnGround = mode ? walkTo(accent, ladder.ink, ladder.page, 4.5) : accent;
+		return {
+			...shared,
+			"--chat-ground": "var(--ws-bg-page)",
+			"--chat-ground-ink": "var(--ws-text-primary)",
+			"--chat-ground-ink-muted": "var(--ws-text-muted)",
+			"--chat-ground-ink-subtle": "var(--ws-text-subtle)",
+			"--chat-ground-hairline": "var(--ws-border-hairline)",
+			"--chat-ground-wash": "color-mix(in srgb, var(--ws-text-primary) 6%, transparent)",
+			"--chat-ground-wash-strong": "color-mix(in srgb, var(--ws-text-primary) 12%, transparent)",
+			// The centred day stamp. On a flat ground it is bare subtle ink; on
+			// a picture it sits in a chip of the page colour so it reads over
+			// whatever is behind it (owner 2026-09-15).
+			"--chat-pill-bg": flat ? "transparent" : "color-mix(in srgb, var(--ws-bg-page) 72%, transparent)",
+			"--chat-pill-ink": flat ? "var(--ws-text-subtle)" : "var(--ws-text-muted)",
+			"--chat-accent-on-ground": HEX.test(accent) ? accentOnGround : "var(--ws-brand-primary)",
+			"--chat-reaction-bg": "var(--ws-bg-raised)",
+			"--chat-reaction-ink": "var(--ws-text-muted)",
+			"--chat-reaction-mine-bg": `color-mix(in srgb, ${accent} 40%, var(--ws-bg-page))`,
+			"--chat-reaction-mine-ink": "var(--ws-text-primary)",
+			"--chat-reaction-ring": "var(--ws-bg-page)",
+			"--chat-tick": "var(--ws-text-muted)",
+			"--chat-tick-read": "var(--ws-brand-gold-text)",
+			"--chat-quote-mine": `color-mix(in srgb, ${accent} 24%, var(--ws-bg-surface))`,
+			"--chat-quote-mine-ink": "var(--ws-text-primary)",
+			"--chat-card-bg": "var(--chat-frost)",
+		};
+	}
+	const ink = inkOn(base);
+	const inkAt = (pct: number) => `color-mix(in srgb, ${ink} ${pct}%, transparent)`;
+	const pill = mixHex(base, ink, 0.07);
+	const reactionMine = mixHex(base, accent, 0.4);
+	const quoteMine = mixHex(base, accent, 0.24);
+	return {
+		...shared,
+		"--chat-ground": base,
+		"--chat-ground-ink": ink,
+		"--chat-ground-ink-muted": inkAt(66),
+		"--chat-ground-ink-subtle": inkAt(46),
+		"--chat-ground-hairline": inkAt(12),
+		"--chat-ground-wash": inkAt(6),
+		"--chat-ground-wash-strong": inkAt(12),
+		"--chat-pill-bg": `color-mix(in srgb, ${pill} 82%, transparent)`,
+		"--chat-pill-ink": inkAt(70),
+		"--chat-accent-on-ground": walkTo(accent, ink, base, 4.5),
+		"--chat-reaction-bg": mixHex(base, ink, 0.1),
+		"--chat-reaction-ink": inkAt(70),
+		"--chat-reaction-mine-bg": reactionMine,
+		"--chat-reaction-mine-ink": inkOn(reactionMine),
+		"--chat-reaction-ring": base,
+		"--chat-tick": inkAt(66),
+		"--chat-tick-read": walkTo(accent, ink, base, 4.5),
+		"--chat-quote-mine": quoteMine,
+		"--chat-quote-mine-ink": inkOn(quoteMine),
+		// The thread card wears the theme's own chrome, not the app frost.
+		"--chat-card-bg": "var(--chat-chrome-bg)",
 	};
 }
 
@@ -791,7 +1109,7 @@ function chromeOf(t: ChatTheme): Record<string, string> {
  * badge, the inbox's unread dot — resolves through these, so picking a
  * theme retints the section instead of leaving cyan islands in it.
  */
-export function themeVars(t: ChatTheme): CSSProperties {
+export function themeVars(t: ChatTheme, mode?: ThemeMode): CSSProperties {
 	const s = SHAPES[t.bubbles.shape];
 	const accent = accentOf(t.bubbles.mine);
 	const mix = (pct: number) =>
@@ -812,23 +1130,15 @@ export function themeVars(t: ChatTheme): CSSProperties {
 		"--chat-theirs-ink": inkFor(t.bubbles.theirs.color),
 		// The quoted reply peeks out from behind a bubble, so it sits on the
 		// GROUND, which may be a photograph. It gets an opaque chip: mine is
-		// the accent folded into the surface token, theirs is their own fill.
-		// A translucent wash of the bubble's ink (the old rule) was white text
-		// on 16% white over a pale wallpaper.
-		"--chat-quote-mine": `color-mix(in srgb, ${accent} 24%, var(--ws-bg-surface))`,
-		"--chat-quote-mine-ink": "var(--ws-text-primary)",
+		// the accent folded into the ground (groundVars), theirs is their own
+		// fill. A translucent wash of the bubble's ink (the old rule) was
+		// white text on 16% white over a pale wallpaper.
 		"--chat-quote-theirs": t.bubbles.theirs.color,
 		"--chat-quote-theirs-ink": inkFor(t.bubbles.theirs.color),
-		// The centred day stamp. On a flat ground it is bare subtle ink; on
-		// any picture or painted ground it sits in a chip of the page colour
-		// so it reads over whatever is behind it (owner 2026-09-15: the dates
-		// vanished on a pale wallpaper).
-		"--chat-stamp-bg":
-			t.wallpaper.type === "flat"
-				? "transparent"
-				: "color-mix(in srgb, var(--ws-bg-page) 72%, transparent)",
-		"--chat-stamp-ink":
-			t.wallpaper.type === "flat" ? "var(--ws-text-subtle)" : "var(--ws-text-muted)",
+		...groundVars(t, mode),
+		// The day stamp is the pill (kept under its old name for callers).
+		"--chat-stamp-bg": "var(--chat-pill-bg)",
+		"--chat-stamp-ink": "var(--chat-pill-ink)",
 		"--chat-r": `${s.r}px`,
 		"--chat-r-in": `${s.rin}px`,
 		// Always the whole set, so the `.chat-chrome` scope never meets an
@@ -839,6 +1149,18 @@ export function themeVars(t: ChatTheme): CSSProperties {
 	} as CSSProperties;
 }
 
+/** Key order and undefined keys never decide sameness. */
+function canon(x: unknown): unknown {
+	if (Array.isArray(x)) return x.map(canon);
+	if (x && typeof x === "object")
+		return Object.fromEntries(
+			Object.keys(x as Record<string, unknown>)
+				.sort()
+				.filter((k) => (x as Record<string, unknown>)[k] !== undefined)
+				.map((k) => [k, canon((x as Record<string, unknown>)[k])]),
+		);
+	return x;
+}
 export function sameTheme(a: ChatTheme, b: ChatTheme): boolean {
-	return JSON.stringify(a) === JSON.stringify(b);
+	return JSON.stringify(canon(a)) === JSON.stringify(canon(b));
 }

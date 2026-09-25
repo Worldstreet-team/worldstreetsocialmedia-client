@@ -91,7 +91,7 @@ export function PinsBar({
 							}}
 							className="flex min-h-[36px] min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-[10px] px-1 text-left transition-colors hover:bg-primary/5"
 						>
-							<Pin className="h-4 w-4 shrink-0 text-gold" />
+							<Pin className="h-4 w-4 shrink-0 [color:var(--chat-chrome-accent,var(--ws-brand-primary))]" />
 							<span className="min-w-0 flex-1">
 								<span className="block font-sans text-[calc(11.5px*var(--ws-fs))] font-semibold text-muted">
 									Pinned{rows.length > 1 ? ` ${index + 1} of ${rows.length}` : ""}

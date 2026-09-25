@@ -1,3 +1,4 @@
+import { SENDER_HUES } from "../theme/chatTheme";
 /**
  * System-event copy + per-sender colour for group threads (register 105/117).
  *
@@ -153,21 +154,14 @@ function settingWords(changed: unknown): string {
 	return `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
 }
 
-// Six brand-family hues, all AA on both the stone and paper grounds. No blue,
-// no pink (the palette forbids them). Rendered via inline color.
-const SENDER_HUES = [
-	"#EAB308", // gold
-	"#F59E0B", // amber
-	"#10B981", // emerald
-	"#14B8A6", // teal
-	"#A3A375", // olive
-	"#D97706", // ochre
-];
-
+// Six brand-family hues (SENDER_HUES in chatTheme.ts). Inside a themed
+// pane the theme has already walked each toward their bubble's ink until
+// it reads on that fill; the hue itself is the fallback outside one.
 export function senderColor(profileId: string): string {
 	let h = 0;
 	for (let i = 0; i < profileId.length; i++) {
 		h = (h * 31 + profileId.charCodeAt(i)) >>> 0;
 	}
-	return SENDER_HUES[h % SENDER_HUES.length];
+	const i = h % SENDER_HUES.length;
+	return `var(--chat-sender-${i + 1}, ${SENDER_HUES[i]})`;
 }

@@ -26,8 +26,10 @@ export function TypingIndicator({
 				{[0, 1, 2].map((i) => (
 					<span
 						key={i}
-						className="ws-typing-dot h-1.5 w-1.5 rounded-pill bg-muted"
-						style={{ animationDelay: `${i * 0.16}s` }}
+						className="ws-typing-dot h-1.5 w-1.5 rounded-pill"
+						// Their bubble's own ink, not the app's muted: on a pale
+						// theirs fill the app dots were invisible.
+						style={{ animationDelay: `${i * 0.16}s`, background: "var(--chat-theirs-ink, var(--ws-text-muted))" }}
 					/>
 				))}
 			</div>

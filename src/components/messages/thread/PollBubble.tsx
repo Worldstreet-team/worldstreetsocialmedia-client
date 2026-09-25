@@ -35,10 +35,14 @@ function endsWords(endsAt?: string): string | null {
 export function PollBubble({
 	messageId,
 	poll,
+	isMe = false,
 	onVote,
 }: {
 	messageId: string;
 	poll: PollData;
+	/** On my bubble the radio fills with my ink and the check takes the
+	 *  accent; on theirs, their ink and their fill. Always single colours. */
+	isMe?: boolean;
 	onVote: (messageId: string, optionIds: string[]) => Promise<void> | void;
 }) {
 	const [busy, setBusy] = useState(false);
@@ -108,7 +112,16 @@ export function PollBubble({
 									background: on ? "currentColor" : "transparent",
 								}}
 							>
-								{on && <Check className="h-3 w-3" style={{ color: "var(--chat-mine, #000)" , mixBlendMode: "difference" }} />}
+								{on && (
+									<Check
+										className="h-3 w-3"
+										style={{
+											color: isMe
+												? "var(--chat-accent, var(--ws-brand-primary))"
+												: "var(--chat-theirs, var(--ws-bg-raised))",
+										}}
+									/>
+								)}
 							</span>
 							<span className="relative min-w-0 flex-1 truncate font-sans text-[calc(13.5px*var(--ws-fs))]">
 								{o.text}

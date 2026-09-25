@@ -97,6 +97,7 @@ export function ThemeGallery({
 										>
 											<ThemePreview
 												theme={t}
+												mode={mode}
 												frame="card"
 												compact
 												className={clsx(on && "outline outline-2 outline-brand")}

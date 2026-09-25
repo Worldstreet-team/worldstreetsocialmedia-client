@@ -2723,7 +2723,7 @@ export const MessageBox = ({
 		// 100dvh, not 100vh: on mobile 100vh is the address-bar-expanded height,
 		// so the composer sat below the fold until the bar collapsed.
 		<div
-			style={themeVars(sectionTheme)}
+			style={themeVars(sectionTheme, themeMode)}
 			className="ws-chat-scale relative flex h-[100dvh] bg-page text-primary overflow-hidden"
 		>
 			{/* The section's own ground, when the profile theme has one. */}
@@ -3156,7 +3156,7 @@ export const MessageBox = ({
 				<motion.div
 					key={activeConversation._id}
 					{...threadSlide}
-					style={themeVars(chatTheme)}
+					style={themeVars(chatTheme, themeMode)}
 					className="absolute inset-0 z-10 flex min-w-0 flex-col p-0 md:relative md:inset-auto md:z-auto md:flex-1 md:border-l md:border-hairline md:p-3"
 				>
 					{/* The long card, same architecture as the inbox: everything
@@ -3164,7 +3164,9 @@ export const MessageBox = ({
 					    surface, inset from the column's edges. On a phone the
 					    card IS the screen (owner 2026-09-25): no inset, no radius,
 					    so the header fills the top edge. */}
-					<div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-none glass-frost backdrop-blur-xl md:rounded-2xl">
+					{/* The card's frost is the theme's own chrome when the theme has
+					    a ground of its own; the app frost on the house theme. */}
+					<div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-none backdrop-blur-xl [background:var(--chat-card-bg,var(--chat-frost))] md:rounded-2xl">
 					{/* This chat's picture (per-chat theme, else the profile's).
 					    Only the message list floats on it: the header and the
 					    composer keep a band of the page colour, or the chrome
@@ -3220,7 +3222,7 @@ export const MessageBox = ({
 									onClick={() => !iLeftGroup && setGroupSheetOpen(true)}
 									className="-my-1 flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 text-left transition-colors hover:bg-primary/5 md:gap-3"
 								>
-									<span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-pill bg-raised">
+									<span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-pill [background:var(--chat-chrome-chip,var(--ws-bg-chip))]">
 										{headerIdentity.avatar ? (
 											<SafeAvatar
 												src={headerIdentity.avatar}
@@ -3283,7 +3285,7 @@ export const MessageBox = ({
 												key="online"
 												aria-hidden
 												{...pop}
-												className="absolute bottom-0 right-0 h-3 w-3 rounded-pill bg-success ring-2 ring-page ws-cue-online"
+												className="absolute bottom-0 right-0 h-3 w-3 rounded-pill bg-success ring-2 ws-cue-online [--tw-ring-color:var(--chat-chrome-solid,var(--ws-bg-page))]"
 											/>
 										)}
 									</AnimatePresence>
@@ -3587,18 +3589,23 @@ export const MessageBox = ({
 								<motion.div
 									key="drop"
 									{...fade}
-									className="pointer-events-none absolute inset-2 z-20 flex items-center justify-center rounded-xl border-2 border-dashed border-brand bg-page/60"
+									className="pointer-events-none absolute inset-2 z-20 flex items-center justify-center rounded-xl border-2 border-dashed"
+									style={{ borderColor: "var(--chat-accent, var(--ws-brand-primary))", background: "color-mix(in srgb, var(--chat-ground, var(--ws-bg-page)) 60%, transparent)" }}
 								>
 									<motion.span
 										{...pop}
-										className="rounded-pill bg-raised px-4 py-2 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary"
+										className="rounded-pill px-4 py-2 font-sans text-[calc(13px*var(--ws-fs))] font-semibold"
+										style={{ background: "var(--chat-pill-bg, var(--ws-bg-raised))", color: "var(--chat-ground-ink, var(--ws-text-primary))" }}
 									>
 										Drop to send
 									</motion.span>
 								</motion.div>
 							)}
 						</AnimatePresence>
-						<div className="relative z-10 flex min-h-0 flex-1 flex-col">
+						{/* chat-ground: the floor between the bars reads the theme's
+						    ground inks. Never on the pane above, which carries the
+						    variables themselves. */}
+						<div className="chat-ground relative z-10 flex min-h-0 flex-1 flex-col">
 						{activeConversation.isInvite ? (
 							<InviteCard
 								name={headerIdentity.title}
@@ -3773,9 +3780,9 @@ export const MessageBox = ({
 											{...pop}
 											onClick={() => setSelectedAttId(att.id)}
 											className={clsx(
-												"relative h-[72px] w-[72px] shrink-0 cursor-pointer overflow-hidden rounded-[10px] bg-raised",
+												"relative h-[72px] w-[72px] shrink-0 cursor-pointer overflow-hidden rounded-[10px] [background:var(--chat-chrome-chip,var(--ws-bg-chip))]",
 												selectedAtt?.id === att.id
-													? "ring-2 ring-brand"
+													? "ring-2 [--tw-ring-color:var(--chat-chrome-accent,var(--ws-brand-primary))]"
 													: "ring-1 ring-hairline",
 											)}
 										>
@@ -3795,7 +3802,7 @@ export const MessageBox = ({
 												/>
 											)}
 											{att.caption.trim() && (
-												<span className="absolute inset-x-0 bottom-0 h-[3px] bg-brand/80" />
+												<span className="absolute inset-x-0 bottom-0 h-[3px] [background:var(--chat-chrome-accent,var(--ws-brand-primary))] opacity-80" />
 											)}
 											<button
 												type="button"
@@ -4070,7 +4077,7 @@ export const MessageBox = ({
 						onAnimationComplete={() => setFlight(null)}
 						// It renders outside the thread pane, so it carries the chat's
 						// own variables; without them it wore the inbox's theme.
-						style={themeVars(chatTheme)}
+						style={themeVars(chatTheme, themeMode)}
 						className="pointer-events-none fixed z-modal max-h-24 overflow-hidden px-4 py-2.5 font-sans text-sm leading-relaxed [color:var(--chat-accent-ink,var(--ws-brand-on-primary))]"
 					>
 						{/* The fill fades in as its own layer. framer cannot mix a
@@ -4315,7 +4322,7 @@ export const MessageBox = ({
 								// chat's variables itself. Without them the lifted copy
 								// resolved --chat-mine against the inbox theme and
 								// changed colour in a per-chat themed thread.
-								style={themeVars(chatTheme)}
+								style={themeVars(chatTheme, themeMode)}
 								className="fixed inset-0 z-modal"
 								onClick={() => setMsgMenu(null)}
 							>
@@ -4353,7 +4360,7 @@ export const MessageBox = ({
 											left: barLeft,
 											top: barTop,
 										}}
-										className="absolute flex items-center gap-0.5 rounded-pill card-depth px-1.5 py-1"
+										className="absolute flex items-center gap-0.5 rounded-pill chat-chrome-solid px-1.5 py-1"
 										onClick={(e) => e.stopPropagation()}
 									>
 										{QUICK_REACTIONS.map((emoji) => (
@@ -4398,7 +4405,7 @@ export const MessageBox = ({
 									<motion.div
 										role="menu"
 										{...actionMenu}
-										className="w-[190px] overflow-hidden rounded-xl card-depth"
+										className="w-[190px] overflow-hidden rounded-xl chat-chrome-solid"
 										onClick={(e) => e.stopPropagation()}
 									>
 										{/* The picker used to snap 320px open and shove the

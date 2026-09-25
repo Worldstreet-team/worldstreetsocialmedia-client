@@ -520,8 +520,8 @@ export function VoiceRecorder({
 							key={i}
 							// Spread across the row: a short note has few peaks, and a
 							// fixed 2px pitch left them huddled at the left edge.
-							className="w-[2px] shrink-0 rounded-pill bg-gold"
-							style={{ height: Math.max(3, p * 26) }}
+							className="w-[2px] shrink-0 rounded-pill"
+							style={{ height: Math.max(3, p * 26), background: "var(--chat-chrome-accent, var(--ws-brand-primary))" }}
 						/>
 					))}
 				</div>
@@ -635,7 +635,7 @@ export function VoiceRecorder({
 					className="flex shrink-0 items-center gap-2 text-muted"
 				>
 					<span className="font-sans text-[calc(12px*var(--ws-fs))]">‹ slide to cancel</span>
-					<span className="flex h-7 w-7 items-center justify-center rounded-pill bg-chip">
+					<span className="flex h-7 w-7 items-center justify-center rounded-pill [background:var(--chat-chrome-chip,var(--ws-bg-chip))]">
 						<RiLock2Line size={14} />
 					</span>
 				</div>

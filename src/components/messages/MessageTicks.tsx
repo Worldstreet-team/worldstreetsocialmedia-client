@@ -1,7 +1,6 @@
 "use client";
 
 import { RiCheckLine, RiCheckDoubleLine, RiTimeLine } from "@remixicon/react";
-import clsx from "clsx";
 
 /**
  * Delivery state for a message I sent, in the tick language people already
@@ -67,10 +66,15 @@ export function MessageTicks({ state }: { state: TickState }) {
 			role="img"
 			aria-label={LABEL[state]}
 			title={LABEL[state]}
-			className={clsx(
-				"inline-flex items-center animate-tick-in",
-				state === "read" ? "text-gold" : "text-muted",
-			)}
+			className="inline-flex items-center animate-tick-in"
+			// On the floor between bubbles the theme decides the ink; read
+			// keeps its one bit of colour, gold on the house theme.
+			style={{
+				color:
+					state === "read"
+						? "var(--chat-tick-read, var(--ws-brand-gold-text))"
+						: "var(--chat-tick, var(--ws-text-muted))",
+			}}
 		>
 			<Icon size={14} />
 			<span className="ml-0.5">{LABEL[state]}</span>
