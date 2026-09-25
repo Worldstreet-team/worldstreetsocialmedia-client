@@ -31,7 +31,10 @@ export type PaletteId =
 	| "orchid"
 	| "sunset"
 	| "heritage"
-	| "mono";
+	| "mono"
+	| "citrus"
+	| "steel"
+	| "parchment";
 
 export const DEFAULT_PALETTE: PaletteId = "tide";
 
@@ -91,6 +94,31 @@ export const PALETTES: {
 		blurb: "No colour at all. Ink is the brand.",
 		dark: { fill: "#FAFAFA", on: "#0C0A09" },
 		light: { fill: "#18181B", on: "#FFFFFF" },
+	},
+	// Third set (curated 2026-09-25). Citrus is the one open hue on the
+	// wheel; Steel and Parchment are inks that flip with the mode, like
+	// Mono. Rose and emerald stay out by ruling; Ultramarine was offered and
+	// left out, 17 degrees from Cobalt.
+	{
+		id: "citrus",
+		label: "Citrus",
+		blurb: "Sharp lime.",
+		dark: { fill: "#BEF264", on: "#0C0A09" },
+		light: { fill: "#A3E635", on: "#0C0A09" },
+	},
+	{
+		id: "steel",
+		label: "Steel",
+		blurb: "A cool ink. Brushed, not bright.",
+		dark: { fill: "#B4C2D2", on: "#0C0A09" },
+		light: { fill: "#475569", on: "#FFFFFF" },
+	},
+	{
+		id: "parchment",
+		label: "Parchment",
+		blurb: "Ivory by night, sepia by day.",
+		dark: { fill: "#EBDDBA", on: "#0C0A09" },
+		light: { fill: "#4A3B28", on: "#FFFFFF" },
 	},
 ];
 

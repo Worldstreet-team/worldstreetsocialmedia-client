@@ -139,3 +139,57 @@ html[data-ws-palette="mono"][data-ws-theme="platform-light"] {
 	--ws-brand-gold-text: #18181B;
 	--ws-glow-brand: rgba(24, 24, 27, 0.04);
 }
+
+/* Citrus: lime, the one open hue on the wheel (curated 2026-09-25). */
+html[data-ws-palette="citrus"][data-ws-theme="platform"] {
+	--ws-brand-primary: #BEF264;
+	--ws-brand-on-primary: #0C0A09;
+	--ws-brand-active: #D9F99D;
+	--ws-brand-dim: #84CC16;
+	--ws-brand-gold-text: #D9F99D;
+	--ws-glow-brand: rgba(190, 242, 100, 0.1);
+}
+html[data-ws-palette="citrus"][data-ws-theme="platform-light"] {
+	--ws-brand-primary: #A3E635;
+	--ws-brand-on-primary: #0C0A09;
+	--ws-brand-active: #84CC16;
+	--ws-brand-dim: #65A30D;
+	--ws-brand-gold-text: #3F6212;
+	--ws-glow-brand: rgba(101, 163, 13, 0.06);
+}
+
+/* Steel: a cool ink. Like Mono, the fill flips with the mode. */
+html[data-ws-palette="steel"][data-ws-theme="platform"] {
+	--ws-brand-primary: #B4C2D2;
+	--ws-brand-on-primary: #0C0A09;
+	--ws-brand-active: #CBD5E1;
+	--ws-brand-dim: #94A3B8;
+	--ws-brand-gold-text: #CBD5E1;
+	--ws-glow-brand: rgba(180, 194, 210, 0.1);
+}
+html[data-ws-palette="steel"][data-ws-theme="platform-light"] {
+	--ws-brand-primary: #475569;
+	--ws-brand-on-primary: #FFFFFF;
+	--ws-brand-active: #334155;
+	--ws-brand-dim: #64748B;
+	--ws-brand-gold-text: #334155;
+	--ws-glow-brand: rgba(100, 116, 139, 0.06);
+}
+
+/* Parchment: a warm ink, ivory on black and sepia on paper. Flips like Mono. */
+html[data-ws-palette="parchment"][data-ws-theme="platform"] {
+	--ws-brand-primary: #EBDDBA;
+	--ws-brand-on-primary: #0C0A09;
+	--ws-brand-active: #F5ECD6;
+	--ws-brand-dim: #C9B58C;
+	--ws-brand-gold-text: #F0E3C3;
+	--ws-glow-brand: rgba(235, 221, 186, 0.1);
+}
+html[data-ws-palette="parchment"][data-ws-theme="platform-light"] {
+	--ws-brand-primary: #4A3B28;
+	--ws-brand-on-primary: #FFFFFF;
+	--ws-brand-active: #5C4B35;
+	--ws-brand-dim: #6E5A40;
+	--ws-brand-gold-text: #4A3B28;
+	--ws-glow-brand: rgba(110, 90, 64, 0.06);
+}

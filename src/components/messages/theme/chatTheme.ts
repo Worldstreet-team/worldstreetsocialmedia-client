@@ -682,6 +682,115 @@ const CARDS: {
 			bubbles: { mine: { kind: "solid", color: "#2B4640" }, theirs: { color: "#C9D6CF" } },
 		},
 	},
+	/* ── Colour, third set (curated 2026-09-25, the quiet-to-bold pass).
+	   Eight of fourteen kept: the other six were the same card as a Place
+	   (a second terminal, a second dusk, a third cold white, a second gold
+	   on black, a second bottle green, a second paper). Mine ink 4.76:1 or
+	   better at the worst stop, their ink 11.5:1 or better, both modes. ── */
+	{
+		id: "bond-desk",
+		label: "Bond Desk",
+		blurb: "Navy on black, the trading desk after the close.",
+		dark: {
+			wallpaper: { type: "solid", color: "#000000", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#24358A" }, theirs: { color: "#2A2F40" } },
+		},
+		light: {
+			wallpaper: { type: "solid", color: "#F3F5F9", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#24358A" }, theirs: { color: "#D9DEEA" } },
+		},
+	},
+	{
+		id: "wild-honey",
+		label: "Wild Honey",
+		blurb: "Dark honey, amber-orange, on a jar-black ground.",
+		dark: {
+			wallpaper: { type: "gradient", stops: ["#160E02", "#000000"], angle: 180, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#F99E52" }, theirs: { color: "#40301A" } },
+		},
+		light: {
+			wallpaper: { type: "solid", color: "#FFF8EC", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#F99E52" }, theirs: { color: "#F5DCB0" } },
+		},
+	},
+	{
+		id: "coral-reef",
+		label: "Coral Reef",
+		blurb: "Living coral over black water.",
+		dark: {
+			wallpaper: { type: "gradient", stops: ["#001417", "#000000"], angle: 180, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#FF968D" }, theirs: { color: "#14373E" } },
+		},
+		light: {
+			wallpaper: { type: "solid", color: "#FFF6F3", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#FF968D" }, theirs: { color: "#FFD9CF" } },
+		},
+	},
+	{
+		id: "rose-gold",
+		label: "Rose Gold",
+		blurb: "Burnished copper-rose, the metal not the pink.",
+		dark: {
+			wallpaper: { type: "gradient", stops: ["#170B0C", "#000000"], angle: 180, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#9C6257", "#7A4B45"], angle: 150 }, theirs: { color: "#472E2E" } },
+		},
+		light: {
+			wallpaper: { type: "solid", color: "#FBF3F1", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#9C6257", "#7A4B45"], angle: 150 }, theirs: { color: "#F0D9D3" } },
+		},
+	},
+	{
+		id: "abyss",
+		label: "Abyss",
+		blurb: "Black water, a bioluminescent reply.",
+		dark: {
+			wallpaper: { type: "gradient", stops: ["#00111C", "#000000"], angle: 180, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#0F4A4E" }, theirs: { color: "#7FE3D8" } },
+		},
+		light: {
+			wallpaper: { type: "solid", color: "#EEF6F7", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#0F4A4E" }, theirs: { color: "#B4E7E1" } },
+		},
+	},
+	{
+		id: "slate-rain",
+		label: "Slate Rain",
+		blurb: "Rain-grey blue streaking down. Overcast and calm.",
+		dark: {
+			wallpaper: { type: "gradient", stops: ["#070C12", "#000000"], angle: 180, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#587690", "#3E5468"], angle: 170 }, theirs: { color: "#2A3340" } },
+		},
+		light: {
+			wallpaper: { type: "solid", color: "#EEF1F4", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#587690", "#3E5468"], angle: 170 }, theirs: { color: "#D3DAE1" } },
+		},
+	},
+	{
+		id: "acid-night",
+		label: "Acid Night",
+		blurb: "Neon lime on pure black. Loud on purpose.",
+		dark: {
+			wallpaper: { type: "solid", color: "#000000", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#B6FF2E" }, theirs: { color: "#2E2E2E" } },
+		},
+		light: {
+			wallpaper: { type: "solid", color: "#FFFFFF", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#7BCB00" }, theirs: { color: "#E6E6E6" } },
+		},
+	},
+	{
+		id: "stark-relief",
+		label: "Stark Relief",
+		blurb: "Both poles at once: white and black bubbles on a grey wash.",
+		dark: {
+			wallpaper: { type: "solid", color: "#2E2E2E", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#FFFFFF" }, theirs: { color: "#000000" } },
+		},
+		light: {
+			wallpaper: { type: "solid", color: "#DEDEDE", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#000000" }, theirs: { color: "#FFFFFF" } },
+		},
+	},
 ];
 
 /** The owner's 22/8, stamped on every card: a theme never re-cuts the bubbles. */
