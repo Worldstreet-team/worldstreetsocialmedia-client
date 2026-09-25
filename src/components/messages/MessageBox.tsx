@@ -454,6 +454,35 @@ export const MessageBox = ({
 		window.addEventListener("popstate", onPop);
 		return () => window.removeEventListener("popstate", onPop);
 	}, []);
+	/**
+	 * Open and close a thread without a navigation (owner 2026-09-25: "the
+	 * back opens the chat and the back in the chat opens the messages").
+	 * The close used to PUSH an inbox entry, so history read inbox, chat,
+	 * inbox: the inbox's own back arrow (a real back) landed on the chat,
+	 * whose arrow pushed the inbox again, forever. The rule now: opening
+	 * from the inbox pushes one entry marked `wsFromInbox`; switching from
+	 * one chat to another REPLACES it (carrying the mark), so a back from
+	 * any chat is the inbox; closing steps back when the mark is there and
+	 * otherwise (a deep-linked chat) replaces the entry with the inbox.
+	 * Nothing pushes an inbox entry.
+	 */
+	const inboxUrl = () =>
+		window.location.pathname.replace(/\/messages(\/.*)?$/, "/messages");
+	const openThreadShallow = (id: string) => {
+		const url = `${inboxUrl()}/${id}`;
+		const inChat = /\/messages\/[a-f0-9]{24}/i.test(window.location.pathname);
+		if (inChat) {
+			const fromInbox = Boolean(window.history.state?.wsFromInbox);
+			window.history.replaceState({ wsChat: id, wsFromInbox: fromInbox }, "", url);
+		} else {
+			window.history.pushState({ wsChat: id, wsFromInbox: true }, "", url);
+		}
+	};
+	const closeThreadShallow = () => {
+		setActiveConversation(null);
+		if (window.history.state?.wsFromInbox) window.history.back();
+		else window.history.replaceState({}, "", inboxUrl());
+	};
 	const [messageCache, setMessageCache] = useAtom(messageCacheAtom);
 	const setUnreadMessages = useSetAtom(unreadMessagesCountAtom);
 	const setActiveConversationId = useSetAtom(activeConversationIdAtom);
@@ -3139,15 +3168,7 @@ export const MessageBox = ({
 							// skeletons. Swap the URL by hand; Next syncs
 							// usePathname without a navigation.
 							setActiveConversation(conv as any);
-							const base = window.location.pathname.replace(
-								/\/messages(\/.*)?$/,
-								"/messages",
-							);
-							window.history.pushState(
-								{ wsChat: conv._id },
-								"",
-								`${base}/${conv._id}`,
-							);
+							openThreadShallow(conv._id);
 						}}
 						onDelete={(conv) => {
 							// A request declines instantly — that IS the gesture's
@@ -3215,15 +3236,11 @@ export const MessageBox = ({
 							<button
 								type="button"
 								onClick={() => {
-									// Shallow, like the open: clear the pane and put
-									// the inbox URL back without a navigation, so
-									// the list is exactly as you left it.
-									setActiveConversation(null);
-									const base = window.location.pathname.replace(
-										/\/messages(\/.*)?$/,
-										"/messages",
-									);
-									window.history.pushState({}, "", base);
+									// Shallow, like the open, and a real step back
+									// when the chat was opened from the inbox, so the
+									// list is exactly as you left it and the inbox's
+									// own back leaves Messages.
+									closeThreadShallow();
 								}}
 								aria-label="Back to conversations"
 								className="md:hidden h-11 w-11 shrink-0 flex items-center justify-center rounded-pill text-muted hover:text-primary hover:bg-primary/5 transition-colors"
@@ -4144,9 +4161,8 @@ export const MessageBox = ({
 							const { [goneId]: _gone, ...rest } = prev;
 							return rest;
 						});
-						setActiveConversation(null);
 						void fetchConversations();
-						goBack("/messages");
+						closeThreadShallow();
 					}}
 				/>
 			)}
