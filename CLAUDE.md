@@ -274,7 +274,9 @@ Three independent colour axes, and they must stay independent:
 - **Palettes** (`src/data/palettes.ts` registry, `src/styles/ws-palettes.css`
   values, `components/settings/PaletteSetting.tsx` picker under Settings >
   Display): Tide (default, NO attribute, it is the token file), Cobalt,
-  Iris, Orchid, Sunset, Heritage, Mono. A palette block may declare ONLY
+  Iris, Orchid, Sunset, Heritage, Mono, and since 2026-09-25 Citrus,
+  Steel, Parchment (the last two are inks that flip with the mode, like
+  Mono). A palette block may declare ONLY
   the six brand tokens (`--ws-brand-primary`, `-on-primary`, `-active`,
   `-dim`, `--ws-brand-gold-text`, `--ws-glow-brand`), always as
   `html[data-ws-palette="x"][data-ws-theme="platform"]` plus the
