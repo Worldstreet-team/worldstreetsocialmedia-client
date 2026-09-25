@@ -42,9 +42,6 @@ import { BmCountSync } from "@/components/providers/BmCountSync";
 import { EngagementSync } from "@/components/providers/EngagementSync";
 
 import {
-    Archivo_Black,
-    Bebas_Neue,
-    Caveat,
     Instrument_Sans,
     Instrument_Serif,
     JetBrains_Mono,
@@ -81,8 +78,11 @@ const poppins = Poppins({
     variable: "--font-poppins",
 });
 
-// Editorial + poster voices. These exist ONLY for story/creator typography
-// (the Story Studio's font picker) — app chrome stays Poppins + Public Sans.
+// The editorial voice. It is a story face, but the feed's stories rail
+// draws it too (the text lane's "Aa" in StoryCreateSheet), so it stays here.
+// The poster, condensed and script faces load with the Story Studio instead
+// (components/story/story-fonts.ts, audit 2026-09-25): they were on every
+// page for a picker almost nobody opens.
 const instrumentSerif = Instrument_Serif({
     subsets: ["latin"],
     weight: ["400"],
@@ -90,27 +90,10 @@ const instrumentSerif = Instrument_Serif({
     variable: "--font-instrument-serif",
 });
 
-const archivoBlack = Archivo_Black({
-    subsets: ["latin"],
-    weight: ["400"],
-    variable: "--font-archivo-black",
-});
-
-const bebasNeue = Bebas_Neue({
-    subsets: ["latin"],
-    weight: ["400"],
-    variable: "--font-bebas-neue",
-});
-
-const caveat = Caveat({
-    subsets: ["latin"],
-    weight: ["600", "700"],
-    variable: "--font-caveat",
-});
-
 // A real ticker face. The mono voice used to fall back to the system stack,
 // which meant the canvas export and the DOM preview could resolve different
-// fonts on different machines.
+// fonts on different machines. It is also `font-mono` in app chrome (trend
+// ranks, the countdown, the stream key), so it stays in the layout.
 const jetbrainsMono = JetBrains_Mono({
     subsets: ["latin"],
     weight: ["700"],
@@ -233,7 +216,7 @@ export default async function RootLayout({
                 lang={locale}
                 data-ws-theme="platform"
                 suppressHydrationWarning
-                className={`${instrumentSans.variable} ${publicSans.variable} ${poppins.variable} ${instrumentSerif.variable} ${archivoBlack.variable} ${bebasNeue.variable} ${caveat.variable} ${jetbrainsMono.variable}`}
+                className={`${instrumentSans.variable} ${publicSans.variable} ${poppins.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable}`}
             >
                 <body
                     className={`antialiased`}

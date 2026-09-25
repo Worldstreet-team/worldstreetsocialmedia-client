@@ -18,7 +18,14 @@ import { useUser, useAuth } from "@clerk/nextjs";
 import { useChannel, ChannelProvider } from "ably/react";
 import { useTheme } from "next-themes";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
-import EmojiPicker, { Theme } from "emoji-picker-react";
+import type { Theme } from "emoji-picker-react";
+// The picker is ~300KB and renders only after someone opens it, so the
+// chunk waits for that first render. `Theme` is a runtime enum that would
+// pull the whole library back in; it is imported as a type and the values
+// it holds ("light" / "dark") are written out at the call site.
+const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
+	ssr: false,
+});
 import { useT } from "@/i18n/client";
 import { getUserStoriesAction } from "@/lib/stories.actions";
 import { startConversationAction } from "@/lib/conversation.actions";
@@ -4456,8 +4463,8 @@ export const MessageBox = ({
 														<EmojiPicker
 															theme={
 																resolvedTheme === "light"
-																	? Theme.LIGHT
-																	: Theme.DARK
+																	? ("light" as Theme)
+																	: ("dark" as Theme)
 															}
 															width="100%"
 															height={320}

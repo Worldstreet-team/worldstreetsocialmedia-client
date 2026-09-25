@@ -3,8 +3,10 @@
  * assume webpack; this repo builds with Turbopack).
  *
  * Scope is deliberately narrow:
- *   - /_next/static and /icons: cache-first. Content-hashed, immutable —
- *     this is what makes a warm open paint instantly.
+ *   - /_next/static, /icons and /wallpapers: cache-first. Content-hashed
+ *     or immutable by name (a wallpaper is never replaced under its name, a
+ *     new picture is a new file), and this is what makes a warm open paint
+ *     instantly.
  *   - media (R2, avatars, /_next/image, /images): stale-while-revalidate
  *     with an LRU cap, so faces stop re-downloading on every scroll.
  *   - HTML, RSC payloads, server actions, gateway API: NEVER touched. They
@@ -121,7 +123,8 @@ self.addEventListener("fetch", (event) => {
 	if (
 		sameOrigin &&
 		(url.pathname.startsWith("/_next/static/") ||
-			url.pathname.startsWith("/icons/"))
+			url.pathname.startsWith("/icons/") ||
+			url.pathname.startsWith("/wallpapers/"))
 	) {
 		event.respondWith(cacheFirst(request));
 		return;

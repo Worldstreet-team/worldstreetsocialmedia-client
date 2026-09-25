@@ -2,7 +2,15 @@
 
 import { MagnifyingGlass, X } from "@phosphor-icons/react";
 import clsx from "clsx";
-import EmojiPicker, { type EmojiClickData, Theme } from "emoji-picker-react";
+import type { EmojiClickData, Theme } from "emoji-picker-react";
+import dynamic from "next/dynamic";
+// The picker is ~300KB and renders only after someone opens it, so the
+// chunk waits for that first render. `Theme` is a runtime enum that would
+// pull the whole library back in; it is imported as a type and the values
+// it holds ("light" / "dark") are written out at the call site.
+const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
+  ssr: false,
+});
 import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import { useEffect, useId, useState } from "react";
@@ -259,7 +267,7 @@ export default function StickerTray({
         <div className="flex-1 min-h-0 ws-emoji-picker">
           <EmojiPicker
             onEmojiClick={(data: EmojiClickData) => onAddEmoji(data.emoji)}
-            theme={resolvedTheme === "light" ? Theme.LIGHT : Theme.DARK}
+            theme={resolvedTheme === "light" ? ("light" as Theme) : ("dark" as Theme)}
             width="100%"
             height={260}
             lazyLoadEmojis={true}

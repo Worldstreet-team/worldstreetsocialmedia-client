@@ -1,6 +1,6 @@
 "use client";
 
-import { cacheKeys, fetchCached } from "@/lib/cache";
+import { cacheKeys, fetchCached, readCache } from "@/lib/cache";
 
 /** Same window the right rail uses — they are reading the same two endpoints. */
 const SHARED_TTL = 5 * 60_000;
@@ -128,8 +128,20 @@ export function useExploreData() {
     const stale = now - fetchedAt > EXPLORE_TTL_MS;
 
     // Cold: fetch and show the skeleton. Warm but stale: keep the cached
-    // paint on screen and refresh underneath it.
-    if (!trendsLoaded || !popularLoaded) {
+    // paint on screen and refresh underneath it. A cold atom with a copy
+    // in the shared cache (persisted per account since 2026-09-25) paints
+    // that copy first and refreshes behind it, the same as warm-but-stale.
+    const saved = readCache<Awaited<ReturnType<typeof getExploreDataAction>>>(
+      cacheKeys.exploreData(),
+    );
+    if ((!trendsLoaded || !popularLoaded) && saved?.data?.success) {
+      setTrends(saved.data.data?.trendsForYou ?? []);
+      setPopularPosts((saved.data.data?.popularTweets ?? []).map(mapApiPost));
+      setTrendsLoaded(true);
+      setPopularLoaded(true);
+      setLoading((l) => ({ ...l, trends: false }));
+      void fetchTrends(true);
+    } else if (!trendsLoaded || !popularLoaded) {
       void fetchTrends();
     } else if (stale) {
       void fetchTrends(true);

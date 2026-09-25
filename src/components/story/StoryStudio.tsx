@@ -35,6 +35,11 @@ import OverlayLayer from "@/components/story/overlays/OverlayLayer";
 import StickerTray from "@/components/story/overlays/StickerTray";
 import TextTool from "@/components/story/overlays/TextTool";
 import type { StoryKind } from "@/components/story/StoryCreateSheet";
+import {
+  STORY_FONT_FAMILIES,
+  storyFontsClassName,
+  storyFontsStyle,
+} from "@/components/story/story-fonts";
 import VoiceRecorder from "@/components/story/VoiceRecorder";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import { useToast } from "@/components/ui/Toast/ToastContext";
@@ -235,7 +240,10 @@ export default function StoryStudio({
           script: '"Caveat", cursive',
           mono: MONO_STACK,
         }
-      : resolveOverlayFonts(),
+      : // The poster, condensed and script faces load with the studio, not
+        // the layout, so their tokens no longer resolve on <html>; the
+        // hashed families come from the studio's own font module.
+        { ...resolveOverlayFonts(), ...STORY_FONT_FAMILIES },
   );
 
   const orientedRef = useRef<HTMLCanvasElement | null>(null);
@@ -1419,7 +1427,13 @@ export default function StoryStudio({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2, ease: EASE }}
-        className="fixed inset-0 z-modal glass-veil backdrop-blur-lg backdrop-saturate-150 glass-ink flex flex-col"
+        className={clsx(
+          storyFontsClassName,
+          "fixed inset-0 z-modal glass-veil backdrop-blur-lg backdrop-saturate-150 glass-ink flex flex-col",
+        )}
+        // The studio-only faces and their tokens live on this element; see
+        // story-fonts.ts for why the tokens must be redeclared here.
+        style={storyFontsStyle}
         role="dialog"
         aria-modal="true"
         aria-label={TITLES[kind]}
