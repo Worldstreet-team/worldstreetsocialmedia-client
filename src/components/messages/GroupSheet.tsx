@@ -241,6 +241,26 @@ function logWords(row: LogRow): string {
 	}
 }
 
+/** The group as it will read once the PATCH lands, for the optimistic
+ *  paint. Only the fields updateGroup accepts. */
+function applyGroupPatch(info: GroupInfo, body: Record<string, unknown>): GroupInfo {
+	const next: GroupInfo = { ...info, settings: { ...info.settings } };
+	if (typeof body.name === "string") next.name = body.name;
+	if (typeof body.description === "string") next.description = body.description;
+	if (typeof body.avatar === "string") next.avatar = body.avatar || undefined;
+	if (body.settings && typeof body.settings === "object")
+		next.settings = { ...next.settings, ...(body.settings as Partial<Record<SettingKey, Rule>>) };
+	if (typeof body.joinApproval === "boolean") next.joinApproval = body.joinApproval;
+	if (typeof body.historyVisible === "boolean") next.historyVisible = body.historyVisible;
+	if (typeof body.historyShare === "number") next.historyShare = body.historyShare;
+	if (typeof body.slowModeSec === "number") next.slowModeSec = body.slowModeSec;
+	if (typeof body.disappearSec === "number") next.disappearSec = body.disappearSec;
+	if (typeof body.adminsOnly === "boolean") next.settings.send = body.adminsOnly ? "admins" : "everyone";
+	return next;
+}
+
+const NOTIFY_SPANS: Record<string, number> = { "8h": 8 * 3600_000, "1w": 7 * 24 * 3600_000 };
+
 const notifyValue = (me: GroupInfo["me"]): "all" | "mentions" | "8h" | "1w" | "none" => {
 	if (me.notifyLevel === "none") return "none";
 	if (me.muted) {
@@ -272,6 +292,7 @@ export function GroupSheet({
 	onChanged,
 	onLeft,
 	onOpenRequests,
+	epoch,
 }: {
 	open: boolean;
 	onClose: () => void;
@@ -285,6 +306,8 @@ export function GroupSheet({
 	onLeft: () => void;
 	/** People asking to join, in their own sheet. */
 	onOpenRequests: () => void;
+	/** Bumped by the parent when the room changes under the sheet. */
+	epoch?: number;
 }) {
 	const read = useGatewayRead();
 	const [info, setInfo] = useState<GroupInfo | null>(null);
@@ -316,17 +339,30 @@ export function GroupSheet({
 	const isOwner = info?.me.role === "owner";
 
 	/* ---- the group PATCH, one field at a time ---- */
+	// Optimistic (owner 2026-09-25): the control answers the moment it is
+	// touched; the read after the write confirms, and a refusal puts the
+	// old value back. It used to wait on the round trip and the refetch,
+	// so the row in the thread arrived before the switch moved.
 	const patchGroup = async (body: Record<string, unknown>, key: string) => {
+		const before = info;
+		if (info) setInfo(applyGroupPatch(info, body));
 		setBusy(key);
 		const res = await patchJsonDirect(`/api/messages/groups/${conversationId}`, body);
 		setBusy(null);
 		if (!res.success) {
+			setInfo(before);
 			toast.error(res.message || "Couldn't change that");
 			return false;
 		}
 		await refresh();
 		return true;
 	};
+
+	// Another tab, another admin, or the realtime event for this room:
+	// the parent bumps `epoch` and the sheet re-reads in place.
+	useEffect(() => {
+		if (open && epoch) void load();
+	}, [epoch, open, load]);
 
 	const title =
 		typeof view === "string"
@@ -392,6 +428,7 @@ export function GroupSheet({
 									{view === "main" && (
 										<MainView
 											info={info}
+											setInfo={setInfo}
 											busy={busy}
 											patchGroup={patchGroup}
 											can={can}
@@ -546,6 +583,7 @@ function Section({ title, children }: { title?: string; children: React.ReactNod
 
 function MainView({
 	info,
+	setInfo,
 	busy,
 	patchGroup,
 	can,
@@ -558,6 +596,7 @@ function MainView({
 	setBusy,
 }: {
 	info: GroupInfo;
+	setInfo: (next: GroupInfo | null) => void;
 	busy: string | null;
 	patchGroup: (body: Record<string, unknown>, key: string) => Promise<boolean>;
 	can: (k: string) => boolean;
@@ -608,13 +647,26 @@ function MainView({
 
 	const notify = notifyValue(info.me);
 	const setNotify = async (v: typeof notify) => {
-		setBusy("notify");
+		// Optimistic: the pill reads the new value at once.
+		const before = info;
+		setInfo({
+			...info,
+			me:
+				v === "8h" || v === "1w"
+					? { ...info.me, muted: true, mutedUntil: new Date(Date.now() + NOTIFY_SPANS[v]).toISOString(), notifyLevel: "all" }
+					: v === "none"
+						? { ...info.me, muted: true, mutedUntil: undefined, notifyLevel: "none" }
+						: { ...info.me, muted: false, mutedUntil: undefined, notifyLevel: v },
+		});
 		const res =
 			v === "8h" || v === "1w"
 				? await patchJsonDirect(`/api/messages/conversations/${conversationId}/mute`, { until: v })
 				: await patchJsonDirect(`/api/messages/conversations/${conversationId}/notifications`, { level: v });
-		setBusy(null);
-		if (!res.success) toast.error(res.message || "Couldn't change that");
+		if (!res.success) {
+			setInfo(before);
+			toast.error(res.message || "Couldn't change that");
+			return;
+		}
 		await refresh();
 	};
 
@@ -777,7 +829,6 @@ function MainView({
 							["none", "Muted"],
 						] as const}
 						onPick={(v) => void setNotify(v)}
-						disabled={busy === "notify"}
 					/>
 				</div>
 			</div>
@@ -875,7 +926,6 @@ function SettingsView({
 							["admins", "Admins"],
 						] as const}
 						onPick={(v) => void patchGroup({ settings: { [k]: v } }, `setting:${k}`)}
-						disabled={busy === `setting:${k}`}
 					/>
 				))}
 			</Group>
@@ -885,7 +935,6 @@ function SettingsView({
 					hint="Link joins and members' adds wait for an admin."
 					checked={info.joinApproval}
 					onChange={(v) => void patchGroup({ joinApproval: v }, "joinApproval")}
-					disabled={busy === "joinApproval"}
 				/>
 				<SelectRow
 					label="History for new members"
@@ -905,7 +954,7 @@ function SettingsView({
 							"history",
 						)
 					}
-					disabled={busy === "history"}
+
 				/>
 			</Group>
 			<Group title="Pace">
@@ -923,7 +972,6 @@ function SettingsView({
 						[3600, "1 hour"],
 					] as const}
 					onPick={(v) => void patchGroup({ slowModeSec: v }, "slow")}
-					disabled={busy === "slow"}
 				/>
 				<SelectRow
 					label="Disappearing messages"
@@ -936,7 +984,6 @@ function SettingsView({
 						[7776000, "90 days"],
 					] as const}
 					onPick={(v) => void patchGroup({ disappearSec: v }, "disappear")}
-					disabled={busy === "disappear"}
 				/>
 			</Group>
 		</div>

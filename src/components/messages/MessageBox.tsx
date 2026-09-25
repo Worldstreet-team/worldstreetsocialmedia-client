@@ -126,6 +126,7 @@ import {
 	RiFileCopyLine,
 	RiRestartLine,
 	RiPushpinLine,
+	RiMore2Fill,
 	RiEyeLine,
 	RiPencilLine as RiEditLine,
 	RiDeleteBinLine,
@@ -148,6 +149,7 @@ import { PollComposer, type PollDraft } from "@/components/messages/PollComposer
 import { SeenBySheet } from "@/components/messages/SeenBySheet";
 import { ThreadSearchSheet } from "@/components/messages/ThreadSearchSheet";
 import { EditMessageSheet } from "@/components/messages/EditMessageSheet";
+import { ThreadMoreSheet } from "@/components/messages/ThreadMoreSheet";
 import { BACKEND_ORIGIN } from "@/const";
 
 const API_URL = BACKEND_ORIGIN;
@@ -557,6 +559,9 @@ export const MessageBox = ({
 	/** Briefly highlighted after a jump, so the eye lands on the right bubble. */
 	const [flashedId, setFlashedId] = useState<string | null>(null);
 	const [pollOpen, setPollOpen] = useState(false);
+	const [moreOpen, setMoreOpen] = useState(false);
+	/** Bumped when the open room changes shape; the group sheet re-reads. */
+	const [groupEpoch, setGroupEpoch] = useState(0);
 	const [seenByFor, setSeenByFor] = useState<string | null>(null);
 	const [searchOpen, setSearchOpen] = useState(false);
 	const [editFor, setEditFor] = useState<{ id: string; content: string } | null>(null);
@@ -1988,6 +1993,7 @@ export const MessageBox = ({
 			}
 			if (ablyMessage.data.type === "invite:received")
 				toast(`You're invited to ${ablyMessage.data.name ?? "a group"}`);
+			if (cid && cid === activeIdRef.current) setGroupEpoch((n) => n + 1);
 			void fetchConversationsRef.current?.();
 			return;
 		}
@@ -3151,12 +3157,14 @@ export const MessageBox = ({
 					key={activeConversation._id}
 					{...threadSlide}
 					style={themeVars(chatTheme)}
-					className="absolute inset-0 z-10 flex min-w-0 flex-col p-2 md:relative md:inset-auto md:z-auto md:flex-1 md:border-l md:border-hairline md:p-3"
+					className="absolute inset-0 z-10 flex min-w-0 flex-col p-0 md:relative md:inset-auto md:z-auto md:flex-1 md:border-l md:border-hairline md:p-3"
 				>
 					{/* The long card, same architecture as the inbox: everything
 					    from the header to the composer rides inside one rounded
-					    surface, inset from the column's edges. */}
-					<div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl glass-frost backdrop-blur-xl">
+					    surface, inset from the column's edges. On a phone the
+					    card IS the screen (owner 2026-09-25): no inset, no radius,
+					    so the header fills the top edge. */}
+					<div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-none glass-frost backdrop-blur-xl md:rounded-2xl">
 					{/* This chat's picture (per-chat theme, else the profile's).
 					    Only the message list floats on it: the header and the
 					    composer keep a band of the page colour, or the chrome
@@ -3176,7 +3184,10 @@ export const MessageBox = ({
 							// theme reaches the bar. On the house theme the two are the
 							// same fill; on any other the bar takes the ground's colour
 							// and its own ink (see chromeOf in chatTheme.ts).
-							"chat-chrome relative z-10 mx-2 mt-2 flex h-14 shrink-0 items-center gap-2 rounded-pill px-2 md:mx-3 md:mt-3",
+							// A phone gets the whole top edge, square, no inset (owner
+							// 2026-09-25: "it should fill the top, no radius"); the
+							// floating pill is a desktop shape.
+							"chat-chrome relative z-10 mx-0 mt-0 flex h-14 shrink-0 items-center gap-2 rounded-none px-2 md:mx-3 md:mt-3 md:rounded-pill",
 						)}
 					>
 						<div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3">
@@ -3399,12 +3410,12 @@ export const MessageBox = ({
 									>
 										<Phone className="w-5 h-5" />
 									</motion.button>
-									<span aria-hidden className="h-5 w-px bg-hairline" />
+									<span aria-hidden className="hidden h-5 w-px bg-hairline md:block" />
 									<motion.button
 										{...press}
 										type="button"
 										aria-label="Start group video call"
-										className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/10 hover:text-primary"
+										className="hidden md:flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/10 hover:text-primary"
 										onClick={() =>
 											startCall({
 												conversationId: activeConversation._id,
@@ -3455,12 +3466,12 @@ export const MessageBox = ({
 							>
 								<Phone className="w-5 h-5" />
 							</motion.button>
-							<span aria-hidden className="h-5 w-px bg-hairline" />
+							<span aria-hidden className="hidden h-5 w-px bg-hairline md:block" />
 							<motion.button
 								{...press}
 								type="button"
 								aria-label="Start video call"
-								className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/10 hover:text-primary"
+								className="hidden md:flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/10 hover:text-primary"
 								onClick={() =>
 									startCall({
 										conversationId: activeConversation._id,
@@ -3495,7 +3506,7 @@ export const MessageBox = ({
 							onClick={() => setSearchOpen(true)}
 							aria-label="Search this chat"
 							title="Search this chat"
-							className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
+							className="hidden md:flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
 						>
 							<RiSearchLine size={20} />
 						</motion.button>
@@ -3505,9 +3516,20 @@ export const MessageBox = ({
 							onClick={() => setThemeSheet("gallery")}
 							aria-label="Chat theme"
 							title="Chat theme"
-							className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
+							className="hidden md:flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
 						>
 							<RiPaletteLine size={20} />
+						</motion.button>
+						{/* A phone keeps one call button and this; the rest of the
+						    toolbar lives in the sheet it opens (owner 2026-09-25). */}
+						<motion.button
+							{...press}
+							type="button"
+							onClick={() => setMoreOpen(true)}
+							aria-label="More"
+							className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary md:hidden"
+						>
+							<RiMore2Fill size={20} />
 						</motion.button>
 					</div>
 					</div>
@@ -4085,6 +4107,7 @@ export const MessageBox = ({
 						void fetchConversations();
 					}}
 					onOpenRequests={() => setJoinRequestsFor(activeConversation)}
+					epoch={groupEpoch}
 					onLeft={() => {
 						// Purge NOW — the refetch confirms, but stale local state
 						// is exactly how a left group reopened with a live
@@ -4562,6 +4585,48 @@ export const MessageBox = ({
 				onPoll={() => setPollOpen(true)}
 			/>
 			<PollComposer open={pollOpen} onClose={() => setPollOpen(false)} onSubmit={sendPoll} />
+			{activeConversation && (
+				<ThreadMoreSheet
+					open={moreOpen}
+					onClose={() => setMoreOpen(false)}
+					title={headerIdentity.title}
+					items={[
+						{
+							icon: <Video className="h-4 w-4" />,
+							label: "Video call",
+							onClick: () =>
+								startCall(
+									isGroupThread
+										? {
+												conversationId: activeConversation._id,
+												peer: { id: activeConversation._id, name: headerIdentity.title, avatar: headerIdentity.avatar, username: "" },
+												isVideo: true,
+												isGroup: true,
+											}
+										: {
+												conversationId: activeConversation._id,
+												peer: {
+													id: activeConversation.otherParticipant?._id || "",
+													name: headerIdentity.title,
+													avatar: activeConversation.otherParticipant?.avatar || "",
+													username: activeConversation.otherParticipant?.username || "",
+												},
+												isVideo: true,
+											},
+								),
+						},
+						{ icon: <RiSearchLine size={16} />, label: "Search this chat", onClick: () => setSearchOpen(true) },
+						{ icon: <RiPaletteLine size={16} />, label: "Chat theme", hint: "Wallpaper, bubbles, colours", onClick: () => setThemeSheet("gallery") },
+						isGroupThread
+							? { icon: <Users className="h-4 w-4" />, label: "Group details", onClick: () => !iLeftGroup && setGroupSheetOpen(true) }
+							: {
+									icon: <Info className="h-4 w-4" />,
+									label: "View profile",
+									onClick: () => router.push(`/profile/${activeConversation.otherParticipant?.username ?? ""}`),
+								},
+					]}
+				/>
+			)}
 			<SeenBySheet open={seenByFor !== null} onClose={() => setSeenByFor(null)} messageId={seenByFor} />
 			{activeConversation && (
 				<ThreadSearchSheet
