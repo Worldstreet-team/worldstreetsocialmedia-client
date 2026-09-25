@@ -298,6 +298,28 @@ Three independent colour axes, and they must stay independent:
   that reaches itself is a cycle, the `--ws-fs` bug again), never re-point
   `--ws-bg-*` in it, and no blur (the thread card has the one blur). The
   flat house theme's chrome is exactly the app frost.
+- **A theme reaches everything between the bars (audit 2026-09-25).**
+  `themeVars(t, mode)` derives a GROUND family from the theme's own ground
+  (`groundOf`: the solid, the gradient's middle, a picture's tint walked
+  to its pole) and from it: `--chat-ground(-ink/-ink-muted/-ink-subtle/
+  -hairline/-wash)`, `--chat-pill-bg/-ink` (stamps, system rows,
+  tombstones, the drop chip), `--chat-reaction-*` (opaque chips in the
+  ground's step, ringed in the ground), `--chat-tick/-tick-read`,
+  `--chat-accent-on-ground`, `--chat-link-theirs` and
+  `--chat-mention-theirs-bg` (the accent WALKED toward their ink until it
+  reads 4.5:1 on their bubble; the raw accent failed on 20 of 22 cards),
+  `--chat-sender-1..6` (the group name hues, walked the same way),
+  `--chat-chrome-chip/-accent`, `--chat-send-bg/-ink`, `--chat-card-bg`.
+  On the house theme every one resolves to an app token. Pass `mode` so
+  the token branch can test contrast against the ladder. `.chat-ground`
+  (chat-chrome.css) sits on the LIST wrapper and re-points the ink tokens
+  between the bars; `.chat-bubble-ink` on `[data-bubble]` makes ink
+  classes inside a bubble mean the bubble's ink. Neither may sit on the
+  element carrying `themeVars()` (the cycle rule). Their payment card and
+  the call log row wear their shore; the long-press menu and reaction bar
+  are `.chat-chrome-solid`. A card may set `group` to choose its shelf;
+  the shelves are Colour, Places, Artwork, Photographs. `sameTheme`
+  compares canonical (sorted, undefined-free) shapes.
 - **Wallpapers**: `WALLPAPERS` rows carry a measured `tint`; nothing is
   sampled at runtime. The generated set lives in `public/wallpapers/gen`
   (dark under 3.5% luminance, light over 80%, so frost 0 / dim 0). Card
