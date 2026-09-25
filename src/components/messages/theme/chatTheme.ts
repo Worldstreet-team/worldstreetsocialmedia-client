@@ -117,6 +117,24 @@ export const WALLPAPERS: {
 	{ id: "lichen-light", label: "Lichen", src: "/wallpapers/gen/lichen-light.webp", tone: "light", tint: "#E7ECD8" },
 	{ id: "foundry-dark", label: "Foundry", src: "/wallpapers/gen/foundry-dark.webp", tone: "dark", tint: "#171A1F" },
 	{ id: "foundry-light", label: "Foundry", src: "/wallpapers/gen/foundry-light.webp", tone: "light", tint: "#D5D8DD" },
+	// The comic-book set (2026-09-25): eight moods with no character in
+	// them, drawn to the same rule as the set above, tints measured.
+	{ id: "rooftop-dark", label: "Rooftop", src: "/wallpapers/gen/rooftop-dark.webp", tone: "dark", tint: "#1E0C1A" },
+	{ id: "rooftop-light", label: "Rooftop", src: "/wallpapers/gen/rooftop-light.webp", tone: "light", tint: "#F6F1F6" },
+	{ id: "gamma-dark", label: "Gamma", src: "/wallpapers/gen/gamma-dark.webp", tone: "dark", tint: "#051308" },
+	{ id: "gamma-light", label: "Gamma", src: "/wallpapers/gen/gamma-light.webp", tone: "light", tint: "#EDF7EE" },
+	{ id: "vigilante-dark", label: "Vigilante", src: "/wallpapers/gen/vigilante-dark.webp", tone: "dark", tint: "#0A0904" },
+	{ id: "vigilante-light", label: "Vigilante", src: "/wallpapers/gen/vigilante-light.webp", tone: "light", tint: "#F6F4EC" },
+	{ id: "cosmic-dark", label: "Cosmic", src: "/wallpapers/gen/cosmic-dark.webp", tone: "dark", tint: "#1A0B22" },
+	{ id: "cosmic-light", label: "Cosmic", src: "/wallpapers/gen/cosmic-light.webp", tone: "light", tint: "#F7F0FB" },
+	{ id: "storm-dark", label: "Storm Front", src: "/wallpapers/gen/storm-dark.webp", tone: "dark", tint: "#0E1522" },
+	{ id: "storm-light", label: "Storm Front", src: "/wallpapers/gen/storm-light.webp", tone: "light", tint: "#EFF2F9" },
+	{ id: "symbiote-dark", label: "Symbiote", src: "/wallpapers/gen/symbiote-dark.webp", tone: "dark", tint: "#0F0F12" },
+	{ id: "symbiote-light", label: "Symbiote", src: "/wallpapers/gen/symbiote-light.webp", tone: "light", tint: "#F2F1F6" },
+	{ id: "multiverse-dark", label: "Multiverse", src: "/wallpapers/gen/multiverse-dark.webp", tone: "dark", tint: "#100F19" },
+	{ id: "multiverse-light", label: "Multiverse", src: "/wallpapers/gen/multiverse-light.webp", tone: "light", tint: "#F4F4FB" },
+	{ id: "arclight-dark", label: "Arc Light", src: "/wallpapers/gen/arclight-dark.webp", tone: "dark", tint: "#1B0C0E" },
+	{ id: "arclight-light", label: "Arc Light", src: "/wallpapers/gen/arclight-light.webp", tone: "light", tint: "#F5F2F0" },
 ];
 
 /** The painted (non-photographic) ground, or null when there is none. */
@@ -804,6 +822,134 @@ const CARDS: {
 		light: {
 			wallpaper: { type: "solid", color: "#DEDEDE", frost: 0, hue: "none", dim: 0 },
 			bubbles: { mine: { kind: "solid", color: "#000000" }, theirs: { color: "#FFFFFF" } },
+		},
+	},
+	/* Artwork, the comic-book set (2026-09-25; owner: themes "even dark
+	   things like spider man, marvel things"). Eight moods with no
+	   character, emblem or name in them, each on its own drawn picture,
+	   all on the Artwork shelf: rooftop night, gamma glow, a searchlight
+	   over a skyline, a nebula, a storm, gloss black, a glitch, an arc.
+	   Saturated fills only where the hue was still free (the red, the
+	   toxic green); the glow cards (Storm Front, Cosmic, Multiverse, Arc
+	   Light) wear pale light-source fills in the dark and a deep cut of
+	   the same hue on paper, which keeps them clear of the saturated
+	   blues and violets above. Rooftop's red and Vigilante's yellow sit
+	   inside 20 degrees of Kiln / Night Market and Lamplight: those bands
+	   were full, and the colour is the point of each card. Checked with
+	   the file's own formula against the measured tints: white ink on
+	   every dark mine stop 4.67:1 or better, dark ink on every pale one
+	   8.1:1 or better, their ink 10:1 or better, their fill 1.66:1 (dark)
+	   and 1.25:1 (light) or more off the ground. */
+	{
+		id: "rooftop",
+		label: "Rooftop",
+		blurb: "A night sky strung with thread, red glow below, blue above.",
+		group: "art",
+		dark: {
+			wallpaper: { type: "preset", preset: "rooftop-dark", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#D8202B", "#A5121B"], angle: 140 }, theirs: { color: "#26376F" } },
+		},
+		light: {
+			wallpaper: { type: "preset", preset: "rooftop-light", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#D8202B", "#A5121B"], angle: 140 }, theirs: { color: "#C5D2F0" } },
+		},
+	},
+	{
+		id: "gamma",
+		label: "Gamma",
+		blurb: "A green glow through a halftone screen. Pulp-page dark.",
+		group: "art",
+		dark: {
+			wallpaper: { type: "preset", preset: "gamma-dark", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#3A8420", "#2B6617"], angle: 140 }, theirs: { color: "#22412E" } },
+		},
+		light: {
+			wallpaper: { type: "preset", preset: "gamma-light", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#3A8420", "#2B6617"], angle: 140 }, theirs: { color: "#C3E3C8" } },
+		},
+	},
+	{
+		id: "vigilante",
+		label: "Vigilante",
+		blurb: "A searchlight over a black skyline. Signal yellow, your side.",
+		group: "art",
+		dark: {
+			wallpaper: { type: "preset", preset: "vigilante-dark", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#ECE22A", "#CBC014"], angle: 150 }, theirs: { color: "#3A3A3A" } },
+		},
+		light: {
+			wallpaper: { type: "preset", preset: "vigilante-light", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#E3D91C", "#BFB40E"], angle: 150 }, theirs: { color: "#DCD9CF" } },
+		},
+	},
+	{
+		id: "cosmic",
+		label: "Cosmic",
+		blurb: "Nebula washes and a scatter of stars. Your side is starlight.",
+		group: "art",
+		dark: {
+			wallpaper: { type: "preset", preset: "cosmic-dark", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#C9BAFF", "#E4BFFF"], angle: 140 }, theirs: { color: "#4E2F66" } },
+		},
+		light: {
+			wallpaper: { type: "preset", preset: "cosmic-light", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#6A48C9", "#8A5BD6"], angle: 140 }, theirs: { color: "#DCCBF2" } },
+		},
+	},
+	{
+		id: "storm",
+		label: "Storm Front",
+		blurb: "Lightning over slate. Your side carries the charge.",
+		group: "art",
+		dark: {
+			wallpaper: { type: "preset", preset: "storm-dark", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#A9D2FF", "#7FB5F7"], angle: 160 }, theirs: { color: "#37414F" } },
+		},
+		light: {
+			wallpaper: { type: "preset", preset: "storm-light", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#2A5DB8", "#1E4A99"], angle: 160 }, theirs: { color: "#CFDBEC" } },
+		},
+	},
+	{
+		id: "symbiote",
+		label: "Symbiote",
+		blurb: "Gloss black on black and one white streak. Yours is the streak.",
+		group: "art",
+		dark: {
+			wallpaper: { type: "preset", preset: "symbiote-dark", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#F4F4F5" }, theirs: { color: "#353B50" } },
+		},
+		light: {
+			wallpaper: { type: "preset", preset: "symbiote-light", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "solid", color: "#121216" }, theirs: { color: "#D4D4DC" } },
+		},
+	},
+	{
+		id: "multiverse",
+		label: "Multiverse",
+		blurb: "Cyan and magenta split a few pixels apart. The glitch one.",
+		group: "art",
+		dark: {
+			wallpaper: { type: "preset", preset: "multiverse-dark", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#FF8AD4", "#FF9DB8"], angle: 140 }, theirs: { color: "#154850" } },
+		},
+		light: {
+			wallpaper: { type: "preset", preset: "multiverse-light", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#C41E8E", "#8E2FB5"], angle: 140 }, theirs: { color: "#BFE3E6" } },
+		},
+	},
+	{
+		id: "arclight",
+		label: "Arc Light",
+		blurb: "A cyan ring in a red-black dark, gold at the rim.",
+		group: "art",
+		dark: {
+			wallpaper: { type: "preset", preset: "arclight-dark", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#2BDCF2", "#14C4E0"], angle: 150 }, theirs: { color: "#4A3A12" } },
+		},
+		light: {
+			wallpaper: { type: "preset", preset: "arclight-light", frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#0A7F92", "#07697A"], angle: 150 }, theirs: { color: "#EBD9A8" } },
 		},
 	},
 ];
