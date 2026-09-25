@@ -30,10 +30,10 @@
   "source": "https://commons.wikimedia.org/wiki/File:Forested_hills_in_Lysekil_in_fog_-_wide.jpg"
  },
  "lonetree": {
-  "title": "File:D\u00fclmen, Leuste, B\u00e4ume im Nebel -- 2020 -- 5042 (bw).jpg",
+  "title": "File:Dülmen, Leuste, Bäume im Nebel -- 2020 -- 5042 (bw).jpg",
   "artist": "Dietmar Rabich",
   "license": "CC BY-SA 4.0",
-  "source": "https://commons.wikimedia.org/wiki/File:D\u00fclmen,_Leuste,_B\u00e4ume_im_Nebel_--_2020_--_5042_(bw).jpg"
+  "source": "https://commons.wikimedia.org/wiki/File:Dülmen,_Leuste,_Bäume_im_Nebel_--_2020_--_5042_(bw).jpg"
  },
  "pier": {
   "title": "File:Lake mapourika NZ.jpeg",
@@ -46,5 +46,77 @@
   "artist": "WorldSpace, drawn procedurally for this app (2026-09-20)",
   "license": "Own work",
   "source": "n/a"
+ },
+ "thunder": {
+  "title": "File:Thunderbolts and lightning.jpg",
+  "artist": "ESO/Gerhard Hüdepohl",
+  "license": "CC BY 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Thunderbolts_and_lightning.jpg"
+ },
+ "low-orbit": {
+  "title": "File:Image of aurora at night from the ISS 02.jpg",
+  "artist": "NASA",
+  "license": "Public domain",
+  "source": "https://commons.wikimedia.org/wiki/File:Image_of_aurora_at_night_from_the_ISS_02.jpg"
+ },
+ "celestial": {
+  "title": "File:NASA Unveils Celestial Fireworks as Official Hubble 25th Anniversary Image.jpg",
+  "artist": "NASA, ESA, the Hubble Heritage Team (STS",
+  "license": "Public domain",
+  "source": "https://commons.wikimedia.org/wiki/File:NASA_Unveils_Celestial_Fireworks_as_Official_Hubble_25th_Anniversary_Image.jpg"
+ },
+ "helix": {
+  "title": "File:Comets Kick up Dust in Helix Nebula (PIA09178).jpg",
+  "artist": "NASA/JPL-Caltech/Univ. of Ariz.",
+  "license": "Public domain",
+  "source": "https://commons.wikimedia.org/wiki/File:Comets_Kick_up_Dust_in_Helix_Nebula_(PIA09178).jpg"
+ },
+ "ice-cave": {
+  "title": "File:Glacier-cave-man-iceland (Unsplash).jpg",
+  "artist": "Davide Cantelli cant89",
+  "license": "CC0",
+  "source": "https://commons.wikimedia.org/wiki/File:Glacier-cave-man-iceland_(Unsplash).jpg"
+ },
+ "night-grid": {
+  "title": "File:The city lights of Hong Kong and Shenzhen (iss072e399613).jpg",
+  "artist": "NASA Johnson Space Center",
+  "license": "Public domain",
+  "source": "https://commons.wikimedia.org/wiki/File:The_city_lights_of_Hong_Kong_and_Shenzhen_(iss072e399613).jpg"
+ },
+ "dew-web": {
+  "title": "File:Dewy spider web on a misty morning (53410256981).jpg",
+  "artist": "evergladesnps",
+  "license": "Public domain",
+  "source": "https://commons.wikimedia.org/wiki/File:Dewy_spider_web_on_a_misty_morning_(53410256981).jpg"
+ },
+ "kabukicho": {
+  "title": "File:Nightlife in Kabuki-chō 20241020 (II).jpg",
+  "artist": "This Photo was taken by Supanut Arunopra",
+  "license": "CC BY 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Nightlife_in_Kabuki-ch%C5%8D_20241020_(II).jpg"
+ },
+ "ferro": {
+  "title": "File:Феррожидкость в магнитном поле.jpg",
+  "artist": "Gribkov",
+  "license": "CC BY 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:%D0%A4%D0%B5%D1%80%D1%80%D0%BE%D0%B6%D0%B8%D0%B4%D0%BA%D0%BE%D1%81%D1%82%D1%8C_%D0%B2_%D0%BC%D0%B0%D0%B3%D0%BD%D0%B8%D1%82%D0%BD%D0%BE%D0%BC_%D0%BF%D0%BE%D0%BB%D0%B5.jpg"
+ },
+ "gateway": {
+  "title": "File:Gateway of Fire (16019584068).jpg",
+  "artist": "darkday from Brisbane, Australia",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Gateway_of_Fire_(16019584068).jpg"
+ },
+ "bay-lights": {
+  "title": "File:Light rails on a San Francisco bridge (Unsplash).jpg",
+  "artist": "Artur Westergren ampedimagery",
+  "license": "CC0",
+  "source": "https://commons.wikimedia.org/wiki/File:Light_rails_on_a_San_Francisco_bridge_(Unsplash).jpg"
+ },
+ "carousel": {
+  "title": "File:Neon light trails at fairground (Unsplash).jpg",
+  "artist": "Freddy Marschall freddymarschall",
+  "license": "CC0",
+  "source": "https://commons.wikimedia.org/wiki/File:Neon_light_trails_at_fairground_(Unsplash).jpg"
  }
 }

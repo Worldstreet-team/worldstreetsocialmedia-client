@@ -167,6 +167,10 @@ const sat = (c: string) => {
 	const n = Number.parseInt(c.slice(1), 16);
 	return hsl(n >> 16, (n >> 8) & 255, n & 255)[1];
 };
+const lightnessOf = (c: string) => {
+	const n = Number.parseInt(c.slice(1), 16);
+	return hsl(n >> 16, (n >> 8) & 255, n & 255)[2];
+};
 
 /**
  * Turn a sample into a whole theme, on the rules every curated card keeps:
@@ -194,9 +198,19 @@ export function themeFromSample(
 	const { base } = pictureGround(s.tint, s.tone, dim);
 
 	let accent = s.accent;
+	// Two ways to a legible fill, chosen by what the colour IS. A light
+	// colour (a gold, a cyan, a peach) stays light and takes dark ink, the
+	// way Lamplight's gold does; darkened for white ink it turns to mud. A
+	// deep colour is walked under 0.18 luminance for white ink. Nothing
+	// lands between 0.18 and 0.42, where white ink fails.
+	const light = lightnessOf(accent) >= 0.55;
 	if (sat(accent) < 0.12) {
 		// No colour to take: the accent is ink, like Obsidian.
 		accent = dark ? "#F4F4F5" : "#18181B";
+	} else if (light) {
+		// To 0.5, not the 0.42 line: the gradient's second stop sits a
+		// little under the first, and the ink is chosen by their average.
+		for (let i = 0; i < 14 && luminance(accent) < 0.5; i++) accent = mixHex(accent, "#FFFFFF", 0.1);
 	} else {
 		for (let i = 0; i < 14 && luminance(accent) > 0.18; i++) accent = mixHex(accent, "#000000", 0.1);
 		// A colour that was already deep (a navy, a wine) must still stand
@@ -207,7 +221,7 @@ export function themeFromSample(
 	const mine: ChatTheme["bubbles"]["mine"] =
 		sat(accent) < 0.12
 			? { kind: "solid", color: accent }
-			: { kind: "gradient", stops: [accent, mixHex(accent, "#000000", 0.25)], angle: 140 };
+			: { kind: "gradient", stops: [accent, mixHex(accent, "#000000", light ? 0.08 : 0.25)], angle: 140 };
 
 	let theirs = s.second;
 	if (dark) {

@@ -135,6 +135,24 @@ export const WALLPAPERS: {
 	{ id: "multiverse-light", label: "Multiverse", src: "/wallpapers/gen/multiverse-light.webp", tone: "light", tint: "#F4F4FB" },
 	{ id: "arclight-dark", label: "Arc Light", src: "/wallpapers/gen/arclight-dark.webp", tone: "dark", tint: "#1B0C0E" },
 	{ id: "arclight-light", label: "Arc Light", src: "/wallpapers/gen/arclight-light.webp", tone: "light", tint: "#F5F2F0" },
+	// Photographs found online (2026-09-25 PM, owner: "search online and
+	// curate themes from them"): twelve free-licence pictures (public
+	// domain, CC0 or CC BY, never ShareAlike, so a crop is clean) in the
+	// hero moods, 1440 by 900, credits in /wallpapers/credits.json. The
+	// dark card carries the picture; the light card is a painted pale
+	// ground from the same accent (a galaxy has no daytime photograph).
+	{ id: "thunder", label: "Thunder", src: "/wallpapers/thunder.webp", tone: "dark", tint: "#74616e" },
+	{ id: "low-orbit", label: "Low Orbit", src: "/wallpapers/low-orbit.webp", tone: "dark", tint: "#3d342a" },
+	{ id: "celestial", label: "Celestial", src: "/wallpapers/celestial.webp", tone: "dark", tint: "#644e57" },
+	{ id: "helix", label: "Helix", src: "/wallpapers/helix.webp", tone: "dark", tint: "#214749" },
+	{ id: "ice-cave", label: "Ice Cave", src: "/wallpapers/ice-cave.webp", tone: "dark", tint: "#076d89" },
+	{ id: "night-grid", label: "Night Grid", src: "/wallpapers/night-grid.webp", tone: "dark", tint: "#070809" },
+	{ id: "dew-web", label: "Dew Web", src: "/wallpapers/dew-web.webp", tone: "dark", tint: "#6b5b46" },
+	{ id: "kabukicho", label: "Kabukicho", src: "/wallpapers/kabukicho.webp", tone: "dark", tint: "#524844" },
+	{ id: "ferro", label: "Ferro", src: "/wallpapers/ferro.webp", tone: "dark", tint: "#474745" },
+	{ id: "gateway", label: "Gateway", src: "/wallpapers/gateway.webp", tone: "dark", tint: "#915722" },
+	{ id: "bay-lights", label: "Bay Lights", src: "/wallpapers/bay-lights.webp", tone: "dark", tint: "#393632" },
+	{ id: "carousel", label: "Carousel", src: "/wallpapers/carousel.webp", tone: "dark", tint: "#57443e" },
 ];
 
 /** The painted (non-photographic) ground, or null when there is none. */
@@ -950,6 +968,170 @@ const CARDS: {
 		light: {
 			wallpaper: { type: "preset", preset: "arclight-light", frost: 0, hue: "none", dim: 0 },
 			bubbles: { mine: { kind: "gradient", stops: ["#0A7F92", "#07697A"], angle: 150 }, theirs: { color: "#EBD9A8" } },
+		},
+	},
+	/* Photographs found online (2026-09-25 PM). Each card's hero colour
+	   was set by hand from the picture, on the sampler's two routes: a
+	   light colour stays light with dark ink (the golds, the aurora
+	   green, the lightning's lilac), a deep one is walked under 0.18
+	   luminance for white ink. Checked with the file's own formula: white
+	   or dark ink on every mine stop 4.6:1 or better by the gradient's
+	   average, their ink 6.8:1 or better, their fill 1.6:1 or more off
+	   the measured ground in the dark and 1.4:1 or more on paper. */
+	{
+		id: "thunder",
+		label: "Thunder",
+		blurb: "Lightning over a dark hill, photographed at La Silla. Your side carries the charge.",
+		dark: {
+			wallpaper: { type: "preset", preset: "thunder", frost: 4, hue: "none", dim: 22 },
+			bubbles: { mine: { kind: "gradient", stops: ["#c7baf9", "#b7abe5"], angle: 140 }, theirs: { color: "#585560" } },
+		},
+		light: {
+			wallpaper: { type: "gradient", stops: ["#faf8fe", "#ede8fd"], angle: 165, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#c7baf9", "#b7abe5"], angle: 140 }, theirs: { color: "#c4c0cc" } },
+		},
+	},
+	{
+		id: "low-orbit",
+		label: "Low Orbit",
+		blurb: "The aurora from the station, city lights below. Green on black.",
+		dark: {
+			wallpaper: { type: "preset", preset: "low-orbit", frost: 4, hue: "none", dim: 22 },
+			bubbles: { mine: { kind: "gradient", stops: ["#9FE07A", "#92ce70"], angle: 140 }, theirs: { color: "#62492b" } },
+		},
+		light: {
+			wallpaper: { type: "gradient", stops: ["#fbfefa", "#f2fbec"], angle: 165, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#9FE07A", "#92ce70"], angle: 140 }, theirs: { color: "#dbc3a6" } },
+		},
+	},
+	{
+		id: "celestial",
+		label: "Celestial",
+		blurb: "Hubble's star cluster in full colour. The loud one.",
+		dark: {
+			wallpaper: { type: "preset", preset: "celestial", frost: 10, hue: "none", dim: 32 },
+			bubbles: { mine: { kind: "gradient", stops: ["#f1abd5", "#de9dc4"], angle: 140 }, theirs: { color: "#475974" } },
+		},
+		light: {
+			wallpaper: { type: "gradient", stops: ["#fef8fb", "#fbe6f3"], angle: 165, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#f1abd5", "#de9dc4"], angle: 140 }, theirs: { color: "#b6c9e4" } },
+		},
+	},
+	{
+		id: "helix",
+		label: "Helix",
+		blurb: "The Helix Nebula, a teal ring with a red heart.",
+		dark: {
+			wallpaper: { type: "preset", preset: "helix", frost: 8, hue: "none", dim: 28 },
+			bubbles: { mine: { kind: "gradient", stops: ["#1c7783", "#155962"], angle: 140 }, theirs: { color: "#7e3c45" } },
+		},
+		light: {
+			wallpaper: { type: "gradient", stops: ["#f6fbfc", "#e1f2f4"], angle: 165, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#1c7783", "#155962"], angle: 140 }, theirs: { color: "#e6b0b6" } },
+		},
+	},
+	{
+		id: "ice-cave",
+		label: "Ice Cave",
+		blurb: "Inside a glacier in Iceland. Cold blue all around.",
+		dark: {
+			wallpaper: { type: "preset", preset: "ice-cave", frost: 6, hue: "none", dim: 24 },
+			bubbles: { mine: { kind: "gradient", stops: ["#018095", "#016070"], angle: 140 }, theirs: { color: "#2e5964" } },
+		},
+		light: {
+			wallpaper: { type: "gradient", stops: ["#f5fdfe", "#dbf7fb"], angle: 165, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#018095", "#016070"], angle: 140 }, theirs: { color: "#9ac4cf" } },
+		},
+	},
+	{
+		id: "night-grid",
+		label: "Night Grid",
+		blurb: "Hong Kong and Shenzhen from orbit: gold threads on black.",
+		dark: {
+			wallpaper: { type: "preset", preset: "night-grid", frost: 0, hue: "none", dim: 16 },
+			bubbles: { mine: { kind: "gradient", stops: ["#E8C25A", "#d5b253"], angle: 140 }, theirs: { color: "#353538" } },
+		},
+		light: {
+			wallpaper: { type: "gradient", stops: ["#fefdf8", "#fcf6e8"], angle: 165, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#E8C25A", "#d5b253"], angle: 140 }, theirs: { color: "#bcbcbf" } },
+		},
+	},
+	{
+		id: "dew-web",
+		label: "Dew Web",
+		blurb: "A spider's web strung with dew at sunrise.",
+		dark: {
+			wallpaper: { type: "preset", preset: "dew-web", frost: 8, hue: "none", dim: 30 },
+			bubbles: { mine: { kind: "gradient", stops: ["#E6C070", "#d4b167"], angle: 140 }, theirs: { color: "#5e574c" } },
+		},
+		light: {
+			wallpaper: { type: "gradient", stops: ["#fefcf9", "#fcf6eb"], angle: 165, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#E6C070", "#d4b167"], angle: 140 }, theirs: { color: "#c3bcb0" } },
+		},
+	},
+	{
+		id: "kabukicho",
+		label: "Kabukicho",
+		blurb: "Shinjuku's neon at night. Every sign lit.",
+		dark: {
+			wallpaper: { type: "preset", preset: "kabukicho", frost: 12, hue: "none", dim: 34 },
+			bubbles: { mine: { kind: "gradient", stops: ["#d13a1b", "#9d2c14"], angle: 140 }, theirs: { color: "#2c5e2c" } },
+		},
+		light: {
+			wallpaper: { type: "gradient", stops: ["#fef7f6", "#fce4df"], angle: 165, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#d13a1b", "#9d2c14"], angle: 140 }, theirs: { color: "#a7d8a7" } },
+		},
+	},
+	{
+		id: "ferro",
+		label: "Ferro",
+		blurb: "Ferrofluid under a magnet: black gloss, spiked.",
+		dark: {
+			wallpaper: { type: "preset", preset: "ferro", frost: 6, hue: "none", dim: 24 },
+			bubbles: { mine: { kind: "gradient", stops: ["#9e6516", "#774c11"], angle: 140 }, theirs: { color: "#5b5b5d" } },
+		},
+		light: {
+			wallpaper: { type: "gradient", stops: ["#fdfaf6", "#faefdf"], angle: 165, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#9e6516", "#774c11"], angle: 140 }, theirs: { color: "#bcbcbe" } },
+		},
+	},
+	{
+		id: "gateway",
+		label: "Gateway",
+		blurb: "A ring of fire in a brick tunnel, drawn with steel wool.",
+		dark: {
+			wallpaper: { type: "preset", preset: "gateway", frost: 8, hue: "none", dim: 28 },
+			bubbles: { mine: { kind: "gradient", stops: ["#af5912", "#83430e"], angle: 140 }, theirs: { color: "#64574a" } },
+		},
+		light: {
+			wallpaper: { type: "gradient", stops: ["#fefaf6", "#fdecdf"], angle: 165, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#af5912", "#83430e"], angle: 140 }, theirs: { color: "#cabcae" } },
+		},
+	},
+	{
+		id: "bay-lights",
+		label: "Bay Lights",
+		blurb: "Light trails over the bridge, the city gold behind.",
+		dark: {
+			wallpaper: { type: "preset", preset: "bay-lights", frost: 10, hue: "none", dim: 30 },
+			bubbles: { mine: { kind: "gradient", stops: ["#EBBE5E", "#d8af56"], angle: 140 }, theirs: { color: "#47484f" } },
+		},
+		light: {
+			wallpaper: { type: "gradient", stops: ["#fefcf9", "#fcf6e8"], angle: 165, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#EBBE5E", "#d8af56"], angle: 140 }, theirs: { color: "#bdbec5" } },
+		},
+	},
+	{
+		id: "carousel",
+		label: "Carousel",
+		blurb: "A fairground ride spun into rings of light.",
+		dark: {
+			wallpaper: { type: "preset", preset: "carousel", frost: 8, hue: "none", dim: 26 },
+			bubbles: { mine: { kind: "gradient", stops: ["#BFD8FF", "#b0c7eb"], angle: 140 }, theirs: { color: "#5e514a" } },
+		},
+		light: {
+			wallpaper: { type: "gradient", stops: ["#fcfdff", "#f6faff"], angle: 165, frost: 0, hue: "none", dim: 0 },
+			bubbles: { mine: { kind: "gradient", stops: ["#BFD8FF", "#b0c7eb"], angle: 140 }, theirs: { color: "#c9bcb6" } },
 		},
 	},
 ];
