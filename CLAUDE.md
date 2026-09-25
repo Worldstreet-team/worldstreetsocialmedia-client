@@ -352,7 +352,17 @@ Three independent colour axes, and they must stay independent:
   Front, Symbiote, Multiverse, Arc Light): original drawn wallpapers in
   those moods, no character, logo or trademarked name, because the
   owner's "Spider-Man, Marvel" pictures cannot ship; a person who wants
-  the real art brings the picture and the theme is read from it.
+  the real art brings the picture and the theme is read from it. The
+  Photographs shelf then gained twelve pictures found online the same
+  day (Thunder, Low Orbit, Celestial, Helix, Ice Cave, Night Grid, Dew
+  Web, Kabukicho, Ferro, Gateway, Bay Lights, Carousel): Wikimedia
+  Commons finds, public domain, CC0 or CC BY only (never ShareAlike, so
+  a crop is clean), 1440 by 900 webp in `public/wallpapers`, credits in
+  `credits.json` (CC BY needs the credit shown somewhere before this
+  ships wide). Each card's hero colour is set by hand on the sampler's
+  two routes: a light colour stays light with dark ink, a deep one goes
+  under 0.18 luminance for white ink; the light card is a painted pale
+  ground from the same accent.
 - **The browser's own chrome follows** (`providers/ThemeColorSync.tsx`
   in the root layout, `browserChromeAtom`). The `theme-color` meta is
   rewritten to the resolved page colour when the mode or palette moves,
