@@ -1,5 +1,6 @@
 "use client";
 
+import { platformName } from "@/lib/platform";
 import clsx from "clsx";
 import {
 	useCallback,
@@ -80,6 +81,8 @@ export interface ConversationRow {
 	/** DM only — a group has no single "other". */
 	otherParticipant?: ConversationRowUser;
 	kind?: "dm" | "group";
+	/** The platform the thread was opened from; shown when it is not home. */
+	source?: string;
 	name?: string;
 	avatar?: string;
 	memberCount?: number;
@@ -616,6 +619,11 @@ export function ConversationList({
 								>
 									{identity.title}
 								</span>
+								{platformName(conv.source) && (
+									<span className="shrink-0 rounded-pill bg-primary/5 px-1.5 py-px font-sans text-[calc(11px*var(--ws-fs))] font-medium text-muted">
+										{platformName(conv.source)}
+									</span>
+								)}
 								{isGroup ? (
 									<>
 										<span className="flex shrink-0 items-center gap-0.5 font-sans text-[calc(13px*var(--ws-fs))] text-subtle">

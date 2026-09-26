@@ -1,3 +1,4 @@
+import { viaLabel } from "@/lib/platform";
 import type { Realtime } from "ably";
 import type {
 	LocalVideoTrack,
@@ -100,6 +101,8 @@ export interface CallState {
 	isGroup: boolean;
 	/** Who rang, for the incoming line of a group call. */
 	groupCaller: CallPeer | null;
+	/** "via Xstream" when the ring came from another platform, else null. */
+	via?: string | null;
 	/** Remote participant count — bumps re-render the grid. */
 	participantCount: number;
 	conversationId: string | null;
@@ -877,6 +880,7 @@ class CallManager {
 						: (data.caller ?? null),
 					isGroup: incomingGroup,
 					groupCaller: incomingGroup ? (data.caller ?? null) : null,
+					via: viaLabel(data.platform),
 					participantCount: 0,
 					conversationId: data.conversationId ?? null,
 					isVideo: Boolean(data.isVideo),

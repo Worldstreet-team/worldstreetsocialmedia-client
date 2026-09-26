@@ -81,16 +81,7 @@ export interface BubbleMessage {
  * banner for both"). WorldSpace and its app are one home, so nothing is
  * said for those; Xstream shows the mirror image, "via WorldSpace".
  */
-const PLATFORM_LABELS: Record<string, string> = {
-	dashboard: "Dashboard",
-	academy: "Academy",
-	shop: "Shop",
-	xstream: "Xstream",
-};
-function viaLabel(source: string | undefined): string | null {
-	const name = source ? PLATFORM_LABELS[source] : undefined;
-	return name ? `via ${name}` : null;
-}
+import { viaLabel } from "@/lib/platform";
 
 function quotedPreview(r: {
 	content?: string;
@@ -549,6 +540,7 @@ export const MessageBubble = memo(function MessageBubble({
 				<CallLogRow
 					content={m.content}
 					at={m.createdAt}
+					source={m.source}
 					mine={isMe}
 					onCallBack={onCallBack}
 				/>

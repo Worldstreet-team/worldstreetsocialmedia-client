@@ -7,6 +7,7 @@ import {
 	RiVideoOnFill,
 } from "@remixicon/react";
 import clsx from "clsx";
+import { viaLabel } from "@/lib/platform";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { press } from "@/lib/motion-presets";
@@ -26,11 +27,14 @@ import { press } from "@/lib/motion-presets";
 export function CallLogRow({
 	content,
 	at,
+	source,
 	mine,
 	onCallBack,
 }: {
 	content: string;
 	at?: string;
+	/** The platform the call was placed from; named when it is not home. */
+	source?: string;
 	/** The caller logs the call, so the sender IS the caller: the row sits
 	 *  on their shore like any other message (owner pick 2026-09-03). */
 	mine?: boolean;
@@ -69,9 +73,11 @@ export function CallLogRow({
 					<span className="block truncate font-sans text-[calc(13px*var(--ws-fs))] font-medium">
 						{content}
 					</span>
-					{at && (
+					{(at || viaLabel(source)) && (
 						<span className="block font-sans text-[calc(12px*var(--ws-fs))] tabular-nums opacity-70">
-							{format(new Date(at), "h:mm a")}
+							{at ? format(new Date(at), "h:mm a") : null}
+							{at && viaLabel(source) ? " · " : null}
+							{viaLabel(source)}
 						</span>
 					)}
 				</span>
