@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw } from "@/components/ui/icons";
 import { press, reveal } from "@/lib/motion-presets";
 
 /* Route error boundary — catches render/data errors below the root layout and

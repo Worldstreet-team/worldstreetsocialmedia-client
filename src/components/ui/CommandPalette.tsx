@@ -4,7 +4,7 @@ import { AnimatePresence } from "framer-motion";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { OverlayPanel, OverlayScrim } from "@/components/ui/Overlay";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import type { LucideIcon } from "lucide-react";
+import type { LucideIcon } from "@/components/ui/icons";
 // 03-icons: everything here stays inside the standardized lucide set —
 // house/search/bell/message-circle/bookmark for nav, plus for create.
 import {
@@ -16,7 +16,7 @@ import {
   Search,
   Settings,
   Sparkles,
-} from "lucide-react";
+} from "@/components/ui/icons";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";

@@ -8,7 +8,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { Info, Phone, Video, Plus, ArrowLeft, Users } from "lucide-react";
+import { Info, Phone, Video, Plus, ArrowLeft, Users } from "@/components/ui/icons";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Badge } from "@/components/ui/Badge";

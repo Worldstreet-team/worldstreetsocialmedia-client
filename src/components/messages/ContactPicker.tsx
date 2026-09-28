@@ -2,7 +2,7 @@
 
 import { AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
-import { Search } from "lucide-react";
+import { Search } from "@/components/ui/icons";
 import { useGatewayRead } from "@/hooks/useGateway";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import {

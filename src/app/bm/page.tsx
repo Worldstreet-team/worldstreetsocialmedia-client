@@ -20,7 +20,7 @@ import {
 	X,
 } from "@phosphor-icons/react";
 import Link from "next/link";
-import { Briefcase } from "lucide-react";
+import { Briefcase } from "@/components/ui/icons";
 import { BACKEND_URL } from "@/const";
 import { userAtom } from "@/store/user.atom";
 import { unreadBmCountAtom } from "@/store/ui.atom";

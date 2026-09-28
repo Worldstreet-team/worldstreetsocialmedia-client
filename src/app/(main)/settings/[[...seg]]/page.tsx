@@ -20,7 +20,7 @@ import {
 	ShieldCheck,
 	SlidersHorizontal,
 	UserCircle,
-} from "lucide-react";
+} from "@/components/ui/icons";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { AccessibilitySettings } from "@/components/settings/AccessibilitySettings";
@@ -32,7 +32,7 @@ import { InterestPicker } from "@/components/onboarding/InterestPicker";
 import { BlockedAccounts } from "@/components/settings/BlockedAccounts";
 import { AccountLifecycle } from "@/components/settings/AccountLifecycle";
 import { UsernameSetting } from "@/components/settings/UsernameSetting";
-import { LayoutGrid } from "lucide-react";
+import { LayoutGrid } from "@/components/ui/icons";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { NotificationPrefs } from "@/components/settings/NotificationPrefs";

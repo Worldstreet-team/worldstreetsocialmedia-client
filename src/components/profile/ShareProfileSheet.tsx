@@ -2,8 +2,11 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Search } from "lucide-react";
-import { RiLinkM, RiShareForwardFill } from "@remixicon/react";
+import { Check, Search } from "@/components/ui/icons";
+import {
+	Export as PhExport,
+	Link as PhLink,
+} from "@phosphor-icons/react";
 import clsx from "clsx";
 import { toast } from "sonner";
 import { useGatewayRead } from "@/hooks/useGateway";
@@ -311,7 +314,7 @@ export function ShareProfileSheet({
 												{copied ? (
 													<Check className="h-4 w-4" />
 												) : (
-													<RiLinkM size={16} />
+													<PhLink size={16} />
 												)}
 												{copied ? t("share.copied") : t("share.copyLink")}
 											</motion.span>
@@ -487,7 +490,7 @@ export function ShareProfileSheet({
 											className="flex w-[68px] shrink-0 cursor-pointer flex-col items-center gap-1.5 rounded-lg px-1 py-1.5 transition-colors hover:bg-primary/5"
 										>
 											<span className="flex h-12 w-12 items-center justify-center rounded-pill bg-primary/5 text-primary">
-												<RiShareForwardFill size={20} />
+												<PhExport weight="fill" size={20} />
 											</span>
 											<span className="w-full truncate text-center font-sans text-[calc(12px*var(--ws-fs))] text-primary">
 												{t("share.otherApps")}

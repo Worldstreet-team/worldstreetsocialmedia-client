@@ -5,7 +5,7 @@ import { UserBadges } from "@/components/ui/UserBadges";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight } from "@/components/ui/icons";
 import {
 	Broadcast,
 	Camera,

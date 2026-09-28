@@ -4,7 +4,7 @@ import type { Ref } from "react";
 import { motion } from "framer-motion";
 // 03-icons: `check`, `x`, `bell` are in-set. `alert-triangle` is a justified
 // deviation — the standardized set has no warning glyph.
-import { X, Check, Bell, AlertTriangle } from "lucide-react";
+import { X, Check, Bell, AlertTriangle } from "@/components/ui/icons";
 import { menuStagger, snappySpring, staggerPop } from "@/lib/motion-presets";
 import type { Toast, ToastPosition } from "./ToastContext";
 

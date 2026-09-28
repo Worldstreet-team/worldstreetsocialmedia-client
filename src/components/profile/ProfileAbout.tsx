@@ -8,7 +8,7 @@ import VerifiedIcon from "@/assets/icons/VerifiedIcon";
 import { premiumOpenAtom } from "@/store/ui.atom";
 import { formatCompact } from "@/lib/utils";
 import Link from "next/link";
-import { Calendar, Link as LinkIcon, MapPin } from "lucide-react";
+import { Calendar, Link as LinkIcon, MapPin } from "@/components/ui/icons";
 import { renderRichText } from "@/components/ui/RichText";
 import {
   UserBadges,

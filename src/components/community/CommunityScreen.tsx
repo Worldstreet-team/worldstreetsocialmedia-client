@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, UsersThree } from "@phosphor-icons/react";
-import { MessageSquarePlus, Search } from "lucide-react";
+import { MessageSquarePlus, Search } from "@/components/ui/icons";
 
 import { PostCard, type PostProps } from "@/components/feed/PostCard";
 import { ImpressionSensor } from "@/components/feed/ImpressionSensor";

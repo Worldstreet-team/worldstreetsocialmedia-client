@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Users } from "lucide-react";
+import { Loader2, Users } from "@/components/ui/icons";
 import { toast } from "sonner";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { useGatewayRead } from "@/hooks/useGateway";

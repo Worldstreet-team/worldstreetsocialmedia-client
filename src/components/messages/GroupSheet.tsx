@@ -21,7 +21,7 @@ import {
 	Trash2,
 	UserPlus,
 	Users,
-} from "lucide-react";
+} from "@/components/ui/icons";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Phone, Video } from "lucide-react";
+import { Phone, Video } from "@/components/ui/icons";
 import { AnimatePresence, motion } from "framer-motion";
 import { collapse } from "@/lib/motion-presets";
 

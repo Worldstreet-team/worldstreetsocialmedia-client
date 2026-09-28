@@ -6,7 +6,7 @@ import {
 	Lock,
 	SlidersHorizontal,
 	UserCircle,
-} from "lucide-react";
+} from "@/components/ui/icons";
 
 /**
  * The settings map, read by both faces of the surface: the desktop section

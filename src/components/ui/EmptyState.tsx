@@ -1,4 +1,4 @@
-import type { LucideIcon } from "lucide-react";
+import type { LucideIcon } from "@/components/ui/icons";
 
 interface EmptyStateProps {
 	icon: LucideIcon;

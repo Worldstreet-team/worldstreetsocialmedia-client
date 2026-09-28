@@ -1,6 +1,6 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Check } from "@/components/ui/icons";
 import { useState } from "react";
 
 export interface PollData {

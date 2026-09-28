@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAtomValue } from "jotai";
 import { CaretDown, CaretRight, MagnifyingGlass, X } from "@phosphor-icons/react";
-import { LayoutGrid } from "lucide-react";
+import { LayoutGrid } from "@/components/ui/icons";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { collapse, staggerItem, staggerParentFast, thumbSpring } from "@/lib/motion-presets";

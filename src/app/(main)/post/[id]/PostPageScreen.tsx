@@ -12,7 +12,7 @@ import { PostCard, type PostProps } from "@/components/feed/PostCard";
 import { usePostEvents } from "@/hooks/useUserEvents";
 import { CommentComposer } from "@/components/feed/CommentComposer";
 import { PostSkeleton } from "@/components/feed/PostSkeleton";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, Search } from "@/components/ui/icons";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { mapApiPost } from "@/lib/post-mapper";
 import { formatTimeAgo } from "@/lib/utils";

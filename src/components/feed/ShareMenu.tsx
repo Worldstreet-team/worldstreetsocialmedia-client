@@ -1,12 +1,12 @@
 "use client";
 
 import {
-	RiFacebookCircleFill,
-	RiLinkM,
-	RiTelegram2Fill,
-	RiTwitterXFill,
-	RiWhatsappFill,
-} from "@remixicon/react";
+	FacebookLogo as PhFacebookLogo,
+	Link as PhLink,
+	TelegramLogo as PhTelegramLogo,
+	WhatsappLogo as PhWhatsappLogo,
+	XLogo as PhXLogo,
+} from "@phosphor-icons/react";
 import { motion, useIsPresent } from "framer-motion";
 import { menuStagger, staggerItem } from "@/lib/motion-presets";
 
@@ -44,28 +44,28 @@ export const SHARE_TARGETS = [
 	{
 		key: "x",
 		label: "X",
-		Icon: RiTwitterXFill,
+		Icon: PhXLogo,
 		href: (url: string, text: string) =>
 			`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
 	},
 	{
 		key: "whatsapp",
 		label: "WhatsApp",
-		Icon: RiWhatsappFill,
+		Icon: PhWhatsappLogo,
 		href: (url: string, text: string) =>
 			`https://wa.me/?text=${encodeURIComponent(text ? `${text} ${url}` : url)}`,
 	},
 	{
 		key: "telegram",
 		label: "Telegram",
-		Icon: RiTelegram2Fill,
+		Icon: PhTelegramLogo,
 		href: (url: string, text: string) =>
 			`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`,
 	},
 	{
 		key: "facebook",
 		label: "Facebook",
-		Icon: RiFacebookCircleFill,
+		Icon: PhFacebookLogo,
 		href: (url: string) =>
 			`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
 	},
@@ -120,7 +120,7 @@ export function ShareMenu({
 						onClick={onClose}
 						className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 font-sans text-sm font-medium text-primary transition-colors hover:bg-raised"
 					>
-						<tgt.Icon size={17} className="shrink-0 text-muted" />
+						<tgt.Icon size={17} weight="fill" className="shrink-0 text-muted" />
 						{tgt.label}
 					</motion.a>
 				))}
@@ -134,7 +134,7 @@ export function ShareMenu({
 					}}
 					className="flex w-full cursor-pointer items-center gap-2.5 border-t border-hairline px-3.5 py-2.5 text-left font-sans text-sm font-medium text-primary transition-colors hover:bg-raised"
 				>
-					<RiLinkM size={17} className="shrink-0 text-muted" />
+					<PhLink size={17} className="shrink-0 text-muted" />
 					Copy link
 				</motion.button>
 			</motion.div>

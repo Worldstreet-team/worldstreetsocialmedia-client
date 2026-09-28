@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Loader2, X } from "lucide-react";
+import { Check, Loader2, X } from "@/components/ui/icons";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import {

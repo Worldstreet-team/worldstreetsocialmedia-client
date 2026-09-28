@@ -1,7 +1,10 @@
 "use client";
 
 import { X } from "@phosphor-icons/react";
-import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react";
+import {
+	ArrowLeft as PhArrowLeft,
+	ArrowRight as PhArrowRight,
+} from "@phosphor-icons/react";
 import { AnimatePresence, motion, type PanInfo } from "framer-motion";
 import Image from "next/image";
 import { useTheme } from "next-themes";
@@ -444,7 +447,7 @@ export function SettingsFeatureTour() {
                 aria-label="Previous feature"
                 className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-pill bg-primary/[0.045] text-muted transition-[background-color,color,opacity] duration-[320ms] hover:bg-primary/[0.08] hover:text-primary disabled:cursor-default disabled:opacity-30"
               >
-                <RiArrowLeftLine size={17} />
+                <PhArrowLeft size={17} />
               </button>
 
               <output
@@ -486,7 +489,7 @@ export function SettingsFeatureTour() {
               >
                 <span>{isLast ? "Let's go" : "Continue"}</span>
                 {!isLast && (
-                  <RiArrowRightLine
+                  <PhArrowRight
                     size={17}
                     className="transition-transform duration-[320ms] group-hover:translate-x-0.5"
                   />

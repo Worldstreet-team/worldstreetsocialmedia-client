@@ -34,7 +34,7 @@ import { useAuth } from "@clerk/nextjs";
 import { BACKEND_URL } from "@/const";
 import { LOCALE_COOKIE } from "@/i18n/config";
 // 03-icons: `plus`, `user-plus` and `arrow-up` are all in the standardized set.
-import { ArrowUp, Plus, UserPlus } from "lucide-react";
+import { ArrowUp, Plus, UserPlus } from "@/components/ui/icons";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { PostSkeleton } from "@/components/feed/PostSkeleton";
 import { ImpressionSensor } from "@/components/feed/ImpressionSensor";

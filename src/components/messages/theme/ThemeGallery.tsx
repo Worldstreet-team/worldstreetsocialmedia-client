@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
-import { ImagePlus } from "lucide-react";
+import { ImagePlus } from "@/components/ui/icons";
 import { useAuth } from "@clerk/nextjs";
 import { staggerItem, staggerParent } from "@/lib/motion-presets";
 import { useState } from "react";

@@ -2,7 +2,7 @@
 
 import { useClerk } from "@clerk/nextjs";
 import { useAtomValue } from "jotai";
-import { Bell, LogOut, UserCircle, Zap } from "lucide-react";
+import { Bell, LogOut, UserCircle, Zap } from "@/components/ui/icons";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";

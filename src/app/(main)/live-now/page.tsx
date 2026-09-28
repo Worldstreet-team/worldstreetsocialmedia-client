@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Eye } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Radio } from "lucide-react";
+import { Radio } from "@/components/ui/icons";
 import { listLiveStreamsAction } from "@/lib/live.actions";
 import { staggerItem, staggerParentFast, swap } from "@/lib/motion-presets";
 

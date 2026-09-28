@@ -3,7 +3,9 @@
 import clsx from "clsx";
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { RiCheckLine } from "@remixicon/react";
+import {
+	Check as PhCheck,
+} from "@phosphor-icons/react";
 
 import { postJsonDirect } from "@/lib/upload-direct";
 import { formatCompact } from "@/lib/utils";
@@ -165,7 +167,7 @@ export function PostPoll({
 										initial={justVoted ? pop.initial : false}
 										className="flex shrink-0"
 									>
-										<RiCheckLine size={15} className="text-gold" />
+										<PhCheck size={15} className="text-gold" />
 									</motion.span>
 								)}
 							</span>

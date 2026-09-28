@@ -10,7 +10,7 @@ import {
   GraduationCap,
   ShoppingBag,
   Wallet,
-} from "lucide-react";
+} from "@/components/ui/icons";
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import {

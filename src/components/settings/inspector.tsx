@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown } from "@/components/ui/icons";
 import {
 	useCallback,
 	useEffect,

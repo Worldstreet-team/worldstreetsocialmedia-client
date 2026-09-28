@@ -29,7 +29,7 @@ const MediaEditor = dynamic(
 
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import clsx from "clsx";
-import { X, Camera, Link as LinkIcon, MapPin } from "lucide-react";
+import { X, Camera, Link as LinkIcon, MapPin } from "@/components/ui/icons";
 import { CaretDown } from "@phosphor-icons/react";
 import { InterestPicker } from "@/components/onboarding/InterestPicker";
 import { CATEGORIES, MAX_INTERESTS } from "@/data/categories";

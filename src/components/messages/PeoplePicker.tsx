@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Loader2, Search } from "lucide-react";
+import { Check, Loader2, Search } from "@/components/ui/icons";
 import { AnimatePresence, motion } from "framer-motion";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";

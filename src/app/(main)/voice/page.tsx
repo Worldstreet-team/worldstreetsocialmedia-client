@@ -4,7 +4,7 @@ import { MagnifyingGlass, Plus } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { AnimatePresence, motion, useReducedMotionConfig } from "framer-motion";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { Mic } from "lucide-react";
+import { Mic } from "@/components/ui/icons";
 import { useSearchParams } from "next/navigation";
 import {
   Suspense,

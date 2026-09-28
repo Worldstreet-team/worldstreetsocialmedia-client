@@ -3,7 +3,7 @@
 import { motionReduced } from "@/lib/motion";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "@/components/ui/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { OverlayHeader, useOverlayDismiss } from "@/components/ui/Overlay";

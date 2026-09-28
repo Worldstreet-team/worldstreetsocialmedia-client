@@ -1,6 +1,8 @@
 "use client";
 
-import { RiErrorWarningFill } from "@remixicon/react";
+import {
+	WarningCircle as PhWarningCircle,
+} from "@phosphor-icons/react";
 
 import {
   Broadcast,
@@ -395,7 +397,7 @@ export default function CreateSpaceSheet({
                       {/* A glyph, not just the hue: under achromatopsia danger
                           resolves darker than text-subtle, so this line read
                           quieter than the placeholder sitting above it. */}
-                      <RiErrorWarningFill size={13} className="shrink-0" />
+                      <PhWarningCircle weight="fill" size={13} className="shrink-0" />
                       {coverError}
                     </p>
                   </motion.div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle } from "@/components/ui/icons";
 import { videoMeta } from "@/lib/media-meta";
 
 import dynamic from "next/dynamic";
@@ -10,22 +10,21 @@ import Image from "next/image";
 // Remix on the composer row (locked plan of record 2026-09-02), same set as
 // the post action row and the chat surfaces.
 import {
-	RiImageLine,
-	RiEmotionLine,
-	RiSendPlane2Fill,
-	RiCloseLine,
-	RiLinkM,
-	RiAddLine,
-	RiFileTextLine,
-	RiMusic2Fill,
-	RiLockLine,
-	RiLockFill,
-	RiMicLine,
-	RiEditLine,
-	RiListCheck3,
-	RiArrowDownSLine,
-	RiCheckLine,
-} from "@remixicon/react";
+	CaretDown as PhCaretDown,
+	Check as PhCheck,
+	FileText as PhFileText,
+	Image as PhImage,
+	Link as PhLink,
+	ListChecks as PhListChecks,
+	Lock as PhLock,
+	Microphone as PhMicrophone,
+	MusicNotes as PhMusicNotes,
+	PaperPlaneRight as PhPaperPlaneRight,
+	PencilSimple as PhPencilSimple,
+	Plus as PhPlus,
+	Smiley as PhSmiley,
+	X as PhX,
+} from "@phosphor-icons/react";
 import { VanishingPlaceholder } from "@/components/ui/VanishingPlaceholder";
 import { useT } from "@/i18n/client";
 import { useUser } from "@clerk/nextjs";
@@ -1086,7 +1085,7 @@ export const PostComposer = ({
 											title="Edit voice note"
 										>
 											<span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-primary text-page">
-												<RiMusic2Fill size={14} />
+												<PhMusicNotes weight="fill" size={14} />
 											</span>
 											<span className="flex h-8 flex-1 items-center gap-[2px]">
 												{(audioMeta?.peaks ?? []).slice(0, 32).map((v, i) => (
@@ -1143,7 +1142,7 @@ export const PostComposer = ({
 											}
 											className="flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors"
 										>
-											<RiEditLine size={16} />
+											<PhPencilSimple size={16} />
 										</button>
 										<button
 											type="button"
@@ -1151,7 +1150,7 @@ export const PostComposer = ({
 											aria-label="Remove attachment"
 											className="flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors"
 										>
-											<RiCloseLine className="w-4 h-4" />
+											<PhX size={24} className="w-4 h-4" />
 										</button>
 									</div>
 								</motion.div>
@@ -1170,7 +1169,7 @@ export const PostComposer = ({
 										aria-label="Add more photos"
 										className="relative aspect-square border border-dashed border-hairline bg-sunken/30 hover:bg-raised/50 flex flex-col items-center justify-center gap-1.5 text-muted hover:text-primary transition-colors cursor-pointer"
 									>
-										<RiAddLine className="w-6 h-6" />
+										<PhPlus size={24} className="w-6 h-6" />
 										<span className="text-[calc(12px*var(--ws-fs))] font-sans font-medium tabular-nums">
 											Add photos · {4 - mediaItems.length}{" "}
 											left
@@ -1201,7 +1200,7 @@ export const PostComposer = ({
 								aria-label="Remove link preview"
 								className="absolute top-1.5 right-1.5 flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-opacity z-10 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
 							>
-								<RiCloseLine className="w-4 h-4" />
+								<PhX size={24} className="w-4 h-4" />
 							</button>
 							{linkPreview.image && (
 								<div className="aspect-video relative w-full bg-surface border-b border-hairline/50">
@@ -1223,7 +1222,7 @@ export const PostComposer = ({
 									{linkPreview.description}
 								</p>
 								<div className="flex items-center gap-1 text-[calc(11px*var(--ws-fs))] text-muted font-sans">
-									<RiLinkM className="w-3 h-3" />
+									<PhLink size={24} className="w-3 h-3" />
 									<span>{linkPreview.domain}</span>
 								</div>
 							</div>
@@ -1299,7 +1298,7 @@ export const PostComposer = ({
 										aria-label={`Remove ${topic.label}`}
 										className="flex h-5 w-5 items-center justify-center rounded-pill text-subtle transition-colors hover:bg-raised hover:text-primary"
 									>
-										<RiCloseLine size={11} />
+										<PhX size={11} />
 									</button>
 								</motion.span>
 							))}
@@ -1338,7 +1337,7 @@ export const PostComposer = ({
 									{...swap}
 									className="flex items-center gap-2 sm:gap-1.5"
 								>
-									{selling ? <RiLockFill size={15} /> : <RiLockLine size={15} />}
+									{selling ? <PhLock weight="fill" size={15} /> : <PhLock size={15} />}
 									{selling ? t("composer.sellingOn") : t("composer.sellPost")}
 								</motion.span>
 							</AnimatePresence>
@@ -1425,7 +1424,7 @@ export const PostComposer = ({
 											: "bg-sunken text-muted hover:bg-raised",
 									)}
 								>
-									{saleHidePreview ? <RiLockFill size={12} /> : <RiLockLine size={12} />}
+									{saleHidePreview ? <PhLock weight="fill" size={12} /> : <PhLock size={12} />}
 									{saleHidePreview ? "Preview hidden" : "Hide preview"}
 								</motion.button>
 							</motion.div>
@@ -1493,7 +1492,7 @@ export const PostComposer = ({
 												aria-label={t("poll.removeOption")}
 												className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-raised hover:text-danger"
 											>
-												<RiCloseLine size={16} />
+												<PhX size={16} />
 											</button>
 										)}
 									</motion.div>
@@ -1512,7 +1511,7 @@ export const PostComposer = ({
 										}
 										className="flex h-8 cursor-pointer items-center gap-1 rounded-pill px-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-gold transition-colors hover:bg-raised"
 									>
-										<RiAddLine size={15} />
+										<PhPlus size={15} />
 										{t("poll.addOption")}
 									</button>
 								) : (
@@ -1539,7 +1538,7 @@ export const PostComposer = ({
 											{POLL_DURATIONS.find(
 												(d) => d.hours === poll.durationHours,
 											)?.label ?? `${poll.durationHours}h`}
-											<RiArrowDownSLine
+											<PhCaretDown
 												size={14}
 												className={clsx(
 													"text-muted transition-transform",
@@ -1604,7 +1603,7 @@ export const PostComposer = ({
 															{d.label}
 															{poll.durationHours ===
 																d.hours && (
-																<RiCheckLine
+																<PhCheck
 																	size={14}
 																	className="text-gold"
 																/>
@@ -1651,7 +1650,7 @@ export const PostComposer = ({
 										: "bg-raised/50 text-muted hover:bg-raised hover:text-primary cursor-pointer",
 								)}
 							>
-								<RiImageLine className="h-[18px] w-[18px] shrink-0" />
+								<PhImage size={24} className="h-[18px] w-[18px] shrink-0" />
 							</motion.button>
 							<motion.button
 								{...press}
@@ -1667,7 +1666,7 @@ export const PostComposer = ({
 										: "bg-raised/50 text-muted hover:bg-raised hover:text-primary cursor-pointer",
 								)}
 							>
-								<RiMicLine className="h-[18px] w-[18px] shrink-0" size={18} />
+								<PhMicrophone className="h-[18px] w-[18px] shrink-0" size={18} />
 							</motion.button>
 							{/* Poll — the locked ruling: the glyph is a LIST, never a
 							    bar chart. Mutually exclusive with media and selling. */}
@@ -1693,7 +1692,7 @@ export const PostComposer = ({
 											: "bg-raised/50 text-muted hover:bg-raised hover:text-primary cursor-pointer",
 								)}
 							>
-								<RiListCheck3 className="h-[18px] w-[18px] shrink-0" />
+								<PhListChecks size={24} className="h-[18px] w-[18px] shrink-0" />
 							</motion.button>
 							<input
 								type="file"
@@ -1718,7 +1717,7 @@ export const PostComposer = ({
 										: "bg-raised/50 text-muted hover:bg-raised hover:text-primary",
 								)}
 							>
-								<RiEmotionLine className="h-[18px] w-[18px] shrink-0" />
+								<PhSmiley size={24} className="h-[18px] w-[18px] shrink-0" />
 							</motion.button>
 
 							{content.trim() && (
@@ -1729,7 +1728,7 @@ export const PostComposer = ({
 									title={t("composer.saveDraft")}
 									className="flex h-10 w-10 items-center justify-center rounded-pill bg-raised/50 text-muted hover:bg-raised hover:text-primary transition-colors cursor-pointer"
 								>
-									<RiFileTextLine className="h-[18px] w-[18px] shrink-0" />
+									<PhFileText size={24} className="h-[18px] w-[18px] shrink-0" />
 								</button>
 							)}
 
@@ -1742,7 +1741,7 @@ export const PostComposer = ({
 									aria-label={t("drafts.title")}
 									className="flex h-10 items-center gap-1.5 rounded-pill px-3 bg-raised/50 text-muted hover:bg-raised hover:text-primary font-sans text-[calc(12.5px*var(--ws-fs))] font-medium transition-colors cursor-pointer"
 								>
-									<RiFileTextLine className="h-[18px] w-[18px] shrink-0" />
+									<PhFileText size={24} className="h-[18px] w-[18px] shrink-0" />
 									<span className="tabular-nums">{drafts.length}</span>
 								</button>
 							)}
@@ -1817,7 +1816,7 @@ export const PostComposer = ({
 									) : (
 										<>
 											<span className="uppercase">{t("composer.post")}</span>
-											<RiSendPlane2Fill className="w-3 h-3" />
+											<PhPaperPlaneRight size={24} weight="fill" className="w-3 h-3" />
 										</>
 									)}
 								</motion.span>

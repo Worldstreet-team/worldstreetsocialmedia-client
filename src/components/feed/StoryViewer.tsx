@@ -4,7 +4,7 @@ import { formatCompact } from "@/lib/utils";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
-import { Download, Eye, Send, Trash2, Volume2, VolumeX, X } from "lucide-react";
+import { Download, Eye, Send, Trash2, Volume2, VolumeX, X } from "@/components/ui/icons";
 
 import {
 	deleteStoryAction,

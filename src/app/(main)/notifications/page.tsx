@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertTriangle, AtSign, BadgeCheck, Bell, UserPlus } from "lucide-react";
+import { AlertTriangle, AtSign, BadgeCheck, Bell, UserPlus } from "@/components/ui/icons";
 import { Check } from "@phosphor-icons/react";
 import { useAtom, useSetAtom } from "jotai";
 import { EmptyState } from "@/components/ui/EmptyState";

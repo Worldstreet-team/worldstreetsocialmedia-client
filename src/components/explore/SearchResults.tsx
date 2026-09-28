@@ -4,7 +4,7 @@ import type { ProfileBadge } from "@/components/ui/UserBadges";
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Search } from "lucide-react";
+import { Search } from "@/components/ui/icons";
 import { PostCard, type PostProps } from "@/components/feed/PostCard";
 import { ImpressionSensor } from "@/components/feed/ImpressionSensor";
 import { PostSkeleton } from "@/components/feed/PostSkeleton";

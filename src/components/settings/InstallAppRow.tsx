@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { MonitorDown, Share, SquarePlus } from "lucide-react";
+import { MonitorDown, Share, SquarePlus } from "@/components/ui/icons";
 import { collapse } from "@/lib/motion-presets";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 import { MagnifyingGlass, X } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Compass } from "lucide-react";
+import { Compass } from "@/components/ui/icons";
 import { useGatewayRead } from "@/hooks/useGateway";
 import { searchPostsAction } from "@/lib/post.actions";
 import { joinSpaceAction } from "@/lib/space.actions";

@@ -24,7 +24,7 @@ import {
   MoreHorizontal,
   Settings,
   Share2,
-} from "lucide-react";
+} from "@/components/ui/icons";
 import { toast } from "sonner";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { useT } from "@/i18n/client";

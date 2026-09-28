@@ -5,11 +5,11 @@ import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import {
-	RiImageLine,
-	RiEmotionLine,
-	RiSendPlane2Fill,
-	RiCloseLine,
-} from "@remixicon/react";
+	Image as PhImage,
+	PaperPlaneRight as PhPaperPlaneRight,
+	Smiley as PhSmiley,
+	X as PhX,
+} from "@phosphor-icons/react";
 import { useUser } from "@clerk/nextjs";
 import { useAtomValue } from "jotai";
 import { userAtom } from "@/store/user.atom";
@@ -325,7 +325,7 @@ export const CommentComposer = ({
 													aria-label="Remove attachment"
 													className="absolute top-1.5 right-1.5 flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors"
 												>
-													<RiCloseLine className="w-4 h-4" />
+													<PhX size={24} className="w-4 h-4" />
 												</button>
 											</motion.div>
 										))}
@@ -344,7 +344,7 @@ export const CommentComposer = ({
 								aria-label="Attach media"
 								className="group relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-raised hover:text-primary"
 							>
-								<RiImageLine className="h-[18px] w-[18px]" />
+								<PhImage size={24} className="h-[18px] w-[18px]" />
 								<span className="hidden sm:block absolute -bottom-8 left-1/2 -translate-x-1/2 text-[calc(10px*var(--ws-fs))] bg-raised text-primary px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
 									Media
 								</span>
@@ -371,7 +371,7 @@ export const CommentComposer = ({
 										: "text-muted hover:bg-raised hover:text-primary",
 								)}
 							>
-								<RiEmotionLine className="h-[18px] w-[18px]" />
+								<PhSmiley size={24} className="h-[18px] w-[18px]" />
 								<span className="hidden sm:block absolute -bottom-8 left-1/2 -translate-x-1/2 text-[calc(10px*var(--ws-fs))] bg-raised text-primary px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-sans">
 									Emoji
 								</span>
@@ -438,7 +438,7 @@ export const CommentComposer = ({
 							) : (
 								<>
 									<span>Reply</span>
-									<RiSendPlane2Fill className="w-3 h-3" />
+									<PhPaperPlaneRight size={24} weight="fill" className="w-3 h-3" />
 								</>
 							)}
 						</motion.button>

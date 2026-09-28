@@ -5,7 +5,7 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 // EmptyState's contract is a Lucide glyph; Ban is the documented stand-in
 // for "blocked" since the 74-icon set has no equivalent.
-import { Ban } from "lucide-react";
+import { Ban } from "@/components/ui/icons";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";

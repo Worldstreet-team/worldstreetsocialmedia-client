@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "@/components/ui/icons";
 import { useImageZoom } from "@/hooks/useImageZoom";
 import { OverlayHeader, useOverlayDismiss } from "@/components/ui/Overlay";
 import { press, swap } from "@/lib/motion-presets";

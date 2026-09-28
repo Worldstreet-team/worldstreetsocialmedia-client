@@ -167,10 +167,18 @@ Non-obvious rules the spec enforces, all of which this page now follows:
   (`bg-surface` → `bg-raised`); pressed adds an overlay. No `hover:scale-*`.
 - **Only two shadows exist**, `shadow-nav` and `shadow-sheet` (defined in
   `globals.css`). Cards get **no** shadow — the surface ladder does depth.
-- **Icon libraries are split.** Lucide everywhere, **except** the Social post
-  action row + overflow menu, which use Phosphor (`ChatCircle`, `Heart`,
-  `BookmarkSimple`, `Export`, `DotsThree`) to match the mobile app. Don't
-  "simplify" these back to Lucide.
+- **Icons are Phosphor, the Xstream set** (owner 2026-09-28: "softer icons,
+  the ones used on the Xtreme project"). Regular weight at rest, fill for
+  an active or chosen state (liked, saved, reposted), bold only at tiny
+  sizes. The 61 files that used Lucide import from
+  `src/components/ui/icons.tsx`, which keeps the Lucide NAMES and draws the
+  Phosphor glyph (a `strokeWidth` of 2.4 or more becomes bold, a Lucide
+  `fill` becomes the fill weight); new code imports Phosphor directly.
+  Remix stays in Messages only (the owner's chat pick). The post action
+  row is Repeat, ChatCircle, Heart, BookmarkSimple, Export, Pulse and
+  DotsThree at `size-[calc(19px*var(--ws-fs))]` beside 13px counts, in
+  36px hover circles, so the icon and its count read as one pair (the
+  26px Remix glyphs were twice the count's height).
 - **No emoji as icons**, ever. Stay inside the 74-icon set. Known justified
   deviations (the set has no equivalent): `Trash2` (delete post), `Ban`
   (block/not-interested), `Pin` (pin to profile), `AlertTriangle` (toast

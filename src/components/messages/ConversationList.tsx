@@ -62,7 +62,7 @@ import {
 	displayNameOf,
 } from "@/lib/conversation-identity";
 import { onlineIdsAtom } from "@/store/ui.atom";
-import { Users } from "lucide-react";
+import { Users } from "@/components/ui/icons";
 import { systemEventCopy } from "./thread/groupSystem";
 
 export interface ConversationRowUser {

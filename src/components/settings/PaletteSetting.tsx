@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import { motion } from "framer-motion";
-import { Image as ImageIcon, LoaderCircle } from "lucide-react";
+import { Image as ImageIcon, LoaderCircle } from "@/components/ui/icons";
 import { useTheme } from "next-themes";
 import { useEffect, useRef, useState } from "react";
 import { sampleImage } from "@/components/messages/theme/imageTheme";

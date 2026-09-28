@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Pin, X } from "lucide-react";
+import { Pin, X } from "@/components/ui/icons";
 import { AnimatePresence, motion } from "framer-motion";
 import { useGatewayRead } from "@/hooks/useGateway";
 import { collapse, swap } from "@/lib/motion-presets";

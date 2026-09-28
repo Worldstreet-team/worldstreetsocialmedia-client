@@ -22,7 +22,7 @@ import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import clsx from "clsx";
 import { effectiveFollowing } from "@/lib/engagementStore";
 import { useFollowVersion } from "@/hooks/useFollowState";
-import { UserX } from "lucide-react";
+import { UserX } from "@/components/ui/icons";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 

@@ -3,7 +3,7 @@
 import { ArrowsOutSimple } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
-import { Trash2 } from "lucide-react";
+import { Trash2 } from "@/components/ui/icons";
 import { useRef, useState } from "react";
 import TextBlock from "@/components/story/overlays/TextBlock";
 import {

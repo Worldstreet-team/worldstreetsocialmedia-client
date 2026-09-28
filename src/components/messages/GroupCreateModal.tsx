@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Camera, Loader2 } from "lucide-react";
+import { Camera, Loader2 } from "@/components/ui/icons";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import {

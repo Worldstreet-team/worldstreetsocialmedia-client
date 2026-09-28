@@ -3,7 +3,7 @@
 import { useGatewayRead } from "@/hooks/useGateway";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { X, Search, Loader2 } from "lucide-react";
+import { X, Search, Loader2 } from "@/components/ui/icons";
 import { AnimatePresence, motion } from "framer-motion";
 import {
 	OverlayHeader,

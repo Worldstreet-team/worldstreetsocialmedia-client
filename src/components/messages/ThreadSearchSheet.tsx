@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Link2, Loader2, Play, Search } from "lucide-react";
+import { Link2, Loader2, Play, Search } from "@/components/ui/icons";
 import { AnimatePresence, motion } from "framer-motion";
 import {
 	OverlayHeader,

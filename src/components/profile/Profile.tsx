@@ -9,7 +9,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { collapse, reveal } from "@/lib/motion-presets";
 import { useRouter } from "next/navigation";
 import { useAtom, useAtomValue } from "jotai";
-import { Grid3x3, Heart, MessageCircle, Plus, Search, Video } from "lucide-react";
+import { Grid3x3, Heart, MessageCircle, Plus, Search, Video } from "@/components/ui/icons";
 
 import {
 	hasRenderableBody,

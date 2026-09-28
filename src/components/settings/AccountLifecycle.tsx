@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useClerk } from "@clerk/nextjs";
 import { useAtomValue } from "jotai";
-import { Download, PauseCircle, Trash2 } from "lucide-react";
+import { Download, PauseCircle, Trash2 } from "@/components/ui/icons";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import {

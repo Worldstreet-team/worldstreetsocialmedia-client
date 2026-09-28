@@ -12,7 +12,7 @@ import { useAtom, useAtomValue } from "jotai";
 import { storyRailAtom, storyStudioSignalAtom } from "@/store/ui.atom";
 import clsx from "clsx";
 import { motion } from "framer-motion";
-import { Plus } from "lucide-react";
+import { Plus } from "@/components/ui/icons";
 
 import { useT } from "@/i18n/client";
 import { useLiveEvents } from "@/hooks/useLiveNow";

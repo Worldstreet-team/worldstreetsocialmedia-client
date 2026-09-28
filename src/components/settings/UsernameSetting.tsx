@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAtom } from "jotai";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, LoaderCircle, X } from "lucide-react";
+import { Check, LoaderCircle, X } from "@/components/ui/icons";
 import { pop, swap } from "@/lib/motion-presets";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { changeUsernameAction, checkUsernameAction } from "@/lib/user.actions";

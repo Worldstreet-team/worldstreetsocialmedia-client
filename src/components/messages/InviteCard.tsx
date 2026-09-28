@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Users } from "lucide-react";
+import { Loader2, Users } from "@/components/ui/icons";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { displayNameOf } from "@/lib/conversation-identity";
 

@@ -8,7 +8,7 @@ import { useGatewayRead } from "@/hooks/useGateway";
 import { getSubscriptionAction } from "@/lib/subscription.actions";
 import { premiumOpenAtom } from "@/store/ui.atom";
 import { useSetAtom } from "jotai";
-import { Lock } from "lucide-react";
+import { Lock } from "@/components/ui/icons";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { menu } from "@/lib/motion-presets";

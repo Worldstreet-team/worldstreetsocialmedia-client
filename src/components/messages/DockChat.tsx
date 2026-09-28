@@ -19,7 +19,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useCall } from "@/providers/CallProvider";
 import { useRealtime } from "@/components/providers/RealtimeProvider";
-import { Users } from "lucide-react";
+import { Users } from "@/components/ui/icons";
 import { conversationIdentity } from "@/lib/conversation-identity";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { VoiceMessage } from "@/components/messages/VoiceMessage";

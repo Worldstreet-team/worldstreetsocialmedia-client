@@ -9,7 +9,7 @@ import { useGatewayRead } from "@/hooks/useGateway";
 import { useAtom, useAtomValue } from "jotai";
 import { userAtom } from "@/store/user.atom";
 import { bookmarksAtom, bookmarksLoadedAtom } from "@/store/bookmarks.atom";
-import { Bookmark } from "lucide-react";
+import { Bookmark } from "@/components/ui/icons";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useT } from "@/i18n/client";
 import { collapse } from "@/lib/motion-presets";

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Compass as CompassIcon, House, MagnifyingGlass, Plus } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotionConfig } from "framer-motion";
 import { useAtom, useSetAtom } from "jotai";
-import { Compass, UsersRound } from "lucide-react";
+import { Compass, UsersRound } from "@/components/ui/icons";
 
 import { PostCard, type PostProps } from "@/components/feed/PostCard";
 import { ImpressionSensor } from "@/components/feed/ImpressionSensor";

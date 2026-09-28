@@ -14,29 +14,29 @@ import {
     Ban,
     BarChart3,
     Pin,
-} from "lucide-react";
+} from "@/components/ui/icons";
 import { UserBadges } from "@/components/ui/UserBadges";
 // Remix set for the Social post-action row + overflow menu (locked plan of
 // record 2026-09-02): matches the chat surfaces and the mobile app's reskin.
 import {
-    RiBookmarkLine,
-    RiBookmarkFill,
-    RiEyeLine,
-    RiEyeOffLine,
-    RiLockFill,
-    RiPulseLine,
-    RiChat3Line,
-    RiCheckLine,
-    RiLoader4Line,
-    RiMoreLine,
-    RiHeartLine,
-    RiHeartFill,
-    RiShareForwardLine,
-    RiRepeatLine,
-    RiRepeatFill,
-    RiTranslate2,
-    RiGroupLine,
-} from "@remixicon/react";
+	BookmarkSimple as PhBookmarkSimple,
+	ChatCircle as PhChatCircle,
+	Check as PhCheck,
+	CircleNotch as PhCircleNotch,
+	DotsThree as PhDotsThree,
+	Export as PhExport,
+	Eye as PhEye,
+	EyeSlash as PhEyeSlash,
+	Heart as PhHeart,
+	Image as PhImage,
+	Lock as PhLock,
+	Pulse as PhPulse,
+	Repeat as PhRepeat,
+	Translate as PhTranslate,
+	Users as PhUsers,
+	VideoCamera as PhVideoCamera,
+	Waveform as PhWaveform,
+} from "@phosphor-icons/react";
 import clsx from "clsx";
 import {
     memo,
@@ -87,11 +87,6 @@ import { track } from "@/lib/telemetry";
 import { LikersModal } from "@/components/feed/LikersModal";
 import { postJsonDirect } from "@/lib/upload-direct";
 import { AudioCard } from "@/components/feed/AudioCard";
-import {
-    RiImageLine,
-    RiVideoOnLine,
-    RiVoiceprintLine,
-} from "@remixicon/react";
 import { renderRichText } from "@/components/ui/RichText";
 import {
     applyStats,
@@ -104,10 +99,10 @@ import {
 } from "@/lib/engagementStore";
 import { VideoPlayer } from "@/components/ui/VideoPlayer";
 import { VoteChip } from "@/components/votes/VoteChip";
-import { Radio } from "lucide-react";
+import { Radio } from "@/components/ui/icons";
 import { repostPostAction } from "@/lib/post.actions";
 import { QuoteModal } from "@/components/feed/QuoteModal";
-import { Megaphone } from "lucide-react";
+import { Megaphone } from "@/components/ui/icons";
 import { useT } from "@/i18n/client";
 import { useLiveEvents } from "@/hooks/useLiveNow";
 import { translatePostAction } from "@/lib/translate.actions";
@@ -291,7 +286,7 @@ const formatCount = (n: number) => (!n ? "" : formatCompact(n));
 function RollingCount({ value }: { value: number }) {
     const label = formatCount(value);
     return (
-        <span className="relative overflow-hidden text-[calc(13.5px*var(--ws-fs))] font-medium font-sans tabular-nums sm:text-[calc(14px*var(--ws-fs))]">
+        <span className="relative overflow-hidden text-[calc(13px*var(--ws-fs))] font-medium font-sans tabular-nums">
             <AnimatePresence mode="wait" initial={false}>
                 <motion.span key={label} {...swap} className="inline-block">
                     {label}
@@ -1096,7 +1091,7 @@ export const PostCard = memo(
                     onClick={(e) => e.stopPropagation()}
                     className="relative z-10 mb-1.5 ml-[54px] sm:ml-[58px] flex w-fit items-center gap-1.5 pointer-events-auto font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-muted transition-colors hover:text-primary"
                 >
-                    <RiGroupLine size={13} className="text-gold" />
+                    <PhUsers size={13} className="text-gold" />
                     <span className="truncate">{post.community.name}</span>
                 </Link>
             )}
@@ -1216,7 +1211,7 @@ export const PostCard = memo(
                                         "text-gold bg-brand/10",
                                 )}
                             >
-                                <RiMoreLine size={20} />
+                                <PhDotsThree size={20} />
                             </motion.button>
 
                             <AnimatePresence>
@@ -1257,7 +1252,7 @@ export const PostCard = memo(
                                                     }}
                                                     className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
                                                 >
-                                                    <RiTranslate2 size={16} />
+                                                    <PhTranslate size={16} />
                                                     {autoTranslate
                                                         ? t("post.autoTranslateOff")
                                                         : t("post.autoTranslateOn")}
@@ -1367,7 +1362,7 @@ export const PostCard = memo(
                                                     }}
                                                     className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
                                                 >
-                                                    <RiTranslate2 size={16} />
+                                                    <PhTranslate size={16} />
                                                     {autoTranslate
                                                         ? t("post.autoTranslateOff")
                                                         : t("post.autoTranslateOn")}
@@ -1413,7 +1408,7 @@ export const PostCard = memo(
                     {/* UI/Body: Public Sans Regular 15 post text size per 02-typography. */}
                     {post.repostOf && !post.content && (
                         <span className="flex items-center gap-1.5 text-subtle text-[calc(12px*var(--ws-fs))] font-sans mb-1">
-                            <RiRepeatLine size={12} />
+                            <PhRepeat size={12} />
                             {t("post.reposted")}
                         </span>
                     )}
@@ -1511,9 +1506,9 @@ export const PostCard = memo(
                                         className="flex items-center gap-1"
                                     >
                                         {previewAsBuyer ? (
-                                            <RiEyeOffLine size={12} />
+                                            <PhEyeSlash size={12} />
                                         ) : (
-                                            <RiEyeLine size={12} />
+                                            <PhEye size={12} />
                                         )}
                                         {previewAsBuyer
                                             ? t("post.forSale.exitPreview")
@@ -1569,7 +1564,7 @@ export const PostCard = memo(
                                         }}
                                         className="flex items-center gap-1.5 text-[calc(12.5px*var(--ws-fs))] font-sans text-subtle hover:text-gold transition-colors cursor-pointer"
                                     >
-                                        <RiTranslate2 size={13} />
+                                        <PhTranslate size={13} />
                                         {/* Only the reader's own toggle rolls
                                             the label. The button stays mounted
                                             so focus holds, and a background
@@ -1601,7 +1596,7 @@ export const PostCard = memo(
                                     </button>
                                 ) : translating ? (
                                     <span className="flex items-center gap-1.5 text-[calc(12.5px*var(--ws-fs))] font-sans text-subtle">
-                                        <RiLoader4Line
+                                        <PhCircleNotch
                                             size={13}
                                             className="animate-spin"
                                         />
@@ -1616,7 +1611,7 @@ export const PostCard = memo(
                                         }}
                                         className="flex items-center gap-1.5 text-[calc(12.5px*var(--ws-fs))] font-sans text-subtle hover:text-gold transition-colors cursor-pointer"
                                     >
-                                        <RiTranslate2 size={13} />
+                                        <PhTranslate size={13} />
                                         {t("post.translate")}
                                     </button>
                                 )}
@@ -1956,7 +1951,7 @@ export const PostCard = memo(
                                     reposted ? "text-success" : "hover:text-success",
                                 )}
                             >
-                                <span className="flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-success/10 transition group-active:scale-[0.98]">
+                                <span className="flex size-9 shrink-0 items-center justify-center rounded-pill group-hover:bg-success/10 transition group-active:scale-[0.98]">
                                     {/* The glyph lands when the viewer's own
                                         repost comes back. Pulse 0 is a mount,
                                         and a mount is still. */}
@@ -1967,9 +1962,9 @@ export const PostCard = memo(
                                         className="flex"
                                     >
                                         {reposted ? (
-                                            <RiRepeatFill size={26} />
+                                            <PhRepeat weight="bold" size={19} className="size-[calc(19px*var(--ws-fs))]" />
                                         ) : (
-                                            <RiRepeatLine size={26} />
+                                            <PhRepeat size={19} className="size-[calc(19px*var(--ws-fs))]" />
                                         )}
                                     </motion.span>
                                 </span>
@@ -2019,7 +2014,7 @@ export const PostCard = memo(
                                         }}
                                         className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans cursor-pointer"
                                     >
-                                        <RiRepeatLine size={16} />
+                                        <PhRepeat size={16} />
                                         {t("post.repost")}
                                     </motion.button>
                                     <motion.button
@@ -2031,7 +2026,7 @@ export const PostCard = memo(
                                         }}
                                         className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans cursor-pointer"
                                     >
-                                        <RiChat3Line size={16} />
+                                        <PhChatCircle size={16} />
                                         {t("post.quote")}
                                     </motion.button>
                                 </motion.div>
@@ -2047,8 +2042,8 @@ export const PostCard = memo(
                             aria-label="Reply"
                             className="flex items-center gap-0.5 sm:gap-1 hover:text-primary transition-colors group cursor-pointer"
                         >
-                            <span className="flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-primary/10 transition group-active:scale-[0.98]">
-                                <RiChat3Line size={26} />
+                            <span className="flex size-9 shrink-0 items-center justify-center rounded-pill group-hover:bg-primary/10 transition group-active:scale-[0.98]">
+                                <PhChatCircle size={19} className="size-[calc(19px*var(--ws-fs))]" />
                             </span>
                             <RollingCount value={shownReplies} />
                         </Link>
@@ -2065,7 +2060,7 @@ export const PostCard = memo(
                                 isLiked ? "text-danger" : "hover:text-danger",
                             )}
                         >
-                            <span className="relative flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-danger/10 transition group-active:scale-[0.98]">
+                            <span className="relative flex size-9 shrink-0 items-center justify-center rounded-pill group-hover:bg-danger/10 transition group-active:scale-[0.98]">
                                 {/* One-shot danger wash on like opacity-only,
                                     fades out over motion-slow and stays gone. */}
                                 <AnimatePresence>
@@ -2095,9 +2090,9 @@ export const PostCard = memo(
                                     className="flex"
                                 >
                                     {isLiked ? (
-                                        <RiHeartFill size={26} />
+                                        <PhHeart weight="fill" size={19} className="size-[calc(19px*var(--ws-fs))]" />
                                     ) : (
-                                        <RiHeartLine size={26} />
+                                        <PhHeart size={19} className="size-[calc(19px*var(--ws-fs))]" />
                                     )}
                                 </motion.span>
                             </span>
@@ -2116,7 +2111,7 @@ export const PostCard = memo(
                                     if (e.key === "Enter" && (shownLikes ?? 0) > 0)
                                         setLikersOpen(true);
                                 }}
-                                className="relative cursor-pointer overflow-hidden text-[calc(13.5px*var(--ws-fs))] font-medium font-sans tabular-nums hover:underline sm:text-[calc(14px*var(--ws-fs))]"
+                                className="relative cursor-pointer overflow-hidden text-[calc(13px*var(--ws-fs))] font-medium font-sans tabular-nums hover:underline"
                             >
                                 <AnimatePresence mode="wait" initial={false}>
                                     {/* Count rolls 8px in the direction of change. */}
@@ -2155,7 +2150,7 @@ export const PostCard = memo(
                                 isBookmarked ? "text-gold" : "hover:text-gold",
                             )}
                         >
-                            <span className="relative flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-gold/10 transition group-active:scale-[0.98]">
+                            <span className="relative flex size-9 shrink-0 items-center justify-center rounded-pill group-hover:bg-gold/10 transition group-active:scale-[0.98]">
                                 <AnimatePresence>
                                     {isBookmarked && (
                                         <motion.span
@@ -2180,14 +2175,14 @@ export const PostCard = memo(
                                     className="flex"
                                 >
                                     {isBookmarked ? (
-                                        <RiBookmarkFill size={26} />
+                                        <PhBookmarkSimple weight="fill" size={19} className="size-[calc(19px*var(--ws-fs))]" />
                                     ) : (
-                                        <RiBookmarkLine size={26} />
+                                        <PhBookmarkSimple size={19} className="size-[calc(19px*var(--ws-fs))]" />
                                     )}
                                 </motion.span>
                             </span>
                             {(post.stats.bookmarks ?? 0) > 0 && (
-                                <span className="text-[calc(13.5px*var(--ws-fs))] font-medium font-sans tabular-nums sm:text-[calc(14px*var(--ws-fs))]">
+                                <span className="text-[calc(13px*var(--ws-fs))] font-medium font-sans tabular-nums">
                                     {formatCount(post.stats.bookmarks ?? 0)}
                                 </span>
                             )}
@@ -2227,7 +2222,7 @@ export const PostCard = memo(
                                     : "hover:text-primary",
                             )}
                         >
-                            <span className="flex h-11 w-9 shrink-0 items-center justify-center rounded-pill sm:h-11 sm:w-11 group-hover:bg-primary/10 transition group-active:scale-[0.98]">
+                            <span className="flex size-9 shrink-0 items-center justify-center rounded-pill group-hover:bg-primary/10 transition group-active:scale-[0.98]">
                                 <AnimatePresence mode="wait" initial={false}>
                                     {linkCopied ? (
                                         <motion.span
@@ -2244,7 +2239,7 @@ export const PostCard = memo(
                                             }}
                                             className="flex"
                                         >
-                                            <RiCheckLine size={16} />
+                                            <PhCheck size={16} />
                                         </motion.span>
                                     ) : (
                                         <motion.span
@@ -2261,8 +2256,8 @@ export const PostCard = memo(
                                             }}
                                             className="flex"
                                         >
-                                            <RiShareForwardLine
-                                                size={26}
+                                            <PhExport
+                                                size={19} className="size-[calc(19px*var(--ws-fs))]"
                                             />
                                         </motion.span>
                                     )}
@@ -2309,9 +2304,9 @@ export const PostCard = memo(
                             title={t("post.views")}
                             aria-label={t("post.views")}
                         >
-                            <RiPulseLine size={19} className="sm:hidden" />
-                            <RiPulseLine size={20} className="hidden sm:block" />
-                            <span className="text-[calc(13.5px*var(--ws-fs))] font-medium font-sans tabular-nums sm:text-[calc(14px*var(--ws-fs))]">
+                            <PhPulse size={19} className="sm:hidden" />
+                            <PhPulse size={20} className="hidden sm:block" />
+                            <span className="text-[calc(13px*var(--ws-fs))] font-medium font-sans tabular-nums">
                                 {formatCount(post.stats.views ?? 0) || "0"}
                             </span>
                         </div>
@@ -2350,7 +2345,7 @@ export const PostCard = memo(
                         className="pointer-events-none absolute z-20 -ml-8 -mt-8 flex h-16 w-16 items-center justify-center text-danger"
                         style={{ left: heartBurst.x, top: heartBurst.y }}
                     >
-                        <RiHeartFill size={64} />
+                        <PhHeart weight="fill" size={64} />
                     </motion.span>
                 )}
             </AnimatePresence>
@@ -2424,18 +2419,18 @@ function SaleStorefront({
                 <div className="flex gap-1.5 px-4 pt-2.5">
                     {imageCount > 0 && (
                         <span className="flex items-center gap-1 rounded-pill bg-raised px-2.5 py-1 font-sans text-[calc(11px*var(--ws-fs))] text-muted">
-                            <RiImageLine size={12} /> {imageCount}{" "}
+                            <PhImage size={12} /> {imageCount}{" "}
                             {imageCount === 1 ? "image" : "images"}
                         </span>
                     )}
                     {media.hasVideo && (
                         <span className="flex items-center gap-1 rounded-pill bg-raised px-2.5 py-1 font-sans text-[calc(11px*var(--ws-fs))] text-muted">
-                            <RiVideoOnLine size={12} /> {vidClock ?? "video"}
+                            <PhVideoCamera size={12} /> {vidClock ?? "video"}
                         </span>
                     )}
                     {hasAudio && (
                         <span className="flex items-center gap-1 rounded-pill bg-raised px-2.5 py-1 font-sans text-[calc(11px*var(--ws-fs))] text-muted">
-                            <RiVoiceprintLine size={12} />{" "}
+                            <PhWaveform size={12} />{" "}
                             {Math.floor(((media.audio?.durationSec ?? media.audioDurationSec) ?? 0) / 60)}:
                             {String(((media.audio?.durationSec ?? media.audioDurationSec) ?? 0) % 60).padStart(2, "0")}{" "}
                             voice
@@ -2461,7 +2456,7 @@ function SaleStorefront({
                     <span aria-hidden className="absolute inset-0 bg-page/25" />
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
                         <span className="flex h-11 w-11 items-center justify-center rounded-pill bg-primary text-page">
-                            <RiLockFill size={17} />
+                            <PhLock weight="fill" size={17} />
                         </span>
                         <span className="font-sans text-[calc(11.5px*var(--ws-fs))] font-medium text-white [text-shadow:0_1px_2px_rgba(0,0,0,.6)]">
                             {media.hasVideo
@@ -2503,7 +2498,7 @@ function SaleStorefront({
             ) : hasAudio ? (
                 <div className="px-4 pt-2.5">
                     <span className="flex w-fit items-center gap-1 rounded-pill bg-raised px-2.5 py-1 font-sans text-[calc(11px*var(--ws-fs))] text-muted">
-                        <RiVoiceprintLine size={12} />{" "}
+                        <PhWaveform size={12} />{" "}
                         {Math.floor((media.audioDurationSec ?? 0) / 60)}:
                         {String((media.audioDurationSec ?? 0) % 60).padStart(2, "0")}{" "}
                         voice inside
@@ -2513,7 +2508,7 @@ function SaleStorefront({
 
             <div className="mt-3 flex items-center justify-between gap-3 border-t border-hairline px-4 py-2.5">
                 <span className="flex items-center gap-1.5 font-sans text-[calc(11.5px*var(--ws-fs))] text-subtle tabular-nums">
-                    <RiLockFill size={13} className="text-credit" />
+                    <PhLock weight="fill" size={13} className="text-credit" />
                     {(sale.salesCount ?? 0) > 0
                         ? `${(sale.salesCount ?? 0).toLocaleString()} unlocked`
                         : "Locked"}
