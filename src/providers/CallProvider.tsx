@@ -25,6 +25,8 @@ interface CallContextType extends CallState {
 		/** Ring the whole room; the surface renders the N-tile grid. */
 		isGroup?: boolean;
 	}) => void;
+	/** Join a group call already in progress: no ring. */
+	joinCall: (opts: { conversationId: string; peer: CallPeer; isVideo: boolean }) => void;
 	acceptCall: () => void;
 	declineCall: () => void;
 	endCall: () => void;
@@ -158,6 +160,12 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
 		},
 		[],
 	);
+	const joinCall = useCallback(
+		(opts: { conversationId: string; peer: CallPeer; isVideo: boolean }) => {
+			void callManager.joinCall(opts);
+		},
+		[],
+	);
 	const acceptCall = useCallback(() => void callManager.acceptCall(), []);
 	const declineCall = useCallback(() => callManager.declineCall(), []);
 	const endCall = useCallback(() => callManager.endCall(), []);
@@ -174,6 +182,7 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
 			value={{
 				...state,
 				startCall,
+				joinCall,
 				acceptCall,
 				declineCall,
 				endCall,

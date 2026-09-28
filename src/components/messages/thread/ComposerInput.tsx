@@ -11,7 +11,15 @@ import {
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
-import EmojiPicker, { Theme } from "emoji-picker-react";
+import type { Theme } from "emoji-picker-react";
+import dynamic from "next/dynamic";
+// The picker is ~300KB and renders only after someone opens it, so the
+// chunk waits for that first render. `Theme` is a runtime enum that would
+// pull the whole library back in; it is imported as a type and the values
+// it holds ("light" / "dark") are written out at the call site.
+const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
+	ssr: false,
+});
 import { useTheme } from "next-themes";
 import {
 	forwardRef,
@@ -169,7 +177,7 @@ export const ComposerInput = forwardRef<
 						}}
 						className="chat-chrome-solid flex shrink-0 cursor-pointer items-center gap-1.5 rounded-pill py-1 pl-1 pr-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium transition-opacity hover:opacity-90"
 					>
-						<span className="relative h-5 w-5 overflow-hidden rounded-pill bg-chip">
+						<span className="relative h-5 w-5 overflow-hidden rounded-pill [background:var(--chat-chrome-chip,var(--ws-bg-chip))]">
 							<SafeAvatar src={c.avatar} eager />
 						</span>
 						{c.name}
@@ -343,7 +351,7 @@ export const ComposerInput = forwardRef<
 				className="overflow-hidden rounded-xl bg-surface ws-emoji-picker"
 			>
 				<EmojiPicker
-					theme={resolvedTheme === "light" ? Theme.LIGHT : Theme.DARK}
+					theme={resolvedTheme === "light" ? ("light" as Theme) : ("dark" as Theme)}
 					width="100%"
 					height={300}
 					lazyLoadEmojis={true}

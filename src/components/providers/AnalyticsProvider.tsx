@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useAtomValue } from "jotai";
-import posthog from "posthog-js";
+import { analytics, initAnalytics } from "@/lib/analytics";
 import { userAtom } from "@/store/user.atom";
 
 /**
@@ -15,6 +15,10 @@ import { userAtom } from "@/store/user.atom";
  *
  * Pageviews are captured manually: the App Router does client-side navigation,
  * so PostHog's automatic capture would only ever see the first paint.
+ *
+ * The library itself loads after the page is idle (`src/lib/analytics.ts`);
+ * the calls below queue until it has, so the first pageview and the identify
+ * are not lost to the wait.
  */
 const KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY;
 const HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://eu.i.posthog.com";
@@ -26,8 +30,7 @@ export default function AnalyticsProvider() {
 
   useEffect(() => {
     if (!KEY || typeof window === "undefined") return;
-    if (posthog.__loaded) return;
-    posthog.init(KEY, {
+    initAnalytics(KEY, {
       api_host: HOST,
       // We fire these ourselves below; autocapture would miss route changes.
       capture_pageview: false,
@@ -41,9 +44,9 @@ export default function AnalyticsProvider() {
   // Identify once the profile hydrates, so sessions before sign-in still join
   // up to the account afterwards.
   useEffect(() => {
-    if (!KEY || !posthog.__loaded) return;
+    if (!KEY) return;
     if (user?.userId) {
-      posthog.identify(user.userId, {
+      analytics.identify(user.userId, {
         username: user.username,
         isVerified: user.isVerified,
       });
@@ -51,9 +54,9 @@ export default function AnalyticsProvider() {
   }, [user?.userId, user?.username, user?.isVerified]);
 
   useEffect(() => {
-    if (!KEY || !posthog.__loaded || !pathname) return;
+    if (!KEY || !pathname) return;
     const qs = searchParams?.toString();
-    posthog.capture("$pageview", {
+    analytics.capture("$pageview", {
       $current_url: `${window.location.origin}${pathname}${qs ? `?${qs}` : ""}`,
     });
   }, [pathname, searchParams]);

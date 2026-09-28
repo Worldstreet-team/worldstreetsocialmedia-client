@@ -1736,7 +1736,10 @@ export const PostCard = memo(
                             // its own black ground and 13px radius), so a
                             // full-width box here just repainted the bars
                             // that narrowing removed.
-                            className="relative z-10 pointer-events-auto mt-1 mb-1.5 flex justify-center"
+                            // Left, on the text's own edge (owner 2026-09-28):
+                            // a centred portrait clip floated between the
+                            // columns and read as a box that did not belong.
+                            className="relative z-10 pointer-events-auto mt-1 mb-1.5 flex justify-start"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
@@ -1802,7 +1805,7 @@ export const PostCard = memo(
                                 // object-contain, not cover: the box is already
                                 // sized by the image itself, so cover only ever
                                 // risked shaving an edge off a tall photo.
-                                imgClassName="block h-auto w-auto max-w-full max-h-[600px] object-contain cursor-zoom-in hover:opacity-95"
+                                imgClassName="block h-auto w-auto max-w-full max-h-[520px] object-contain cursor-zoom-in hover:opacity-95"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     e.preventDefault();

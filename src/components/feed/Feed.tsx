@@ -1101,7 +1101,10 @@ export default function Feed({
 							cursorDepth: Math.floor(index / 10),
 							promoted: post.promoted,
 						}}
-						className="animate-rise feed-cv"
+						// A hairline between posts (owner 2026-09-28, comparing X:
+						// "these lines help your eye see things properly"). Rows,
+						// not cards: no fill, no radius, one rule under each.
+						className="animate-rise feed-cv border-b border-hairline last:border-b-0"
 						style={{
 							animationDelay: introPlayedRef.current
 								? "0ms"

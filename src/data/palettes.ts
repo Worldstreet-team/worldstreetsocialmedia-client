@@ -31,9 +31,22 @@ export type PaletteId =
 	| "orchid"
 	| "sunset"
 	| "heritage"
-	| "mono";
+	| "mono"
+	| "citrus"
+	| "steel"
+	| "parchment"
+	| "custom";
 
 export const DEFAULT_PALETTE: PaletteId = "tide";
+
+/**
+ * The eleventh choice (owner 2026-09-25): a palette derived from a
+ * picture. It has no fixed swatch, so it is not in PALETTES; its twelve
+ * values live in `prefs.appearance.custom` (src/lib/palette-derive.ts)
+ * and are stamped inline on <html> as `--ws-custom-*`, which the custom
+ * block in ws-palettes.css maps onto the six brand tokens.
+ */
+export const CUSTOM_PALETTE = "custom" satisfies PaletteId;
 
 export const PALETTES: {
 	id: PaletteId;
@@ -92,6 +105,35 @@ export const PALETTES: {
 		dark: { fill: "#FAFAFA", on: "#0C0A09" },
 		light: { fill: "#18181B", on: "#FFFFFF" },
 	},
+	// Third set (curated 2026-09-25). Citrus is the one open hue on the
+	// wheel; Steel and Parchment are inks that flip with the mode, like
+	// Mono. Rose and emerald stay out by ruling; Ultramarine was offered and
+	// left out, 17 degrees from Cobalt.
+	{
+		id: "citrus",
+		label: "Citrus",
+		blurb: "Sharp lime.",
+		dark: { fill: "#BEF264", on: "#0C0A09" },
+		light: { fill: "#A3E635", on: "#0C0A09" },
+	},
+	{
+		id: "steel",
+		label: "Steel",
+		blurb: "A cool ink. Brushed, not bright.",
+		dark: { fill: "#B4C2D2", on: "#0C0A09" },
+		light: { fill: "#475569", on: "#FFFFFF" },
+	},
+	{
+		id: "parchment",
+		label: "Parchment",
+		blurb: "Ivory by night, sepia by day.",
+		dark: { fill: "#EBDDBA", on: "#0C0A09" },
+		light: { fill: "#4A3B28", on: "#FFFFFF" },
+	},
 ];
 
-export const PALETTE_IDS = PALETTES.map((p) => p.id) as readonly PaletteId[];
+/** Every id normalizePrefs accepts: the ten swatches plus the custom one. */
+export const PALETTE_IDS = [
+	...PALETTES.map((p) => p.id),
+	CUSTOM_PALETTE,
+] as readonly PaletteId[];

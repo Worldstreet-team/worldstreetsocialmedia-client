@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import type { ReactNode } from "react";
 import {
+	RiBarChartHorizontalLine,
 	RiContactsBookLine,
 	RiImageLine,
 	RiMusic2Line,
@@ -45,6 +46,7 @@ export function AttachSheet({
 	onMoney,
 	onContact,
 	onPhoneContact,
+	onPoll,
 }: {
 	open: boolean;
 	anchor: AttachAnchor | null;
@@ -54,6 +56,7 @@ export function AttachSheet({
 	onMoney: () => void;
 	onContact: () => void;
 	onPhoneContact: () => void;
+	onPoll?: () => void;
 }) {
 	useOverlayDismiss(open, onClose);
 	const desktop =
@@ -69,6 +72,7 @@ export function AttachSheet({
 		{ icon: <RiMusic2Line size={19} />, label: "Audio", hint: "A song or an audio file", go: pick(onAudio) },
 		{ icon: <RiWallet3Line size={19} />, label: "Send money", hint: "From your WorldStreet wallet", go: pick(onMoney) },
 		{ icon: <RiUserSharedLine size={19} />, label: "WorldSpace contact", hint: "Share someone's profile", go: pick(onContact) },
+		...(onPoll ? [{ icon: <RiBarChartHorizontalLine size={19} />, label: "Poll", hint: "Ask the room", go: pick(onPoll) }] : []),
 	];
 	if (phoneContactsSupported())
 		rows.push({ icon: <RiContactsBookLine size={19} />, label: "Contact from your phone", hint: "Name and number", go: pick(onPhoneContact) });

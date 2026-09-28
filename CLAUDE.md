@@ -274,7 +274,10 @@ Three independent colour axes, and they must stay independent:
 - **Palettes** (`src/data/palettes.ts` registry, `src/styles/ws-palettes.css`
   values, `components/settings/PaletteSetting.tsx` picker under Settings >
   Display): Tide (default, NO attribute, it is the token file), Cobalt,
-  Iris, Orchid, Sunset, Heritage, Mono. A palette block may declare ONLY
+  Iris, Orchid, Sunset, Heritage, Mono, and since 2026-09-25 Citrus,
+  Steel, Parchment (the last two are inks that flip with the mode, like
+  Mono), plus `custom`, derived from a picture (below). A palette block
+  may declare ONLY
   the six brand tokens (`--ws-brand-primary`, `-on-primary`, `-active`,
   `-dim`, `--ws-brand-gold-text`, `--ws-glow-brand`), always as
   `html[data-ws-palette="x"][data-ws-theme="platform"]` plus the
@@ -298,6 +301,88 @@ Three independent colour axes, and they must stay independent:
   that reaches itself is a cycle, the `--ws-fs` bug again), never re-point
   `--ws-bg-*` in it, and no blur (the thread card has the one blur). The
   flat house theme's chrome is exactly the app frost.
+- **A theme reaches everything between the bars (audit 2026-09-25).**
+  `themeVars(t, mode)` derives a GROUND family from the theme's own ground
+  (`groundOf`: the solid, the gradient's middle, a picture's tint walked
+  to its pole) and from it: `--chat-ground(-ink/-ink-muted/-ink-subtle/
+  -hairline/-wash)`, `--chat-pill-bg/-ink` (stamps, system rows,
+  tombstones, the drop chip), `--chat-reaction-*` (opaque chips in the
+  ground's step, ringed in the ground), `--chat-tick/-tick-read`,
+  `--chat-accent-on-ground`, `--chat-link-theirs` and
+  `--chat-mention-theirs-bg` (the accent WALKED toward their ink until it
+  reads 4.5:1 on their bubble; the raw accent failed on 20 of 22 cards),
+  `--chat-sender-1..6` (the group name hues, walked the same way),
+  `--chat-chrome-chip/-accent`, `--chat-send-bg/-ink`, `--chat-card-bg`.
+  On the house theme every one resolves to an app token. Pass `mode` so
+  the token branch can test contrast against the ladder. `.chat-ground`
+  (chat-chrome.css) sits on the LIST wrapper and re-points the ink tokens
+  between the bars; `.chat-bubble-ink` on `[data-bubble]` makes ink
+  classes inside a bubble mean the bubble's ink. Neither may sit on the
+  element carrying `themeVars()` (the cycle rule). Their payment card and
+  the call log row wear their shore; the long-press menu and reaction bar
+  are `.chat-chrome-solid`. A card may set `group` to choose its shelf;
+  the shelves are Colour, Places, Artwork, Photographs. `sameTheme`
+  compares canonical (sorted, undefined-free) shapes.
+- **Themes read from a picture, coloured bars, the doodle on painted
+  grounds (owner 2026-09-25).** `theme/imageTheme.ts`: `sampleImage()`
+  reads a picture small (48px, cover) into a tint, a tone (dark under
+  0.35 mean luminance), the most vivid hue's colour (the mean of that
+  hue's most vivid sixth, never its plain mean, which lands on mud) and
+  a second hue at least 45 degrees away; `themeFromSample()` builds the
+  whole theme on the card rules (mine walked to 0.18 luminance for white
+  ink, theirs 1.6:1 off the ground in the dark and 1.2:1 on paper). An
+  own photo is sampled from the FILE at upload (the presigned copy would
+  taint a canvas) and stores `tint` and `tone` on the wallpaper, which
+  the gateway's `sanitizeTheme` keeps, so `groundOf` derives the family
+  for it like a preset. Doors: the "Your picture" tile, first on the
+  Photographs shelf (opens the studio on the derived draft), the upload
+  in the studio (derives on the way in) and "Colours from the picture"
+  under a preset or a just-picked photo. `chrome: "quiet"` on a theme is
+  the 2026-09-20 tinted bar; unset means COLOURED: on a dark ground the
+  bar is ground and accent in equal parts, walked into the dark until
+  white holds 7.5:1, on paper a pastel of the accent. The studio's "Top
+  bar and composer" tabs set it; a card never carries it (canon drops
+  undefined, so a saved card still matches). A solid or gradient ground
+  wears `.chat-doodle` (chat-chrome.css), the house mask painted in
+  `--chat-doodle-ink` (the accent as it reads on that ground) at
+  `--chat-doodle-alpha` (0.2 under light ink, 0.14 on paper); a picture
+  never does. Gallery cards show the bar band and the doodle
+  (`ThemePreview` compact, `houseDoodle`). The Artwork shelf gained the
+  comic-book set the same day (Rooftop, Gamma, Vigilante, Cosmic, Storm
+  Front, Symbiote, Multiverse, Arc Light): original drawn wallpapers in
+  those moods, no character, logo or trademarked name, because the
+  owner's "Spider-Man, Marvel" pictures cannot ship; a person who wants
+  the real art brings the picture and the theme is read from it. The
+  Photographs shelf then gained twelve pictures found online the same
+  day (Thunder, Low Orbit, Celestial, Helix, Ice Cave, Night Grid, Dew
+  Web, Kabukicho, Ferro, Gateway, Bay Lights, Carousel): Wikimedia
+  Commons finds, public domain, CC0 or CC BY only (never ShareAlike, so
+  a crop is clean), 1440 by 900 webp in `public/wallpapers`, credits in
+  `credits.json` (CC BY needs the credit shown somewhere before this
+  ships wide). Each card's hero colour is set by hand on the sampler's
+  two routes: a light colour stays light with dark ink, a deep one goes
+  under 0.18 luminance for white ink; the light card is a painted pale
+  ground from the same accent.
+- **The browser's own chrome follows** (`providers/ThemeColorSync.tsx`
+  in the root layout, `browserChromeAtom`). The `theme-color` meta is
+  rewritten to the resolved page colour when the mode or palette moves,
+  and to the open chat's bar colour on a phone (MessageBox publishes
+  `--chat-chrome-solid` through `resolveCssColor`, which paints a probe
+  so `var()` and `color-mix()` resolve). A head observer puts the value
+  back after the router re-renders the layout's static black tag on
+  every navigation. Safari tints its tab bar with it, Chrome and Samsung
+  the address bar, an installed app its title bar.
+- **A custom app palette from a picture**: `palette: "custom"` with
+  `appearance.custom`, thirteen flat strings (seed and six tokens per
+  mode; the gateway keeps one object level of scalars under a
+  namespace). `src/lib/palette-derive.ts` `paletteFromSeed` keeps the
+  seed's hue and saturation and walks lightness until the dark ink holds
+  7.2:1, text 11:1 on black and 5.8:1 on paper; a near-grey seed becomes
+  Mono. The values ride inline on `<html>` as `--ws-custom-*` (stamped
+  by the pre-paint script and `applyPrefsToDocument`, both validating
+  every field) and the `custom` blocks in ws-palettes.css map the six
+  brand tokens to them. The picker's eleventh swatch, From a picture,
+  samples with `sampleImage` and takes its accent as the seed.
 - **Wallpapers**: `WALLPAPERS` rows carry a measured `tint`; nothing is
   sampled at runtime. The generated set lives in `public/wallpapers/gen`
   (dark under 3.5% luminance, light over 80%, so frost 0 / dim 0). Card
@@ -865,6 +950,72 @@ directions D + A from a mocked set
 - `ConversationList` takes `banner`, `footer` and `onBack` for this. The
   old `filter` prop is gone.
 
+**Groups run on consent, not the follow graph** (gateway audit, 2026-09-24,
+register at https://claude.ai/artifact/STFhpGJ4mkZsSFZgbhRKdn, findings
+G1 to G215). Creating a group or adding to one no longer needs a mutual
+follow. Each person's `privacy.groupAdd` (everyone / following, the
+default / allies / nobody) says whether they are added or sent an invite
+that lasts three days; invites ride the Requests shelf and accept and
+decline through the same doors as a DM request, so the existing UI handles
+them. Group permissions are per action (`settings.send/media/addMembers/
+editInfo/pin/calls/mentionAll/money`, each everyone or admins); the old
+`adminsOnly` mirrors `send`. New groups hide history from before you
+joined (`historyVisible`); groups from before that date keep showing it.
+Messages and rings push to phones now (no bell row), threads can be muted
+(`PATCH /conversations/:id/mute`), and the group info and roster come from
+`GET /groups/:id` and `/groups/:id/members`. The SDK carries all of it.
+Owner-set Ably "revocable tokens" is what makes removal cut live access
+at once; until it is on, a removed member's token lasts up to an hour.
+Second round (same day): mentions travel as ids (`mentions[]`,
+`mentionAll`; `/unread` counts them), an admin removal leaves a tombstone
+(`removedBy`, event `message:removed`), "seen by" is `GET
+/message/:id/receipts` for the sender only. Invite links live at
+`/groups/:id/links` (title, 1d/7d/30d expiry, use limit, per-link
+approval, 20 live at most) and open at `/join/<code>` on every platform
+(`groupLinkPath()` in the contracts; the web route is NOT built yet);
+`GET /groups/links/:code` previews safely, `POST .../join` joins or,
+under `joinApproval`, files a request that admins answer at
+`/groups/:id/requests/:profileId`. Bans (`/groups/:id/bans`, `?ban=1` on
+a removal) keep people out of links and adds; `?quiet=1` on a leave posts
+no row; `/groups/:id/past` lists who left in 60 days. The group records a
+live call from the first ring (`call` on the row and on GroupInfo, events
+`call:started` / `call:ended`), reconciled against the LiveKit room when
+the group is read. Third round (same day, gateway `557a1b8`): admin
+rights per admin (`members[].rights`, `adminCan()`, owner-set; an admin
+with `addAdmins` may promote), restrict a member (`restrict` on the
+member PATCH), slow mode and disappearing messages and history share on
+the group PATCH (`slowModeSec`, `disappearSec`, `historyShare`), pins
+(`/conversations/:id/pins`, three, groups by the `pin` permission and DMs
+by either side), edit within 15 minutes (`PATCH /message/:id`), delete for
+me (`?scope=me`) and delete for everyone within 48h, polls (`type: "poll"`
++ `POST /message/:id/vote`), group invite cards (`type: "group_invite"`),
+the gallery and search (`/:conversationId/media`, `/search`), notification
+level per thread (`/conversations/:id/notifications`), an admin log
+(`/groups/:id/log`), soft delete with `POST /groups/:id/restore` inside 30
+days and an hourly sweeper (`messaging-sweep.service.ts`) that purges
+messages and media after, `seq` on every message, names cleaned by
+`cleanGroupName()` (no posing as the platform), 32 call seats and no ring
+past 32 members (`call:started` + a quiet push instead). System rows the
+client must render: `group.pinned/unpinned/slowmode/disappearing/
+restricted/unrestricted/restored`, `group.renamed` with `from`,
+`group.left` with `accountDeleted`, `group.history` with `share`. **Web UI (2026-09-24, Phase 4):** `PeoplePicker` (follows
+as suggestions, server search from two characters) is shared by
+`GroupCreateModal` and the group sheet; the gateway's per-person answer
+(`groupOutcomes` / `OUTCOME_WORDS`) is shown after every create or add,
+even a refused one (`postJsonDirect` now returns the failure body as
+`data`). `GroupSheet` reads `GET /groups/:id` and acts by
+`me.permissions`: views for members (row actions), settings, links, bans,
+past, log, leave (quiet, hand over), delete (typed name, restorable).
+`InviteCard` is the invite thread; `JoinRequestsSheet` answers requests
+and withdraws invites; the Requests banner counts both. Thread: `PinsBar`,
+`CallJoinBar` (`callManager.joinCall`, no ring), `PollBubble`,
+`GroupInviteBubble`, tombstones, "edited", the message menu (Pin, Seen by,
+Edit, Delete for me, Delete for everyone within 48h), `ThreadSearchSheet`
+(messages, photos, voice, links) behind the header's search button,
+`PollComposer` from the attach menu, mentions sent as ids, and
+`app/join/[code]` as the link landing. The phone app and Xstream have
+none of this yet; `poll` and `group_invite` bubbles exist on the web only.
+
 **No margins at the edge of a virtuoso item** (2026-09-21, the long-chat
 bounce). A message row is the first child of virtuoso's item wrapper, so a
 top or bottom MARGIN on it collapses out of the wrapper and the list
@@ -974,6 +1125,44 @@ Where it is wired (every category surface in the app):
 — the same forward-compatible seam as `imageAlts`: the gateway ignores unknown
 body fields today, so the transport is ready before the post model grows the
 column.
+
+## Delivery, phase 0 (2026-09-25)
+
+The CDN plan's code-only phase (research: no edge in front of either
+host, web on OVH London, gateway on Contabo France, a cold request from
+Lagos pays three round trips before the first byte). What is in place:
+
+- `next.config.ts` `headers()`: HSTS on everything; `/wallpapers` a year
+  immutable (names never change, files are only added); `/images` and
+  `/icons` a week with stale-while-revalidate; the manifest an hour.
+  `/sw.js` and `/offline.html` stay at `max-age=0` on purpose so a worker
+  kill lands. Next cannot stop the origin gzipping images; that is the
+  proxy on the box and goes away with an edge.
+- Heavy code is lazy: emoji-picker-react is `dynamic()` in all five
+  composers (`Theme` is a type import; the enum's string values are used
+  so the runtime enum never enters the chunk); PostHog loads on idle
+  through `src/lib/analytics.ts`, which queues capture and identify until
+  then (the first pageview used to be dropped); LiveKit was already lazy
+  (`loadLiveKit()` in call-manager). The three Story Studio faces (Archivo
+  Black, Bebas Neue, Caveat) live in `story/story-fonts.ts` and ride the
+  studio's root, not `<html>`; the studio redeclares the three font
+  tokens on its root because a custom property resolves where declared.
+- **The shared read cache persists per account** (`src/lib/cache.ts`):
+  `setCacheScope(profileId)` is called DURING JotaiHydrator's render (an
+  effect there runs after the pages' own effects, one beat too late) and
+  hydrates `localStorage["ws-cache-v1:<id>"]`; writes persist debounced,
+  a day old is dropped, one entry over 200 KB is never written, the file
+  stays under 1 MB. `useCachedResource` consumers get the warm start for
+  free; Explore seeds its atoms from `cacheKeys.exploreData()` when cold.
+  Never store anything personal to another account under a key: the
+  scope is the account.
+- Gateway (same day, `d5f9e3e`): every API answer is `private, no-store`;
+  openapi and the root are public an hour; keep-alive 65s (past the
+  proxy's 60s idle); R2 objects written `immutable`; `presignRead` signs
+  from the start of the UTC day with a two-day window, so a private URL
+  is the same all day and the browser, the worker and a CDN can hold it
+  (the shortest a private URL now lives is a day); the profile sync no
+  longer ships the follower, following, blocked or push-token arrays.
 
 ## Gotchas
 

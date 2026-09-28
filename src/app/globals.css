@@ -58,10 +58,10 @@
    selector in a group, and the html prefix also outranks it. */
 html[data-ws-theme="platform"] {
   --ws-bg-page: #000000;
-  --ws-bg-sunken: #0A0A0A;
-  --ws-bg-surface: #0D0D0D;
-  --ws-bg-raised: #1A1A1A;
-  --ws-bg-chip: #1A1A1A;
+  --ws-bg-sunken: #0a0a0a;
+  --ws-bg-surface: #0d0d0d;
+  --ws-bg-raised: #1a1a1a;
+  --ws-bg-chip: #1a1a1a;
   /* Ink is WHITE and its variations (owner 2026-09-15, revising the earlier
      "keep the stone greys"): primary pure white, secondary white at 62%,
      tertiary white at 42%. Alpha, not solid greys, so the same ink reads
@@ -69,7 +69,7 @@ html[data-ws-theme="platform"] {
      alike, and so bg-primary/5 and bg-primary/10 are exactly white/5 and
      white/10. 62% on black is 9.6:1, 42% is 4.6:1 (subtle is decorative
      only, never under 13px). */
-  --ws-text-primary: #FFFFFF;
+  --ws-text-primary: #ffffff;
   --ws-text-muted: rgba(255, 255, 255, 0.62);
   --ws-text-subtle: rgba(255, 255, 255, 0.42);
 }
@@ -171,6 +171,35 @@ html[data-ws-theme="platform"] {
        Everything else gets depth from the surface ladder, not shadow. */
   --shadow-nav: var(--ws-shadow-nav);
   --shadow-sheet: var(--ws-shadow-sheet);
+}
+
+/* WorldSpace house wallpaper: the default thread and the no-thread state.
+   The portrait source keeps useful detail at every pane aspect ratio; custom
+   chat themes paint over this through ThemeBackdrop's other branches. */
+.ws-default-chat-wallpaper {
+  --ws-chat-doodle: url("/images/backgrounds/worldspace-doodle-dark-page.webp");
+
+  background-color: var(--ws-bg-page);
+}
+
+.ws-default-chat-wallpaper::before {
+  position: absolute;
+  inset: 0;
+  background-image: var(--ws-chat-doodle);
+  background-position: center;
+  background-size: cover;
+  content: "";
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.ws-default-chat-wallpaper > * {
+  position: relative;
+  z-index: 1;
+}
+
+[data-ws-theme="platform-light"] .ws-default-chat-wallpaper {
+  --ws-chat-doodle: url("/images/backgrounds/worldspace-doodle-light-page.webp");
 }
 
 /* Keyboard focus: 2px focus/ring, 2px offset, on every interactive element
@@ -580,8 +609,14 @@ html {
    session once the intro has played, which left every chat menu popping in
    with zero motion. 160ms, scale from 0.96, the one easing. */
 @keyframes ws-pop {
-  from { opacity: 0; transform: scale(0.96) translateY(4px); }
-  to { opacity: 1; transform: none; }
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 @utility animate-pop {
   /* Fast tier (was 160ms, off the 120/200/320 ladder). */
@@ -592,8 +627,14 @@ html {
    place in the thread (owner 2026-09-09). Same family as ws-pop and NOT
    animate-rise, which the intro kill-switch disables for the session. */
 @keyframes ws-dock {
-  from { opacity: 0; transform: translateY(100%); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @utility animate-dock {
   animation: ws-dock var(--ws-motion-base, 200ms) var(--ws-ease) both;
@@ -758,8 +799,7 @@ html.ws-intro-done .animate-rise {
 .glass-tile-on,
 .glass-tile-on:hover {
   background: color-mix(in srgb, var(--ws-brand-primary) 14%, transparent);
-  box-shadow:
-    inset 0 0 0 1px
+  box-shadow: inset 0 0 0 1px
       color-mix(in srgb, var(--ws-brand-primary) 55%, transparent);
 }
 
@@ -781,8 +821,7 @@ html.ws-intro-done .animate-rise {
       80% 60% at 50% 108%,
       color-mix(in srgb, var(--ws-brand-primary) 12%, transparent),
       transparent 70%
-    ),
-    var(--ws-bg-page);
+    ), var(--ws-bg-page);
 }
 
 /* The brand ritual, on a loop: draw the W → flood the fill → the wordmark
@@ -812,10 +851,27 @@ html.ws-intro-done .animate-rise {
   animation-delay: 0.12s;
 }
 @keyframes ws-brand-cycle {
-  0%        { stroke-dashoffset: 1; fill-opacity: 0; opacity: 1; }
-  26%       { stroke-dashoffset: 0; fill-opacity: 0; }
-  34%, 82%  { stroke-dashoffset: 0; fill-opacity: 1; opacity: 1; }
-  92%, 100% { stroke-dashoffset: 1; fill-opacity: 0; opacity: 0; }
+  0% {
+    stroke-dashoffset: 1;
+    fill-opacity: 0;
+    opacity: 1;
+  }
+  26% {
+    stroke-dashoffset: 0;
+    fill-opacity: 0;
+  }
+  34%,
+  82% {
+    stroke-dashoffset: 0;
+    fill-opacity: 1;
+    opacity: 1;
+  }
+  92%,
+  100% {
+    stroke-dashoffset: 1;
+    fill-opacity: 0;
+    opacity: 0;
+  }
 }
 
 .ws-brand-word {
@@ -830,9 +886,21 @@ html.ws-intro-done .animate-rise {
   color: var(--ws-brand-gold-text);
 }
 @keyframes ws-brand-word {
-  0%, 30%   { opacity: 0; transform: translateX(-6px); }
-  40%, 82%  { opacity: 1; transform: translateX(0); }
-  92%, 100% { opacity: 0; transform: translateX(4px); }
+  0%,
+  30% {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  40%,
+  82% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  92%,
+  100% {
+    opacity: 0;
+    transform: translateX(4px);
+  }
 }
 
 /* Reduced motion gets the resolved end state, not a frozen half-drawn W. */
@@ -986,29 +1054,64 @@ html[data-ws-motion="reduce"] .ws-brand-word {
 		mk-op 6s linear infinite;
 }
 @keyframes mk-x {
-	0%, 15% { transform: translateX(0); }
-	16.8% { transform: translateX(-3px); }
-	18.6% { transform: translateX(2.5px); }
-	20.4% { transform: translateX(-2px); }
-	22.2% { transform: translateX(3px); }
-	24% { transform: translateX(-1px); }
-	25.8%, 100% { transform: translateX(0); }
+  0%,
+  15% {
+    transform: translateX(0);
+  }
+  16.8% {
+    transform: translateX(-3px);
+  }
+  18.6% {
+    transform: translateX(2.5px);
+  }
+  20.4% {
+    transform: translateX(-2px);
+  }
+  22.2% {
+    transform: translateX(3px);
+  }
+  24% {
+    transform: translateX(-1px);
+  }
+  25.8%,
+  100% {
+    transform: translateX(0);
+  }
 }
 @keyframes mk-op {
 	/* the burst */
-	0%, 15% { opacity: 1; }
-	16.8% { opacity: 0.3; }
-	19.5% { opacity: 1; }
-	22.2% { opacity: 0.45; }
-	24% { opacity: 0.85; }
-	25.8% { opacity: 1; }
+  0%,
+  15% {
+    opacity: 1;
+  }
+  16.8% {
+    opacity: 0.3;
+  }
+  19.5% {
+    opacity: 1;
+  }
+  22.2% {
+    opacity: 0.45;
+  }
+  24% {
+    opacity: 0.85;
+  }
+  25.8% {
+    opacity: 1;
+  }
 	/* then the long dip and return, on the source's fill timing. They swap
 	   the fill to #353535 over this stretch; expressed as opacity instead so
 	   it reads the same way on paper, where a mid grey would go the wrong
 	   direction and darken rather than recede. */
-	39.2% { opacity: 0.45; }
-	92% { opacity: 0.45; }
-	100% { opacity: 1; }
+  39.2% {
+    opacity: 0.45;
+  }
+  92% {
+    opacity: 0.45;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 /* The two torn slices, shearing in opposite directions. */
@@ -1017,22 +1120,56 @@ html[data-ws-motion="reduce"] .ws-brand-word {
 	animation: mk-up 6s linear infinite;
 }
 @keyframes mk-up {
-	0%, 15% { transform: translateX(0); opacity: 0; }
-	17.7% { transform: translateX(6px); opacity: 0.7; }
-	20.4% { transform: translateX(-5px); opacity: 0; }
-	23.1% { transform: translateX(4px); opacity: 0.55; }
-	25.8%, 100% { transform: translateX(0); opacity: 0; }
+  0%,
+  15% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+  17.7% {
+    transform: translateX(6px);
+    opacity: 0.7;
+  }
+  20.4% {
+    transform: translateX(-5px);
+    opacity: 0;
+  }
+  23.1% {
+    transform: translateX(4px);
+    opacity: 0.55;
+  }
+  25.8%,
+  100% {
+    transform: translateX(0);
+    opacity: 0;
+  }
 }
 .mk-slice-down {
 	transform-box: fill-box;
 	animation: mk-down 6s linear infinite;
 }
 @keyframes mk-down {
-	0%, 15% { transform: translateX(0); opacity: 0; }
-	17.7% { transform: translateX(-6px); opacity: 0.55; }
-	20.4% { transform: translateX(5px); opacity: 0; }
-	23.1% { transform: translateX(-4px); opacity: 0.7; }
-	25.8%, 100% { transform: translateX(0); opacity: 0; }
+  0%,
+  15% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+  17.7% {
+    transform: translateX(-6px);
+    opacity: 0.55;
+  }
+  20.4% {
+    transform: translateX(5px);
+    opacity: 0;
+  }
+  23.1% {
+    transform: translateX(-4px);
+    opacity: 0.7;
+  }
+  25.8%,
+  100% {
+    transform: translateX(0);
+    opacity: 0;
+  }
 }
 
 /* "Square": the animating clip gradient. The wordmark stays solid ink, this
@@ -1178,8 +1315,7 @@ video,
       color-mix(in srgb, var(--ws-bg-page) 45%, transparent) 50%,
       color-mix(in srgb, var(--ws-bg-page) 85%, transparent) 68%,
       var(--ws-bg-page) 84%
-    ),
-    url("/images/onboarding/backdrop-dark.webp");
+    ), url("/images/onboarding/backdrop-dark.webp");
   /* `cover` anchored to the TOP, not the centre: the art fills the width as a
      header band and the gradient takes the lower half back to page colour.
      Sizing by height instead made a 333px strip the 420px card sat right on
@@ -1201,8 +1337,7 @@ video,
       color-mix(in srgb, var(--ws-bg-page) 45%, transparent) 50%,
       color-mix(in srgb, var(--ws-bg-page) 85%, transparent) 68%,
       var(--ws-bg-page) 84%
-    ),
-    url("/images/onboarding/backdrop-light.webp");
+    ), url("/images/onboarding/backdrop-light.webp");
 }
 
 /* Tried a widened canvas so the whole 2:3 composition would fit a landscape
@@ -1227,10 +1362,23 @@ video,
 /* The Weekly Vote flame: a live thing in the nav, transform/opacity only.
    The global prefers-reduced-motion block stills it like everything else. */
 @keyframes ws-flicker {
-	0%, 100% { transform: scale(1) rotate(-2deg); opacity: 1; }
-	28% { transform: scale(1.12) rotate(2.5deg); opacity: 0.88; }
-	54% { transform: scale(0.94) rotate(-1deg); opacity: 1; }
-	78% { transform: scale(1.07) rotate(1.5deg); opacity: 0.94; }
+  0%,
+  100% {
+    transform: scale(1) rotate(-2deg);
+    opacity: 1;
+  }
+  28% {
+    transform: scale(1.12) rotate(2.5deg);
+    opacity: 0.88;
+  }
+  54% {
+    transform: scale(0.94) rotate(-1deg);
+    opacity: 1;
+  }
+  78% {
+    transform: scale(1.07) rotate(1.5deg);
+    opacity: 0.94;
+  }
 }
 .animate-flicker {
 	animation: ws-flicker 1.5s var(--ws-ease) infinite;
@@ -1246,8 +1394,12 @@ video,
    as a white bar across the left of the pill: reduced motion hides it
    instead (the block right after the rule). */
 @keyframes ws-sheen-sweep {
-	0% { transform: translateX(-160%) skewX(-12deg); }
-	100% { transform: translateX(260%) skewX(-12deg); }
+  0% {
+    transform: translateX(-160%) skewX(-12deg);
+  }
+  100% {
+    transform: translateX(260%) skewX(-12deg);
+  }
 }
 .shine-pill {
 	position: relative;
@@ -1285,9 +1437,17 @@ video,
 /* The ballot falling into the hinged vote box: appears above the mouth,
    drops through, fades as it passes the rim. Keyed remounts retrigger it. */
 @keyframes ws-ballot-drop {
-	0% { transform: translateY(-3px) rotate(-8deg); opacity: 0; }
-	30% { opacity: 1; }
-	100% { transform: translateY(7px) rotate(4deg); opacity: 0; }
+  0% {
+    transform: translateY(-3px) rotate(-8deg);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(7px) rotate(4deg);
+    opacity: 0;
+  }
 }
 .ws-ballot {
 	animation: ws-ballot-drop 0.55s var(--ws-ease) 0.16s both;
@@ -1319,40 +1479,79 @@ video,
     0 10px 30px rgb(0 0 0 / 0.16);
 }
 
-
 /* Phase 5 motion. Timeline switches slide in FROM the direction of travel
    (swipe left = the next timeline enters from the right); first loads
    crossfade from skeleton to content instead of popping. Transform and
    opacity only, base duration, the one easing; the global reduced-motion
    block stills all three. */
 @keyframes ws-slide-in-r {
-	from { opacity: 0; transform: translateX(18px); }
-	to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 @keyframes ws-slide-in-l {
-	from { opacity: 0; transform: translateX(-18px); }
-	to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 @keyframes ws-fade-in {
-	from { opacity: 0; }
-	to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
-.animate-slide-in-r { animation: ws-slide-in-r var(--ws-motion-base, 200ms) var(--ws-ease) backwards; }
-.animate-slide-in-l { animation: ws-slide-in-l var(--ws-motion-base, 200ms) var(--ws-ease) backwards; }
-.animate-content-in { animation: ws-fade-in var(--ws-motion-fast, 120ms) var(--ws-ease) backwards; }
+.animate-slide-in-r {
+  animation: ws-slide-in-r var(--ws-motion-base, 200ms) var(--ws-ease) backwards;
+}
+.animate-slide-in-l {
+  animation: ws-slide-in-l var(--ws-motion-base, 200ms) var(--ws-ease) backwards;
+}
+.animate-content-in {
+  animation: ws-fade-in var(--ws-motion-fast, 120ms) var(--ws-ease) backwards;
+}
 
 /* W2 messenger motion: live arrivals only (history renders static), and
    the CSS-loop typing dots that cost zero React renders. */
 @keyframes ws-message-in {
-	from { opacity: 0; transform: translateY(8px); }
-	to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-.animate-message-in { animation: ws-message-in var(--ws-motion-base, 200ms) var(--ws-ease) backwards; }
+.animate-message-in {
+  animation: ws-message-in var(--ws-motion-base, 200ms) var(--ws-ease) backwards;
+}
 @keyframes ws-typing-dot {
-	0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
-	30% { transform: translateY(-3px); opacity: 1; }
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  30% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
 }
-.ws-typing-dot { animation: ws-typing-dot 1.3s var(--ws-ease) infinite; }
+.ws-typing-dot {
+  animation: ws-typing-dot 1.3s var(--ws-ease) infinite;
+}
 
 /* Tick morph (register 122): each delivery state crossfades in at the fast
    tier. Transform+opacity only; snaps under reduced motion globally. */
@@ -1418,7 +1617,11 @@ html[data-ws-bold] {
    hairlines rather than inventing a new palette. */
 html[data-ws-contrast="more"] {
   --ws-text-subtle: var(--ws-text-muted);
-  --ws-border-hairline: color-mix(in srgb, var(--ws-text-muted) 45%, transparent);
+  --ws-border-hairline: color-mix(
+    in srgb,
+    var(--ws-text-muted) 45%,
+    transparent
+  );
 }
 html[data-ws-contrast="more"] :focus-visible {
   outline: 3px solid var(--ws-text-primary);
@@ -1515,23 +1718,23 @@ html[data-ws-motion="reduce"] .animate-spin {
    luminance apart so the pair survives even in achromatopsia. */
 html[data-ws-cv="deuteran"],
 html[data-ws-cv="protan"] {
-  --ws-money-credit: #3B82F6;   /* gain  -> blue,   light and cool */
-  --ws-money-debit: #F59E0B;    /* loss  -> amber,  dark and warm */
-  --ws-status-success: #3B82F6;
-  --ws-status-danger: #B45309;
+  --ws-money-credit: #3b82f6; /* gain  -> blue,   light and cool */
+  --ws-money-debit: #f59e0b; /* loss  -> amber,  dark and warm */
+  --ws-status-success: #3b82f6;
+  --ws-status-danger: #b45309;
 }
 html[data-ws-cv="tritan"] {
-  --ws-money-credit: #0EA5A5;   /* blue/yellow fails, so hold the red-green */
-  --ws-money-debit: #DC2626;
-  --ws-status-success: #0EA5A5;
-  --ws-status-danger: #DC2626;
+  --ws-money-credit: #0ea5a5; /* blue/yellow fails, so hold the red-green */
+  --ws-money-debit: #dc2626;
+  --ws-status-success: #0ea5a5;
+  --ws-status-danger: #dc2626;
 }
 html[data-ws-cv="achroma"] {
   /* No hue at all: separate by luminance only. */
-  --ws-money-credit: #F5F5F5;
-  --ws-money-debit: #6B6B6B;
-  --ws-status-success: #F5F5F5;
-  --ws-status-danger: #6B6B6B;
+  --ws-money-credit: #f5f5f5;
+  --ws-money-debit: #6b6b6b;
+  --ws-status-success: #f5f5f5;
+  --ws-status-danger: #6b6b6b;
 }
 
 /* Categorical chart colours.
@@ -1540,12 +1743,12 @@ html[data-ws-cv="achroma"] {
    distinct greys with no hue at all. Charts pair it with per-slice patterns,
    because a legend that matches by colour alone is unreadable either way. */
 :root {
-  --ws-chart-1: #7DD3FC;
-  --ws-chart-2: #34D399;
-  --ws-chart-3: #FBBF24;
-  --ws-chart-4: #A78BFA;
-  --ws-chart-5: #64748B;
-  --ws-chart-6: #3F3F46;
+  --ws-chart-1: #7dd3fc;
+  --ws-chart-2: #34d399;
+  --ws-chart-3: #fbbf24;
+  --ws-chart-4: #a78bfa;
+  --ws-chart-5: #64748b;
+  --ws-chart-6: #3f3f46;
 }
 html[data-ws-cv="deuteran"] :root,
 html[data-ws-cv="deuteran"],
@@ -1554,22 +1757,32 @@ html[data-ws-cv="tritan"],
 html[data-ws-cv="achroma"] {
   /* One luminance staircase, .88 down to .16, so the order is legible even
      when every hue collapses. */
-  --ws-chart-1: #E8EDF2;
-  --ws-chart-2: #B9C4CF;
-  --ws-chart-3: #8C9AA8;
-  --ws-chart-4: #64717E;
-  --ws-chart-5: #414B55;
-  --ws-chart-6: #232A31;
+  --ws-chart-1: #e8edf2;
+  --ws-chart-2: #b9c4cf;
+  --ws-chart-3: #8c9aa8;
+  --ws-chart-4: #64717e;
+  --ws-chart-5: #414b55;
+  --ws-chart-6: #232a31;
 }
 
 /* Symbols, not just colour. Redundant encoding is what actually fixes a
    hue-only signal; forced on by any colour-vision mode. */
-html[data-ws-cues] .ws-cue-up::before { content: "▲ "; }
-html[data-ws-cues] .ws-cue-down::before { content: "▼ "; }
-html[data-ws-cues] .ws-cue-online { box-shadow: 0 0 0 2px var(--ws-bg-page), 0 0 0 3.5px var(--ws-text-primary); }
+html[data-ws-cues] .ws-cue-up::before {
+  content: "▲ ";
+}
+html[data-ws-cues] .ws-cue-down::before {
+  content: "▼ ";
+}
+html[data-ws-cues] .ws-cue-online {
+  box-shadow:
+    0 0 0 2px var(--ws-bg-page),
+    0 0 0 3.5px var(--ws-text-primary);
+}
 
 /* Data saver: no autoplay, no decorative motion, cheaper media. */
-html[data-ws-saver] video[autoplay] { animation: none; }
+html[data-ws-saver] video[autoplay] {
+  animation: none;
+}
 
 /* ── The black theme has no stone in it (owner 2026-09-20) ───────────────
    "don't use the stone background, not the faded stone gray, no no".
@@ -1599,35 +1812,6 @@ html[data-ws-theme="platform"] .glass-toast {
    listed. It sits under every Tabs thumb. */
 html[data-ws-theme="platform"] {
   --ws-bg-track: #111111;
-}
-
-/* The house chat ground: a flat theme still gets a real WorldSpace
-   wallpaper rather than an empty colour. The block below repaints its
-   line art with the brand token. */
-.ws-default-chat-wallpaper {
-  --ws-chat-doodle: url("/images/backgrounds/worldspace-doodle-dark-page.webp");
-
-  background-color: var(--ws-bg-page);
-}
-
-.ws-default-chat-wallpaper::before {
-  position: absolute;
-  inset: 0;
-  background-image: var(--ws-chat-doodle);
-  background-position: center;
-  background-size: cover;
-  content: "";
-  opacity: 0.4;
-  pointer-events: none;
-}
-
-.ws-default-chat-wallpaper > * {
-  position: relative;
-  z-index: 1;
-}
-
-[data-ws-theme="platform-light"] .ws-default-chat-wallpaper {
-  --ws-chat-doodle: url("/images/backgrounds/worldspace-doodle-light-page.webp");
 }
 
 /* ── The house wallpaper wears the palette (owner 2026-09-20) ───────────

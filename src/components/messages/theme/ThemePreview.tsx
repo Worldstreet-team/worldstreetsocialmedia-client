@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { type ChatTheme, themeVars } from "./chatTheme";
+import { type ChatTheme, type ThemeMode, themeVars } from "./chatTheme";
 import { ThemeBackdrop } from "./ThemeBackdrop";
 
 /**
@@ -11,11 +11,14 @@ import { ThemeBackdrop } from "./ThemeBackdrop";
  */
 export function ThemePreview({
 	theme,
+	mode,
 	frame,
 	className,
 	compact = false,
 }: {
 	theme: ChatTheme;
+	/** The app mode the preview is drawn in; the token branch needs it. */
+	mode?: ThemeMode;
 	frame: "phone" | "desktop" | "card";
 	className?: string;
 	/** Fewer, smaller bubbles for a gallery card. */
@@ -41,7 +44,7 @@ export function ThemePreview({
 	);
 	return (
 		<div
-			style={themeVars(theme)}
+			style={themeVars(theme, mode)}
 			className={clsx(
 				"relative flex flex-col overflow-hidden bg-page",
 				frame === "phone" && "aspect-[9/17] w-[168px] rounded-[20px] border-2 border-hairline",
@@ -50,13 +53,33 @@ export function ThemePreview({
 				className,
 			)}
 		>
-			<ThemeBackdrop wallpaper={theme.wallpaper} resolution={compact ? 320 : 640} />
+			<ThemeBackdrop wallpaper={theme.wallpaper} resolution={compact ? 320 : 640} houseDoodle />
+			{/* A gallery card shows the bar the theme paints (owner 2026-09-25:
+			    the bars wear the colour), as a thin band at the top. */}
+			{compact && (
+				<div className="chat-chrome relative flex h-[14px] shrink-0 items-center gap-1 px-1.5">
+					<span className="h-[7px] w-[7px] rounded-pill [background:var(--chat-chrome-chip,var(--ws-bg-chip))]" />
+					<span className="h-[3px] w-6 rounded-pill bg-primary/40" />
+				</div>
+			)}
 			<div
 				className={clsx(
 					"relative flex flex-1 flex-col justify-end gap-1",
 					compact ? "p-2" : "p-3",
 				)}
 			>
+				{/* A stamp and a reaction ride the sample (audit 2026-09-25): they
+				    are what a theme now paints beyond the bubbles, and the card
+				    should show what it sells. */}
+				<span
+					className={clsx(
+						"self-center rounded-pill font-sans font-medium tabular-nums",
+						compact ? "px-1.5 py-px text-[7px]" : "px-2 py-0.5 text-[9px]",
+					)}
+					style={{ background: "var(--chat-stamp-bg)", color: "var(--chat-stamp-ink)" }}
+				>
+					Today
+				</span>
 				{!compact && bubble(false, "Good morning, Highly Esteemed!")}
 				{bubble(false, compact ? "Hey, you around?" : "I don't even know what to say or how to say it.")}
 				{!compact && (
@@ -74,6 +97,21 @@ export function ThemePreview({
 					</span>
 				)}
 				{bubble(true, compact ? "What country is this" : "What country is this")}
+				<span
+					className={clsx(
+						"-mt-1 self-end rounded-pill font-sans ring-2",
+						compact ? "mr-1 px-1 text-[7px]" : "mr-2 px-1.5 py-px text-[9px]",
+					)}
+					style={
+						{
+							"--tw-ring-color": "var(--chat-reaction-ring)",
+							background: "var(--chat-reaction-mine-bg)",
+							color: "var(--chat-reaction-mine-ink)",
+						} as React.CSSProperties
+					}
+				>
+					{"\u{1F525}"} 2
+				</span>
 				{!compact && (
 					<span
 						className="flex max-w-[78%] items-center gap-1.5 self-start px-3 py-2"
@@ -101,11 +139,11 @@ export function ThemePreview({
 				)}
 			</div>
 			{!compact && (
-				<div className="relative m-2 mt-0 flex h-8 items-center justify-between rounded-pill border border-hairline bg-page/60 px-3">
+				<div className="chat-chrome relative m-2 mt-0 flex h-8 items-center justify-between rounded-pill px-3">
 					<span className="font-sans text-[11px] text-subtle">Message…</span>
 					<span
 						className="h-5 w-5 rounded-pill"
-						style={{ background: "var(--chat-mine)" }}
+						style={{ background: "var(--chat-send-bg, var(--chat-mine))" }}
 					/>
 				</div>
 			)}

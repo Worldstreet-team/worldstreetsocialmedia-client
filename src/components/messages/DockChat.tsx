@@ -1,5 +1,6 @@
 "use client";
 
+import { viaLabel } from "@/lib/platform";
 import { UserBadges } from "@/components/ui/UserBadges";
 import axios from "axios";
 import clsx from "clsx";
@@ -317,6 +318,9 @@ export function DockChat({
 											className={missed ? "text-danger" : "text-success"}
 										/>
 										{m.content}
+										{viaLabel(m.source) && (
+											<span className="text-subtle">{viaLabel(m.source)}</span>
+										)}
 									</span>
 								</div>
 							);

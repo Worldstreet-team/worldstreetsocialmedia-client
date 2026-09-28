@@ -1,5 +1,6 @@
 "use client";
 
+import { platformName } from "@/lib/platform";
 import clsx from "clsx";
 import {
 	useCallback,
@@ -80,6 +81,8 @@ export interface ConversationRow {
 	/** DM only — a group has no single "other". */
 	otherParticipant?: ConversationRowUser;
 	kind?: "dm" | "group";
+	/** The platform the thread was opened from; shown when it is not home. */
+	source?: string;
 	name?: string;
 	avatar?: string;
 	memberCount?: number;
@@ -92,6 +95,9 @@ export interface ConversationRow {
 		sender?: string | { _id?: string; firstName?: string; username?: string };
 		/** Group membership events; the row renders their copy, not "". */
 		systemEvent?: { kind: string; params?: Record<string, unknown> };
+		poll?: { question?: string };
+		groupInvite?: { name?: string };
+		removedAt?: string;
 	};
 	/** Not sent by the gateway today — see `rowTime`. Kept for callers. */
 	lastMessageAt?: string;
@@ -99,6 +105,17 @@ export interface ConversationRow {
 	unreadCount: number;
 	/** Waiting on the Requests shelf — quiet until accepted. */
 	isRequestForMe?: boolean;
+	/** A group invite for me (audit G34), also on the Requests shelf. */
+	isInvite?: boolean;
+	invite?: {
+		by?: string | { _id?: string; firstName?: string; lastName?: string; username?: string; avatar?: string };
+		at?: string;
+		expiresAt?: string;
+	};
+	/** Groups I run: people asking to join (audit G38). */
+	requestCount?: number;
+	/** A call in progress in this group (audit G121). */
+	call?: { startedBy: string; startedAt: string; video: boolean } | null;
 	/** On my Archived shelf (per member, from the gateway). */
 	archived?: boolean;
 }
@@ -602,11 +619,23 @@ export function ConversationList({
 								>
 									{identity.title}
 								</span>
-								{isGroup ? (
-									<span className="flex shrink-0 items-center gap-0.5 font-sans text-[calc(13px*var(--ws-fs))] text-subtle">
-										<Users className="h-3 w-3" />
-										{identity.memberCount ?? ""}
+								{platformName(conv.source) && (
+									<span className="shrink-0 rounded-pill bg-primary/5 px-1.5 py-px font-sans text-[calc(11px*var(--ws-fs))] font-medium text-muted">
+										{platformName(conv.source)}
 									</span>
+								)}
+								{isGroup ? (
+									<>
+										<span className="flex shrink-0 items-center gap-0.5 font-sans text-[calc(13px*var(--ws-fs))] text-subtle">
+											<Users className="h-3 w-3" />
+											{identity.memberCount ?? ""}
+										</span>
+										{(conv.requestCount ?? 0) > 0 && (
+											<span className="shrink-0 font-sans text-[calc(12px*var(--ws-fs))] font-semibold tabular-nums text-gold">
+												{conv.requestCount} asking
+											</span>
+										)}
+									</>
 								) : (
 									u && (
 										<>
@@ -634,6 +663,12 @@ export function ConversationList({
 									unread ? "font-medium text-primary" : "text-muted",
 								)}
 							>
+								{/* A live call outranks the last message (audit G182). */}
+								{conv.call && (
+									<span className="shrink-0 rounded-pill bg-success/15 px-1.5 py-px font-sans text-[calc(11px*var(--ws-fs))] font-semibold text-success">
+										{conv.call.video ? "Video call" : "Call"} on
+									</span>
+								)}
 								{mine && conv.lastMessage?.type !== "system" && (
 									<span className="shrink-0 text-subtle">
 										{t("messages.you")}
@@ -642,7 +677,12 @@ export function ConversationList({
 								{Glyph && conv.lastMessage?.type !== "system" && (
 									<Glyph size={15} className="shrink-0 text-subtle" />
 								)}
-								<PreviewRoll
+								{conv.isInvite ? (
+									<span className="truncate">
+										{`Invited you${typeof conv.memberCount === "number" && conv.memberCount > 0 ? ` · ${conv.memberCount} members` : ""}`}
+									</span>
+								) : (
+<PreviewRoll
 									stamp={conv.lastMessage?.createdAt ?? "none"}
 									roll={!mine}
 								>
@@ -659,7 +699,13 @@ export function ConversationList({
 														: undefined,
 												)
 											: t("messages.noMessages")
-										: kind
+										: conv.lastMessage?.removedAt
+											? "Message removed"
+											: conv.lastMessage?.type === "poll"
+												? `Poll: ${conv.lastMessage.poll?.question ?? ""}`
+												: conv.lastMessage?.type === "group_invite"
+													? `Invite to ${conv.lastMessage.groupInvite?.name ?? "a group"}`
+													: kind
 											? conv.lastMessage?.type === "audio" &&
 												conv.lastMessage?.durationSec
 												? `${Math.floor(conv.lastMessage.durationSec / 60)}:${String(Math.floor(conv.lastMessage.durationSec % 60)).padStart(2, "0")}`
@@ -667,6 +713,7 @@ export function ConversationList({
 											: conv.lastMessage?.content ||
 												t("messages.noMessages")}
 								</PreviewRoll>
+								)}
 								{/* The time rides the preview line ("Heyy · 3d"),
 								    which frees the top line for the name alone. */}
 								{rowTime(conv) && (

@@ -107,13 +107,18 @@ export const ThemeBackdrop = memo(function ThemeBackdrop({
 		);
 
 	// A painted ground needs no image, no blur and no dim - it IS the colour.
+	// In a chat it carries the house line art, tinted to the theme (owner
+	// 2026-09-25: "the ones with a blank background should use the doodle,
+	// tinted to match the theme"); the ink and opacity come from themeVars.
 	if (!src)
 		return painted ? (
 			<div
 				aria-hidden
 				className="pointer-events-none absolute inset-0"
 				style={{ background: painted }}
-			/>
+			>
+				{houseDoodle && <div className="chat-doodle absolute inset-0" />}
+			</div>
 		) : null;
 	return (
 		<div

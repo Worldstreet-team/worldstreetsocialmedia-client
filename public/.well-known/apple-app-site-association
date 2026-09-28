@@ -6,7 +6,8 @@
         "components": [
           { "/": "/post/*", "comment": "A post opens in the app" },
           { "/": "/profile/*", "comment": "A profile opens in the app" },
-          { "/": "/messages/*", "comment": "A chat opens in the app" }
+          { "/": "/messages/*", "comment": "A chat opens in the app" },
+          { "/": "/join/*", "comment": "A group invite link opens in the app" }
         ]
       }
     ]

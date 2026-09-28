@@ -38,6 +38,92 @@ const listeners = new Map<string, Set<() => void>>();
 
 export const DEFAULT_TTL = 60_000;
 
+/* ------------------------------------------------------------------ */
+/* Warm start (delivery plan phase 0, 2026-09-25).
+ *
+ * This store used to be memory only, so a reload or a new tab threw away
+ * explore, the profiles, who-to-follow and the notifications page and
+ * held the reader on a skeleton for the whole round trip, which on a
+ * queueing database is seconds. The entries now ride localStorage under
+ * a key scoped to the ACCOUNT (set by JotaiHydrator once the profile is
+ * known, so a shared device never shows one person another's cache).
+ * Consumers already render a stale copy and revalidate underneath
+ * (useCachedResource), so a warm start needs no new rule anywhere else:
+ * the copy paints, the request runs, the fresh answer replaces it.
+ *
+ * Bounded on purpose: entries older than a day are dropped on load, one
+ * entry over 200 KB is never written, and the whole file stays under
+ * 1 MB by evicting the oldest. Every storage call is wrapped: a private
+ * window or a full quota must never reach React. */
+const PERSIST_KEY = "ws-cache-v1";
+const PERSIST_MAX_AGE = 24 * 3600_000;
+const PERSIST_ENTRY_CAP = 200_000;
+const PERSIST_TOTAL_CAP = 1_000_000;
+let scope: string | null = null;
+let persistTimer: ReturnType<typeof setTimeout> | null = null;
+
+function storageKey(): string | null {
+	return scope ? `${PERSIST_KEY}:${scope}` : null;
+}
+
+/** Called once the signed-in profile is known; hydrates that account's copy. */
+export function setCacheScope(id: string | null | undefined): void {
+	const next = id ? String(id) : null;
+	if (next === scope) return;
+	scope = next;
+	if (typeof window === "undefined" || !scope) return;
+	try {
+		const raw = localStorage.getItem(storageKey() as string);
+		if (!raw) return;
+		const parsed = JSON.parse(raw) as Record<string, CacheEntry<unknown>>;
+		const now = Date.now();
+		for (const [key, entry] of Object.entries(parsed)) {
+			if (!entry || typeof entry.at !== "number") continue;
+			if (now - entry.at > PERSIST_MAX_AGE) continue;
+			// Memory wins: a copy this tab already fetched is newer.
+			if (!store.has(key)) {
+				store.set(key, entry);
+				emit(key);
+			}
+		}
+	} catch {
+		/* no storage, or a corrupt file: start cold */
+	}
+	// Whatever this tab fetched before the profile was known is written
+	// now; otherwise the first page after a cold start never persists.
+	persistSoon();
+}
+
+function persistSoon(): void {
+	if (typeof window === "undefined" || !scope) return;
+	if (persistTimer) clearTimeout(persistTimer);
+	persistTimer = setTimeout(persistNow, 400);
+}
+
+function persistNow(): void {
+	persistTimer = null;
+	const key = storageKey();
+	if (!key) return;
+	try {
+		const now = Date.now();
+		const rows = [...store.entries()]
+			.filter(([, e]) => now - e.at <= PERSIST_MAX_AGE)
+			.map(([k, e]) => [k, e, JSON.stringify(e).length] as const)
+			.filter(([, , size]) => size <= PERSIST_ENTRY_CAP)
+			.sort((a, b) => b[1].at - a[1].at);
+		const out: Record<string, CacheEntry<unknown>> = {};
+		let total = 0;
+		for (const [k, e, size] of rows) {
+			if (total + size > PERSIST_TOTAL_CAP) break;
+			out[k] = e;
+			total += size;
+		}
+		localStorage.setItem(key, JSON.stringify(out));
+	} catch {
+		/* quota or a private window: the memory copy still serves this tab */
+	}
+}
+
 function emit(key: string) {
 	const set = listeners.get(key);
 	if (!set) return;
@@ -64,6 +150,7 @@ export function readCache<T>(key: string): CacheEntry<T> | undefined {
 export function writeCache<T>(key: string, data: T): void {
 	store.set(key, { data, at: Date.now() });
 	emit(key);
+	persistSoon();
 }
 
 export function isFresh(entry: CacheEntry<unknown> | undefined, ttl: number) {
@@ -78,6 +165,7 @@ export function invalidate(key: string): void {
 	store.delete(key);
 	inflight.delete(key);
 	emit(key);
+	persistSoon();
 }
 
 /**
@@ -92,6 +180,12 @@ export function invalidatePrefix(prefix: string): void {
 
 export function clearCache(): void {
 	for (const key of [...store.keys()]) invalidate(key);
+	try {
+		const key = storageKey();
+		if (key && typeof window !== "undefined") localStorage.removeItem(key);
+	} catch {
+		/* nothing to clear */
+	}
 }
 
 /**

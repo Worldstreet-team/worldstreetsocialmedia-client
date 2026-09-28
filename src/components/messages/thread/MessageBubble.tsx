@@ -1,5 +1,8 @@
 "use client";
 
+import { PollBubble, type PollData } from "./PollBubble";
+import { GroupInviteBubble, type GroupInviteCard } from "./GroupInviteBubble";
+
 import clsx from "clsx";
 import { format } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
@@ -60,6 +63,16 @@ export interface BubbleMessage {
 	createdAt: string;
 	/** Which platform it was sent from (the gateway stamps it). */
 	source?: string;
+	mentions?: string[];
+	mentionAll?: boolean;
+	/** An admin removed it for everyone (audit G60): a tombstone. */
+	removedBy?: string;
+	removedAt?: string;
+	/** Edited by the sender (audit G90). */
+	editedAt?: string;
+	expiresAt?: string;
+	poll?: PollData;
+	groupInvite?: GroupInviteCard;
 }
 
 /**
@@ -68,16 +81,7 @@ export interface BubbleMessage {
  * banner for both"). WorldSpace and its app are one home, so nothing is
  * said for those; Xstream shows the mirror image, "via WorldSpace".
  */
-const PLATFORM_LABELS: Record<string, string> = {
-	dashboard: "Dashboard",
-	academy: "Academy",
-	shop: "Shop",
-	xstream: "Xstream",
-};
-function viaLabel(source: string | undefined): string | null {
-	const name = source ? PLATFORM_LABELS[source] : undefined;
-	return name ? `via ${name}` : null;
-}
+import { viaLabel } from "@/lib/platform";
 
 function quotedPreview(r: {
 	content?: string;
@@ -116,6 +120,14 @@ const ACCENT_18 = accentWash(18);
 const ACCENT_40 = accentWash(40);
 const ON_MINE =
 	"var(--chat-on-mine, color-mix(in srgb, currentColor 22%, transparent))";
+// The accent as INK on their bubble, pushed by the theme until it reads
+// there (audit 2026-09-25: the raw accent failed AA on most cards).
+const LINK_THEIRS = "var(--chat-link-theirs, var(--ws-brand-primary))";
+const MENTION_THEIRS_BG = `var(--chat-mention-theirs-bg, ${ACCENT_18})`;
+// A chip on the floor between bubbles: near-opaque, in the ground's own
+// step, so it reads over a photograph as well as a flat ground.
+const PILL_BG = "var(--chat-pill-bg, color-mix(in srgb, var(--ws-bg-page) 72%, transparent))";
+const PILL_INK = "var(--chat-pill-ink, var(--ws-text-muted))";
 
 const URL_RE = /(https?:\/\/[^\s<]+)/;
 const TOKEN_RE = /(https?:\/\/[^\s<]+|@[A-Za-z0-9_.]{2,32})/g;
@@ -137,11 +149,7 @@ function linkify(text: string, mine: boolean) {
 							? "underline underline-offset-2 opacity-95 hover:opacity-100"
 							: "font-medium hover:underline",
 					)}
-					style={
-						mine
-							? undefined
-							: { color: "var(--chat-accent, var(--ws-brand-primary))" }
-					}
+					style={mine ? undefined : { color: LINK_THEIRS }}
 					onClick={(e) => e.stopPropagation()}
 				>
 					{part}
@@ -162,8 +170,8 @@ function linkify(text: string, mine: boolean) {
 						mine
 							? { background: ON_MINE }
 							: {
-								background: ACCENT_18,
-								color: "var(--chat-accent, var(--ws-brand-primary))",
+								background: MENTION_THEIRS_BG,
+								color: LINK_THEIRS,
 							}
 					}
 					onClick={(e) => e.stopPropagation()}
@@ -251,12 +259,21 @@ function ReactionChip({
 			animate={enter.animate}
 			exit={pop.exit}
 			{...press}
-			className={clsx(
-				// relative: the outgoing count is popped out of flow against it.
-				"relative flex cursor-pointer items-center gap-1 rounded-pill px-1.5 py-0.5 font-sans text-[calc(13px*var(--ws-fs))] ring-2 ring-page transition-colors",
-				!mine && "bg-primary/5 hover:bg-primary/10",
-			)}
-			style={mine ? { background: ACCENT_40 } : undefined}
+			className="relative flex cursor-pointer items-center gap-1 rounded-pill px-1.5 py-0.5 font-sans text-[calc(13px*var(--ws-fs))] ring-2 transition-opacity hover:opacity-85"
+			// Opaque chips in the ground's own step (audit 2026-09-25): a 5%
+			// wash vanished on every photograph, and the ring was the page
+			// colour, a black halo on a pale picture.
+			style={
+				{
+					"--tw-ring-color": "var(--chat-reaction-ring, var(--ws-bg-page))",
+					background: mine
+						? `var(--chat-reaction-mine-bg, ${ACCENT_40})`
+						: "var(--chat-reaction-bg, var(--ws-bg-raised))",
+					color: mine
+						? "var(--chat-reaction-mine-ink, var(--ws-text-primary))"
+						: "var(--chat-reaction-ink, var(--ws-text-muted))",
+				} as React.CSSProperties
+			}
 		>
 			<motion.span
 				key={mine ? "mine" : "theirs"}
@@ -270,7 +287,7 @@ function ReactionChip({
 				{count > 1 && (
 					<motion.span
 						key={count}
-						className="inline-block tabular-nums text-[calc(12px*var(--ws-fs))] font-semibold text-muted"
+						className="inline-block tabular-nums text-[calc(12px*var(--ws-fs))] font-semibold"
 						{...swap}
 					>
 						{count}
@@ -326,6 +343,8 @@ export interface BubbleProps {
 	onReact?: (m: BubbleMessage, emoji: string) => void;
 	/** The Message action on a shared contact card. */
 	onMessageContact?: (profileId: string) => void;
+	/** Vote in a poll: the picks replace the last ones. */
+	onVote?: (messageId: string, optionIds: string[]) => Promise<void> | void;
 }
 
 /**
@@ -369,6 +388,7 @@ export const MessageBubble = memo(function MessageBubble({
 	onRetryUpload,
 	onCancelUpload,
 	onReact,
+	onVote,
 	onMessageContact,
 }: BubbleProps) {
 	const rowRef = useRef<HTMLDivElement | null>(null);
@@ -420,14 +440,28 @@ export const MessageBubble = memo(function MessageBubble({
 			const t = Math.min(1, dx / 56);
 			hint.style.opacity = String(t);
 			hint.style.transform = `translate(${-dx}px, -50%) scale(${0.5 + 0.5 * t})`;
-			hint.style.background = t >= 0.86 ? "var(--ws-brand-primary)" : "";
-			hint.style.color = t >= 0.86 ? "var(--ws-brand-on-primary)" : "";
+			hint.style.background = t >= 0.86 ? "var(--chat-accent, var(--ws-brand-primary))" : "";
+			hint.style.color = t >= 0.86 ? "var(--chat-accent-ink, var(--ws-brand-on-primary))" : "";
 		}
 		const armed = dx > 48;
 		if (armed && !armedRef.current) haptic(8);
 		armedRef.current = armed;
 	};
 
+	// A tombstone (audit G60): the row stays so the thread does not shrink
+	// under people, and says what happened.
+	if (m.removedAt) {
+		return (
+			<div className={clsx("flex w-full px-4 py-0.5", isMe ? "justify-end" : "justify-start")}>
+				<span
+					className="rounded-pill px-3 py-1.5 font-sans text-[calc(12.5px*var(--ws-fs))] italic"
+					style={{ background: PILL_BG, color: PILL_INK }}
+				>
+					Message removed by an admin
+				</span>
+			</div>
+		);
+	}
 	if (m.type === "system") {
 		const copy = m.systemEvent
 			? systemEventCopy(
@@ -442,7 +476,10 @@ export const MessageBubble = memo(function MessageBubble({
 		const actorAvatar = (m.sender as { avatar?: string })?.avatar;
 		return (
 			<div className="mx-auto flex w-full max-w-[52rem] justify-center px-4 py-1.5">
-				<span className="inline-flex items-center gap-1.5 rounded-pill bg-page/70 px-3 py-1 text-center font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-muted">
+				<span
+					className="inline-flex items-center gap-1.5 rounded-pill px-3 py-1 text-center font-sans text-[calc(12.5px*var(--ws-fs))] font-medium"
+					style={{ background: PILL_BG, color: PILL_INK }}
+				>
 					{/* The actor's face inline (owner pick): a busy group reads
 					    as people, not names. */}
 					{actorAvatar && (
@@ -503,6 +540,7 @@ export const MessageBubble = memo(function MessageBubble({
 				<CallLogRow
 					content={m.content}
 					at={m.createdAt}
+					source={m.source}
 					mine={isMe}
 					onCallBack={onCallBack}
 				/>
@@ -516,7 +554,7 @@ export const MessageBubble = memo(function MessageBubble({
 				// Telegram's rule (owner pick): the thread opens here.
 				<div className="mx-auto flex w-full max-w-[52rem] items-center gap-3 px-4 py-3 sm:px-6">
 					<span className="h-px flex-1" style={{ background: ACCENT_40 }} />
-					<span className="font-sans text-[calc(12px*var(--ws-fs))] font-semibold" style={{ color: "var(--chat-accent, var(--ws-brand-primary))" }}>
+					<span className="font-sans text-[calc(12px*var(--ws-fs))] font-semibold" style={{ color: "var(--chat-accent-on-ground, var(--ws-brand-primary))" }}>
 						{unreadLabel && unreadLabel > 1
 							? `${unreadLabel} unread messages`
 							: "Unread messages"}
@@ -635,7 +673,8 @@ export const MessageBubble = memo(function MessageBubble({
 				<span
 					ref={hintRef}
 					aria-hidden
-					className="pointer-events-none absolute left-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-pill bg-raised text-muted opacity-0"
+					className="pointer-events-none absolute left-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-pill opacity-0"
+					style={{ background: PILL_BG, color: PILL_INK }}
 				>
 					<RiReplyLine size={14} />
 				</span>
@@ -737,7 +776,9 @@ export const MessageBubble = memo(function MessageBubble({
 					<div
 						data-bubble
 						className={clsx(
-							"relative min-w-0 max-w-full overflow-hidden",
+							// chat-bubble-ink: app ink classes inside mean the bubble's
+							// own ink (the embedded post, a failed upload's Retry).
+							"chat-bubble-ink relative min-w-0 max-w-full overflow-hidden",
 							// A GIF/photo-only bubble has no fill of its own.
 							(m.type === "image" || m.type === "video") && !m.content
 								? "p-0 text-primary"
@@ -902,12 +943,23 @@ export const MessageBubble = memo(function MessageBubble({
 									className="mt-2.5 flex h-9 w-full cursor-pointer items-center justify-center rounded-pill font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-opacity hover:opacity-85"
 									style={{
 										background: isMe ? ON_MINE : ACCENT_18,
-										color: isMe ? "inherit" : "var(--chat-accent, var(--ws-brand-primary))",
+										color: isMe ? "inherit" : LINK_THEIRS,
 									}}
 								>
 									Message
 								</button>
 							</div>
+						)}
+						{m.type === "poll" && m.poll && (
+							<PollBubble messageId={m._id} poll={m.poll} isMe={isMe} onVote={(id, picks) => onVote?.(id, picks)} />
+						)}
+						{m.type === "group_invite" && m.groupInvite && (
+							<GroupInviteBubble
+								card={m.groupInvite}
+								isMe={isMe}
+								accentBg={isMe ? ON_MINE : MENTION_THEIRS_BG}
+								accentInk={LINK_THEIRS}
+							/>
 						)}
 						{m.storyRef && (
 							<button
@@ -935,6 +987,9 @@ export const MessageBubble = memo(function MessageBubble({
 								)}
 							>
 								{linkify(m.content, isMe)}
+								{m.editedAt && (
+									<span className="ml-1.5 font-sans text-[calc(11px*var(--ws-fs))] opacity-60">edited</span>
+								)}
 							</p>
 						)}
 						{/* A WorldSpace post link renders as the post (owner pick),
@@ -1035,7 +1090,7 @@ export const MessageBubble = memo(function MessageBubble({
 							<img src={peerAvatar} alt="Seen" className="h-3.5 w-3.5 rounded-pill object-cover" />
 						</motion.span>
 					) : (
-						<span className="mt-1 flex items-center gap-1 font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
+						<span className="mt-1 flex items-center gap-1 font-sans text-[calc(12px*var(--ws-fs))]">
 							<MessageTicks state={state} />
 						</span>
 					);

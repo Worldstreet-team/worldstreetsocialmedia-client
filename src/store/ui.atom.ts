@@ -126,3 +126,12 @@ export const profileAdHeaderAtom = atom<{
  *  rates sheet. A request flag, not shared open-state: the sheet stays
  *  owned by AdSlot. */
 export const profileRatesRequestAtom = atom(false);
+
+/**
+ * The colour the browser's own chrome should wear (the phone status bar
+ * and address bar, an installed app's title bar), when something on the
+ * page has a better answer than the page colour: an open chat on a phone
+ * sets it to its top bar's fill, so the bar and the status bar read as one
+ * surface. null means "the page colour". Read by <ThemeColorSync>.
+ */
+export const browserChromeAtom = atom<string | null>(null);

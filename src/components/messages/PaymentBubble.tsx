@@ -56,7 +56,7 @@ export function PaymentBubble({
 	// so that ring never painted.
 	const ring = mine
 		? { boxShadow: "0 0 0 2px color-mix(in srgb, currentColor 40%, transparent)" }
-		: { boxShadow: "0 0 0 2px var(--ws-bg-raised)" };
+		: { boxShadow: "0 0 0 2px var(--chat-theirs, var(--ws-bg-raised))" };
 
 	const face = (src: string | undefined, name: string | undefined) =>
 		src ? (
@@ -71,19 +71,14 @@ export function PaymentBubble({
 			<span
 				// Mine: the same ink wash as a mention chip on my bubble, and the
 				// letter inherits the card's ink, so it reads on any fill.
-				style={
-					mine
-						? {
-								...ring,
-								background:
-									"var(--chat-on-mine, color-mix(in srgb, currentColor 22%, transparent))",
-							}
-						: ring
-				}
-				className={clsx(
-					"flex h-9 w-9 items-center justify-center rounded-pill font-sans text-[calc(13px*var(--ws-fs))] font-semibold",
-					!mine && "bg-chip text-muted",
-				)}
+				// Theirs: a wash of THEIR ink, the mirror of the mine chip.
+				style={{
+					...ring,
+					background: mine
+						? "var(--chat-on-mine, color-mix(in srgb, currentColor 22%, transparent))"
+						: "var(--chat-on-theirs, color-mix(in srgb, currentColor 22%, transparent))",
+				}}
+				className="flex h-9 w-9 items-center justify-center rounded-pill font-sans text-[calc(13px*var(--ws-fs))] font-semibold"
 			>
 				{(name || "?").charAt(0).toUpperCase()}
 			</span>
@@ -92,17 +87,16 @@ export function PaymentBubble({
 	return (
 		<div className={clsx("mt-1.5 flex", mine ? "justify-end" : "justify-start")}>
 			<div
-				className={clsx(
-					"min-w-[200px] max-w-[280px] rounded-[22px] px-4 py-3",
-					mine ? "" : "bg-raised text-primary",
-				)}
+				className="min-w-[200px] max-w-[280px] rounded-[22px] px-4 py-3"
 				style={
 					mine
 						? // The same fill and ink as MessageBubble's MINE_FILL / MINE_INK
 							// (not imported: that file imports this one). Token fallbacks,
 							// so the app palette reaches a card outside a themed pane.
 							{ background: "var(--chat-mine, linear-gradient(135deg, var(--ws-brand-primary), var(--ws-brand-dim)))", color: "var(--chat-mine-ink, var(--ws-brand-on-primary))" }
-						: undefined
+						: // Theirs wears THEIR bubble (audit 2026-09-25): it was the
+							// raised token, a different colour from their text a row up.
+							{ background: "var(--chat-theirs, var(--ws-bg-raised))", color: "var(--chat-theirs-ink, var(--ws-text-primary))" }
 				}
 			>
 				<span className="flex items-center gap-3">

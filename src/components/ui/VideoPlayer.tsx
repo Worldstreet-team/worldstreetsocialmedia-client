@@ -142,6 +142,9 @@ export function VideoPlayer({
 	 *  phone saw half of it (owner 2026-09-16). 62dvh keeps the whole frame
 	 *  in view on any screen; 600px is the ceiling and the fallback. */
 	const MEDIA_H_CAP = "min(600px, 62dvh)";
+	/** A portrait clip sits lower (owner 2026-09-28, "reduce the size of
+	 *  these things"): it hugs the text column's left edge at this height. */
+	const PORTRAIT_H_CAP = "min(520px, 56dvh)";
 	// A phone's own portrait shape (9:16) is the floor, 16:9 the ceiling.
 	// Between them a clip fits its frame exactly; beyond them the maxWidth
 	// branch keeps a tall frame from running away.
@@ -552,19 +555,17 @@ export function VideoPlayer({
 				// never jumps twice.
 				fitToMedia && !full
 					? {
-							maxHeight: MEDIA_H_CAP,
+							maxHeight: ratio && ratio < 1 ? PORTRAIT_H_CAP : MEDIA_H_CAP,
 							...(ratio ? { aspectRatio: String(ratio) } : {}),
 							// A portrait clip at full width would need ~1000px of
-							// height; the caller caps height at 600px, so the box
-							// stayed wide while the video shrank to fit — black
-							// bars down both sides (owner report 2026-09-01).
-							// Cap the WIDTH instead so the frame hugs the clip.
+							// height; the caller caps height, so the box stayed
+							// wide while the video shrank to fit, black bars down
+							// both sides (owner report 2026-09-01). Cap the WIDTH
+							// instead so the frame hugs the clip. It is no longer
+							// centred: the caller decides the edge it sits on
+							// (owner 2026-09-28, the text's left edge, like X).
 							...(ratio && ratio < 1
-								? {
-										maxWidth: `calc(${MEDIA_H_CAP} * ${ratio})`,
-										marginLeft: "auto",
-										marginRight: "auto",
-									}
+								? { maxWidth: `calc(${PORTRAIT_H_CAP} * ${ratio})` }
 								: {}),
 						}
 					: undefined

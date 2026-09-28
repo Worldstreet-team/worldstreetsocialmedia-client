@@ -52,7 +52,14 @@ import {
 	draftsOpenAtom,
 	pendingDraftAtom,
 } from "@/store/drafts.atom";
-import EmojiPicker, { type EmojiClickData, Theme } from "emoji-picker-react";
+import type { EmojiClickData, Theme } from "emoji-picker-react";
+// The picker is ~300KB and renders only after someone opens it, so the
+// chunk waits for that first render. `Theme` is a runtime enum that would
+// pull the whole library back in; it is imported as a type and the values
+// it holds ("light" / "dark") are written out at the call site.
+const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
+	ssr: false,
+});
 import { useTheme } from "next-themes";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
@@ -1759,8 +1766,8 @@ export const PostComposer = ({
 										onEmojiClick={onEmojiClick}
 										theme={
 											resolvedTheme === "light"
-												? Theme.LIGHT
-												: Theme.DARK
+												? ("light" as Theme)
+												: ("dark" as Theme)
 										}
 										width="100%"
 										height={360}

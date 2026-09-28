@@ -514,6 +514,7 @@ export function CallSurface() {
 		peer,
 		isGroup,
 		groupCaller,
+		via,
 		participantCount,
 		minimized,
 		startedAt,
@@ -547,6 +548,8 @@ export function CallSurface() {
 	// cleared by the expand handler.
 	const draggedRef = useRef(false);
 	let line = statusLine(status, isIncoming, isVideo, endReason, elapsed);
+	// A ring from another platform says so on its line (owner 2026-09-26).
+	if (status === "ringing" && isIncoming && via) line = `${line} ${via}`;
 	if (isGroup) {
 		if (status === "ringing" && isIncoming)
 			line = isVideo ? "Incoming group video call" : "Incoming group call";

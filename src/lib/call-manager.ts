@@ -1,3 +1,4 @@
+import { viaLabel } from "@/lib/platform";
 import type { Realtime } from "ably";
 import type {
 	LocalVideoTrack,
@@ -100,6 +101,8 @@ export interface CallState {
 	isGroup: boolean;
 	/** Who rang, for the incoming line of a group call. */
 	groupCaller: CallPeer | null;
+	/** "via Xstream" when the ring came from another platform, else null. */
+	via?: string | null;
 	/** Remote participant count — bumps re-render the grid. */
 	participantCount: number;
 	conversationId: string | null;
@@ -403,6 +406,40 @@ class CallManager {
 				this.finish("unanswered");
 			}
 		}, RING_TIMEOUT_MS);
+	}
+
+	/**
+	 * Join a call already going in a group (audit G174): no ring, straight
+	 * into the room, then sync whoever is there. Counted as not the caller,
+	 * so nothing is logged twice.
+	 */
+	async joinCall(opts: { conversationId: string; peer: CallPeer; isVideo: boolean }) {
+		if (this.state.status !== "idle") return;
+		this.clearTimers();
+		this.set({
+			status: "connecting",
+			isIncoming: true,
+			peer: opts.peer,
+			isGroup: true,
+			groupCaller: null,
+			participantCount: 0,
+			conversationId: opts.conversationId,
+			isVideo: opts.isVideo,
+			minimized: false,
+			micOn: true,
+			camOn: opts.isVideo,
+			endReason: null,
+			error: null,
+			startedAt: null,
+		});
+		const joined = await this.joinRoom(opts.conversationId, opts.isVideo);
+		if (!joined) return;
+		this.syncRemote();
+		if (this.getState().status === "connecting") {
+			this.rejoinTimer = setTimeout(() => {
+				if (this.state.status === "connecting") this.finish("ended");
+			}, REJOIN_GRACE_MS);
+		}
 	}
 
 	/** Answer an incoming call. */
@@ -843,6 +880,7 @@ class CallManager {
 						: (data.caller ?? null),
 					isGroup: incomingGroup,
 					groupCaller: incomingGroup ? (data.caller ?? null) : null,
+					via: viaLabel(data.platform),
 					participantCount: 0,
 					conversationId: data.conversationId ?? null,
 					isVideo: Boolean(data.isVideo),

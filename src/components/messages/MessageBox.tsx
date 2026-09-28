@@ -18,7 +18,14 @@ import { useUser, useAuth } from "@clerk/nextjs";
 import { useChannel, ChannelProvider } from "ably/react";
 import { useTheme } from "next-themes";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
-import EmojiPicker, { Theme } from "emoji-picker-react";
+import type { Theme } from "emoji-picker-react";
+// The picker is ~300KB and renders only after someone opens it, so the
+// chunk waits for that first render. `Theme` is a runtime enum that would
+// pull the whole library back in; it is imported as a type and the values
+// it holds ("light" / "dark") are written out at the call site.
+const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
+	ssr: false,
+});
 import { useT } from "@/i18n/client";
 import { getUserStoriesAction } from "@/lib/stories.actions";
 import { startConversationAction } from "@/lib/conversation.actions";
@@ -85,11 +92,7 @@ import {
 import { imageMeta, videoMeta } from "@/lib/media-meta";
 import { conversationIdentity } from "@/lib/conversation-identity";
 import { compressImage } from "@/lib/image-compress";
-import {
-	patchJsonDirect,
-	postJsonDirect,
-	sendFormProgress,
-} from "@/lib/upload-direct";
+import { deleteDirect, patchJsonDirect, postJsonDirect, sendFormProgress } from "@/lib/upload-direct";
 import { loadThreads, saveThread } from "@/lib/chat-vault";
 import {
 	DUR,
@@ -129,6 +132,12 @@ import {
 	RiUserAddLine,
 	RiFileCopyLine,
 	RiRestartLine,
+	RiPushpinLine,
+	RiMore2Fill,
+	RiEyeLine,
+	RiPencilLine as RiEditLine,
+	RiDeleteBinLine,
+	RiUnpinLine,
 } from "@remixicon/react";
 // Tray and Archive stay Phosphor: they label the two shelves, the requests
 // row and the archived door. The Remix swap was for the chat MESSAGE glyphs,
@@ -139,18 +148,24 @@ import { MessageSettingsSheet } from "@/components/messages/MessageSettingsSheet
 import { SendMoneySheet } from "@/components/messages/SendMoneySheet";
 import { GroupSheet } from "@/components/messages/GroupSheet";
 import { GroupCreateModal } from "@/components/messages/GroupCreateModal";
+import { JoinRequestsSheet } from "@/components/messages/JoinRequestsSheet";
+import { InviteCard } from "@/components/messages/InviteCard";
+import { PinsBar } from "@/components/messages/PinsBar";
+import { CallJoinBar } from "@/components/messages/CallJoinBar";
+import { PollComposer, type PollDraft } from "@/components/messages/PollComposer";
+import { SeenBySheet } from "@/components/messages/SeenBySheet";
+import { ThreadSearchSheet } from "@/components/messages/ThreadSearchSheet";
+import { EditMessageSheet } from "@/components/messages/EditMessageSheet";
+import { ThreadMoreSheet } from "@/components/messages/ThreadMoreSheet";
 import { BACKEND_ORIGIN } from "@/const";
 
 const API_URL = BACKEND_ORIGIN;
 import { useAtom, useSetAtom } from "jotai";
 import { useAtomValue } from "jotai";
-import { onlineIdsAtom } from "@/store/ui.atom";
+import { browserChromeAtom, onlineIdsAtom } from "@/store/ui.atom";
+import { resolveCssColor } from "@/components/providers/ThemeColorSync";
 import { userAtom } from "@/store/user.atom";
-import {
-  activeConversationIdAtom,
-  messageCacheAtom,
-  unreadMessagesCountAtom,
-} from "@/store/messageCache";
+import { activeConversationIdAtom, messageCacheAtom, unreadMessagesCountAtom, type Message as CachedMessage } from "@/store/messageCache";
 import NewConversationModal from "./NewConversationModal";
 
 // Helper component for conditional channel subscription
@@ -252,15 +267,7 @@ interface Message {
 	sender: UserProfile;
 	content: string;
 	// "call" is a finished call logged into the thread, not something typed.
-  type:
-    | "text"
-    | "image"
-    | "video"
-    | "audio"
-    | "file"
-    | "call"
-    | "payment"
-    | "contact";
+	type: CachedMessage["type"];
 	/** A shared account: the bubble is a card with a Message action. */
   contact?: {
     profile: string;
@@ -301,6 +308,15 @@ interface Message {
 	uploadPct?: number;
 	/** Transient, sender's tab only: send failed, retry offered. */
 	failed?: boolean;
+	mentions?: string[];
+	mentionAll?: boolean;
+	removedBy?: string;
+	removedAt?: string;
+	editedAt?: string;
+	expiresAt?: string;
+	poll?: CachedMessage["poll"];
+	groupInvite?: CachedMessage["groupInvite"];
+	systemEvent?: CachedMessage["systemEvent"];
 }
 
 /**
@@ -371,6 +387,23 @@ interface Conversation {
 	avatar?: string;
 	memberCount?: number;
 	myRole?: "owner" | "admin" | "member";
+	/** A group invite for me (audit G34): waits on the Requests shelf; the
+	 *  thread is empty until I join. */
+	isInvite?: boolean;
+	invite?: {
+		by?: string | { _id?: string; firstName?: string; lastName?: string; username?: string; avatar?: string };
+		at?: string;
+		expiresAt?: string;
+	};
+	/** Groups I run: people asking to join (audit G38). */
+	requestCount?: number;
+	description?: string;
+	/** Pinned message ids (audit G88). */
+	pins?: string[];
+	/** A call in progress (audit G121). */
+	call?: { startedBy: string; startedAt: string; video: boolean } | null;
+	notifyLevel?: "all" | "mentions" | "none";
+	disappearSec?: number;
 	/** Group lock: only admins may post while true (register 99). */
 	adminsOnly?: boolean;
 	/** Member records with high-water read marks (gateway W1). */
@@ -428,6 +461,35 @@ export const MessageBox = ({
 		window.addEventListener("popstate", onPop);
 		return () => window.removeEventListener("popstate", onPop);
 	}, []);
+	/**
+	 * Open and close a thread without a navigation (owner 2026-09-25: "the
+	 * back opens the chat and the back in the chat opens the messages").
+	 * The close used to PUSH an inbox entry, so history read inbox, chat,
+	 * inbox: the inbox's own back arrow (a real back) landed on the chat,
+	 * whose arrow pushed the inbox again, forever. The rule now: opening
+	 * from the inbox pushes one entry marked `wsFromInbox`; switching from
+	 * one chat to another REPLACES it (carrying the mark), so a back from
+	 * any chat is the inbox; closing steps back when the mark is there and
+	 * otherwise (a deep-linked chat) replaces the entry with the inbox.
+	 * Nothing pushes an inbox entry.
+	 */
+	const inboxUrl = () =>
+		window.location.pathname.replace(/\/messages(\/.*)?$/, "/messages");
+	const openThreadShallow = (id: string) => {
+		const url = `${inboxUrl()}/${id}`;
+		const inChat = /\/messages\/[a-f0-9]{24}/i.test(window.location.pathname);
+		if (inChat) {
+			const fromInbox = Boolean(window.history.state?.wsFromInbox);
+			window.history.replaceState({ wsChat: id, wsFromInbox: fromInbox }, "", url);
+		} else {
+			window.history.pushState({ wsChat: id, wsFromInbox: true }, "", url);
+		}
+	};
+	const closeThreadShallow = () => {
+		setActiveConversation(null);
+		if (window.history.state?.wsFromInbox) window.history.back();
+		else window.history.replaceState({}, "", inboxUrl());
+	};
 	const [messageCache, setMessageCache] = useAtom(messageCacheAtom);
 	const setUnreadMessages = useSetAtom(unreadMessagesCountAtom);
 	const setActiveConversationId = useSetAtom(activeConversationIdAtom);
@@ -466,9 +528,12 @@ export const MessageBox = ({
 	// variables on the thread pane, so a theme change re-paints without
 	// re-rendering a single memoised bubble.
 	const [globalTheme, setGlobalTheme] = useState<ThemeByMode>({});
-  const [themeSheet, setThemeSheet] = useState<
-    null | "gallery" | { studio: ThemeScope }
-  >(null);
+	// `draft` is a theme derived from a picture (2026-09-25): the studio
+	// opens on it instead of the chat's current theme, so the person sees
+	// the derived colours on the stage before saving.
+	const [themeSheet, setThemeSheet] = useState<
+		null | "gallery" | { studio: ThemeScope; draft?: ChatTheme }
+	>(null);
 	const [themeSaving, setThemeSaving] = useState(false);
 	const [sendPulse, setSendPulse] = useState(0);
 	const hasMoreOlderRef = useRef(true);
@@ -498,6 +563,13 @@ export const MessageBox = ({
 	const [menuPicker, setMenuPicker] = useState(false);
 	const [groupSheetOpen, setGroupSheetOpen] = useState(false);
 	const [showGroupCreate, setShowGroupCreate] = useState(false);
+	/** The group whose join requests and invites are open in a sheet. */
+	const [joinRequestsFor, setJoinRequestsFor] = useState<Conversation | null>(null);
+	const [inviteBusy, setInviteBusy] = useState(false);
+	// The two loaders are defined below; the request handlers above them
+	// reach them through refs so a stale closure never runs an old loader.
+	const fetchConversationsRef = useRef<(() => Promise<Conversation[] | undefined>) | null>(null);
+	const fetchMessagesRef = useRef<((id: string) => Promise<void>) | null>(null);
 	useEffect(() => {
 		if (!msgMenu) setMenuPicker(false);
 	}, [msgMenu]);
@@ -526,6 +598,13 @@ export const MessageBox = ({
 	// the parent no longer re-renders the thread per touchmove.
 	/** Briefly highlighted after a jump, so the eye lands on the right bubble. */
 	const [flashedId, setFlashedId] = useState<string | null>(null);
+	const [pollOpen, setPollOpen] = useState(false);
+	const [moreOpen, setMoreOpen] = useState(false);
+	/** Bumped when the open room changes shape; the group sheet re-reads. */
+	const [groupEpoch, setGroupEpoch] = useState(0);
+	const [seenByFor, setSeenByFor] = useState<string | null>(null);
+	const [searchOpen, setSearchOpen] = useState(false);
+	const [editFor, setEditFor] = useState<{ id: string; content: string } | null>(null);
 
 	/**
 	 * Scroll to a quoted message and flash it.
@@ -803,6 +882,11 @@ export const MessageBox = ({
 		.slice(0, 2)
 		.map((c) => conversationIdentity(c as never).title)
 		.join(", ");
+	/** Groups I run with people asking to join (audit G38, G173). */
+	const askingGroups = conversations.filter(
+		(c) => c.kind === "group" && !c.isRequestForMe && !(c as any).archived && (c.requestCount ?? 0) > 0,
+	);
+	const askingTotal = askingGroups.reduce((n, c) => n + (c.requestCount ?? 0), 0);
 
 	/** Put a thread away, or take it back. Optimistic; the gateway keeps the
 	 *  flag per member, so it never touches the other person's inbox. */
@@ -865,13 +949,31 @@ export const MessageBox = ({
 		async (conversationId: string) => {
 			try {
 				const token = await getToken();
-				await fetch(
+				setInviteBusy(true);
+				const r = await fetch(
 					`${API_URL}/api/messages/conversations/${conversationId}/accept`,
 					{
 						method: "POST",
 						headers: { Authorization: `Bearer ${token}` },
 					},
 				);
+				const body = await r.json().catch(() => null);
+				if (!r.ok) {
+					toast.error(body?.message || "Couldn't accept that");
+					return;
+				}
+				if (body?.joined) {
+					// A group invite (audit G34): the row is a real group now.
+					// Refetch, then open it properly so the history and the
+					// composer arrive together.
+					const rows = await fetchConversationsRef.current?.();
+					const fresh = rows?.find((c) => c._id === conversationId);
+					if (fresh) {
+						setActiveConversation(fresh);
+						void fetchMessagesRef.current?.(conversationId);
+					}
+					return;
+				}
 				setConversations((prev) =>
 					prev.map((c) =>
 						c._id === conversationId
@@ -886,6 +988,8 @@ export const MessageBox = ({
 				);
 			} catch {
 				toast.error("Couldn't accept the request");
+			} finally {
+				setInviteBusy(false);
 			}
 		},
 		[getToken],
@@ -1013,6 +1117,21 @@ export const MessageBox = ({
 				transition: { duration: 0.32, ease: [0.2, 0, 0, 1] as const },
 			}
 		: {};
+	// The phone's status bar wears the open chat's top bar (owner
+	// 2026-09-25): the bar fills the top edge there, and a black strip over
+	// a coloured bar reads as a seam. ThemeColorSync writes it to the
+	// theme-color meta; null hands the bar back to the page colour.
+	const setBrowserChrome = useSetAtom(browserChromeAtom);
+	const activeId = activeConversation?._id;
+	useEffect(() => {
+		if (!phone || !activeId) {
+			setBrowserChrome(null);
+			return;
+		}
+		const vars = themeVars(chatTheme, themeMode) as Record<string, string>;
+		setBrowserChrome(resolveCssColor(vars["--chat-chrome-solid"] ?? ""));
+		return () => setBrowserChrome(null);
+	}, [phone, activeId, chatTheme, themeMode, setBrowserChrome]);
 	// Failed TEXT sends keep their bubble (owner pick); this remembers what
 	// to resend when the red mark is tapped.
 	const textRetryRef = useRef(
@@ -1743,6 +1862,7 @@ export const MessageBox = ({
 				);
 				if (target) setActiveConversation(target);
 			}
+			return response.data as Conversation[];
 		} catch (error) {
 			toast.error("Failed to load conversations");
 		} finally {
@@ -1875,7 +1995,63 @@ export const MessageBox = ({
 		}
 	}, [getToken]);
 
+	fetchConversationsRef.current = fetchConversations;
+	fetchMessagesRef.current = fetchMessages;
+
 	const onMessage = useCallback((ablyMessage: any) => {
+		if (
+			ablyMessage?.name === "event" &&
+			[
+				"invite:received",
+				"request:received",
+				"member:joined",
+				"member:left",
+				"member:removed",
+				"member:role",
+				"member:rights",
+				"member:restricted",
+				"group:updated",
+				"call:started",
+				"call:ended",
+			].includes(ablyMessage.data?.type)
+		) {
+			// The room changed shape (audit G152). A name or photo lands in
+			// place first; the refetch brings the rest (roster, counts, the
+			// invite row itself).
+			const cid = String(ablyMessage.data.conversationId ?? "");
+			const patch = ablyMessage.data.patch;
+			// A call starting or ending lands on the row at once, so the
+			// join bar does not wait for the refetch.
+			if (cid && (ablyMessage.data.type === "call:started" || ablyMessage.data.type === "call:ended")) {
+				const call =
+					ablyMessage.data.type === "call:started"
+						? { startedBy: String(ablyMessage.data.by ?? ""), startedAt: new Date().toISOString(), video: Boolean(ablyMessage.data.video) }
+						: null;
+				const applyCall = (c: Conversation): Conversation => (c._id === cid ? { ...c, call } : c);
+				setConversations((prev) => prev.map(applyCall));
+				setActiveConversation((prev) => (prev ? applyCall(prev) : prev));
+			}
+			if (patch && cid) {
+				const apply = (c: Conversation): Conversation =>
+					c._id !== cid
+						? c
+						: {
+								...c,
+								...(typeof patch.name === "string" ? { name: patch.name } : {}),
+								...(typeof patch.avatar === "string" ? { avatar: patch.avatar || undefined } : {}),
+								...(typeof patch.description === "string" ? { description: patch.description } : {}),
+								...(typeof patch.adminsOnly === "boolean" ? { adminsOnly: patch.adminsOnly } : {}),
+								...(Array.isArray(patch.pins) ? { pins: patch.pins.map(String) } : {}),
+							};
+				setConversations((prev) => prev.map(apply));
+				setActiveConversation((prev) => (prev ? apply(prev) : prev));
+			}
+			if (ablyMessage.data.type === "invite:received")
+				toast(`You're invited to ${ablyMessage.data.name ?? "a group"}`);
+			if (cid && cid === activeIdRef.current) setGroupEpoch((n) => n + 1);
+			void fetchConversationsRef.current?.();
+			return;
+		}
 		if (ablyMessage?.data?.type === "theme:updated") {
 			// Another tab or device saved the profile theme.
       void fetchGlobalTheme(getToken)
@@ -1903,6 +2079,43 @@ export const MessageBox = ({
 				else if (!ablyMessage.data.left)
 					toast.error("You were removed from the group");
 			}
+			return;
+		}
+		if (ablyMessage.name === "event" && ablyMessage.data.type === "message:edited") {
+			const { conversationId, messageId, content, editedAt } = ablyMessage.data;
+			setMessageCache((prev) => ({
+				...prev,
+				[conversationId]: (prev[conversationId] ?? []).map((m) =>
+					m._id !== messageId
+						? m
+						: m.type === "poll" && m.poll
+							? { ...m, editedAt, poll: { ...m.poll, question: content } }
+							: { ...m, content, editedAt },
+				),
+			}));
+			return;
+		}
+		if (ablyMessage.name === "event" && ablyMessage.data.type === "message:removed") {
+			// An admin removed it: the row becomes a tombstone in place.
+			const { conversationId, messageId, by } = ablyMessage.data;
+			setMessageCache((prev) => ({
+				...prev,
+				[conversationId]: (prev[conversationId] ?? []).map((m) =>
+					m._id === messageId
+						? { ...m, content: "", mediaUrl: undefined, reactions: [], removedBy: String(by), removedAt: new Date().toISOString() }
+						: m,
+				),
+			}));
+			return;
+		}
+		if (ablyMessage.name === "event" && ablyMessage.data.type === "poll:updated") {
+			const { conversationId, messageId, counts, total } = ablyMessage.data;
+			setMessageCache((prev) => ({
+				...prev,
+				[conversationId]: (prev[conversationId] ?? []).map((m) =>
+					m._id === messageId && m.poll ? { ...m, poll: { ...m.poll, counts, total } } : m,
+				),
+			}));
 			return;
 		}
 		if (
@@ -2095,6 +2308,14 @@ export const MessageBox = ({
 					// thread, so a stale id degrades to a plain message.
 					replyTo: currentReply?._id,
 					clientKey,
+					// Mentions travel as ids (audit G81): the roster names the
+					// @handles in the text; @everyone is its own flag.
+					mentions: isGroupThread
+						? groupRoster
+								.filter((r) => r.username && new RegExp(`@${r.username}\\b`, "i").test(text))
+								.map((r) => r.id)
+						: undefined,
+					mentionAll: isGroupThread && /@everyone\b/i.test(text) ? true : undefined,
 				},
 				{ headers: { Authorization: `Bearer ${token}` } },
 			);
@@ -2197,7 +2418,80 @@ export const MessageBox = ({
 	};
 
 	// --- Call Logic (Global) ---
-	const { startCall } = useCall();
+	const { startCall, joinCall } = useCall();
+
+	/** Vote in a poll (audit G89): the gateway's answer is the poll. */
+	const voteOn = useCallback(async (messageId: string, optionIds: string[]) => {
+		const convId = activeIdRef.current;
+		if (!convId) return;
+		const res = await postJsonDirect(`/api/messages/message/${messageId}/vote`, { optionIds });
+		if (!res.success) {
+			toast.error(res.message || "Couldn't vote");
+			return;
+		}
+		if (res.data?.poll)
+			setMessageCache((prev) => ({
+				...prev,
+				[convId]: (prev[convId] ?? []).map((m) => (m._id === messageId ? { ...m, poll: res.data.poll } : m)),
+			}));
+	}, [setMessageCache]);
+
+	/** Delete for me (audit G91): gone from my view, at any age. */
+	const hideForMe = useCallback(async (message: Message) => {
+		const convId = activeIdRef.current;
+		if (!convId) return;
+		setMessageCache((prev) => ({ ...prev, [convId]: (prev[convId] ?? []).filter((m) => m._id !== message._id) }));
+		const res = await deleteDirect(`/api/messages/message/${message._id}?scope=me`);
+		if (!res.success) {
+			setMessageCache((prev) => ({
+				...prev,
+				[convId]: [...(prev[convId] ?? []), message].sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1)),
+			}));
+			toast.error(res.message || "Couldn't delete that");
+		}
+	}, [setMessageCache]);
+
+	/** Pin or unpin (audit G88); the row's pins update from the answer. */
+	const setPinned = useCallback(async (messageId: string, on: boolean) => {
+		const convId = activeIdRef.current;
+		if (!convId) return;
+		const res = on
+			? await postJsonDirect(`/api/messages/conversations/${convId}/pins`, { messageId })
+			: await deleteDirect(`/api/messages/conversations/${convId}/pins/${messageId}`);
+		if (!res.success) {
+			toast.error(res.message || (on ? "Couldn't pin that" : "Couldn't unpin that"));
+			return;
+		}
+		const pins = Array.isArray(res.data?.pins) ? res.data.pins.map((x: any) => String(x.message ?? x)) : undefined;
+		if (pins) {
+			const apply = (c: Conversation): Conversation => (c._id === convId ? { ...c, pins } : c);
+			setConversations((prev) => prev.map(apply));
+			setActiveConversation((prev) => (prev ? apply(prev) : prev));
+		}
+	}, []);
+
+	/** A poll (audit G89): one POST, the stored row lands in the cache. */
+	const sendPoll = useCallback(async (draft: PollDraft): Promise<boolean> => {
+		const convId = activeIdRef.current;
+		if (!convId) return false;
+		const res = await postJsonDirect("/api/messages", {
+			conversationId: convId,
+			type: "poll",
+			poll: draft,
+			clientKey: newKey(),
+		});
+		if (!res.success || !res.data?._id) {
+			toast.error(res.message || "Couldn't send the poll");
+			return false;
+		}
+		setMessageCache((prev) => ({
+			...prev,
+			[convId]: (prev[convId] ?? []).some((m) => m._id === res.data._id) ? prev[convId] : [...(prev[convId] ?? []), res.data],
+		}));
+		setPendingNew(0);
+		scrollToBottom();
+		return true;
+	}, [setMessageCache]);
 
 	/**
 	 * Toggle MY reaction (register 132-134): optimistic replace-on-re-react
@@ -2413,6 +2707,7 @@ export const MessageBox = ({
         thumbnail: string;
         authorUsername: string;
       }) => void openStoryRef(ref),
+			onVote: voteOn,
 			onCallBack: (video: boolean) => {
 				if (!activeConversation) return;
 				// Same branch as the header buttons: a group call-back was
@@ -2483,7 +2778,7 @@ export const MessageBox = ({
 		// 100dvh, not 100vh: on mobile 100vh is the address-bar-expanded height,
 		// so the composer sat below the fold until the bar collapsed.
 		<div
-			style={themeVars(sectionTheme)}
+			style={themeVars(sectionTheme, themeMode)}
 			className="ws-chat-scale relative flex h-[100dvh] bg-page text-primary overflow-hidden"
 		>
 			{/* The section's own ground, when the profile theme has one. */}
@@ -2758,7 +3053,7 @@ export const MessageBox = ({
 					)}
 					<ConversationList
 						banner={
-							inboxTab === "primary" && requestConversations.length > 0 ? (
+							inboxTab === "primary" && (requestConversations.length > 0 || askingTotal > 0) ? (
 								<motion.button
 									type="button"
 									{...press}
@@ -2770,20 +3065,53 @@ export const MessageBox = ({
 									</span>
 									<span className="min-w-0 flex-1">
 										<span className="block font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-primary">
-											{requestConversations.length}{" "}
-											{requestConversations.length === 1
-												? "message request"
-												: "message requests"}
+											{requestConversations.length > 0
+												? `${requestConversations.length} ${requestConversations.length === 1 ? "message request" : "message requests"}`
+												: ""}
+											{requestConversations.length > 0 && askingTotal > 0 ? " · " : ""}
+											{askingTotal > 0 ? `${askingTotal} asking to join` : ""}
 										</span>
 										<span className="block truncate font-sans text-[calc(12px*var(--ws-fs))] text-muted">
-											{requestNames}
-											{requestConversations.length > 2
-												? ` and ${requestConversations.length - 2} more`
-												: ""}
+											{requestConversations.length > 0
+												? `${requestNames}${requestConversations.length > 2 ? ` and ${requestConversations.length - 2} more` : ""}`
+												: askingGroups.map((c) => conversationIdentity(c as never).title).slice(0, 2).join(", ")}
 										</span>
 									</span>
 									<RiArrowRightSLine size={18} className="shrink-0 text-subtle" />
 								</motion.button>
+							) : inboxTab === "requests" && askingGroups.length > 0 ? (
+								// Join requests for the groups I run (audit G173), a
+								// block above the strangers' openers.
+								<div className="mx-2 mb-2">
+									<p className="px-2 pb-1 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
+										Asking to join your groups
+									</p>
+									{askingGroups.map((c) => {
+										const id = conversationIdentity(c as never);
+										return (
+											<motion.button
+												key={c._id}
+												type="button"
+												{...press}
+												onClick={() => setJoinRequestsFor(c)}
+												className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-primary/5"
+											>
+												<span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-pill bg-raised">
+													{id.avatar ? <SafeAvatar src={id.avatar} /> : <Users className="h-5 w-5 text-muted" />}
+												</span>
+												<span className="min-w-0 flex-1">
+													<span className="block truncate font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary">
+														{id.title}
+													</span>
+													<span className="block font-sans text-[calc(12px*var(--ws-fs))] text-muted">
+														{c.requestCount} asking to join
+													</span>
+												</span>
+												<RiArrowRightSLine size={18} className="shrink-0 text-subtle" />
+											</motion.button>
+										);
+									})}
+								</div>
 							) : null
 						}
 						door={
@@ -2847,15 +3175,7 @@ export const MessageBox = ({
 							// skeletons. Swap the URL by hand; Next syncs
 							// usePathname without a navigation.
 							setActiveConversation(conv as any);
-							const base = window.location.pathname.replace(
-								/\/messages(\/.*)?$/,
-								"/messages",
-							);
-							window.history.pushState(
-								{ wsChat: conv._id },
-								"",
-								`${base}/${conv._id}`,
-							);
+							openThreadShallow(conv._id);
 						}}
 						onDelete={(conv) => {
 							// A request declines instantly — that IS the gesture's
@@ -2883,13 +3203,17 @@ export const MessageBox = ({
 				<motion.div
 					key={activeConversation._id}
 					{...threadSlide}
-					style={themeVars(chatTheme)}
-					className="absolute inset-0 z-10 flex min-w-0 flex-col p-2 md:relative md:inset-auto md:z-auto md:flex-1 md:border-l md:border-hairline md:p-3"
+					style={themeVars(chatTheme, themeMode)}
+					className="absolute inset-0 z-10 flex min-w-0 flex-col p-0 md:relative md:inset-auto md:z-auto md:flex-1 md:border-l md:border-hairline md:p-3"
 				>
 					{/* The long card, same architecture as the inbox: everything
 					    from the header to the composer rides inside one rounded
-					    surface, inset from the column's edges. */}
-					<div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl glass-frost backdrop-blur-xl">
+					    surface, inset from the column's edges. On a phone the
+					    card IS the screen (owner 2026-09-25): no inset, no radius,
+					    so the header fills the top edge. */}
+					{/* The card's frost is the theme's own chrome when the theme has
+					    a ground of its own; the app frost on the house theme. */}
+					<div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-none backdrop-blur-xl [background:var(--chat-card-bg,var(--chat-frost))] md:rounded-2xl">
 					{/* This chat's picture (per-chat theme, else the profile's).
 					    Only the message list floats on it: the header and the
 					    composer keep a band of the page colour, or the chrome
@@ -2909,22 +3233,21 @@ export const MessageBox = ({
 							// theme reaches the bar. On the house theme the two are the
 							// same fill; on any other the bar takes the ground's colour
 							// and its own ink (see chromeOf in chatTheme.ts).
-							"chat-chrome relative z-10 mx-2 mt-2 flex h-14 shrink-0 items-center gap-2 rounded-pill px-2 md:mx-3 md:mt-3",
+							// A phone gets the whole top edge, square, no inset (owner
+							// 2026-09-25: "it should fill the top, no radius"); the
+							// floating pill is a desktop shape.
+							"chat-chrome relative z-10 mx-0 mt-0 flex h-14 shrink-0 items-center gap-2 rounded-none px-2 md:mx-3 md:mt-3 md:rounded-pill",
 						)}
 					>
 						<div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3">
 							<button
 								type="button"
 								onClick={() => {
-									// Shallow, like the open: clear the pane and put
-									// the inbox URL back without a navigation, so
-									// the list is exactly as you left it.
-									setActiveConversation(null);
-									const base = window.location.pathname.replace(
-										/\/messages(\/.*)?$/,
-										"/messages",
-									);
-									window.history.pushState({}, "", base);
+									// Shallow, like the open, and a real step back
+									// when the chat was opened from the inbox, so the
+									// list is exactly as you left it and the inbox's
+									// own back leaves Messages.
+									closeThreadShallow();
 								}}
 								aria-label="Back to conversations"
 								className="md:hidden h-11 w-11 shrink-0 flex items-center justify-center rounded-pill text-muted hover:text-primary hover:bg-primary/5 transition-colors"
@@ -2942,7 +3265,7 @@ export const MessageBox = ({
 									onClick={() => !iLeftGroup && setGroupSheetOpen(true)}
 									className="-my-1 flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 text-left transition-colors hover:bg-primary/5 md:gap-3"
 								>
-									<span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-pill bg-raised">
+									<span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-pill [background:var(--chat-chrome-chip,var(--ws-bg-chip))]">
 										{headerIdentity.avatar ? (
 											<SafeAvatar
 												src={headerIdentity.avatar}
@@ -3005,7 +3328,7 @@ export const MessageBox = ({
 												key="online"
 												aria-hidden
 												{...pop}
-												className="absolute bottom-0 right-0 h-3 w-3 rounded-pill bg-success ring-2 ring-page ws-cue-online"
+												className="absolute bottom-0 right-0 h-3 w-3 rounded-pill bg-success ring-2 ws-cue-online [--tw-ring-color:var(--chat-chrome-solid,var(--ws-bg-page))]"
 											/>
 										)}
 									</AnimatePresence>
@@ -3132,12 +3455,12 @@ export const MessageBox = ({
 									>
 										<Phone className="w-5 h-5" />
 									</motion.button>
-									<span aria-hidden className="h-5 w-px bg-hairline" />
+									<span aria-hidden className="hidden h-5 w-px bg-hairline md:block" />
 									<motion.button
 										{...press}
 										type="button"
 										aria-label="Start group video call"
-										className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/10 hover:text-primary"
+										className="hidden md:flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/10 hover:text-primary"
 										onClick={() =>
 											startCall({
 												conversationId: activeConversation._id,
@@ -3188,12 +3511,12 @@ export const MessageBox = ({
 							>
 								<Phone className="w-5 h-5" />
 							</motion.button>
-							<span aria-hidden className="h-5 w-px bg-hairline" />
+							<span aria-hidden className="hidden h-5 w-px bg-hairline md:block" />
 							<motion.button
 								{...press}
 								type="button"
 								aria-label="Start video call"
-								className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/10 hover:text-primary"
+								className="hidden md:flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/10 hover:text-primary"
 								onClick={() =>
 									startCall({
 										conversationId: activeConversation._id,
@@ -3225,12 +3548,33 @@ export const MessageBox = ({
 					<motion.button
 							{...press}
 							type="button"
+							onClick={() => setSearchOpen(true)}
+							aria-label="Search this chat"
+							title="Search this chat"
+							className="hidden md:flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
+						>
+							<RiSearchLine size={20} />
+						</motion.button>
+						<motion.button
+							{...press}
+							type="button"
 							onClick={() => setThemeSheet("gallery")}
 							aria-label="Chat theme"
 							title="Chat theme"
-							className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
+							className="hidden md:flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
 						>
 							<RiPaletteLine size={20} />
+						</motion.button>
+						{/* A phone keeps one call button and this; the rest of the
+						    toolbar lives in the sheet it opens (owner 2026-09-25). */}
+						<motion.button
+							{...press}
+							type="button"
+							onClick={() => setMoreOpen(true)}
+							aria-label="More"
+							className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary md:hidden"
+						>
+							<RiMore2Fill size={20} />
 						</motion.button>
 					</div>
 					</div>
@@ -3253,6 +3597,34 @@ export const MessageBox = ({
 							addFiles(Array.from(e.dataTransfer.files ?? []));
 						}}
 					>
+						{!activeConversation.isInvite && (
+							<div className="relative z-10 shrink-0">
+								{isGroupThread && (
+									<CallJoinBar
+										call={activeConversation.call}
+										starterName={
+											activeConversation.call?.startedBy === myProfileId
+												? "you"
+												: groupRoster.find((r) => r.id === activeConversation.call?.startedBy)?.name
+										}
+										onJoin={(video) =>
+											joinCall({
+												conversationId: activeConversation._id,
+												peer: { id: activeConversation._id, name: headerIdentity.title, avatar: headerIdentity.avatar, username: "" },
+												isVideo: video,
+											})
+										}
+									/>
+								)}
+								<PinsBar
+									conversationId={activeConversation._id}
+									pinIds={activeConversation.pins ?? []}
+									canUnpin={!isGroupThread || activeConversation.myRole !== "member"}
+									onJump={jumpToMessage}
+									onUnpin={(id) => setPinned(id, false)}
+								/>
+							</div>
+						)}
 						{/* The wash only fades, it is the size of the pane; the chip is
 						    the small thing that lands. */}
 						<AnimatePresence>
@@ -3260,18 +3632,35 @@ export const MessageBox = ({
 								<motion.div
 									key="drop"
 									{...fade}
-									className="pointer-events-none absolute inset-2 z-20 flex items-center justify-center rounded-xl border-2 border-dashed border-brand bg-page/60"
+									className="pointer-events-none absolute inset-2 z-20 flex items-center justify-center rounded-xl border-2 border-dashed"
+									style={{ borderColor: "var(--chat-accent, var(--ws-brand-primary))", background: "color-mix(in srgb, var(--chat-ground, var(--ws-bg-page)) 60%, transparent)" }}
 								>
 									<motion.span
 										{...pop}
-										className="rounded-pill bg-raised px-4 py-2 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary"
+										className="rounded-pill px-4 py-2 font-sans text-[calc(13px*var(--ws-fs))] font-semibold"
+										style={{ background: "var(--chat-pill-bg, var(--ws-bg-raised))", color: "var(--chat-ground-ink, var(--ws-text-primary))" }}
 									>
 										Drop to send
 									</motion.span>
 								</motion.div>
 							)}
 						</AnimatePresence>
-						<div className="relative z-10 flex min-h-0 flex-1 flex-col">
+						{/* chat-ground: the floor between the bars reads the theme's
+						    ground inks. Never on the pane above, which carries the
+						    variables themselves. */}
+						<div className="chat-ground relative z-10 flex min-h-0 flex-1 flex-col">
+						{activeConversation.isInvite ? (
+							<InviteCard
+								name={headerIdentity.title}
+								avatar={headerIdentity.avatar}
+								memberCount={activeConversation.memberCount}
+								invitedBy={activeConversation.invite?.by as any}
+								expiresAt={activeConversation.invite?.expiresAt}
+								busy={inviteBusy}
+								onJoin={() => void acceptRequest(activeConversation._id)}
+								onDecline={() => void declineRequest(activeConversation._id)}
+							/>
+						) : (
 						<ThreadList
 							ref={virtuosoRef}
 							threadId={activeConversation._id}
@@ -3312,6 +3701,7 @@ export const MessageBox = ({
 							onShowNew={() => scrollToBottom()}
 							handlers={bubbleHandlers}
 						/>
+						)}
 						</div>
 					</div>
 
@@ -3433,9 +3823,9 @@ export const MessageBox = ({
 											{...pop}
 											onClick={() => setSelectedAttId(att.id)}
 											className={clsx(
-												"relative h-[72px] w-[72px] shrink-0 cursor-pointer overflow-hidden rounded-[10px] bg-raised",
+												"relative h-[72px] w-[72px] shrink-0 cursor-pointer overflow-hidden rounded-[10px] [background:var(--chat-chrome-chip,var(--ws-bg-chip))]",
 												selectedAtt?.id === att.id
-													? "ring-2 ring-brand"
+													? "ring-2 [--tw-ring-color:var(--chat-chrome-accent,var(--ws-brand-primary))]"
 													: "ring-1 ring-hairline",
 											)}
 										>
@@ -3455,7 +3845,7 @@ export const MessageBox = ({
 												/>
 											)}
 											{att.caption.trim() && (
-												<span className="absolute inset-x-0 bottom-0 h-[3px] bg-brand/80" />
+												<span className="absolute inset-x-0 bottom-0 h-[3px] [background:var(--chat-chrome-accent,var(--ws-brand-primary))] opacity-80" />
 											)}
 											<button
 												type="button"
@@ -3560,7 +3950,9 @@ export const MessageBox = ({
 								className="chat-chrome flex items-center gap-2 rounded-xl px-3 py-2"
 							>
 								<span className="min-w-0 flex-1 font-sans text-[calc(12px*var(--ws-fs))] text-muted">
-									Accept to reply. They won't know you've seen this.
+									{activeConversation.isInvite
+										? "Join to read what's been said."
+										: "Accept to reply. They won't know you've seen this."}
 								</span>
 								<button
 									type="button"
@@ -3569,14 +3961,14 @@ export const MessageBox = ({
                       }
 									className="h-8 shrink-0 cursor-pointer rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-medium text-danger transition-colors hover:bg-primary/5"
 								>
-									Delete
+									{activeConversation.isInvite ? "Decline" : "Delete"}
 								</button>
 								<button
 									type="button"
 									onClick={() => void acceptRequest(activeConversation._id)}
 									className="h-8 shrink-0 cursor-pointer rounded-pill px-3.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-opacity [background:var(--chat-mine)] [color:var(--chat-mine-ink)] hover:opacity-90"
 								>
-									Accept
+									{activeConversation.isInvite ? "Join" : "Accept"}
 								</button>
 							</motion.div>
 						) : iLeftGroup ? (
@@ -3728,7 +4120,7 @@ export const MessageBox = ({
 						onAnimationComplete={() => setFlight(null)}
 						// It renders outside the thread pane, so it carries the chat's
 						// own variables; without them it wore the inbox's theme.
-						style={themeVars(chatTheme)}
+						style={themeVars(chatTheme, themeMode)}
 						className="pointer-events-none fixed z-modal max-h-24 overflow-hidden px-4 py-2.5 font-sans text-sm leading-relaxed [color:var(--chat-accent-ink,var(--ws-brand-on-primary))]"
 					>
 						{/* The fill fades in as its own layer. framer cannot mix a
@@ -3757,17 +4149,15 @@ export const MessageBox = ({
 					open={groupSheetOpen}
 					onClose={() => setGroupSheetOpen(false)}
 					conversationId={activeConversation._id}
-					name={headerIdentity.title}
-					avatar={headerIdentity.avatar}
-					adminsOnly={Boolean(activeConversation.adminsOnly)}
 					currentClerkId={user?.id || ""}
-					members={(activeConversation.members ?? []) as any}
-					participants={(activeConversation.participants ?? []) as any}
 					myProfileId={myProfileId}
+					// The sheet reads the group itself and stays open through
+					// every action; the inbox row and header refetch behind it.
 					onChanged={() => {
-						setGroupSheetOpen(false);
 						void fetchConversations();
 					}}
+					onOpenRequests={() => setJoinRequestsFor(activeConversation)}
+					epoch={groupEpoch}
 					onLeft={() => {
 						// Purge NOW — the refetch confirms, but stale local state
 						// is exactly how a left group reopened with a live
@@ -3778,9 +4168,8 @@ export const MessageBox = ({
 							const { [goneId]: _gone, ...rest } = prev;
 							return rest;
 						});
-						setActiveConversation(null);
 						void fetchConversations();
-						goBack("/messages");
+						closeThreadShallow();
 					}}
 				/>
 			)}
@@ -3797,6 +4186,15 @@ export const MessageBox = ({
 				open={msgSettingsOpen}
 				onClose={() => setMsgSettingsOpen(false)}
 			/>
+			{joinRequestsFor && (
+				<JoinRequestsSheet
+					open
+					onClose={() => setJoinRequestsFor(null)}
+					conversationId={joinRequestsFor._id}
+					name={conversationIdentity(joinRequestsFor as never).title}
+					onChanged={() => void fetchConversations()}
+				/>
+			)}
 			{activeConversation && (
 				<SendMoneySheet
 					open={showSendMoney}
@@ -3966,7 +4364,7 @@ export const MessageBox = ({
 								// chat's variables itself. Without them the lifted copy
 								// resolved --chat-mine against the inbox theme and
 								// changed colour in a per-chat themed thread.
-								style={themeVars(chatTheme)}
+								style={themeVars(chatTheme, themeMode)}
 								className="fixed inset-0 z-modal"
 								onClick={() => setMsgMenu(null)}
 							>
@@ -4004,7 +4402,7 @@ export const MessageBox = ({
 											left: barLeft,
 											top: barTop,
 										}}
-										className="absolute flex items-center gap-0.5 rounded-pill card-depth px-1.5 py-1"
+										className="absolute flex items-center gap-0.5 rounded-pill chat-chrome-solid px-1.5 py-1"
 										onClick={(e) => e.stopPropagation()}
 									>
 										{QUICK_REACTIONS.map((emoji) => (
@@ -4049,7 +4447,7 @@ export const MessageBox = ({
 									<motion.div
 										role="menu"
 										{...actionMenu}
-										className="w-[190px] overflow-hidden rounded-xl card-depth"
+										className="w-[190px] overflow-hidden rounded-xl chat-chrome-solid"
 										onClick={(e) => e.stopPropagation()}
 									>
 										{/* The picker used to snap 320px open and shove the
@@ -4065,8 +4463,8 @@ export const MessageBox = ({
 														<EmojiPicker
 															theme={
 																resolvedTheme === "light"
-																	? Theme.LIGHT
-																	: Theme.DARK
+																	? ("light" as Theme)
+																	: ("dark" as Theme)
 															}
 															width="100%"
 															height={320}
@@ -4114,24 +4512,108 @@ export const MessageBox = ({
 													Copy text
 												</motion.button>
 											)}
-											{(typeof msgMenu.message.sender === "string"
-												? msgMenu.message.sender === myProfileId
-												: (msgMenu.message.sender as any)?._id ===
-													myProfileId) && (
-												<motion.button
-													variants={staggerItem}
-													type="button"
-													role="menuitem"
-													onClick={() => {
-														void unsendMessage(msgMenu.message);
-														setMsgMenu(null);
-													}}
-													className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-danger transition-colors hover:bg-primary/5"
-												>
-													<RiRestartLine size={16} />
-													Unsend
-												</motion.button>
-											)}
+											{(() => {
+												const mine =
+													typeof msgMenu.message.sender === "string"
+														? msgMenu.message.sender === myProfileId
+														: (msgMenu.message.sender as any)?._id === myProfileId;
+												const age = Date.now() - new Date(msgMenu.message.createdAt).getTime();
+												const pinned = (activeConversation?.pins ?? []).includes(msgMenu.message._id);
+												const temp = msgMenu.message._id.startsWith("temp-");
+												const item =
+													"flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/5";
+												const dangerItem = item.replace("text-primary", "text-danger");
+												const editable =
+													mine &&
+													!msgMenu.message.removedAt &&
+													(msgMenu.message.type === "text" || msgMenu.message.type === "poll") &&
+													age < 15 * 60_000;
+												return (
+													<>
+														{!msgMenu.message.removedAt && !temp && (
+															<motion.button
+																variants={staggerItem}
+																type="button"
+																role="menuitem"
+																onClick={() => {
+																	void setPinned(msgMenu.message._id, !pinned);
+																	setMsgMenu(null);
+																}}
+																className={item}
+															>
+																{pinned ? <RiUnpinLine size={16} /> : <RiPushpinLine size={16} />}
+																{pinned ? "Unpin" : "Pin"}
+															</motion.button>
+														)}
+														{mine && isGroupThread && !temp && (
+															<motion.button
+																variants={staggerItem}
+																type="button"
+																role="menuitem"
+																onClick={() => {
+																	setSeenByFor(msgMenu.message._id);
+																	setMsgMenu(null);
+																}}
+																className={item}
+															>
+																<RiEyeLine size={16} />
+																Seen by
+															</motion.button>
+														)}
+														{editable && (
+															<motion.button
+																variants={staggerItem}
+																type="button"
+																role="menuitem"
+																onClick={() => {
+																	setEditFor({
+																		id: msgMenu.message._id,
+																		content:
+																			msgMenu.message.type === "poll"
+																				? (msgMenu.message.poll?.question ?? "")
+																				: (msgMenu.message.content ?? ""),
+																	});
+																	setMsgMenu(null);
+																}}
+																className={item}
+															>
+																<RiEditLine size={16} />
+																Edit
+															</motion.button>
+														)}
+														{!temp && (
+															<motion.button
+																variants={staggerItem}
+																type="button"
+																role="menuitem"
+																onClick={() => {
+																	void hideForMe(msgMenu.message);
+																	setMsgMenu(null);
+																}}
+																className={mine && age < 48 * 3600_000 ? item : dangerItem}
+															>
+																<RiDeleteBinLine size={16} />
+																Delete for me
+															</motion.button>
+														)}
+														{mine && !msgMenu.message.removedAt && age < 48 * 3600_000 && (
+															<motion.button
+																variants={staggerItem}
+																type="button"
+																role="menuitem"
+																onClick={() => {
+																	void unsendMessage(msgMenu.message);
+																	setMsgMenu(null);
+																}}
+																className={dangerItem}
+															>
+																<RiRestartLine size={16} />
+																Delete for everyone
+															</motion.button>
+														)}
+													</>
+												);
+											})()}
 										</div>
 									</motion.div>
 								</motion.div>
@@ -4149,6 +4631,79 @@ export const MessageBox = ({
 				onMoney={() => setShowSendMoney(true)}
 				onContact={() => setContactPickerOpen(true)}
 				onPhoneContact={() => void sendPhoneContact()}
+				onPoll={() => setPollOpen(true)}
+			/>
+			<PollComposer open={pollOpen} onClose={() => setPollOpen(false)} onSubmit={sendPoll} />
+			{activeConversation && (
+				<ThreadMoreSheet
+					open={moreOpen}
+					onClose={() => setMoreOpen(false)}
+					title={headerIdentity.title}
+					items={[
+						{
+							icon: <Video className="h-4 w-4" />,
+							label: "Video call",
+							onClick: () =>
+								startCall(
+									isGroupThread
+										? {
+												conversationId: activeConversation._id,
+												peer: { id: activeConversation._id, name: headerIdentity.title, avatar: headerIdentity.avatar, username: "" },
+												isVideo: true,
+												isGroup: true,
+											}
+										: {
+												conversationId: activeConversation._id,
+												peer: {
+													id: activeConversation.otherParticipant?._id || "",
+													name: headerIdentity.title,
+													avatar: activeConversation.otherParticipant?.avatar || "",
+													username: activeConversation.otherParticipant?.username || "",
+												},
+												isVideo: true,
+											},
+								),
+						},
+						{ icon: <RiSearchLine size={16} />, label: "Search this chat", onClick: () => setSearchOpen(true) },
+						{ icon: <RiPaletteLine size={16} />, label: "Chat theme", hint: "Wallpaper, bubbles, colours", onClick: () => setThemeSheet("gallery") },
+						isGroupThread
+							? { icon: <Users className="h-4 w-4" />, label: "Group details", onClick: () => !iLeftGroup && setGroupSheetOpen(true) }
+							: {
+									icon: <Info className="h-4 w-4" />,
+									label: "View profile",
+									onClick: () => router.push(`/profile/${activeConversation.otherParticipant?.username ?? ""}`),
+								},
+					]}
+				/>
+			)}
+			<SeenBySheet open={seenByFor !== null} onClose={() => setSeenByFor(null)} messageId={seenByFor} />
+			{activeConversation && (
+				<ThreadSearchSheet
+					open={searchOpen}
+					onClose={() => setSearchOpen(false)}
+					conversationId={activeConversation._id}
+					onJump={jumpToMessage}
+				/>
+			)}
+			<EditMessageSheet
+				open={editFor !== null}
+				onClose={() => setEditFor(null)}
+				messageId={editFor?.id ?? null}
+				initial={editFor?.content ?? ""}
+				onSaved={(id, content, editedAt) => {
+					const convId = activeIdRef.current;
+					if (!convId) return;
+					setMessageCache((prev) => ({
+						...prev,
+						[convId]: (prev[convId] ?? []).map((m) =>
+							m._id !== id
+								? m
+								: m.type === "poll" && m.poll
+									? { ...m, editedAt, poll: { ...m.poll, question: content } }
+									: { ...m, content, editedAt },
+						),
+					}));
+				}}
 			/>
 			<ContactPicker
 				open={contactPickerOpen}
@@ -4161,16 +4716,18 @@ export const MessageBox = ({
 					current={chatTheme}
 					isGroup={isGroupThread}
 					saving={themeSaving}
+					conversationId={activeConversation._id}
 					onClose={() => setThemeSheet(null)}
 					onApply={(t, scope) => void applyTheme(t, scope)}
 					onReset={(scope) => void applyTheme(null, scope)}
 					onAdvanced={(scope) => setThemeSheet({ studio: scope })}
+					onDerived={(t, scope) => setThemeSheet({ studio: scope, draft: t })}
 				/>
 			)}
 			{themeSheet && themeSheet !== "gallery" && activeConversation && (
 				<ThemeStudio
 					mode={themeMode}
-					initial={chatTheme}
+					initial={themeSheet.draft ?? chatTheme}
 					scope={themeSheet.studio}
 					conversationId={activeConversation._id}
 					isGroup={isGroupThread}
