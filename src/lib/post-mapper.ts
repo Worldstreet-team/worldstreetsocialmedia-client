@@ -18,7 +18,14 @@ import { formatTimeAgo } from "@/lib/utils";
  * Every read is defensive because the shape isn't uniform — the author may
  * arrive populated or as a bare id depending on which endpoint served it.
  */
-export function mapApiPost(post: any, depth = 0): PostProps {
+export function mapApiPost(post: any): PostProps {
+	return mapPost(post, true);
+}
+
+// One argument on the export on purpose: call sites pass mapApiPost straight
+// to .map(), which hands it the row index as a second argument. With a
+// `depth` parameter there, only row 0 ever carried its original.
+function mapPost(post: any, withOriginal: boolean): PostProps {
 	return {
 		id: post._id,
 		author: {
@@ -35,6 +42,7 @@ export function mapApiPost(post: any, depth = 0): PostProps {
 		},
 		content: post.content,
 		mentions: post.mentions,
+		linkPreview: post.linkPreview ?? undefined,
 		sale: post.sale,
 		// Pre-translated by the gateway during feed assembly, so the post can
 		// paint in the reader's language on the FIRST render — no request, no
@@ -92,12 +100,12 @@ export function mapApiPost(post: any, depth = 0): PostProps {
 		// pick 2026-09-28), so it needs the original's media and counts, not
 		// the summary above.
 		repostOfPost:
-			depth === 0 &&
+			withOriginal &&
 			post.repostOf &&
 			typeof post.repostOf === "object" &&
 			post.repostOf._id &&
 			typeof post.repostOf.author === "object"
-				? mapApiPost(post.repostOf, depth + 1)
+				? mapPost(post.repostOf, false)
 				: undefined,
 	};
 }
