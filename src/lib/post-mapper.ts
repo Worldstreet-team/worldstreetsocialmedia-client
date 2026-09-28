@@ -18,7 +18,7 @@ import { formatTimeAgo } from "@/lib/utils";
  * Every read is defensive because the shape isn't uniform — the author may
  * arrive populated or as a bare id depending on which endpoint served it.
  */
-export function mapApiPost(post: any): PostProps {
+export function mapApiPost(post: any, depth = 0): PostProps {
 	return {
 		id: post._id,
 		author: {
@@ -82,9 +82,22 @@ export function mapApiPost(post: any): PostProps {
 						badges: post.repostOf.author?.badges ?? [],
 						content: post.repostOf.content ?? "",
 						image: post.repostOf.images?.[0],
+						video: post.repostOf.videos?.[0],
 						timestamp: formatTimeAgo(post.repostOf.createdAt),
 						createdAt: post.repostOf.createdAt,
 					}
+				: undefined,
+		// The whole original, one level deep (a repost of a repost stops
+		// here). A plain repost renders AS this post, Threads style (owner
+		// pick 2026-09-28), so it needs the original's media and counts, not
+		// the summary above.
+		repostOfPost:
+			depth === 0 &&
+			post.repostOf &&
+			typeof post.repostOf === "object" &&
+			post.repostOf._id &&
+			typeof post.repostOf.author === "object"
+				? mapApiPost(post.repostOf, depth + 1)
 				: undefined,
 	};
 }

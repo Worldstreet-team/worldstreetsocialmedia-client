@@ -245,10 +245,13 @@ export interface PostProps {
         badges?: ProfileBadge[];
         content: string;
         image?: string;
+        video?: string;
         timestamp: string;
         /** Same reasoning as the parent's — the instant, not a frozen label. */
         createdAt?: string;
     };
+    /** The whole original post behind a repost (post-mapper, one level). */
+    repostOfPost?: PostProps;
     live?: {
         streamId: string;
         status: "live" | "ended";
@@ -296,15 +299,52 @@ function RollingCount({ value }: { value: number }) {
     );
 }
 
+/** Who reposted the post this card shows (Threads style, owner 2026-09-28). */
+type RepostedBy = { name: string; username: string };
+
+/**
+ * A plain repost (no words, no media of its own) IS the original post,
+ * Threads style (owner pick 2026-09-28, concept B of
+ * https://claude.ai/artifact/F7TZUbxYi8e8zd3CBTA4DJ): the original's author,
+ * text, media and counts, with a repost badge on the avatar's corner and a
+ * "Name reposted" line above the name. A quote keeps the quoter's words and
+ * carries the original in a borderless card (below, in the card body).
+ */
 export const PostCard = memo(
+    ({ post, replyingTo }: { post: PostProps; replyingTo?: string }) => {
+        const plainRepost =
+            post.repostOf &&
+            post.repostOfPost &&
+            !post.content?.trim() &&
+            !post.images?.length &&
+            !post.videos?.length &&
+            !post.audio &&
+            !post.poll;
+        if (plainRepost && post.repostOfPost) {
+            return (
+                <PostCardBody
+                    post={post.repostOfPost}
+                    replyingTo={replyingTo}
+                    repostedBy={{ name: post.author.name, username: post.author.username }}
+                />
+            );
+        }
+        return <PostCardBody post={post} replyingTo={replyingTo} />;
+    },
+);
+PostCard.displayName = "PostCard";
+
+const PostCardBody = memo(
     ({
         post: postProp,
         replyingTo,
+        repostedBy,
     }: {
         post: PostProps;
         /** Handle this card answers — renders the "Replying to @x" cue that
          *  turns a card sitting under a post into a visible reply to it. */
         replyingTo?: string;
+        repostedBy?: RepostedBy;
     }) => {
     const t = useT();
     // A paid unlock swaps the stripped post for the revealed one in place —
@@ -1125,7 +1165,17 @@ export const PostCard = memo(
             )}
 
             <div className="flex gap-3 sm:gap-4 relative z-10 pointer-events-none">
-                <div className="shrink-0 pointer-events-auto mt-1">
+                <div className="relative shrink-0 self-start pointer-events-auto mt-1">
+                    {repostedBy && (
+                        // The repost badge on the avatar's corner, ringed in the
+                        // page so it reads as a mark ON the face.
+                        <span
+                            aria-hidden
+                            className="absolute -bottom-1 -right-1 z-10 flex size-5 items-center justify-center rounded-pill bg-raised text-success ring-2 ring-page"
+                        >
+                            <PhRepeat size={12} weight="bold" />
+                        </span>
+                    )}
                     <Link
                         href={authorLiveSpace ? "/voice" : `/profile/${post.author.username}`}
                         onClick={
@@ -1157,6 +1207,16 @@ export const PostCard = memo(
                     </Link>
                 </div>
                 <div className="flex-1 min-w-0">
+                    {repostedBy && (
+                        <Link
+                            href={`/profile/${repostedBy.username}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="relative z-10 mb-0.5 flex w-fit max-w-full items-center gap-1.5 pointer-events-auto font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-muted transition-colors hover:text-primary"
+                        >
+                            <PhRepeat size={14} className="shrink-0" />
+                            <span className="truncate">{repostedBy.name} reposted</span>
+                        </Link>
+                    )}
                     <div className="flex items-center justify-between gap-1 mb-0.5">
                         {/* min-w-0 lets the two truncating links actually shrink;
                             without it the row grows past the card on narrow
@@ -1660,9 +1720,9 @@ export const PostCard = memo(
                         <Link
                             href={`/post/${post.repostOf.id}`}
                             onClick={(e) => e.stopPropagation()}
-                            className="relative z-10 pointer-events-auto block mt-2 mb-1.5 rounded-xl border border-hairline/70 p-3 hover:bg-raised/30 transition-colors"
+                            className="relative z-10 pointer-events-auto mt-2 mb-1.5 block overflow-hidden rounded-xl bg-raised transition-colors hover:bg-raised/80"
                         >
-                            <span className="flex items-center gap-2 mb-1 min-w-0">
+                            <span className="flex items-center gap-2 px-3 pt-3 min-w-0">
                                 <span className="relative w-5 h-5 rounded-pill overflow-hidden shrink-0 bg-raised">
                                     <SafeAvatar src={post.repostOf.avatar} className="object-cover" />
                                 </span>
@@ -1683,20 +1743,31 @@ export const PostCard = memo(
                                 </span>
                             </span>
                             {post.repostOf.content && (
-                                <span className="block text-[calc(14px*var(--ws-fs))] text-muted font-sans line-clamp-4 whitespace-pre-wrap">
+                                <span className="block px-3 pt-1 pb-3 text-[calc(15px*var(--ws-fs))] text-primary font-sans line-clamp-4 whitespace-pre-wrap">
                                     {post.repostOf.content}
                                 </span>
                             )}
-                            {post.repostOf.image && (
-                                <span className="relative block mt-2 h-44 rounded-lg overflow-hidden bg-sunken">
-                                    <Image
-                                        src={post.repostOf.image}
-                                        alt=""
-                                        fill
-                                        className="object-cover"
-                                    />
-                                </span>
-                            )}
+                            {post.repostOf.image ? (
+                                // Full width at its real shape, the card's corners
+                                // clipping it; tall pictures stop at 420px.
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                    src={post.repostOf.image}
+                                    alt=""
+                                    loading="lazy"
+                                    className="block h-auto max-h-[420px] w-full object-cover"
+                                />
+                            ) : post.repostOf.video ? (
+                                <video
+                                    src={`${post.repostOf.video}#t=0.1`}
+                                    muted
+                                    playsInline
+                                    preload="metadata"
+                                    className="block max-h-[420px] w-full bg-page object-cover"
+                                />
+                            ) : !post.repostOf.content ? (
+                                <span className="block h-3" />
+                            ) : null}
                         </Link>
                     )}
 
@@ -2384,7 +2455,7 @@ export const PostCard = memo(
     );
 });
 
-PostCard.displayName = "PostCard";
+PostCardBody.displayName = "PostCardBody";
 
 /**
  * The locked paid post as a STOREFRONT — Option B from owner review.
