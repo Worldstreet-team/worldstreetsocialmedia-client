@@ -47,6 +47,25 @@ const HUB_LOGIN_URL = `${HUB_ORIGIN}/login`;
 const HUB_REGISTER_URL = "https://www.worldstreetgold.com/register";
 
 /**
+ * The address the visitor actually typed, for every redirect and link this
+ * file builds.
+ *
+ * Behind Coolify, `req.url` and `req.nextUrl` carry the CONTAINER's origin,
+ * https://localhost:3000. Every URL built from them sent people to
+ * localhost: the "Signing you in" page refreshed to
+ * https://localhost:3000/?__ws_retry=1, and a visitor coming back from the
+ * hub's sign-in was redirected to localhost when the __ws_hs marker was
+ * stripped (production, 2026-09-28, reproduced by curl). In production the
+ * origin is fixed, never read from a request header, so nothing a request
+ * says can point a redirect somewhere else. Local dev keeps its own origin.
+ */
+const PUBLIC_ORIGIN = "https://social.worldstreetgold.com";
+function publicUrl(req: NextRequest, path?: string): URL {
+	const origin = isLocalDev ? req.nextUrl.origin : PUBLIC_ORIGIN;
+	return new URL(path ?? req.nextUrl.pathname + req.nextUrl.search, origin);
+}
+
+/**
  * A speculative request: a Link prefetch, or an RSC payload fetch. Redirecting
  * either one poisons the router (see the call sites).
  */
@@ -102,7 +121,7 @@ const withClerk = clerkMiddleware(async (auth, req) => {
 	// once a session exists the marker has done its job. One redirect to the
 	// clean URL, so it never lingers in the address bar or a shared link.
 	if (userId && req.nextUrl.searchParams.has(HS_MARK)) {
-		const clean = new URL(req.nextUrl.href);
+		const clean = publicUrl(req);
 		clean.searchParams.delete(HS_MARK);
 		return NextResponse.redirect(clean, 307);
 	}
@@ -231,9 +250,9 @@ const withClerk = clerkMiddleware(async (auth, req) => {
  * as a redirect that bounces back into the loop.
  */
 function handshakeLoopPage(req: NextRequest, retry: number): string {
-	const again = new URL(req.nextUrl.href);
+	const again = publicUrl(req);
 	again.searchParams.set("__ws_retry", String(retry + 1));
-	const clean = new URL(req.nextUrl.href);
+	const clean = publicUrl(req);
 	clean.searchParams.delete("__ws_retry");
 	const login = new URL(HUB_LOGIN_URL);
 	login.searchParams.set("redirect_url", clean.href);
@@ -266,8 +285,8 @@ ${retrying ? "" : `<a href="${esc(login.href)}">Sign in at WorldStreet</a>`}
  * the router rejects, falling back to a hard navigation.
  */
 function redirectTarget(path: string, req: NextRequest): URL {
-	const url = new URL(path, req.url);
-	const from = new URL(req.url);
+	const url = publicUrl(req, path);
+	const from = req.nextUrl;
 	from.searchParams.forEach((value, key) => {
 		if (!url.searchParams.has(key)) url.searchParams.set(key, value);
 	});
@@ -505,7 +524,7 @@ export default function proxy(req: NextRequest, evt: NextFetchEvent) {
 				},
 			});
 		}
-		const marker = new URL(req.nextUrl.href);
+		const marker = publicUrl(req);
 		marker.searchParams.set(HS_MARK, "1");
 		const res = NextResponse.redirect(marker, 307);
 		// The probe. Without it a first-time visitor whose browser keeps
@@ -527,7 +546,7 @@ export default function proxy(req: NextRequest, evt: NextFetchEvent) {
 
 /** The page for a browser that keeps no cookies: no redirect, a way out. */
 function cookiesOffPage(req: NextRequest): string {
-	const clean = new URL(req.nextUrl.href);
+	const clean = publicUrl(req);
 	clean.searchParams.delete(HS_MARK);
 	const esc = (v: string) =>
 		v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
