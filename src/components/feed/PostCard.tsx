@@ -98,7 +98,7 @@ import {
     subscribeStats,
 } from "@/lib/engagementStore";
 import { VideoPlayer } from "@/components/ui/VideoPlayer";
-import { VoteChip } from "@/components/votes/VoteChip";
+import { VotePill } from "@/components/votes/VotePill";
 import { Radio } from "@/components/ui/icons";
 import { repostPostAction } from "@/lib/post.actions";
 import { QuoteModal } from "@/components/feed/QuoteModal";
@@ -310,8 +310,26 @@ type RepostedBy = { name: string; username: string };
  * "Name reposted" line above the name. A quote keeps the quoter's words and
  * carries the original in a borderless card (below, in the card body).
  */
+/** How a card sits: a full post, or a compact row in a thread's replies. */
+type CardVariant = "post" | "reply";
+
 export const PostCard = memo(
-    ({ post, replyingTo }: { post: PostProps; replyingTo?: string }) => {
+    ({
+        post,
+        replyingTo,
+        variant = "post",
+        onReply,
+    }: {
+        post: PostProps;
+        replyingTo?: string;
+        /** "reply": the compact row under a post (owner pick A + C,
+         *  2026-09-28): a 36px avatar, name and time only, 15px text, and a
+         *  smaller action row without bookmark, views or the vote. */
+        variant?: CardVariant;
+        /** Replaces the reply link: the thread aims its pinned reply box at
+         *  this post instead of navigating away. */
+        onReply?: (post: PostProps) => void;
+    }) => {
         const plainRepost =
             post.repostOf &&
             post.repostOfPost &&
@@ -326,10 +344,19 @@ export const PostCard = memo(
                     post={post.repostOfPost}
                     replyingTo={replyingTo}
                     repostedBy={{ name: post.author.name, username: post.author.username }}
+                    variant={variant}
+                    onReply={onReply}
                 />
             );
         }
-        return <PostCardBody post={post} replyingTo={replyingTo} />;
+        return (
+            <PostCardBody
+                post={post}
+                replyingTo={replyingTo}
+                variant={variant}
+                onReply={onReply}
+            />
+        );
     },
 );
 PostCard.displayName = "PostCard";
@@ -339,14 +366,19 @@ const PostCardBody = memo(
         post: postProp,
         replyingTo,
         repostedBy,
+        variant = "post",
+        onReply,
     }: {
         post: PostProps;
+        variant?: CardVariant;
+        onReply?: (post: PostProps) => void;
         /** Handle this card answers — renders the "Replying to @x" cue that
          *  turns a card sitting under a post into a visible reply to it. */
         replyingTo?: string;
         repostedBy?: RepostedBy;
     }) => {
     const t = useT();
+    const compact = variant === "reply";
     // A paid unlock swaps the stripped post for the revealed one in place —
     // no refetch of the page, no scroll jump. Shadowing the prop means every
     // reference below sees the unlocked body the instant it lands.
@@ -963,7 +995,10 @@ const PostCardBody = memo(
             put post text 12px from the viewport edge. */}
         <article
             ref={articleRef}
-            className="relative block px-4 py-3 sm:py-3.5 hover:bg-surface/40 transition-colors"
+            className={clsx(
+                "relative block px-4 hover:bg-surface/40 transition-colors",
+                compact ? "py-2.5" : "py-3 sm:py-3.5",
+            )}
             // The whole card opens the post (owner 2026-09-28: "the entire
             // box of the post except the image should open a post"). Parts
             // of the card take pointer events (the action row's gaps, text
@@ -1164,8 +1199,8 @@ const PostCardBody = memo(
                 </Link>
             )}
 
-            <div className="flex gap-3 sm:gap-4 relative z-10 pointer-events-none">
-                <div className="relative shrink-0 self-start pointer-events-auto mt-1">
+            <div className={clsx("flex relative z-10 pointer-events-none", compact ? "gap-3" : "gap-3 sm:gap-4")}>
+                <div className={clsx("relative shrink-0 self-start pointer-events-auto", compact ? "mt-0.5" : "mt-1")}>
                     {repostedBy && (
                         // The repost badge on the avatar's corner, ringed in the
                         // page so it reads as a mark ON the face.
@@ -1197,7 +1232,8 @@ const PostCardBody = memo(
                         }
                         title={authorLiveSpace ? authorLiveSpace.title : undefined}
                         className={clsx(
-                            "relative block w-12 h-12 sm:w-[52px] sm:h-[52px] rounded-pill overflow-hidden transition-colors",
+                            "relative block rounded-pill overflow-hidden transition-colors",
+                            compact ? "size-9" : "w-12 h-12 sm:w-[52px] sm:h-[52px]",
                             authorLiveSpace
                                 ? "border-2 border-danger"
                                 : "border border-hairline hover:border-brand",
@@ -1225,7 +1261,12 @@ const PostCardBody = memo(
                         <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 overflow-hidden pointer-events-auto">
                             <Link
                                 href={`/profile/${post.author.username}`}
-                                className="text-[calc(17px*var(--ws-fs))] sm:text-[calc(16px*var(--ws-fs))] font-semibold leading-5 text-primary truncate font-sans hover:underline decoration-gold underline-offset-4"
+                                className={clsx(
+                                    "font-semibold leading-5 text-primary truncate font-sans hover:underline decoration-gold underline-offset-4",
+                                    compact
+                                        ? "text-[calc(15px*var(--ws-fs))]"
+                                        : "text-[calc(17px*var(--ws-fs))] sm:text-[calc(16px*var(--ws-fs))]",
+                                )}
                             >
                                 {post.author.name}
                             </Link>
@@ -1245,21 +1286,42 @@ const PostCardBody = memo(
                                     size={16}
                                 />
                             </span>
-                            <Link
-                                href={`/profile/${post.author.username}`}
-                                className="hidden xs:block text-subtle text-[calc(13.5px*var(--ws-fs))] truncate font-sans hover:text-muted"
+                            {!compact && (
+                                <>
+                                    <Link
+                                        href={`/profile/${post.author.username}`}
+                                        className="hidden xs:block text-subtle text-[calc(13.5px*var(--ws-fs))] truncate font-sans hover:text-muted"
+                                    >
+                                        @{post.author.username}
+                                    </Link>
+                                    <span className="hidden xs:inline text-subtle text-xs shrink-0">
+                                        •
+                                    </span>
+                                </>
+                            )}
+                            <span
+                                className={clsx(
+                                    "text-subtle font-sans whitespace-nowrap shrink-0",
+                                    compact
+                                        ? "text-[calc(13px*var(--ws-fs))]"
+                                        : "text-[calc(13.5px*var(--ws-fs))]",
+                                )}
                             >
-                                @{post.author.username}
-                            </Link>
-                            <span className="hidden xs:inline text-subtle text-xs shrink-0">
-                                •
-                            </span>
-                            <span className="text-subtle text-[calc(13.5px*var(--ws-fs))] font-sans whitespace-nowrap shrink-0">
                                 <TimeAgo
                                     date={post.createdAt}
                                     fallback={post.timestamp}
                                 />
                             </span>
+                            {/* The Weekly Vote rides beside the time (owner
+                                pick V2, 2026-09-28); a tap opens the sheet,
+                                never casts. Not on a reply row. */}
+                            {!compact && (
+                                <VotePill
+                                    postId={post.id}
+                                    votes={post.votes ?? 0}
+                                    isMine={isOwnPost}
+                                />
+                            )}
                             {post.promoted && (
                                 <span className="shrink-0 rounded-[4px] bg-raised px-1.5 py-px text-[calc(10px*var(--ws-fs))] font-semibold tracking-wide text-subtle font-sans">
                                     {t("promo.label")}
@@ -1624,7 +1686,14 @@ const PostCardBody = memo(
                             </Link>
                         </p>
                     )}
-                    <p className="text-primary whitespace-pre-wrap [overflow-wrap:anywhere] mb-1.5 font-normal leading-[1.55] text-[calc(18px*var(--ws-fs))] sm:text-[calc(16.5px*var(--ws-fs))] font-sans tracking-tight pointer-events-none">
+                    <p
+                        className={clsx(
+                            "text-primary whitespace-pre-wrap [overflow-wrap:anywhere] font-normal font-sans tracking-tight pointer-events-none",
+                            compact
+                                ? "mb-1 leading-[1.5] text-[calc(15px*var(--ws-fs))]"
+                                : "mb-1.5 leading-[1.55] text-[calc(18px*var(--ws-fs))] sm:text-[calc(16.5px*var(--ws-fs))]",
+                        )}
+                    >
                         {showingTranslation
                             ? formattedTranslation
                             : formattedContent}
@@ -1705,17 +1774,6 @@ const PostCardBody = memo(
                                 )}
                             </div>
                         )}
-                    {/* The ballot row leads a repost as well: above the quoted
-                        card, same corner it holds above media (owner ruling —
-                        it had fallen into the text-only branch and rendered
-                        under the embed). */}
-                    {post.repostOf && (
-                        <VoteChip
-                            postId={post.id}
-                            votes={post.votes ?? 0}
-                            isMine={isOwnPost}
-                        />
-                    )}
                     {post.repostOf && (
                         <Link
                             href={`/post/${post.repostOf.id}`}
@@ -1805,19 +1863,6 @@ const PostCardBody = memo(
                                 </div>
                             </div>
                         </a>
-                    )}
-
-                    {/* The ballot row: right-aligned directly ABOVE the media
-                        (owner ruling — same corner as before, off the artwork).
-                        Text-only posts get the same row above the action bar. */}
-                    {!post.repostOf &&
-                        ((post.videos && post.videos.length > 0) ||
-                        (post.images && post.images.length > 0)) && (
-                        <VoteChip
-                            postId={post.id}
-                            votes={post.votes ?? 0}
-                            isMine={isOwnPost}
-                        />
                     )}
                     {/* A lone video keeps the full-width player; a video that
                         shares the post with images rides the strip above. */}
@@ -2005,15 +2050,6 @@ const PostCardBody = memo(
                             ))}
                         </div>
                     )}
-                    {!post.repostOf &&
-                        !(post.videos && post.videos.length > 0) &&
-                        !(post.images && post.images.length > 0) && (
-                            <VoteChip
-                                postId={post.id}
-                                votes={post.votes ?? 0}
-                                isMine={isOwnPost}
-                            />
-                        )}
                     {/* Post actions the interaction cluster distributes across
                         the row like X: flex-1 + max-w + justify-between puts
                         reply/repost/like/bookmark/share at even intervals, each
@@ -2031,12 +2067,20 @@ const PostCardBody = memo(
                             seedPostCache({ postId: post.id, post });
                             router.push(`/post/${post.id}`);
                         }}
-                        className="flex cursor-pointer items-center justify-between text-muted mt-1.5 -mb-1.5 pointer-events-auto">
+                        className={clsx(
+                            "flex cursor-pointer items-center text-muted pointer-events-auto",
+                            compact
+                                ? // One size down for a reply row: 16px glyphs in
+                                  // 32px circles beside 12.5px counts, all four
+                                  // actions together at the left.
+                                  "mt-0.5 -mb-1.5 justify-start gap-4 [&_.size-9]:size-8 [&_svg]:size-[calc(16px*var(--ws-fs))] [&_.tabular-nums]:text-[calc(12.5px*var(--ws-fs))]"
+                                : "mt-1.5 -mb-1.5 justify-between",
+                        )}>
                         {/* Option B (owner pick): the four actions cluster left with
                             FIXED gaps — nothing stretches, so the rhythm holds at any
                             card width — and share + impressions ride the right edge
                             together as the "do something with this / how it did" pair. */}
-                        <div className="flex min-w-0 items-center gap-1.5 -ml-2 sm:gap-7">
+                        <div className={clsx("flex min-w-0 items-center -ml-2", compact ? "gap-4" : "gap-1.5 sm:gap-7")}>
                         <div className="relative">
                             <button
                                 type="button"
@@ -2132,6 +2176,22 @@ const PostCardBody = memo(
                             )}
                             </AnimatePresence>
                         </div>
+                        {onReply ? (
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onReply(post);
+                                }}
+                                aria-label={`Reply to ${post.author.name}`}
+                                className="flex items-center gap-0.5 sm:gap-1 hover:text-primary transition-colors group cursor-pointer"
+                            >
+                            <span className="flex size-9 shrink-0 items-center justify-center rounded-pill group-hover:bg-primary/10 transition group-active:scale-[0.98]">
+                                <PhChatCircle size={19} className="size-[calc(19px*var(--ws-fs))]" />
+                            </span>
+                            <RollingCount value={shownReplies} />
+                            </button>
+                        ) : (
                         <Link
                             // #comments: the post page scrolls to the reply
                             // box instead of the post top (owner 2026-09-03 —
@@ -2146,6 +2206,7 @@ const PostCardBody = memo(
                             </span>
                             <RollingCount value={shownReplies} />
                         </Link>
+                        )}
                         <button
                             type="button"
                             aria-label={isLiked ? "Unlike" : "Like"}
@@ -2236,6 +2297,7 @@ const PostCardBody = memo(
                         </div>
 
                         <div className="flex items-center gap-0.5 sm:gap-2">
+                        {!compact && (
                         <button
                             type="button"
                             aria-label={isBookmarked ? "Remove bookmark" : "Bookmark"}
@@ -2286,6 +2348,7 @@ const PostCardBody = memo(
                                 </span>
                             )}
                         </button>
+                        )}
                         <div className="relative">
                         <button
                             type="button"
@@ -2387,6 +2450,7 @@ const PostCardBody = memo(
                         </AnimatePresence>
                         </div>
 
+                        {!compact && (
                         <div
                             // Impressions belong at the end of this row, beside
                             // the other numbers, the way every timeline shows
@@ -2409,6 +2473,7 @@ const PostCardBody = memo(
                                 {formatCount(post.stats.views ?? 0) || "0"}
                             </span>
                         </div>
+                        )}
                         </div>
                     </div>
                 </div>

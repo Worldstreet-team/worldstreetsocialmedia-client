@@ -10,12 +10,15 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { PostCard, type PostProps } from "@/components/feed/PostCard";
 import { usePostEvents } from "@/hooks/useUserEvents";
-import { CommentComposer } from "@/components/feed/CommentComposer";
+import {
+	CommentComposer,
+	type ReplyTarget,
+} from "@/components/feed/CommentComposer";
 import { PostSkeleton } from "@/components/feed/PostSkeleton";
 import { ArrowLeft, Search } from "@/components/ui/icons";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { mapApiPost } from "@/lib/post-mapper";
-import { formatTimeAgo } from "@/lib/utils";
+import { formatCompact, formatTimeAgo } from "@/lib/utils";
 import {
 	collapse,
 	press,
@@ -130,6 +133,21 @@ export default function PostPageScreen() {
 	});
 	const [loading, setLoading] = useState(!cachedPost);
 	const [isAddingComment, setIsAddingComment] = useState(false);
+	// The reply the pinned box is aimed at (null = the post itself), and the
+	// last reply that landed under a reply, so that thread reopens with it.
+	const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
+	const [landed, setLanded] = useState<{ id: string; n: number } | null>(
+		null,
+	);
+	const aimAt = useCallback(
+		(p: PostProps) =>
+			setReplyTarget({
+				id: p.id,
+				name: p.author.name || p.author.username,
+				username: p.author.username,
+			}),
+		[],
+	);
 	// "No comments yet" waits for the answer. Said while the request is in
 	// flight, it would rise in only to be cut by the replies.
 	const [commentsLoaded, setCommentsLoaded] = useState(false);
@@ -263,11 +281,15 @@ export default function PostPageScreen() {
 		);
 	}
 
-	const handleCommentStart = () => {
-		setIsAddingComment(true);
+	const handleCommentStart = (repliedTo: string) => {
+		if (repliedTo === postId) setIsAddingComment(true);
 	};
 
-	const handleCommentSuccess = async () => {
+	const handleCommentSuccess = async (repliedTo: string) => {
+		if (repliedTo !== postId) {
+			setLanded((prev) => ({ id: repliedTo, n: (prev?.n ?? 0) + 1 }));
+			return;
+		}
 		await fetchPostData();
 		setIsAddingComment(false);
 	};
@@ -339,6 +361,17 @@ export default function PostPageScreen() {
 				    first load. A refetch keeps the keys and replays nothing; a
 				    reply that lands later rises alone. */}
 				{comments.length > 0 && (
+					// The Instagram lead line (owner pick A + C, 2026-09-28).
+					<div className="flex items-baseline justify-between px-4 pb-1 pt-3">
+						<h2 className="font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
+							Comments
+						</h2>
+						<span className="font-sans text-[calc(13px*var(--ws-fs))] tabular-nums text-subtle">
+							{formatCompact(Math.max(post.stats.replies ?? 0, comments.length))}
+						</span>
+					</div>
+				)}
+				{comments.length > 0 && (
 					<motion.div
 						variants={staggerParentFast}
 						initial="hidden"
@@ -356,21 +389,13 @@ export default function PostPageScreen() {
 							>
 								{/* No lines between or under replies (owner rulings
 								    2026-09-03 and 2026-09-28): the replies read as one
-								    conversation by spacing alone; the thread rail that
-								    ran the avatar column is gone too. */}
-								<ImpressionSensor
-									meta={{
-										post: comment.id,
-										author: comment.author?.id ?? "",
-										surface: "post_detail",
-										position: i,
-									}}
-								>
-									<PostCard
-										post={comment}
-										replyingTo={post?.author?.username}
-									/>
-								</ImpressionSensor>
+								    conversation by spacing and indent alone. */}
+								<ReplyThread
+									reply={comment}
+									position={i}
+									onReply={aimAt}
+									landed={landed}
+								/>
 							</motion.div>
 						))}
 					</motion.div>
@@ -394,9 +419,126 @@ export default function PostPageScreen() {
 			<CommentComposer
 				postId={postId}
 				pinned
+				target={replyTarget}
+				onClearTarget={() => setReplyTarget(null)}
 				onCommentStart={handleCommentStart}
 				onCommentSuccess={handleCommentSuccess}
 			/>
 		</div>
+	);
+}
+
+/**
+ * One reply and the answers under it, the comments layout the owner picked
+ * (A + C, 2026-09-28, https://claude.ai/artifact/R5uguMNcQHA2t3gQo3E6QE):
+ * Threads' compact row (A) with Instagram's fold (C). Answers stay behind
+ * "View N replies" until asked for, load from the reply's own comments,
+ * oldest first so they read as a conversation, and sit one indent in. An
+ * answer to an answer joins the same indent rather than stepping further
+ * right, so a long exchange never runs out of column.
+ */
+function ReplyThread({
+	reply,
+	position,
+	onReply,
+	landed,
+	nested = false,
+}: {
+	reply: PostProps;
+	position: number;
+	onReply: (p: PostProps) => void;
+	landed: { id: string; n: number } | null;
+	nested?: boolean;
+}) {
+	const read = useGatewayRead();
+	const [open, setOpen] = useState(false);
+	const [items, setItems] = useState<PostProps[] | null>(null);
+	const [loading, setLoading] = useState(false);
+	// Clip only while the height moves: a row's menus hang outside it.
+	const [settled, setSettled] = useState(false);
+
+	const load = useCallback(async () => {
+		setLoading(true);
+		const res = await read(`/api/posts/${reply.id}/comments`);
+		if (res.success) {
+			const rows = Array.isArray(res.data) ? (res.data as any[]) : [];
+			setItems(rows.map((p) => mapApiPost(p)).reverse());
+		}
+		setLoading(false);
+	}, [read, reply.id]);
+
+	// A reply just posted to this one: open the fold with it in place. Keyed
+	// on the landing alone, so a new `load` identity can never re-fire it.
+	const loadRef = useRef(load);
+	loadRef.current = load;
+	useEffect(() => {
+		if (!landed || landed.id !== reply.id) return;
+		void loadRef.current().then(() => setOpen(true));
+	}, [landed, reply.id]);
+
+	const n = Math.max(reply.stats.replies ?? 0, items?.length ?? 0);
+
+	return (
+		<>
+			<ImpressionSensor
+				meta={{
+					post: reply.id,
+					author: reply.author?.id ?? "",
+					surface: "post_detail",
+					position,
+				}}
+			>
+				<PostCard post={reply} variant="reply" onReply={onReply} />
+			</ImpressionSensor>
+			{n > 0 && (
+				<button
+					type="button"
+					aria-expanded={open}
+					disabled={loading}
+					onClick={() => {
+						if (open) {
+							setSettled(false);
+							setOpen(false);
+							return;
+						}
+						setOpen(true);
+						if (items === null) void load();
+					}}
+					// Lines up with the row's text column: 16px gutter, 36px
+					// avatar, 12px gap.
+					className="-mt-1 flex h-9 cursor-pointer items-center gap-2.5 pl-16 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-muted transition-colors hover:text-primary"
+				>
+					<span aria-hidden className="h-px w-6 bg-subtle" />
+					{open
+						? loading && items === null
+							? "Loading replies"
+							: "Hide replies"
+						: `View ${formatCompact(n)} ${n === 1 ? "reply" : "replies"}`}
+				</button>
+			)}
+			<AnimatePresence initial={false}>
+				{open && items && items.length > 0 && (
+					<motion.div
+						key="answers"
+						{...collapse}
+						className={clsx(!settled && "overflow-hidden")}
+						onAnimationComplete={() => setSettled(true)}
+					>
+						<div className={nested ? undefined : "pl-12"}>
+							{items.map((c, i) => (
+								<ReplyThread
+									key={c.id}
+									reply={c}
+									position={i}
+									onReply={onReply}
+									landed={landed}
+									nested
+								/>
+							))}
+						</div>
+					</motion.div>
+				)}
+			</AnimatePresence>
+		</>
 	);
 }

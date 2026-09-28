@@ -39,8 +39,14 @@ interface CommentComposerProps {
 	postId: string;
 	/** Who this box answers — named above the input so it feels like a reply. */
 	replyingTo?: string;
-	onCommentSuccess?: () => void;
-	onCommentStart?: () => void;
+	/** A reply in the thread this box answers instead of the post (owner
+	 *  pick A + C, 2026-09-28: tapping Reply on a reply aims the pinned box
+	 *  at it). Cleared by the chip's close or after it posts. */
+	target?: ReplyTarget | null;
+	onClearTarget?: () => void;
+	/** Both receive the id the reply went to: the post, or the target. */
+	onCommentSuccess?: (repliedTo: string) => void;
+	onCommentStart?: (repliedTo: string) => void;
 	/**
 	 * Phones only: sit inline where the thread puts it, then dock to the
 	 * bottom of the screen once the reader scrolls past it (owner
@@ -52,6 +58,12 @@ interface CommentComposerProps {
 	 *  (owner 2026-09-28: "let the post your reply be fixed at the bottom").
 	 *  Sticky, not fixed, so it stays inside the feed column on a desktop. */
 	pinned?: boolean;
+}
+
+export interface ReplyTarget {
+	id: string;
+	name: string;
+	username: string;
 }
 
 interface MediaItem {
@@ -67,6 +79,8 @@ export const CommentComposer = ({
 	onCommentStart,
 	dockOnScroll = false,
 	pinned = false,
+	target = null,
+	onClearTarget,
 }: CommentComposerProps) => {
 	const { user } = useUser();
 	// The APP profile's picture, same shared atom as everywhere — Clerk's
@@ -88,6 +102,11 @@ export const CommentComposer = ({
 	// come from the shared dismiss hook.
 	const closeEmoji = useCallback(() => setShowEmojiPicker(false), []);
 	useOverlayDismiss(showEmojiPicker, closeEmoji);
+
+	// Aimed at a reply: the keyboard comes up on that answer.
+	useEffect(() => {
+		if (target) textareaRef.current?.focus();
+	}, [target]);
 
 	// Auto-resize textarea
 	useEffect(() => {
@@ -222,7 +241,8 @@ export const CommentComposer = ({
 	const handleSubmit = async () => {
 		if ((!content.trim() && mediaItems.length === 0) || isPosting) return;
 
-		onCommentStart?.();
+		const repliedTo = target?.id ?? postId;
+		onCommentStart?.(repliedTo);
 		setIsPosting(true);
 		try {
 			// Straight to the gateway (media never rides a server action):
@@ -233,14 +253,15 @@ export const CommentComposer = ({
 			for (const m of mediaItems) {
 				fd.append(m.type === "video" ? "video" : "images", m.file);
 			}
-			const result = await sendFormDirect(`/api/posts/${postId}/reply`, fd);
+			const result = await sendFormDirect(`/api/posts/${repliedTo}/reply`, fd);
 
 			if (result.success) {
 				setContent("");
 				setMediaItems([]);
 				setShowEmojiPicker(false);
 				toast("Reply posted!", { type: "success" });
-				onCommentSuccess?.();
+				onClearTarget?.();
+				onCommentSuccess?.(repliedTo);
 			} else {
 				toast(result.message || "Failed to post reply", { type: "error" });
 			}
@@ -285,7 +306,27 @@ export const CommentComposer = ({
 					: undefined
 			}
 		>
-			{replyingTo && (
+			<AnimatePresence initial={false}>
+				{target && (
+					<motion.div key={target.id} {...collapse} className="overflow-hidden">
+						<div className="mb-1 flex items-center gap-1 pl-[52px] font-sans text-[calc(13px*var(--ws-fs))] text-muted">
+							<span className="min-w-0 truncate">
+								Replying to{" "}
+								<span className="font-medium text-primary">{target.name}</span>
+							</span>
+							<button
+								type="button"
+								onClick={onClearTarget}
+								aria-label="Reply to the post instead"
+								className="-my-2 flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-subtle transition-colors hover:bg-primary/5 hover:text-primary"
+							>
+								<PhX size={14} />
+							</button>
+						</div>
+					</motion.div>
+				)}
+			</AnimatePresence>
+			{replyingTo && !target && (
 				<p className="mb-2 pl-[52px] font-sans text-[calc(12.5px*var(--ws-fs))] text-muted">
 					Replying to <span className="font-medium text-gold">@{replyingTo}</span>
 				</p>
@@ -304,7 +345,7 @@ export const CommentComposer = ({
 						ref={textareaRef}
 						value={content}
 						onChange={(e) => setContent(e.target.value)}
-						placeholder="Post your reply"
+						placeholder={target ? `Reply to ${target.name}` : "Post your reply"}
 						className="w-full resize-none overflow-hidden bg-transparent pt-2 font-sans text-[calc(16px*var(--ws-fs))] leading-relaxed text-primary outline-none placeholder:text-subtle"
 						rows={1}
 					/>
