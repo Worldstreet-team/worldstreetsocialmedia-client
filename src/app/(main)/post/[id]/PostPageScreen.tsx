@@ -46,7 +46,9 @@ export default function PostPageScreen() {
 
 	// Initialize from cache if available
 	const cachedPost = postCache[postId];
-	const [post, setPost] = useState<PostProps | null>(cachedPost || null);
+	const [post, setPost] = useState<PostProps | null>(
+		cachedPost ? { ...cachedPost, isDetail: true } : null,
+	);
 	const [comments, setComments] = useState<PostProps[]>([]);
 	// The post this one is replying to. Opening a reply used to show it alone,
 	// with no sign of what it answered — every notification deep-link and every
@@ -144,7 +146,7 @@ export default function PostPageScreen() {
 	// Update local state if cache updates (e.g. from background fetch elsewhere)
 	useEffect(() => {
 		if (cachedPost) {
-			setPost(cachedPost);
+			setPost({ ...cachedPost, isDetail: true });
 			if (loading) setLoading(false);
 		}
 	}, [cachedPost]);
@@ -274,7 +276,7 @@ export default function PostPageScreen() {
 		<div
 			// The tail clears BOTH the tab bar and the reply box that docks on
 			// top of it, or the last comment hides under them.
-			className="flex flex-col min-h-dvh pb-[calc(var(--ws-nav-clearance)+88px)] md:pb-20"
+			className="flex flex-col min-h-full pb-[var(--ws-nav-clearance)] md:pb-0"
 		>
 			<header className="sticky top-0 z-sticky bg-page border-b border-hairline px-2 sm:px-4 py-2 flex items-center gap-2 sm:gap-6">
 				<motion.button
@@ -319,16 +321,9 @@ export default function PostPageScreen() {
 				<PostCard post={post} />
 			</ImpressionSensor>
 
-			<div id="comments" className="scroll-mt-16">
-				<CommentComposer
-					postId={postId}
-					dockOnScroll
-					onCommentStart={handleCommentStart}
-					onCommentSuccess={handleCommentSuccess}
-				/>
-			</div>
+			<div id="comments" className="scroll-mt-16" />
 
-			<div className="flex flex-col">
+			<div className="flex flex-1 flex-col">
 				<AnimatePresence>
 					{isAddingComment && (
 						<motion.div
@@ -359,19 +354,10 @@ export default function PostPageScreen() {
 								}
 								className="relative"
 							>
-								{/* No border between replies (owner ruling): hard
-								    rules chopped the conversation into a ledger.
-								    The thread rail runs the avatar column instead —
-								    full height between replies, closing at the
-								    last — so the timeline draws as ONE grouped
-								    conversation. */}
-								<span
-									aria-hidden
-									className={clsx(
-										"absolute left-[38px] top-0 w-0.5 bg-hairline",
-										i === comments.length - 1 ? "h-6" : "h-full",
-									)}
-								/>
+								{/* No lines between or under replies (owner rulings
+								    2026-09-03 and 2026-09-28): the replies read as one
+								    conversation by spacing alone; the thread rail that
+								    ran the avatar column is gone too. */}
 								<ImpressionSensor
 									meta={{
 										post: comment.id,
@@ -402,6 +388,15 @@ export default function PostPageScreen() {
 					)}
 				</AnimatePresence>
 			</div>
+
+			{/* The reply box is pinned to the foot of the column (owner
+			    2026-09-28): always in reach, the thread scrolling above it. */}
+			<CommentComposer
+				postId={postId}
+				pinned
+				onCommentStart={handleCommentStart}
+				onCommentSuccess={handleCommentSuccess}
+			/>
 		</div>
 	);
 }

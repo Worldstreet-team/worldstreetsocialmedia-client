@@ -20,7 +20,7 @@ import {
 	OverlayScrim,
 	useOverlayDismiss,
 } from "@/components/ui/Overlay";
-import { replyToPostAction } from "@/lib/post.actions";
+import { sendFormDirect } from "@/lib/upload-direct";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import type { EmojiClickData, Theme } from "emoji-picker-react";
 import dynamic from "next/dynamic";
@@ -48,6 +48,10 @@ interface CommentComposerProps {
 	 * to dock to and the column never runs out of room.
 	 */
 	dockOnScroll?: boolean;
+	/** Pinned to the bottom of the thread's scroller on every screen size
+	 *  (owner 2026-09-28: "let the post your reply be fixed at the bottom").
+	 *  Sticky, not fixed, so it stays inside the feed column on a desktop. */
+	pinned?: boolean;
 }
 
 interface MediaItem {
@@ -62,6 +66,7 @@ export const CommentComposer = ({
 	onCommentSuccess,
 	onCommentStart,
 	dockOnScroll = false,
+	pinned = false,
 }: CommentComposerProps) => {
 	const { user } = useUser();
 	// The APP profile's picture, same shared atom as everywhere — Clerk's
@@ -173,8 +178,22 @@ export const CommentComposer = ({
 	const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
 		if (e.target.files) {
 			const files = Array.from(e.target.files);
-			const remainingSlots = 4 - mediaItems.length;
-			const filesToProcess = files.slice(0, remainingSlots);
+			// A reply carries up to four images or one video (the gateway's
+			// rule): a video replaces whatever was picked, images fill the
+			// remaining slots and never join a video.
+			const video = files.find((f) => f.type.startsWith("video/"));
+			if (video) {
+				for (const m of mediaItems) URL.revokeObjectURL(m.url);
+				setMediaItems([
+					{ url: URL.createObjectURL(video), file: video, type: "video" },
+				]);
+				if (fileInputRef.current) fileInputRef.current.value = "";
+				return;
+			}
+			const base = mediaItems.filter((m) => m.type === "image");
+			const filesToProcess = files
+				.filter((f) => f.type.startsWith("image/"))
+				.slice(0, 4 - base.length);
 
 			const newItems: MediaItem[] = filesToProcess.map((file) => ({
 				url: URL.createObjectURL(file),
@@ -182,7 +201,7 @@ export const CommentComposer = ({
 				type: "image",
 			}));
 
-			setMediaItems((prev) => [...prev, ...newItems]);
+			setMediaItems([...base, ...newItems]);
 			if (fileInputRef.current) fileInputRef.current.value = "";
 		}
 	};
@@ -206,15 +225,15 @@ export const CommentComposer = ({
 		onCommentStart?.();
 		setIsPosting(true);
 		try {
-			// currently replyToPostAction only supports text content in the signature
-			// TODO: Update backend/action to support images in replies if needed
-			// For now, we'll just send text content.
-
-			if (mediaItems.length > 0) {
-				toast("Image replies are not fully supported yet", { type: "info" });
+			// Straight to the gateway (media never rides a server action):
+			// text, up to four images or one video, multipart (owner
+			// 2026-09-28: "why is it only text people can send in replies").
+			const fd = new FormData();
+			fd.append("content", content);
+			for (const m of mediaItems) {
+				fd.append(m.type === "video" ? "video" : "images", m.file);
 			}
-
-			const result = await replyToPostAction(postId, content);
+			const result = await sendFormDirect(`/api/posts/${postId}/reply`, fd);
 
 			if (result.success) {
 				setContent("");
@@ -234,11 +253,20 @@ export const CommentComposer = ({
 
 	return (
 		// The host holds the bar's place in the thread while it is docked.
-		<div ref={hostRef} style={docked ? { height: hostH } : undefined}>
+		<div
+			ref={hostRef}
+			style={docked ? { height: hostH } : undefined}
+			className={clsx(
+				pinned &&
+					// Above the phone tab bar; flush to the column's foot on a
+					// desktop. A solid bar with one rule on top, never a blur.
+					"sticky z-sticky bottom-[calc(var(--ws-mobile-nav-h)+var(--ws-safe-bottom)+var(--ws-nav-float))] border-t border-hairline bg-page md:bottom-0",
+			)}
+		>
 		<div
 			ref={barRef}
 			className={clsx(
-				"relative px-4 py-3.5",
+				"relative px-4 py-3",
 				docked &&
 					// The bar stacks on top of the tab bar, or on the keyboard
 					// when one is open. Solid page ink + a hairline, never a
@@ -313,12 +341,22 @@ export const CommentComposer = ({
 														: "aspect-video",
 												)}
 											>
-												<Image
-													src={item.url}
-													alt="Preview"
-													fill
-													className="object-cover"
-												/>
+												{item.type === "video" ? (
+													<video
+														src={item.url}
+														muted
+														playsInline
+														preload="metadata"
+														className="absolute inset-0 h-full w-full object-cover"
+													/>
+												) : (
+													<Image
+														src={item.url}
+														alt="Preview"
+														fill
+														className="object-cover"
+													/>
+												)}
 												<button
 													type="button"
 													onClick={() => removeMedia(index)}
@@ -353,7 +391,7 @@ export const CommentComposer = ({
 								type="file"
 								ref={fileInputRef}
 								className="hidden"
-								accept="image/*"
+								accept="image/*,video/*"
 								multiple
 								onChange={handleImageSelect}
 								disabled={isPosting || mediaItems.length >= 4}

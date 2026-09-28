@@ -1,4 +1,13 @@
+"use client";
+
+import { useAtomValue } from "jotai";
+import { useParams } from "next/navigation";
+import { PostCard } from "@/components/feed/PostCard";
 import { PostSkeleton } from "@/components/feed/PostSkeleton";
+import { ArrowLeft } from "@/components/ui/icons";
+import { useT } from "@/i18n/client";
+import { useBackWithFallback } from "@/lib/nav";
+import { singlePostCacheAtom } from "@/store/postCache";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 /**
@@ -8,6 +17,35 @@ import { Skeleton } from "@/components/ui/Skeleton";
  * reloading. One post, then quiet reply rows.
  */
 export default function PostLoading() {
+	const t = useT();
+	const goBack = useBackWithFallback();
+	const params = useParams();
+	const cached = useAtomValue(singlePostCacheAtom)[String(params?.id ?? "")];
+	// Opened from a card, the post is already in hand (owner 2026-09-28: "no
+	// need to load it again, carry on the state and just load the
+	// comments"). While Next fetches the route, this boundary paints that
+	// post, in the same header and place the page will use, so the swap to
+	// the page is invisible and only the replies arrive.
+	if (cached) {
+		return (
+			<div className="flex min-h-full flex-col">
+				<header className="sticky top-0 z-sticky flex items-center gap-2 border-b border-hairline bg-page px-2 py-2 sm:gap-6 sm:px-4">
+					<button
+						type="button"
+						aria-label="Go back"
+						onClick={() => goBack("/")}
+						className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-pill text-primary transition-colors hover:bg-raised sm:h-9 sm:w-9"
+					>
+						<ArrowLeft className="h-5 w-5" />
+					</button>
+					<h1 className="font-display text-lg font-semibold leading-5 text-primary">
+						{t("post.title")}
+					</h1>
+				</header>
+				<PostCard post={{ ...cached, isDetail: true }} />
+			</div>
+		);
+	}
 	return (
 		<div className="flex min-h-dvh flex-col">
 			<div className="sticky top-0 z-sticky flex items-center gap-4 border-b border-hairline bg-page px-4 py-3">

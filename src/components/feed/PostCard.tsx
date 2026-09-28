@@ -417,6 +417,9 @@ export const PostCard = memo(
     const setUser = useSetAtom(userAtom);
     const setBookmarks = useSetAtom(bookmarksAtom);
     const seedPostCache = useSetAtom(updateSinglePostCacheAtom);
+    /** The card's overlay link: any tap on the card's open space is
+     *  forwarded to it, so there is one opening path. */
+    const openLinkRef = useRef<HTMLAnchorElement>(null);
     const { toast } = useToast();
 
     // The author is in a live Space Voice room right now: their avatar gets
@@ -921,9 +924,34 @@ export const PostCard = memo(
         <article
             ref={articleRef}
             className="relative block px-4 py-3 sm:py-3.5 hover:bg-surface/40 transition-colors"
+            // The whole card opens the post (owner 2026-09-28: "the entire
+            // box of the post except the image should open a post"). Parts
+            // of the card take pointer events (the action row's gaps, text
+            // blocks), so a tap there never reached the overlay link. Any
+            // tap that is not on a control, a link, a field or media is
+            // handed to that link, which keeps its double-tap-to-like and
+            // its cache seeding. Selecting text never opens anything.
+            onClick={(e) => {
+                if (post.isDetail) return;
+                const el = e.target as HTMLElement;
+                if (
+                    el.closest(
+                        'a,button,input,textarea,select,label,video,img,audio,[role="button"],[role="menu"],[role="dialog"],[data-no-open]',
+                    )
+                )
+                    return;
+                if (window.getSelection()?.toString()) return;
+                openLinkRef.current?.click();
+            }}
+            // The route is fetched while the pointer is on its way, so the
+            // open does not wait on the network.
+            onPointerEnter={() => {
+                if (!post.isDetail) router.prefetch(`/post/${post.id}`);
+            }}
         >
             {/* ... Rest of the component remains the same ... */}
             <Link
+                ref={openLinkRef}
                 href={`/post/${post.id}`}
                 onClick={(e) => {
                     // Double-tap (or double-click) likes; a single tap still
