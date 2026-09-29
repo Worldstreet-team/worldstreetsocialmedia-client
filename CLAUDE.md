@@ -1172,6 +1172,37 @@ Lagos pays three round trips before the first byte). What is in place:
   (the shortest a private URL now lives is a day); the profile sync no
   longer ships the follower, following, blocked or push-token arrays.
 
+## Posts open in a layer, not a route (owner 2026-09-29)
+
+"The flow from feed to comment is terrible ... when a user taps back it
+glitches." Opening a post was a route change: the feed and /post/[id] are
+siblings, so the feed UNMOUNTED and back rebuilt it, every card
+re-measuring from its 420px `content-visibility` guess while the scroll
+restore aimed at the old offset, so back landed short and the column
+jumped. The open also waited on the route's server payload (through
+proxy.ts) before the replies even started.
+
+- `components/feed/PostLayer.tsx`: `useOpenPost()` pushes a history entry
+  WITHOUT changing the URL and puts the id on `postLayerStackAtom`;
+  MainShell draws `PostLayer` over the column (`absolute inset-0` next to
+  `#ws-main-scroll`, which is `inert` while covered). Back pops the entry
+  and the layer; the feed never moved. Every PostCard open path (tap, the
+  action row gaps, the reply icon, See more, the quoted original) goes
+  through it.
+- The URL stays put on purpose: a manual pushState to /post/<id> is synced
+  into Next's router through a queued update that in-flight router work (a
+  server action) overwrites, writing the old URL back. Entries carry
+  Next's `__NA` and tree, set explicitly, or back onto them RELOADS.
+- A /post/<id> URL (shared link, notification, refresh) renders the real
+  route in the same frame. Both are header / own scroller / reply box as
+  the foot of a flex column: never a sticky reply box (it floated above
+  the tab bar's height on a page where the tab bar is hidden).
+- The post and its replies are separate reads, each shown as it lands.
+  The fetch waits for Clerk's `isLoaded`: on a full load the first effect
+  had no token and the page said the post did not exist.
+- The document can hold a second, hidden copy of MainShell; the layer
+  renders only in the visible one and finds its column as a sibling.
+
 ## Gotchas
 
 **`--ws-fs` is derived; never write it directly** (found 2026-09-16, shipped

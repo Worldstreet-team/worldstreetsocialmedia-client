@@ -4,6 +4,7 @@ import { LeftSidebar } from "@/components/layout/LeftSidebar";
 import { MobileNavigation } from "@/components/layout/MobileNavigation";
 import { RightSidebar } from "@/components/layout/RightSidebar";
 import { StoriesRail } from "@/components/feed/StoriesRail";
+import { PostLayer, PostLayerContext } from "@/components/feed/PostLayer";
 import { useAppPathname } from "@/i18n/useAppPathname";
 import clsx from "clsx";
 
@@ -24,6 +25,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
 	const onSettings = useAppPathname().startsWith("/settings");
 
 	return (
+		<PostLayerContext.Provider value={!onSettings}>
 		<div className="max-w-[var(--ws-container-max)] mx-auto flex justify-center min-h-dvh">
 			<MobileNavigation />
 			<LeftSidebar />
@@ -42,14 +44,22 @@ export function MainShell({ children }: { children: React.ReactNode }) {
 						<StoriesRail />
 					</div>
 				)}
-				<div
-					id="ws-main-scroll"
-					className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain"
-				>
-					{children}
+				{/* The column and the post layer share one box: a post opens
+				    OVER the column, which stays mounted beneath it (see
+				    PostLayer). Absolute, so neither depends on a percentage
+				    height resolving inside a flex item. */}
+				<div className="relative min-h-0 flex-1">
+					<div
+						id="ws-main-scroll"
+						className="absolute inset-0 overflow-y-auto overscroll-y-contain"
+					>
+						{children}
+					</div>
+					{!onSettings && <PostLayer />}
 				</div>
 			</main>
 			{!onSettings && <RightSidebar />}
 		</div>
+		</PostLayerContext.Provider>
 	);
 }

@@ -98,6 +98,7 @@ import {
     subscribeStats,
 } from "@/lib/engagementStore";
 import { VideoPlayer } from "@/components/ui/VideoPlayer";
+import { useOpenPost } from "@/components/feed/PostLayer";
 import { VotePill } from "@/components/votes/VotePill";
 import { Radio } from "@/components/ui/icons";
 import { repostPostAction } from "@/lib/post.actions";
@@ -489,6 +490,9 @@ const PostCardBody = memo(
     const setUser = useSetAtom(userAtom);
     const setBookmarks = useSetAtom(bookmarksAtom);
     const seedPostCache = useSetAtom(updateSinglePostCacheAtom);
+    // A post opens as a layer over the column, the page beneath untouched
+    // (see PostLayer); a plain navigation where there is no layer.
+    const openPost = useOpenPost();
     /** The card's overlay link: any tap on the card's open space is
      *  forwarded to it, so there is one opening path. */
     const openLinkRef = useRef<HTMLAnchorElement>(null);
@@ -1044,7 +1048,7 @@ const PostCardBody = memo(
                         typeof window !== "undefined" &&
                         window.matchMedia("(pointer: coarse)").matches;
                     if (!coarse) {
-                        router.push(`/post/${post.id}`);
+                        openPost(post.id);
                         return;
                     }
                     const now = Date.now();
@@ -1071,7 +1075,7 @@ const PostCardBody = memo(
                     navTimerRef.current = setTimeout(() => {
                         navTimerRef.current = null;
                         if (window.location.pathname !== armedAt) return;
-                        router.push(`/post/${post.id}`);
+                        openPost(post.id);
                     }, 260);
                 }}
                 className="absolute inset-0 z-0"
@@ -1702,6 +1706,12 @@ const PostCardBody = memo(
                                 ...{" "}
                                 <Link
                                     href={`/post/${post.id}`}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        seedPostCache({ postId: post.id, post });
+                                        openPost(post.id);
+                                    }}
                                     className="text-gold hover:underline font-medium relative z-20"
                                 >
                                     See more
@@ -1777,7 +1787,18 @@ const PostCardBody = memo(
                     {post.repostOf && (
                         <Link
                             href={`/post/${post.repostOf.id}`}
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (!post.repostOf) return;
+                                if (post.repostOfPost) {
+                                    seedPostCache({
+                                        postId: post.repostOf.id,
+                                        post: post.repostOfPost,
+                                    });
+                                }
+                                openPost(post.repostOf.id);
+                            }}
                             className="relative z-10 pointer-events-auto mt-2 mb-1.5 block overflow-hidden rounded-xl bg-raised transition-colors hover:bg-raised/80"
                         >
                             <span className="flex items-center gap-2 px-3 pt-3 min-w-0">
@@ -2065,7 +2086,7 @@ const PostCardBody = memo(
                         // dying on the container.
                         onClick={() => {
                             seedPostCache({ postId: post.id, post });
-                            router.push(`/post/${post.id}`);
+                            openPost(post.id);
                         }}
                         className={clsx(
                             "flex cursor-pointer items-center text-muted pointer-events-auto",
@@ -2197,7 +2218,12 @@ const PostCardBody = memo(
                             // box instead of the post top (owner 2026-09-03 —
                             // tapping the comment icon landed you at the post).
                             href={`/post/${post.id}#comments`}
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                seedPostCache({ postId: post.id, post });
+                                openPost(post.id, "#comments");
+                            }}
                             aria-label="Reply"
                             className="flex items-center gap-0.5 sm:gap-1 hover:text-primary transition-colors group cursor-pointer"
                         >

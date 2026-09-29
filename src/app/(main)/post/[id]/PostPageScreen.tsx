@@ -1,13 +1,13 @@
 "use client";
 
 import { useBackWithFallback } from "@/lib/nav";
+import { useAuth } from "@clerk/nextjs";
 import { useGatewayRead } from "@/hooks/useGateway";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { ImpressionSensor } from "@/components/feed/ImpressionSensor";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
 import { PostCard, type PostProps } from "@/components/feed/PostCard";
 import { usePostEvents } from "@/hooks/useUserEvents";
 import {
@@ -18,6 +18,7 @@ import { PostSkeleton } from "@/components/feed/PostSkeleton";
 import { ArrowLeft, Search } from "@/components/ui/icons";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { mapApiPost } from "@/lib/post-mapper";
+import { takeRepliesJump } from "@/components/feed/PostLayer";
 import { formatCompact, formatTimeAgo } from "@/lib/utils";
 import {
 	collapse,
@@ -35,13 +36,17 @@ import {
 	updateSinglePostCacheAtom,
 } from "@/store/postCache";
 
-export default function PostPageScreen() {
+export default function PostPageScreen({
+	postId,
+	onBack,
+}: {
+	postId: string;
+	/** Set by PostLayer: back closes the layer (a history step). */
+	onBack?: () => void;
+}) {
   const read = useGatewayRead();
-	const params = useParams();
-	const router = useRouter();
 	const goBack = useBackWithFallback();
 	const t = useT();
-	const postId = params.id as string;
 	const { toast } = useToast();
 
 	const [postCache] = useAtom(singlePostCacheAtom);
@@ -175,63 +180,72 @@ export default function PostPageScreen() {
 	);
 
 	const fetchPostData = useCallback(async () => {
-		try {
-			const [postRes, commentsRes] = await Promise.all([
-				read(`/api/posts/${postId}`),
-				read(`/api/posts/${postId}/comments`),
-			]);
+		// The post and its replies are two independent reads, and each lands
+		// the moment it arrives. They used to wait for each other in one
+		// Promise.all, so a slow post refresh held back replies that were
+		// already here (owner 2026-09-29: "it doesn't even load the
+		// comment"). Opened from a card, the post is already on screen.
+		const postTask = read(`/api/posts/${postId}`)
+			.then((postRes) => {
+				if (postRes.success) {
+					const p = postRes.data;
 
-			if (postRes.success) {
-				const p = postRes.data;
+					// One extra request, and only for replies. The id may arrive
+					// raw or populated depending on the endpoint, so handle both.
+					const parentId =
+						p.parentPost && typeof p.parentPost === "object"
+							? p.parentPost._id
+							: p.parentPost;
+					if (parentId) {
+						void read(`/api/posts/${String(parentId)}`).then((res) => {
+							if (res.success && res.data) setParent(toPostProps(res.data));
+						});
+					} else {
+						setParent(null);
+					}
 
-				// One extra request, and only for replies. The id may arrive raw
-				// or populated depending on the endpoint, so handle both.
-				const parentId =
-					p.parentPost && typeof p.parentPost === "object"
-						? p.parentPost._id
-						: p.parentPost;
-				if (parentId) {
-					void read(`/api/posts/${String(parentId)}`).then((res) => {
-						if (res.success && res.data) setParent(toPostProps(res.data));
-					});
+					setPost(toPostProps(p, true));
+					updatePostCache({ postId: p._id, post: toPostProps(p, true) });
 				} else {
-					setParent(null);
+					toast("Post not found", { type: "error" });
 				}
+			})
+			.catch((error) => {
+				console.error("Failed to fetch post:", error);
+				toast("Failed to load post", { type: "error" });
+			})
+			.finally(() => setLoading(false));
 
-				setPost(toPostProps(p, true));
+		const commentsTask = read(`/api/posts/${postId}/comments`)
+			.then((commentsRes) => {
+				if (commentsRes.success && Array.isArray(commentsRes.data)) {
+					setComments(commentsRes.data.map((c: any) => toPostProps(c)));
+				}
+			})
+			.catch((error) => console.error("Failed to fetch replies:", error))
+			.finally(() => setCommentsLoaded(true));
 
-				// Update Cache
-				updatePostCache({ postId: p._id, post: toPostProps(p, true) });
-			} else {
-				toast("Post not found", { type: "error" });
-			}
+		await Promise.all([postTask, commentsTask]);
+	}, [postId, toast, updatePostCache, toPostProps, read]);
 
-			if (commentsRes.success) {
-				const mappedComments = commentsRes.data.map((c: any) =>
-					toPostProps(c),
-				);
-				setComments(mappedComments);
-			}
-		} catch (error) {
-			console.error("Failed to fetch post data:", error);
-			toast("Failed to load post", { type: "error" });
-		} finally {
-			setLoading(false);
-			setCommentsLoaded(true);
-		}
-	}, [postId, toast, updatePostCache, toPostProps]);
-
+	// Wait for Clerk: on a full page load (a shared link, a refresh) the
+	// first effect runs before the session is ready, the read has no token
+	// and never leaves the browser, and the page said "This post doesn't
+	// exist" about a post that does (2026-09-29).
+	const { isLoaded: authReady } = useAuth();
 	useEffect(() => {
-		if (postId) {
+		if (postId && authReady) {
 			fetchPostData();
 		}
-	}, [postId, fetchPostData]);
+	}, [postId, fetchPostData, authReady]);
 
 	// Arriving via the comment icon (#comments): the browser's native hash
 	// scroll fires before the async post has rendered, so it lands at the
 	// top. Scroll ourselves once the layout is real (owner 2026-09-03).
 	useEffect(() => {
-		if (loading || window.location.hash !== "#comments") return;
+		if (loading) return;
+		if (window.location.hash !== "#comments" && !takeRepliesJump(postId))
+			return;
 		const id = window.setTimeout(() => {
 			document
 				.getElementById("comments")
@@ -242,14 +256,14 @@ export default function PostPageScreen() {
 
 	if (loading) {
 		return (
-			<div className="flex flex-col min-h-dvh pb-20">
-				<header className="sticky top-0 z-sticky bg-page border-b border-hairline px-4 py-2 flex items-center gap-6">
+			<div className="flex min-h-0 flex-1 flex-col">
+				<header className="shrink-0 bg-page border-b border-hairline px-4 py-2 flex items-center gap-6">
 					<motion.button
 						{...press}
 						className="rounded-pill h-11 w-11 sm:h-9 sm:w-9 shrink-0 hover:bg-raised flex items-center justify-center transition-colors cursor-pointer text-primary"
 						type="button"
 						aria-label="Go back"
-						onClick={() => goBack("/")}
+						onClick={() => (onBack ? onBack() : goBack("/"))}
 					>
 						<ArrowLeft className="w-5 h-5" />
 					</motion.button>
@@ -257,12 +271,14 @@ export default function PostPageScreen() {
 						{t("post.title")}
 					</h1>
 				</header>
-				<div className="p-4">
-					<PostSkeleton />
-				</div>
-				<div className="p-4">
-					<PostSkeleton />
-					<PostSkeleton />
+				<div className="min-h-0 flex-1 overflow-y-auto">
+					<div className="p-4">
+						<PostSkeleton />
+					</div>
+					<div className="p-4">
+						<PostSkeleton />
+						<PostSkeleton />
+					</div>
 				</div>
 			</div>
 		);
@@ -270,12 +286,12 @@ export default function PostPageScreen() {
 
 	if (!post) {
 		return (
-			<div className="flex flex-col justify-center items-center min-h-[50dvh]">
+			<div className="flex min-h-0 flex-1 flex-col items-center justify-center">
 				<EmptyState
 					icon={Search}
 					title="This post doesn't exist"
 					caption="It may have been deleted, or the link is wrong."
-					action={{ label: "Go back", onClick: () => goBack("/") }}
+					action={{ label: "Go back", onClick: () => (onBack ? onBack() : goBack("/")) }}
 				/>
 			</div>
 		);
@@ -295,17 +311,17 @@ export default function PostPageScreen() {
 	};
 
 	return (
-		<div
-			// The tail clears BOTH the tab bar and the reply box that docks on
-			// top of it, or the last comment hides under them.
-			className="flex flex-col min-h-full pb-[var(--ws-nav-clearance)] md:pb-0"
-		>
-			<header className="sticky top-0 z-sticky bg-page border-b border-hairline px-2 sm:px-4 py-2 flex items-center gap-2 sm:gap-6">
+		// Header, the thread's own scroller, the reply box: a column, so the
+		// box sits at the bottom however short the thread is (owner
+		// 2026-09-29: "it hangs at the top"). The phone tab bar is hidden on
+		// a post, so only the home indicator is cleared.
+		<div className="flex min-h-0 flex-1 flex-col">
+			<header className="shrink-0 bg-page border-b border-hairline px-2 sm:px-4 py-2 flex items-center gap-2 sm:gap-6">
 				<motion.button
 					{...press}
 					className="rounded-pill h-11 w-11 sm:h-9 sm:w-9 shrink-0 hover:bg-raised flex items-center justify-center transition-colors cursor-pointer text-primary"
 					type="button"
-					onClick={() => goBack("/")}
+					onClick={() => (onBack ? onBack() : goBack("/"))}
 				>
 					<ArrowLeft className="w-5 h-5" />
 				</motion.button>
@@ -314,6 +330,7 @@ export default function PostPageScreen() {
 				</h1>
 			</header>
 
+			<div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
 			{/* Thread ancestry: the post being replied to sits above the focused
 			    one, joined by a vertical rule so the two read as one thread
 			    rather than two unrelated cards. Muted, because the reply is
@@ -414,16 +431,19 @@ export default function PostPageScreen() {
 				</AnimatePresence>
 			</div>
 
-			{/* The reply box is pinned to the foot of the column (owner
-			    2026-09-28): always in reach, the thread scrolling above it. */}
+			</div>
+
+			{/* The reply box is the foot of the column (owner 2026-09-28):
+			    always in reach, the thread scrolling above it. */}
+			<div className="shrink-0 border-t border-hairline bg-page pb-[var(--ws-safe-bottom)]">
 			<CommentComposer
 				postId={postId}
-				pinned
 				target={replyTarget}
 				onClearTarget={() => setReplyTarget(null)}
 				onCommentStart={handleCommentStart}
 				onCommentSuccess={handleCommentSuccess}
 			/>
+			</div>
 		</div>
 	);
 }
