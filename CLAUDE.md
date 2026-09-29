@@ -22,7 +22,7 @@ npm is what's currently installed — pick one and stick with it.
 ## Stack
 
 - **Next.js 16.1.6** + React 19.2 + TypeScript, Turbopack dev
-- **Clerk** (`@clerk/nextjs`) — auth, satellite of the `worldstreetgold.com` hub
+- **Clerk** (`@clerk/nextjs`) — auth on the `worldstreetgold.com` hub's instance. NOT a satellite since 2026-09-29: a production satellite handshakes on every page load, which was the redirect loop; this is a subdomain of the hub's domain, so it shares the session directly. Sign-in and sign-up URLs are the hub's (`proxy.ts`, `ClerkProvider`)
 - **Jotai** — client state (`src/store/*.atom.ts`)
 - **Ably** — realtime messaging
 - **LiveKit** (`livekit-client`) — WebRTC audio/video for DM calls
