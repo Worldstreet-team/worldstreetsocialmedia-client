@@ -253,6 +253,17 @@ Non-obvious rules the spec enforces, all of which this page now follows:
 - **Hit targets are ≥40×40** even when the glyph is 15px — the action-row icons
   are 15px inside 40px flex-centered targets. Don't shrink the target to match
   the glyph.
+- **Anything that loads shows its shape while it loads** (owner 2026-09-29:
+  "the comments don't show loading skeleton ... is this something we'll
+  keep going back and forth on"). A list in flight renders skeleton rows
+  shaped like its real rows (same avatar, lines and action row, so the real
+  rows land where the placeholders were), as many as we already know to
+  expect (a post's reply count, capped at 4), and never a blank space. No
+  empty state until the answer is in ("No comments yet" under a post with
+  replies was the failure case), and a failed read says so with a retry,
+  never an empty state. Replies: `ReplySkeleton` in
+  `components/feed/PostSkeleton.tsx`; the post page and the "View N
+  replies" fold both use it.
 - **Never block pinch-zoom.** `viewport` in `layout.tsx` deliberately omits
   `maximumScale`/`userScalable`; the spec calls this repo out by name for having
   had `user-scalable=no`.

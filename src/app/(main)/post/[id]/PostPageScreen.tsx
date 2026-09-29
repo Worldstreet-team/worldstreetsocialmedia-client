@@ -14,7 +14,7 @@ import {
 	CommentComposer,
 	type ReplyTarget,
 } from "@/components/feed/CommentComposer";
-import { PostSkeleton } from "@/components/feed/PostSkeleton";
+import { PostSkeleton, ReplySkeleton } from "@/components/feed/PostSkeleton";
 import { ArrowLeft, Search } from "@/components/ui/icons";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { mapApiPost } from "@/lib/post-mapper";
@@ -156,6 +156,9 @@ export default function PostPageScreen({
 	// "No comments yet" waits for the answer. Said while the request is in
 	// flight, it would rise in only to be cut by the replies.
 	const [commentsLoaded, setCommentsLoaded] = useState(false);
+	// A failed read of the replies is said out loud with a retry. It used to
+	// land on "No comments yet" under a post that has replies.
+	const [commentsFailed, setCommentsFailed] = useState(false);
 	// The parent's wrapper clips only while its height is moving: PostCard's
 	// menus hang outside the card, and a standing clip would cut them.
 	const [settledParentId, setSettledParentId] = useState<string | null>(null);
@@ -178,6 +181,23 @@ export default function PostPageScreen({
 		(p: any, isDetail = false): PostProps => ({ ...mapApiPost(p), isDetail }),
 		[],
 	);
+
+	const loadComments = useCallback(async () => {
+		setCommentsFailed(false);
+		try {
+			const commentsRes = await read(`/api/posts/${postId}/comments`);
+			if (commentsRes.success && Array.isArray(commentsRes.data)) {
+				setComments(commentsRes.data.map((c: any) => toPostProps(c)));
+			} else {
+				setCommentsFailed(true);
+			}
+		} catch (error) {
+			console.error("Failed to fetch replies:", error);
+			setCommentsFailed(true);
+		} finally {
+			setCommentsLoaded(true);
+		}
+	}, [postId, read, toPostProps]);
 
 	const fetchPostData = useCallback(async () => {
 		// The post and its replies are two independent reads, and each lands
@@ -216,17 +236,8 @@ export default function PostPageScreen({
 			})
 			.finally(() => setLoading(false));
 
-		const commentsTask = read(`/api/posts/${postId}/comments`)
-			.then((commentsRes) => {
-				if (commentsRes.success && Array.isArray(commentsRes.data)) {
-					setComments(commentsRes.data.map((c: any) => toPostProps(c)));
-				}
-			})
-			.catch((error) => console.error("Failed to fetch replies:", error))
-			.finally(() => setCommentsLoaded(true));
-
-		await Promise.all([postTask, commentsTask]);
-	}, [postId, toast, updatePostCache, toPostProps, read]);
+		await Promise.all([postTask, loadComments()]);
+	}, [postId, toast, updatePostCache, toPostProps, read, loadComments]);
 
 	// Wait for Clerk: on a full page load (a shared link, a refresh) the
 	// first effect runs before the session is ready, the read has no token
@@ -301,6 +312,10 @@ export default function PostPageScreen({
 		if (repliedTo === postId) setIsAddingComment(true);
 	};
 
+	const expectedReplies = post.stats.replies ?? 0;
+	const repliesPending =
+		!commentsLoaded && !commentsFailed && comments.length === 0 && expectedReplies > 0;
+
 	const handleCommentSuccess = async (repliedTo: string) => {
 		if (repliedTo !== postId) {
 			setLanded((prev) => ({ id: repliedTo, n: (prev?.n ?? 0) + 1 }));
@@ -370,15 +385,17 @@ export default function PostPageScreen({
 							{...collapse}
 							className="overflow-hidden"
 						>
-							<PostSkeleton />
+							<ReplySkeleton />
 						</motion.div>
 					)}
 				</AnimatePresence>
 				{/* Mounted WITH its first rows, so the cascade plays once, on
 				    first load. A refetch keeps the keys and replays nothing; a
 				    reply that lands later rises alone. */}
-				{comments.length > 0 && (
+				{(comments.length > 0 || repliesPending) && (
 					// The Instagram lead line (owner pick A + C, 2026-09-28).
+					// Shown while the replies load too, with the count the card
+					// already carried, so nothing below the post jumps.
 					<div className="flex items-baseline justify-between px-4 pb-1 pt-3">
 						<h2 className="font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
 							Comments
@@ -386,6 +403,29 @@ export default function PostPageScreen({
 						<span className="font-sans text-[calc(13px*var(--ws-fs))] tabular-nums text-subtle">
 							{formatCompact(Math.max(post.stats.replies ?? 0, comments.length))}
 						</span>
+					</div>
+				)}
+				{/* The replies are loading: rows shaped like the real ones, as many
+				    as the post says it has (up to four), never a blank space
+				    (owner 2026-09-29: "the comments don't show loading skeleton").
+				    A post the card says has no replies gets no fake rows. */}
+				{repliesPending && (
+					<div role="status" aria-label="Loading replies" className="flex flex-col">
+						{Array.from({ length: Math.min(expectedReplies, 4) }, (_, i) => (
+							<ReplySkeleton key={i} i={i} />
+						))}
+					</div>
+				)}
+				{commentsFailed && comments.length === 0 && (
+					<div className="flex items-center justify-center gap-3 px-4 py-10 font-sans text-[calc(14px*var(--ws-fs))] text-muted">
+						<span>Couldn't load the replies.</span>
+						<button
+							type="button"
+							onClick={() => void loadComments()}
+							className="flex h-10 cursor-pointer items-center rounded-pill bg-primary/5 px-4 font-semibold text-primary transition-colors hover:bg-primary/10"
+						>
+							Try again
+						</button>
 					</div>
 				)}
 				{comments.length > 0 && (
@@ -418,7 +458,7 @@ export default function PostPageScreen({
 					</motion.div>
 				)}
 				<AnimatePresence>
-					{commentsLoaded && comments.length === 0 && !isAddingComment && (
+					{commentsLoaded && !commentsFailed && comments.length === 0 && !isAddingComment && (
 						<motion.div
 							key="no-comments"
 							{...reveal(0)}
@@ -474,15 +514,19 @@ function ReplyThread({
 	const [open, setOpen] = useState(false);
 	const [items, setItems] = useState<PostProps[] | null>(null);
 	const [loading, setLoading] = useState(false);
+	const [failed, setFailed] = useState(false);
 	// Clip only while the height moves: a row's menus hang outside it.
 	const [settled, setSettled] = useState(false);
 
 	const load = useCallback(async () => {
 		setLoading(true);
+		setFailed(false);
 		const res = await read(`/api/posts/${reply.id}/comments`);
 		if (res.success) {
 			const rows = Array.isArray(res.data) ? (res.data as any[]) : [];
 			setItems(rows.map((p) => mapApiPost(p)).reverse());
+		} else {
+			setFailed(true);
 		}
 		setLoading(false);
 	}, [read, reply.id]);
@@ -516,6 +560,11 @@ function ReplyThread({
 					aria-expanded={open}
 					disabled={loading}
 					onClick={() => {
+						if (failed) {
+							setOpen(true);
+							void load();
+							return;
+						}
 						if (open) {
 							setSettled(false);
 							setOpen(false);
@@ -529,12 +578,24 @@ function ReplyThread({
 					className="-mt-1 flex h-9 cursor-pointer items-center gap-2.5 pl-16 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-muted transition-colors hover:text-primary"
 				>
 					<span aria-hidden className="h-px w-6 bg-subtle" />
-					{open
-						? loading && items === null
-							? "Loading replies"
-							: "Hide replies"
-						: `View ${formatCompact(n)} ${n === 1 ? "reply" : "replies"}`}
+					{failed
+						? "Couldn't load the replies. Try again"
+						: open
+							? "Hide replies"
+							: `View ${formatCompact(n)} ${n === 1 ? "reply" : "replies"}`}
 				</button>
+			)}
+			{/* Opening: rows shaped like the answers, where they will land. */}
+			{open && loading && items === null && (
+				<div
+					role="status"
+					aria-label="Loading replies"
+					className={nested ? undefined : "pl-12"}
+				>
+					{Array.from({ length: Math.min(n, 3) }, (_, i) => (
+						<ReplySkeleton key={i} i={i + 1} />
+					))}
+				</div>
 			)}
 			<AnimatePresence initial={false}>
 				{open && items && items.length > 0 && (

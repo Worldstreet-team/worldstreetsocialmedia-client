@@ -50,3 +50,41 @@ export const PostSkeleton = ({ hasMedia = false }: PostSkeletonProps) => {
 		</div>
 	);
 };
+
+// Varied widths so a stack of placeholders reads as different replies, not
+// one bar repeated.
+const REPLY_WIDTHS = [
+	["w-[26%]", "w-[84%]", "w-[52%]"],
+	["w-[20%]", "w-[68%]", "w-[40%]"],
+	["w-[32%]", "w-[90%]", "w-[58%]"],
+	["w-[24%]", "w-[74%]", ""],
+] as const;
+
+/**
+ * Loading placeholder for one reply row on a post page. Geometry mirrors
+ * PostCard's "reply" variant (owner pick A + C, 2026-09-28): 36px avatar,
+ * name and time on one line, the text under it, the four small actions, so
+ * the real rows land exactly where their placeholders were.
+ */
+export const ReplySkeleton = ({ i = 0 }: { i?: number }) => {
+	const [name, line1, line2] = REPLY_WIDTHS[i % REPLY_WIDTHS.length];
+	return (
+		<div aria-hidden className="flex gap-3 px-4 py-2.5">
+			<div className="skeleton size-9 shrink-0 rounded-pill" />
+			<div className="min-w-0 flex-1 pt-1">
+				<div className="mb-2.5 flex items-center gap-2">
+					<div className={`skeleton h-3 ${name} rounded-sm`} />
+					<div className="skeleton h-3 w-[8%] rounded-sm" />
+				</div>
+				<div className={`skeleton h-3 ${line1} rounded-sm`} />
+				{line2 && <div className={`skeleton mt-2 h-3 ${line2} rounded-sm`} />}
+				<div className="mt-3.5 flex items-center gap-7">
+					<div className="skeleton size-4 rounded-pill" />
+					<div className="skeleton size-4 rounded-pill" />
+					<div className="skeleton size-4 rounded-pill" />
+					<div className="skeleton size-4 rounded-pill" />
+				</div>
+			</div>
+		</div>
+	);
+};
