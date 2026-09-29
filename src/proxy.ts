@@ -37,8 +37,12 @@ const isProtectedRoute = createRouteMatcher(["/(.*)"]);
  * 2. `signInUrl` pointing at the hub's own /login, so an unauthenticated
  *    visitor is sent there rather than to Clerk's portal.
  *
- * Do NOT replace `auth.protect()` with a hand-rolled redirect to the hub: it
- * skips the satellite handshake and loops (see the call site).
+ * Keep `auth.protect()` for the signed-out redirect. (Its old justification
+ * here, that protect() runs the satellite handshake, was wrong: Clerk's
+ * middleware issues every handshake redirect BEFORE this handler runs,
+ * clerkMiddleware.js, and protect() only sends a signed-out visitor to
+ * signInUrl. The 2026-09-03 loop blamed on a hand-rolled redirect was the
+ * satellite handshake loop described at the clerkMiddleware options.)
  */
 const isLocalDev =
 	process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.startsWith("pk_test_");
@@ -63,6 +67,42 @@ const PUBLIC_ORIGIN = "https://social.worldstreetgold.com";
 function publicUrl(req: NextRequest, path?: string): URL {
 	const origin = isLocalDev ? req.nextUrl.origin : PUBLIC_ORIGIN;
 	return new URL(path ?? req.nextUrl.pathname + req.nextUrl.search, origin);
+}
+
+/**
+ * The page that breaks the satellite handshake ping-pong (see the call
+ * site). First time: hold one beat so Clerk's 2s loop counter is gone, then
+ * try again. Second time: the sync is not going to work on this visit, so
+ * say so and hand over the hub's login as a link the person clicks, never
+ * as a redirect that bounces back into the loop.
+ */
+function handshakeLoopPage(req: NextRequest, retry: number): string {
+	const again = publicUrl(req);
+	again.searchParams.set("__ws_retry", String(retry + 1));
+	const clean = publicUrl(req);
+	clean.searchParams.delete("__ws_retry");
+	const login = new URL(HUB_LOGIN_URL);
+	login.searchParams.set("redirect_url", clean.href);
+	const esc = (v: string) =>
+		v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+	const retrying = retry < 1;
+	return `<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${retrying ? "Signing you in" : "Sign in"} · WorldSpace</title>
+${retrying ? `<meta http-equiv="refresh" content="2;url=${esc(again.href)}">` : ""}
+<style>html{background:#000000;color:#FAFAF9;font:15px/1.6 -apple-system,"Public Sans",system-ui,sans-serif}
+body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:24px}
+main{max-width:360px;text-align:center}h1{font-size:18px;margin:0 0 8px}p{margin:0 0 20px;color:#A8A29E}
+a{display:inline-block;background:#EAB308;color:#0C0A09;font-weight:600;border-radius:9999px;padding:10px 20px;text-decoration:none}</style>
+</head><body><main>
+<h1>${retrying ? "Signing you in…" : "We couldn't sign you in here"}</h1>
+<p>${
+		retrying
+			? "Connecting your WorldStreet session to WorldSpace."
+			: "Your WorldStreet session didn't carry over to this device. Sign in once more and you'll come straight back."
+	}</p>
+${retrying ? "" : `<a href="${esc(login.href)}">Sign in at WorldStreet</a>`}
+</main></body></html>`;
 }
 
 /**
@@ -127,22 +167,15 @@ const withClerk = clerkMiddleware(async (auth, req) => {
 	}
 
 	if (isProtectedRoute(req)) {
-		// `auth.protect()`, NOT a hand-rolled redirect to the hub.
+		// `auth.protect()` sends a signed-out visitor to the hub's /login.
+		// The handshake that copies a hub session onto this domain is NOT
+		// done here: clerkMiddleware does it before this handler runs.
 		//
-		// The satellite handshake is the thing that copies an existing hub
-		// session onto this domain, and protect() is what performs it. A
-		// manual redirect skips it, so a signed-in visitor arrives with no
-		// session, gets sent to the hub, is bounced straight back because the
-		// hub knows them, still has no session — ERR_TOO_MANY_REDIRECTS
-		// (production, 2026-09-03).
-		//
-		// Academy and arcade CAN hand-roll it because they protect a handful
-		// of routes and the handshake lands on a public one. Here
-		// `isProtectedRoute` is /(.*) — every path — so there is nowhere for
-		// it to land and the loop is unavoidable. The satellite config passed
-		// to clerkMiddleware below is what makes protect() send genuinely
-		// signed-out people to the hub's /login instead of Clerk's hosted
-		// portal, which was the original complaint.
+		// `signInUrl` in the options below is what sends them to the hub's
+		// /login instead of Clerk's hosted portal (the 2026-09-03 complaint).
+		// Since 2026-09-29 this app is no longer a satellite (see there), and
+		// breakSignInLoop in front of the middleware caps the sign-in trips,
+		// so the two breakers below are a second line, kept as they are.
 		//
 		// One loop protect() cannot see (owner, 2026-09-11, "always unless I
 		// hard reload"): on a production satellite every session-less
@@ -242,41 +275,6 @@ const withClerk = clerkMiddleware(async (auth, req) => {
  *    header is set. JSON.stringify leaves those characters raw, so they are
  *    escaped to \uXXXX here — still valid JSON, restored intact by JSON.parse.
  */
-/**
- * The page that breaks the satellite handshake ping-pong (see the call
- * site). First time: hold one beat so Clerk's 2s loop counter is gone, then
- * try again. Second time: the sync is not going to work on this visit, so
- * say so and hand over the hub's login as a link the person clicks, never
- * as a redirect that bounces back into the loop.
- */
-function handshakeLoopPage(req: NextRequest, retry: number): string {
-	const again = publicUrl(req);
-	again.searchParams.set("__ws_retry", String(retry + 1));
-	const clean = publicUrl(req);
-	clean.searchParams.delete("__ws_retry");
-	const login = new URL(HUB_LOGIN_URL);
-	login.searchParams.set("redirect_url", clean.href);
-	const esc = (v: string) =>
-		v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
-	const retrying = retry < 1;
-	return `<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${retrying ? "Signing you in" : "Sign in"} · WorldSpace</title>
-${retrying ? `<meta http-equiv="refresh" content="2;url=${esc(again.href)}">` : ""}
-<style>html{background:#000000;color:#FAFAF9;font:15px/1.6 -apple-system,"Public Sans",system-ui,sans-serif}
-body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:24px}
-main{max-width:360px;text-align:center}h1{font-size:18px;margin:0 0 8px}p{margin:0 0 20px;color:#A8A29E}
-a{display:inline-block;background:#EAB308;color:#0C0A09;font-weight:600;border-radius:9999px;padding:10px 20px;text-decoration:none}</style>
-</head><body><main>
-<h1>${retrying ? "Signing you in…" : "We couldn't sign you in here"}</h1>
-<p>${
-		retrying
-			? "Connecting your WorldStreet session to WorldSpace."
-			: "Your WorldStreet session didn't carry over to this device. Sign in once more and you'll come straight back."
-	}</p>
-${retrying ? "" : `<a href="${esc(login.href)}">Sign in at WorldStreet</a>`}
-</main></body></html>`;
-}
 
 
 /**
@@ -463,12 +461,23 @@ function userDataHeader(profile: unknown): string {
 
 	return respond();
 },
-	// Satellite config lives in CODE, mirroring dashboard/academy/arcade.
+	// NOT a satellite (owner 2026-09-29, the loop again). Clerk runs a
+	// production satellite's handshake on EVERY document request, even with a
+	// valid session (@clerk/backend authenticateRequestWithTokenInCookie:
+	// `isSatellite && secFetchDest === "document"` -> SatelliteCookieNeeds
+	// Syncing): two extra redirects plus a server call to Clerk's API on each
+	// page load, and when that call fails or is slow Clerk simply handshakes
+	// again, braked only by a counter cookie that lives 2 seconds. On a slow
+	// connection three round trips outlast it and Chrome gives up with
+	// ERR_TOO_MANY_REDIRECTS. Satellites are for OTHER domains; this app is a
+	// subdomain of the hub's, so it already shares __client_uat and the
+	// Frontend API (clerk.worldstreetgold.com). As a plain app the handshake
+	// runs once, when there is no session here yet. signInUrl/signUpUrl keep
+	// signed-out people on the hub's own pages (the 2026-09-03 complaint was
+	// about Clerk's hosted portal, which these alone prevent).
 	isLocalDev
 		? {}
 		: {
-				domain: "worldstreetgold.com",
-				isSatellite: true,
 				signInUrl: HUB_LOGIN_URL,
 				signUpUrl: HUB_REGISTER_URL,
 			},
@@ -500,7 +509,7 @@ const HS_MARK = "__ws_hs";
  * it never sees the page. Signed-in visitors have the marker stripped in
  * the handler.
  */
-export default function proxy(req: NextRequest, evt: NextFetchEvent) {
+export default async function proxy(req: NextRequest, evt: NextFetchEvent) {
 	const dest = req.headers.get("sec-fetch-dest");
 	const isDocument =
 		req.method === "GET" &&
@@ -541,7 +550,82 @@ export default function proxy(req: NextRequest, evt: NextFetchEvent) {
 		});
 		return res;
 	}
-	return withClerk(req, evt);
+	const result = await withClerk(req, evt);
+	if (!isDocument || isLocalDev || !(result instanceof Response)) return result;
+	return breakSignInLoop(req, result);
+}
+
+/**
+ * The breaker nothing can outrun (owner 2026-09-29: "why is this showing,
+ * why are we going back and forth with this").
+ *
+ * Every earlier guard was either Clerk's `__clerk_redirect_count`, which
+ * lives 2 seconds (a slow connection's round trips outlast it, so it never
+ * reaches its limit), or keyed on the hub being the Referer, which a
+ * browser does not send when the hub bounces with a server redirect. This
+ * one counts the sign-in trips themselves: every redirect this app sends a
+ * page load on to Clerk's handshake or to the hub's login bumps a counter
+ * that lives a minute, and any page that actually renders clears it. Past
+ * MAX_AUTH_HOPS in that minute the visitor gets a page with a way out
+ * instead of another redirect, so the browser can never reach its own
+ * limit of 20 and show "redirected you too many times".
+ */
+const AUTH_HOPS = "ws_auth_hops";
+const MAX_AUTH_HOPS = 4;
+const CLERK_FAPI_HOST = "clerk.worldstreetgold.com";
+
+function isSignInTrip(location: string): boolean {
+	try {
+		const url = new URL(location, PUBLIC_ORIGIN);
+		return (
+			url.host === CLERK_FAPI_HOST ||
+			(url.origin === HUB_ORIGIN &&
+				(url.pathname === "/login" || url.pathname === "/register"))
+		);
+	} catch {
+		return false;
+	}
+}
+
+function breakSignInLoop(req: NextRequest, res: Response): Response {
+	const hops = Number(req.cookies.get(AUTH_HOPS)?.value) || 0;
+	const location = res.headers.get("location");
+	if (!location || !isSignInTrip(location)) {
+		// A page rendered (or an in-app redirect): the trip is over.
+		if (hops > 0) {
+			res.headers.append(
+				"Set-Cookie",
+				`${AUTH_HOPS}=; Path=/; Max-Age=0; SameSite=Lax; Secure; HttpOnly`,
+			);
+		}
+		return res;
+	}
+	if (hops >= MAX_AUTH_HOPS) {
+		console.warn("[auth] sign-in redirect loop broken", {
+			path: req.nextUrl.pathname,
+			hops,
+			to: location.split("?")[0],
+			ua: req.headers.get("user-agent"),
+			cookies: req.cookies.getAll().map((c) => c.name),
+			uat: req.cookies.get("__client_uat")?.value ?? null,
+		});
+		const page = new NextResponse(handshakeLoopPage(req, 1), {
+			status: 200,
+			headers: {
+				"content-type": "text/html; charset=utf-8",
+				"cache-control": "no-store",
+			},
+		});
+		// Cleared, so the page's own "Sign in" link gets a fresh set of
+		// trips; if those fail too, this page again, never a loop.
+		page.cookies.set(AUTH_HOPS, "", { maxAge: 0, path: "/" });
+		return page;
+	}
+	res.headers.append(
+		"Set-Cookie",
+		`${AUTH_HOPS}=${hops + 1}; Path=/; Max-Age=60; SameSite=Lax; Secure; HttpOnly`,
+	);
+	return res;
 }
 
 /** The page for a browser that keeps no cookies: no redirect, a way out. */

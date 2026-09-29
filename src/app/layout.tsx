@@ -118,10 +118,14 @@ const isLocalDev =
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.startsWith("pk_test_");
 
 /**
- * Satellite of the worldstreetgold.com hub, declared in CODE the way the
- * dashboard, academy and arcade declare it. Without it the provider builds
- * sign-in links to Clerk's hosted `*.accounts.dev` portal — a domain that is
- * not ours — instead of the hub's own login page (owner 2026-09-03).
+ * The hub's own sign-in and sign-up pages, declared in CODE. Without them
+ * the provider builds sign-in links to Clerk's hosted `*.accounts.dev`
+ * portal, a domain that is not ours (owner 2026-09-03).
+ *
+ * NOT a satellite since 2026-09-29 (see the clerkMiddleware options in
+ * proxy.ts): this app is a subdomain of the hub's domain and shares its
+ * session through the Frontend API directly; satellite mode made every
+ * page load a round trip through Clerk and was the redirect loop.
  *
  * Cast because Clerk types `domain`/`isSatellite`/`proxyUrl` as a
  * discriminated union that a conditional spread cannot narrow.
@@ -130,8 +134,6 @@ const satelliteProps = (
     isLocalDev
         ? {}
         : {
-              domain: "worldstreetgold.com",
-              isSatellite: true,
               signInUrl: "https://www.worldstreetgold.com/login",
               signUpUrl: "https://www.worldstreetgold.com/register",
               signInFallbackRedirectUrl: "https://social.worldstreetgold.com/",
