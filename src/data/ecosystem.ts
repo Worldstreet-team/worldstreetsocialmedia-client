@@ -43,7 +43,7 @@ export const ECOSYSTEM: EcosystemApp[] = [
 	},
 	{
 		title: "Xstream",
-		href: "https://xtreme.worldstreetgold.com",
+		href: "https://xtream.worldstreetgold.com",
 		description: "Live streaming",
 	},
 	{

@@ -42,7 +42,7 @@ export const XSTREAM_API_URL =
     "https://livestream-api.worldstreetgold.com";
 export const XSTREAM_WEB_URL =
     process.env.NEXT_PUBLIC_XSTREAM_WEB_URL ??
-    "https://xtreme.worldstreetgold.com";
+    "https://xtream.worldstreetgold.com";
 
 // The one 280 budget: post composer, PostCard truncation, story captions.
 export const POST_CHAR_BUDGET = 280;

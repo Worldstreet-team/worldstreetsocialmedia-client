@@ -127,12 +127,12 @@ export const moreItem: SidebarItem = {
 	link: "#", // Handled programmatically
 	icon: navIcon(SquaresFour),
 	isDropdown: true,
-	// Cross-app link set per the DS TopNav spec. "xtreme" subdomain hosts
+	// Cross-app link set per the DS TopNav spec. "xtream" subdomain hosts
 	// Xstream; Wallet/Arcade follow the same subdomain convention.
 	dropdownItems: [
 		{ title: "Dashboard", link: "https://dashboard.worldstreetgold.com" },
 		{ title: "Academy", link: "https://academy.worldstreetgold.com" },
-		{ title: "Xstream", link: "https://xtreme.worldstreetgold.com" },
+		{ title: "Xstream", link: "https://xtream.worldstreetgold.com" },
 		{ title: "Shop", link: "https://shop.worldstreetgold.com" },
 		{ title: "Wallet", link: "https://wallet.worldstreetgold.com" },
 		{ title: "Arcade", link: "https://arcade.worldstreetgold.com" },
