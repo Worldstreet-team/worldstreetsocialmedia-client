@@ -3398,6 +3398,8 @@ export const MessageBox = ({
 											<motion.p
 												key="seen"
 												{...swap}
+												// Clock time in the reader's timezone; the server's differs.
+												suppressHydrationWarning
 												className="truncate font-sans text-[calc(13px*var(--ws-fs))] leading-tight text-muted"
 											>
 												Last seen{" "}

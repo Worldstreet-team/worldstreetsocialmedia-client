@@ -124,7 +124,12 @@ function SpaceRow({ space, live }: { space: Space; live: boolean }) {
 						{t("live.badge")}
 					</span>
 				) : (
-					<span className="rounded-[4px] bg-[#fafaf9]/15 px-1.5 py-px font-sans text-[calc(9px*var(--ws-fs))] font-bold uppercase tracking-wide text-[#fafaf9]/85">
+					<span
+						// "in 12m" is counted from a different moment on the
+						// server, and the weekday is in another timezone.
+						suppressHydrationWarning
+						className="rounded-[4px] bg-[#fafaf9]/15 px-1.5 py-px font-sans text-[calc(9px*var(--ws-fs))] font-bold uppercase tracking-wide text-[#fafaf9]/85"
+					>
 						{when}
 					</span>
 				)}

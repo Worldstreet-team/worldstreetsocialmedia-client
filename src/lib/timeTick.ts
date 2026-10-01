@@ -31,7 +31,11 @@ let boundVisibility = false;
  * returning Date.now() from the getter would hand back a new number on every
  * read and spin useSyncExternalStore forever.
  */
-let stamp = 0;
+// Seeded on the client so it differs from getMinuteServer's 0: React then
+// re-renders every <TimeAgo> right after hydration, replacing the server's
+// text (a different "now", and UTC instead of the reader's timezone) at
+// once instead of at the first minute tick.
+let stamp = typeof window === "undefined" ? 0 : Date.now();
 
 function fire() {
 	stamp = Date.now();

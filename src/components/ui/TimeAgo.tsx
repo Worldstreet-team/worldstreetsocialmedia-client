@@ -28,5 +28,14 @@ export function TimeAgo({
 }) {
 	useSyncExternalStore(subscribeMinute, getMinute, getMinuteServer);
 	if (!date) return <>{fallback ?? ""}</>;
-	return <>{formatTimeAgo(date)}</>;
+	// The server and the browser format this at different moments (a post
+	// under a minute old reads in seconds) and in different timezones, so
+	// the text cannot match at hydration ("Hydration failed because the
+	// server rendered text didn't match", owner 2026-10-01). The mismatch is
+	// expected and the clock above redraws it right after hydration.
+	return (
+		<time dateTime={date} suppressHydrationWarning>
+			{formatTimeAgo(date)}
+		</time>
+	);
 }
