@@ -26,7 +26,7 @@ if(pl==="custom"){var cu=ap.custom,ks=["Primary","On","Active","Dim","Text","Glo
 for(i=0;i<2&&ok;i++)for(j=0;j<6;j++){v=cu[(i?"l":"d")+ks[j]];if(typeof v!=="string"||!(j===5?ga:hx).test(v)){ok=false;break}}
 if(ok)for(i=0;i<2;i++)for(j=0;j<6;j++)h.style.setProperty("--ws-custom-"+(i?"l":"d")+"-"+ks[j].toLowerCase(),cu[(i?"l":"d")+ks[j]]);else pl="tide"}
 if(typeof pl==="string"&&pl!=="tide"&&/^[a-z]{3,12}$/.test(pl))h.dataset.wsPalette=pl;
-var s=a.textScale;s=s==null?1.15:s==="auto"?1:Math.max(.9,Math.min(1.75,s/100));h.style.setProperty("--ws-fs-app",String(s));
+var s=a.textScale;if(s==null)s=m("(max-width: 767px), (pointer: coarse)")?"auto":115;s=s==="auto"?Math.max(.9,Math.min(1.75,Math.round((parseFloat(getComputedStyle(h).getPropertyValue("--ws-root-fs"))||16)/.16)/100)):Math.max(.9,Math.min(1.75,s/100));h.style.setProperty("--ws-fs-app",String(s));
 var ct=a.chatTextScale;h.style.setProperty("--ws-fs-chat",(ct==null||ct==="match")?"1":String(ct/100));
 var t=function(v,q){return v==="on"||((v==null||v==="auto")&&m(q))};
 if(t(a.contrast,"(prefers-contrast: more)"))h.dataset.wsContrast="more";

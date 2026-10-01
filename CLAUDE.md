@@ -154,10 +154,13 @@ Rules that bite:
   a Mac hid it; on a phone people saw their handset's font. To check a font
   is really applied, read `getComputedStyle(document.body).fontFamily` in
   the browser, never the stylesheet.
-- **Default text size is 115%** (owner 2026-09-22): `DEFAULTS.a11y.textScale`,
-  the pre-paint script's unset case and the CSS fallback `--ws-fs-app` all
-  say 1.15. "Match my device" (`auto`) and every explicit choice are
-  untouched; only someone who never chose gets the new default.
+- **Default text size: the device's own on a phone, 115% on a desktop**
+  (owner 2026-10-01: "the texts are too big, the default should be to match
+  their devices on mobile"; 115% was the 2026-09-22 default everywhere).
+  `defaultTextScale()` in preferences.ts (`PHONE_QUERY`: under 768px or a
+  coarse pointer) and the pre-paint script's unset case say the same thing;
+  the CSS fallback `--ws-fs-app` stays 1.15. Only someone who never chose
+  gets it: an explicit choice synced from the account always wins.
 
 Non-obvious rules the spec enforces, all of which this page now follows:
 

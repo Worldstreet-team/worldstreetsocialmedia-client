@@ -235,6 +235,20 @@ function customAppearance(
 }
 
 /** Anything off the wire or out of the cache becomes a whole tree. */
+/**
+ * The size someone gets before they choose one. On a phone it is their own
+ * device's text size ("auto", owner 2026-10-01: "the texts are too big, the
+ * default should be to match their devices on mobile"); on a desktop it
+ * stays 115% (owner 2026-09-22). Only the unset case: any explicit choice,
+ * synced from the account, wins. Mirrored in the pre-paint script.
+ */
+export const PHONE_QUERY = "(max-width: 767px), (pointer: coarse)";
+export function defaultTextScale(): TextScale {
+	if (typeof window !== "undefined" && window.matchMedia?.(PHONE_QUERY).matches)
+		return "auto";
+	return DEFAULTS.a11y.textScale;
+}
+
 export function normalizePrefs(raw: unknown): Preferences {
 	const p = (raw ?? {}) as Partial<Preferences>;
 	const a = (p.a11y ?? {}) as Partial<Preferences["a11y"]>;
@@ -246,7 +260,7 @@ export function normalizePrefs(raw: unknown): Preferences {
 	const nt = (p.notifications ?? {}) as Partial<Preferences["notifications"]>;
 	return {
 		a11y: {
-			textScale: oneOf(SCALES, a.textScale, DEFAULTS.a11y.textScale),
+			textScale: oneOf(SCALES, a.textScale, defaultTextScale()),
 			colorVision: oneOf(
 				["off", "deuteran", "protan", "tritan", "achroma"] as const,
 				a.colorVision,

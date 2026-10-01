@@ -23,17 +23,22 @@ export async function startConversationAction(recipientId: string) {
 			},
 		);
 
-		return response.data;
+		// The gateway answers with the conversation itself. Callers were
+		// written against two shapes (`_id` at the top, or `success` + `data`),
+		// and the second never matched, so starting a chat from the inbox's
+		// suggestions, a shared profile card or the share sheet always said
+		// "Couldn't start that chat" (owner 2026-10-01). Both shapes, here,
+		// once.
+		const conversation = response.data?.data ?? response.data;
+		return { ...conversation, success: Boolean(conversation?._id), data: conversation };
 	} catch (error: any) {
 		console.error("Error starting conversation:", error?.message || error);
 		// Forward the gateway's reason. A 403 here is a rule the person can
 		// act on (follow them back), not a generic failure, and swallowing it
 		// left the UI saying only "could not open the conversation".
-		return {
-			success: false,
-			error:
-				error?.response?.data?.message ?? "Failed to start conversation",
-		};
+		const reason =
+			error?.response?.data?.message ?? "Failed to start conversation";
+		return { success: false, error: reason, message: reason };
 	}
 }
 
