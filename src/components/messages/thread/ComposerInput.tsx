@@ -32,6 +32,11 @@ import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { press, staggerItem } from "@/lib/motion-presets";
 import { MINE_FILL, MINE_INK } from "./MessageBubble";
 
+/** A touch screen, where the on-screen keyboard and the emoji panel compete. */
+const isTouch = () =>
+	typeof window !== "undefined" &&
+	(window.matchMedia?.("(pointer: coarse)").matches ?? false);
+
 export interface MentionCandidate {
 	id: string;
 	username?: string;
@@ -198,6 +203,11 @@ export const ComposerInput = forwardRef<
 			<textarea
 				ref={inputRef}
 				value={value}
+				// On a phone the emoji panel takes the keyboard's place: tapping
+				// back into the text brings the keyboard and folds the panel.
+				onFocus={() => {
+					if (showEmoji && isTouch()) setShowEmoji(false);
+				}}
 				onChange={(e) => {
 					setValue(e.target.value);
 					refreshMention(
@@ -272,7 +282,17 @@ export const ComposerInput = forwardRef<
 				<motion.button
 					type="button"
 					{...press}
-					onClick={() => setShowEmoji((v) => !v)}
+					onClick={() => {
+						// Keyboard and panel never stack (2026-10-07 recordings): the
+						// panel opens with the keyboard put away, and closing it
+						// brings the keyboard back to the same caret.
+						const next = !showEmoji;
+						if (isTouch()) {
+							if (next) inputRef.current?.blur();
+							else inputRef.current?.focus();
+						}
+						setShowEmoji(next);
+					}}
 					aria-label="Insert emoji"
 					aria-expanded={showEmoji}
 					className={clsx(
@@ -355,7 +375,18 @@ export const ComposerInput = forwardRef<
 					width="100%"
 					height={300}
 					lazyLoadEmojis={true}
-					onEmojiClick={(e) => setValue((p) => p + e.emoji)}
+					onEmojiClick={(e) => {
+						// At the caret, which a blurred textarea still remembers,
+						// not always at the end.
+						const el = inputRef.current;
+						const start = el?.selectionStart ?? value.length;
+						const end = el?.selectionEnd ?? start;
+						setValue((p) => p.slice(0, start) + e.emoji + p.slice(end));
+						const caret = start + e.emoji.length;
+						requestAnimationFrame(() => {
+							if (el) el.setSelectionRange(caret, caret);
+						});
+					}}
 				/>
 			</motion.div>
 		)}

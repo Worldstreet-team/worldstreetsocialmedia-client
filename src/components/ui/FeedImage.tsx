@@ -30,15 +30,13 @@ export function FeedImage({
 			<img
 				src={src}
 				alt={alt}
-				// NOT lazy. Feed cards sit inside `content-visibility: auto`
-				// (`feed-cv`), and a lazy image inside a content-visibility
-				// subtree never gets its load triggered — the subtree's contents
-				// aren't rendered, so the intersection that starts the fetch never
-				// resolves. Every post image sat at 0x0 with naturalWidth 0
-				// forever, which is also why they stopped being tappable to zoom
-				// (owner, 2026-09-02). content-visibility already does the
-				// offscreen-work skipping that lazy was there for.
-				loading="eager"
+				// Lazy again since the feed cards dropped `content-visibility`
+				// (2026-10-07). Inside a content-visibility subtree a lazy image
+				// never loaded (0x0 forever, 2026-09-02), which is why this was
+				// eager; with that gone the browser fetches each image as it
+				// nears the screen, so a long feed does not download every
+				// picture up front.
+				loading="lazy"
 				decoding="async"
 				// A cached image can finish before React attaches onLoad —
 				// without this ref check it would stay invisible forever.

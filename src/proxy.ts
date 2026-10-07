@@ -70,12 +70,24 @@ function publicUrl(req: NextRequest, path?: string): URL {
 }
 
 /**
- * The page that breaks the satellite handshake ping-pong (see the call
- * site). First time: hold one beat so Clerk's 2s loop counter is gone, then
- * try again. Second time: the sync is not going to work on this visit, so
- * say so and hand over the hub's login as a link the person clicks, never
- * as a redirect that bounces back into the loop.
+ * The sign-in bridge, for when the server-side handshake could not bring
+ * the hub's session over (owner 2026-10-07: "it says connecting your
+ * worldstreet session to worldspace and nothing happens it goes back").
+ *
+ * The old page waited two seconds and asked the server to try again, which
+ * failed the same way, and its sibling cleared the shared __client_uat,
+ * which signed the hub out and bounced the person between the two. This
+ * one does the handover in the BROWSER instead: it loads Clerk's own
+ * script from the instance's Frontend API, which reads the session the hub
+ * holds through the browser's own Clerk cookies, writes this site's session
+ * cookie, and continues to the page that was asked for. Only when the
+ * browser has no session either does it offer the hub's login, as a link,
+ * never a redirect, so it cannot loop. One automatic attempt per visit
+ * (`__ws_retry`); after that, the link.
  */
+const CLERK_JS_URL =
+	"https://clerk.worldstreetgold.com/npm/@clerk/clerk-js@5/dist/clerk.browser.js";
+
 function handshakeLoopPage(req: NextRequest, retry: number): string {
 	const again = publicUrl(req);
 	again.searchParams.set("__ws_retry", String(retry + 1));
@@ -85,23 +97,37 @@ function handshakeLoopPage(req: NextRequest, retry: number): string {
 	login.searchParams.set("redirect_url", clean.href);
 	const esc = (v: string) =>
 		v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
-	const retrying = retry < 1;
+	const bridging = retry < 1 && !isLocalDev;
+	const pk = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
+	const bridge = bridging
+		? `<script>
+window.__wsBridge=function(){var C=window.Clerk;if(!C){return fail();}
+C.load().then(function(){if(!C.session){return fail();}
+return C.session.getToken().then(function(){location.replace(${JSON.stringify(again.href)});});
+}).catch(fail);};
+function fail(){document.getElementById("t").textContent="We couldn't sign you in here";
+document.getElementById("p").textContent="Your WorldStreet session didn't carry over to this browser. Sign in once more and you'll come straight back.";
+document.getElementById("a").hidden=false;}
+setTimeout(function(){if(!window.Clerk||!window.Clerk.loaded)fail();},12000);
+</script>
+<script async crossorigin="anonymous" data-clerk-publishable-key="${esc(pk)}" src="${CLERK_JS_URL}" onload="window.__wsBridge()" onerror="fail()"></script>`
+		: "";
 	return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${retrying ? "Signing you in" : "Sign in"} · WorldSpace</title>
-${retrying ? `<meta http-equiv="refresh" content="2;url=${esc(again.href)}">` : ""}
+<title>${bridging ? "Signing you in" : "Sign in"} · WorldSpace</title>
 <style>html{background:#000000;color:#FAFAF9;font:15px/1.6 -apple-system,"Public Sans",system-ui,sans-serif}
 body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:24px}
 main{max-width:360px;text-align:center}h1{font-size:18px;margin:0 0 8px}p{margin:0 0 20px;color:#A8A29E}
-a{display:inline-block;background:#EAB308;color:#0C0A09;font-weight:600;border-radius:9999px;padding:10px 20px;text-decoration:none}</style>
+a{display:inline-block;background:#FFFFFF;color:#000000;font-weight:600;border-radius:9999px;padding:10px 20px;text-decoration:none}</style>
 </head><body><main>
-<h1>${retrying ? "Signing you in…" : "We couldn't sign you in here"}</h1>
-<p>${
-		retrying
+<h1 id="t">${bridging ? "Signing you in…" : "We couldn't sign you in here"}</h1>
+<p id="p">${
+		bridging
 			? "Connecting your WorldStreet session to WorldSpace."
-			: "Your WorldStreet session didn't carry over to this device. Sign in once more and you'll come straight back."
+			: "Your WorldStreet session didn't carry over to this browser. Sign in once more and you'll come straight back."
 	}</p>
-${retrying ? "" : `<a href="${esc(login.href)}">Sign in at WorldStreet</a>`}
+<a id="a" href="${esc(login.href)}"${bridging ? " hidden" : ""}>Sign in at WorldStreet</a>
+${bridge}
 </main></body></html>`;
 }
 
@@ -160,9 +186,14 @@ const withClerk = clerkMiddleware(async (auth, req) => {
 	// The cookie-less loop guard below rides a marker through the handshake;
 	// once a session exists the marker has done its job. One redirect to the
 	// clean URL, so it never lingers in the address bar or a shared link.
-	if (userId && req.nextUrl.searchParams.has(HS_MARK)) {
+	if (
+		userId &&
+		(req.nextUrl.searchParams.has(HS_MARK) ||
+			req.nextUrl.searchParams.has("__ws_retry"))
+	) {
 		const clean = publicUrl(req);
 		clean.searchParams.delete(HS_MARK);
+		clean.searchParams.delete("__ws_retry");
 		return NextResponse.redirect(clean, 307);
 	}
 
@@ -234,16 +265,10 @@ const withClerk = clerkMiddleware(async (auth, req) => {
 				},
 			});
 			res.cookies.set("__clerk_redirect_count", "", { maxAge: 0, path: "/" });
-			if (fromHub) {
-				// Both copies: the shared one the hub writes and any host-only one.
-				res.cookies.set("__client_uat", "", {
-					maxAge: 0,
-					path: "/",
-					domain: "worldstreetgold.com",
-				});
-				res.cookies.set("__client_uat", "", { maxAge: 0, path: "/" });
-				res.cookies.set("__session", "", { maxAge: 0, path: "/" });
-			}
+			// The shared __client_uat is NOT cleared any more: it is the hub's
+			// sign-in too, so clearing it signed the hub out and bounced the
+			// person back and forth (2026-10-07). The bridge page does the
+			// handover in the browser instead.
 			return res;
 		}
 		await auth.protect();
@@ -609,7 +634,9 @@ function breakSignInLoop(req: NextRequest, res: Response): Response {
 			cookies: req.cookies.getAll().map((c) => c.name),
 			uat: req.cookies.get("__client_uat")?.value ?? null,
 		});
-		const page = new NextResponse(handshakeLoopPage(req, 1), {
+		// One browser-side attempt (the bridge), then the link.
+		const retry = Number(req.nextUrl.searchParams.get("__ws_retry")) || 0;
+		const page = new NextResponse(handshakeLoopPage(req, retry), {
 			status: 200,
 			headers: {
 				"content-type": "text/html; charset=utf-8",

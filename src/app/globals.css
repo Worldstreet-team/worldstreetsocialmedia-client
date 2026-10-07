@@ -1349,15 +1349,12 @@ video,
    already dissolves the art into the page, and running both crushed the
    picture to near-black. */
 
-/* CSS-native windowing for long feeds: an off-screen card skips layout and
-   paint entirely, which is most of what scrolling costs a phone. The `auto`
-   keyword in contain-intrinsic-size remembers each card's real height once
-   rendered, so scrollbar and restore positions stay honest; 420px is only
-   the first-guess placeholder. */
-.feed-cv {
-	content-visibility: auto;
-	contain-intrinsic-size: auto 420px;
-}
+/* `.feed-cv` (content-visibility: auto on every feed card) was removed
+   2026-10-07. A card it had skipped drew nothing until it was on screen, so
+   a fast fling on a phone showed black gaps where posts should be, and each
+   card that arrived at its real height instead of the 420px guess shoved
+   the feed ("the post disappears as they scroll", "gallops in the flow").
+   Images load lazily instead (FeedImage). */
 
 /* The Weekly Vote flame: a live thing in the nav, transform/opacity only.
    The global prefers-reduced-motion block stills it like everything else. */
