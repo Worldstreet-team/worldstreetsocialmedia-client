@@ -96,6 +96,14 @@ const nextConfig: NextConfig = {
 	images: {
 		remotePatterns: [
 			{
+				// The media CDN (2026-10-07): the R2 bucket on a cached custom
+				// domain. New uploads point here; older posts point at the
+				// r2.dev host below until they are rewritten, so both stay.
+				protocol: "https",
+				hostname: "cdn.worldstreetgold.com",
+				pathname: "**",
+			},
+			{
 				protocol: "https",
 				hostname: "pub-d4a7c1ef37d040829c8bb6d8b855705b.r2.dev",
 				pathname: "**",
