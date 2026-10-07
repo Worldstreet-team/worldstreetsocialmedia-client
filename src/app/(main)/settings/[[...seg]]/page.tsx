@@ -1,5 +1,6 @@
 "use client";
 
+import { mainScrollEl } from "@/lib/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAtom, useSetAtom } from "jotai";
 import { useTheme } from "next-themes";
@@ -113,7 +114,7 @@ export default function SettingsPage() {
 		setActiveGroup(GROUPS[activeId][0]?.id ?? "");
 	}, [activeId]);
 	useEffect(() => {
-		const root = document.getElementById("ws-main-scroll");
+		const root = mainScrollEl();
 		const targets = Array.from(
 			detailRef.current?.querySelectorAll<HTMLElement>("[data-group]") ?? [],
 		);
@@ -143,7 +144,7 @@ export default function SettingsPage() {
 		if (!el) return;
 		setActiveGroup(id);
 		const behavior = motionReduced() ? ("auto" as const) : ("smooth" as const);
-		const root = document.getElementById("ws-main-scroll");
+		const root = mainScrollEl();
 		const header = document.querySelector<HTMLElement>("[data-settings-header]");
 		const offset = (header?.offsetHeight ?? 0) + 10;
 		if (!root) {

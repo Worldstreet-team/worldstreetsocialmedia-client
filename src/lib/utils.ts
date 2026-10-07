@@ -111,6 +111,17 @@ export const handleSignOut = async (
  * has to target that element. Falls back to the document scroller on pages
  * that still scroll the window (messages, live).
  */
+/** The visible #ws-main-scroll element, or null on a route without one.
+ *  Never `document.getElementById("ws-main-scroll")`: it can return the
+ *  hidden, zero-height copy (see mainScroller). */
+export function mainScrollEl(): HTMLElement | null {
+	if (typeof document === "undefined") return null;
+	for (const el of document.querySelectorAll<HTMLElement>("#ws-main-scroll")) {
+		if (el.clientHeight > 0) return el;
+	}
+	return null;
+}
+
 export function mainScroller(): HTMLElement | (Window & typeof globalThis) {
 	if (typeof document === "undefined") return window;
 	// getElementById returns the FIRST match — and a hydration hiccup can

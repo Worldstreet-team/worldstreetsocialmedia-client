@@ -1,5 +1,6 @@
 "use client";
 
+import { mainScrollEl } from "@/lib/utils";
 import { useCallback, useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
@@ -136,7 +137,7 @@ export const CommentComposer = ({
 		const phone = window.matchMedia("(max-width: 767px)");
 		// The (main) column scrolls inside itself, so the window is NOT the
 		// scroller — observing against the viewport root would never fire.
-		const root = document.getElementById("ws-main-scroll");
+		const root = mainScrollEl();
 
 		let observer: IntersectionObserver | null = null;
 		const start = () => {

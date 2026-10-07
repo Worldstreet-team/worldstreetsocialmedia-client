@@ -78,12 +78,20 @@ const NOISE_FLOOR_PX = 4;
  * Reads the shared `#ws-main-scroll` container rather than the window: the
  * column scrolls inside itself, so window scroll never moves.
  */
-function useCollapseOnScrollDown() {
+function useCollapseOnScrollDown(anchor: React.RefObject<HTMLElement | null>) {
 	const [collapsed, setCollapsed] = useState(false);
 	const collapsedRef = useRef(false);
 
 	useEffect(() => {
-		const scroller = document.getElementById("ws-main-scroll");
+		// The column in THIS rail's shell. getElementById returned the first
+		// #ws-main-scroll in the document, which can be the hidden copy Next
+		// keeps of the shell (zero height, never scrolls), so the rail never
+		// heard the feed move and never folded away (owner 2026-10-07: "the
+		// scroll wasn't closing the status bar properly", reproduced on
+		// production: two scrollers, the first 0px tall).
+		const scroller =
+			anchor.current?.closest("main")?.querySelector<HTMLElement>("#ws-main-scroll") ??
+			null;
 		if (!scroller) return;
 
 		let last = scroller.scrollTop;
@@ -260,7 +268,8 @@ export function StoriesRail({ compact }: { compact?: boolean | "thumbs" } = {}) 
 	const selfCover =
 		(self?.stories.find((s) => !s.seen) ?? self?.stories[0])?.media;
 	const others = rail.filter((r) => !r.isSelf);
-	const collapsedByScroll = useCollapseOnScrollDown();
+	const wrapRef = useRef<HTMLDivElement>(null);
+	const collapsedByScroll = useCollapseOnScrollDown(wrapRef);
 	// Owner setting: the whole rail can be put away. It must COLLAPSE, never
 	// unmount - the ref'd element below is how the composer's story action
 	// finds it, and an early return makes that silently do nothing.
@@ -281,6 +290,7 @@ export function StoriesRail({ compact }: { compact?: boolean | "thumbs" } = {}) 
 		    under the reader, which at the fast tier reads as a snap. It is a
 		    page section revealing, which is exactly what the slow tier is for. */}
 		<div
+			ref={wrapRef}
 			className={clsx(
 				"grid transition-[grid-template-rows,opacity] duration-[var(--ws-motion-slow)]",
 				collapsed ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100",
