@@ -55,6 +55,7 @@ function mapPost(post: any, withOriginal: boolean): PostProps {
 		images: post.images,
 		videos: post.videos,
 		videoMeta: post.videoMeta,
+		imageMeta: Array.isArray(post.imageMeta) ? post.imageMeta : undefined,
 		videoPlays: post.videoPlays,
 		votes: post.votes ?? 0,
 		audio: post.audio?.url ? post.audio : undefined,

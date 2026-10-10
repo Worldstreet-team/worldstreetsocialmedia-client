@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle } from "@/components/ui/icons";
-import { videoMeta } from "@/lib/media-meta";
+import { imageMeta, videoMeta } from "@/lib/media-meta";
 
 import dynamic from "next/dynamic";
 
@@ -896,6 +896,18 @@ export const PostComposer = ({
 					formData.append("images", item.file);
 				}
 			});
+			// Each photo's preview blur, in upload order. The gateway measures
+			// the size itself (imageMeta, 2026-10-11); this only adds the
+			// thumbhash a feed paints before the photo arrives.
+			const photoFiles = mediaItems
+				.filter((item) => item.type !== "audio" && item.type !== "video")
+				.map((item) => item.file);
+			if (photoFiles.length > 0) {
+				const metas = await Promise.all(
+					photoFiles.map((f) => imageMeta(f).catch(() => ({}))),
+				);
+				formData.append("imageMeta", JSON.stringify(metas));
+			}
 
 			// Alt text from the editor's Alt tab. The gateway ignores unknown
 			// body fields today (post images are bare URL strings), so this is

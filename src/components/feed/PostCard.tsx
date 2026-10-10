@@ -12,6 +12,7 @@ import {
     Copy,
     Flag,
     Ban,
+    VolumeX,
     BarChart3,
     Pin,
 } from "@/components/ui/icons";
@@ -111,6 +112,7 @@ import { autoTranslateAtom, translationsAtom } from "@/store/translate.atom";
 import { TranslatePanel } from "@/components/ui/TranslatePanel";
 import ReportSheet from "@/components/safety/ReportSheet";
 import { blockUserAction } from "@/lib/user.actions";
+import { muteUserAction } from "@/lib/mute.actions";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 /**
@@ -208,6 +210,9 @@ export interface PostProps {
     videoPlays?: number;
     /** Measured at publish: sizes the frame before the clip loads. */
     videoMeta?: { width?: number; height?: number; thumbhash?: string };
+    /** Per photo, same order as `images`: its size, so the frame is held
+     *  before the photo loads (gateway, 2026-10-11). */
+    imageMeta?: { width?: number; height?: number; thumbhash?: string }[];
     /** Weekly Vote count for the open cycle. */
     votes?: number;
     /** Voice-note post: peaks are 64 ints (0-127) stored with the post. */
@@ -877,6 +882,19 @@ const PostCardBody = memo(
         [post.id, post.author.id, toast],
     );
 
+    /** Mute from the post menu: the quiet option. The post leaves this
+     *  render now; the gateway keeps their posts out of later pages. */
+    const handleMuteAuthor = useCallback(async () => {
+        setIsMenuOpen(false);
+        const res = await muteUserAction(post.author.id);
+        if (!res.success) {
+            toast(res.message ?? "Could not mute", { type: "error" });
+            return;
+        }
+        toast(`Muted @${post.author.username}. Unmute any time in Settings.`);
+        setIsDeleted(true);
+    }, [post.author.id, post.author.username, toast]);
+
     /** Block from the post menu, without leaving the feed. */
     const handleBlockAuthor = useCallback(async () => {
         const res = await blockUserAction(post.author.id);
@@ -1527,6 +1545,19 @@ const PostCardBody = memo(
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
+                                                        void handleMuteAuthor();
+                                                    }}
+                                                    className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
+                                                >
+                                                    <VolumeX className="w-4 h-4" />
+                                                    Mute @
+                                                    {post.author.username}
+                                                </motion.button>
+                                                <motion.button
+                                                    variants={staggerItem}
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
                                                         handleMenuAction(
                                                             "block",
                                                         );
@@ -1966,6 +1997,17 @@ const PostCardBody = memo(
                                 // sized by the image itself, so cover only ever
                                 // risked shaving an edge off a tall photo.
                                 imgClassName="block h-auto w-auto max-w-full max-h-[520px] object-contain cursor-zoom-in hover:opacity-95"
+                                // The final box before a byte loads, so a photo
+                                // arriving never shoves the column (Safari has no
+                                // scroll anchoring to hide it).
+                                imgStyle={
+                                    post.imageMeta?.[0]?.width && post.imageMeta[0].height
+                                        ? {
+                                              aspectRatio: `${post.imageMeta[0].width} / ${post.imageMeta[0].height}`,
+                                              width: `min(100%, ${Math.round((520 * post.imageMeta[0].width) / post.imageMeta[0].height)}px)`,
+                                          }
+                                        : undefined
+                                }
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     e.preventDefault();

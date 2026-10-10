@@ -16,12 +16,15 @@ export function FeedImage({
 	alt = "",
 	className,
 	imgClassName,
+	imgStyle,
 	onClick,
 }: {
 	src: string;
 	alt?: string;
 	className?: string;
 	imgClassName?: string;
+	/** The reserved frame, when the post knows the photo's size. */
+	imgStyle?: React.CSSProperties;
 	onClick?: (e: React.MouseEvent) => void;
 }) {
 	const [loaded, setLoaded] = useState(false);
@@ -44,6 +47,7 @@ export function FeedImage({
 					if (el?.complete && el.naturalWidth > 0) setLoaded(true);
 				}}
 				onLoad={() => setLoaded(true)}
+				style={imgStyle}
 				onClick={onClick}
 				className={clsx(
 					"transition-opacity",
