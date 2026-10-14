@@ -1217,6 +1217,44 @@ proxy.ts) before the replies even started.
 - The document can hold a second, hidden copy of MainShell; the layer
   renders only in the visible one and finds its column as a sibling.
 
+## Space Voice redesign (owner 2026-10-14)
+
+Concepts and the signed-off prototype: https://claude.ai/artifact/HEqtcB596FHduy3JhjxVKA
+(three directions) and https://claude.ai/artifact/5PeztJyq1ST5tdPnqL1UGA (The Signal,
+the pick, with the motion spec).
+
+- **No colour themes for rooms.** Every room wears the house look,
+  `public/images/spaces/house-{dark,light}.webp` (generated on Higgsfield FLUX 3; the
+  light one was re-lit from the dark one so the composition matches), through
+  `--ws-space-house` in `src/styles/spaces.css`. An uploaded `coverImage` wins; a
+  room made with a swatch `cover` before the ruling keeps its colour (owner: "keep
+  their color"). `spaceBackground()` and `SpaceArt` in SpaceCard.tsx are the one door.
+- **/voice takes the right rail too** (MainShell `fullCanvas`, like /settings):
+  Layout B, Now (the Your room bar, live cards with stage faces) beside Later (a
+  timeline with a countdown). One shared clock drives every timer: `useNow`.
+- **Setup is "The Signal".** One wire morphs per step through `SignalArt`, ONE mounted
+  driver for the whole sheet; never key or remount it per step. The engine is
+  `src/lib/morph/` (each change propagates along the wire, clock hands turn in polar,
+  live carriers at rest, paints read from probe paths so both themes blend); its eases
+  and timings are `EASE_MORPH*` and `MORPH` in motion-presets.
+- **Audience at scale**: a room goes to up to three communities (`communityIds`;
+  `community` stays as the first for older readers). The picker pages
+  `GET /api/communities/mine` 40 at a time; never load "all communities" into a list
+  (the v2 sheet read the platform's top 60 and hid most of a big joiner's).
+- **Empty states are morphing art**: `SpaceEmptyState` kinds live, upcoming, search,
+  offline. Keep one per list and change its kind, so the art morphs.
+- **The room** follows the owner's mock: fixed dark in both themes, stage faces with
+  role lines in sentence case, "In the room" paged 40 at a time with hands first, a
+  Chat | Vivid panel, a bottom bar with Space to mute. Parts live in
+  `src/components/voice/room/`. Vivid shows an honest "not taking notes" state until
+  a notes service exists; `VividPanel` takes `notes` when it does.
+- **Recaps after a space ends**, WorldMeet's model (its source is GitHub
+  Worldstreet-team/worldcall: `lib/server/recap.ts`, `lib/server/notes.ts`, `worker/`).
+  In-app plus push to everyone who attended; prefs `spaces.recaps` and
+  `spaces.sendRecap`, both on by default, in Settings → Notifications → Spaces and in
+  `SpaceVoiceSettingsSheet` (the gear on /voice). `SpaceRecapSheet` opens from the
+  notification and from `?recap=<id>` on /notifications and /voice.
+
 ## Gotchas
 
 **`--ws-fs` is derived; never write it directly** (found 2026-09-16, shipped

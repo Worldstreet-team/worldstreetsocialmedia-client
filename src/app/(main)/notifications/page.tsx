@@ -34,6 +34,7 @@ import type {
   AppNotification,
   NotificationGroup,
 } from "@/components/notifications/types";
+import { SpaceRecapDeepLink } from "@/components/voice/SpaceRecapSheet";
 
 type Filter = "all" | "mentions" | "follows" | "verified";
 
@@ -316,6 +317,10 @@ export default function NotificationsPage() {
           ))
         )}
       </div>
+
+      {/* A space recap notification links here as ?recap=<id>; the sheet
+          opens over the list and takes the parameter off when it closes. */}
+      <SpaceRecapDeepLink />
     </div>
   );
 }

@@ -24,6 +24,61 @@ export async function getCommunitiesAction() {
 	}
 }
 
+/** One of the caller's own communities, as `/communities/mine` sends it. */
+export interface MyCommunity {
+	id: string;
+	name: string;
+	slug: string;
+	avatar?: string;
+	membersCount: number;
+}
+
+/**
+ * The caller's OWN communities, searched and paged on the gateway (ranked
+ * there: starts with the text, then a word that starts with it, then
+ * anywhere). `recent` comes only with the first page of the plain list (no
+ * `q`, no `cursor`): up to six they were active in lately. Built for room
+ * setup, where the public top 60 hid most of a big joiner's communities.
+ */
+export async function getMyCommunitiesAction(
+	params: { q?: string; cursor?: string | null; limit?: number } = {},
+) {
+	const headers = await bearer();
+	if (!headers) return { success: false as const, message: "Unauthorized" };
+	try {
+		const res = await axios.get(`${BACKEND_URL}/api/communities/mine`, {
+			headers,
+			params: {
+				...(params.q ? { q: params.q } : {}),
+				...(params.cursor ? { cursor: params.cursor } : {}),
+				limit: params.limit ?? 40,
+			},
+		});
+		const shape = (c: any): MyCommunity => ({
+			id: String(c?.id ?? c?._id ?? ""),
+			name: String(c?.name ?? ""),
+			slug: String(c?.slug ?? ""),
+			...(c?.avatar ? { avatar: String(c.avatar) } : {}),
+			membersCount: Number(c?.membersCount) || 0,
+		});
+		return {
+			success: true as const,
+			communities: ((res.data?.communities ?? []) as any[]).map(shape),
+			recent: Array.isArray(res.data?.recent)
+				? (res.data.recent as any[]).map(shape)
+				: undefined,
+			nextCursor: (res.data?.nextCursor ?? null) as string | null,
+			total: Number(res.data?.total) || 0,
+		};
+	} catch (error: any) {
+		return {
+			success: false as const,
+			message:
+				error.response?.data?.message || "Couldn't load your communities",
+		};
+	}
+}
+
 /**
  * FormData rather than JSON so an avatar can ride along on the same request,
  * through the R2 path posts already use.

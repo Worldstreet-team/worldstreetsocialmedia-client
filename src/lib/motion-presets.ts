@@ -255,3 +255,46 @@ export const collapse = {
 		transition: { height: { duration: DUR.base, ease: EASE_IN_OUT }, opacity: { duration: DUR.fast } },
 	},
 } as const;
+
+/* ── morph: the one-line SVG art (src/lib/morph) ──────────────────────── */
+
+/*
+ * The morph driver writes an SVG path's `d` on requestAnimationFrame, which
+ * framer cannot do, so these are numbers for that driver, not framer props.
+ * They are the signed-off spec of "The Signal" (Space Voice setup, owner
+ * 2026-10-14): a change travels down the line like a signal down a cable.
+ */
+
+/** Travel for a morphing outline: a firm start and a long settle. */
+export const EASE_MORPH = [0.7, 0, 0.16, 1] as const;
+/** Small parts landing in a morph: about 5% overshoot. */
+export const EASE_MORPH_SETTLE = [0.62, 0, 0.22, 1.28] as const;
+/** Clock hands turning about their centre: a quick start and a small
+ *  settle past the mark, the way a real movement lands. */
+export const EASE_MORPH_TURN = [0.5, 0, 0.2, 1.08] as const;
+/** An idle beat caught mid-loop easing back to rest when a morph starts. */
+export const EASE_MORPH_HOME = [0.2, 0.8, 0.2, 1] as const;
+
+/** Morph timing in MILLISECONDS (unlike DUR): the driver runs on rAF time. */
+export const MORPH = {
+	/** How long the change takes to sweep the whole drawing, by direction:
+	 *  left to right along x, clockwise by angle (rings), centre out by
+	 *  radius (the spiral). Rings and the spiral close on a shorter sweep so
+	 *  the line never stretches thin while it coils. */
+	sweep: { x: 420, angle: 260, radius: 300 },
+	/** Each point's own trip once the sweep reaches it. */
+	point: 640,
+	/** Gap between parts in a scene with no sweep. */
+	stagger: 24,
+	/** A part folding away takes this share of `point`. */
+	foldShare: 0.8,
+	/** Arrivals fade in over this share of their trip, departures out over this. */
+	fadeIn: 0.55,
+	fadeOut: 0.45,
+	/** Reduced motion: every change is a crossfade between still scenes. */
+	crossfade: 220,
+	/** An idle beat easing home when a morph interrupts it. */
+	home: 320,
+	/** After landing, before the idle beats and live carriers start. */
+	rest: 40,
+} as const;

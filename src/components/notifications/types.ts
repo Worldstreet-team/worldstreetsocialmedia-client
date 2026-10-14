@@ -35,7 +35,9 @@ export type NotificationType =
   | "gift"
   | "moderation"
   | "message"
-  | "announcement";
+  | "announcement"
+  /** After a space you were in (or hosted) ended. Carries `space`. */
+  | "space_recap";
 
 export interface AppNotification {
   _id: string;
@@ -48,6 +50,8 @@ export interface AppNotification {
   body?: string;
   /** DM notifications: the thread to open. */
   conversation?: string;
+  /** Space recaps: the space the recap is about. */
+  space?: string;
   /** Announcements: optional headline + in-app destination. */
   title?: string;
   href?: string;
@@ -66,6 +70,7 @@ export interface NotificationGroup {
   /** Carried up for moderation notices. */
   body?: string;
   conversation?: string;
+  space?: string;
   title?: string;
   href?: string;
   /** Every member id, so tapping a group marks all of it read. */

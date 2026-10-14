@@ -18,7 +18,11 @@ import {
   UserPlus,
   type Icon,
   Megaphone,
+  Waveform,
 } from "@phosphor-icons/react";
+import { useAtomValue } from "jotai";
+import { userAtom } from "@/store/user.atom";
+import { spaceRecapHref } from "@/components/voice/space-recap-link";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { renderRichText } from "@/components/ui/RichText";
@@ -63,6 +67,8 @@ const CHIP: Record<NotificationType, { classes: string; glyph: Icon; weight: "fi
     glyph: Megaphone,
     weight: "fill",
   },
+  // After a space: the Voice glyph from the nav, on the neutral chip.
+  space_recap: { classes: "bg-raised text-primary", glyph: Waveform, weight: "fill" },
 };
 
 /** Minor units to a readable figure. Money is never "1.2". */
@@ -106,6 +112,10 @@ export function NotificationRow({
   // Server truth first; `followed` is the optimistic session override, so the
   // button still disappears the instant you press it, before any refetch.
   const alreadyFollowing = followed || Boolean(lead?.isFollowing);
+  // A space recap about your OWN room says so instead of naming you.
+  const me = useAtomValue(userAtom);
+  const ownRecap =
+    type === "space_recap" && Boolean(me?._id) && String(lead?._id) === String(me?._id);
 
   const href =
     type === "message"
@@ -114,6 +124,10 @@ export function NotificationRow({
         : "/messages"
       : type === "announcement"
         ? group.href || "#"
+        : type === "space_recap"
+          ? group.space
+            ? spaceRecapHref(group.space)
+            : "/voice"
         : // A chat @mention carries a conversation, never a post — it lands in
           // the thread it happened in (group mentions, register 136).
           type === "mention" && !post?._id && group.conversation
@@ -191,18 +205,22 @@ export function NotificationRow({
 
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="font-sans text-[calc(14.5px*var(--ws-fs))] leading-snug text-primary">
-          <span className="font-semibold">{senderName(lead)}</span>
+          <span className="font-semibold">
+            {ownRecap ? "Your space ended" : senderName(lead)}
+          </span>
           {/* No isVerified guard: UserBadges already returns null when there
               is nothing to show, so the guard only ever hid Wolf and
               developer marks from people who had not also bought a tick. */}
-          <span className="mx-0.5 inline-flex translate-y-[1px]">
-            <UserBadges
-              isVerified={lead.isVerified}
-              verification={(lead as any).verification}
-              badges={lead.badges}
-              size={12}
-            />
-          </span>
+          {!ownRecap && (
+            <span className="mx-0.5 inline-flex translate-y-[1px]">
+              <UserBadges
+                isVerified={lead.isVerified}
+                verification={(lead as any).verification}
+                badges={lead.badges}
+                size={12}
+              />
+            </span>
+          )}
           {others > 0 && (
             <span className="text-primary">
               {" "}
@@ -211,7 +229,14 @@ export function NotificationRow({
                 : t("notif.others.many").replace("{n}", formatCompact(others))}
             </span>
           )}
-          <span className="text-muted"> {t(`notif.verb.${type}`)}</span>
+          {!ownRecap && (
+            <span className="text-muted">
+              {" "}
+              {type === "space_recap"
+                ? "ended a space you listened to"
+                : t(`notif.verb.${type}`)}
+            </span>
+          )}
           {/* The figure IS the notification for a money event; a sale that
               does not say how much is a riddle. */}
           {(type === "sale" || type === "gift") && money(group.amountMinor) && (
@@ -230,7 +255,8 @@ export function NotificationRow({
         )}
         {(type === "moderation" ||
           type === "message" ||
-          type === "announcement") &&
+          type === "announcement" ||
+          type === "space_recap") &&
           group.body && (
           <span className="font-sans text-[calc(13.5px*var(--ws-fs))] leading-snug text-primary whitespace-pre-line">
             {group.body}

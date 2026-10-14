@@ -1,0 +1,30 @@
+/*
+ * Space Voice: the WorldSpace house background (owner 2026-10-14).
+ *
+ * Rooms no longer pick a colour theme. A room with an uploaded photo wears
+ * the photo, a room made before the ruling keeps its swatch, and every other
+ * room wears this: one composition, lit for night and for day, so a room's
+ * card sits in the page it is on instead of being a dark slab on paper.
+ *
+ * `spaceBackground()` (components/voice/SpaceCard.tsx) returns
+ * `var(--ws-space-house)` for that case, so a theme switch re-lights every
+ * card, the rail and the room with no re-render. The value is a whole
+ * `background` shorthand because callers spread it straight into
+ * `style={{ background }}`, exactly as they do a photo or a swatch.
+ *
+ * The selectors are `html[...]` on purpose: a bare `[data-ws-theme]` block
+ * can be folded away by the CSS optimiser, because the token file already
+ * carries that selector inside a group (see the black-theme note in
+ * CLAUDE.md). `:root` is the dark fallback for the frame before the theme
+ * attribute lands, since dark is the default mode.
+ */
+:root,
+html[data-ws-theme="platform"] {
+	--ws-space-house: url("/images/spaces/house-dark.webp") center / cover
+		no-repeat #0c0f16;
+}
+
+html[data-ws-theme="platform-light"] {
+	--ws-space-house: url("/images/spaces/house-light.webp") center / cover
+		no-repeat #f4f6f9;
+}

@@ -126,6 +126,14 @@ export interface Preferences {
 		showReposts: boolean;
 		autoLoadMore: boolean;
 	};
+	/** Space Voice (owner 2026-10-14), mirroring WorldMeet's recap switches.
+	 *  Both on by default; the gateway reads them with the same defaults. */
+	spaces: {
+		/** After a space you were in ends, get its recap. */
+		recaps: boolean;
+		/** After a space you host ends, everyone who listened gets it. */
+		sendRecap: boolean;
+	};
 }
 
 export const DEFAULTS: Preferences = {
@@ -188,6 +196,7 @@ export const DEFAULTS: Preferences = {
 		showReposts: true,
 		autoLoadMore: true,
 	},
+	spaces: { recaps: true, sendRecap: true },
 };
 
 /**
@@ -333,6 +342,16 @@ export function normalizePrefs(raw: unknown): Preferences {
 			expandLongPosts: bool(c.expandLongPosts, DEFAULTS.content.expandLongPosts),
 			showReposts: bool(c.showReposts, DEFAULTS.content.showReposts),
 			autoLoadMore: bool(c.autoLoadMore, DEFAULTS.content.autoLoadMore),
+		},
+		spaces: {
+			recaps: bool(
+				(p.spaces as { recaps?: unknown } | undefined)?.recaps,
+				DEFAULTS.spaces.recaps,
+			),
+			sendRecap: bool(
+				(p.spaces as { sendRecap?: unknown } | undefined)?.sendRecap,
+				DEFAULTS.spaces.sendRecap,
+			),
 		},
 	};
 }

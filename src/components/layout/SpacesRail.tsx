@@ -10,7 +10,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { PersonName } from "@/components/ui/PersonName";
 import { CaretLeft, CaretRight, Waveform } from "@phosphor-icons/react";
 import { SectionHead } from "@/components/layout/SectionHead";
-import { EqBars, spaceBackground } from "@/components/voice/SpaceCard";
+import { EqBars, SpaceArt } from "@/components/voice/SpaceCard";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { useAppPathname } from "@/i18n/useAppPathname";
 import { useT } from "@/i18n/client";
@@ -108,15 +108,14 @@ function SpaceRow({ space, live }: { space: Space; live: boolean }) {
 	return (
 		<Link
 			href="/voice"
-			// The card wears the canvas the host chose, so a room is
-			// recognisable by its colour before you have read the title.
-			style={{ background: spaceBackground(space as any) }}
-			className="group relative block overflow-hidden rounded-[24px] p-3.5 transition-opacity hover:opacity-95"
+			className="group relative block rounded-[24px] p-3.5 transition-opacity hover:opacity-95"
 		>
-			{/* Ink on this card is fixed light: it sits on the host's art, which
-			    does not follow the theme, so text-primary would go black on
-			    paper and vanish. */}
-			<span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0c0a09]/85 via-[#0c0a09]/35 to-[#0c0a09]/20" />
+			{/* The room's art under a veil of the theme's surface (owner
+			    2026-10-14): a photo, a legacy swatch, or the house picture,
+			    which is lit for the mode. The ink follows the theme, because
+			    the house picture does; fixed light ink went unreadable on its
+			    day version. */}
+			<SpaceArt row={space} />
 
 			<span className="relative flex items-center justify-between gap-2">
 				{live ? (
@@ -128,28 +127,28 @@ function SpaceRow({ space, live }: { space: Space; live: boolean }) {
 						// "in 12m" is counted from a different moment on the
 						// server, and the weekday is in another timezone.
 						suppressHydrationWarning
-						className="rounded-[4px] bg-[#fafaf9]/15 px-1.5 py-px font-sans text-[calc(9px*var(--ws-fs))] font-bold uppercase tracking-wide text-[#fafaf9]/85"
+						className="relative rounded-[4px] bg-primary/10 px-1.5 py-px font-sans text-[calc(9px*var(--ws-fs))] font-bold uppercase tracking-wide text-primary"
 					>
 						{when}
 					</span>
 				)}
-				{live && <EqBars className="text-[#fafaf9]" />}
+				{live && <EqBars className="text-primary" />}
 			</span>
 
-			<span className="relative mt-2 block truncate font-display text-[calc(14px*var(--ws-fs))] font-semibold leading-snug text-[#fafaf9]">
+			<span className="relative mt-2 block truncate font-display text-[calc(14px*var(--ws-fs))] font-semibold leading-snug text-primary">
 				{space.title}
 			</span>
 
 			<span className="relative mt-2 flex items-center gap-1.5">
-				<span className="relative h-5 w-5 shrink-0 overflow-hidden rounded-pill bg-[#1c1917]">
+				<span className="relative h-5 w-5 shrink-0 overflow-hidden rounded-pill bg-raised">
 					<SafeAvatar src={space.host?.avatar} />
 				</span>
 				<PersonName
 					person={space.host as any}
 					size={11}
-					className="min-w-0 font-sans text-[calc(11.5px*var(--ws-fs))] text-[#fafaf9]/80"
+					className="min-w-0 font-sans text-[calc(11.5px*var(--ws-fs))] text-muted"
 				/>
-				<span className="ml-auto shrink-0 font-sans text-[calc(11px*var(--ws-fs))] font-semibold tabular-nums text-[#fafaf9]/85">
+				<span className="ml-auto shrink-0 font-sans text-[calc(11px*var(--ws-fs))] font-semibold tabular-nums text-muted">
 					{formatCompact(count)} {live ? t("rail.spaces.listening") : t("rail.spaces.going")}
 				</span>
 			</span>

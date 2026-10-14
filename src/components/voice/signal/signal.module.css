@@ -1,0 +1,251 @@
+/*
+ * Paint and idle beats for the one-line art: SignalArt (the Space setup)
+ * and SpaceEmptyArt (the Space Voice empty states). The driver is
+ * src/lib/morph/driver.ts; it takes these hashed names through
+ * `morphClasses` in SignalArt.tsx.
+ *
+ * Every paint names all four of fill, stroke, width and dashes (never
+ * `none`), so the driver can blend any paint into any other while a part
+ * changes jobs; at rest the class IS the paint. Tokens only, through the
+ * --sg-* inks below, so light and dark (and the app palettes, which move
+ * --ws-brand-primary) all follow. Gold is never used here: brand is the
+ * brand token, live is the danger token.
+ */
+
+.art {
+  --sg-ink: var(--ws-text-primary);
+  --sg-brand: var(--ws-brand-primary);
+  --sg-live: var(--ws-status-danger);
+  --sg-card: var(--ws-bg-surface);
+  --sg-mute: color-mix(in srgb, var(--ws-text-primary) 45%, transparent);
+  --sg-soft: color-mix(in srgb, var(--ws-text-primary) 30%, transparent);
+  --sg-seat: color-mix(in srgb, var(--ws-text-primary) 46%, transparent);
+  overflow: visible;
+}
+
+/* On paper the brand cyan alone is too faint for a 2px line, so it leans a
+   little toward the ink (the prototype's brand-ink), and the greys soften. */
+html[data-ws-theme="platform-light"] .art {
+  --sg-brand: color-mix(
+    in srgb,
+    var(--ws-brand-primary) 78%,
+    var(--ws-text-primary)
+  );
+  --sg-mute: color-mix(in srgb, var(--ws-text-primary) 38%, transparent);
+  --sg-soft: color-mix(in srgb, var(--ws-text-primary) 26%, transparent);
+  --sg-seat: color-mix(in srgb, var(--ws-text-primary) 40%, transparent);
+}
+
+.path {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---- paint ---------------------------------------------------------------- */
+
+/* The wire itself. */
+.wire {
+  fill: transparent;
+  stroke: var(--sg-ink);
+  stroke-width: 2.6px;
+  stroke-dasharray: 1 0;
+}
+.wireHi {
+  fill: transparent;
+  stroke: var(--sg-brand);
+  stroke-width: 2.6px;
+  stroke-dasharray: 1 0;
+}
+.wireLive {
+  fill: transparent;
+  stroke: var(--sg-live);
+  stroke-width: 3.4px;
+  stroke-dasharray: 1 0;
+}
+/* Clock hands. */
+.wireThick {
+  fill: transparent;
+  stroke: var(--sg-ink);
+  stroke-width: 4px;
+  stroke-dasharray: 1 0;
+}
+/* The one brand accent: the end dot, your followers' seat, the clock's pin. */
+.hi {
+  fill: var(--sg-brand);
+  stroke: transparent;
+  stroke-width: 2px;
+  stroke-dasharray: 1 0;
+}
+/* A community's seat. */
+.card {
+  fill: var(--sg-card);
+  stroke: var(--sg-ink);
+  stroke-width: 2px;
+  stroke-dasharray: 1 0;
+}
+.mute {
+  fill: var(--sg-mute);
+  stroke: transparent;
+  stroke-width: 2px;
+  stroke-dasharray: 1 0;
+}
+.soft {
+  fill: transparent;
+  stroke: var(--sg-soft);
+  stroke-width: 2px;
+  stroke-dasharray: 1 0;
+}
+.liveLine {
+  fill: transparent;
+  stroke: var(--sg-live);
+  stroke-width: 2px;
+  stroke-dasharray: 1 0;
+}
+.live {
+  fill: var(--sg-live);
+  stroke: transparent;
+  stroke-width: 2px;
+  stroke-dasharray: 1 0;
+}
+/* Empty states: a seat nobody has taken yet, and the magnifier's grip. */
+.seat {
+  fill: transparent;
+  stroke: var(--sg-seat);
+  stroke-width: 2px;
+  stroke-dasharray: 3.5 4.5;
+}
+.grip {
+  fill: transparent;
+  stroke: var(--sg-ink);
+  stroke-width: 6px;
+  stroke-dasharray: 1 0;
+}
+
+/* ---- idle ----------------------------------------------------------------- */
+
+/* Beats move the wrapper <g>, never the path the driver writes. Each loop's
+   first and last frame is the resting pose, so a morph can start mid-loop
+   and the driver eases it home. */
+.beat {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.iPulse {
+  animation: sg-pulse 2.4s cubic-bezier(0.45, 0, 0.2, 1) infinite backwards;
+}
+@keyframes sg-pulse {
+  0%,
+  100% {
+    transform: none;
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+.iBlink {
+  animation: sg-blink 1.4s ease-in-out infinite backwards;
+}
+@keyframes sg-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.iBob {
+  animation: sg-bob 3.2s ease-in-out infinite backwards;
+}
+@keyframes sg-bob {
+  0%,
+  100% {
+    transform: none;
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* The ready dot at the end of a quiet line. */
+.iBreathe {
+  animation: sg-breathe 2.8s ease-in-out infinite backwards;
+}
+@keyframes sg-breathe {
+  0%,
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 0.6;
+  }
+}
+
+/* An empty clock: the pin beats once a second... */
+.iTick {
+  animation: sg-tick 1s cubic-bezier(0.45, 0, 0.2, 1) infinite backwards;
+}
+@keyframes sg-tick {
+  0%,
+  100% {
+    transform: none;
+  }
+  8% {
+    transform: scale(1.25);
+  }
+  30% {
+    transform: none;
+  }
+}
+
+/* ...and the long hand ticks a hair forward and settles back, in place. */
+.iNudge {
+  animation: sg-nudge 1s cubic-bezier(0.45, 0, 0.2, 1) infinite backwards;
+}
+@keyframes sg-nudge {
+  0%,
+  100% {
+    transform: none;
+  }
+  7% {
+    transform: rotate(5deg);
+  }
+  18% {
+    transform: rotate(-1deg);
+  }
+  30% {
+    transform: none;
+  }
+}
+
+/* The search's dashed ring turns slowly, so its dashes travel round it. */
+.iSpin {
+  animation: sg-spin 24s linear infinite backwards;
+}
+@keyframes sg-spin {
+  from {
+    transform: none;
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Off screen and in hidden tabs the beats stop (the driver sets this). */
+.art[data-paused="true"] .beat {
+  animation-play-state: paused;
+}
+
+/* The in-app Reduce motion setting. The OS query is already flattened for
+   everything by globals.css, and the driver adds no beats while either
+   trigger is on; this is the belt for a beat caught when the setting flips.
+   (Element and attribute selectors stay global in a CSS module; only .art
+   and .beat are hashed, so no :global() is needed.) */
+html[data-ws-motion="reduce"] .beat {
+  animation: none;
+}

@@ -3,15 +3,25 @@
 import { ArrowUp, ArrowsOut, Hand, Heart, Microphone, MicrophoneSlash, X } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
+import { useAtomValue } from "jotai";
+import { type CSSProperties, useState } from "react";
 
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
-import { type SpaceRow, hostName, spaceBackground, spaceListenerCount } from "@/components/voice/SpaceCard";
-import type { useSpaceAudio } from "@/hooks/useSpaceAudio";
-import type { RoomMember, useSpaceRoom } from "@/hooks/useSpaceRoom";
+import { type SpaceRow, spaceBackground } from "@/components/voice/SpaceCard";
+import { ROOM_HOUSE_NIGHT } from "@/components/voice/room/RoomBackdrop";
+import { type RoomAudio, type RoomLive, useRoomRoster } from "@/components/voice/room/roster";
+import { SpeakingRing } from "@/components/voice/room/StageSeat";
 import { useT } from "@/i18n/client";
 import { formatCompact } from "@/lib/utils";
 import { press } from "@/lib/motion-presets";
+import { userAtom } from "@/store/user.atom";
+
+/** Dark in both themes, like the room it docks: the night house picture
+ *  under the veil, and the room's light ink as the brand ink. */
+const RAIL_STYLE = {
+	"--ws-space-house": ROOM_HOUSE_NIGHT,
+	"--ws-brand-gold-text": "#eef2f6",
+} as CSSProperties;
 
 /**
  * A room docked in the third rail (owner 2026-10-12: "space voice can take
@@ -19,7 +29,9 @@ import { press } from "@/lib/motion-presets";
  * right rail parks it here instead of in the floating pill, so you keep
  * reading the feed while you listen. Everything is the live room's own
  * state, handed down by VoiceRoomHost: the audio, the guest list, the chat
- * and the reactions keep running exactly as they do on the full stage.
+ * and the reactions keep running exactly as they do on the full stage, and
+ * the stage is read by the same roster, so a seat says the same thing in
+ * both places.
  */
 export function RailRoom({
 	row,
@@ -29,31 +41,28 @@ export function RailRoom({
 	onLeave,
 }: {
 	row: SpaceRow;
-	audio: ReturnType<typeof useSpaceAudio>;
-	roomLive: ReturnType<typeof useSpaceRoom>;
+	audio: RoomAudio;
+	roomLive: RoomLive;
 	onExpand: () => void;
 	onLeave: () => void;
 }) {
 	const t = useT();
 	const [tab, setTab] = useState<"stage" | "chat">("stage");
 	const [draft, setDraft] = useState("");
-	const { members, messages, realtime, hand, toggleHand, react, sendChat, profileOf } = roomLive;
-
-	const hostId = row.host._id ? String(row.host._id) : "";
-	const cohostIds = new Set(row.cohosts ?? []);
-	const onStage = (id: string) => {
-		const p = audio.room?.getParticipantByIdentity(id);
-		return p?.permissions ? Boolean(p.permissions.canPublish) : cohostIds.has(id);
+	const { messages, hand, toggleHand, react, sendChat, profileOf } = roomLive;
+	const me = useAtomValue(userAtom);
+	const myId = me?._id ? String(me._id) : "";
+	const roster = useRoomRoster({ row, audio, live: roomLive, myId });
+	const stage = roster.stage.slice(0, 4);
+	const audience = roster.audience;
+	const hands = roster.hands;
+	const count = roster.listenerCount;
+	const canManage = Boolean(row.isHost || row.isCohost);
+	// Newer copy than the dictionaries: t() echoes the key when missing.
+	const tf = (key: string, fallback: string) => {
+		const v = t(key);
+		return v === key ? fallback : v;
 	};
-	const others = members.filter((m) => m.id !== hostId && m.username !== row.host.username);
-	const stage: (RoomMember | "host")[] = [
-		"host" as const,
-		...others.filter((m) => onStage(m.id)),
-	].slice(0, 4);
-	const audience = others.filter((m) => !onStage(m.id));
-	const hands = members.filter((m) => m.hand).length;
-	const count = realtime ? Math.max(members.length, 1) : Math.max(spaceListenerCount(row), 1);
-	const speaking = new Set(audio.speakingIds);
 
 	const send = () => {
 		if (sendChat(draft)) setDraft("");
@@ -63,14 +72,14 @@ export function RailRoom({
 		<section
 			aria-label={row.title}
 			className="ws-on-dark relative shrink-0 overflow-hidden rounded-[28px] shadow-pop"
-			style={{ background: spaceBackground(row) }}
+			style={{ ...RAIL_STYLE, background: spaceBackground(row) }}
 		>
 			{/* The room's own cover, frosted: the rail takes on its colours. */}
 			<div className="flex flex-col gap-3.5 bg-[#04060a]/80 p-4 backdrop-blur-2xl backdrop-saturate-150">
 				<div className="flex items-center gap-2">
 					<span className="flex items-center gap-1.5 rounded-pill bg-danger px-2 py-0.5 font-sans text-[calc(10.5px*var(--ws-fs))] font-bold text-white">
 						<span className="h-1.5 w-1.5 animate-pulse rounded-pill bg-white" />
-						LIVE
+						{t("live.badge")}
 					</span>
 					<span className="font-sans text-[calc(12px*var(--ws-fs))] font-semibold tabular-nums text-muted">
 						{formatCompact(count)} {t("voice.listeners")}
@@ -130,31 +139,41 @@ export function RailRoom({
 							className="flex flex-col gap-3"
 						>
 							<div className="flex justify-around">
-								{stage.map((m) => {
-									const id = m === "host" ? hostId : m.id;
-									const name = m === "host" ? hostName(row.host) : m.username;
-									const avatar = m === "host" ? row.host.avatar : m.avatar;
-									const talking = speaking.has(id);
+								{stage.map((seat) => {
+									const role = seat.speaking
+										? tf("voice.speaking", "Speaking")
+										: seat.role === "host"
+											? tf("voice.hostBadge", "Host")
+											: seat.role === "cohost"
+												? tf("voice.cohostBadge", "Co-host")
+												: seat.micOn === false
+													? tf("voice.mutedRole", "Muted")
+													: tf("voice.speaker", "Speaker");
 									return (
-										<div key={id || name} className="flex w-[72px] flex-col items-center gap-1.5">
-											<span
-												className={clsx(
-													"relative block h-14 w-14 rounded-pill p-[3px] transition-shadow",
-													talking ? "ring-2 ring-brand shadow-[0_0_0_6px_rgb(34_184_214/0.18)]" : "",
-												)}
-											>
-												<span className="block h-full w-full overflow-hidden rounded-pill bg-raised">
-													<SafeAvatar src={avatar} className="object-cover" sizes="56px" />
+										<div key={seat.id || seat.username} className="flex w-[72px] flex-col items-center gap-1.5">
+											{/* The ring stands off the face, as on the stage. */}
+											<span className="relative block h-14 w-14">
+												<SpeakingRing
+													room={audio.room}
+													identity={seat.id}
+													active={seat.speaking}
+													inset="-inset-[4px]"
+												/>
+												<span className="absolute inset-0 overflow-hidden rounded-pill bg-raised">
+													<SafeAvatar src={seat.avatar} className="object-cover" sizes="56px" eager />
 												</span>
 											</span>
 											<span className="w-full truncate text-center font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-primary">
-												{name.split(" ")[0]}
+												{seat.isMe ? tf("voice.you", "You") : seat.name.split(" ")[0]}
 											</span>
-											{m === "host" && (
-												<span className="rounded-pill bg-brand/15 px-1.5 font-sans text-[calc(10px*var(--ws-fs))] font-bold text-brand">
-													{t("voice.hostBadge")}
-												</span>
-											)}
+											<span
+												className={clsx(
+													"-mt-1 w-full truncate text-center font-sans text-[calc(10.5px*var(--ws-fs))]",
+													seat.speaking ? "font-semibold text-primary" : "text-muted",
+												)}
+											>
+												{role}
+											</span>
 										</div>
 									);
 								})}
@@ -163,8 +182,11 @@ export function RailRoom({
 								<div className="flex items-center gap-2.5 rounded-[18px] bg-primary/[0.06] px-3 py-2">
 									<span className="flex -space-x-2.5">
 										{audience.slice(0, 5).map((m) => (
-											<span key={m.id} className="block h-7 w-7 overflow-hidden rounded-pill bg-raised ring-2 ring-surface">
-												<SafeAvatar src={m.avatar} className="object-cover" sizes="28px" />
+											<span
+												key={m.id}
+												className="relative block h-7 w-7 overflow-hidden rounded-pill bg-raised ring-2 ring-surface"
+											>
+												<SafeAvatar src={m.avatar} className="object-cover" sizes="28px" eager />
 											</span>
 										))}
 									</span>
@@ -172,7 +194,7 @@ export function RailRoom({
 										{formatCompact(audience.length)} {t("voice.inTheRoom").toLowerCase()}
 									</span>
 									{hands > 0 && (
-										<span className="flex items-center gap-1 rounded-pill bg-warning/15 px-2 py-0.5 font-sans text-[calc(11.5px*var(--ws-fs))] font-bold text-warning">
+										<span className="flex items-center gap-1 rounded-pill bg-primary/[0.1] px-2 py-0.5 font-sans text-[calc(11.5px*var(--ws-fs))] font-bold tabular-nums text-primary">
 											<Hand size={11} weight="fill" />
 											{hands}
 										</span>
@@ -198,8 +220,8 @@ export function RailRoom({
 										const who = profileOf(msg.from);
 										return (
 											<div key={msg.id} className="flex gap-2">
-												<span className="block h-6 w-6 shrink-0 overflow-hidden rounded-pill bg-raised">
-													<SafeAvatar src={who?.avatar} className="object-cover" sizes="24px" />
+												<span className="relative block h-6 w-6 shrink-0 overflow-hidden rounded-pill bg-raised">
+													<SafeAvatar src={who?.avatar} className="object-cover" sizes="24px" eager />
 												</span>
 												<span className="min-w-0">
 													<span className="block font-sans text-[calc(11.5px*var(--ws-fs))] font-semibold text-muted">
@@ -228,7 +250,7 @@ export function RailRoom({
 									type="button"
 									onClick={send}
 									aria-label={t("voice.chatSend")}
-									className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-pill bg-brand text-brand-on"
+									className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-pill bg-[#eef2f6] text-[#05070a]"
 								>
 									<ArrowUp size={13} weight="bold" />
 								</button>
@@ -246,21 +268,27 @@ export function RailRoom({
 							aria-label={t("voice.micToggle")}
 							className={clsx(
 								"flex h-10 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-pill font-sans text-[calc(13px*var(--ws-fs))] font-bold transition-colors",
-								audio.muted ? "bg-primary/[0.08] text-primary" : "bg-brand text-brand-on",
+								// On air is the room's quiet off-white key, as on the stage.
+								audio.muted ? "bg-primary/[0.08] text-primary" : "bg-[#eef2f6] text-[#05070a]",
 							)}
 						>
 							{audio.muted ? <MicrophoneSlash size={15} weight="bold" /> : <Microphone size={15} weight="fill" />}
-							{audio.muted ? t("voice.mute") : t("voice.youAreLive")}
+							{audio.muted ? tf("voice.unmute", "Unmute") : tf("voice.mute", "Mute")}
 						</motion.button>
+					) : canManage ? (
+						// The host's seat with no mic yet (audio still connecting, or
+						// off on this deployment): nothing to ask for, so no control.
+						<span className="flex h-10 flex-1 items-center justify-center truncate rounded-pill bg-primary/[0.06] px-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-muted">
+							{t("voice.listenOnly")}
+						</span>
 					) : (
 						<motion.button
 							{...press}
 							type="button"
 							onClick={toggleHand}
-							aria-pressed={hand}
 							className={clsx(
 								"flex h-10 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-pill font-sans text-[calc(13px*var(--ws-fs))] font-bold transition-colors",
-								hand ? "bg-warning/20 text-warning" : "bg-brand text-brand-on",
+								hand ? "bg-[#eef2f6] text-[#05070a]" : "bg-primary/[0.1] text-primary hover:bg-primary/[0.14]",
 							)}
 						>
 							<Hand size={15} weight="fill" />

@@ -42,6 +42,12 @@ export function useSpaceAudio(spaceId: string | null, live: boolean) {
   // audio levels (the breathing ring) and live publish permissions
   // (who is on stage) without re-rendering per frame.
   const [room, setRoom] = useState<Room | null>(null);
+  // Bumped whenever anyone's mic or stage seat changes (mute, unmute, a
+  // track published or dropped, a permission flip, someone arriving or
+  // leaving). The stage reads those facts straight off `room` during
+  // render, and a LiveKit event is not a React render: without this a
+  // speaker who muted kept saying "Speaker" until something else redrew.
+  const [stageVersion, setStageVersion] = useState(0);
   // Bumping this tears the connection down and rebuilds it with a freshly
   // minted token — the recovery path for a dead connection, and the
   // fallback when a permission flip never reached this client live.
@@ -91,6 +97,7 @@ export function useSpaceAudio(spaceId: string | null, live: boolean) {
           },
         });
         roomRef.current = room;
+        const bumpStage = () => setStageVersion((n) => n + 1);
 
         // Remote audio is attached to detached elements: a room has no video
         // surface to hang them on, and the browser still needs real elements
@@ -143,10 +150,24 @@ export function useSpaceAudio(spaceId: string | null, live: boolean) {
         // the track silenced.
         room.on(RoomEvent.TrackMuted, (_pub, participant) => {
           if (cancelled || !room) return;
+          bumpStage();
           if (participant.identity === room.localParticipant.identity) {
             setMuted(true);
           }
         });
+        // Everything else that changes who is on stage or whose mic is
+        // open, for the seats' role lines. One counter, no payload: the
+        // stage reads the facts from `room` when it redraws.
+        const bumpOnly = () => {
+          if (!cancelled) bumpStage();
+        };
+        room.on(RoomEvent.TrackUnmuted, bumpOnly);
+        room.on(RoomEvent.TrackPublished, bumpOnly);
+        room.on(RoomEvent.TrackUnpublished, bumpOnly);
+        room.on(RoomEvent.LocalTrackPublished, bumpOnly);
+        room.on(RoomEvent.LocalTrackUnpublished, bumpOnly);
+        room.on(RoomEvent.ParticipantConnected, bumpOnly);
+        room.on(RoomEvent.ParticipantDisconnected, bumpOnly);
         // A mic grant/revoke flips the live connection's permission from
         // the gateway (updateParticipant). Track it so the mic button
         // appears the moment the host grants, with no rejoin.
@@ -154,6 +175,7 @@ export function useSpaceAudio(spaceId: string | null, live: boolean) {
           RoomEvent.ParticipantPermissionsChanged,
           (_prev, participant) => {
             if (cancelled || !room) return;
+            bumpStage();
             if (participant.identity === room.localParticipant.identity) {
               const can = Boolean(participant.permissions?.canPublish);
               setCanSpeak(can);
@@ -239,6 +261,7 @@ export function useSpaceAudio(spaceId: string | null, live: boolean) {
     canSpeak,
     muted,
     speakingIds,
+    stageVersion,
     toggleMute,
     ended,
     needsUnlock,

@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Microphone, MicrophoneSlash, Waveform, X } from "@phosphor-icons/react";
+import { Check, Microphone, MicrophoneSlash, X } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useEffect, useState } from "react";
@@ -18,11 +18,14 @@ import { UserBadges } from "@/components/ui/UserBadges";
 import {
   hostName,
   spaceBackground,
+  SpaceThumb,
   spaceListenerCount,
   type SpaceRow,
 } from "@/components/voice/SpaceCard";
 import SpaceRoom from "@/components/voice/SpaceRoom";
 import { RailRoom } from "@/components/voice/RailRoom";
+import { useDemoRoomLive } from "@/components/voice/room/demoRoom";
+import type { RoomLive } from "@/components/voice/room/roster";
 import { useAppPathname } from "@/i18n/useAppPathname";
 import { useT } from "@/i18n/client";
 import { useSpaceAudio } from "@/hooks/useSpaceAudio";
@@ -110,7 +113,14 @@ export default function VoiceRoomHost() {
   // Presence, chat and reactions live up here for the same reason the audio
   // does: minimizing used to remove you from the guest list (and silently
   // strand your raised hand) because SpaceRoom unmounts on minimize.
-  const roomLive = useSpaceRoom(liveSpaceId);
+  const realLive = useSpaceRoom(liveSpaceId);
+  // A `demo-` room (`/voice?demo=1`) has no channel to be present on, so a
+  // design review would only ever see an empty stage. The demo layer seeds
+  // people locally for those ids and nothing else.
+  const demoLive = useDemoRoomLive(
+    session && isDemoId(session.row.id) ? session.row : null,
+  );
+  const roomLive: RoomLive = demoLive ?? realLive;
 
   // Stage changes arrive on my own `user:` channel. The gateway flips the
   // live LiveKit permission (updateParticipant), which normally lands before
@@ -347,12 +357,11 @@ export default function VoiceRoomHost() {
                 label={tf("voice.endedTitle", "This space has ended")}
               >
                 <div className="flex flex-col items-center px-6 pb-6 pt-5 text-center">
-                  <span
-                    className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-pill"
-                    style={{ background: spaceBackground(endedRow) }}
-                  >
-                    <Waveform size={18} weight="fill" className="text-[#fafaf9]" />
-                  </span>
+                  <SpaceThumb
+                    row={endedRow}
+                    glyphSize={18}
+                    className="h-12 w-12 rounded-pill"
+                  />
                   <h2 className="mt-3 font-display text-[calc(17px*var(--ws-fs))] font-semibold leading-snug text-primary">
                     {tf("voice.endedTitle", "This space has ended")}
                   </h2>
@@ -510,7 +519,9 @@ export default function VoiceRoomHost() {
                   <span
                     // biome-ignore lint/suspicious/noArrayIndexKey: positional faces
                     key={i}
-                    className="block h-9 w-9 overflow-hidden rounded-pill bg-raised ring-2 ring-surface"
+                    // Positioned: SafeAvatar fills its nearest positioned
+                    // box, which without this was the whole pill.
+                    className="relative block h-9 w-9 overflow-hidden rounded-pill bg-raised ring-2 ring-surface"
                   >
                     <SafeAvatar src={src} />
                   </span>

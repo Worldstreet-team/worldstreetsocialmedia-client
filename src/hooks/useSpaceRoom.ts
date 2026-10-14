@@ -10,6 +10,9 @@ import { userAtom } from "@/store/user.atom";
 export interface RoomMember {
   id: string;
   username: string;
+  /** Display name, once the gateway confirmed who this is. The listener
+   *  grid shows its first word; the handle stands in until then. */
+  name?: string;
   avatar?: string;
   hand: boolean;
   isVerified?: boolean;
@@ -119,6 +122,7 @@ export function useSpaceRoom(spaceId: string | null) {
         return {
           id,
           username: known.username,
+          name: known.name || undefined,
           avatar: known.avatar,
           hand: !!data?.hand,
           isVerified: known.isVerified,

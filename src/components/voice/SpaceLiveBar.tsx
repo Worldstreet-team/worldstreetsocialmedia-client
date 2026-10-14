@@ -1,6 +1,5 @@
 "use client";
 
-import { Waveform } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useT } from "@/i18n/client";
@@ -9,7 +8,7 @@ import { formatCompact } from "@/lib/utils";
 import {
   EqBars,
   hostName,
-  spaceBackground,
+  SpaceThumb,
   spaceListenerCount,
 } from "@/components/voice/SpaceCard";
 import { spacesLiveAtom } from "@/store/spaces.atom";
@@ -48,13 +47,7 @@ export function SpaceLiveBar() {
             onClick={() => setSession({ row, minimized: false })}
             className="flex w-full items-center gap-3 border-b border-hairline px-4 py-2.5 text-left transition-colors hover:bg-raised cursor-pointer"
           >
-            <span
-              className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg"
-              style={{ background: spaceBackground(row) }}
-            >
-              <span className="absolute inset-0 bg-[#0c0a09]/35" />
-              <Waveform size={14} weight="fill" className="relative text-[#fafaf9]" />
-            </span>
+            <SpaceThumb row={row} glyphSize={14} className="h-9 w-9 rounded-lg" />
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="flex min-w-0 items-center gap-1.5">
                 <EqBars className="h-3 shrink-0 text-danger" />

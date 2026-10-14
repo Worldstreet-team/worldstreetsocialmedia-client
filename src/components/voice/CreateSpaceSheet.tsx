@@ -1,33 +1,57 @@
 "use client";
 
 import {
+  ArrowCounterClockwise,
   ArrowLeft,
-  ArrowRight,
-  Broadcast,
-  CalendarPlus,
   Check,
   FloppyDisk,
   ImageSquare,
   Microphone,
   MicrophoneSlash,
   Spinner,
-  WarningCircle as PhWarningCircle,
+  TextAlignLeft,
+  WarningCircle,
   X,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useId, useRef, useState } from "react";
-import CalendarField from "@/components/ui/CalendarField";
+import { useAtomValue } from "jotai";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import ConfirmModal from "@/components/ui/ConfirmModal";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import { useOverlayDismiss } from "@/components/ui/Overlay";
-import { VERTICALS } from "@/data/categories";
-import { useT } from "@/i18n/client";
+import { spaceBackground } from "@/components/voice/SpaceCard";
 import {
-  STORY_BACKGROUNDS,
-  storyCanvasCss,
-} from "@/lib/editor/storyBackgrounds";
-import { collapse, pop, press, swap, thumbSpring } from "@/lib/motion-presets";
+  AudienceStep,
+  type AudienceProblem,
+  type ChosenCommunity,
+} from "@/components/voice/setup/AudienceStep";
+import s from "@/components/voice/setup/setup.module.css";
+import { chip, fmt, note, soft } from "@/components/voice/setup/styles";
+import { TimingStep } from "@/components/voice/setup/TimingStep";
+import {
+  defaultWhen,
+  LEAD_MS,
+  localDate,
+  nearestSlot,
+  splitWhen,
+  whenSentence,
+} from "@/components/voice/setup/time";
+import { suggestVerticals } from "@/components/voice/setup/topics";
+import { useMicCheck } from "@/components/voice/setup/useMicCheck";
+import { useMyCommunities } from "@/components/voice/setup/useMyCommunities";
+import { SignalArt, type SignalSceneId } from "@/components/voice/signal/SignalArt";
+import { useT } from "@/i18n/client";
+import { useMotionReduced } from "@/lib/motion";
+import { collapse, DUR, EASE, MORPH, press, swap } from "@/lib/motion-presets";
 import { sendFormDirect } from "@/lib/upload-direct";
+import { userAtom } from "@/store/user.atom";
 
 /** The scheduled space being edited, when the sheet opens in edit mode. */
 export interface EditableSpace {
@@ -38,6 +62,10 @@ export interface EditableSpace {
   coverImage?: string;
   /** ISO string from the gateway. */
   scheduledFor?: string;
+  /** Its topic (a vertical id), shown read-only: the gateway can't change it. */
+  category?: string;
+  /** Who it goes to, shown read-only: fixed once a room exists. */
+  communities?: { id: string; name: string }[];
 }
 
 export interface SpacePatch {
@@ -48,21 +76,38 @@ export interface SpacePatch {
   scheduledFor?: string;
 }
 
+/** Everything a new room is made of, as the sheet hands it to the page. */
+export interface SpaceDraft {
+  title: string;
+  /** ISO instant; absent means live now. */
+  scheduledFor?: string;
+  /** Up to three, the host a member of each. */
+  communityIds: string[];
+  description?: string;
+  coverImage?: string;
+  /** A vertical id from src/data/categories.ts. */
+  category?: string;
+}
+
+/** The page's answer to a create, with the gateway's words when it refuses. */
+export interface SpaceCreateResult {
+  success: boolean;
+  message?: string;
+  code?: string;
+  communityId?: string;
+}
+
 interface CreateSpaceSheetProps {
-  communities: { id: string; name: string }[];
   busy: boolean;
   /** Present when editing an existing scheduled space rather than creating. */
   editing?: EditableSpace | null;
   onClose: () => void;
-  onCreate: (
-    title: string,
-    when?: string,
-    communityId?: string,
-    description?: string,
-    cover?: string,
-    coverImage?: string,
-    category?: string,
-  ) => void;
+  /**
+   * Make the room. Live: the page opens it and closes the sheet. Scheduled:
+   * the page leaves the sheet up, which ends on the clock with a
+   * confirmation and closes itself.
+   */
+  onCreate: (draft: SpaceDraft) => Promise<SpaceCreateResult>;
   onSave?: (patch: SpacePatch) => void;
 }
 
@@ -73,7 +118,7 @@ const MAX_COVER_BYTES = 8 * 1024 * 1024;
  * Downscale a cover before upload. The art paints a 168px card behind a
  * blur; an 8MB original buys nothing but transfer time and R2 bytes. Falls
  * back to the original whenever the canvas path fails (odd formats, iOS
- * quirks) — a full-size upload is a worse outcome than a failed one.
+ * quirks): a full-size upload is a worse outcome than a failed one.
  */
 async function downscaleCover(file: File): Promise<File> {
   try {
@@ -107,12 +152,12 @@ async function downscaleCover(file: File): Promise<File> {
 }
 
 /**
- * The gateway wants an ISO instant; CalendarField speaks local
+ * The gateway wants an ISO instant; the picker speaks local
  * "YYYY-MM-DDTHH:mm". Converting here keeps both of them honest about
  * timezone instead of passing a naive string through.
  *
  * The minute is snapped to the half hour because the picker only offers
- * :00 and :30 — an exact 12:58 matched no option and the field rendered
+ * :00 and :30. An exact 12:58 matched no option and the field rendered
  * "Pick a time" over a space that very much had one. The snapped value is
  * only ever used for display and comparison: an untouched time is never
  * written back, so nobody's room silently moves by 28 minutes.
@@ -132,121 +177,78 @@ function isoToLocalInput(iso?: string) {
   )}T${pad(rolled.getHours())}:${pad(rolled.getMinutes())}`;
 }
 
-/** Small caps label, the room's eyebrow voice. */
-const EYEBROW =
-  "font-sans text-[calc(10.5px*var(--ws-fs))] font-semibold uppercase tracking-[0.16em]";
+/** Who hears about the room, in words, with the reach when we know it. */
+function audienceLine(
+  chosen: ChosenCommunity[],
+  followers: number | undefined,
+  tense: "will" | "does",
+) {
+  const names = chosen.map((c) => c.name);
+  const who =
+    names.length === 0
+      ? "Your followers"
+      : names.length === 1
+        ? `Your followers and ${names[0]}`
+        : names.length === 2
+          ? `Your followers, ${names[0]} and ${names[1]}`
+          : `Your followers and ${names.length} communities`;
+  if (tense === "does") return `${who} hear about it.`;
+  // No follower count, no number: the names still say who.
+  if (typeof followers !== "number") return who;
+  const reach = followers + chosen.reduce((n, c) => n + (c.membersCount ?? 0), 0);
+  if (reach <= 0) return who;
+  return `${who} · about ${fmt(reach)} ${reach === 1 ? "person" : "people"} will be told`;
+}
 
-/**
- * The last step before going live (owner 2026-10-12): a real level meter
- * from the browser's own mic, so the host hears they're working before a
- * room full of people does. The stream is closed the moment the step
- * unmounts; the room opens its own connection, muted, as before.
- */
-function MicCheck() {
-  const t = useT();
-  const [levels, setLevels] = useState<number[]>(() => Array(28).fill(0));
-  const [device, setDevice] = useState("");
-  const [state, setState] = useState<"asking" | "ok" | "blocked">("asking");
-  const [heard, setHeard] = useState(false);
-  useEffect(() => {
-    let raf = 0;
-    let stream: MediaStream | null = null;
-    let ctx: AudioContext | null = null;
-    let alive = true;
-    (async () => {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        if (!alive) return;
-        setDevice(stream.getAudioTracks()[0]?.label ?? "");
-        ctx = new AudioContext();
-        const analyser = ctx.createAnalyser();
-        analyser.fftSize = 128;
-        ctx.createMediaStreamSource(stream).connect(analyser);
-        const data = new Uint8Array(analyser.frequencyBinCount);
-        setState("ok");
-        const loop = () => {
-          analyser.getByteFrequencyData(data);
-          // Mirrored about the middle, so speech reads as a waveform.
-          const half = Array.from({ length: 14 }, (_, i) => data[i + 1] / 255);
-          const bars = [...[...half].reverse(), ...half];
-          setLevels(bars);
-          if (half.some((v) => v > 0.35)) setHeard(true);
-          raf = requestAnimationFrame(loop);
-        };
-        loop();
-      } catch {
-        if (alive) setState("blocked");
-      }
-    })();
-    return () => {
-      alive = false;
-      cancelAnimationFrame(raf);
-      for (const tr of stream?.getTracks() ?? []) tr.stop();
-      void ctx?.close();
-    };
-  }, []);
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-4 rounded-[22px] bg-white/[0.05] px-5 py-6">
-        <span className="flex h-14 items-center justify-center gap-[3px]">
-          {levels.map((v, i) => (
-            <span
-              // biome-ignore lint/suspicious/noArrayIndexKey: fixed bar positions
-              key={i}
-              className={clsx(
-                "w-[4px] rounded-pill transition-[height] duration-75",
-                v > 0.08 ? "bg-[#eef2f6]" : "bg-white/15",
-              )}
-              style={{ height: `${Math.max(4, v * 56)}px` }}
-            />
-          ))}
-        </span>
-        <span
-          className={clsx(
-            "flex items-center justify-center gap-1.5 text-center font-sans text-[calc(13px*var(--ws-fs))] font-medium",
-            state === "blocked" ? "text-warning" : heard ? "text-success" : "text-muted",
-          )}
-        >
-          {state === "blocked" ? (
-            t("voice.micBlocked")
-          ) : heard ? (
-            <>
-              <Check size={14} weight="bold" />
-              {t("voice.micGood")}
-            </>
-          ) : (
-            t("voice.micSay")
-          )}
-        </span>
-      </div>
-      {device && (
-        <div>
-          <span className={clsx(EYEBROW, "block text-muted")}>{t("voice.micInput")}</span>
-          <span className="mt-2 flex min-h-12 items-center gap-2.5 rounded-[16px] bg-white/[0.07] px-4 font-sans text-[calc(13.5px*var(--ws-fs))] text-primary">
-            <Microphone size={16} weight="fill" className="shrink-0 text-muted" />
-            <span className="min-w-0 truncate">{device}</span>
-          </span>
-        </div>
-      )}
-      <div className="flex items-start gap-3 rounded-[16px] bg-white/[0.04] px-4 py-3.5">
-        <MicrophoneSlash size={16} weight="fill" className="mt-0.5 shrink-0 text-muted" />
-        <p className="font-sans text-[calc(12.5px*var(--ws-fs))] leading-relaxed text-muted">
-          {t("voice.micMutedNote")}
-        </p>
-      </div>
-    </div>
+/** The band's crop on a phone: the middle 600 of the 1000, edge to edge. */
+const PHONE_VIEWBOX = "200 0 600 260";
+const NARROW = "(max-width: 639px)";
+function useNarrow() {
+  return useSyncExternalStore(
+    (cb) => {
+      const m = window.matchMedia(NARROW);
+      m.addEventListener("change", cb);
+      return () => m.removeEventListener("change", cb);
+    },
+    () => window.matchMedia(NARROW).matches,
+    () => false,
   );
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+type Step = 1 | 2 | 3 | 4;
+type Phase = "steps" | "launching" | "scheduled";
+
 /**
- * Start or schedule a room (owner 2026-10-13, "Setup flow v2"): one dark,
- * full-screen desk over the room's own cover, blurred under the same deep
- * wash as the room itself. The form sits in a frosted panel on the left,
- * four quiet steps; on wide screens a live preview shows the card as it
- * will appear on Explore. Editing a scheduled space keeps one page.
+ * Start or schedule a room: "The Signal" (owner pick 2026-10-14, replacing
+ * setup flow v2). One line runs across the screen and morphs with every
+ * step (`SignalArt`, mounted ONCE for the whole sheet; only its props
+ * change). The question sits centred above the line, the step's controls
+ * under it, Back and Next at the foot, over the room's own picture blurred
+ * under the mode's veil.
+ *
+ *   1  Room      the title typed ON the line; a description and a cover
+ *                photo, both optional. No colour themes: a room without a
+ *                photo wears the house look. A photo becomes the ground at
+ *                once, from the device, while it uploads.
+ *   2  Audience  a topic suggested from the title, and a "To" field: your
+ *                followers plus up to three of your communities, searched
+ *                on the gateway. Each one takes a seat on the line.
+ *   3  Timing    now (the spiral) or later (the clock, its hands on the
+ *                picked time).
+ *   4  Mic       now only: the real input level drives the line.
+ *
+ * Going live: the line goes quiet, closes into the live ring, then the
+ * page makes the room and opens it. Scheduling ends on the clock with a
+ * confirmation. Editing a scheduled room is the same sheet, prefilled;
+ * its audience shows but cannot change.
+ *
+ * Follows the theme. The one blur is the ground; everything on it is a
+ * tint of the theme's ink, and the panels that open off controls are
+ * opaque surfaces.
  */
 export default function CreateSpaceSheet({
-  communities,
   busy,
   editing = null,
   onClose,
@@ -255,59 +257,155 @@ export default function CreateSpaceSheet({
 }: CreateSpaceSheetProps) {
   const t = useT();
   const isEdit = Boolean(editing);
+  const user = useAtomValue(userAtom);
+  const reduced = useMotionReduced();
+  const narrow = useNarrow();
+
+  const [step, setStep] = useState<Step>(1);
+  const [phase, setPhase] = useState<Phase>("steps");
+  const [launchScene, setLaunchScene] = useState<"quiet" | "live">("quiet");
+  const [submitError, setSubmitError] = useState("");
+  const [askClose, setAskClose] = useState(false);
+  const [panelHost, setPanelHost] = useState<HTMLDivElement | null>(null);
+
+  /* ---- 1. the room ---- */
   const [title, setTitle] = useState(editing?.title ?? "");
-  const [category, setCategory] = useState("");
   const [description, setDescription] = useState(editing?.description ?? "");
-  // A scheduled space stays scheduled while you edit it; only a new space
-  // gets to choose between starting now and booking a slot.
-  const [mode, setMode] = useState<"now" | "later">(isEdit ? "later" : "now");
-  // Snapshot of what the sheet opened with, so an untouched time can be left
-  // out of the patch entirely rather than rewritten from a rounded display.
-  const initialWhen = isoToLocalInput(editing?.scheduledFor);
-  const [when, setWhen] = useState(initialWhen);
-  const [communityId, setCommunityId] = useState("");
-  // Cover art: the story canvases double as room art, so a host picks a look
-  // instead of hunting for an image, but can bring their own.
-  const [cover, setCover] = useState(
-    editing?.cover || STORY_BACKGROUNDS[0].id,
-  );
+  const [descOpen, setDescOpen] = useState(Boolean(editing?.description));
   const [coverImage, setCoverImage] = useState(editing?.coverImage ?? "");
+  // The picked file, shown from the device at once while it uploads.
+  const [coverPreview, setCoverPreview] = useState("");
+  const [coverName, setCoverName] = useState("");
   const [uploading, setUploading] = useState(false);
   const [coverError, setCoverError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
-  // Per instance, so two sheets could never share one sliding thumb.
-  const thumbId = useId();
+  const descRef = useRef<HTMLTextAreaElement>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
+  const uploadSeq = useRef(0);
+  const objectUrls = useRef(new Set<string>());
 
-  const valid = title.trim().length >= 3 && (mode === "now" || when.length > 0);
-  // Four steps for a new space: the room, who it's for, when, and a mic
-  // check when it starts now. Editing keeps the single page.
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
-  const show = (n: 1 | 2 | 3 | 4) => (isEdit ? n === 1 || n === 3 : step === n);
-  const whenLabel = when
-    ? new Date(when).toLocaleString(undefined, { weekday: "short", hour: "2-digit", minute: "2-digit" })
-    : "";
-  const preset = STORY_BACKGROUNDS.find((b) => b.id === cover) ?? STORY_BACKGROUNDS[0];
-  const coverCss = coverImage ? `center / cover no-repeat url(${coverImage})` : storyCanvasCss(preset);
-  const vertical = VERTICALS.find((v) => v.id === category);
-  const community = communities.find((c) => c.id === communityId);
-  const steps = [
-    t("voice.stepRoom"),
-    t("voice.stepWho"),
-    t("voice.stepWhen"),
-    t("voice.micCheck"),
-  ];
-  const heads: Record<number, [string, string]> = {
-    1: [t("voice.titleLabel"), t("voice.roomSub")],
-    2: [t("voice.whoTitle"), t("voice.whoSub")],
-    3: [t("voice.whenTitle"), t("voice.whenSub")],
-    4: [t("voice.micCheck"), t("voice.micSub")],
+  /* ---- 2. the audience ---- */
+  // null: follow the title's best guess until the host picks.
+  const [topicPick, setTopicPick] = useState<string | null>(
+    isEdit ? (editing?.category ?? "") : null,
+  );
+  const [chosen, setChosen] = useState<ChosenCommunity[]>(
+    () => editing?.communities ?? [],
+  );
+  const [problem, setProblem] = useState<AudienceProblem | null>(null);
+  const search = useMyCommunities(!isEdit);
+  const suggestions = useMemo(
+    () => suggestVerticals(`${title} ${description}`),
+    [title, description],
+  );
+  const topic = topicPick ?? suggestions.matched[0] ?? "";
+
+  /* ---- 3. timing ---- */
+  // A scheduled space stays scheduled while you edit it; only a new space
+  // chooses between starting now and booking a slot.
+  const [mode, setMode] = useState<"now" | "later">(isEdit ? "later" : "now");
+  // What the sheet opened with, so an untouched time can be left out of
+  // the patch rather than rewritten from a rounded display.
+  const [initialWhen] = useState(() => isoToLocalInput(editing?.scheduledFor));
+  const [when, setWhen] = useState(() => initialWhen || defaultWhen());
+  const clockTime = splitWhen(when)[1] || "20:00";
+
+  /* ---- 4. the mic ---- */
+  const mic = useMicCheck(!isEdit && phase === "steps" && step === 4);
+
+  const titleOk = title.trim().length >= 3;
+  const total = isEdit ? 3 : mode === "now" ? 4 : 3;
+  const live = useRef(true);
+  useEffect(() => {
+    live.current = true;
+    const urls = objectUrls.current;
+    return () => {
+      live.current = false;
+      for (const u of urls) URL.revokeObjectURL(u);
+    };
+  }, []);
+
+  /* ---- the line ---- */
+  const scene: SignalSceneId =
+    phase === "launching"
+      ? launchScene
+      : phase === "scheduled"
+        ? "clock"
+        : step === 1
+          ? title.trim()
+            ? "name"
+            : "quiet"
+          : step === 2
+            ? "people"
+            : step === 3
+              ? mode === "now"
+                ? "spiral"
+                : "clock"
+              : mic.state === "listening"
+                ? "voice"
+                : mic.state === "heard"
+                  ? "heard"
+                  : "quiet";
+
+  const ground = coverPreview
+    ? `url("${coverPreview}") center / cover no-repeat`
+    : spaceBackground({ cover: editing?.cover, coverImage });
+
+  /* ---- closing ---- */
+  const dirty =
+    phase !== "scheduled" &&
+    (isEdit && editing
+      ? title !== editing.title ||
+        description !== (editing.description ?? "") ||
+        coverImage !== (editing.coverImage ?? "") ||
+        when !== initialWhen
+      : Boolean(title.trim() || description.trim() || coverImage || coverPreview || chosen.length));
+  const requestClose = () => {
+    if (phase === "launching" || busy) return;
+    if (dirty) setAskClose(true);
+    else onClose();
   };
-  const [heading, sub] = isEdit ? [t("voice.editSpace"), ""] : heads[step];
-  const connecting = busy && !isEdit && step === 4;
+  // Esc, the back gesture and the scroll lock come from the overlay
+  // grammar; it stands down while the confirm is up (that one owns Esc)
+  // and while the room is being opened.
+  useOverlayDismiss(!askClose && phase !== "launching" && !busy, requestClose);
 
-  // Esc + the body scroll lock come from the overlay grammar.
-  useOverlayDismiss(true, onClose);
+  // The app's one-key shortcuts ("n" jumps to the composer and away from
+  // this page, "/" opens search) listen on window and would fire behind
+  // the sheet whenever focus is on a chip or on nothing. Plain keys outside
+  // a text field stop at the window's capture phase while the sheet is up;
+  // Esc, arrows, Enter and chords go on as normal, and typing is never
+  // touched (stopping propagation does not stop the text going in).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key.length !== 1 || e.metaKey || e.ctrlKey || e.altKey) return;
+      const el = e.target as HTMLElement | null;
+      if (
+        el instanceof HTMLInputElement ||
+        el instanceof HTMLTextAreaElement ||
+        el?.isContentEditable
+      )
+        return;
+      e.stopPropagation();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, []);
 
+  /* ---- focus: the title on step 1, the question on every other ---- */
+  const questionRef = useRef<HTMLDivElement>(null);
+  const opened = useRef(false);
+  useEffect(() => {
+    if (phase !== "steps") {
+      questionRef.current?.focus({ preventScroll: true });
+      return;
+    }
+    if (step === 1) titleRef.current?.focus({ preventScroll: true });
+    else if (opened.current) questionRef.current?.focus({ preventScroll: true });
+    opened.current = true;
+  }, [step, phase]);
+
+  /* ---- the cover ---- */
   const pickCover = async (file: File) => {
     setCoverError("");
     if (!file.type.startsWith("image/")) {
@@ -318,93 +416,423 @@ export default function CreateSpaceSheet({
       setCoverError(t("voice.coverTooBig"));
       return;
     }
+    const seq = ++uploadSeq.current;
+    const was = { preview: coverPreview, name: coverName };
     setUploading(true);
+    const small = await downscaleCover(file);
+    if (seq !== uploadSeq.current || !live.current) return;
+    const local = URL.createObjectURL(small);
+    objectUrls.current.add(local);
+    setCoverPreview(local);
+    setCoverName(file.name);
     try {
       const form = new FormData();
-      form.append("cover", await downscaleCover(file));
+      form.append("cover", small);
       const r = await sendFormDirect("/api/spaces/cover", form);
-      const res = r.success
-        ? { success: true as const, url: (r.data as any)?.url as string }
-        : { success: false as const, url: undefined, message: r.message };
-      if (res.success && res.url) setCoverImage(res.url);
-      else setCoverError(res.message || t("voice.coverNotImage"));
+      if (seq !== uploadSeq.current || !live.current) return;
+      const url = r.success ? (r.data as { url?: string } | null)?.url : undefined;
+      if (url) {
+        setCoverImage(url);
+      } else {
+        setCoverError(r.message || t("voice.coverNotImage"));
+        setCoverPreview(was.preview);
+        setCoverName(was.name);
+      }
     } finally {
-      setUploading(false);
-      // Let the same file be re-picked after a failure.
+      if (seq === uploadSeq.current && live.current) setUploading(false);
+      // Let the same file be picked again after a failure.
       if (fileRef.current) fileRef.current.value = "";
     }
   };
+  const removeCover = () => {
+    uploadSeq.current++;
+    setUploading(false);
+    setCoverImage("");
+    setCoverPreview("");
+    setCoverName("");
+    setCoverError("");
+  };
 
-  const submit = () => {
-    if (isEdit) {
-      // Send the whole editable surface: the sheet is the source of truth
-      // for these fields while it's open, and "" is a real value for
-      // coverImage (it clears back to the preset).
-      onSave?.({
-        title: title.trim(),
-        description: description.trim(),
-        cover,
-        coverImage,
-        ...(when && when !== initialWhen
-          ? { scheduledFor: new Date(when).toISOString() }
-          : {}),
-      });
+  /* ---- moving through ---- */
+  const goto = (n: Step) => {
+    setSubmitError("");
+    setStep(n);
+  };
+
+  const draft = (scheduledFor?: string): SpaceDraft => ({
+    title: title.trim(),
+    scheduledFor,
+    communityIds: chosen.map((c) => c.id),
+    description: description.trim() || undefined,
+    coverImage: coverImage || undefined,
+    category: topic || undefined,
+  });
+
+  /** Where a refusal belongs: the audience for anything about communities. */
+  const refused = (res: SpaceCreateResult, at: Step) => {
+    const message = res.message || "Couldn't make the room. Try again.";
+    setPhase("steps");
+    if (res.code === "NOT_MEMBER" || res.code === "NO_COMMUNITY" || /communit/i.test(message)) {
+      setProblem({ message, communityId: res.communityId });
+      goto(2);
       return;
     }
-    onCreate(
-      title.trim(),
-      // ISO, not the raw local "YYYY-MM-DDTHH:mm": the gateway parses in
-      // *its* timezone, so the raw string booked the wrong instant for any
-      // non-UTC host.
-      mode === "later" && when ? new Date(when).toISOString() : undefined,
-      communityId || undefined,
-      description.trim() || undefined,
-      cover,
-      coverImage || undefined,
-      category || undefined,
-    );
+    setStep(at);
+    setSubmitError(message);
   };
 
-  // The button always says what happens next.
+  const submitting = useRef(false);
+  const goLive = async () => {
+    if (submitting.current || busy || uploading) return;
+    submitting.current = true;
+    setSubmitError("");
+    // The mic check closes as the phase leaves the steps, before the room
+    // opens its own connection.
+    setPhase("launching");
+    setLaunchScene("quiet");
+    await sleep(reduced ? MORPH.crossfade : MORPH.sweep.x + MORPH.point);
+    if (!live.current) return;
+    setLaunchScene("live");
+    await sleep(reduced ? MORPH.crossfade : MORPH.sweep.angle + MORPH.point + 240);
+    if (!live.current) return;
+    let res: SpaceCreateResult;
+    try {
+      res = await onCreate(draft());
+    } catch {
+      res = { success: false };
+    }
+    submitting.current = false;
+    // Success: the page closes the sheet and opens the room.
+    if (!res.success && live.current) refused(res, 4);
+  };
+
+  const schedule = async () => {
+    if (submitting.current || busy || uploading) return;
+    const at = localDate(when);
+    if (Number.isNaN(at.getTime()) || at.getTime() < Date.now() + LEAD_MS) {
+      // Left open past the slot: move to the next one and say so.
+      const [day, slot] = splitWhen(when);
+      const next = nearestSlot(day, slot);
+      setWhen(next ? `${day}T${next}` : defaultWhen());
+      setSubmitError("That time has passed. Check the new one and schedule again.");
+      return;
+    }
+    submitting.current = true;
+    setSubmitError("");
+    let res: SpaceCreateResult;
+    try {
+      res = await onCreate(draft(at.toISOString()));
+    } catch {
+      res = { success: false };
+    }
+    submitting.current = false;
+    if (!live.current) return;
+    if (res.success) setPhase("scheduled");
+    else refused(res, 3);
+  };
+
+  const save = () => {
+    if (!editing || busy || uploading) return;
+    onSave?.({
+      title: title.trim(),
+      description: description.trim(),
+      // "" is a real value: it takes the photo off (back to the house look,
+      // or the swatch a room made before 2026-10-14 still has).
+      coverImage,
+      ...(when && when !== initialWhen
+        ? { scheduledFor: localDate(when).toISOString() }
+        : {}),
+    });
+  };
+
   const next = () => {
-    if (isEdit) return submit();
-    if (step === 1) return setStep(2);
-    if (step === 2) return setStep(3);
-    if (step === 3 && mode === "now") return setStep(4);
-    submit();
+    if (phase === "scheduled") return onClose();
+    if (phase !== "steps") return;
+    if (!titleOk) return goto(1);
+    if (isEdit) return step < 3 ? goto((step + 1) as Step) : save();
+    if (step === 1) return goto(2);
+    if (step === 2) return goto(3);
+    if (step === 3) return mode === "now" ? goto(4) : void schedule();
+    void goLive();
   };
-  const nextLabel = isEdit
-    ? t("voice.saveChanges")
-    : step === 1
-      ? `${t("voice.next")}: ${t("voice.stepWho").toLowerCase()}`
-      : step === 2
-        ? `${t("voice.next")}: ${t("voice.stepWhen").toLowerCase()}`
-        : step === 3 && mode === "now"
-          ? `${t("voice.next")}: ${t("voice.micCheck").toLowerCase()}`
-          : step === 3
-            ? whenLabel
-              ? `${t("voice.schedule")} · ${whenLabel}`
-              : t("voice.schedule")
-            : t("voice.goLive");
-  const disabled =
-    busy ||
-    uploading ||
-    (step === 1 && !isEdit ? title.trim().length < 3 : (step >= 3 || isEdit) && !valid);
-  const hint = isEdit
-    ? ""
-    : step === 1
-      ? t("voice.onlyTitle")
-      : step === 2
-        ? t("voice.canSkip")
-        : "";
+  const back = () => {
+    if (step > 1) goto((step - 1) as Step);
+  };
 
-  const field =
-    "rounded-[16px] bg-white/[0.07] px-4 py-3.5 transition-colors focus-within:bg-white/[0.1]";
-  const chip = (on: boolean) =>
-    clsx(
-      "h-9 cursor-pointer rounded-pill px-3.5 font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors",
-      on ? "bg-[#eef2f6] text-[#05070a]" : "bg-white/[0.07] text-muted hover:text-primary",
+  /* ---- words ---- */
+  const followers =
+    typeof user?.followersCount === "number" ? user.followersCount : undefined;
+  let count: string;
+  let heading: string;
+  let sub: string;
+  if (phase === "launching") {
+    count = "Going live";
+    heading = title.trim();
+    sub = "Opening your room. Your mic starts muted.";
+  } else if (phase === "scheduled") {
+    count = "Scheduled";
+    heading = title.trim();
+    sub = `${whenSentence(when)}. The card counts down in Space Voice until you open it.`;
+  } else {
+    count = `${step} of ${total}`;
+    if (step === 1) {
+      heading = isEdit ? "Edit the room" : "What's the room about?";
+      sub = isEdit ? "Change its name, the words under it or the photo." : "Type it on the line.";
+    } else if (step === 2) {
+      heading = isEdit ? "Who it's for" : "Who should find it?";
+      sub = audienceLine(chosen, followers, isEdit ? "does" : "will");
+    } else if (step === 3) {
+      heading = isEdit ? "When it opens" : "When does it open?";
+      sub =
+        mode === "now"
+          ? "Your room opens right after a quick mic check."
+          : `${whenSentence(when)}. People can set a reminder from the card.`;
+    } else if (mic.state === "blocked") {
+      heading = "No mic yet";
+      sub = t("voice.micBlocked");
+    } else if (mic.state === "heard") {
+      heading = "We can hear you";
+      sub = "Sounds good. In the room your mic starts muted.";
+    } else if (mic.state === "listening") {
+      heading = "Say something";
+      sub = "Watch the line move with your voice. Only you can hear this.";
+    } else {
+      heading = "Check your mic";
+      sub = "Allow the microphone when your browser asks.";
+    }
+  }
+
+  const nextLabel =
+    phase === "scheduled"
+      ? "Done"
+      : isEdit
+        ? step < 3
+          ? `Next: ${step === 1 ? "audience" : "timing"}`
+          : t("voice.saveChanges")
+        : step === 1
+          ? "Next: audience"
+          : step === 2
+            ? "Next: timing"
+            : step === 3
+              ? mode === "now"
+                ? "Next: mic check"
+                : "Schedule it"
+              : t("voice.goLive");
+  const finalStep =
+    phase === "steps" && (isEdit ? step === 3 : step === 4 || (step === 3 && mode === "later"));
+  const disabled =
+    phase === "launching" ||
+    (phase === "steps" && (busy || !titleOk || (finalStep && uploading)));
+  const isGoLive = !isEdit && phase === "steps" && step === 4;
+
+  // The whole steps' content swaps as one piece; under reduced motion it
+  // is a plain fade (and the MotionConfig drops the rise anyway).
+  const stepSwap = reduced
+    ? {
+        initial: { opacity: 0 },
+        animate: { opacity: 1, transition: { duration: DUR.fast } },
+        exit: { opacity: 0, transition: { duration: DUR.fast } },
+      }
+    : swap;
+  // The name and the seats only use the band above the line, so their
+  // controls come up under it.
+  const lift = phase === "steps" && (step === 1 || step === 2);
+  const contentKey = phase === "steps" ? `s${step}` : phase;
+
+  /* ---- step 1's extras: a description and a photo, both optional ---- */
+  const roomExtras = (
+    <div className="flex flex-col items-center gap-3">
+      <AnimatePresence initial={false}>
+        {descOpen && (
+          <motion.div key="desc" {...collapse} className="w-full max-w-[560px] overflow-hidden">
+            <div className="rounded-xl bg-primary/10 px-4 pb-2 pt-3 transition-shadow focus-within:ring-2 focus-within:ring-gold">
+              <textarea
+                ref={descRef}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                maxLength={280}
+                rows={2}
+                aria-label="Description"
+                placeholder={t("voice.descriptionPlaceholder")}
+                className="block w-full resize-none bg-transparent font-sans text-base leading-relaxed text-primary caret-gold outline-none placeholder:text-subtle sm:text-[calc(14px*var(--ws-fs))]"
+              />
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDescription("");
+                    setDescOpen(false);
+                  }}
+                  className="-ml-2 flex h-10 cursor-pointer items-center px-2 font-sans text-[calc(13px*var(--ws-fs))] text-muted transition-colors hover:text-primary"
+                >
+                  Remove
+                </button>
+                <span className={clsx(note, "tabular-nums")}>{description.length} / 280</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        {!descOpen && (
+          <button
+            type="button"
+            onClick={() => {
+              setDescOpen(true);
+              requestAnimationFrame(() => descRef.current?.focus());
+            }}
+            className={soft}
+          >
+            <TextAlignLeft size={16} />
+            Add a description
+          </button>
+        )}
+        {coverPreview || coverImage ? (
+          <span className="flex flex-wrap items-center justify-center gap-2">
+            <span
+              aria-hidden
+              className="h-11 w-11 shrink-0 rounded-lg bg-cover bg-center ring-1 ring-hairline"
+              style={{ backgroundImage: `url("${coverPreview || coverImage}")` }}
+            />
+            <span className="flex max-w-[12rem] items-center gap-1.5 truncate font-sans text-[calc(13.5px*var(--ws-fs))] text-muted">
+              {uploading && <Spinner size={13} weight="bold" className="shrink-0 animate-spin" />}
+              <span className="truncate">
+                {uploading ? t("voice.coverUploading") : coverName || "Your cover photo"}
+              </span>
+            </span>
+            <button type="button" onClick={() => fileRef.current?.click()} className={chip(false)}>
+              Change
+            </button>
+            <button type="button" onClick={removeCover} className={chip(false)}>
+              Remove
+            </button>
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className={soft}
+          >
+            {uploading ? (
+              <Spinner size={16} weight="bold" className="animate-spin" />
+            ) : (
+              <ImageSquare size={16} />
+            )}
+            Add a cover photo
+          </button>
+        )}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void pickCover(file);
+          }}
+        />
+      </div>
+      {coverError ? (
+        <p role="alert" className="flex items-center gap-1.5 font-sans text-[calc(13px*var(--ws-fs))] text-danger">
+          <WarningCircle size={15} weight="fill" className="shrink-0" />
+          {coverError}
+        </p>
+      ) : (
+        !coverPreview &&
+        !coverImage && (
+          <p className={clsx(note, "text-center")}>
+            Both optional. Without a photo, the room wears the WorldSpace look.
+          </p>
+        )
+      )}
+    </div>
+  );
+
+  const micStep = (
+    <div className="flex flex-col items-center gap-3 text-center">
+      {mic.state === "heard" ? (
+        <span className="flex flex-wrap items-center justify-center gap-3">
+          <span className="flex items-center gap-1.5 font-sans text-[calc(14px*var(--ws-fs))] font-medium text-gold">
+            <Check size={15} weight="bold" />
+            {t("voice.micGood")}
+          </span>
+          <button type="button" onClick={mic.again} className={soft}>
+            <ArrowCounterClockwise size={15} weight="bold" />
+            Test again
+          </button>
+        </span>
+      ) : mic.state === "listening" ? (
+        <span className="flex items-center gap-2 font-sans text-[calc(14px*var(--ws-fs))] text-muted">
+          <span className="h-2 w-2 animate-pulse rounded-pill bg-gold" />
+          Listening
+        </span>
+      ) : mic.state === "asking" ? (
+        <span className="flex items-center gap-2 font-sans text-[calc(14px*var(--ws-fs))] text-muted">
+          <Spinner size={14} weight="bold" className="animate-spin" />
+          Waiting for the microphone
+        </span>
+      ) : null}
+      {mic.state !== "blocked" && mic.device && (
+        <p className={clsx(note, "flex max-w-full items-center gap-1.5")}>
+          <Microphone size={14} weight="fill" className="shrink-0" />
+          <span className="truncate">{mic.device}</span>
+        </p>
+      )}
+      <p className={clsx(note, "flex items-center gap-1.5")}>
+        <MicrophoneSlash size={14} weight="fill" className="shrink-0" />
+        {t("voice.micMutedNote")}
+      </p>
+    </div>
+  );
+
+  let content: React.ReactNode = null;
+  if (phase === "scheduled") {
+    content = (
+      <p className={clsx(note, "text-center")}>
+        {audienceLine(chosen, undefined, "will")} can see it now.
+      </p>
     );
+  } else if (phase === "steps") {
+    content =
+      step === 1 ? (
+        roomExtras
+      ) : step === 2 ? (
+        <AudienceStep
+          host={panelHost}
+          topic={topic}
+          topics={suggestions.shown}
+          onTopic={setTopicPick}
+          chosen={chosen}
+          onChosen={(list) => {
+            setProblem(null);
+            setChosen(list);
+          }}
+          search={search}
+          readOnly={isEdit}
+          problem={problem}
+        />
+      ) : step === 3 ? (
+        <TimingStep
+          host={panelHost}
+          mode={mode}
+          onMode={(m) => {
+            setSubmitError("");
+            setMode(m);
+          }}
+          value={when}
+          onChange={(v) => {
+            setSubmitError("");
+            setWhen(v);
+          }}
+          canGoNow={!isEdit}
+        />
+      ) : (
+        micStep
+      );
+  }
+
+  const showTitle = phase === "steps" && step === 1;
 
   return (
     <ConfirmModalPortal>
@@ -413,487 +841,235 @@ export default function CreateSpaceSheet({
         aria-modal="true"
         aria-label={isEdit ? t("voice.editSpace") : t("voice.create")}
         initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        animate={{ opacity: 1, transition: { duration: reduced ? 0 : DUR.base, ease: EASE } }}
         exit={{ opacity: 0 }}
-        className="ws-on-dark fixed inset-0 z-modal flex flex-col overflow-hidden bg-[#05070a]"
+        className="fixed inset-0 z-modal isolate flex flex-col overflow-hidden bg-page text-primary"
       >
-        {/* The room's own cover, blurred under the room's deep wash: the
-            same dark blur as the live room and its collapsed bar. */}
-        <div aria-hidden className="pointer-events-none absolute inset-0">
-          <div
-            className="absolute -inset-24 scale-110 blur-[90px] transition-[background] duration-500"
-            style={{ background: coverCss }}
-          />
-          <div className="absolute inset-0 bg-[#04060a]/85" />
+        {/* The room's picture, blurred deep under the mode's veil: the one
+            blur on this screen. A new photo crossfades in. */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+          <AnimatePresence initial={false}>
+            <motion.div
+              key={ground}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1, transition: { duration: reduced ? 0 : DUR.travel, ease: EASE } }}
+              exit={{ opacity: 0, transition: { duration: reduced ? 0 : DUR.travel } }}
+              className={s.ground}
+              style={{ background: ground }}
+            />
+          </AnimatePresence>
+          <div className={s.veil} />
         </div>
 
-        <header className="relative flex h-14 shrink-0 items-center gap-2 px-5 sm:px-7">
-          <span className={clsx(EYEBROW, "text-muted")}>{t("voice.eyebrow")}</span>
-          <span className="text-subtle">·</span>
-          <span className={clsx(EYEBROW, "text-primary")}>
-            {connecting ? t("voice.goingLive") : isEdit ? t("voice.editSpace") : t("voice.create")}
-          </span>
-          <span className="flex-1" />
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t("common.close")}
-            className="flex h-9 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[calc(13px*var(--ws-fs))] text-muted transition-colors hover:text-primary"
-          >
-            <X size={14} weight="bold" className="sm:hidden" />
-            <span className="hidden sm:inline">{t("common.cancel")}</span>
-          </button>
+        <header className="relative shrink-0 pt-[var(--ws-safe-top)]">
+          <div className="flex h-14 items-center gap-2 px-4 sm:h-[60px] sm:px-7">
+            <span className="hidden font-sans text-[calc(13px*var(--ws-fs))] text-subtle sm:inline">
+              {t("voice.eyebrow")}
+            </span>
+            <span aria-hidden className="hidden font-sans text-[calc(13px*var(--ws-fs))] text-subtle sm:inline">
+              /
+            </span>
+            <span className="font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
+              {isEdit ? t("voice.editSpace") : t("voice.create")}
+            </span>
+            <span className="flex-1" />
+            {phase !== "launching" && (
+              <button
+                type="button"
+                onClick={phase === "scheduled" ? onClose : requestClose}
+                aria-label={t("common.close")}
+                className="-mr-2 flex h-10 min-w-10 cursor-pointer items-center justify-center gap-1.5 rounded-pill px-2 font-sans text-[calc(13.5px*var(--ws-fs))] text-muted transition-colors hover:text-primary"
+              >
+                <X size={16} weight="bold" className="sm:hidden" />
+                <span className="hidden sm:inline">
+                  {phase === "scheduled" ? t("common.close") : t("common.cancel")}
+                </span>
+              </button>
+            )}
+          </div>
         </header>
 
-        {connecting ? (
-          <div className="relative flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
-            <span className="relative flex h-32 w-32 items-center justify-center">
-              <span className="absolute inset-0 animate-ping rounded-pill bg-white/[0.06]" />
-              <span className="absolute inset-3 rounded-pill bg-white/[0.06]" />
-              <span
-                className="relative h-20 w-20 overflow-hidden rounded-pill"
-                style={{ background: coverCss }}
-              />
-            </span>
-            <div>
-              {(community || vertical) && (
-                <span className={clsx(EYEBROW, "block text-muted")}>
-                  {[community?.name, vertical?.label].filter(Boolean).join("  ·  ")}
-                </span>
+        <main
+          className={clsx(
+            s.stage,
+            "relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto overflow-x-hidden overscroll-contain",
+          )}
+        >
+          <div aria-hidden className="h-[clamp(4px,3dvh,40px)] shrink-0" />
+
+          {/* The question. A fixed height that grows upward, so the line
+              below never moves when a subtitle wraps. */}
+          <div
+            ref={questionRef}
+            tabIndex={-1}
+            className="flex h-[118px] w-full max-w-[900px] shrink-0 flex-col items-center justify-end gap-1.5 px-5 text-center outline-none sm:h-[140px] sm:gap-2.5"
+          >
+            <span
+              className={clsx(
+                "font-mono text-[calc(13px*var(--ws-fs))] tabular-nums",
+                phase === "launching" ? "text-danger" : phase === "scheduled" ? "text-gold" : "text-subtle",
               )}
-              <h2 className="mt-3 font-display text-[calc(30px*var(--ws-fs))] font-medium tracking-[-0.01em] text-primary">
-                {t("voice.openingRoom")}
-              </h2>
-              <p className="mx-auto mt-2 max-w-md font-sans text-[calc(14px*var(--ws-fs))] text-muted">
-                {title}
-              </p>
-            </div>
-            <span className="flex items-center gap-2 font-sans text-[calc(13px*var(--ws-fs))] text-muted">
-              <Spinner size={14} weight="bold" className="animate-spin" />
-              {t("voice.micMutedShort")}
+            >
+              {count}
             </span>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.h2
+                key={`${phase}-${heading}`}
+                {...stepSwap}
+                className="line-clamp-2 max-w-[22ch] text-balance font-display text-[calc(25px*var(--ws-fs))] font-semibold leading-[1.1] tracking-[-0.01em] text-primary sm:max-w-[30ch] sm:text-[calc(34px*var(--ws-fs))] lg:text-[calc(38px*var(--ws-fs))]"
+              >
+                {heading}
+              </motion.h2>
+            </AnimatePresence>
+            <p className="line-clamp-2 min-h-[1.5em] max-w-[60ch] font-sans text-[calc(14px*var(--ws-fs))] leading-normal text-muted sm:text-[calc(15px*var(--ws-fs))]">
+              {sub}
+            </p>
           </div>
-        ) : (
-          <div className="relative flex min-h-0 flex-1 items-stretch justify-center gap-10 px-3 pb-3 sm:px-7 sm:pb-7 lg:gap-16">
-            {/* The form, in frosted glass. */}
-            <section className="flex min-h-0 w-full max-w-[520px] flex-col rounded-[28px] bg-[#04060a]/60 shadow-[0_24px_64px_rgb(0_0_0/0.5)] backdrop-blur-2xl backdrop-saturate-150">
-              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pt-6 sm:px-9 sm:pt-8">
-                {!isEdit && (
-                  <div aria-hidden className="mb-6">
-                    <div className="flex gap-1.5">
-                      {steps.slice(0, mode === "now" ? 4 : 3).map((label, i) => (
-                        <span
-                          key={label}
-                          className={clsx(
-                            "h-[3px] flex-1 rounded-pill transition-colors duration-300",
-                            i + 1 <= step ? "bg-brand" : "bg-white/[0.08]",
-                          )}
-                        />
-                      ))}
-                    </div>
-                    <span className="mt-3 flex items-center gap-2">
-                      <span className={clsx(EYEBROW, "text-primary")}>
-                        {t("voice.stepOf")
-                          .replace("{n}", String(step))
-                          .replace("{total}", String(mode === "now" ? 4 : 3))}
-                      </span>
-                      <span className={clsx(EYEBROW, "text-subtle")}>{steps[step - 1]}</span>
-                    </span>
-                  </div>
-                )}
 
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.div key={isEdit ? "edit" : step} {...swap} className="space-y-6 pb-6">
-                    <div>
-                      <h2 className="font-display text-[calc(28px*var(--ws-fs))] font-medium leading-tight tracking-[-0.01em] text-primary">
-                        {heading}
-                      </h2>
-                      {sub && (
-                        <p className="mt-2 font-sans text-[calc(14px*var(--ws-fs))] leading-relaxed text-muted">
-                          {sub}
-                        </p>
-                      )}
-                    </div>
-
-                    {show(1) && (
-                      <>
-                        <div>
-                          <span className="flex items-center">
-                            <span className={clsx(EYEBROW, "text-muted")}>{t("voice.coverLabel")}</span>
-                            <span className="flex-1" />
-                            <span className="font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
-                              {coverImage ? t("voice.customCover") : preset.label}
-                            </span>
-                          </span>
-                          <div className="mt-2.5 grid grid-cols-7 gap-2">
-                            {STORY_BACKGROUNDS.slice(0, 6).map((option) => {
-                              // A preset only reads as chosen when no upload
-                              // is overriding it.
-                              const active = !coverImage && cover === option.id;
-                              return (
-                                <button
-                                  key={option.id}
-                                  type="button"
-                                  onClick={() => {
-                                    setCover(option.id);
-                                    setCoverImage("");
-                                    setCoverError("");
-                                  }}
-                                  aria-label={option.label}
-                                  aria-pressed={active}
-                                  className={clsx(
-                                    "relative h-16 cursor-pointer overflow-hidden rounded-[14px] transition-opacity",
-                                    active ? "opacity-100 ring-2 ring-[#eef2f6] ring-offset-2 ring-offset-[#0b0f15]" : "opacity-60 hover:opacity-90",
-                                  )}
-                                  style={{ background: storyCanvasCss(option) }}
-                                >
-                                  <AnimatePresence initial={false}>
-                                    {active && (
-                                      <motion.span
-                                        key="check"
-                                        {...pop}
-                                        className="absolute inset-0 flex items-center justify-center text-[#fafaf9]"
-                                      >
-                                        <Check size={14} weight="bold" />
-                                      </motion.span>
-                                    )}
-                                  </AnimatePresence>
-                                </button>
-                              );
-                            })}
-                            <button
-                              type="button"
-                              onClick={() => fileRef.current?.click()}
-                              disabled={uploading}
-                              aria-label={coverImage ? t("voice.removeCover") : t("voice.customCover")}
-                              aria-pressed={Boolean(coverImage)}
-                              title={t("voice.customCover")}
-                              className={clsx(
-                                "relative h-16 cursor-pointer overflow-hidden rounded-[14px] transition-colors",
-                                coverImage
-                                  ? "ring-2 ring-[#eef2f6] ring-offset-2 ring-offset-[#0b0f15]"
-                                  : "bg-white/[0.06] hover:bg-white/[0.1]",
-                                uploading && "cursor-wait",
-                              )}
-                              style={
-                                coverImage
-                                  ? { backgroundImage: `url(${coverImage})`, backgroundSize: "cover", backgroundPosition: "center" }
-                                  : undefined
-                              }
-                            >
-                              <span className="absolute inset-0 flex items-center justify-center text-[#eef2f6]">
-                                {uploading ? (
-                                  <Spinner size={15} weight="bold" className="animate-spin" />
-                                ) : coverImage ? (
-                                  <Check size={14} weight="bold" />
-                                ) : (
-                                  <ImageSquare size={17} />
-                                )}
-                              </span>
-                            </button>
-                            <input
-                              ref={fileRef}
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) void pickCover(file);
-                              }}
-                            />
-                          </div>
-                          <AnimatePresence initial={false}>
-                            {coverImage && !uploading && (
-                              <motion.div key="remove-cover" {...collapse} className="overflow-hidden">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setCoverImage("");
-                                    setCoverError("");
-                                  }}
-                                  className="mt-2 cursor-pointer font-sans text-[calc(12px*var(--ws-fs))] text-muted underline underline-offset-2 transition-colors hover:text-primary"
-                                >
-                                  {t("voice.removeCover")}
-                                </button>
-                              </motion.div>
-                            )}
-                            {coverError && (
-                              <motion.div key="cover-error" {...collapse} className="overflow-hidden">
-                                <p
-                                  role="alert"
-                                  className="mt-2 flex items-center gap-1 font-sans text-[calc(12px*var(--ws-fs))] text-danger"
-                                >
-                                  <PhWarningCircle weight="fill" size={13} className="shrink-0" />
-                                  {coverError}
-                                </p>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
-
-                        <div>
-                          <span className="flex items-center">
-                            <label htmlFor="space-title" className={clsx(EYEBROW, "text-muted")}>
-                              {t("voice.titleShort")}
-                            </label>
-                            <span className="flex-1" />
-                            <span className="font-sans text-[calc(12px*var(--ws-fs))] tabular-nums text-subtle">
-                              {title.length} / 96
-                            </span>
-                          </span>
-                          <div className={clsx("mt-2.5", field)}>
-                            <input
-                              id="space-title"
-                              value={title}
-                              onChange={(e) => setTitle(e.target.value)}
-                              maxLength={96}
-                              placeholder={t("voice.placeholder")}
-                              className="w-full bg-transparent font-sans text-base font-medium text-primary caret-brand outline-none placeholder:text-subtle sm:text-[calc(15px*var(--ws-fs))]"
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <span className="flex items-center">
-                            <label htmlFor="space-description" className={clsx(EYEBROW, "text-muted")}>
-                              {t("voice.descriptionShort")}
-                            </label>
-                            <span className="flex-1" />
-                            <span className="font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
-                              {t("voice.optional")}
-                            </span>
-                          </span>
-                          <div className={clsx("mt-2.5", field)}>
-                            <textarea
-                              id="space-description"
-                              value={description}
-                              onChange={(e) => setDescription(e.target.value)}
-                              maxLength={280}
-                              rows={3}
-                              placeholder={t("voice.descriptionPlaceholder")}
-                              className="w-full resize-none bg-transparent font-sans text-base leading-relaxed text-primary caret-brand outline-none placeholder:text-subtle sm:text-[calc(14px*var(--ws-fs))]"
-                            />
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    {show(2) && (
-                      <>
-                        <div>
-                          <span className={clsx(EYEBROW, "block text-muted")}>{t("voice.topic")}</span>
-                          {/* The 14 verticals, the field the hub's chips
-                              filter on; a room is broader than a post. */}
-                          <div className="mt-2.5 flex flex-wrap gap-2">
-                            {[{ id: "", label: t("voice.general") }, ...VERTICALS].map((v) => (
-                              <button
-                                key={v.id || "general"}
-                                type="button"
-                                aria-pressed={category === v.id}
-                                onClick={() => setCategory(v.id)}
-                                className={chip(category === v.id)}
-                              >
-                                {v.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        {communities.length > 0 && (
-                          <div>
-                            <span className={clsx(EYEBROW, "block text-muted")}>
-                              {t("voice.communityLabel")}
-                            </span>
-                            <div className="mt-2.5 space-y-1.5">
-                              {[{ id: "", name: t("voice.standalone") }, ...communities].map((c) => {
-                                const on = communityId === c.id;
-                                return (
-                                  <button
-                                    key={c.id || "none"}
-                                    type="button"
-                                    aria-pressed={on}
-                                    onClick={() => setCommunityId(c.id)}
-                                    className={clsx(
-                                      "flex min-h-12 w-full cursor-pointer items-center gap-3 rounded-[16px] px-4 text-left transition-colors",
-                                      on ? "bg-white/[0.1]" : "bg-white/[0.04] hover:bg-white/[0.07]",
-                                    )}
-                                  >
-                                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-pill bg-white/[0.08] font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-primary">
-                                      {c.name.slice(0, 1).toUpperCase()}
-                                    </span>
-                                    <span className="min-w-0 flex-1 truncate font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary">
-                                      {c.name}
-                                    </span>
-                                    {on && <Check size={15} weight="bold" className="shrink-0 text-primary" />}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </>
-                    )}
-
-                    {show(3) && (
-                      <div>
-                        {isEdit && (
-                          <span className={clsx(EYEBROW, "block text-muted")}>{t("voice.reschedule")}</span>
-                        )}
-                        {/* Editing never converts a scheduled space into a
-                            live one — that is what Start is for. */}
-                        <div className={clsx("grid grid-cols-2 gap-1 rounded-pill bg-white/[0.06] p-1", isEdit && "hidden")}>
-                          {(
-                            [
-                              { id: "now", label: t("voice.goLiveNow"), icon: Broadcast },
-                              { id: "later", label: t("voice.schedule"), icon: CalendarPlus },
-                            ] as const
-                          ).map(({ id, label, icon: Icon }) => (
-                            <button
-                              key={id}
-                              type="button"
-                              onClick={() => setMode(id)}
-                              aria-pressed={mode === id}
-                              className={clsx(
-                                "relative flex h-11 cursor-pointer items-center justify-center gap-2 rounded-pill font-sans text-[calc(13.5px*var(--ws-fs))] font-medium transition-colors",
-                                mode === id ? "text-[#05070a]" : "text-muted hover:text-primary",
-                              )}
-                            >
-                              {mode === id && (
-                                <motion.span
-                                  layoutId={`${thumbId}-when`}
-                                  transition={thumbSpring}
-                                  aria-hidden
-                                  className="absolute inset-0 rounded-pill bg-[#eef2f6]"
-                                />
-                              )}
-                              <Icon size={15} weight="bold" className="relative" />
-                              <span className="relative">{label}</span>
-                            </button>
-                          ))}
-                        </div>
-                        <AnimatePresence initial={false}>
-                          {(mode === "later" || isEdit) && (
-                            <motion.div key="when" {...collapse} className="overflow-hidden">
-                              <div className="mt-3">
-                                <CalendarField value={when} onChange={setWhen} />
-                              </div>
-                            </motion.div>
-                          )}
-                          {mode === "now" && !isEdit && (
-                            <motion.p
-                              key="now-note"
-                              {...collapse}
-                              className="mt-3 overflow-hidden font-sans text-[calc(13px*var(--ws-fs))] leading-relaxed text-muted"
-                            >
-                              {t("voice.nowNote")}
-                            </motion.p>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    )}
-
-                    {show(4) && <MicCheck />}
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-
-              <div className="flex shrink-0 items-center gap-3 px-6 pb-[calc(20px+var(--ws-safe-bottom))] pt-3 sm:px-9 sm:pb-8">
-                {!isEdit && step > 1 ? (
-                  <button
-                    type="button"
-                    onClick={() => setStep((step - 1) as 1 | 2 | 3)}
-                    className="flex h-12 shrink-0 cursor-pointer items-center gap-1.5 rounded-pill px-2 font-sans text-[calc(14px*var(--ws-fs))] font-medium text-muted transition-colors hover:text-primary"
-                  >
-                    <ArrowLeft size={14} weight="bold" />
-                    {t("voice.back")}
-                  </button>
-                ) : (
-                  <span className="min-w-0 truncate font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle">
-                    {hint}
-                  </span>
-                )}
-                <span className="flex-1" />
-                <motion.button
-                  {...press}
-                  type="button"
-                  disabled={disabled}
-                  onClick={next}
-                  className={clsx(
-                    "flex h-12 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-pill px-6 font-sans text-[calc(14px*var(--ws-fs))] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40",
-                    !isEdit && step === 4
-                      ? "bg-danger text-white hover:bg-danger/90"
-                      : "bg-brand text-brand-on hover:bg-brand-active",
-                  )}
-                >
-                  {busy ? (
-                    <span className="h-4 w-4 animate-spin rounded-pill border-2 border-current/30 border-t-current" />
-                  ) : isEdit ? (
-                    <FloppyDisk size={16} weight="bold" />
-                  ) : step === 4 ? (
-                    <span className="h-2 w-2 animate-pulse rounded-pill bg-white" />
-                  ) : null}
-                  <AnimatePresence mode="wait" initial={false}>
-                    <motion.span key={nextLabel} {...swap} className="inline-block">
-                      {nextLabel}
-                    </motion.span>
-                  </AnimatePresence>
-                  {!isEdit && step < 3 && <ArrowRight size={15} weight="bold" />}
-                  {!isEdit && step === 3 && mode === "later" && <CalendarPlus size={15} weight="bold" />}
-                </motion.button>
-              </div>
-            </section>
-
-            {/* How it will show on Explore, updating as you type. */}
-            <aside className="hidden w-[520px] shrink-0 flex-col justify-center gap-4 lg:flex">
-              <span className={clsx(EYEBROW, "text-subtle")}>{t("voice.livePreview")}</span>
-              <div className="overflow-hidden rounded-[28px] bg-[#0b0f15]/90 shadow-[0_24px_64px_rgb(0_0_0/0.55)]">
-                <div className="relative h-[200px]" style={{ background: coverCss }}>
-                  <span className="absolute left-4 top-4 flex items-center gap-1.5 rounded-pill bg-[#05070a]/70 px-3 py-1.5 font-sans text-[calc(10.5px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-[#eef2f6] backdrop-blur-md">
-                    {mode === "now" ? (
-                      <>
-                        <span className="h-1.5 w-1.5 rounded-pill bg-[#e5484d]" />
-                        {t("voice.live")}
-                      </>
-                    ) : (
-                      <>
-                        <CalendarPlus size={11} weight="bold" />
-                        {whenLabel || t("voice.schedule")}
-                      </>
-                    )}
-                  </span>
-                </div>
-                <div className="space-y-3 p-6">
-                  {community || vertical ? (
-                    <span className={clsx(EYEBROW, "block text-muted")}>
-                      {[community?.name, vertical?.label].filter(Boolean).join("  ·  ")}
-                    </span>
-                  ) : (
-                    <span className="block h-2 w-36 rounded-pill bg-white/[0.07]" />
-                  )}
-                  {title.trim() ? (
-                    <h3 className="font-display text-[calc(24px*var(--ws-fs))] font-medium leading-snug tracking-[-0.01em] text-primary">
-                      {title}
-                    </h3>
-                  ) : (
-                    <span className="block space-y-2">
-                      <span className="block h-5 w-4/5 rounded-pill bg-white/[0.08]" />
-                      <span className="block h-5 w-1/2 rounded-pill bg-white/[0.08]" />
-                    </span>
-                  )}
-                  {description.trim() ? (
-                    <p className="line-clamp-2 font-sans text-[calc(13.5px*var(--ws-fs))] leading-relaxed text-muted">
-                      {description}
-                    </p>
-                  ) : (
-                    <span className="block h-2 w-3/4 rounded-pill bg-white/[0.05]" />
-                  )}
-                </div>
-              </div>
-              <span className="text-center font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
-                {t("voice.previewNote")}
-              </span>
-            </aside>
+          {/* The line. ONE SignalArt for the whole sheet: only its props
+              change, so every step is a morph and never a remount. */}
+          <div className={s.band}>
+            <SignalArt
+              scene={scene}
+              audience={chosen.length}
+              clockTime={clockTime}
+              level={mic.level}
+              viewBox={narrow ? PHONE_VIEWBOX : undefined}
+              className="pointer-events-none absolute inset-0 h-full w-full"
+            />
+            <input
+              ref={titleRef}
+              // The sheet's own mount effect runs before its portal has
+              // rendered this, so the first focus rides the mount itself.
+              // biome-ignore lint/a11y/noAutofocus: the title is the step's one job.
+              autoFocus
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (titleOk) next();
+                }
+              }}
+              inert={!showTitle}
+              aria-hidden={!showTitle}
+              tabIndex={showTitle ? 0 : -1}
+              maxLength={96}
+              aria-label="Name the room"
+              placeholder="Name the room"
+              enterKeyHint="next"
+              autoComplete="off"
+              className={clsx(
+                s.onLine,
+                "bg-transparent text-center font-display text-[calc(23px*var(--ws-fs))] font-semibold leading-tight tracking-[-0.01em] text-primary caret-gold outline-none transition-opacity duration-300 placeholder:text-subtle sm:text-[calc(32px*var(--ws-fs))] lg:text-[calc(36px*var(--ws-fs))]",
+                showTitle ? "opacity-100" : "pointer-events-none opacity-0",
+              )}
+            />
           </div>
+
+          {/* Positioned, so it paints over the band it is pulled up into. */}
+          <div className="relative w-full max-w-[820px] shrink-0 px-4 pb-6 sm:px-8">
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={contentKey}
+                {...stepSwap}
+                className={clsx("w-full", lift && s.lift)}
+              >
+                {content}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </main>
+
+        {submitError && (
+          <p
+            role="alert"
+            className="relative flex shrink-0 items-center justify-center gap-1.5 px-5 pt-2 text-center font-sans text-[calc(13.5px*var(--ws-fs))] text-danger"
+          >
+            <WarningCircle size={15} weight="fill" className="shrink-0" />
+            {submitError}
+          </p>
         )}
+
+        <footer
+          className={clsx(
+            "relative flex shrink-0 items-center gap-2 px-4 pb-[calc(16px+var(--ws-safe-bottom))] pt-3 transition-opacity sm:px-10 sm:pb-7",
+            phase === "launching" && "pointer-events-none opacity-0",
+          )}
+        >
+          <div className="flex flex-1 justify-start">
+            {phase === "steps" && step > 1 && (
+              <button
+                type="button"
+                onClick={back}
+                className="-ml-2 flex h-11 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[calc(14px*var(--ws-fs))] font-medium text-muted transition-colors hover:text-primary"
+              >
+                <ArrowLeft size={14} weight="bold" />
+                {t("voice.back")}
+              </button>
+            )}
+          </div>
+          <div className="hidden flex-1 justify-center sm:flex">
+            {phase === "steps" && step === 1 && (
+              <span className="font-mono text-[calc(13px*var(--ws-fs))] text-subtle">
+                Enter to continue
+              </span>
+            )}
+          </div>
+          <div className="flex flex-1 items-center justify-end gap-1">
+            {isEdit && phase === "steps" && step < 3 && (
+              <button
+                type="button"
+                onClick={save}
+                disabled={busy || !titleOk || uploading}
+                className="flex h-11 cursor-pointer items-center rounded-pill px-3 font-sans text-[calc(14px*var(--ws-fs))] font-medium text-muted transition-colors hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {t("voice.saveChanges")}
+              </button>
+            )}
+            <motion.button
+              {...press}
+              type="button"
+              onClick={next}
+              disabled={disabled}
+              className={clsx(
+                "flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-pill px-5 font-sans text-[calc(14px*var(--ws-fs))] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+                isGoLive
+                  ? "bg-danger text-white hover:bg-danger/90"
+                  : "bg-brand text-brand-on hover:bg-brand-active",
+              )}
+            >
+              {busy && finalStep ? (
+                <Spinner size={15} weight="bold" className="animate-spin" />
+              ) : isGoLive ? (
+                <span aria-hidden className="h-2 w-2 animate-pulse rounded-pill bg-white" />
+              ) : isEdit && finalStep ? (
+                <FloppyDisk size={15} weight="bold" />
+              ) : null}
+              {nextLabel}
+            </motion.button>
+          </div>
+        </footer>
+
+        {/* Panels that open off a control (communities, topics, dates)
+            render here: fixed to the viewport, above everything in the
+            sheet, below the confirm. */}
+        <div ref={setPanelHost} />
+
+        <ConfirmModal
+          isOpen={askClose}
+          onClose={() => setAskClose(false)}
+          onConfirm={onClose}
+          title={isEdit ? "Discard your changes?" : "Discard this room?"}
+          message={
+            isEdit
+              ? "The room stays as it was before you opened this."
+              : "What you've typed so far will be lost."
+          }
+          confirmText="Discard"
+          cancelText="Keep editing"
+          isDestructive
+        />
       </motion.div>
     </ConfirmModalPortal>
   );

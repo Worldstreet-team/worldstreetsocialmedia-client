@@ -1,0 +1,115 @@
+/*
+ * Room setup, "The Signal" (owner pick 2026-10-14): the pieces Tailwind
+ * cannot say. The ground, its one blur and the mode's veil; the band the
+ * line runs in; the fade on the chip rails.
+ *
+ * The sheet follows the theme, so the veil does too: night is #05070A,
+ * paper is #F6F8FA, both heavier at the top (the question) and the bottom
+ * (the controls) than in the middle, where the line is. Selectors are
+ * `html[...]` for the same reason as styles/spaces.css: a bare attribute
+ * block can be folded away by the CSS optimiser.
+ */
+
+/* The room's picture: the house background or the host's photo. The ONE
+   blur on this screen; chips and fields on top are tints. Inset past the
+   edges so the blur never shows a soft border. */
+.ground {
+  position: absolute;
+  inset: -90px;
+  filter: blur(52px) saturate(1.2);
+  transform: translateZ(0);
+}
+
+.veil {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgb(5 7 10 / 0.58) 0%,
+    rgb(5 7 10 / 0.16) 46%,
+    rgb(5 7 10 / 0.66) 100%
+  );
+}
+
+html[data-ws-theme="platform-light"] .veil {
+  background: linear-gradient(
+    180deg,
+    rgb(246 248 250 / 0.62) 0%,
+    rgb(246 248 250 / 0.12) 46%,
+    rgb(246 248 250 / 0.7) 100%
+  );
+}
+
+/*
+ * The band the line runs in, sized from the viewport so its height never
+ * changes between steps (the art morphs in place; the box must hold
+ * still). --bw is the band's width, --bh its height in the art's own
+ * aspect: 1000 x 260 on a desktop, the cropped 600 x 260 on a phone, where
+ * the line runs edge to edge.
+ */
+.stage {
+  --bw: min(100vw, 1040px, max(560px, (100dvh - 470px) * 3.85));
+  --bh: calc(var(--bw) * 0.26);
+}
+
+@media (max-width: 639px) {
+  .stage {
+    --bw: 100vw;
+    --bh: calc(var(--bw) * 0.4333);
+  }
+}
+
+.band {
+  position: relative;
+  flex: none;
+  width: var(--bw);
+  height: var(--bh);
+}
+
+/* The title sits on the line: its bottom a little above the wire, which
+   runs at 150 of 260 (57.7%) in both crops. */
+.onLine {
+  position: absolute;
+  left: 50%;
+  bottom: calc(42.3% + 20px);
+  width: min(100% - 40px, 780px);
+  transform: translateX(-50%);
+}
+
+@media (max-width: 639px) {
+  .onLine {
+    bottom: calc(42.3% + 14px);
+  }
+}
+
+/* Steps whose scenes only use the band above the line (the name, the
+   seats) pull their controls up under it. */
+.lift {
+  margin-top: calc(var(--bh) * -0.28);
+}
+
+/* A row of chips that scrolls sideways when it outgrows the screen, fading
+   at the edges instead of cutting a chip in half. */
+.rail {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0,
+    #000 20px,
+    #000 calc(100% - 20px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0,
+    #000 20px,
+    #000 calc(100% - 20px),
+    transparent 100%
+  );
+}
+
+.rail::-webkit-scrollbar {
+  display: none;
+}

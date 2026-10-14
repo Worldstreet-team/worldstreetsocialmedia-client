@@ -1,315 +1,142 @@
 "use client";
 
-import { formatCompact } from "@/lib/utils";
 import {
-  ArrowSquareOut,
   ArrowsInSimple,
   CaretDown,
   ChatCircle,
-  Fire,
-  Flag,
   HandPalm,
-  HandsClapping,
-  Heart,
+  Headphones,
   LinkSimple,
-  Microphone,
-  MicrophoneSlash,
   NotePencil,
-  PaperPlaneRight,
-  SignOut,
-  Smiley,
+  ShareNetwork,
+  Sparkle,
   SpeakerHigh,
-  ThumbsUp,
-  Users,
 } from "@phosphor-icons/react";
-import clsx from "clsx";
 import { AnimatePresence, motion, useReducedMotionConfig } from "framer-motion";
-import { useSetAtom, useAtomValue } from "jotai";
-import type { Room } from "livekit-client";
+import { useAtomValue, useSetAtom } from "jotai";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import { UserBadges } from "@/components/ui/UserBadges";
-import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import {
-  OverlayHeader,
-  OverlayPanel,
-  OverlayScrim,
-  useOverlayDismiss,
-} from "@/components/ui/Overlay";
-import { SafeAvatar } from "@/components/ui/SafeAvatar";
-import { useToast } from "@/components/ui/Toast/ToastContext";
+  type CSSProperties,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import ReportSheet from "@/components/safety/ReportSheet";
+import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
+import { useOverlayDismiss } from "@/components/ui/Overlay";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import { Tabs } from "@/components/ui/Tabs";
+import { useToast } from "@/components/ui/Toast/ToastContext";
+import { ListenerGrid } from "@/components/voice/room/ListenerGrid";
+import { ManagerMenu } from "@/components/voice/room/ManagerMenu";
 import {
-  EqBars,
-  hostName,
-  spaceBackground,
-  spaceListenerCount,
+  ROOM_HOUSE_NIGHT,
+  RoomBackdrop,
+} from "@/components/voice/room/RoomBackdrop";
+import { RoomBar } from "@/components/voice/room/RoomBar";
+import { RoomChat } from "@/components/voice/room/RoomChat";
+import { ReactionFloats } from "@/components/voice/room/reactions";
+import {
+  type RoomAudio,
+  type RoomLive,
+  useRoomRoster,
+} from "@/components/voice/room/roster";
+import { StageSeat } from "@/components/voice/room/StageSeat";
+import { VividPanel } from "@/components/voice/room/Vivid";
+import {
+  ElapsedTimer,
   type SpaceRow,
+  spaceCategoryLabel,
+  spaceCommunities,
 } from "@/components/voice/SpaceCard";
+import type { RoomMember } from "@/hooks/useSpaceRoom";
+import { useT } from "@/i18n/client";
+import { isDemoId } from "@/lib/demoSeed";
+import {
+  DUR,
+  EASE,
+  EASE_OUT_EXPO,
+  EASE_SHEET,
+  menuStagger,
+  pop,
+  press,
+  staggerItem,
+  swap,
+} from "@/lib/motion-presets";
 import {
   inviteSpeakAction,
   muteSpeakerAction,
   removeFromSpaceAction,
   setCohostAction,
 } from "@/lib/space.actions";
-import type { useSpaceAudio } from "@/hooks/useSpaceAudio";
-import {
-  type RoomChatMessage,
-  type RoomMember,
-  useSpaceRoom,
-} from "@/hooks/useSpaceRoom";
-import {
-  menuStagger,
-  pop,
-  press,
-  staggerItem,
-  staggerParent,
-  staggerPop,
-  swap,
-} from "@/lib/motion-presets";
-import { useT } from "@/i18n/client";
+import { formatCompact } from "@/lib/utils";
 import { pendingDraftAtom } from "@/store/drafts.atom";
 import { userAtom } from "@/store/user.atom";
 
-const EASE = [0.2, 0, 0, 1] as const;
-
 /**
- * The reaction vocabulary. Ids ride the Ably `reaction` payload — never
- * emoji characters — and each id maps to a Phosphor glyph here. The legacy
- * table keeps older clients' emoji payloads rendering during a deploy.
+ * The room is fixed dark in both themes, so inside it the brand INK is the
+ * room's own light ink (an ink palette's light-mode brand is near black,
+ * which would vanish here) and the house background is always the night
+ * picture. The text and surface tokens are re-pointed by `.ws-on-dark`.
  */
-type ReactionKind = "heart" | "clap" | "fire" | "laugh" | "plus-one";
+const ROOM_STYLE = {
+  "--ws-space-house": ROOM_HOUSE_NIGHT,
+  "--ws-brand-gold-text": "#eef2f6",
+} as CSSProperties;
 
-const REACTION_SET: {
-  kind: ReactionKind;
-  Icon: typeof Heart;
-  tint: string;
-  label: string;
-}[] = [
-  { kind: "heart", Icon: Heart, tint: "text-danger", label: "Heart" },
-  { kind: "clap", Icon: HandsClapping, tint: "text-[#fafaf9]", label: "Clap" },
-  { kind: "fire", Icon: Fire, tint: "text-warning", label: "Fire" },
-  { kind: "laugh", Icon: Smiley, tint: "text-[#fafaf9]", label: "Laugh" },
-  { kind: "plus-one", Icon: ThumbsUp, tint: "text-success", label: "Plus one" },
-];
-
-const REACTION_BY_KIND = new Map(REACTION_SET.map((r) => [r.kind, r]));
-
-const LEGACY_REACTIONS: Record<string, ReactionKind> = {
-  "👏": "clap",
-  "🔥": "fire",
-  "💛": "heart",
-  "❤️": "heart",
-  "😂": "laugh",
-  "📈": "plus-one",
+/** Wide enough to seat the Chat | Vivid panel beside the stage. */
+const WIDE = "(min-width: 1024px)";
+const subscribeWide = (cb: () => void) => {
+  const mq = window.matchMedia(WIDE);
+  mq.addEventListener("change", cb);
+  return () => mq.removeEventListener("change", cb);
 };
+const useWide = () =>
+  useSyncExternalStore(
+    subscribeWide,
+    () => window.matchMedia(WIDE).matches,
+    () => false,
+  );
+
+type PanelTab = "chat" | "vivid";
 
 interface SpaceRoomProps {
   row: SpaceRow;
   /**
-   * The audio connection, owned by VoiceRoomHost. It lives up there — not
-   * here — because this component unmounts on minimize, and audio that dies
+   * The audio connection, owned by VoiceRoomHost. It lives up there, not
+   * here, because this component unmounts on minimize, and audio that dies
    * the moment you dock the room makes the dock a lie.
    */
-  audio: ReturnType<typeof useSpaceAudio>;
-  /** Presence, chat and reactions — hoisted beside the audio for the same
+  audio: RoomAudio;
+  /** Presence, chat and reactions, hoisted beside the audio for the same
    *  reason: minimizing must not remove you from the room. */
-  roomLive: ReturnType<typeof useSpaceRoom>;
-  /** Collapse to the floating dock — the room keeps running. */
+  roomLive: RoomLive;
+  /** Collapse to the floating dock; the room keeps running. */
   onMinimize: () => void;
   /** Leave for good (listeners). */
   onLeave: () => void;
-  /** Host only — ends the room for everyone. */
+  /** Host only: ends the room for everyone. */
   onEnd: (row: SpaceRow) => void;
 }
 
-function elapsedLabel(startedAt?: string) {
-  if (!startedAt) return null;
-  const mins = Math.max(
-    0,
-    Math.floor((Date.now() - new Date(startedAt).getTime()) / 60_000),
-  );
-  if (mins < 60) return `${mins}m`;
-  return `${Math.floor(mins / 60)}h ${mins % 60}m`;
-}
-
 /**
- * The ring that breathes with the voice. An absolutely positioned pill
- * behind the avatar — never a border — whose scale tracks the LiveKit
- * participant's `audioLevel` through a requestAnimationFrame loop with
- * exponential smoothing. It writes `style.transform`/`style.opacity` on the
- * ref imperatively: React never re-renders per frame.
+ * The room itself (owner pick 2026-10-14, "the room" mock): a stage over
+ * the room's own art. On air, the time and the topic, then the title; the
+ * stage as large faces, each saying what it is doing; everyone else as a
+ * grid of faces with first names and raised hands; a side panel with the
+ * room's Chat and Vivid's notes; and a bar along the foot with your own
+ * mic and the five things you can do.
  *
- * Scale caps at 1.18 and the cell around the avatar reserves padding for
- * it, so a loud speaker can never bleed into a neighbouring avatar.
- */
-function SpeakingRing({
-  room,
-  identity,
-}: {
-  room: Room | null;
-  identity?: string;
-}) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const reduce = useReducedMotionConfig();
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || !room || !identity) return;
-    let raf = 0;
-    let scale = 1;
-    let opacity = 0;
-    const tick = () => {
-      const p = room.getParticipantByIdentity(identity);
-      // Conversational speech reports low levels; sqrt lifts it into the
-      // visible range while a shout still caps at the reserved 1.18.
-      const level = p?.isSpeaking ? Math.min(1, Math.sqrt(p.audioLevel)) : 0;
-      const targetScale = reduce ? 1 : 1 + level * 0.18;
-      const targetOpacity = level > 0.02 ? (reduce ? 0.6 : 0.4 + level * 0.6) : 0;
-      scale += (targetScale - scale) * 0.25;
-      opacity += (targetOpacity - opacity) * 0.25;
-      el.style.transform = `scale(${scale.toFixed(4)})`;
-      el.style.opacity = opacity.toFixed(3);
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => {
-      cancelAnimationFrame(raf);
-      el.style.transform = "";
-      el.style.opacity = "0";
-    };
-  }, [room, identity, reduce]);
-
-  return (
-    <span
-      ref={ref}
-      aria-hidden
-      className="pointer-events-none absolute -inset-1 rounded-pill ring-[1.5px] ring-[#eef2f6] opacity-0 will-change-transform"
-    />
-  );
-}
-
-/**
- * The room's text lane, for everyone who would rather type than talk.
- *
- * One pane, two mounts: a fixed aside on desktop (the room grows wider to
- * seat it) and a slide-up sheet on phones. Messages are ephemeral — they
- * ride the room's Ably channel and live exactly as long as your stay —
- * and every name and face comes from the server-resolved roster, never
- * from the payload.
- */
-function ChatPane({
-  messages,
-  meId,
-  nameOf,
-  avatarOf,
-  onSend,
-  placeholder,
-  emptyLine,
-  sendLabel,
-}: {
-  messages: RoomChatMessage[];
-  meId: string;
-  nameOf: (id: string) => string;
-  avatarOf: (id: string) => string | undefined;
-  onSend: (text: string) => boolean;
-  placeholder: string;
-  emptyLine: string;
-  sendLabel: string;
-}) {
-  const [text, setText] = useState("");
-  const listRef = useRef<HTMLDivElement>(null);
-  // Follow the stream only while the reader is at the bottom; never yank
-  // someone away from a message they scrolled back to.
-  const stickRef = useRef(true);
-
-  useEffect(() => {
-    const el = listRef.current;
-    if (el && stickRef.current) el.scrollTop = el.scrollHeight;
-  }, [messages.length]);
-
-  return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div
-        ref={listRef}
-        role="log"
-        aria-label={placeholder}
-        onScroll={() => {
-          const el = listRef.current;
-          if (!el) return;
-          stickRef.current =
-            el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-        }}
-        className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-4 py-3"
-      >
-        {messages.length === 0 ? (
-          <p className="pt-6 text-center font-sans text-[calc(12px*var(--ws-fs))] glass-ink-faint">
-            {emptyLine}
-          </p>
-        ) : (
-          <div className="flex flex-col gap-2.5">
-            {messages.map((m) => (
-              <div key={m.id} className="flex items-start gap-2">
-                <span className="relative mt-0.5 h-[18px] w-[18px] shrink-0 overflow-hidden rounded-pill bg-[#1c1917]">
-                  <SafeAvatar src={avatarOf(m.from)} />
-                </span>
-                <p className="min-w-0 font-sans text-[calc(12.5px*var(--ws-fs))] leading-snug glass-ink [overflow-wrap:anywhere]">
-                  <span
-                    className={clsx(
-                      "mr-1.5 font-semibold",
-                      m.from === meId ? "text-gold" : "glass-ink-dim",
-                    )}
-                  >
-                    {nameOf(m.from)}
-                  </span>
-                  {m.text}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-      <form
-        className="flex shrink-0 items-center gap-2 border-t border-[#fafaf9]/8 px-3 py-2.5"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (onSend(text)) setText("");
-        }}
-      >
-        <input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          maxLength={500}
-          placeholder={placeholder}
-          aria-label={placeholder}
-          className="h-10 w-full min-w-0 flex-1 rounded-pill glass-chip px-3.5 font-sans text-[calc(13px*var(--ws-fs))] glass-ink outline-none placeholder:opacity-50"
-        />
-        <button
-          type="submit"
-          disabled={!text.trim()}
-          aria-label={sendLabel}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill bg-[#fafaf9] text-[#0c0a09] transition-opacity disabled:opacity-30 cursor-pointer disabled:cursor-default"
-        >
-          <PaperPlaneRight size={15} weight="fill" />
-        </button>
-      </form>
-    </div>
-  );
-}
-
-/**
- * The room itself — a Spaces-style stage over the room's mesh art, with a
- * text lane beside it (desktop) or beneath a toggle (phones).
- *
- * Presence (Ably `space:<id>`) is the guest list — ids only; faces and
- * badges are server-resolved. Reactions float up the stage with the sender's
- * name, Meet-style. Listeners join with no publish rights (the LiveKit token
- * enforces it), so their dock shows "Request to speak" rather than a dead
- * mic; the mic appears only once the host brings them to stage.
+ * Presence (Ably `space:<id>`) is the guest list: ids only, faces and
+ * badges server-resolved. Listeners join with no publish rights (the
+ * LiveKit token enforces it), so their bar offers Raise, not a dead mic;
+ * the mic appears only once the host brings them up.
  */
 export default function SpaceRoom({
   row,
-  audio: audioConn,
+  audio,
   roomLive,
   onMinimize,
   onLeave,
@@ -322,11 +149,11 @@ export default function SpaceRoom({
   const me = useAtomValue(userAtom);
   const setPendingDraft = useSetAtom(pendingDraftAtom);
   const {
-    members,
     reactions,
     messages,
     sendChat,
     profileOf,
+    members,
     realtime,
     hand,
     react,
@@ -334,29 +161,32 @@ export default function SpaceRoom({
     setSpeaker,
   } = roomLive;
   const {
-    state: audio,
+    state: audioState,
     canSpeak,
     muted,
     toggleMute,
     room,
     needsUnlock,
     unlockAudio,
-    reconnect,
-    speakingIds,
-  } = audioConn;
+  } = audio;
 
   // Host and co-hosts share the stage tools; only the host manages
   // co-hosts themselves or ends the room.
   const canManage = Boolean(row.isHost || row.isCohost);
+  const demo = isDemoId(row.id);
+  const wide = useWide();
 
   // Missing-i18n fallback: t() returns the key untranslated when a catalog
   // lacks it; these strings are newer than the dictionaries.
-  const tf = (key: string, fallback: string) => {
-    const v = t(key);
-    return v === key ? fallback : v;
-  };
+  const tf = useCallback(
+    (key: string, fallback: string) => {
+      const v = t(key);
+      return v === key ? fallback : v;
+    },
+    [t],
+  );
 
-  // The participant the host tapped — an anchored popover with stage
+  // The participant the host tapped: an anchored popover with stage
   // controls. Null when closed.
   const [menuFor, setMenuFor] = useState<RoomMember | null>(null);
   // Optimistic stage map: the gateway grant succeeded but LiveKit's
@@ -365,12 +195,27 @@ export default function SpaceRoom({
   // The share menu (copy link / post about it).
   const [shareOpen, setShareOpen] = useState(false);
   const shareRef = useRef<HTMLDivElement>(null);
-  // The phone chat sheet; on desktop the pane is always seated.
-  const [chatOpen, setChatOpen] = useState(false);
+  const [reactOpen, setReactOpen] = useState(false);
+  // The side panel's tab. Chat is where the room talks back, so it leads.
+  const [tab, setTab] = useState<PanelTab>("chat");
+  // The phone sheet carrying the same panel; on a wide screen it is seated.
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [seenCount, setSeenCount] = useState(0);
   // Report a participant through the standard safety flow.
   const [reportFor, setReportFor] = useState<RoomMember | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<HTMLInputElement>(null);
   useOverlayDismiss(menuFor !== null, () => setMenuFor(null));
+
+  const myId = me?._id ? String(me._id) : "";
+  const roster = useRoomRoster({ row, audio, live: roomLive, myId, staged });
+
+  // Land focus in the room, so Space and Escape speak to it at once and a
+  // screen reader starts at the room, not the page under it.
+  useEffect(() => {
+    rootRef.current?.focus({ preventScroll: true });
+  }, []);
 
   useEffect(() => {
     if (!shareOpen) return;
@@ -381,13 +226,20 @@ export default function SpaceRoom({
     return () => document.removeEventListener("mousedown", onDown);
   }, [shareOpen]);
 
-  // Chat-open marks everything read; the badge and ticker run off the rest.
+  // Growing past the phone layout seats the panel; a sheet left open
+  // underneath would only swallow the next Escape.
   useEffect(() => {
-    if (chatOpen) setSeenCount(messages.length);
-  }, [chatOpen, messages.length]);
+    if (wide) setSheetOpen(false);
+  }, [wide]);
+
+  // Chat on screen marks everything read; the badge and ticker run off the
+  // rest.
+  const chatVisible = tab === "chat" && (wide || sheetOpen);
+  useEffect(() => {
+    if (chatVisible) setSeenCount(messages.length);
+  }, [chatVisible, messages.length]);
   const unread = Math.max(0, messages.length - seenCount);
 
-  const myId = me?._id ? String(me._id) : "";
   const nameOf = (id: string) =>
     id === myId
       ? me?.username || "you"
@@ -399,158 +251,117 @@ export default function SpaceRoom({
       ? me?.avatar
       : (profileOf(id)?.avatar ?? members.find((m) => m.id === id)?.avatar);
 
-  /** Is this participant currently allowed to publish (on stage)? */
-  const isOnStage = (profileId: string) => {
-    const p = room?.getParticipantByIdentity(profileId);
-    if (p?.permissions) return Boolean(p.permissions.canPublish);
-    return Boolean(staged[profileId]);
-  };
+  const fail = (message?: string) =>
+    toast(message || t("voice.endFailed"), { type: "error" });
 
   /**
    * Hand the mic to someone. The gateway flips the live LiveKit permission
    * (updateParticipant), so their mic appears in place with no rejoin.
    */
-  const grantMic = async (profileId: string, username: string) => {
-    const res = await setSpeaker(profileId, true);
+  const grantMic = async (m: RoomMember) => {
+    const res = await setSpeaker(m.id, true);
     if (res?.success) {
-      setStaged((s) => ({ ...s, [profileId]: true }));
-      toast(`${username} — ${t("voice.approve")}`, { type: "success" });
-    } else {
-      toast(res?.message || t("voice.endFailed"), { type: "error" });
-    }
+      setStaged((s) => ({ ...s, [m.id]: true }));
+      toast(`${m.username}: ${t("voice.approve")}`, { type: "success" });
+    } else fail(res?.message);
   };
 
   /** Take the mic back. */
-  const revokeMic = async (profileId: string, username: string) => {
-    const res = await setSpeaker(profileId, false);
+  const revokeMic = async (m: RoomMember) => {
+    const res = await setSpeaker(m.id, false);
     if (res?.success) {
-      setStaged((s) => ({ ...s, [profileId]: false }));
-      toast(
-        `${username} — ${tf("voice.offStage", "back in the audience")}`,
-        { type: "success" },
-      );
-    } else {
-      toast(res?.message || t("voice.endFailed"), { type: "error" });
-    }
-  };
-
-  /** Ask a listener up — they accept or decline; nobody is conscripted. */
-  const inviteToSpeak = async (profileId: string, username: string) => {
-    const res = await inviteSpeakAction(row.id, profileId);
-    if (res.success) {
-      toast(`${username} — ${tf("voice.invited", "invited to speak")}`, {
+      setStaged((s) => ({ ...s, [m.id]: false }));
+      toast(`${m.username}: ${tf("voice.offStage", "back in the audience")}`, {
         type: "success",
       });
-    } else {
-      toast(res.message || t("voice.endFailed"), { type: "error" });
-    }
+    } else fail(res?.message);
+  };
+
+  /** Ask a listener up: they accept or decline; nobody is conscripted. */
+  const inviteToSpeak = async (m: RoomMember) => {
+    const res = await inviteSpeakAction(row.id, m.id);
+    if (res.success) {
+      toast(`${m.username}: ${tf("voice.invited", "invited to speak")}`, {
+        type: "success",
+      });
+    } else fail(res.message);
   };
 
   /** Server-enforced mute; they can unmute themselves. */
-  const muteTarget = async (profileId: string, username: string) => {
-    const res = await muteSpeakerAction(row.id, profileId);
+  const muteTarget = async (m: RoomMember) => {
+    const res = await muteSpeakerAction(row.id, m.id);
     if (res.success) {
-      toast(`${username} — ${tf("voice.mutedThem", "muted")}`, {
+      toast(`${m.username}: ${tf("voice.mutedThem", "muted")}`, {
         type: "success",
       });
-    } else {
-      toast(res.message || t("voice.endFailed"), { type: "error" });
-    }
+    } else fail(res.message);
   };
 
   /** Remove is a ban: disconnected now, and the door stays shut. */
-  const removeTarget = async (profileId: string, username: string) => {
-    const res = await removeFromSpaceAction(row.id, profileId);
+  const removeTarget = async (m: RoomMember) => {
+    const res = await removeFromSpaceAction(row.id, m.id);
     if (res.success) {
       toast(
-        `${username} — ${tf("voice.removedThem", "removed from the space")}`,
+        `${m.username}: ${tf("voice.removedThem", "removed from the space")}`,
         { type: "success" },
       );
-    } else {
-      toast(res.message || t("voice.endFailed"), { type: "error" });
-    }
+    } else fail(res.message);
   };
 
   /** Host only: appoint or dismiss a deputy. */
-  const cohostTarget = async (
-    profileId: string,
-    username: string,
-    grant: boolean,
-  ) => {
-    const res = await setCohostAction(row.id, profileId, grant);
+  const cohostTarget = async (m: RoomMember, grant: boolean) => {
+    const res = await setCohostAction(row.id, m.id, grant);
     if (res.success) {
       toast(
-        `${username} — ${
+        `${m.username}: ${
           grant
             ? tf("voice.cohostMade", "co-host now")
             : tf("voice.cohostDropped", "no longer a co-host")
         }`,
         { type: "success" },
       );
-    } else {
-      toast(res.message || t("voice.endFailed"), { type: "error" });
-    }
+    } else fail(res.message);
   };
 
-  const [elapsed, setElapsed] = useState(() => elapsedLabel(row.startedAt));
-
-  useEffect(() => {
-    const timer = setInterval(
-      () => setElapsed(elapsedLabel(row.startedAt)),
-      30_000,
-    );
-    return () => clearInterval(timer);
-  }, [row.startedAt]);
-
-  // The talking flow (owner 2026-10-12): while your mic is open a quiet
-  // pill counts how long you've been live, and Space toggles the mic from
+  // The talking flow (owner 2026-10-12): while your mic is open the bar
+  // counts how long you've been on air, and Space toggles the mic from
   // anywhere in the room except a text field.
-  const micLive = canSpeak && !muted && audio === "listening";
+  const micLive = canSpeak && !muted && audioState === "listening";
   const [liveSince, setLiveSince] = useState<number | null>(null);
-  const [, setTick] = useState(0);
   useEffect(() => {
     setLiveSince((v) => (micLive ? (v ?? Date.now()) : null));
   }, [micLive]);
   useEffect(() => {
-    if (liveSince === null) return;
-    const id = window.setInterval(() => setTick((n) => n + 1), 1000);
-    return () => window.clearInterval(id);
-  }, [liveSince]);
-  useEffect(() => {
-    if (!canSpeak || audio !== "listening") return;
+    if (!canSpeak || audioState !== "listening") return;
     const onSpace = (e: KeyboardEvent) => {
       if (e.code !== "Space" || e.repeat) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
       const el = e.target as HTMLElement | null;
-      if (el?.closest("input, textarea, [contenteditable='true']")) return;
+      if (el?.closest("input, textarea, select, [contenteditable='true']"))
+        return;
       e.preventDefault();
-      toggleMute();
+      void toggleMute();
     };
     document.addEventListener("keydown", onSpace);
     return () => document.removeEventListener("keydown", onSpace);
-  }, [canSpeak, audio, toggleMute]);
-  const liveFor =
-    liveSince === null
-      ? ""
-      : (() => {
-          const sec = Math.max(0, Math.floor((Date.now() - liveSince) / 1000));
-          return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
-        })();
+  }, [canSpeak, audioState, toggleMute]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // Escape collapses to the dock; it must never silently drop the room.
-      // With the participant popover or a sheet open, Escape closes that.
+      // With a popover, menu or sheet open, Escape closes that instead.
       if (e.key !== "Escape") return;
-      if (menuFor || shareOpen || chatOpen || reportFor) {
+      if (menuFor || shareOpen || reactOpen || sheetOpen || reportFor) {
         setShareOpen(false);
-        setChatOpen(false);
+        setReactOpen(false);
+        setSheetOpen(false);
         return;
       }
       onMinimize();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onMinimize, menuFor, shareOpen, chatOpen, reportFor]);
+  }, [onMinimize, menuFor, shareOpen, reactOpen, sheetOpen, reportFor]);
 
   const roomUrl = () => `${window.location.origin}/voice/${row.id}`;
 
@@ -575,186 +386,98 @@ export default function SpaceRoom({
     router.push("/");
   };
 
-  const listeners = members.filter(
-    (m) => m.id !== (row.host._id ? String(row.host._id) : "") &&
-      m.username !== row.host.username,
-  );
-  // The stage is a tier, not a badge: speakers and co-hosts sit in their
-  // own row under the host, the audience below. The layout itself says who
-  // can talk.
-  const cohostIds = new Set(row.cohosts ?? []);
-  const onStageMembers = listeners.filter(
-    (m) => cohostIds.has(m.id) || isOnStage(m.id),
-  );
-  const audience = listeners.filter(
-    (m) => !cohostIds.has(m.id) && !isOnStage(m.id),
-  );
-  // A huge room stays renderable: the grid caps and the rest is a count.
-  // Everyone gets a seat with a face and a name, never a stack (owner
-  // 2026-10-13: "make all the users show not stacked"); past this many the
-  // tail rolls into a count so a huge room stays one scroll.
-  const AUDIENCE_CAP = 80;
-  const audienceShown = audience.slice(0, AUDIENCE_CAP);
-  const audienceOverflow = audience.length - audienceShown.length;
-  const listenerCount = realtime
-    ? Math.max(members.length, 1)
-    : Math.max(spaceListenerCount(row), 1);
-
-  // Non-managers tap a face to see the person; the room stays alive in the
-  // dock underneath.
-  const viewProfile = (m: RoomMember) => {
+  // A face opens the person; the room stays alive in the dock underneath.
+  // Demo people have no profiles to open.
+  const openProfile = (username: string) => {
+    if (demo) {
+      toast(t("voice.demoRow"), { type: "success" });
+      return;
+    }
     onMinimize();
-    router.push(`/profile/${m.username}`);
+    router.push(`/profile/${username}`);
   };
 
-  const speakingNames = speakingIds
-    .map((id) =>
-      id === (row.host._id ? String(row.host._id) : "")
-        ? hostName(row.host)
-        : members.find((m) => m.id === id)?.username,
-    )
-    .filter(Boolean) as string[];
-  // The host's LiveKit identity is their profile id; presence carries it as
-  // the clientId when the row itself predates the `_id` field.
-  const hostIdentity =
-    row.host._id ??
-    members.find((m) => m.username === row.host.username)?.id;
+  // Managers get the stage controls for anyone but themselves; everyone
+  // else gets the person's profile.
+  const pickMember = (m: RoomMember) => {
+    if (m.id === myId) return;
+    if (canManage) setMenuFor(m);
+    else openProfile(m.username);
+  };
 
-  const menuOnStage = menuFor ? isOnStage(menuFor.id) : false;
+  // The bar's Chat: on a wide screen the panel is already seated, so it
+  // brings the Chat tab forward and puts the cursor in it; on a phone it
+  // opens (or closes) the sheet on Chat.
+  const openChat = () => {
+    if (wide) {
+      setTab("chat");
+      requestAnimationFrame(() => chatInputRef.current?.focus());
+      return;
+    }
+    if (sheetOpen && tab === "chat") {
+      setSheetOpen(false);
+      return;
+    }
+    setTab("chat");
+    setSheetOpen(true);
+  };
 
   const lastMsg = messages[messages.length - 1];
   const showTicker =
-    !chatOpen && unread > 0 && lastMsg && lastMsg.from !== myId;
+    !wide && !chatVisible && unread > 0 && lastMsg && lastMsg.from !== myId;
 
-  /**
-   * One avatar cell, both tiers. Everyone can tap a face: managers get the
-   * stage controls, everyone else gets the person's profile (the room
-   * docks underneath). The cell's padding reserves the breathing ring's
-   * headroom so it can never overlap a neighbour.
-   */
-  const memberCell = (m: RoomMember, onStage: boolean, large: boolean) => {
-    const label = `${m.username}: ${
-      onStage
-        ? tf("voice.stageTier", "On stage")
-        : m.hand
-          ? t("voice.speakRequests")
-          : t("voice.listeners")
-    }`;
-    return (
-      // A seat filling or emptying lands; no layout, the grid can be long.
-      <motion.button
-        key={m.id}
-        {...pop}
-        type="button"
-        onClick={() => (canManage ? setMenuFor(m) : viewProfile(m))}
-        aria-label={label}
-        {...(canManage ? { "aria-haspopup": "dialog" as const } : {})}
-        className="flex flex-col items-center gap-0.5 cursor-pointer"
-      >
-        <span className="block p-1.5">
-          <span
-            className={clsx(
-              "relative block",
-              large ? "h-16 w-16 lg:h-20 lg:w-20" : "h-12 w-12",
-            )}
-          >
-            <SpeakingRing room={room} identity={m.id} />
-            <span
-              className={clsx(
-                "absolute inset-0 overflow-hidden rounded-pill bg-[#1c1917]",
-                // A hand a manager can act on gets a ring, so it reads as
-                // a request, not paint.
-                canManage && m.hand && !onStage && "ring-2 ring-gold",
-                cohostIds.has(m.id) && "ring-2 ring-brand/45",
-              )}
-            >
-              <SafeAvatar src={m.avatar} />
-            </span>
-            <AnimatePresence initial={false}>
-              {m.hand && !onStage && (
-                <motion.span
-                  key="hand"
-                  {...pop}
-                  className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-pill bg-[#fafaf9] text-[#0c0a09]"
-                >
-                  <HandPalm size={11} weight="fill" />
-                </motion.span>
-              )}
-              {onStage && !cohostIds.has(m.id) && (
-                <motion.span
-                  key="mic"
-                  {...pop}
-                  className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-pill bg-success text-[#0c0a09]"
-                >
-                  <Microphone size={11} weight="fill" />
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </span>
-        </span>
-        <span className="flex max-w-full items-center gap-0.5">
-          <span className="min-w-0 truncate font-sans text-[calc(10.5px*var(--ws-fs))] glass-ink-dim">
-            {m.username}
-          </span>
-          {/* Badges only once the gateway confirmed who this id is —
-              presence is client-published and trust marks are not
-              self-serve. */}
-          {m.resolved && (
-            <UserBadges
-              isVerified={m.isVerified}
-              verification={m.verification}
-              badges={m.badges as any}
-              size={10}
-            />
-          )}
-        </span>
-        <AnimatePresence initial={false}>
-          {cohostIds.has(m.id) && (
-            <motion.span
-              key="cohost"
-              {...pop}
-              className="rounded-pill bg-brand/15 px-1.5 py-px font-sans text-[calc(8.5px*var(--ws-fs))] font-bold uppercase tracking-[0.1em] text-gold"
-            >
-              {tf("voice.cohostBadge", "Co-host")}
-            </motion.span>
-          )}
-        </AnimatePresence>
-      </motion.button>
-    );
+  const category = spaceCategoryLabel(row);
+  const communities = spaceCommunities(row);
+  const menuOnStage = menuFor ? roster.isOnStage(menuFor.id) : false;
+
+  const seatLabels = {
+    you: tf("voice.you", "You"),
+    speaking: tf("voice.speaking", "Speaking"),
+    host: tf("voice.hostBadge", "Host"),
+    cohost: tf("voice.cohostBadge", "Co-host"),
+    speaker: tf("voice.speaker", "Speaker"),
+    muted: tf("voice.mutedRole", "Muted"),
   };
 
-  const audioLine =
-    audio === "connecting"
-      ? t("voice.audioConnecting")
-      : audio === "reconnecting"
-        ? tf("voice.reconnecting", "Reconnecting to the room…")
-        : audio === "listening"
-          ? canSpeak
-            ? muted
-              ? t("voice.youAreMuted")
-              : t("voice.youAreLive")
-            : t("voice.listenOnly")
-          : audio === "unavailable"
-            ? t("voice.audioUnavailable")
-            : audio === "failed"
-              ? t("voice.audioFailed")
-              : t("voice.listenOnly");
+  const panelTabs = (
+    <Tabs<PanelTab>
+      items={[
+        {
+          key: "chat",
+          label: tf("voice.chat", "Chat"),
+          Icon: ChatCircle,
+          badge: tab === "chat" ? undefined : unread || undefined,
+        },
+        { key: "vivid", label: tf("voice.vivid", "Vivid"), Icon: Sparkle },
+      ]}
+      value={tab}
+      onChange={setTab}
+      ariaLabel={tf("voice.roomPanel", "Room panel")}
+    />
+  );
 
   const chatPane = (
-    <ChatPane
+    <RoomChat
       messages={messages}
       meId={myId}
       nameOf={nameOf}
       avatarOf={avatarOf}
       onSend={sendChat}
-      placeholder={tf("voice.chatPlaceholder", "Message the room")}
-      emptyLine={tf(
-        "voice.chatEmpty",
-        "Nothing yet. Say something to the room.",
-      )}
-      sendLabel={tf("voice.chatSend", "Send")}
+      inputRef={chatInputRef}
+      labels={{
+        placeholder: tf("voice.chatPlaceholder", "Message the room"),
+        empty: tf("voice.chatEmpty", "Nothing yet. Say something to the room."),
+        send: tf("voice.chatSend", "Send"),
+      }}
     />
   );
+
+  // No notes backend yet: one honest state. The notes phase passes notes,
+  // a transcript opener and Ask here.
+  const vividPane = <VividPanel notes={null} />;
+
+  const iconBtn =
+    "flex h-10 min-w-10 cursor-pointer items-center justify-center gap-2 rounded-pill px-2.5 font-sans text-[calc(14.5px*var(--ws-fs))] font-medium text-muted transition-colors hover:bg-primary/[0.07] hover:text-primary sm:px-3.5";
 
   return (
     <ConfirmModalPortal>
@@ -762,45 +485,99 @@ export default function SpaceRoom({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.2, ease: EASE }}
-        className="fixed inset-0 z-modal glass-ink flex items-end sm:items-center justify-center sm:p-6"
-        onClick={onMinimize}
+        transition={{ duration: DUR.base, ease: EASE }}
+        className="fixed inset-0 z-modal"
       >
-        {/* The room's cover, blurred full-bleed behind everything (owner
-            2026-10-12, "the room, sleeker"): no box around the stage, the
-            art IS the room. */}
-        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div
-            className="absolute -inset-24 scale-110 blur-[90px]"
-            style={{ background: spaceBackground(row) }}
-          />
-          <div className="absolute inset-0 bg-[#04060a]/85" />
-        </div>
-        <motion.div
-          initial={reduce ? { opacity: 0 } : { opacity: 0, y: 24, scale: 0.99 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.32, ease: EASE }}
+        <div
+          ref={rootRef}
           role="dialog"
           aria-modal="true"
           aria-label={row.title}
-          className="relative flex h-[92dvh] w-full flex-col overflow-hidden rounded-t-[28px] bg-[#0e131a]/45 backdrop-blur-2xl backdrop-saturate-150 sm:h-[88vh] sm:w-[600px] sm:rounded-[28px] lg:w-[min(1180px,94vw)]"
-          onClick={(e) => e.stopPropagation()}
+          tabIndex={-1}
+          style={ROOM_STYLE}
+          className="ws-on-dark absolute inset-0 flex flex-col overflow-hidden outline-none"
         >
-          {/* Mesh header band — the card's art carries into the room. */}
-          <div className="relative shrink-0 px-6 pb-4 pt-5">
-            <div className="relative flex items-start justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className="flex items-center gap-1.5 rounded-[4px] bg-danger px-1.5 py-px text-[calc(9px*var(--ws-fs))] font-bold tracking-wide text-white font-sans">
-                  <span className="h-1 w-1 rounded-pill bg-white animate-pulse" />
-                  {t("live.badge")}
-                </span>
-                {elapsed && (
-                  <span className="font-sans text-[calc(11px*var(--ws-fs))] font-medium text-[#fafaf9]/70 tabular-nums">
-                    {elapsed}
+          <RoomBackdrop row={row} />
+
+          <motion.div
+            initial={reduce ? { opacity: 0 } : { opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: DUR.slow, ease: EASE_OUT_EXPO }}
+            className="relative flex min-h-0 flex-1 flex-col"
+          >
+            {/* Header: on air, the time and the topic, then the title. */}
+            <header className="flex shrink-0 items-start gap-3 px-4 pt-[max(var(--ws-safe-top),14px)] sm:px-6 sm:pt-6 lg:px-10 lg:pt-8">
+              <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 font-sans text-[calc(12.5px*var(--ws-fs))] text-muted lg:text-[calc(13.5px*var(--ws-fs))]">
+                  {/* A badge, so it may shout; everything after it is words. */}
+                  <span className="flex shrink-0 items-center gap-1.5 rounded-pill bg-danger/15 px-2 py-0.5 font-sans text-[calc(10.5px*var(--ws-fs))] font-bold uppercase tracking-[0.12em] text-[#ff9b9b]">
+                    <span className="size-1.5 animate-pulse rounded-pill bg-danger" />
+                    {tf("voice.onAir", "On air")}
                   </span>
+                  <ElapsedTimer
+                    since={row.startedAt}
+                    className="font-semibold text-primary"
+                  />
+                  {/* Each separator travels with the words after it, so a
+                      wrap never strands a dot at the end of a line. */}
+                  {category && (
+                    <span className="flex shrink-0 items-center gap-2">
+                      <span aria-hidden className="text-subtle">
+                        ·
+                      </span>
+                      {category}
+                    </span>
+                  )}
+                  {communities.length > 0 && (
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span aria-hidden className="text-subtle">
+                        ·
+                      </span>
+                      <span className="min-w-0 truncate">
+                        {communities[0].name}
+                        {communities.length > 1 &&
+                          ` +${communities.length - 1}`}
+                      </span>
+                    </span>
+                  )}
+                  {demo && (
+                    <span className="rounded-pill bg-primary/10 px-2 py-0.5 font-semibold text-primary">
+                      {t("voice.demoChip")}
+                    </span>
+                  )}
+                </div>
+                <h1 className="mt-2 line-clamp-3 font-display text-[calc(20px*var(--ws-fs))] font-semibold leading-tight tracking-[-0.01em] text-primary sm:text-[calc(24px*var(--ws-fs))] sm:line-clamp-2 lg:mt-3 lg:text-[calc(32px*var(--ws-fs))]">
+                  {row.title}
+                </h1>
+                {row.description && (
+                  <p className="mt-2 hidden max-w-[72ch] line-clamp-2 font-sans text-[calc(14px*var(--ws-fs))] leading-relaxed text-muted sm:block">
+                    {row.description}
+                  </p>
                 )}
               </div>
-              <div className="flex items-center gap-1.5">
+
+              <div className="-mr-2 flex shrink-0 items-center gap-0.5 sm:mr-0 sm:gap-1">
+                <span className="flex h-10 items-center gap-1.5 px-2 font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-primary tabular-nums sm:px-3 sm:text-[calc(14.5px*var(--ws-fs))]">
+                  <Headphones size={17} className="text-muted sm:hidden" />
+                  {/* People coming and going is not your doing: it rolls. */}
+                  <span className="relative inline-flex overflow-hidden">
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      <motion.span
+                        key={formatCompact(roster.listenerCount)}
+                        {...swap}
+                        className="inline-block"
+                      >
+                        {formatCompact(roster.listenerCount)}
+                      </motion.span>
+                    </AnimatePresence>
+                  </span>
+                  <span className="hidden sm:inline">
+                    {t("voice.listeners")}
+                  </span>
+                  <span className="sr-only sm:hidden">
+                    {t("voice.listeners")}
+                  </span>
+                </span>
                 <div ref={shareRef} className="relative">
                   <button
                     type="button"
@@ -808,10 +585,10 @@ export default function SpaceRoom({
                     aria-label={t("voice.share")}
                     aria-haspopup="menu"
                     aria-expanded={shareOpen}
-                    className="flex h-9 items-center gap-1.5 rounded-pill glass-chip px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors cursor-pointer"
+                    className={iconBtn}
                   >
-                    <LinkSimple size={14} weight="bold" />
-                    {t("voice.share")}
+                    <ShareNetwork size={18} className="sm:hidden" />
+                    <span className="hidden sm:inline">{t("voice.share")}</span>
                   </button>
                   <AnimatePresence>
                     {shareOpen && (
@@ -819,7 +596,7 @@ export default function SpaceRoom({
                         key="share-menu"
                         role="menu"
                         {...menuStagger("top-right")}
-                        className="absolute right-0 top-full z-20 mt-2 w-[208px] overflow-hidden rounded-[22px] bg-[#141a22]/85 p-1.5 shadow-pop backdrop-blur-2xl"
+                        className="absolute right-0 top-full z-dropdown mt-2 w-[212px] overflow-hidden rounded-[22px] bg-[#111722]/90 p-1.5 shadow-pop backdrop-blur-2xl"
                       >
                         <motion.button
                           variants={staggerItem}
@@ -829,9 +606,9 @@ export default function SpaceRoom({
                             setShareOpen(false);
                             void copyLink();
                           }}
-                          className="flex w-full items-center gap-2.5 rounded-pill px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-[#fafaf9] transition-colors hover:bg-[#fafaf9]/8 cursor-pointer"
+                          className="flex h-11 w-full cursor-pointer items-center gap-2.5 rounded-pill px-3.5 text-left font-sans text-[calc(13.5px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/[0.08]"
                         >
-                          <LinkSimple size={15} weight="bold" />
+                          <LinkSimple size={16} />
                           {tf("voice.copyLink", "Copy link")}
                         </motion.button>
                         <motion.button
@@ -842,9 +619,9 @@ export default function SpaceRoom({
                             setShareOpen(false);
                             postAbout();
                           }}
-                          className="flex w-full items-center gap-2.5 rounded-pill px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-[#fafaf9] transition-colors hover:bg-[#fafaf9]/8 cursor-pointer"
+                          className="flex h-11 w-full cursor-pointer items-center gap-2.5 rounded-pill px-3.5 text-left font-sans text-[calc(13.5px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/[0.08]"
                         >
-                          <NotePencil size={15} weight="bold" />
+                          <NotePencil size={16} />
                           {tf("voice.postAbout", "Post about it")}
                         </motion.button>
                       </motion.div>
@@ -855,642 +632,298 @@ export default function SpaceRoom({
                   type="button"
                   onClick={onMinimize}
                   aria-label={t("voice.minimize")}
-                  className="flex h-9 w-9 items-center justify-center rounded-pill glass-chip transition-colors cursor-pointer"
+                  className={iconBtn}
                 >
-                  <ArrowsInSimple size={15} weight="bold" />
+                  <ArrowsInSimple size={18} className="sm:hidden" />
+                  <span className="hidden sm:inline">
+                    {tf("voice.minimiseShort", "Minimise")}
+                  </span>
                 </button>
               </div>
-            </div>
-            <h2 className="relative mt-4 font-display text-[calc(22px*var(--ws-fs))] font-medium leading-snug tracking-[-0.01em] text-[#fafaf9]">
-              {row.title}
-            </h2>
-            {row.description && (
-              <p className="relative mt-1.5 font-sans text-[calc(12.5px*var(--ws-fs))] leading-relaxed text-[#fafaf9]/70">
-                {row.description}
-              </p>
-            )}
-            <div className="relative mt-2 flex items-center gap-2 font-sans text-[calc(12px*var(--ws-fs))] text-[#fafaf9]/70">
-              <EqBars className="text-gold" />
-              <span className="flex items-center gap-1 font-semibold tabular-nums">
-                <Users size={13} weight="bold" />
-                {/* People coming and going is not your doing: it rolls. */}
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.span
-                    key={formatCompact(listenerCount)}
-                    {...swap}
-                    className="inline-block"
+            </header>
+
+            {/* The stage and the room, with the panel beside them on a wide
+                screen. */}
+            <div className="relative flex min-h-0 flex-1 gap-10 px-4 sm:px-6 lg:px-10">
+              <div className="relative flex min-w-0 flex-1 flex-col">
+                <div
+                  ref={scrollRef}
+                  className="min-h-0 flex-1 overflow-y-auto no-scrollbar pb-6"
+                >
+                  <section
+                    aria-label={tf("voice.onStageLabel", "On stage")}
+                    className="pt-6 lg:pt-12"
                   >
-                    {formatCompact(listenerCount)}
-                  </motion.span>
-                </AnimatePresence>{" "}
-                {t("voice.listeners")}
-              </span>
-              {row.community && (
-                <span className="truncate rounded-pill bg-[#fafaf9]/12 px-2 py-px text-[calc(10.5px*var(--ws-fs))] font-medium">
-                  {row.community.name}
-                </span>
-              )}
-            </div>
-          </div>
+                    <div className="grid grid-cols-3 gap-x-2 gap-y-6 sm:grid-cols-4 lg:flex lg:flex-wrap lg:gap-x-10 lg:gap-y-8">
+                      {roster.stage.map((seat) => {
+                        const target = seat.member;
+                        const onClick = seat.isMe
+                          ? undefined
+                          : target
+                            ? () => pickMember(target)
+                            : () => openProfile(seat.username);
+                        return (
+                          <StageSeat
+                            key={seat.id || `host-${seat.username}`}
+                            seat={seat}
+                            room={room}
+                            onClick={onClick}
+                            labels={seatLabels}
+                          />
+                        );
+                      })}
+                    </div>
+                  </section>
 
-          {/* Below the band: the stage column, and on desktop the text lane
-              beside it — the window grows to seat it rather than crowding
-              the stage. */}
-          <div className="relative flex min-h-0 flex-1">
-            <div className="relative flex min-w-0 flex-1 flex-col">
-              {/* Stage */}
-              <div className="relative flex-1 min-h-0 overflow-y-auto no-scrollbar px-6 py-6 lg:py-10">
-                {/* Host seat. The cell's padding reserves the room the
-                    breathing ring needs at its 1.18 ceiling. */}
-                <div className="flex flex-col items-center gap-1.5">
-                  <span className="block p-3">
-                    <span className="relative block h-24 w-24 lg:h-28 lg:w-28">
-                      <SpeakingRing room={room} identity={hostIdentity} />
-                      <span className="absolute inset-0 overflow-hidden rounded-pill bg-[#1c1917] ring-2 ring-brand/45">
-                        <SafeAvatar src={row.host.avatar} />
-                      </span>
-                    </span>
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span className="font-sans text-[calc(14px*var(--ws-fs))] font-semibold glass-ink">
-                      {hostName(row.host)}
-                    </span>
-                    <UserBadges
-                      isVerified={row.host.isVerified}
-                      verification={(row.host as any).verification}
-                      badges={(row.host as any).badges}
-                      size={13}
-                    />
-                  </span>
-                  <span className="rounded-pill bg-brand/15 px-2.5 py-px font-sans text-[calc(10px*var(--ws-fs))] font-bold uppercase tracking-[0.1em] text-gold">
-                    {t("voice.hostBadge")}
-                  </span>
-                </div>
+                  <div aria-hidden className="my-7 h-px bg-hairline lg:my-10" />
 
-                {/* Stage tier: co-hosts and speakers, under the host. */}
-                {realtime && onStageMembers.length > 0 && (
-                  <div className="mt-5">
-                    <h3 className="glass-eyebrow font-sans">
-                      {tf("voice.stageTier", "On stage")}
-                    </h3>
-                    <div className="mt-2 grid grid-cols-3 gap-x-1 gap-y-2 sm:grid-cols-4">
+                  <section aria-labelledby="ws-room-audience">
+                    <div className="flex min-h-8 items-center gap-2.5">
+                      <h2
+                        id="ws-room-audience"
+                        className="font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-primary lg:text-[calc(14.5px*var(--ws-fs))]"
+                      >
+                        {t("voice.inTheRoom")}
+                      </h2>
+                      {realtime && (
+                        <span className="relative inline-flex overflow-hidden font-sans text-[calc(13.5px*var(--ws-fs))] text-muted tabular-nums lg:text-[calc(14.5px*var(--ws-fs))]">
+                          <AnimatePresence mode="popLayout" initial={false}>
+                            <motion.span
+                              key={roster.audience.length}
+                              {...swap}
+                              className="inline-block"
+                            >
+                              {formatCompact(roster.audience.length)}
+                            </motion.span>
+                          </AnimatePresence>
+                        </span>
+                      )}
                       <AnimatePresence initial={false}>
-                        {onStageMembers.map((m) => memberCell(m, true, true))}
+                        {roster.hands > 0 && (
+                          <motion.span
+                            key="hands"
+                            {...pop}
+                            className="ml-auto flex h-8 items-center gap-1.5 rounded-pill bg-primary/[0.08] px-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-primary tabular-nums"
+                          >
+                            <HandPalm size={13} weight="fill" />
+                            {roster.hands}{" "}
+                            {roster.hands === 1
+                              ? tf("voice.handRaisedOne", "hand raised")
+                              : tf("voice.handsRaisedMany", "hands raised")}
+                          </motion.span>
+                        )}
                       </AnimatePresence>
                     </div>
-                  </div>
-                )}
-
-                {/* Audience */}
-                <div className="mt-6">
-                  <h3 className="glass-eyebrow font-sans">
-                    {t("voice.inTheRoom")}
-                  </h3>
-                  {realtime && audienceShown.length > 0 ? (
-                    <>
-                      <div className="mt-2 grid grid-cols-4 gap-x-1 gap-y-2 sm:grid-cols-5">
-                        <AnimatePresence initial={false}>
-                          {audienceShown.map((m) =>
-                            memberCell(m, false, false),
-                          )}
-                        </AnimatePresence>
-                      </div>
-                      {audienceOverflow > 0 && (
-                        <p className="mt-2 font-sans text-[calc(11.5px*var(--ws-fs))] glass-ink-faint">
-                          +{formatCompact(audienceOverflow)}
-                        </p>
-                      )}
-                    </>
-                  ) : (
-                    <p className="mt-3 font-sans text-[calc(12.5px*var(--ws-fs))] glass-ink-dim">
-                      {realtime
-                        ? t("voice.roomQuiet")
-                        : `${formatCompact(listenerCount)} ${t("voice.listeners")}`}
-                    </p>
-                  )}
-                </div>
-
-                {/* Who is talking, for ears that can't see the rings. */}
-                <span className="sr-only" aria-live="polite">
-                  {speakingNames.join(", ")}
-                </span>
-              </div>
-
-              {/* Floating reactions — Meet-style: up the left edge, wearing
-                  the sender's name, so a host can acknowledge the person and
-                  not just the confetti. */}
-              <div className="pointer-events-none absolute inset-y-0 left-0 w-40 overflow-hidden">
-                <AnimatePresence>
-                  {reactions.map((r, i) => {
-                    const kind = REACTION_BY_KIND.has(r.emoji as ReactionKind)
-                      ? (r.emoji as ReactionKind)
-                      : LEGACY_REACTIONS[r.emoji];
-                    const def = kind ? REACTION_BY_KIND.get(kind) : undefined;
-                    if (!def) return null;
-                    return (
-                      <motion.div
-                        key={r.id}
-                        initial={{ opacity: 0, y: 24, scale: 0.7 }}
-                        animate={{
-                          opacity: 1,
-                          y: reduce ? -30 : -170 - (i % 3) * 40,
-                          scale: 1,
+                    {realtime && roster.audience.length > 0 ? (
+                      <ListenerGrid
+                        members={roster.audience}
+                        myId={myId}
+                        scrollRoot={scrollRef}
+                        onPick={pickMember}
+                        labels={{
+                          you: seatLabels.you,
+                          handUp: tf("voice.handRaised", "Hand raised"),
+                          listener: t("voice.listeners"),
+                          more: (n) =>
+                            `+${n} ${tf("voice.moreScroll", "more · scroll to see everyone")}`,
                         }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 1.8, ease: "easeOut" }}
-                        className="absolute bottom-2"
-                        style={{ left: 14 + (r.id % 3) * 36 }}
-                      >
-                        <span className="flex flex-col items-center gap-1">
-                          <def.Icon
-                            size={24}
-                            weight="fill"
-                            className={def.tint}
-                          />
-                          {r.from?.name && (
-                            <span className="max-w-[92px] truncate rounded-pill bg-[#0c0a09]/60 px-2 py-px font-sans text-[calc(9.5px*var(--ws-fs))] font-semibold text-[#fafaf9]/85">
-                              {r.from.name}
-                            </span>
-                          )}
-                        </span>
-                      </motion.div>
-                    );
-                  })}
-                </AnimatePresence>
-              </div>
-
-              {/* Autoplay was refused (iOS until a gesture): the honest fix
-                  is a tap, so offer the tap. */}
-              <AnimatePresence>
-                {needsUnlock && audio === "listening" && (
-                  <div
-                    key="unlock"
-                    className="pointer-events-none absolute inset-x-0 bottom-20 flex justify-center"
-                  >
-                    <motion.button
-                      {...pop}
-                      {...press}
-                      type="button"
-                      onClick={() => void unlockAudio()}
-                      className="pointer-events-auto flex h-10 items-center gap-2 rounded-pill bg-brand px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on shadow-nav transition-colors hover:bg-brand-active cursor-pointer"
-                    >
-                      <SpeakerHigh size={15} weight="fill" />
-                      {tf("voice.tapToListen", "Tap to listen")}
-                    </motion.button>
-                  </div>
-                )}
-              </AnimatePresence>
-
-              {/* New-chat ticker (phones): the latest line slides in above
-                  the dock so the stage never hides a conversation. */}
-              <AnimatePresence>
-                {showTicker && (
-                  <motion.button
-                    type="button"
-                    initial={reduce ? { opacity: 0 } : { opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2, ease: EASE }}
-                    onClick={() => setChatOpen(true)}
-                    className="absolute inset-x-3 bottom-2 z-10 flex items-center gap-2 rounded-pill bg-[#0c0a09]/75 px-3 py-2 text-left lg:hidden cursor-pointer"
-                  >
-                    <span className="relative h-[18px] w-[18px] shrink-0 overflow-hidden rounded-pill bg-[#1c1917]">
-                      <SafeAvatar src={avatarOf(lastMsg.from)} />
-                    </span>
-                    <span className="min-w-0 flex-1 truncate font-sans text-[calc(12px*var(--ws-fs))] glass-ink">
-                      <span className="mr-1.5 font-semibold glass-ink-dim">
-                        {nameOf(lastMsg.from)}
-                      </span>
-                      {lastMsg.text}
-                    </span>
-                    {unread > 1 && (
-                      <span className="shrink-0 rounded-pill bg-brand px-1.5 py-px font-sans text-[calc(10px*var(--ws-fs))] font-bold text-brand-on tabular-nums">
-                        {unread}
-                      </span>
-                    )}
-                  </motion.button>
-                )}
-              </AnimatePresence>
-
-              {/* Dock */}
-              <div className="shrink-0 px-4 pb-safe pt-2 pb-4">
-                <AnimatePresence>
-                  {micLive && (
-                    <motion.div
-                      key="live-pill"
-                      {...pop}
-                      className="mb-3 flex justify-center"
-                    >
-                      <span className="flex items-center gap-2.5 rounded-pill bg-[#fafaf9]/8 px-4 py-1.5 font-sans text-[calc(11px*var(--ws-fs))] uppercase tracking-[0.16em]">
-                        <span className="h-1.5 w-1.5 animate-pulse rounded-pill bg-[#e5484d]" />
-                        <span className="font-semibold tabular-nums text-[#eef2f6]">
-                          {tf("voice.onAir", "On air")} · {liveFor}
-                        </span>
-                        <span className="hidden glass-ink-dim sm:inline">
-                          {tf("voice.spaceToMute", "Space to mute")}
-                        </span>
-                      </span>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                <div className="flex flex-wrap items-center justify-center gap-3">
-                  <div className="flex min-w-0 flex-wrap items-center justify-center gap-2">
-                    {canSpeak ? (
-                      // On stage: a real mic. The token grants publish, so
-                      // this is never a dead control.
-                      <motion.button
-                        {...press}
-                        type="button"
-                        disabled={audio !== "listening"}
-                        onClick={toggleMute}
-                        aria-pressed={!muted}
-                        title={t("voice.micToggle")}
-                        aria-label={t("voice.micToggle")}
-                        className={clsx(
-                          "order-first flex h-16 w-16 items-center justify-center rounded-pill transition-[background-color,box-shadow] sm:order-none",
-                          audio !== "listening"
-                            ? "glass-chip opacity-40 cursor-not-allowed"
-                            : muted
-                              ? "glass-chip cursor-pointer"
-                              // On air: a quiet off-white key, not a glow
-                              // (owner 2026-10-13, "a more mature look").
-                              : "bg-[#eef2f6] text-[#05070a] cursor-pointer",
-                        )}
-                      >
-                        {/* Keyed, no exit: the new glyph lands at once. A mic
-                            state must never wait on the old one leaving. */}
-                        <motion.span
-                          key={muted ? "muted" : "live"}
-                          initial={pop.initial}
-                          animate={pop.animate}
-                          className="flex"
-                        >
-                          {muted ? (
-                            <MicrophoneSlash size={24} weight="bold" />
-                          ) : (
-                            <Microphone size={24} weight="fill" />
-                          )}
-                        </motion.span>
-                      </motion.button>
+                      />
                     ) : (
-                      // In the audience: no publish rights, so no mic at all —
-                      // the honest control is asking for one.
+                      <p className="mt-3 font-sans text-[calc(13.5px*var(--ws-fs))] text-muted">
+                        {realtime
+                          ? t("voice.roomQuiet")
+                          : `${formatCompact(roster.listenerCount)} ${t("voice.listeners")}`}
+                      </p>
+                    )}
+                  </section>
+
+                  {/* Who is talking, for ears that can't see the rings. */}
+                  <span className="sr-only" aria-live="polite">
+                    {roster.speakingNames.join(", ")}
+                  </span>
+                </div>
+
+                <ReactionFloats reactions={reactions} />
+
+                {/* Autoplay was refused (iOS until a gesture): the honest fix
+                    is a tap, so offer the tap. */}
+                <AnimatePresence>
+                  {needsUnlock && audioState === "listening" && (
+                    <div
+                      key="unlock"
+                      className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center"
+                    >
                       <motion.button
+                        {...pop}
                         {...press}
                         type="button"
-                        onClick={toggleHand}
-                        aria-pressed={hand}
-                        className={clsx(
-                          "flex h-10 items-center gap-1.5 rounded-pill px-3.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors cursor-pointer",
-                          hand ? "glass-chip-active" : "glass-chip",
-                        )}
+                        onClick={() => void unlockAudio()}
+                        className="pointer-events-auto flex h-11 cursor-pointer items-center gap-2 rounded-pill bg-[#eef2f6] px-5 font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-[#05070a] shadow-pop"
                       >
-                        <HandPalm size={15} weight={hand ? "fill" : "bold"} />
-                        <AnimatePresence mode="wait" initial={false}>
-                          <motion.span
-                            key={hand ? "lower" : "raise"}
-                            {...swap}
-                            className="inline-block"
-                          >
-                            {hand
-                              ? t("voice.lowerHand")
-                              : tf("voice.requestSpeak", "Request to speak")}
-                          </motion.span>
-                        </AnimatePresence>
+                        <SpeakerHigh size={16} weight="fill" />
+                        {tf("voice.tapToListen", "Tap to listen")}
                       </motion.button>
-                    )}
+                    </div>
+                  )}
+                </AnimatePresence>
 
-                    {/* display:contents, so the cascade parent adds no box
-                        to the wrapping dock row. Plays once, as the room
-                        opens. */}
-                    <motion.div
-                      variants={staggerParent}
-                      initial="hidden"
-                      animate="show"
-                      className="contents"
-                    >
-                      {REACTION_SET.map(({ kind, Icon, tint, label }) => (
-                        <motion.button
-                          key={kind}
-                          variants={staggerPop}
-                          {...press}
-                          type="button"
-                          onClick={() => react(kind)}
-                          aria-label={`React: ${label}`}
-                          className="flex h-10 w-10 items-center justify-center rounded-pill transition-colors hover:bg-[#fafaf9]/10 cursor-pointer"
-                        >
-                          <Icon size={17} weight="fill" className={tint} />
-                        </motion.button>
-                      ))}
-                    </motion.div>
-                    {/* The text lane, for phones — desktop seats it beside
-                        the stage instead. */}
-                    <button
+                {/* New-chat ticker (phones): the latest line slides in above
+                    the bar so the stage never hides a conversation. */}
+                <AnimatePresence>
+                  {showTicker && (
+                    <motion.button
                       type="button"
-                      onClick={() => setChatOpen((v) => !v)}
-                      aria-pressed={chatOpen}
-                      aria-label={tf("voice.chat", "Chat")}
-                      className={clsx(
-                        "relative flex h-10 w-10 items-center justify-center rounded-pill transition-colors cursor-pointer lg:hidden",
-                        chatOpen ? "glass-chip-active" : "glass-chip",
+                      initial={reduce ? { opacity: 0 } : { opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: DUR.base, ease: EASE }}
+                      onClick={openChat}
+                      className="absolute inset-x-0 bottom-2 flex cursor-pointer items-center gap-2 rounded-pill bg-[#0b0f15]/90 px-3 py-2 text-left"
+                    >
+                      <span className="relative size-5 shrink-0 overflow-hidden rounded-pill bg-[#1c2533]">
+                        <SafeAvatar src={avatarOf(lastMsg.from)} eager />
+                      </span>
+                      <span className="min-w-0 flex-1 truncate font-sans text-[calc(13px*var(--ws-fs))] text-primary">
+                        <span className="mr-1.5 font-semibold text-muted">
+                          {nameOf(lastMsg.from)}
+                        </span>
+                        {lastMsg.text}
+                      </span>
+                      {unread > 1 && (
+                        <span className="shrink-0 rounded-pill bg-[#eef2f6] px-1.5 py-px font-sans text-[calc(10.5px*var(--ws-fs))] font-bold text-[#05070a] tabular-nums">
+                          {unread}
+                        </span>
                       )}
-                    >
-                      <ChatCircle size={16} weight={chatOpen ? "fill" : "bold"} />
-                      <AnimatePresence>
-                        {unread > 0 && !chatOpen && (
-                          <motion.span
-                            key="unread"
-                            {...pop}
-                            className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-pill bg-brand px-1 font-sans text-[calc(9px*var(--ws-fs))] font-bold text-brand-on tabular-nums"
-                          >
-                            {unread > 9 ? "9+" : unread}
-                          </motion.span>
-                        )}
-                      </AnimatePresence>
-                    </button>
-                  </div>
-                  {row.isHost ? (
-                    <motion.button
-                      {...press}
-                      type="button"
-                      onClick={() => onEnd(row)}
-                      className="flex items-center gap-1.5 rounded-pill bg-danger/90 px-5 h-12 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-white hover:bg-danger transition-colors cursor-pointer"
-                    >
-                      {t("voice.end")}
-                    </motion.button>
-                  ) : (
-                    <motion.button
-                      {...press}
-                      type="button"
-                      onClick={onLeave}
-                      className="flex items-center gap-1.5 rounded-pill bg-danger/20 px-5 h-12 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-[#ff8a8a] hover:bg-danger/30 transition-colors cursor-pointer"
-                    >
-                      <SignOut size={14} weight="bold" />
-                      {t("voice.leave")}
                     </motion.button>
                   )}
-                </div>
-                <p className="mt-2 flex items-center justify-center gap-2 text-center font-sans text-[calc(10.5px*var(--ws-fs))] glass-ink-faint">
-                  <AnimatePresence mode="wait" initial={false}>
-                    <motion.span
-                      key={audioLine}
-                      {...swap}
-                      className="inline-block"
-                    >
-                      {audioLine}
-                    </motion.span>
-                  </AnimatePresence>
-                  <AnimatePresence>
-                    {audio === "failed" && (
-                      <motion.button
-                        key="rejoin"
-                        {...pop}
-                        type="button"
-                        onClick={reconnect}
-                        className="rounded-pill glass-chip px-2.5 py-0.5 font-sans text-[calc(10.5px*var(--ws-fs))] font-semibold glass-ink transition-colors cursor-pointer"
-                      >
-                        {tf("voice.rejoin", "Rejoin")}
-                      </motion.button>
-                    )}
-                  </AnimatePresence>
-                </p>
+                </AnimatePresence>
               </div>
+
+              {/* The panel, seated. A plain tint on the art: the menus that
+                  float over the room carry the stack's one backdrop blur. */}
+              {wide && (
+                <aside
+                  aria-label={tf("voice.roomPanel", "Room panel")}
+                  className="mb-4 mt-8 flex w-[360px] shrink-0 flex-col overflow-hidden rounded-[20px] bg-primary/[0.045] xl:w-[400px]"
+                >
+                  <div className="shrink-0 px-3 pt-2">{panelTabs}</div>
+                  <div className="min-h-0 flex-1">
+                    {tab === "chat" ? chatPane : vividPane}
+                  </div>
+                </aside>
+              )}
             </div>
 
-            {/* Desktop text lane. Solid own fill, no second blur: the panel
-                behind it already carries the one blur this stack gets. */}
-            <aside
-              aria-label={tf("voice.chat", "Chat")}
-              className="hidden w-[340px] shrink-0 flex-col lg:flex"
-            >
-              <div className="flex h-10 shrink-0 items-center px-4 pt-2">
-                <span className="glass-eyebrow font-sans">
-                  {tf("voice.chat", "Chat")}
-                </span>
-              </div>
-              {chatPane}
-            </aside>
+            <div className="relative shrink-0 px-3 pb-safe pt-2 sm:px-6 lg:px-10 lg:pb-6">
+              <RoomBar
+                avatar={me?.avatar}
+                audio={audio}
+                liveSince={liveSince}
+                hand={hand}
+                canRaise={!canManage}
+                onRaise={toggleHand}
+                reactOpen={reactOpen}
+                onReactOpen={setReactOpen}
+                onReact={react}
+                onChat={openChat}
+                chatActive={!wide && sheetOpen}
+                unread={chatVisible ? 0 : unread}
+                isHost={row.isHost}
+                onLeave={onLeave}
+                onEnd={() => onEnd(row)}
+                tf={tf}
+              />
+            </div>
 
-            {/* Phone chat sheet: slides over the lower stage, solid fill,
-                the dock stays reachable underneath it is replaced by the
-                pane's own input. */}
+            {/* The panel on a phone: the same Chat and Vivid in a sheet over
+                the lower room. Solid fill, no second blur. */}
             <AnimatePresence>
-              {chatOpen && (
-                <motion.div
-                  initial={reduce ? { opacity: 0 } : { opacity: 0, y: 40 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={reduce ? { opacity: 0 } : { opacity: 0, y: 40 }}
-                  transition={{ duration: 0.2, ease: EASE }}
-                  className="absolute inset-x-0 bottom-0 top-[26%] z-10 flex flex-col rounded-t-2xl border-t border-[#fafaf9]/10 bg-[#131009] lg:hidden"
-                >
-                  <div className="flex shrink-0 items-center justify-between px-4 pt-3 pb-1">
-                    <span className="glass-eyebrow font-sans">
-                      {tf("voice.chat", "Chat")}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setChatOpen(false)}
-                      aria-label={t("common.close")}
-                      className="flex h-8 w-8 items-center justify-center rounded-pill glass-chip cursor-pointer"
-                    >
-                      <CaretDown size={14} weight="bold" />
-                    </button>
-                  </div>
-                  {chatPane}
-                </motion.div>
+              {!wide && sheetOpen && (
+                <>
+                  <motion.button
+                    key="sheet-scrim"
+                    type="button"
+                    aria-label={t("common.close")}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: DUR.base, ease: EASE }}
+                    onClick={() => setSheetOpen(false)}
+                    className="absolute inset-0 cursor-default bg-[#05070a]/55"
+                  />
+                  <motion.div
+                    key="sheet"
+                    role="dialog"
+                    aria-label={tf("voice.roomPanel", "Room panel")}
+                    initial={reduce ? { opacity: 0 } : { y: "100%" }}
+                    animate={reduce ? { opacity: 1 } : { y: 0 }}
+                    exit={
+                      reduce
+                        ? { opacity: 0 }
+                        : {
+                            y: "100%",
+                            transition: { duration: DUR.base, ease: EASE },
+                          }
+                    }
+                    transition={{ duration: DUR.slow, ease: EASE_SHEET }}
+                    className="absolute inset-x-0 bottom-0 top-[14%] flex flex-col rounded-t-[28px] bg-[#0b0f15]"
+                  >
+                    <div className="flex shrink-0 items-center gap-2 pl-3 pr-2 pt-2">
+                      <div className="min-w-0 flex-1">{panelTabs}</div>
+                      <button
+                        type="button"
+                        onClick={() => setSheetOpen(false)}
+                        aria-label={t("common.close")}
+                        className="flex size-10 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/[0.08] hover:text-primary"
+                      >
+                        <CaretDown size={18} weight="bold" />
+                      </button>
+                    </div>
+                    <div className="min-h-0 flex-1 pb-safe">
+                      {tab === "chat" ? chatPane : vividPane}
+                    </div>
+                  </motion.div>
+                </>
               )}
             </AnimatePresence>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
 
-        {/* Host's participant popover — the overlay grammar's anchored
-            variant: no dim on desktop (a popover is not a modal). */}
+        {/* The host's controls for one person. Outside the fixed-dark room
+            on purpose: a popover follows the person's theme. */}
         <AnimatePresence>
           {menuFor && (
-            <div onClick={(e) => e.stopPropagation()}>
-              <OverlayScrim dim={false} onClose={() => setMenuFor(null)} />
-              <OverlayPanel dragClose={() => setMenuFor(null)} variant="anchored" label={menuFor.username}>
-                <OverlayHeader onClose={() => setMenuFor(null)}>
-                  <span className="flex min-w-0 flex-1 items-center gap-2.5">
-                    <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-pill bg-chip">
-                      <SafeAvatar src={menuFor.avatar} />
-                    </span>
-                    <span className="flex min-w-0 flex-col">
-                      <span className="flex items-center gap-1">
-                        <span className="truncate font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-primary">
-                          {menuFor.username}
-                        </span>
-                        {menuFor.resolved && (
-                          <UserBadges
-                            isVerified={menuFor.isVerified}
-                            verification={(menuFor as any).verification}
-                            size={12}
-                          />
-                        )}
-                      </span>
-                      <span className="truncate font-sans text-[calc(11px*var(--ws-fs))] text-subtle">
-                        {cohostIds.has(menuFor.id)
-                          ? tf("voice.cohostBadge", "Co-host")
-                          : menuOnStage
-                            ? tf("voice.onStageLabel", "On stage")
-                            : menuFor.hand
-                              ? t("voice.speakRequests")
-                              : t("voice.listeners")}
-                      </span>
-                    </span>
-                  </span>
-                </OverlayHeader>
-                <motion.div
-                  variants={staggerParent}
-                  initial="hidden"
-                  animate="show"
-                  className="flex flex-col gap-0.5 px-2 pb-3"
-                >
-                  {(() => {
-                    const m = menuFor;
-                    const targetCohost = cohostIds.has(m.id);
-                    const item =
-                      "flex h-11 w-full items-center gap-2.5 rounded-lg px-3 text-left font-sans text-[calc(13.5px*var(--ws-fs))] font-medium transition-colors hover:bg-chip cursor-pointer";
-                    const run = (fn: () => void) => () => {
-                      setMenuFor(null);
-                      fn();
-                    };
-                    return (
-                      <>
-                        {/* Stage controls. A co-host is managed only by the
-                            host, and through the role, not the mic. */}
-                        {targetCohost ? (
-                          row.isHost && (
-                            <motion.button
-                              variants={staggerItem}
-                              type="button"
-                              onClick={run(() =>
-                                void cohostTarget(m.id, m.username, false),
-                              )}
-                              className={clsx(item, "text-primary")}
-                            >
-                              <MicrophoneSlash size={16} weight="bold" />
-                              {tf("voice.removeCohost", "Remove co-host")}
-                            </motion.button>
-                          )
-                        ) : menuOnStage ? (
-                          <>
-                            <motion.button
-                              variants={staggerItem}
-                              type="button"
-                              onClick={run(() =>
-                                void muteTarget(m.id, m.username),
-                              )}
-                              className={clsx(item, "text-primary")}
-                            >
-                              <MicrophoneSlash size={16} weight="bold" />
-                              {tf("voice.mute", "Mute")}
-                            </motion.button>
-                            <motion.button
-                              variants={staggerItem}
-                              type="button"
-                              onClick={run(() =>
-                                void revokeMic(m.id, m.username),
-                              )}
-                              className={clsx(item, "text-primary")}
-                            >
-                              <HandPalm size={16} weight="bold" />
-                              {tf("voice.removeFromStage", "Remove from stage")}
-                            </motion.button>
-                          </>
-                        ) : m.hand ? (
-                          <motion.button
-                            variants={staggerItem}
-                            type="button"
-                            onClick={run(() =>
-                              void grantMic(m.id, m.username),
-                            )}
-                            className={clsx(item, "text-primary")}
-                          >
-                            <Microphone size={16} weight="bold" />
-                            {tf("voice.bringToStage", "Bring to stage")}
-                          </motion.button>
-                        ) : (
-                          <motion.button
-                            variants={staggerItem}
-                            type="button"
-                            onClick={run(() =>
-                              void inviteToSpeak(m.id, m.username),
-                            )}
-                            className={clsx(item, "text-primary")}
-                          >
-                            <Microphone size={16} weight="bold" />
-                            {tf("voice.invite", "Invite to speak")}
-                          </motion.button>
-                        )}
-                        {/* Deputies: host only, two seats. */}
-                        {row.isHost &&
-                          !targetCohost &&
-                          (row.cohosts?.length ?? 0) < 2 && (
-                            <motion.button
-                              variants={staggerItem}
-                              type="button"
-                              onClick={run(() =>
-                                void cohostTarget(m.id, m.username, true),
-                              )}
-                              className={clsx(item, "text-primary")}
-                            >
-                              <Users size={16} weight="bold" />
-                              {tf("voice.makeCohost", "Make co-host")}
-                            </motion.button>
-                          )}
-                        <motion.button
-                          variants={staggerItem}
-                          type="button"
-                          onClick={run(() => viewProfile(m))}
-                          className={clsx(item, "text-primary")}
-                        >
-                          <ArrowSquareOut size={16} weight="bold" />
-                          {tf("voice.viewProfile", "View profile")}
-                        </motion.button>
-                        <motion.button
-                          variants={staggerItem}
-                          type="button"
-                          onClick={run(() => setReportFor(m))}
-                          className={clsx(item, "text-primary")}
-                        >
-                          <Flag size={16} weight="bold" />
-                          {tf("voice.report", "Report")}
-                        </motion.button>
-                        {/* Removal: a ban, not a shove. Co-hosts can't
-                            remove co-hosts; that is the host's call. */}
-                        {(row.isHost || !targetCohost) && (
-                          <motion.button
-                            variants={staggerItem}
-                            type="button"
-                            onClick={run(() =>
-                              void removeTarget(m.id, m.username),
-                            )}
-                            className={clsx(item, "text-danger")}
-                          >
-                            <SignOut size={16} weight="bold" />
-                            {tf("voice.removeFromSpace", "Remove from space")}
-                          </motion.button>
-                        )}
-                      </>
-                    );
-                  })()}
-                </motion.div>
-              </OverlayPanel>
-            </div>
+            <ManagerMenu
+              key="manager"
+              member={menuFor}
+              onClose={() => setMenuFor(null)}
+              isHost={row.isHost}
+              isCohost={roster.cohostIds.has(menuFor.id)}
+              onStage={menuOnStage}
+              cohostSeatsLeft={(row.cohosts?.length ?? 0) < 2}
+              tf={tf}
+              actions={{
+                grant: (m) => void grantMic(m),
+                revoke: (m) => void revokeMic(m),
+                invite: (m) => void inviteToSpeak(m),
+                mute: (m) => void muteTarget(m),
+                remove: (m) => void removeTarget(m),
+                cohost: (m, grant) => void cohostTarget(m, grant),
+                profile: (m) => openProfile(m.username),
+                report: (m) => setReportFor(m),
+              }}
+            />
           )}
         </AnimatePresence>
 
         {/* The standard safety flow, aimed at a person in the room. */}
         {reportFor && (
-          <div onClick={(e) => e.stopPropagation()}>
-            <ReportSheet
-              targetType="user"
-              targetId={reportFor.id}
-              subject={`@${reportFor.username}`}
-              onClose={() => setReportFor(null)}
-            />
-          </div>
+          <ReportSheet
+            targetType="user"
+            targetId={reportFor.id}
+            subject={`@${reportFor.username}`}
+            onClose={() => setReportFor(null)}
+          />
         )}
       </motion.div>
     </ConfirmModalPortal>
