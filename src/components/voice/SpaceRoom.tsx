@@ -184,7 +184,7 @@ function SpeakingRing({
     <span
       ref={ref}
       aria-hidden
-      className="pointer-events-none absolute inset-0 rounded-pill bg-success/40 opacity-0 will-change-transform"
+      className="pointer-events-none absolute -inset-1 rounded-pill ring-[1.5px] ring-[#eef2f6] opacity-0 will-change-transform"
     />
   );
 }
@@ -502,6 +502,40 @@ export default function SpaceRoom({
     return () => clearInterval(timer);
   }, [row.startedAt]);
 
+  // The talking flow (owner 2026-10-12): while your mic is open a quiet
+  // pill counts how long you've been live, and Space toggles the mic from
+  // anywhere in the room except a text field.
+  const micLive = canSpeak && !muted && audio === "listening";
+  const [liveSince, setLiveSince] = useState<number | null>(null);
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    setLiveSince((v) => (micLive ? (v ?? Date.now()) : null));
+  }, [micLive]);
+  useEffect(() => {
+    if (liveSince === null) return;
+    const id = window.setInterval(() => setTick((n) => n + 1), 1000);
+    return () => window.clearInterval(id);
+  }, [liveSince]);
+  useEffect(() => {
+    if (!canSpeak || audio !== "listening") return;
+    const onSpace = (e: KeyboardEvent) => {
+      if (e.code !== "Space" || e.repeat) return;
+      const el = e.target as HTMLElement | null;
+      if (el?.closest("input, textarea, [contenteditable='true']")) return;
+      e.preventDefault();
+      toggleMute();
+    };
+    document.addEventListener("keydown", onSpace);
+    return () => document.removeEventListener("keydown", onSpace);
+  }, [canSpeak, audio, toggleMute]);
+  const liveFor =
+    liveSince === null
+      ? ""
+      : (() => {
+          const sec = Math.max(0, Math.floor((Date.now() - liveSince) / 1000));
+          return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
+        })();
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // Escape collapses to the dock; it must never silently drop the room.
@@ -556,7 +590,10 @@ export default function SpaceRoom({
     (m) => !cohostIds.has(m.id) && !isOnStage(m.id),
   );
   // A huge room stays renderable: the grid caps and the rest is a count.
-  const AUDIENCE_CAP = 40;
+  // Everyone gets a seat with a face and a name, never a stack (owner
+  // 2026-10-13: "make all the users show not stacked"); past this many the
+  // tail rolls into a count so a huge room stays one scroll.
+  const AUDIENCE_CAP = 80;
   const audienceShown = audience.slice(0, AUDIENCE_CAP);
   const audienceOverflow = audience.length - audienceShown.length;
   const listenerCount = realtime
@@ -618,7 +655,7 @@ export default function SpaceRoom({
           <span
             className={clsx(
               "relative block",
-              large ? "h-14 w-14" : "h-12 w-12",
+              large ? "h-16 w-16 lg:h-20 lg:w-20" : "h-12 w-12",
             )}
           >
             <SpeakingRing room={room} identity={m.id} />
@@ -726,9 +763,19 @@ export default function SpaceRoom({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2, ease: EASE }}
-        className="fixed inset-0 z-modal glass-veil backdrop-blur-lg backdrop-saturate-150 glass-ink flex items-end sm:items-center justify-center sm:p-6"
+        className="fixed inset-0 z-modal glass-ink flex items-end sm:items-center justify-center sm:p-6"
         onClick={onMinimize}
       >
+        {/* The room's cover, blurred full-bleed behind everything (owner
+            2026-10-12, "the room, sleeker"): no box around the stage, the
+            art IS the room. */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div
+            className="absolute -inset-24 scale-110 blur-[90px]"
+            style={{ background: spaceBackground(row) }}
+          />
+          <div className="absolute inset-0 bg-[#04060a]/85" />
+        </div>
         <motion.div
           initial={reduce ? { opacity: 0 } : { opacity: 0, y: 24, scale: 0.99 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -736,15 +783,11 @@ export default function SpaceRoom({
           role="dialog"
           aria-modal="true"
           aria-label={row.title}
-          className="relative flex h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl sm:h-[86vh] sm:w-[560px] lg:w-[900px] sm:rounded-2xl glass-dock backdrop-blur-xl backdrop-saturate-150"
+          className="relative flex h-[92dvh] w-full flex-col overflow-hidden rounded-t-[28px] bg-[#0e131a]/45 backdrop-blur-2xl backdrop-saturate-150 sm:h-[88vh] sm:w-[600px] sm:rounded-[28px] lg:w-[min(1180px,94vw)]"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Mesh header band — the card's art carries into the room. */}
-          <div
-            className="relative shrink-0 px-5 pb-5 pt-4"
-            style={{ background: spaceBackground(row) }}
-          >
-            <span className="absolute inset-0 bg-gradient-to-t from-[#16130f] via-[#0c0a09]/35 to-[#0c0a09]/20" />
+          <div className="relative shrink-0 px-6 pb-4 pt-5">
             <div className="relative flex items-start justify-between gap-3">
               <div className="flex items-center gap-2">
                 <span className="flex items-center gap-1.5 rounded-[4px] bg-danger px-1.5 py-px text-[calc(9px*var(--ws-fs))] font-bold tracking-wide text-white font-sans">
@@ -776,7 +819,7 @@ export default function SpaceRoom({
                         key="share-menu"
                         role="menu"
                         {...menuStagger("top-right")}
-                        className="absolute right-0 top-full z-20 mt-2 w-[196px] overflow-hidden rounded-xl border border-[#fafaf9]/10 bg-[#1c1917] py-1 shadow-nav"
+                        className="absolute right-0 top-full z-20 mt-2 w-[208px] overflow-hidden rounded-[22px] bg-[#141a22]/85 p-1.5 shadow-pop backdrop-blur-2xl"
                       >
                         <motion.button
                           variants={staggerItem}
@@ -786,7 +829,7 @@ export default function SpaceRoom({
                             setShareOpen(false);
                             void copyLink();
                           }}
-                          className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-[#fafaf9] transition-colors hover:bg-[#fafaf9]/8 cursor-pointer"
+                          className="flex w-full items-center gap-2.5 rounded-pill px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-[#fafaf9] transition-colors hover:bg-[#fafaf9]/8 cursor-pointer"
                         >
                           <LinkSimple size={15} weight="bold" />
                           {tf("voice.copyLink", "Copy link")}
@@ -799,7 +842,7 @@ export default function SpaceRoom({
                             setShareOpen(false);
                             postAbout();
                           }}
-                          className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-[#fafaf9] transition-colors hover:bg-[#fafaf9]/8 cursor-pointer"
+                          className="flex w-full items-center gap-2.5 rounded-pill px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-[#fafaf9] transition-colors hover:bg-[#fafaf9]/8 cursor-pointer"
                         >
                           <NotePencil size={15} weight="bold" />
                           {tf("voice.postAbout", "Post about it")}
@@ -818,7 +861,7 @@ export default function SpaceRoom({
                 </button>
               </div>
             </div>
-            <h2 className="relative mt-4 font-display text-[calc(21px*var(--ws-fs))] font-semibold leading-snug text-[#fafaf9]">
+            <h2 className="relative mt-4 font-display text-[calc(22px*var(--ws-fs))] font-medium leading-snug tracking-[-0.01em] text-[#fafaf9]">
               {row.title}
             </h2>
             {row.description && (
@@ -856,12 +899,12 @@ export default function SpaceRoom({
           <div className="relative flex min-h-0 flex-1">
             <div className="relative flex min-w-0 flex-1 flex-col">
               {/* Stage */}
-              <div className="relative flex-1 min-h-0 overflow-y-auto no-scrollbar px-5 py-4">
+              <div className="relative flex-1 min-h-0 overflow-y-auto no-scrollbar px-6 py-6 lg:py-10">
                 {/* Host seat. The cell's padding reserves the room the
                     breathing ring needs at its 1.18 ceiling. */}
                 <div className="flex flex-col items-center gap-1.5">
-                  <span className="block p-2">
-                    <span className="relative block h-20 w-20">
+                  <span className="block p-3">
+                    <span className="relative block h-24 w-24 lg:h-28 lg:w-28">
                       <SpeakingRing room={room} identity={hostIdentity} />
                       <span className="absolute inset-0 overflow-hidden rounded-pill bg-[#1c1917] ring-2 ring-brand/45">
                         <SafeAvatar src={row.host.avatar} />
@@ -1030,9 +1073,28 @@ export default function SpaceRoom({
               </AnimatePresence>
 
               {/* Dock */}
-              <div className="shrink-0 border-t border-[#fafaf9]/8 px-4 py-3 pb-safe">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+              <div className="shrink-0 px-4 pb-safe pt-2 pb-4">
+                <AnimatePresence>
+                  {micLive && (
+                    <motion.div
+                      key="live-pill"
+                      {...pop}
+                      className="mb-3 flex justify-center"
+                    >
+                      <span className="flex items-center gap-2.5 rounded-pill bg-[#fafaf9]/8 px-4 py-1.5 font-sans text-[calc(11px*var(--ws-fs))] uppercase tracking-[0.16em]">
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-pill bg-[#e5484d]" />
+                        <span className="font-semibold tabular-nums text-[#eef2f6]">
+                          {tf("voice.onAir", "On air")} · {liveFor}
+                        </span>
+                        <span className="hidden glass-ink-dim sm:inline">
+                          {tf("voice.spaceToMute", "Space to mute")}
+                        </span>
+                      </span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  <div className="flex min-w-0 flex-wrap items-center justify-center gap-2">
                     {canSpeak ? (
                       // On stage: a real mic. The token grants publish, so
                       // this is never a dead control.
@@ -1045,12 +1107,14 @@ export default function SpaceRoom({
                         title={t("voice.micToggle")}
                         aria-label={t("voice.micToggle")}
                         className={clsx(
-                          "flex h-10 w-10 items-center justify-center rounded-pill transition-colors",
+                          "order-first flex h-16 w-16 items-center justify-center rounded-pill transition-[background-color,box-shadow] sm:order-none",
                           audio !== "listening"
                             ? "glass-chip opacity-40 cursor-not-allowed"
                             : muted
                               ? "glass-chip cursor-pointer"
-                              : "bg-danger text-white cursor-pointer",
+                              // On air: a quiet off-white key, not a glow
+                              // (owner 2026-10-13, "a more mature look").
+                              : "bg-[#eef2f6] text-[#05070a] cursor-pointer",
                         )}
                       >
                         {/* Keyed, no exit: the new glyph lands at once. A mic
@@ -1062,9 +1126,9 @@ export default function SpaceRoom({
                           className="flex"
                         >
                           {muted ? (
-                            <MicrophoneSlash size={16} weight="bold" />
+                            <MicrophoneSlash size={24} weight="bold" />
                           ) : (
-                            <Microphone size={16} weight="fill" />
+                            <Microphone size={24} weight="fill" />
                           )}
                         </motion.span>
                       </motion.button>
@@ -1095,7 +1159,7 @@ export default function SpaceRoom({
                         </AnimatePresence>
                       </motion.button>
                     )}
-                    <span className="mx-1 h-5 w-px bg-[#fafaf9]/12" />
+
                     {/* display:contents, so the cascade parent adds no box
                         to the wrapping dock row. Plays once, as the room
                         opens. */}
@@ -1150,7 +1214,7 @@ export default function SpaceRoom({
                       {...press}
                       type="button"
                       onClick={() => onEnd(row)}
-                      className="flex items-center gap-1.5 rounded-pill bg-danger/90 px-4 h-10 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-white hover:bg-danger transition-colors cursor-pointer"
+                      className="flex items-center gap-1.5 rounded-pill bg-danger/90 px-5 h-12 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-white hover:bg-danger transition-colors cursor-pointer"
                     >
                       {t("voice.end")}
                     </motion.button>
@@ -1159,7 +1223,7 @@ export default function SpaceRoom({
                       {...press}
                       type="button"
                       onClick={onLeave}
-                      className="flex items-center gap-1.5 rounded-pill glass-chip px-4 h-10 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold transition-colors cursor-pointer"
+                      className="flex items-center gap-1.5 rounded-pill bg-danger/20 px-5 h-12 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-[#ff8a8a] hover:bg-danger/30 transition-colors cursor-pointer"
                     >
                       <SignOut size={14} weight="bold" />
                       {t("voice.leave")}
@@ -1197,7 +1261,7 @@ export default function SpaceRoom({
                 behind it already carries the one blur this stack gets. */}
             <aside
               aria-label={tf("voice.chat", "Chat")}
-              className="hidden w-[300px] shrink-0 flex-col border-l border-[#fafaf9]/8 bg-[#0c0a09]/25 lg:flex"
+              className="hidden w-[340px] shrink-0 flex-col lg:flex"
             >
               <div className="flex h-10 shrink-0 items-center px-4 pt-2">
                 <span className="glass-eyebrow font-sans">

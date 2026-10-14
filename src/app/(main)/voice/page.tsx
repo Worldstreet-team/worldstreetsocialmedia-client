@@ -406,7 +406,7 @@ function VoiceDirectory() {
       {loading ? (
         <div className="grid gap-3 sm:grid-cols-2">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-[168px] rounded-xl skeleton" />
+            <div key={i} className="h-[220px] rounded-[28px] skeleton" />
           ))}
         </div>
       ) : (

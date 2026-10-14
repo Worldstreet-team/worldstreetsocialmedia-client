@@ -1,12 +1,11 @@
 "use client";
 
-import { CaretUp, Check, Waveform, X } from "@phosphor-icons/react";
+import { Check, Microphone, MicrophoneSlash, Waveform, X } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRealtime } from "@/components/providers/RealtimeProvider";
-import ConfirmModal from "@/components/ui/ConfirmModal";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import {
   OverlayPanel,
@@ -17,13 +16,14 @@ import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { UserBadges } from "@/components/ui/UserBadges";
 import {
-  EqBars,
   hostName,
   spaceBackground,
   spaceListenerCount,
   type SpaceRow,
 } from "@/components/voice/SpaceCard";
 import SpaceRoom from "@/components/voice/SpaceRoom";
+import { RailRoom } from "@/components/voice/RailRoom";
+import { useAppPathname } from "@/i18n/useAppPathname";
 import { useT } from "@/i18n/client";
 import { useSpaceAudio } from "@/hooks/useSpaceAudio";
 import { useSpaceHeartbeat } from "@/hooks/useSpaceHeartbeat";
@@ -75,6 +75,27 @@ export default function VoiceRoomHost() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // The third rail (owner 2026-10-12): when the right rail is on screen, a
+  // minimised room docks into its slot instead of the floating pill. The
+  // slot is looked up on every route change and resize, since the rail is
+  // only there on wide screens and on pages that have it.
+  const pathname = useAppPathname();
+  const [railSlot, setRailSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    const find = () => {
+      const el = document.getElementById("ws-rail-room");
+      const aside = el?.parentElement;
+      setRailSlot(el && aside && aside.getClientRects().length > 0 ? el : null);
+    };
+    // After the route's layout has painted.
+    const id = window.requestAnimationFrame(find);
+    window.addEventListener("resize", find);
+    return () => {
+      window.cancelAnimationFrame(id);
+      window.removeEventListener("resize", find);
+    };
+  }, [pathname, session?.minimized]);
 
   // Hooks can't sit behind the early return below, so the heartbeat reads the
   // session defensively and simply does nothing when there isn't one.
@@ -249,34 +270,75 @@ export default function VoiceRoomHost() {
   const overlays = mounted
     ? createPortal(
         <>
-          <ConfirmModal
-            isOpen={invite !== null}
-            onClose={() => {
-              const inv = invite;
-              setInvite(null);
-              if (inv) void respondInviteAction(inv.spaceId, false);
-            }}
-            onConfirm={async () => {
-              const inv = invite;
-              setInvite(null);
-              if (!inv) return;
-              const res = await respondInviteAction(inv.spaceId, true);
-              if (!res.success || !res.granted) {
-                toast(
-                  res.message ||
-                    tf("voice.inviteGone", "That invitation is gone"),
-                  { type: "error" },
-                );
-              }
-            }}
-            title={tf("voice.inviteTitle", "Invited to speak")}
-            message={`${invite?.from ?? ""} — ${tf(
-              "voice.inviteBody",
-              "wants to bring you to the stage. Your mic stays muted until you turn it on.",
-            )}`}
-            confirmText={tf("voice.accept", "Join the stage")}
-            cancelText={tf("voice.notNow", "Not now")}
-          />
+          {/* Invited to speak, in the Halo style (owner pick, round 3): the
+              host's face in a halo, then one clear choice. */}
+          <ConfirmModalPortal>
+            <AnimatePresence>
+              {invite && (
+                <>
+                  <OverlayScrim
+                    key="invite-scrim"
+                    blur
+                    onClose={() => {
+                      const inv = invite;
+                      setInvite(null);
+                      if (inv) void respondInviteAction(inv.spaceId, false);
+                    }}
+                  />
+                  <OverlayPanel
+                    key="invite-panel"
+                    variant="center"
+                    ground="solid"
+                    label={tf("voice.inviteTitle", "Invited to speak")}
+                    className="max-w-[360px]"
+                  >
+                    <div className="flex flex-col items-center gap-3 px-6 pb-6 pt-7 text-center">
+                      <span className="mb-1 flex h-24 w-24 items-center justify-center rounded-pill bg-brand/10">
+                        <span className="block h-[72px] w-[72px] overflow-hidden rounded-pill bg-raised ring-2 ring-brand/30">
+                          <SafeAvatar src={session?.row.host.avatar} />
+                        </span>
+                      </span>
+                      <h2 className="font-display text-[calc(19px*var(--ws-fs))] font-semibold text-primary">
+                        {tf("voice.inviteTitle", "Invited to speak")}
+                      </h2>
+                      <p className="max-w-[30ch] font-sans text-[calc(14px*var(--ws-fs))] leading-relaxed text-muted">
+                        {invite.from}{" "}
+                        {tf(
+                          "voice.inviteBody",
+                          "wants to bring you to the stage. Your mic stays muted until you turn it on.",
+                        )}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const inv = invite;
+                          setInvite(null);
+                          const res = await respondInviteAction(inv.spaceId, true);
+                          if (!res.success || !res.granted) {
+                            toast(res.message || tf("voice.inviteGone", "That invitation is gone"), { type: "error" });
+                          }
+                        }}
+                        className="mt-2 flex h-12 w-full cursor-pointer items-center justify-center rounded-pill bg-brand font-sans text-[calc(14px*var(--ws-fs))] font-bold text-brand-on transition-colors hover:bg-brand-active"
+                      >
+                        {tf("voice.accept", "Join the stage")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const inv = invite;
+                          setInvite(null);
+                          void respondInviteAction(inv.spaceId, false);
+                        }}
+                        className="flex h-11 w-full cursor-pointer items-center justify-center rounded-pill bg-primary/[0.06] font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-primary/[0.1]"
+                      >
+                        {tf("voice.notNow", "Not now")}
+                      </button>
+                    </div>
+                  </OverlayPanel>
+                </>
+              )}
+            </AnimatePresence>
+          </ConfirmModalPortal>
           {endedRow && (
             <ConfirmModalPortal>
               <OverlayScrim onClose={() => setEndedRow(null)} />
@@ -401,51 +463,93 @@ export default function VoiceRoomHost() {
 
   if (!mounted) return null;
 
+  if (railSlot && railSlot.isConnected) {
+    return (
+      <>
+        {createPortal(
+          <RailRoom
+            row={row}
+            audio={audio}
+            roomLive={roomLive}
+            onExpand={() => setSession({ row, minimized: false })}
+            onLeave={row.isHost ? end : leave}
+          />,
+          railSlot,
+        )}
+        {overlays}
+      </>
+    );
+  }
+
   return (
     <>
       {createPortal(
         <motion.div
           initial={swap.initial}
           animate={swap.animate}
-          className="fixed bottom-nav right-4 z-toast md:bottom-4"
+          className="fixed inset-x-3 bottom-nav z-toast sm:inset-x-auto sm:right-4 md:bottom-4"
         >
-          <div className="flex items-center gap-2 rounded-pill glass-dock backdrop-blur-xl backdrop-saturate-150 py-2 pl-2 pr-2.5 shadow-nav">
+          {/* The live bar (owner pick, Space Voice on a phone): faces of who's
+              in the room, the title and count, and the two controls that
+              matter while you're elsewhere in the app. */}
+          <div
+            className="ws-on-dark relative overflow-hidden rounded-pill shadow-pop sm:w-[360px]"
+            style={{ background: spaceBackground(row) }}
+          >
+          {/* The room's cover under a deep wash, frosted (owner 2026-10-13):
+              the collapsed room keeps the room's colour, dark in both themes. */}
+          <div className="flex items-center gap-2.5 bg-[#04060a]/80 py-1.5 pl-1.5 pr-1.5 backdrop-blur-2xl backdrop-saturate-150">
             <button
               type="button"
               onClick={() => setSession({ row, minimized: false })}
               aria-label={t("voice.expandRoom")}
-              className="flex items-center gap-2.5 cursor-pointer"
+              className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-left"
             >
-              <span
-                className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-pill"
-                style={{ background: spaceBackground(row) }}
-              >
-                <span className="absolute inset-0 bg-[#0c0a09]/35" />
-                <Waveform
-                  size={14}
-                  weight="fill"
-                  className="relative text-[#fafaf9]"
-                />
+              <span className="flex shrink-0 -space-x-2.5">
+                {[row.host.avatar, ...roomLive.members.filter((m) => m.username !== row.host.username).slice(0, 2).map((m) => m.avatar)].map((src, i) => (
+                  <span
+                    // biome-ignore lint/suspicious/noArrayIndexKey: positional faces
+                    key={i}
+                    className="block h-9 w-9 overflow-hidden rounded-pill bg-raised ring-2 ring-surface"
+                  >
+                    <SafeAvatar src={src} />
+                  </span>
+                ))}
               </span>
-              <span className="hidden min-w-0 max-w-[168px] flex-col items-start sm:flex">
-                <span className="w-full truncate font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold glass-ink">
+              <span className="flex min-w-0 flex-col">
+                <span className="truncate font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-primary">
                   {row.title}
                 </span>
-                <span className="flex items-center gap-1.5 font-sans text-[calc(10.5px*var(--ws-fs))] glass-ink-dim">
-                  <EqBars className="h-2.5 text-gold" />
-                  {t("voice.inRoomNow")}
+                <span className="flex items-center gap-1.5 font-sans text-[calc(11.5px*var(--ws-fs))] text-muted tabular-nums">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-pill bg-danger" />
+                  {formatCompact(Math.max(roomLive.members.length, 1))} {t("voice.listeners")}
                 </span>
               </span>
-              <CaretUp size={13} weight="bold" className="shrink-0 opacity-60" />
             </button>
+            {audio.canSpeak && (
+              <button
+                type="button"
+                onClick={audio.toggleMute}
+                aria-label={t("voice.micToggle")}
+                aria-pressed={!audio.muted}
+                className={
+                  audio.muted
+                    ? "flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-primary/[0.08] text-primary"
+                    : "flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-brand text-brand-on"
+                }
+              >
+                {audio.muted ? <MicrophoneSlash size={16} weight="bold" /> : <Microphone size={16} weight="fill" />}
+              </button>
+            )}
             <button
               type="button"
               onClick={row.isHost ? end : leave}
               aria-label={row.isHost ? t("voice.end") : t("voice.leave")}
-              className="flex h-8 w-8 items-center justify-center rounded-pill bg-danger/90 text-white transition-colors hover:bg-danger cursor-pointer"
+              className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-danger/15 text-danger transition-colors hover:bg-danger/25"
             >
-              <X size={13} weight="bold" />
+              <X size={14} weight="bold" />
             </button>
+          </div>
           </div>
         </motion.div>,
         document.body,

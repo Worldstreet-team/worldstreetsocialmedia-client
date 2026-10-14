@@ -111,7 +111,7 @@ function SpaceRow({ space, live }: { space: Space; live: boolean }) {
 			// The card wears the canvas the host chose, so a room is
 			// recognisable by its colour before you have read the title.
 			style={{ background: spaceBackground(space as any) }}
-			className="group relative block overflow-hidden rounded-xl p-3 transition-opacity hover:opacity-95"
+			className="group relative block overflow-hidden rounded-[24px] p-3.5 transition-opacity hover:opacity-95"
 		>
 			{/* Ink on this card is fixed light: it sits on the host's art, which
 			    does not follow the theme, so text-primary would go black on

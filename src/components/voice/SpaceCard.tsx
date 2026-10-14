@@ -129,7 +129,7 @@ export function LiveSpaceCard({
     <button
       type="button"
       onClick={() => onOpen(row)}
-      className="group relative flex min-h-[168px] w-full flex-col justify-between overflow-hidden rounded-xl p-4 text-left transition-opacity cursor-pointer"
+      className="group relative flex min-h-[220px] w-full flex-col justify-between overflow-hidden rounded-[28px] p-5 text-left transition-opacity cursor-pointer"
     >
       {/* The art is its own layer so it can be blurred without taking the
           type with it. At this size a cover photo is unreadable AS a photo
@@ -139,15 +139,15 @@ export function LiveSpaceCard({
           soft border. */}
       <span
         aria-hidden
-        className="absolute -inset-4 scale-110 blur-[6px]"
+        className="absolute -inset-6 scale-110 blur-[14px]"
         style={{ background: spaceBackground(row) }}
       />
       {/* Scrim so type never fights the art. */}
       <span className="absolute inset-0 bg-gradient-to-t from-[#0c0a09]/85 via-[#0c0a09]/25 to-[#0c0a09]/30 transition-colors group-hover:via-[#0c0a09]/15" />
 
       <span className="relative flex items-center justify-between gap-2">
-        <span className="flex items-center gap-1.5 rounded-[4px] bg-danger px-1.5 py-px text-[calc(9px*var(--ws-fs))] font-bold tracking-wide text-white font-sans">
-          <span className="h-1 w-1 rounded-pill bg-white animate-pulse" />
+        <span className="flex items-center gap-1.5 rounded-pill bg-danger px-2.5 py-0.5 text-[calc(10.5px*var(--ws-fs))] font-bold tracking-wide text-white font-sans">
+          <span className="h-1.5 w-1.5 rounded-pill bg-white animate-pulse" />
           {t("live.badge")}
         </span>
         <span className="flex items-center gap-1.5 text-[#fafaf9]/85">
@@ -241,7 +241,7 @@ export function NextUpCard({
   const t = useT();
   return (
     <div
-      className="relative overflow-hidden rounded-xl p-5"
+      className="relative overflow-hidden rounded-[28px] p-5"
     >
       <span
         aria-hidden
@@ -348,8 +348,8 @@ export function UpcomingSpaceRow({
   const t = useT();
   const when = row.scheduledFor ? new Date(row.scheduledFor) : null;
   return (
-    <div className="card-depth flex items-center gap-3.5 p-3.5">
-      <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-lg bg-raised">
+    <div className="flex items-center gap-3.5 rounded-[24px] bg-primary/[0.04] p-3.5 transition-colors hover:bg-primary/[0.07]">
+      <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-[16px] bg-primary/[0.07]">
         {when ? (
           <>
             <span className="font-sans text-[calc(9px*var(--ws-fs))] font-bold uppercase tracking-[0.1em] text-gold">

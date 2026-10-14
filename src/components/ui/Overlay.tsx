@@ -182,12 +182,20 @@ export function OverlayScrim({
 	onClose,
 	dim = true,
 	strong = false,
+	blur = false,
 	label = "Close",
 }: {
 	onClose: () => void;
 	dim?: boolean;
 	/** Deeper wash for surfaces that float over a busy page (the create fan). */
 	strong?: boolean;
+	/**
+	 * Soften the page behind, not just dim it (owner 2026-10-12: "clean dark
+	 * blurs"). A deliberate exception to one-blur-per-stack, kept light so
+	 * the page reads as a soft ground rather than soup. For the create
+	 * surfaces: the menu, the compose window, the story sheets.
+	 */
+	blur?: boolean;
 	label?: string;
 }) {
 	return (
@@ -201,6 +209,7 @@ export function OverlayScrim({
 			onClick={onClose}
 			className={clsx(
 				"fixed inset-0 z-modal cursor-default",
+				blur && "backdrop-blur-[6px]",
 				// Dimmed on mobile even for popovers: down there the panel owns
 				// the screen and there is nothing to keep visible behind it.
 				// `bg-scrim` is the theme's own wash, so a palette moves it.
@@ -258,6 +267,11 @@ export function OverlayPanel({
 	/**
 	 * `frost` is the default and what almost everything wants.
 	 *
+	 * `solid` is the Halo surface (owner pick 2026-10-11, glass since
+	 * 2026-10-12): the surface step as frosted glass, a hairline, the pop
+	 * shadow and a 28px radius, in the user's theme. The creation flows (compose, story, voice, quote, go live,
+	 * drafts) use it.
+	 *
 	 * `none` drops the glass fill so the caller can own the ground. Needed in
 	 * two places: a media lightbox wants black behind the picture, not a 50%
 	 * wash; and the Creator Studio is deliberately fixed-dark, so a frost
@@ -265,7 +279,7 @@ export function OverlayPanel({
 	 * has to be dropped rather than overridden — `.glass-frost` is unlayered
 	 * CSS, so a layered `bg-*` utility loses the cascade to it.
 	 */
-	ground?: "frost" | "none";
+	ground?: "frost" | "none" | "solid";
 	/** Accessible name. A dialog without one is unnavigable by screen reader. */
 	label: string;
 	/**
@@ -350,6 +364,16 @@ export function OverlayPanel({
 			className={clsx(
 				ground === "frost" ? overlayPanelClass : overlayPanelBare,
 				VARIANT[variant],
+				ground === "solid" &&
+					clsx(
+						// Glass since 2026-10-12 (owner: "clean dark blurs",
+						// white in the light theme): the surface step at 80%
+						// over a strong backdrop blur, so it follows the theme.
+						"bg-surface/80 shadow-pop backdrop-blur-2xl backdrop-saturate-150",
+						variant === "center"
+							? "!rounded-[28px]"
+							: "!rounded-t-[28px] sm:!rounded-[28px]",
+					),
 				className,
 			)}
 		>
