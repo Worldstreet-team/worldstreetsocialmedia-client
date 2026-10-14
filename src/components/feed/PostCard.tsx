@@ -396,6 +396,13 @@ const PostCardBody = memo(
     const [topUpMessage, setTopUpMessage] = useState<string | null>(null);
     const [likersOpen, setLikersOpen] = useState(false);
     const [repostMenuOpen, setRepostMenuOpen] = useState(false);
+    // A card's body is a `relative z-10` layer, so a menu's own z-dropdown
+    // only counts inside it, and the NEXT card's z-10 body (later in the
+    // page) painted straight over an open menu: text and action icons on
+    // top of "Delete post" (owner 2026-10-14: "why is there a see through
+    // in the popups"). While a menu is open, and until its exit finishes,
+    // the whole body is lifted to the dropdown layer instead.
+    const [menuLifted, setMenuLifted] = useState(false);
     const [quoteOpen, setQuoteOpen] = useState(false);
     const [reposted, setReposted] = useState(false);
     const [repostDelta, setRepostDelta] = useState(0);
@@ -1206,7 +1213,13 @@ const PostCardBody = memo(
                 </Link>
             )}
 
-            <div className={clsx("flex relative z-10 pointer-events-none", compact ? "gap-3" : "gap-3 sm:gap-4")}>
+            <div
+                className={clsx(
+                    "flex relative pointer-events-none",
+                    isMenuOpen || repostMenuOpen || menuLifted ? "z-dropdown" : "z-10",
+                    compact ? "gap-3" : "gap-3 sm:gap-4",
+                )}
+            >
                 <div className={clsx("relative shrink-0 self-start pointer-events-auto", compact ? "mt-0.5" : "mt-1")}>
                     {repostedBy && (
                         // The repost badge on the avatar's corner, ringed in the
@@ -1360,6 +1373,7 @@ const PostCardBody = memo(
                                 type="button"
                                 onClick={(e) => {
                                     e.stopPropagation();
+                                    setMenuLifted(true);
                                     setIsMenuOpen(!isMenuOpen);
                                 }}
                                 className={clsx(
@@ -1371,7 +1385,7 @@ const PostCardBody = memo(
                                 <PhDotsThree size={20} />
                             </motion.button>
 
-                            <AnimatePresence>
+                            <AnimatePresence onExitComplete={() => setMenuLifted(false)}>
                                 {isMenuOpen && (
                                     <motion.div
                                         // Unfolds from the corner under the
@@ -2122,6 +2136,7 @@ const PostCardBody = memo(
                                 aria-label={t("post.repost")}
                                 onClick={(e) => {
                                     e.stopPropagation();
+                                    setMenuLifted(true);
                                     setRepostMenuOpen((v) => !v);
                                 }}
                                 className={clsx(
@@ -2153,7 +2168,7 @@ const PostCardBody = memo(
                             {/* animate-rise is switched off once the intro has
                                 played, so this used to snap open and had no
                                 way out at all. */}
-                            <AnimatePresence>
+                            <AnimatePresence onExitComplete={() => setMenuLifted(false)}>
                             {repostMenuOpen && (
                                 <motion.div
                                     key="repost-menu"
