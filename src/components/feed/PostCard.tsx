@@ -12,7 +12,6 @@ import {
     Copy,
     Flag,
     Ban,
-    VolumeX,
     BarChart3,
     Pin,
 } from "@/components/ui/icons";
@@ -112,7 +111,6 @@ import { autoTranslateAtom, translationsAtom } from "@/store/translate.atom";
 import { TranslatePanel } from "@/components/ui/TranslatePanel";
 import ReportSheet from "@/components/safety/ReportSheet";
 import { blockUserAction } from "@/lib/user.actions";
-import { muteUserAction } from "@/lib/mute.actions";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 /**
@@ -882,19 +880,6 @@ const PostCardBody = memo(
         [post.id, post.author.id, toast],
     );
 
-    /** Mute from the post menu: the quiet option. The post leaves this
-     *  render now; the gateway keeps their posts out of later pages. */
-    const handleMuteAuthor = useCallback(async () => {
-        setIsMenuOpen(false);
-        const res = await muteUserAction(post.author.id);
-        if (!res.success) {
-            toast(res.message ?? "Could not mute", { type: "error" });
-            return;
-        }
-        toast(`Muted @${post.author.username}. Unmute any time in Settings.`);
-        setIsDeleted(true);
-    }, [post.author.id, post.author.username, toast]);
-
     /** Block from the post menu, without leaving the feed. */
     const handleBlockAuthor = useCallback(async () => {
         const res = await blockUserAction(post.author.id);
@@ -1540,19 +1525,6 @@ const PostCardBody = memo(
                                                         : t("post.autoTranslateOn")}
                                                 </motion.button>
                                                 <div className="my-1 border-t border-hairline" />
-                                                <motion.button
-                                                    variants={staggerItem}
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        void handleMuteAuthor();
-                                                    }}
-                                                    className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
-                                                >
-                                                    <VolumeX className="w-4 h-4" />
-                                                    Mute @
-                                                    {post.author.username}
-                                                </motion.button>
                                                 <motion.button
                                                     variants={staggerItem}
                                                     type="button"
