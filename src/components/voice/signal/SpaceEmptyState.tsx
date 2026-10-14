@@ -18,11 +18,11 @@ export type SpaceEmptyStateProps = {
 /**
  * A Space Voice empty state: the components/ui EmptyState column (centred,
  * gap 12, padding 32/24, title then a muted caption capped near 36ch, one
- * action), with the Signal's wire drawn above it instead of an icon chip.
+ * action), with a drawing from the house art kit above it instead of an
+ * icon chip (Xtream's language: an object on a faint disc, one accent).
  *
- * The art morphs when `kind` changes, so render ONE of these for a list and
- * change its props (a search that finds nothing, then a load that fails)
- * rather than swapping components; a new instance redraws from scratch.
+ * A new `kind` replays the drawing's entrance, so render ONE of these for a
+ * list and change its props rather than swapping components.
  */
 export function SpaceEmptyState({
   kind,
@@ -38,11 +38,10 @@ export function SpaceEmptyState({
         compact ? "gap-2 px-4 py-5" : "gap-3 px-6 py-8",
       )}
     >
-      {/* Room around the art: its parts overshoot and grow while morphing. */}
       <div
         className={cn(
           "pointer-events-none px-2 pt-1",
-          compact ? "w-[172px]" : "w-[232px]",
+          compact ? "w-[160px]" : "w-[216px]",
         )}
       >
         <SpaceEmptyArt kind={kind} />

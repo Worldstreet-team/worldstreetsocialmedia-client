@@ -1241,8 +1241,13 @@ the pick, with the motion spec).
   `community` stays as the first for older readers). The picker pages
   `GET /api/communities/mine` 40 at a time; never load "all communities" into a list
   (the v2 sheet read the platform's top 60 and hid most of a big joiner's).
-- **Empty states are morphing art**: `SpaceEmptyState` kinds live, upcoming, search,
-  offline. Keep one per list and change its kind, so the art morphs.
+- **Empty states are composed drawings, not morphs** (owner 2026-10-14: the morphs
+  "aren't looking nice ... check how the xtream did theirs"). The house art kit,
+  `src/components/ui/art/` (ported from Xtream's components/app/art), draws an object
+  on a faint disc with specks, 2px lines over solid cards, one accent, one entrance and
+  one slow idle. `SpaceEmptyState` kinds live (a mic waiting to go on air), upcoming,
+  search, offline. Reach for the kit for any new empty state; never bend a wire into
+  a symbol.
 - **The room** follows the owner's mock: fixed dark in both themes, stage faces with
   role lines in sentence case, "In the room" paged 40 at a time with hands first, a
   Chat | Vivid panel, a bottom bar with Space to mute. Parts live in
