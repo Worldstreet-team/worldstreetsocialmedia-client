@@ -21,8 +21,8 @@ import { PremiumScene, WolfScene, XstreamScene } from "./promo/PromoScenes";
  * in code rather than shipped as video: sharp at any density, a few KB,
  * replayed from the top each time a card slides into view, and a designed
  * still frame under reduced motion. The comps live in ./promo. Market
- * Square is its original card, held still ("leave the old market square
- * design there without motion").
+ * Square is its original card with its original motion ("leave the old
+ * market square design"; "without motion" meant no new comp on it).
  *
  * The strip does not rotate on its own; it scrolls (a trackpad swipe, a
  * drag on a phone) and the dots follow it and jump to a card.
@@ -76,18 +76,18 @@ export function PromoBanners() {
 			key: "market",
 			label: "Market Square",
 			node: (
-				// The original card, still: the house ambience behind the
-				// lockup and a full-width Visit. [&_*]:animate-none! holds the
-				// lockup's glitch, its gradient and the ambience drift (the
-				// important is needed: those rules are unlayered in
-				// globals.css and outrank any layered utility).
+				// The original card, exactly: the house ambience behind the
+				// lockup, a full-width Visit, and its own motion (the lockup's
+				// torn-slice glitch, the gradient running through Square, the
+				// soft shine). "Without motion" meant none of the new comp
+				// motion, not freezing this (owner 2026-10-16).
 				<a
 					key="market"
 					href="https://tsionark.com"
 					target="_blank"
 					rel="noopener noreferrer"
 					aria-label={`Market Square. ${t("promo.market.cta")}`}
-					className="relative block h-[168px] w-[78%] shrink-0 snap-start cursor-pointer overflow-hidden rounded-xl bg-surface text-left no-underline! [&_*]:animate-none!"
+					className="relative block h-[168px] w-[78%] shrink-0 snap-start cursor-pointer overflow-hidden rounded-xl bg-surface text-left shine-soft no-underline!"
 				>
 					<img
 						src="/images/promo/ambience-dark.webp"
