@@ -616,14 +616,19 @@ noted below is fixed).
   triggers) stops the clock and rests on the finished word. After editing
   that CSS, check the served stylesheet: the Turbopack dev cache replayed
   the old one twice here.
-- **The astronaut helmet is retired** (owner 2026-09-22: "remove the
-  worldstreet austronaut"). `worldspace-mark{,-dark,-light}.png` are
-  deleted. The brand mark everywhere is `BrandMark` in
-  `layout/BrandRitual.tsx`, the stroked W SVG: it draws itself on the
-  lockup's track and follows `--ws-brand-primary`, neither of which a PNG
-  could. The rail lockup, the mobile bar and the welcome tour all use it;
-  an empty profile banner is now the bare sunken ground. Do not
-  reintroduce a raster mark.
+- **The space logo is WorldSpace's mark: use it on anything WorldSpace**
+  (owner 2026-10-15: "always use the space logo when doing anything about
+  worldspace"). The space logo is the astronaut helmet with the W on its
+  visor: `public/images/worldspace-mark.png`, byte for byte the app icon
+  `src/app/icon.png` (256px, palette-encoded, 11KB; never ship a
+  full-colour encode). The bare W (`BrandMark`, `wsa-mark.png`) is
+  WorldStreet's. First use under this ruling: the sign-in bridge in
+  `proxy.ts`. History: the helmet was retired on 2026-09-22 ("remove the
+  worldstreet austronaut") and `BrandMark`, the stroked W in
+  `layout/BrandRitual.tsx`, took its place in the rail lockup, the mobile
+  bar and the welcome tour, which still show the W; an empty profile
+  banner is the bare sunken ground. Moving those back to the helmet is the
+  owner's call, not a drive-by.
 - **Verified badge**: `src/assets/icons/VerifiedIcon.tsx` is now Phosphor
   `SealCheck` filled in gold (never blue) and is THE badge everywhere —
   PostCard, Profile, explore, modals all route through it. Its `color` prop

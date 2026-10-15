@@ -124,11 +124,12 @@ function destinationWords(path: string): string {
  * creative and better ... use our own images").
  *
  * The picture is the handover itself, in our own marks: the WorldStreet W
- * (wsa-mark.png) on the left, the WorldSpace W (BrandMark's polygons) on the
- * right, one wire between. While the browser bridges the session a packet of
- * brand colour runs along the wire; when it lands the wire lights and the W
- * fills; when it fails the wire parts in the middle and the way forward sits
- * under the gap. The house doodle (the brand-painted mask) is the ground,
+ * (wsa-mark.png) on the left, the WorldSpace helmet (worldspace-mark.png, the
+ * space logo, which the owner wants on anything WorldSpace, 2026-10-15) on
+ * the right, one wire between. While the browser bridges the session a
+ * packet of brand colour runs along the wire into the helmet; when it lands
+ * the wire lights and the helmet settles; when it fails the wire parts in
+ * the middle and the way forward sits under the gap. The house doodle (the brand-painted mask) is the ground,
  * cleared from the middle so it frames the picture instead of crowding it.
  *
  * Plain HTML from middleware, before the app or its CSS: everything is
@@ -155,13 +156,12 @@ body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:32px 20p
 body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--brand);opacity:var(--doodle);--clear:radial-gradient(ellipse 320px 300px at 50% 50%,transparent 60%,#000 100%);--art:url("/images/backgrounds/worldspace-doodle-mask.webp");-webkit-mask-image:var(--clear),var(--art);-webkit-mask-size:100% 100%,cover;-webkit-mask-position:center;-webkit-mask-repeat:no-repeat;-webkit-mask-composite:source-in;mask-image:var(--clear),var(--art);mask-size:100% 100%,cover;mask-position:center;mask-repeat:no-repeat;mask-composite:intersect}
 main{width:100%;max-width:380px;text-align:center;display:grid;justify-items:center;animation:rise .32s cubic-bezier(.16,1,.3,1) backwards}
 @keyframes rise{from{opacity:0;transform:translateY(8px)}}
-.stage{width:min(100%,300px);display:grid;grid-template-columns:56px 1fr 56px;column-gap:14px;align-items:start;margin-bottom:36px}
-figure{margin:0;display:grid;justify-items:center;gap:10px}
-figure img,figure svg{display:block;width:56px;height:32px}
+.stage{width:min(100%,312px);display:grid;grid-template-columns:72px 1fr 72px;column-gap:12px;align-items:start;margin-bottom:32px}
+figure{margin:0;display:grid;justify-items:center;gap:8px}
+.mark{width:72px;height:72px;display:grid;place-items:center}
+.mark img{display:block}
 figcaption{font-size:13px;line-height:1;color:var(--subtle);white-space:nowrap}
-.ws{overflow:visible;transition:opacity .32s}
-.ws polygon{fill:var(--brand);fill-opacity:0;stroke:var(--brand);stroke-width:16;stroke-linejoin:miter;transition:fill-opacity .2s}
-.wire{position:relative;height:2px;margin-top:15px}
+.wire{position:relative;height:2px;margin-top:35px}
 .wire>span{position:absolute;top:0;height:2px;border-radius:2px}
 .half{width:50%;background:var(--line);transition:transform .32s cubic-bezier(.2,0,0,1)}
 .h1{left:0;transform-origin:left}.h2{right:0;transform-origin:right}
@@ -172,9 +172,9 @@ figcaption{font-size:13px;line-height:1;color:var(--subtle);white-space:nowrap}
 @keyframes run{80%{transform:translateX(0);opacity:1}to{transform:translateX(0);opacity:0}}
 .ok .run,.broken .run{opacity:0}
 .ok .lit{opacity:1}
-.ok .ws polygon{fill-opacity:1}
+.ok .ws{animation:land .32s cubic-bezier(.34,1.56,.64,1)}
+@keyframes land{50%{transform:scale(1.06)}}
 .broken .h1,.broken .h2{transform:scaleX(.8)}
-.broken .ws{opacity:.45}
 h1{font-size:22px;line-height:1.3;font-weight:600;letter-spacing:-.01em;margin:0 0 8px;text-wrap:balance}
 #p{margin:0;color:var(--muted);text-wrap:pretty}
 .act{display:grid;justify-items:center;gap:6px;margin-top:24px;width:100%}
@@ -193,18 +193,18 @@ details li+li{margin-top:4px}
 details p{margin:10px 0 0;text-align:left;padding-left:16px}
 small{display:block;margin-top:16px;font-size:13px;color:var(--subtle);word-break:break-all}
 a:focus-visible,summary:focus-visible{outline:2px solid var(--focus);outline-offset:3px}
-html[data-motion="reduce"] main{animation:none}
+html[data-motion="reduce"] main,html[data-motion="reduce"] .ws{animation:none}
 html[data-motion="reduce"] .run b{animation:none;transform:translateX(-40%)}
 html[data-motion="reduce"] *{transition:none!important}
-@media (prefers-reduced-motion: reduce){main{animation:none}.run b{animation:none;transform:translateX(-40%)}*{transition:none!important}}
+@media (prefers-reduced-motion: reduce){main,.ws{animation:none}.run b{animation:none;transform:translateX(-40%)}*{transition:none!important}}
 </style>`;
 
 /** The handover picture. `state`: "" (bridging), "ok" or "broken". */
 function handoverStage(state: "" | "ok" | "broken"): string {
 	return `<div class="stage ${state}" id="s" aria-hidden="true">
-<figure><img src="/images/wsa-mark.png" alt="" width="56" height="32"><figcaption>WorldStreet</figcaption></figure>
+<figure><span class="mark"><img src="/images/wsa-mark.png" alt="" width="58" height="33"></span><figcaption>WorldStreet</figcaption></figure>
 <div class="wire"><span class="half h1"></span><span class="half h2"></span><span class="lit"></span><span class="run"><b></b></span></div>
-<figure><svg class="ws" viewBox="0 0 435.32 245.73"><polygon points="0,0 159.68,0 217.66,102.5 139.01,245.73"/><polygon points="435.32,0 275.64,0 217.66,102.5 296.32,245.73"/></svg><figcaption>WorldSpace</figcaption></figure>
+<figure><span class="mark"><img class="ws" src="/images/worldspace-mark.png" alt="" width="72" height="72"></span><figcaption>WorldSpace</figcaption></figure>
 </div>`;
 }
 
