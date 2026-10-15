@@ -782,10 +782,9 @@ function VoiceDirectory() {
           value={vertical}
           onChange={setVertical}
           ariaLabel={t("voice.topics")}
-          // Fourteen verticals never fit: the row scrolls, and its right
-          // edge fades so a chip cut in half reads as "more this way"
-          // rather than a clipped word against the counts.
-          className="-mx-2 min-w-0 flex-1 [mask-image:linear-gradient(to_right,#000_calc(100%-40px),transparent)]"
+          // Fourteen verticals never fit: Tabs fades whichever edge has
+          // more and puts an arrow there (it used to be a fixed fade here).
+          rootClassName="-mx-2 min-w-0 flex-1"
         />
         {!showSkeleton && !offline && (
           <p className="hidden shrink-0 items-center gap-1.5 font-sans text-[calc(12.5px*var(--ws-fs))] text-muted tabular-nums sm:flex">
