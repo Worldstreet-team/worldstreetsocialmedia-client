@@ -32,7 +32,16 @@ export async function getVoteCycle(): Promise<VoteCycleInfo | null> {
 	if (cycleInflight) return cycleInflight;
 	cycleInflight = (async () => {
 		try {
-			const token = await (window as any).Clerk?.session?.getToken?.();
+			// The rail asks on first paint, before Clerk has loaded; without
+			// a wait it got null and the clock stayed a skeleton until a reload.
+			let token = await (window as any).Clerk?.session?.getToken?.();
+			for (let waited = 0; !token && waited < 6000; waited += 150) {
+				if ((window as any).Clerk?.loaded) {
+					token = await (window as any).Clerk?.session?.getToken?.();
+					break;
+				}
+				await new Promise((r) => setTimeout(r, 150));
+			}
 			if (!token) return null;
 			const res = await fetch(`${API_URL}/api/votes/cycle`, {
 				headers: { Authorization: `Bearer ${token}` },

@@ -14,11 +14,11 @@ import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 import { useGatewayRead } from "@/hooks/useGateway";
 import { useLiveNow } from "@/hooks/useLiveNow";
 import Link from "next/link";
-import { Aperture, Broadcast, Fire, Lightning, MagnifyingGlass, UserPlus } from "@phosphor-icons/react";
+import { MagnifyingGlass } from "@phosphor-icons/react";
 import { PromoBanners } from "@/components/feed/PromoBanners";
 import { SidebarWallet } from "@/components/layout/SidebarWallet";
 import { SectionHead } from "@/components/layout/SectionHead";
-import { VoteCountdown } from "@/components/votes/VoteCountdown";
+import { VoteRow } from "@/components/votes/VoteRow";
 import { effectiveFollowing } from "@/lib/engagementStore";
 import { useFollowVersion } from "@/hooks/useFollowState";
 import { SpacesRail } from "@/components/layout/SpacesRail";
@@ -46,6 +46,10 @@ import clsx from "clsx";
 /** How long rail data (suggestions + trends) serves from memory before a
  *  quiet revalidate. Matches the gateway's own who-to-follow cache TTL. */
 const RAIL_TTL_MS = 5 * 60_000;
+
+/** The trailing link on a section head: quiet ink, not brand (Concept A). */
+const RAIL_LINK =
+	"font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-muted transition-colors hover:text-primary";
 
 export function RightSidebar() {
 	const t = useT();
@@ -204,7 +208,7 @@ export function RightSidebar() {
 				type="button"
 				onClick={() => setSearchOpen(true)}
 				style={{ animationDelay: "60ms" }}
-				className="relative mt-2 shrink-0 flex items-center w-full h-10 bg-primary/5 rounded-pill pl-[42px] pr-3 font-sans text-sm text-subtle hover:text-muted transition-colors cursor-pointer animate-rise"
+				className="relative mt-2 shrink-0 flex items-center w-full h-11 bg-primary/5 rounded-pill pl-[42px] pr-3 font-sans text-sm text-subtle hover:text-muted transition-colors cursor-pointer animate-rise"
 			>
 				<MagnifyingGlass
 					size={16}
@@ -228,31 +232,35 @@ export function RightSidebar() {
 				<SidebarWallet />
 			</section>
 
+			{/* WorldStreet's products: the one moving part of the column,
+			    and the only place promos live (Concept A, 2026-10-15). */}
 			<section
 				className="shrink-0 animate-rise"
 				style={{ animationDelay: "120ms" }}
 			>
-				<PromoBanners />
+				<SectionHead
+					label="WorldStreet"
+					trailing={
+						<a
+							href="https://www.worldstreetgold.com"
+							target="_blank"
+							rel="noopener noreferrer"
+							className={RAIL_LINK}
+						>
+							All products
+						</a>
+					}
+				/>
+				<div className="px-3 pt-1">
+					<PromoBanners />
+				</div>
 			</section>
 
-			{/* The Weekly Vote clock: the drama lives on the rail so the race
-			    is felt from every feed page. The card IS the door to /votes. */}
+			{/* The Weekly Vote as one row: what is at stake and how long is
+			    left. The ticking clock lives on /votes, which the row opens. */}
 			<section className="animate-rise" style={{ animationDelay: "150ms" }}>
-				<Link
-					href="/votes"
-					className="group block rounded-xl px-1 py-1 transition-opacity hover:opacity-90"
-				>
-					<span className="flex items-center gap-1.5 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-widest text-gold">
-						<Lightning size={13} weight="fill" />
-						The Weekly Vote
-					</span>
-					<div className="mt-2.5">
-						<VoteCountdown />
-					</div>
-					<p className="shine-pill mt-2.5 inline-block rounded-pill px-3 py-1.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-gold">
-						Most-voted post wins up to $200 Friday night
-					</p>
-				</Link>
+				<SectionHead label="This week" />
+				<VoteRow />
 			</section>
 
 			{/* Live rings the red ring grammar, above Happening now. Click a
@@ -260,14 +268,10 @@ export function RightSidebar() {
 			{liveNow.length > 0 && (
 				<section className="animate-rise" style={{ animationDelay: "180ms" }}>
 					<SectionHead
-						icon={<Broadcast size={13} weight="duotone" />}
 						label={t("rail.liveNow")}
 						live
 						trailing={
-							<Link
-								href="/live-now"
-								className="font-sans text-[calc(11px*var(--ws-fs))] font-semibold text-gold hover:underline"
-							>
+							<Link href="/live-now" className={RAIL_LINK}>
 								{t("rail.seeAll")}
 							</Link>
 						}
@@ -317,10 +321,9 @@ export function RightSidebar() {
 			    home, which is why Explore's own column no longer repeats it. */}
 			<section className="animate-rise" style={{ animationDelay: "240ms" }}>
 				<SectionHead
-					icon={<Fire size={13} weight="fill" />}
 					label={t("rail.happening")}
 					trailing={
-						<span className="text-[calc(10px*var(--ws-fs))] font-semibold uppercase tracking-wider text-gold font-sans">
+						<span className="font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-muted">
 							{t("rail.scope")}
 						</span>
 					}
@@ -384,14 +387,14 @@ export function RightSidebar() {
 									)}`}
 									className="flex items-start gap-3.5 px-3 py-2.5 rounded-xl hover:bg-primary/5 transition-colors"
 								>
-									<span className="pt-0.5 font-mono text-[calc(13px*var(--ws-fs))] text-gold tabular-nums select-none">
+									<span className="w-5 shrink-0 pt-0.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-subtle tabular-nums select-none">
 										{String(i + 1).padStart(2, "0")}
 									</span>
 									<span className="flex flex-col min-w-0 flex-1">
-										<span className="font-semibold text-primary text-[calc(15px*var(--ws-fs))] truncate leading-snug">
+										<span className="font-semibold text-primary text-[calc(14.5px*var(--ws-fs))] truncate leading-snug">
 											{trend.title.replace(/^#/, "")}
 										</span>
-										<span className="text-[calc(12px*var(--ws-fs))] text-subtle font-sans tabular-nums">
+										<span className="text-[calc(12px*var(--ws-fs))] text-muted font-sans tabular-nums">
 											{trend.category ? `${resolveCategoryLabel(trend.category)} · ` : ""}
 											{compactTrendPosts(trend)}
 										</span>
@@ -453,7 +456,7 @@ export function RightSidebar() {
 						<button
 							type="button"
 							onClick={() => setTrendsExpanded((v) => !v)}
-							className="px-3 py-2.5 text-left text-gold text-[calc(13px*var(--ws-fs))] font-medium font-sans hover:underline cursor-pointer"
+							className="px-3 py-2.5 text-left text-muted text-[calc(13px*var(--ws-fs))] font-medium font-sans hover:text-primary transition-colors cursor-pointer"
 						>
 							{trendsExpanded ? t("rail.showLess") : t("rail.showMore")}
 						</button>
@@ -466,8 +469,12 @@ export function RightSidebar() {
 			{!onExplore && (
 				<section className="animate-rise" style={{ animationDelay: "300ms" }}>
 				<SectionHead
-					icon={<UserPlus size={13} weight="duotone" />}
 					label={t("rail.suggested")}
+					trailing={
+						<Link href="/explore" className={RAIL_LINK}>
+							{t("rail.seeAll")}
+						</Link>
+					}
 				/>
 				<div className="flex flex-col">
 					{!isSuggestionsLoaded ? (
@@ -537,7 +544,7 @@ export function RightSidebar() {
 										<motion.button
 											{...press}
 											onClick={() => handleFollow(user._id)}
-											className="px-4 h-8 bg-primary text-page text-[calc(13px*var(--ws-fs))] font-semibold rounded-pill font-sans hover:bg-muted transition-colors shrink-0 cursor-pointer"
+											className="px-3.5 h-8 bg-primary/10 text-primary text-[calc(12.5px*var(--ws-fs))] font-semibold rounded-pill font-sans hover:bg-primary/15 transition-colors shrink-0 cursor-pointer"
 											type="button"
 										>
 											{t("rail.follow")}
@@ -553,7 +560,7 @@ export function RightSidebar() {
 						<button
 							type="button"
 							onClick={() => setSuggestionsExpanded((v) => !v)}
-							className="px-3 py-2.5 text-left text-gold text-[calc(13px*var(--ws-fs))] font-medium font-sans hover:underline cursor-pointer"
+							className="px-3 py-2.5 text-left text-muted text-[calc(13px*var(--ws-fs))] font-medium font-sans hover:text-primary transition-colors cursor-pointer"
 						>
 							{suggestionsExpanded
 								? t("rail.showLess")
@@ -565,7 +572,7 @@ export function RightSidebar() {
 			)}
 
 			<footer className="px-3 mt-auto pb-2">
-				<p className="text-[calc(10px*var(--ws-fs))] text-subtle font-sans">
+				<p className="text-[calc(12px*var(--ws-fs))] text-muted font-sans">
 					© 2026 WorldStreet Group
 				</p>
 			</footer>

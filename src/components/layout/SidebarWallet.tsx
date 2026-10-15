@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowUpRight, Vault } from "@phosphor-icons/react";
+import { Plus } from "@phosphor-icons/react";
 import { getWalletBalanceAction, type WalletBalances } from "@/lib/wallet.actions";
 import { useT } from "@/i18n/client";
 import { reveal } from "@/lib/motion-presets";
@@ -17,11 +17,11 @@ const money = (minor: number) =>
 	}).format(minor / 100);
 
 /**
- * The wallet strip on the right rail.
- *
- * Same treatment as the promo cards: its own artwork under a baked blur ramp,
- * no border, depth from the image rather than a hairline. It renders nothing
- * when the wallet is unreachable, because a wrong balance is worse than none.
+ * The wallet on the right rail, as one plain line (Concept A, 2026-10-15:
+ * no cards for the everyday bits): the label, the balance, and Top up. It
+ * renders nothing when the wallet is unreachable, because a wrong balance
+ * is worse than none. USD only (owner ruling 2026-08-28): a naira line
+ * under it read as a second wallet.
  */
 export function SidebarWallet() {
 	const t = useT();
@@ -43,53 +43,28 @@ export function SidebarWallet() {
 	if (!ready || !balances) return null;
 
 	return (
-		// The card only exists once the balance lands, so it rises in rather
-		// than snapping. A wrapper, because framer's inline opacity would
-		// otherwise pin the anchor's own hover fade.
-		<motion.div {...reveal()}>
+		<motion.div {...reveal()} className="flex items-end justify-between gap-3 px-3">
 			<a
 				href="https://worldstreetgold.com/welcome"
 				target="_blank"
 				rel="noopener noreferrer"
-				className="group relative block overflow-hidden rounded-xl transition-opacity hover:opacity-95"
+				className="flex min-w-0 flex-col gap-0.5 no-underline!"
 			>
-				<img
-					src="/images/promo/wallet-dark.webp"
-					alt=""
-					aria-hidden="true"
-					className="wallet-amb wallet-amb-dark"
-				/>
-				<img
-					src="/images/promo/wallet-light.webp"
-					alt=""
-					aria-hidden="true"
-					className="wallet-amb wallet-amb-light"
-				/>
-
-				<span className="relative block px-4 py-3.5">
-					<span className="flex items-center gap-1.5">
-						<Vault size={15} weight="duotone" className="text-gold" />
-						<span className="flex-1 font-sans text-[calc(10.5px*var(--ws-fs))] font-bold uppercase tracking-[0.14em] text-primary/60">
-							{t("wallet.title")}
-						</span>
-						<ArrowUpRight
-							size={12}
-							weight="bold"
-							className="text-primary/50 transition-colors group-hover:text-primary"
-						/>
-					</span>
-
-					<span className="mt-2 block font-display text-[calc(24px*var(--ws-fs))] font-semibold leading-none tabular-nums text-primary">
-						{money(balances.USD.availableMinor)}
-					</span>
-
-					{/* USD only (owner ruling 2026-08-28). The naira line rendered a
-					    SECOND balance under the first, which reads as two wallets
-					    rather than one, and the gateway is the authority on which
-					    currency this surface speaks. The NGN figure is still on the
-					    balance payload for whoever needs it; it is just not shown
-					    here. */}
+				<span className="font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
+					{t("wallet.title")}
 				</span>
+				<span className="font-display text-[calc(24px*var(--ws-fs))] font-medium leading-tight tracking-[-0.01em] tabular-nums text-primary">
+					{money(balances.USD.availableMinor)}
+				</span>
+			</a>
+			<a
+				href="https://worldstreetgold.com/welcome"
+				target="_blank"
+				rel="noopener noreferrer"
+				className="mb-0.5 inline-flex no-underline! h-[34px] shrink-0 items-center gap-1.5 rounded-pill bg-primary/10 px-3.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-primary/15"
+			>
+				<Plus size={14} weight="bold" />
+				{t("wallet.topUp")}
 			</a>
 		</motion.div>
 	);

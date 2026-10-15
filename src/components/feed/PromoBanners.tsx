@@ -2,7 +2,7 @@
 
 import { motionReduced } from "@/lib/motion";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import clsx from "clsx";
 import VerifiedIcon from "@/assets/icons/VerifiedIcon";
 import { useSetAtom } from "jotai";
@@ -10,42 +10,43 @@ import WolfIcon from "@/assets/icons/WolfIcon";
 import { MarketSquareLockup } from "@/assets/icons/MarketMark";
 import { premiumOpenAtom } from "@/store/ui.atom";
 import { useT } from "@/i18n/client";
-
-const ROTATE_MS = 5500;
+import { XSTREAM_WEB_URL } from "@/const";
 
 interface Slide {
 	key: string;
 	eyebrow?: string;
+	title?: React.ReactNode;
 	cta: string;
 	onOpen?: () => void;
 	href?: string;
-	/** Sits in the crisp upper half of the artwork. */
-	mark: React.ReactNode;
-	title?: React.ReactNode;
-	sub?: string;
+	/** A mark drawn in code, centred in the art side of the card. */
+	mark?: React.ReactNode;
+	/** Or the product's own picture, a transparent cut-out from its repo. */
+	art?: string;
 }
 
 /**
- * The promo carousel on the right rail.
+ * WorldStreet's products on the right rail (Concept A, owner 2026-10-15:
+ * "use our own images"), the one place promos live.
  *
- * The ambience photograph fills the whole card, not a header strip. Its blur
- * is baked as a vertical ramp (see public/images/promo), so the top stays
- * crisp behind the mark while the bottom softens into a wash that copy can
- * sit on without a heavy scrim.
+ * Every picture is the product's own: the Academy's hero from
+ * worldstreet-academy, the Arcade's chess queen from worldstreet-arcade,
+ * Xstream's chili from xtreme-livestream (cut down to webp in
+ * public/images/products), and the tick, the wolf and the Market Square
+ * lockup the rail already drew. Vivid AI has no picture of its own yet, so
+ * it has no slide rather than a made-up one.
  *
- * One and a half cards show at a time so the rail admits there is more to
- * swipe to, and the dots live under the track rather than over the artwork.
+ * It does not rotate on its own: the rail sits beside the feed all day,
+ * and motion in the corner of the eye is the thing people stop reading
+ * for. A card and a half shows, so the edge of the next says there is
+ * more; it scrolls (a trackpad swipe, a drag on a phone) and the dots
+ * follow it and jump to a card.
  */
 export function PromoBanners() {
 	const t = useT();
 	const setPremiumOpen = useSetAtom(premiumOpenAtom);
 	const [index, setIndex] = useState(0);
-	const [paused, setPaused] = useState(false);
-	const reduceRef = useRef(false);
-
-	useEffect(() => {
-		reduceRef.current = motionReduced();
-	}, []);
+	const track = useRef<HTMLDivElement>(null);
 
 	const slides: Slide[] = [
 		{
@@ -54,13 +55,32 @@ export function PromoBanners() {
 			title: t("promo.premium.title"),
 			cta: t("promo.premium.cta"),
 			onOpen: () => setPremiumOpen(true),
-			mark: (
-				// The real badge component, not a lookalike: this advert sells the
-				// tick, so it shows the tick.
-				<span className="drop-shadow-[0_2px_18px_rgba(234,179,8,0.55)]">
-					<VerifiedIcon size={{ width: "44", height: "44" }} />
-				</span>
-			),
+			// The real badge, not a lookalike: this advert sells the tick.
+			mark: <VerifiedIcon size={{ width: "52", height: "52" }} />,
+		},
+		{
+			key: "academy",
+			eyebrow: "Academy",
+			title: "Learn the markets",
+			cta: "Start learning",
+			href: "https://academy.worldstreetgold.com",
+			art: "/images/products/academy.webp",
+		},
+		{
+			key: "xstream",
+			eyebrow: "Xstream",
+			title: "Go live, watch live",
+			cta: "Open Xstream",
+			href: XSTREAM_WEB_URL,
+			art: "/images/products/xstream.webp",
+		},
+		{
+			key: "arcade",
+			eyebrow: "Arcade",
+			title: "Play and compete",
+			cta: "Play now",
+			href: "https://arcade.worldstreetgold.com",
+			art: "/images/products/arcade.webp",
 		},
 		{
 			key: "wolf",
@@ -68,15 +88,14 @@ export function PromoBanners() {
 			title: t("promo.wolf.title"),
 			cta: t("promo.wolf.cta"),
 			onOpen: () => setPremiumOpen(true),
-			mark: <WolfIcon size={46} />,
+			mark: <WolfIcon size={52} />,
 		},
 		{
 			key: "market",
-			// The lockup is the headline: MARKET in ink, Square in gradient.
-			mark: (
+			title: (
 				<MarketSquareLockup
-					markClassName="h-[27px] w-auto"
-					wordClassName="font-display text-[calc(22px*var(--ws-fs))] font-semibold leading-none"
+					markClassName="h-[18px] w-auto"
+					wordClassName="font-display text-[calc(15px*var(--ws-fs))] font-semibold leading-none"
 				/>
 			),
 			cta: t("promo.market.cta"),
@@ -84,115 +103,126 @@ export function PromoBanners() {
 		},
 	];
 
-	const count = slides.length;
-	const next = useCallback(() => setIndex((i) => (i + 1) % count), [count]);
+	/** Card width plus the gap: one step of the track. */
+	const step = () => {
+		const el = track.current;
+		const card = el?.firstElementChild as HTMLElement | null;
+		return card ? card.offsetWidth + 10 : 1;
+	};
 
-	useEffect(() => {
-		if (paused || reduceRef.current) return;
-		const id = setInterval(next, ROTATE_MS);
-		return () => clearInterval(id);
-	}, [paused, next]);
+	const goTo = (i: number) => {
+		track.current?.scrollTo({
+			left: i * step(),
+			behavior: motionReduced() ? "auto" : "smooth",
+		});
+	};
 
 	return (
-		<div
-			onMouseEnter={() => setPaused(true)}
-			onMouseLeave={() => setPaused(false)}
-			onFocusCapture={() => setPaused(true)}
-			onBlurCapture={() => setPaused(false)}
-		>
-			<div className="overflow-hidden">
-				<div
-					className="flex gap-2.5 transition-transform duration-500 ease-[cubic-bezier(0.2,0,0,1)]"
-					style={{ transform: `translateX(calc(${-index} * (68% + 0.625rem)))` }}
-				>
-					{slides.map((slide) => {
-						const inner = (
-							<>
-								{/* the photograph, full bleed */}
+		<div>
+			<div
+				ref={track}
+				onScroll={(e) =>
+					setIndex(
+						Math.min(
+							slides.length - 1,
+							Math.round(e.currentTarget.scrollLeft / step()),
+						),
+					)
+				}
+				className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+			>
+				{slides.map((slide) => {
+					const inner = (
+						<>
+							{/* the house ambience, light and dark */}
+							<img
+								src="/images/promo/ambience-dark.webp"
+								alt=""
+								aria-hidden="true"
+								className="promo-amb promo-amb-dark"
+							/>
+							<img
+								src="/images/promo/ambience-light.webp"
+								alt=""
+								aria-hidden="true"
+								className="promo-amb promo-amb-light"
+							/>
+
+							{/* the product's own picture, standing on the right edge */}
+							{slide.art && (
 								<img
-									src="/images/promo/ambience-dark.webp"
+									src={slide.art}
 									alt=""
 									aria-hidden="true"
-									className="promo-amb promo-amb-dark"
+									loading="lazy"
+									className="pointer-events-none absolute right-0 bottom-0 h-[92%] w-auto max-w-[56%] object-contain object-bottom"
 								/>
-								<img
-									src="/images/promo/ambience-light.webp"
-									alt=""
-									aria-hidden="true"
-									className="promo-amb promo-amb-light"
-								/>
-
-								<span className="relative flex h-full flex-col p-3.5">
-									{/* mark rides the crisp top of the frame */}
-									<span className="flex flex-1 items-center justify-center pb-1">
-										{slide.mark}
-									</span>
-
-									{slide.eyebrow && (
-										<span className="block font-sans text-[calc(9.5px*var(--ws-fs))] font-bold uppercase tracking-[0.14em] text-primary/55">
-											{slide.eyebrow}
-										</span>
-									)}
-									{slide.title && (
-										<span className="mt-1 block font-display text-[calc(15px*var(--ws-fs))] font-semibold leading-tight text-primary">
-											{slide.title}
-										</span>
-									)}
-									{slide.sub && (
-										<span className="mt-0.5 block font-sans text-[calc(11px*var(--ws-fs))] text-primary/55">
-											{slide.sub}
-										</span>
-									)}
-
-									<span className="mt-3 flex h-8 w-full items-center justify-center rounded-pill bg-primary font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-page">
-										{slide.cta}
-									</span>
+							)}
+							{slide.mark && (
+								<span className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2">
+									{slide.mark}
 								</span>
-							</>
-						);
+							)}
 
-						// shine-soft, not shine: the CTA-sized sweep reads as a flare
-						// across a whole card.
-						const className =
-							"shine-soft relative block h-[236px] w-[68%] shrink-0 cursor-pointer overflow-hidden rounded-xl bg-surface text-left";
+							<span className="relative flex h-full max-w-[60%] flex-col justify-end gap-1 p-4">
+								{slide.eyebrow && (
+									<span className="block font-sans text-[calc(10px*var(--ws-fs))] font-semibold uppercase tracking-[0.16em] text-primary/60">
+										{slide.eyebrow}
+									</span>
+								)}
+								{slide.title && (
+									<span className="block font-sans text-[calc(15px*var(--ws-fs))] font-semibold leading-snug text-primary">
+										{slide.title}
+									</span>
+								)}
+								<span className="mt-2 inline-flex h-[30px] w-fit items-center rounded-pill bg-primary px-3.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-page">
+									{slide.cta}
+								</span>
+							</span>
+						</>
+					);
 
-						return slide.href ? (
-							<a
-								key={slide.key}
-								href={slide.href}
-								target="_blank"
-								rel="noopener noreferrer"
-								className={className}
-							>
-								{inner}
-							</a>
-						) : (
-							<button
-								key={slide.key}
-								type="button"
-								onClick={slide.onOpen}
-								className={className}
-							>
-								{inner}
-							</button>
-						);
-					})}
-				</div>
+					// no-underline!: the Underline links setting is for links in
+					// running text; a whole card with a pill in it is plainly one.
+					const className =
+						"relative block h-[168px] w-[78%] shrink-0 snap-start cursor-pointer overflow-hidden rounded-xl bg-surface text-left no-underline!";
+
+					return slide.href ? (
+						<a
+							key={slide.key}
+							href={slide.href}
+							target="_blank"
+							rel="noopener noreferrer"
+							className={className}
+						>
+							{inner}
+						</a>
+					) : (
+						<button
+							key={slide.key}
+							type="button"
+							onClick={slide.onOpen}
+							className={className}
+						>
+							{inner}
+						</button>
+					);
+				})}
 			</div>
 
-			<div className="mt-2.5 flex items-center justify-center gap-1.5">
+			<div className="mt-3 flex items-center justify-center gap-1.5">
 				{slides.map((slide, i) => (
 					<button
 						key={slide.key}
 						type="button"
 						aria-label={slide.eyebrow ?? slide.key}
 						aria-current={i === index}
-						onClick={() => setIndex(i)}
+						onClick={() => goTo(i)}
 						className={clsx(
-							"h-1.5 cursor-pointer rounded-pill transition-all",
+							"h-[5px] cursor-pointer rounded-pill transition-all",
 							i === index
 								? "w-4 bg-primary"
-								: "w-1.5 bg-primary/25 hover:bg-primary/45",
+								: "w-[5px] bg-primary/20 hover:bg-primary/40",
 						)}
 					/>
 				))}
