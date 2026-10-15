@@ -193,6 +193,11 @@ export function clearCache(): void {
  * request; a failed request is not cached, so the next caller retries rather
  * than inheriting an error forever.
  */
+const isFailedResult = (data: unknown) =>
+	typeof data === "object" &&
+	data !== null &&
+	(data as { success?: unknown }).success === false;
+
 export async function fetchCached<T>(
 	key: string,
 	fetcher: () => Promise<T>,
@@ -206,7 +211,13 @@ export async function fetchCached<T>(
 
 	const promise = fetcher()
 		.then((data) => {
-			writeCache(key, data);
+			// A failed read is never cached. Fetchers here mostly return the
+			// action shape, so a refused or unreachable request comes back as a
+			// value, { success: false }, not a throw; written down, it served
+			// as the answer for the whole TTL and, persisted, across reloads
+			// too: the right rail stayed empty after the gateway came back
+			// (2026-10-15).
+			if (!isFailedResult(data)) writeCache(key, data);
 			return data;
 		})
 		.finally(() => {
