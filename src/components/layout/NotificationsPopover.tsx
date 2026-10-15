@@ -1,5 +1,6 @@
 "use client";
 
+import { StateArt } from "@/components/ui/state-art/StateArt";
 import { useCallback, useEffect, useState } from "react";
 import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 import { createPortal } from "react-dom";
@@ -192,9 +193,14 @@ export function NotificationsPopover({
 											</div>
 										))
 									) : groups.length === 0 ? (
-										<p className="px-3 py-6 text-center font-sans text-[calc(13px*var(--ws-fs))] text-subtle">
-											{t("notif.empty.all.title")}
-										</p>
+										// The page's bell, small: the same glyph the All tab
+										// morphs from.
+										<div className="flex flex-col items-center gap-1.5 px-3 py-5">
+											<StateArt scene="bell" className="size-[72px]" />
+											<p className="font-sans text-[calc(13px*var(--ws-fs))] text-muted">
+												{t("notif.empty.all.title")}
+											</p>
+										</div>
 									) : (
 										groups.map((g, i) => (
 											<NotificationRow

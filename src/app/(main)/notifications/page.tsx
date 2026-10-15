@@ -3,10 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { followUserDirect, unfollowUserDirect } from "@/lib/upload-direct";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertTriangle, AtSign, BadgeCheck, Bell, UserPlus } from "@/components/ui/icons";
 import { Check } from "@phosphor-icons/react";
 import { useAtom, useSetAtom } from "jotai";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { StateArt, type StateScene } from "@/components/ui/state-art/StateArt";
 import { Tabs } from "@/components/ui/Tabs";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { markNotificationsReadAction } from "@/lib/notification.actions";
@@ -46,20 +45,23 @@ const FILTERS: { key: Filter; labelKey: string }[] = [
   { key: "verified", labelKey: "notif.tab.verified" },
 ];
 
-const EMPTY: Record<Filter, { icon: typeof Bell; title: string; caption: string }> = {
-  all: { icon: Bell, title: "notif.empty.all.title", caption: "notif.empty.all.caption" },
+// Each filter's empty state is a glyph of the state art, so switching tabs
+// on an empty list morphs bell to @ to person to seal (owner 2026-10-15:
+// "I want our notifications to be like an svg morph").
+const EMPTY: Record<Filter, { scene: StateScene; title: string; caption: string }> = {
+  all: { scene: "bell", title: "notif.empty.all.title", caption: "notif.empty.all.caption" },
   mentions: {
-    icon: AtSign,
+    scene: "mention",
     title: "notif.empty.mentions.title",
     caption: "notif.empty.mentions.caption",
   },
   follows: {
-    icon: UserPlus,
+    scene: "align",
     title: "notif.empty.follows.title",
     caption: "notif.empty.follows.caption",
   },
   verified: {
-    icon: BadgeCheck,
+    scene: "verified",
     title: "notif.empty.verified.title",
     caption: "notif.empty.verified.caption",
   },
@@ -84,6 +86,9 @@ export default function NotificationsPage() {
     () => !readCache(cacheKeys.notifications()),
   );
   const [failed, setFailed] = useState(false);
+  // Try again from the failed state: the state view stays up and its art
+  // morphs cloud to magnifier, instead of dropping to the skeleton.
+  const [retrying, setRetrying] = useState(false);
   const [filter, setFilter] = useAtom(notificationFilterAtom);
   const [followingIds, setFollowingIds] = useAtom(followingIdsAtom);
   const setUnreadCount = useSetAtom(unreadNotificationsCountAtom);
@@ -281,27 +286,46 @@ export default function NotificationsPage() {
       </AnimatePresence>
 
       <div className="flex flex-col">
-        {loading ? (
+        {loading && !retrying ? (
           [0, 1, 2, 3, 4, 5].map((i) => <NotificationRowSkeleton key={i} />)
-        ) : failed ? (
-          <EmptyState
-            icon={AlertTriangle}
-            title={t("notif.error.title")}
-            caption={t("notif.error.caption")}
-            action={{
-              label: t("common.retry"),
-              onClick: () => {
-                invalidate(cacheKeys.notifications());
-                void load();
-              },
-            }}
-          />
-        ) : groups.length === 0 ? (
-          <EmptyState
-            icon={empty.icon}
-            title={t(empty.title)}
-            caption={t(empty.caption)}
-          />
+        ) : failed || retrying || groups.length === 0 ? (
+          // ONE art for every state here, so it morphs between them: the
+          // filter's glyph, the cloud when the read failed, the magnifier
+          // while Try again is in flight.
+          <div className="flex animate-pop flex-col items-center gap-3 px-6 py-12 text-center">
+            <StateArt
+              scene={retrying ? "search" : failed ? "offline" : empty.scene}
+              className="mb-1 size-28"
+            />
+            <h2
+              aria-live="polite"
+              className="font-sans text-base font-semibold text-primary"
+            >
+              {retrying
+                ? "Looking again"
+                : failed
+                  ? t("notif.error.title")
+                  : t(empty.title)}
+            </h2>
+            <p className="max-w-[36ch] font-sans text-[calc(13px*var(--ws-fs))] leading-relaxed text-muted">
+              {failed || retrying ? t("notif.error.caption") : t(empty.caption)}
+            </p>
+            {(failed || retrying) && (
+              <button
+                type="button"
+                disabled={retrying}
+                onClick={async () => {
+                  setRetrying(true);
+                  invalidate(cacheKeys.notifications());
+                  await load();
+                  setRetrying(false);
+                }}
+                className="mt-1 h-9 cursor-pointer rounded-pill bg-brand px-[18px] font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active disabled:cursor-default disabled:opacity-60"
+              >
+                {t("common.retry")}
+              </button>
+            )}
+          </div>
         ) : (
           groups.map((group, i) => (
             <NotificationRow

@@ -238,19 +238,7 @@ export function RightSidebar() {
 				className="shrink-0 animate-rise"
 				style={{ animationDelay: "120ms" }}
 			>
-				<SectionHead
-					label="WorldStreet"
-					trailing={
-						<a
-							href="https://www.worldstreetgold.com"
-							target="_blank"
-							rel="noopener noreferrer"
-							className={RAIL_LINK}
-						>
-							All products
-						</a>
-					}
-				/>
+				<SectionHead label="WorldStreet" />
 				<div className="px-3 pt-1">
 					<PromoBanners />
 				</div>

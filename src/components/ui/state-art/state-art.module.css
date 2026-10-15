@@ -112,6 +112,49 @@ html[data-ws-theme="platform-light"] .art {
 	}
 }
 
+/* The bell rings: a few swings that die away, then a long rest. Pivots on
+   the bell's crown. */
+.iSwing {
+	transform-origin: 80px 46px;
+	animation: st-swing 4s cubic-bezier(0.45, 0, 0.55, 1) infinite backwards;
+}
+@keyframes st-swing {
+	0%,
+	48%,
+	100% {
+		transform: none;
+	}
+	8% {
+		transform: rotate(11deg);
+	}
+	18% {
+		transform: rotate(-9deg);
+	}
+	28% {
+		transform: rotate(5deg);
+	}
+	38% {
+		transform: rotate(-2deg);
+	}
+}
+
+/* A brand accent catching the eye on the same clock as the ring. */
+.iBlink {
+	animation: st-blink 4s ease-in-out infinite backwards;
+}
+@keyframes st-blink {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	12% {
+		opacity: 0.35;
+	}
+	30% {
+		opacity: 1;
+	}
+}
+
 .art[data-paused="true"] .beat {
 	animation-play-state: paused;
 }
