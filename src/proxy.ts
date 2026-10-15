@@ -88,6 +88,139 @@ function publicUrl(req: NextRequest, path?: string): URL {
 const CLERK_JS_URL =
 	"https://clerk.worldstreetgold.com/npm/@clerk/clerk-js@5/dist/clerk.browser.js";
 
+const escHtml = (v: string) =>
+	v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+
+/**
+ * Where the person was going, in words ("we'll take you straight to your
+ * messages"). A fixed map, so nothing from the URL is echoed into the page.
+ */
+function destinationWords(path: string): string {
+	const p = splitLocalePath(path).pathname;
+	const at = (base: string) => p === base || p.startsWith(`${base}/`);
+	if (p === "/") return "your feed";
+	if (at("/messages")) return "your messages";
+	if (at("/notifications")) return "your notifications";
+	if (at("/bookmarks")) return "your bookmarks";
+	if (at("/explore")) return "Explore";
+	if (at("/communities")) return "Communities";
+	if (p.startsWith("/voice/")) return "the space you opened";
+	if (at("/voice")) return "Space Voice";
+	if (at("/post")) return "the post you opened";
+	if (p.startsWith("/profile/")) return "that profile";
+	if (at("/profile")) return "your profile";
+	if (at("/settings")) return "your settings";
+	if (at("/studio")) return "Creator Studio";
+	if (at("/live") || at("/live-now") || at("/stream"))
+		return "the live stream";
+	if (at("/join")) return "the group invite";
+	if (at("/votes")) return "the weekly vote";
+	return "the page you opened";
+}
+
+/*
+ * The two pages proxy.ts serves itself (the sign-in bridge and the
+ * cookies-off page), drawn in the house look (owner 2026-10-15: "more
+ * creative and better ... use our own images").
+ *
+ * The picture is the handover itself, in our own marks: the WorldStreet W
+ * (wsa-mark.png) on the left, the WorldSpace W (BrandMark's polygons) on the
+ * right, one wire between. While the browser bridges the session a packet of
+ * brand colour runs along the wire; when it lands the wire lights and the W
+ * fills; when it fails the wire parts in the middle and the way forward sits
+ * under the gap. The house doodle (the brand-painted mask) is the ground,
+ * cleared from the middle so it frames the picture instead of crowding it.
+ *
+ * Plain HTML from middleware, before the app or its CSS: everything is
+ * inline, static files are reachable signed out (the matcher skips them),
+ * and nothing loads from another host except Clerk's script on the bridge.
+ * The head script reads the same caches the app's pre-paint does (next-themes
+ * `theme`, `ws-prefs-v1`) so the page wears the person's mode, palette and
+ * reduced-motion choice. The palette map mirrors ws-palettes.css: change
+ * both together.
+ */
+const AUTH_PAGE_HEAD = `<script>try{var h=document.documentElement,c=JSON.parse(localStorage.getItem("ws-prefs-v1")||"{}"),ap=c.appearance||{},a=c.a11y||{},L=localStorage.getItem("theme")==="light",x=/^#[0-9a-fA-F]{6}$/;
+if(L){h.dataset.mode="light";var tc=document.querySelector('meta[name="theme-color"]');if(tc)tc.content="#FFFFFF"}
+var P={cobalt:["#60A5FA","#60A5FA"],iris:["#A78BFA","#A78BFA"],orchid:["#E879F9","#E879F9"],sunset:["#FB923C","#FB923C"],heritage:["#EAB308","#EAB308"],mono:["#FAFAFA","#18181B"],citrus:["#BEF264","#A3E635"],steel:["#B4C2D2","#475569"],parchment:["#EBDDBA","#4A3B28"]},pl=ap.palette,b=Object.prototype.hasOwnProperty.call(P,pl)?P[pl]:null,cu=ap.custom;
+if(pl==="custom"&&cu&&x.test(cu.dPrimary)&&x.test(cu.lPrimary))b=[cu.dPrimary,cu.lPrimary];
+if(b){var v=b[L?1:0],n=parseInt(v.slice(1),16),f=function(k){k/=255;return k<=.03928?k/12.92:Math.pow((k+.055)/1.055,2.4)},y=.2126*f(n>>16&255)+.7152*f(n>>8&255)+.0722*f(n&255);
+h.style.setProperty("--brand",v);h.style.setProperty("--brand-ink",y>.179?"#0C0A09":"#FFFFFF")}
+var r=a.reduceMotion;if(r==="on"||((r==null||r==="auto")&&window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches))h.dataset.motion="reduce";}catch(e){}</script>
+<style>
+:root{--page:#000000;--ink:#FFFFFF;--muted:rgba(255,255,255,.62);--subtle:rgba(255,255,255,.42);--line:rgba(255,255,255,.16);--wash:rgba(255,255,255,.05);--brand:#22B8D6;--brand-ink:#0C0A09;--focus:#EAB308;--doodle:.2;color-scheme:dark}
+html[data-mode="light"]{--page:#FFFFFF;--ink:#0C0A09;--muted:#6F6862;--subtle:#7A736D;--line:#E2DFDD;--wash:rgba(0,0,0,.04);--focus:#CA8A04;--doodle:.14;color-scheme:light}
+html{background:var(--page);color:var(--ink);font:15px/1.6 "Instrument Sans","Public Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+[hidden]{display:none!important}
+body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:32px 20px;box-sizing:border-box}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--brand);opacity:var(--doodle);--clear:radial-gradient(ellipse 320px 300px at 50% 50%,transparent 60%,#000 100%);--art:url("/images/backgrounds/worldspace-doodle-mask.webp");-webkit-mask-image:var(--clear),var(--art);-webkit-mask-size:100% 100%,cover;-webkit-mask-position:center;-webkit-mask-repeat:no-repeat;-webkit-mask-composite:source-in;mask-image:var(--clear),var(--art);mask-size:100% 100%,cover;mask-position:center;mask-repeat:no-repeat;mask-composite:intersect}
+main{width:100%;max-width:380px;text-align:center;display:grid;justify-items:center;animation:rise .32s cubic-bezier(.16,1,.3,1) backwards}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}}
+.stage{width:min(100%,300px);display:grid;grid-template-columns:56px 1fr 56px;column-gap:14px;align-items:start;margin-bottom:36px}
+figure{margin:0;display:grid;justify-items:center;gap:10px}
+figure img,figure svg{display:block;width:56px;height:32px}
+figcaption{font-size:13px;line-height:1;color:var(--subtle);white-space:nowrap}
+.ws{overflow:visible;transition:opacity .32s}
+.ws polygon{fill:var(--brand);fill-opacity:0;stroke:var(--brand);stroke-width:16;stroke-linejoin:miter;transition:fill-opacity .2s}
+.wire{position:relative;height:2px;margin-top:15px}
+.wire>span{position:absolute;top:0;height:2px;border-radius:2px}
+.half{width:50%;background:var(--line);transition:transform .32s cubic-bezier(.2,0,0,1)}
+.h1{left:0;transform-origin:left}.h2{right:0;transform-origin:right}
+.lit{inset:0;background:var(--brand);opacity:0;transition:opacity .2s}
+.run{inset:0;overflow:hidden;transition:opacity .2s}
+.run b{position:absolute;inset:0;transform:translateX(-100%);animation:run 1.5s cubic-bezier(.65,0,.35,1) infinite}
+.run b::after{content:"";position:absolute;right:0;top:0;width:28px;height:2px;border-radius:2px;background:var(--brand)}
+@keyframes run{80%{transform:translateX(0);opacity:1}to{transform:translateX(0);opacity:0}}
+.ok .run,.broken .run{opacity:0}
+.ok .lit{opacity:1}
+.ok .ws polygon{fill-opacity:1}
+.broken .h1,.broken .h2{transform:scaleX(.8)}
+.broken .ws{opacity:.45}
+h1{font-size:22px;line-height:1.3;font-weight:600;letter-spacing:-.01em;margin:0 0 8px;text-wrap:balance}
+#p{margin:0;color:var(--muted);text-wrap:pretty}
+.act{display:grid;justify-items:center;gap:6px;margin-top:24px;width:100%}
+.cta{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 24px;border-radius:9999px;background:var(--brand);color:var(--brand-ink);font-weight:600;text-decoration:none}
+.alt{margin:6px 0 0;font-size:14px;color:var(--muted)}
+.alt a{color:var(--ink);font-weight:600;text-decoration:none;display:inline-block;padding:10px 4px}
+.alt a:hover{text-decoration:underline}
+details{width:100%;max-width:320px;font-size:14px;color:var(--muted)}
+summary{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 12px;border-radius:9999px;cursor:pointer;list-style:none;color:var(--muted)}
+summary::-webkit-details-marker{display:none}
+summary:hover{background:var(--wash);color:var(--ink)}
+summary svg{width:14px;height:14px;transition:transform .2s}
+details[open] summary svg{transform:rotate(180deg)}
+details ul{margin:8px 0 0;padding:14px 16px 14px 32px;text-align:left;border-top:1px solid var(--line)}
+details li+li{margin-top:4px}
+details p{margin:10px 0 0;text-align:left;padding-left:16px}
+small{display:block;margin-top:16px;font-size:13px;color:var(--subtle);word-break:break-all}
+a:focus-visible,summary:focus-visible{outline:2px solid var(--focus);outline-offset:3px}
+html[data-motion="reduce"] main{animation:none}
+html[data-motion="reduce"] .run b{animation:none;transform:translateX(-40%)}
+html[data-motion="reduce"] *{transition:none!important}
+@media (prefers-reduced-motion: reduce){main{animation:none}.run b{animation:none;transform:translateX(-40%)}*{transition:none!important}}
+</style>`;
+
+/** The handover picture. `state`: "" (bridging), "ok" or "broken". */
+function handoverStage(state: "" | "ok" | "broken"): string {
+	return `<div class="stage ${state}" id="s" aria-hidden="true">
+<figure><img src="/images/wsa-mark.png" alt="" width="56" height="32"><figcaption>WorldStreet</figcaption></figure>
+<div class="wire"><span class="half h1"></span><span class="half h2"></span><span class="lit"></span><span class="run"><b></b></span></div>
+<figure><svg class="ws" viewBox="0 0 435.32 245.73"><polygon points="0,0 159.68,0 217.66,102.5 139.01,245.73"/><polygon points="435.32,0 275.64,0 217.66,102.5 296.32,245.73"/></svg><figcaption>WorldSpace</figcaption></figure>
+</div>`;
+}
+
+function authPage(title: string, body: string): string {
+	return `<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#000000">
+<title>${title} · WorldSpace</title>
+${AUTH_PAGE_HEAD}
+</head><body><main>
+${body}
+</main></body></html>`;
+}
+
+const CARET = `<svg viewBox="0 0 256 256" aria-hidden="true"><path d="M208 96l-80 80-80-80" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
 function handshakeLoopPage(req: NextRequest, retry: number): string {
 	const again = publicUrl(req);
 	again.searchParams.set("__ws_retry", String(retry + 1));
@@ -95,40 +228,44 @@ function handshakeLoopPage(req: NextRequest, retry: number): string {
 	clean.searchParams.delete("__ws_retry");
 	const login = new URL(HUB_LOGIN_URL);
 	login.searchParams.set("redirect_url", clean.href);
-	const esc = (v: string) =>
-		v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+	const register = new URL(HUB_REGISTER_URL);
+	register.searchParams.set("redirect_url", clean.href);
 	const bridging = retry < 1 && !isLocalDev;
+	const failHeading = "One more step";
+	const failBody = `Sign in with your WorldStreet account and we'll take you straight to ${destinationWords(req.nextUrl.pathname)}.`;
 	const pk = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
 	const bridge = bridging
 		? `<script>
 window.__wsBridge=function(){var C=window.Clerk;if(!C){return fail();}
 C.load().then(function(){if(!C.session){return fail();}
-return C.session.getToken().then(function(){location.replace(${JSON.stringify(again.href)});});
+return C.session.getToken().then(function(){document.getElementById("s").className="stage ok";location.replace(${JSON.stringify(again.href)});});
 }).catch(fail);};
-function fail(){document.getElementById("t").textContent="We couldn't sign you in here";
-document.getElementById("p").textContent="Your WorldStreet session didn't carry over to this browser. Sign in once more and you'll come straight back.";
+function fail(){if(window.__wsFailed)return;window.__wsFailed=1;
+document.getElementById("s").className="stage broken";
+document.getElementById("t").textContent=${JSON.stringify(failHeading)};
+document.getElementById("p").textContent=${JSON.stringify(failBody)};
 document.getElementById("a").hidden=false;}
 setTimeout(function(){if(!window.Clerk||!window.Clerk.loaded)fail();},12000);
 </script>
-<script async crossorigin="anonymous" data-clerk-publishable-key="${esc(pk)}" src="${CLERK_JS_URL}" onload="window.__wsBridge()" onerror="fail()"></script>`
+<script async crossorigin="anonymous" data-clerk-publishable-key="${escHtml(pk)}" src="${CLERK_JS_URL}" onload="window.__wsBridge()" onerror="fail()"></script>`
 		: "";
-	return `<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${bridging ? "Signing you in" : "Sign in"} · WorldSpace</title>
-<style>html{background:#000000;color:#FAFAF9;font:15px/1.6 -apple-system,"Public Sans",system-ui,sans-serif}
-body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:24px}
-main{max-width:360px;text-align:center}h1{font-size:18px;margin:0 0 8px}p{margin:0 0 20px;color:#A8A29E}
-a{display:inline-block;background:#FFFFFF;color:#000000;font-weight:600;border-radius:9999px;padding:10px 20px;text-decoration:none}</style>
-</head><body><main>
-<h1 id="t">${bridging ? "Signing you in…" : "We couldn't sign you in here"}</h1>
-<p id="p">${
-		bridging
-			? "Connecting your WorldStreet session to WorldSpace."
-			: "Your WorldStreet session didn't carry over to this browser. Sign in once more and you'll come straight back."
-	}</p>
-<a id="a" href="${esc(login.href)}"${bridging ? " hidden" : ""}>Sign in at WorldStreet</a>
-${bridge}
-</main></body></html>`;
+	return authPage(
+		bridging ? "Signing you in" : "Sign in",
+		`${handoverStage(bridging ? "" : "broken")}
+<div aria-live="polite">
+<h1 id="t">${bridging ? "Signing you in" : failHeading}</h1>
+<p id="p">${escHtml(bridging ? "Bringing your WorldStreet account over to WorldSpace." : failBody)}</p>
+</div>
+<div class="act" id="a"${bridging ? " hidden" : ""}>
+<a class="cta" href="${escHtml(login.href)}">Continue with WorldStreet</a>
+<p class="alt">New here? <a href="${escHtml(register.href)}">Create an account</a></p>
+<details><summary>Why am I seeing this? ${CARET}</summary>
+<ul><li>You're in a private or incognito window.</li><li>This browser blocks cookies for worldstreetgold.com.</li><li>You signed in to WorldStreet in a different browser or app.</li></ul>
+<p>Signing in once fixes it for this browser.</p>
+</details>
+</div>
+${bridge}`,
+	);
 }
 
 /**
@@ -659,22 +796,16 @@ function breakSignInLoop(req: NextRequest, res: Response): Response {
 function cookiesOffPage(req: NextRequest): string {
 	const clean = publicUrl(req);
 	clean.searchParams.delete(HS_MARK);
-	const esc = (v: string) =>
-		v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
-	return `<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Open in your browser · WorldSpace</title>
-<style>html{background:#000000;color:#FFFFFF;font:15px/1.6 -apple-system,"Public Sans",system-ui,sans-serif}
-body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:24px}
-main{max-width:360px;text-align:center}h1{font-size:18px;margin:0 0 8px}p{margin:0 0 20px;color:rgba(255,255,255,0.62)}
-a{display:inline-block;background:#FFFFFF;color:#000000;font-weight:600;border-radius:9999px;padding:10px 20px;text-decoration:none}
-small{display:block;margin-top:16px;color:rgba(255,255,255,0.42);word-break:break-all}</style>
-</head><body><main>
-<h1>Open this in your browser</h1>
-<p>WorldSpace needs cookies to keep you signed in, and this browser isn't saving them. If you opened this link inside another app, use its menu to open the page in Safari or Chrome.</p>
-<a href="${esc(clean.href)}">Try again</a>
-<small>${esc(clean.href)}</small>
-</main></body></html>`;
+	return authPage(
+		"Open in your browser",
+		`${handoverStage("broken")}
+<h1 id="t">Open this in your browser</h1>
+<p id="p">WorldSpace needs cookies to keep you signed in, and this browser isn't saving them. If you opened this link inside another app, use its menu to open the page in Safari or Chrome.</p>
+<div class="act">
+<a class="cta" href="${escHtml(clean.href)}">Try again</a>
+<small>${escHtml(clean.href)}</small>
+</div>`,
+	);
 }
 
 export const config = {
