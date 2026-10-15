@@ -1,0 +1,890 @@
+/*
+ * The rail's product cards as six-second motion pieces (owner 2026-10-15:
+ * "actual video motion for those cards ... 6 seconds loops with texts and
+ * camera movements following the themes properly").
+ *
+ * Every card is a comp on ONE 6s clock: a camera that drifts in and back
+ * out over the background and the product's art (two parallax depths), a
+ * headline that builds word by word, holds, and leaves, and one story
+ * beat per product. Every duration here divides 6s (1, 1.5, 2, 3, 6), so
+ * the whole card loops without a seam; anything that has to jump does it
+ * while invisible, under the light sweep that marks the cut.
+ *
+ * The STATIC style of every element is the hero frame: headline set, chip
+ * in, chart drawn, tick stamped. Animation is applied only while the card
+ * is on screen (`.on`, set from an IntersectionObserver, so a card restarts
+ * its story each time it slides into view) and only when neither
+ * reduced-motion trigger is on. Under either, the card is that still frame.
+ *
+ * The cards are media, fixed dark in both themes like the creator glass:
+ * literal colours, each product in its own light. Transform and opacity
+ * only, except a static blur on the heat glow.
+ */
+
+/* ---- the frame ------------------------------------------------------------ */
+
+.scene {
+	position: relative;
+	overflow: hidden;
+	isolation: isolate;
+	color: #fff;
+	background: #08090b;
+}
+.cam,
+.layer {
+	position: absolute;
+	inset: 0;
+}
+.cam {
+	transform-origin: 62% 50%;
+}
+.text {
+	position: relative;
+	z-index: 2;
+	box-sizing: border-box;
+	display: flex;
+	height: 100%;
+	max-width: 62%;
+	flex-direction: column;
+	justify-content: flex-end;
+	gap: 4px;
+	padding: 16px;
+}
+.eyebrow {
+	font-size: calc(10px * var(--ws-fs));
+	font-weight: 600;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+	color: rgb(255 255 255 / 0.62);
+}
+.title {
+	font-size: calc(15px * var(--ws-fs));
+	font-weight: 600;
+	line-height: 1.25;
+	color: #fff;
+}
+.mask {
+	display: inline-block;
+	overflow: hidden;
+	vertical-align: bottom;
+	padding-bottom: 0.08em;
+	margin-bottom: -0.08em;
+}
+.word {
+	display: inline-block;
+}
+.cta {
+	margin-top: 8px;
+	display: inline-flex;
+	height: 30px;
+	width: fit-content;
+	align-items: center;
+	white-space: nowrap;
+	border-radius: 9999px;
+	background: #f5f5f5;
+	padding: 0 14px;
+	font-size: calc(12px * var(--ws-fs));
+	font-weight: 600;
+	color: #0a0a0a;
+}
+/* A chip in the top-left: the product's beat, stated in one line. */
+.chip {
+	box-sizing: border-box;
+	position: absolute;
+	z-index: 2;
+	top: 14px;
+	left: 14px;
+	display: inline-flex;
+	height: 24px;
+	align-items: center;
+	gap: 6px;
+	border-radius: 9999px;
+	padding: 0 10px 0 8px;
+	background: rgb(255 255 255 / 0.1);
+	font-size: calc(11px * var(--ws-fs));
+	font-weight: 600;
+	color: #fff;
+	white-space: nowrap;
+}
+/* The cut: a soft band of light that crosses as the loop restarts. */
+.sweep {
+	position: absolute;
+	z-index: 3;
+	inset: -20% auto -20% 0;
+	width: 40%;
+	opacity: 0;
+	background: linear-gradient(
+		100deg,
+		transparent,
+		rgb(255 255 255 / 0.14),
+		transparent
+	);
+	transform: translateX(-120%) skewX(-16deg);
+	pointer-events: none;
+}
+
+/* ---- Premium: the tick lands on your name ------------------------------- */
+
+.premiumBg {
+	background:
+		radial-gradient(60% 75% at 74% 46%, rgb(234 179 8 / 0.24), transparent 70%),
+		#0c0905;
+}
+.seal {
+	position: absolute;
+	top: 50%;
+	right: 22px;
+	margin-top: -36px;
+}
+.mote {
+	position: absolute;
+	bottom: 18px;
+	width: 3px;
+	height: 3px;
+	border-radius: 9999px;
+	background: #fde047;
+	opacity: 0;
+}
+.nameBar {
+	width: 46px;
+	height: 6px;
+	border-radius: 9999px;
+	background: rgb(255 255 255 / 0.55);
+}
+.dotAvatar {
+	width: 12px;
+	height: 12px;
+	border-radius: 9999px;
+	background: linear-gradient(135deg, #fef3c7, #d4d4d8);
+}
+.stamp {
+	display: inline-flex;
+}
+
+/* ---- Academy: a lesson charts itself behind her ------------------------- */
+
+.academyBg {
+	background:
+		linear-gradient(rgb(255 255 255 / 0.05) 1px, transparent 1px) 0 0 / 100% 21px,
+		linear-gradient(90deg, rgb(255 255 255 / 0.05) 1px, transparent 1px) 0 0 / 21px 100%,
+		radial-gradient(70% 80% at 72% 60%, rgb(45 212 191 / 0.18), transparent 70%),
+		#08131a;
+}
+.chart {
+	position: absolute;
+	right: 0;
+	bottom: 18px;
+	width: 78%;
+	height: 62%;
+	overflow: visible;
+}
+.chartLine {
+	fill: none;
+	stroke: #5eead4;
+	stroke-width: 2px;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-dasharray: 1;
+	stroke-dashoffset: 0;
+}
+.candle {
+	transform-box: fill-box;
+	transform-origin: 50% 100%;
+}
+.student {
+	position: absolute;
+	right: -18px;
+	bottom: 0;
+	height: 90%;
+	width: auto;
+}
+.progress {
+	position: relative;
+	width: 34px;
+	height: 4px;
+	overflow: hidden;
+	border-radius: 9999px;
+	background: rgb(255 255 255 / 0.18);
+}
+.progressFill {
+	position: absolute;
+	inset: 0;
+	border-radius: 9999px;
+	background: #5eead4;
+	transform-origin: left;
+}
+
+/* ---- Xstream: on air -------------------------------------------------------- */
+
+.xstreamBg {
+	background:
+		radial-gradient(55% 70% at 76% 48%, rgb(239 68 68 / 0.3), transparent 70%),
+		#120405;
+}
+.beam {
+	position: absolute;
+	top: -30%;
+	width: 34%;
+	height: 160%;
+	background: linear-gradient(180deg, rgb(255 255 255 / 0.1), transparent 70%);
+	transform-origin: 50% 0;
+}
+.chili {
+	position: absolute;
+	top: 50%;
+	right: 12px;
+	width: 92px;
+	height: 92px;
+	margin-top: -50px;
+}
+.chiliImg,
+.heat {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+}
+.heat {
+	filter: blur(14px) saturate(1.5);
+	opacity: 0.5;
+}
+.chiliImg {
+	transform-origin: 30% 85%;
+}
+.live {
+	background: #ef4444;
+	padding: 0 9px 0 7px;
+	letter-spacing: 0.08em;
+}
+.liveDot {
+	width: 6px;
+	height: 6px;
+	border-radius: 9999px;
+	background: #fff;
+}
+.heart {
+	position: absolute;
+	right: 28px;
+	bottom: 14px;
+	color: #fb7185;
+	opacity: 0;
+}
+
+/* ---- Arcade: the board comes at you ------------------------------------- */
+
+.arcadeBg {
+	background:
+		radial-gradient(60% 70% at 70% 30%, rgb(168 85 247 / 0.3), transparent 70%),
+		#0d0618;
+}
+.floorWrap {
+	position: absolute;
+	inset: 46% -40% -10% -40%;
+	perspective: 220px;
+	perspective-origin: 60% 0;
+	overflow: hidden;
+	-webkit-mask-image: linear-gradient(to bottom, transparent, #000 45%);
+	mask-image: linear-gradient(to bottom, transparent, #000 45%);
+}
+.floor {
+	position: absolute;
+	inset: -100% 0 0 0;
+	background: repeating-conic-gradient(
+			rgb(168 85 247 / 0.32) 0 25%,
+			transparent 0 50%
+		)
+		0 0 / 36px 36px;
+	transform: rotateX(62deg);
+	transform-origin: 50% 100%;
+}
+.queen {
+	position: absolute;
+	right: -4px;
+	bottom: 0;
+	height: 100%;
+	width: auto;
+}
+.pulseDot {
+	width: 7px;
+	height: 7px;
+	border-radius: 9999px;
+	background: #c084fc;
+}
+
+/* ---- Wolf of WorldStreet: the pack's night -------------------------------- */
+
+.wolfBg {
+	background:
+		radial-gradient(40% 50% at 78% 30%, rgb(253 230 138 / 0.2), transparent 70%),
+		#060914;
+}
+.moon {
+	position: absolute;
+	top: 16px;
+	right: 30px;
+	width: 46px;
+	height: 46px;
+	border-radius: 9999px;
+	background: radial-gradient(circle at 38% 36%, #fff7d6, #f5d77a 60%, #c99a2e);
+	opacity: 0.9;
+}
+.star {
+	position: absolute;
+	width: 2px;
+	height: 2px;
+	border-radius: 9999px;
+	background: #fff;
+	opacity: 0.6;
+}
+.skyline {
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	left: 56%;
+	height: 34%;
+	display: flex;
+	align-items: flex-end;
+	gap: 5px;
+	padding: 0 8px;
+}
+.bar {
+	flex: 1;
+	border-radius: 2px 2px 0 0;
+	background: linear-gradient(180deg, #eab308, rgb(161 98 7 / 0.35));
+	transform-origin: 50% 100%;
+}
+.wolf {
+	position: absolute;
+	top: 50%;
+	right: 34px;
+	margin-top: -38px;
+}
+.ring {
+	position: absolute;
+	top: 50%;
+	right: 24px;
+	width: 76px;
+	height: 76px;
+	margin-top: -38px;
+	border-radius: 9999px;
+	border: 1.5px solid rgb(250 204 21 / 0.7);
+	opacity: 0;
+}
+
+/* ---- Market Square: the open market -------------------------------------- */
+
+.marketBg {
+	background:
+		linear-gradient(rgb(34 211 238 / 0.1) 1px, transparent 1px) 0 0 / 100% 18px,
+		radial-gradient(70% 80% at 30% 40%, rgb(217 70 239 / 0.2), transparent 70%),
+		#05070b;
+}
+.scan {
+	position: absolute;
+	inset: 0;
+	background: repeating-linear-gradient(
+		180deg,
+		rgb(255 255 255 / 0.03) 0 1px,
+		transparent 1px 3px
+	);
+}
+.comet {
+	position: absolute;
+	top: 30%;
+	left: 0;
+	width: 70px;
+	height: 2px;
+	border-radius: 9999px;
+	background: linear-gradient(90deg, transparent, #67e8f9);
+	opacity: 0;
+	transform: translateX(-90px) rotate(-14deg);
+}
+.lockup {
+	margin-bottom: 2px;
+}
+.tagline {
+	font-size: calc(12px * var(--ws-fs));
+	font-weight: 500;
+	color: rgb(255 255 255 / 0.7);
+}
+
+/* ---- the clock --------------------------------------------------------------
+   `.on` is set by PromoScene only while the card is on screen and motion
+   is allowed (useMotionReduced: the OS query and the in-app setting). With
+   it off, nothing below applies and every element sits on its hero frame. */
+
+.on .cam {
+	animation: ps-cam 6s cubic-bezier(0.45, 0, 0.55, 1) infinite both;
+}
+
+.on .far {
+	animation: ps-far 6s cubic-bezier(0.45, 0, 0.55, 1) infinite both;
+}
+
+.on .near {
+	animation: ps-near 6s cubic-bezier(0.45, 0, 0.55, 1) infinite both;
+}
+
+.on .eyebrow {
+	animation: ps-eyebrow 6s cubic-bezier(0.16, 1, 0.3, 1) infinite both;
+}
+
+.on .word {
+	animation: ps-word 6s cubic-bezier(0.16, 1, 0.3, 1) infinite both;
+}
+
+.on .sweep {
+	animation: ps-sweep 6s cubic-bezier(0.45, 0, 0.55, 1) infinite both;
+}
+
+.on .chip {
+	animation: ps-chip 6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite both;
+}
+
+.on .seal {
+	animation: ps-coin 6s cubic-bezier(0.45, 0, 0.55, 1) infinite both;
+}
+
+.on .mote {
+	animation: ps-mote 3s ease-out infinite both;
+}
+
+.on .stamp {
+	animation: ps-stamp 6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite both;
+}
+
+.on .chartLine {
+	animation: ps-draw 6s cubic-bezier(0.65, 0, 0.35, 1) infinite both;
+}
+
+.on .candle {
+	animation: ps-candle 6s cubic-bezier(0.16, 1, 0.3, 1) infinite both;
+}
+
+.on .progressFill {
+	animation: ps-progress 6s cubic-bezier(0.45, 0, 0.55, 1) infinite both;
+}
+
+.on .beam {
+	animation: ps-beam 3s ease-in-out infinite both;
+}
+
+.on .chiliImg {
+	animation: ps-flame 3s ease-in-out infinite both;
+}
+
+.on .heat {
+	animation: ps-heat 1.5s ease-in-out infinite both;
+}
+
+.on .liveDot {
+	animation: ps-blink 1s steps(2, jump-none) infinite both;
+}
+
+.on .heart {
+	animation: ps-heart 3s cubic-bezier(0.2, 0, 0, 1) infinite both;
+}
+
+.on .floor {
+	animation: ps-floor 1.5s linear infinite both;
+}
+
+.on .queen {
+	animation: ps-float 3s ease-in-out infinite both;
+}
+
+.on .pulseDot {
+	animation: ps-pulse 1.5s ease-in-out infinite both;
+}
+
+.on .bar {
+	animation: ps-bar 6s cubic-bezier(0.16, 1, 0.3, 1) infinite both;
+}
+
+.on .star {
+	animation: ps-twinkle 2s ease-in-out infinite both;
+}
+
+.on .wolf {
+	animation: ps-rise 6s cubic-bezier(0.16, 1, 0.3, 1) infinite both;
+}
+
+.on .ring {
+	animation: ps-howl 6s cubic-bezier(0.2, 0, 0, 1) infinite both;
+}
+
+.on .moon {
+	animation: ps-moon 6s cubic-bezier(0.45, 0, 0.55, 1) infinite both;
+}
+
+.on .comet {
+	animation: ps-comet 3s cubic-bezier(0.65, 0, 0.35, 1) infinite both;
+}
+
+/* The camera breathes in and back, so its loop has no seam. */
+@keyframes ps-cam {
+	0%,
+	100% {
+		transform: scale(1.04) translate(-1.5%, 0.5%);
+	}
+	50% {
+		transform: scale(1.13) translate(1.5%, -1%);
+	}
+}
+/* Parallax: the far layer lags the camera, the near one leads it. */
+@keyframes ps-far {
+	0%,
+	100% {
+		transform: translateX(2%);
+	}
+	50% {
+		transform: translateX(-2%);
+	}
+}
+@keyframes ps-near {
+	0%,
+	100% {
+		transform: translateX(-3%);
+	}
+	50% {
+		transform: translateX(3%);
+	}
+}
+@keyframes ps-eyebrow {
+	0% {
+		opacity: 0;
+		transform: translateX(-10px);
+	}
+	7%,
+	85% {
+		opacity: 1;
+		transform: none;
+	}
+	91%,
+	100% {
+		opacity: 0;
+		transform: none;
+	}
+}
+/* A word rises out of its mask, holds, and leaves upward. It jumps back
+   below the mask between 100% and 0%, while it is out of sight. */
+@keyframes ps-word {
+	0% {
+		opacity: 0;
+		transform: translateY(105%);
+	}
+	9%,
+	84% {
+		opacity: 1;
+		transform: none;
+	}
+	91%,
+	100% {
+		opacity: 0;
+		transform: translateY(-105%);
+	}
+}
+@keyframes ps-sweep {
+	0%,
+	88% {
+		opacity: 0;
+		transform: translateX(-120%) skewX(-16deg);
+	}
+	90% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 1;
+		transform: translateX(320%) skewX(-16deg);
+	}
+}
+@keyframes ps-chip {
+	0%,
+	14% {
+		opacity: 0;
+		transform: translateY(-8px) scale(0.9);
+	}
+	20%,
+	86% {
+		opacity: 1;
+		transform: none;
+	}
+	92%,
+	100% {
+		opacity: 0;
+		transform: none;
+	}
+}
+
+@keyframes ps-coin {
+	0%,
+	100% {
+		transform: perspective(260px) rotateY(0);
+	}
+	25% {
+		transform: perspective(260px) rotateY(24deg);
+	}
+	36% {
+		transform: perspective(260px) rotateY(0) scale(1.08);
+	}
+	42% {
+		transform: perspective(260px) rotateY(0) scale(1);
+	}
+	75% {
+		transform: perspective(260px) rotateY(-24deg);
+	}
+}
+@keyframes ps-mote {
+	0% {
+		opacity: 0;
+		transform: translateY(0);
+	}
+	25% {
+		opacity: 0.9;
+	}
+	100% {
+		opacity: 0;
+		transform: translateY(-110px);
+	}
+}
+/* The tick lands on your name when the big seal pulses. */
+@keyframes ps-stamp {
+	0%,
+	34% {
+		opacity: 0;
+		transform: scale(0.2);
+	}
+	40% {
+		opacity: 1;
+		transform: scale(1.35);
+	}
+	46%,
+	86% {
+		opacity: 1;
+		transform: none;
+	}
+	92%,
+	100% {
+		opacity: 0;
+		transform: none;
+	}
+}
+
+@keyframes ps-draw {
+	0%,
+	8% {
+		stroke-dashoffset: 1;
+		opacity: 1;
+	}
+	58%,
+	86% {
+		stroke-dashoffset: 0;
+		opacity: 1;
+	}
+	94%,
+	100% {
+		stroke-dashoffset: 0;
+		opacity: 0;
+	}
+}
+@keyframes ps-candle {
+	0%,
+	10% {
+		transform: scaleY(0);
+		opacity: 0;
+	}
+	24%,
+	86% {
+		transform: none;
+		opacity: 1;
+	}
+	94%,
+	100% {
+		transform: none;
+		opacity: 0;
+	}
+}
+@keyframes ps-progress {
+	0%,
+	18% {
+		transform: scaleX(0);
+	}
+	70%,
+	88% {
+		transform: none;
+	}
+	96%,
+	100% {
+		transform: scaleX(0);
+	}
+}
+
+@keyframes ps-beam {
+	0%,
+	100% {
+		transform: rotate(-9deg);
+	}
+	50% {
+		transform: rotate(7deg);
+	}
+}
+@keyframes ps-flame {
+	0%,
+	100% {
+		transform: none;
+	}
+	30% {
+		transform: rotate(-2.5deg) translateY(-1px);
+	}
+	65% {
+		transform: rotate(1.5deg) translateY(-2px);
+	}
+}
+@keyframes ps-heat {
+	0%,
+	100% {
+		opacity: 0.45;
+	}
+	30% {
+		opacity: 0.72;
+	}
+	55% {
+		opacity: 0.4;
+	}
+	80% {
+		opacity: 0.66;
+	}
+}
+@keyframes ps-blink {
+	0% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0.25;
+	}
+}
+@keyframes ps-heart {
+	0% {
+		opacity: 0;
+		transform: translate(0, 0) scale(0.6);
+	}
+	15% {
+		opacity: 1;
+		transform: translate(-4px, -14px) scale(1);
+	}
+	100% {
+		opacity: 0;
+		transform: translate(6px, -96px) scale(0.9);
+	}
+}
+
+/* One full tile pair per cycle, so the floor never jumps. */
+@keyframes ps-floor {
+	from {
+		transform: rotateX(62deg) translateY(0);
+	}
+	to {
+		transform: rotateX(62deg) translateY(36px);
+	}
+}
+@keyframes ps-float {
+	0%,
+	100% {
+		transform: none;
+	}
+	50% {
+		transform: translateY(-4px);
+	}
+}
+@keyframes ps-pulse {
+	0%,
+	100% {
+		transform: none;
+		opacity: 1;
+	}
+	50% {
+		transform: scale(1.5);
+		opacity: 0.5;
+	}
+}
+
+@keyframes ps-bar {
+	0%,
+	4% {
+		transform: scaleY(0);
+	}
+	30%,
+	86% {
+		transform: none;
+	}
+	96%,
+	100% {
+		transform: scaleY(0);
+	}
+}
+@keyframes ps-twinkle {
+	0%,
+	100% {
+		opacity: 0.25;
+	}
+	50% {
+		opacity: 0.9;
+	}
+}
+@keyframes ps-rise {
+	0% {
+		opacity: 0;
+		transform: translateY(18px);
+	}
+	16%,
+	88% {
+		opacity: 1;
+		transform: none;
+	}
+	96%,
+	100% {
+		opacity: 0;
+		transform: translateY(-6px);
+	}
+}
+@keyframes ps-howl {
+	0%,
+	40% {
+		opacity: 0;
+		transform: scale(0.8);
+	}
+	44% {
+		opacity: 0.9;
+	}
+	70%,
+	100% {
+		opacity: 0;
+		transform: scale(1.9);
+	}
+}
+@keyframes ps-moon {
+	0%,
+	100% {
+		transform: translateY(4px);
+	}
+	50% {
+		transform: translateY(-3px);
+	}
+}
+
+@keyframes ps-comet {
+	0%,
+	20% {
+		opacity: 0;
+		transform: translateX(-90px) rotate(-14deg);
+	}
+	30% {
+		opacity: 1;
+	}
+	60%,
+	100% {
+		opacity: 0;
+		transform: translateX(320px) rotate(-14deg);
+	}
+}

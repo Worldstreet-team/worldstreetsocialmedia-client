@@ -5,14 +5,15 @@
  * VerifiedIcon `shine` and WolfIcon `animated` opt in, so the hundreds of
  * other ticks and wolves in the app stay still.
  *
- * Slow and small on purpose: the rail sits beside the feed all day.
+ * Slow and small on purpose: the rail sits beside the feed all day. Every
+ * period divides 6s, the clock the rail's promo comps run on.
  * Transform and opacity only. Each loop starts and ends on the resting
  * pose, and both reduced-motion triggers stop it there.
  */
 
 /* ---- the tick: a glint across the metal -------------------------------- */
 .glint {
-	animation: mm-glint 5.2s cubic-bezier(0.45, 0, 0.25, 1) 1.2s infinite both;
+	animation: mm-glint 6s cubic-bezier(0.45, 0, 0.25, 1) 1.2s infinite both;
 }
 @keyframes mm-glint {
 	0% {
@@ -32,11 +33,11 @@
 }
 .earL {
 	transform-origin: 7.4px 8.2px;
-	animation: mm-ear-l 6.4s ease-in-out 0.8s infinite both;
+	animation: mm-ear-l 6s ease-in-out 0.8s infinite both;
 }
 .earR {
 	transform-origin: 16.6px 8.2px;
-	animation: mm-ear-r 6.4s ease-in-out 0.8s infinite both;
+	animation: mm-ear-r 6s ease-in-out 0.8s infinite both;
 }
 @keyframes mm-ear-l {
 	0%,
@@ -74,7 +75,7 @@
 }
 .eyes {
 	transform-origin: 12px 11.6px;
-	animation: mm-blink 4.6s ease-in-out 2s infinite both;
+	animation: mm-blink 3s ease-in-out 2s infinite both;
 }
 @keyframes mm-blink {
 	0%,

@@ -4,46 +4,32 @@ import { motionReduced } from "@/lib/motion";
 
 import { useRef, useState } from "react";
 import clsx from "clsx";
-import VerifiedIcon from "@/assets/icons/VerifiedIcon";
 import { useSetAtom } from "jotai";
-import WolfIcon from "@/assets/icons/WolfIcon";
-import { MarketSquareLockup } from "@/assets/icons/MarketMark";
 import { premiumOpenAtom } from "@/store/ui.atom";
 import { useT } from "@/i18n/client";
 import { XSTREAM_WEB_URL } from "@/const";
-import pm from "./promo-motion.module.css";
-
-interface Slide {
-	key: string;
-	eyebrow?: string;
-	title?: React.ReactNode;
-	cta: string;
-	onOpen?: () => void;
-	href?: string;
-	/** A mark drawn in code, centred in the art side of the card. */
-	mark?: React.ReactNode;
-	/** Or the product's own picture, a transparent cut-out from its repo. */
-	art?: string;
-	/** The picture's idle motion (only Xstream's flame has one). */
-	artMotion?: "flame";
-}
+import {
+	AcademyScene,
+	ArcadeScene,
+	MarketScene,
+	PremiumScene,
+	WolfScene,
+	XstreamScene,
+} from "./promo/PromoScenes";
 
 /**
- * WorldStreet's products on the right rail (Concept A, owner 2026-10-15:
- * "use our own images"), the one place promos live.
+ * WorldStreet's products on the right rail, the one place promos live.
  *
- * Every picture is the product's own: the Academy's hero from
- * worldstreet-academy, the Arcade's chess queen from worldstreet-arcade,
- * Xstream's chili from xtreme-livestream (cut down to webp in
- * public/images/products), and the tick, the wolf and the Market Square
- * lockup the rail already drew. Vivid AI has no picture of its own yet, so
- * it has no slide rather than a made-up one.
+ * Each card is a six-second motion piece (owner 2026-10-15: "actual video
+ * motion ... 6 seconds loops with texts and camera movements following the
+ * themes"), built in code rather than shipped as video: sharp at any
+ * density, a few KB instead of megabytes, replayed from the top each time a
+ * card slides into view, and a designed still frame under reduced motion.
+ * The comps live in ./promo; every picture is the product's own (owner:
+ * "use our own images"). Vivid AI has no picture of its own yet, so no card.
  *
- * It does not rotate on its own: the rail sits beside the feed all day,
- * and motion in the corner of the eye is the thing people stop reading
- * for. A card and a half shows, so the edge of the next says there is
- * more; it scrolls (a trackpad swipe, a drag on a phone) and the dots
- * follow it and jump to a card.
+ * The strip does not rotate on its own; it scrolls (a trackpad swipe, a
+ * drag on a phone) and the dots follow it and jump to a card.
  */
 export function PromoBanners() {
 	const t = useT();
@@ -51,79 +37,85 @@ export function PromoBanners() {
 	const [index, setIndex] = useState(0);
 	const track = useRef<HTMLDivElement>(null);
 
-	const slides: Slide[] = [
+	const cards = [
 		{
 			key: "premium",
-			eyebrow: t("promo.premium.eyebrow"),
-			title: t("promo.premium.title"),
-			cta: t("promo.premium.cta"),
-			onOpen: () => setPremiumOpen(true),
-			// The real badge, not a lookalike: this advert sells the tick. It
-			// turns like a coin and a glint crosses the metal.
-			mark: (
-				<span className={clsx("block", pm.sway)}>
-					<VerifiedIcon size={{ width: "56", height: "56" }} shine />
-				</span>
+			label: t("promo.premium.eyebrow"),
+			node: (
+				<PremiumScene
+					key="premium"
+					eyebrow={t("promo.premium.eyebrow")}
+					title={t("promo.premium.title")}
+					cta={t("promo.premium.cta")}
+					onOpen={() => setPremiumOpen(true)}
+				/>
 			),
 		},
 		{
 			key: "academy",
-			eyebrow: "Academy",
-			title: "Learn the markets",
-			cta: "Start learning",
-			href: "https://academy.worldstreetgold.com",
-			art: "/images/products/academy.webp",
+			label: "Academy",
+			node: (
+				<AcademyScene
+					key="academy"
+					title="Learn the markets"
+					cta="Start learning"
+					href="https://academy.worldstreetgold.com"
+				/>
+			),
 		},
 		{
 			key: "xstream",
-			eyebrow: "Xstream",
-			title: "Go live, watch live",
-			cta: "Open Xstream",
-			href: XSTREAM_WEB_URL,
-			art: "/images/products/xstream.webp",
-			artMotion: "flame",
+			label: "Xstream",
+			node: (
+				<XstreamScene
+					key="xstream"
+					title="Go live, watch live"
+					cta="Open Xstream"
+					href={XSTREAM_WEB_URL}
+				/>
+			),
 		},
 		{
 			key: "arcade",
-			eyebrow: "Arcade",
-			title: "Play and compete",
-			cta: "Play now",
-			href: "https://arcade.worldstreetgold.com",
-			art: "/images/products/arcade.webp",
+			label: "Arcade",
+			node: (
+				<ArcadeScene
+					key="arcade"
+					title="Play and compete"
+					cta="Play now"
+					href="https://arcade.worldstreetgold.com"
+				/>
+			),
 		},
 		{
 			key: "wolf",
-			eyebrow: t("promo.wolf.eyebrow"),
-			title: t("promo.wolf.title"),
-			cta: t("promo.wolf.cta"),
-			onOpen: () => setPremiumOpen(true),
-			mark: (
-				<span className={clsx("block", pm.breathe)}>
-					<WolfIcon size={56} animated />
-				</span>
+			label: t("promo.wolf.eyebrow"),
+			node: (
+				<WolfScene
+					key="wolf"
+					eyebrow={t("promo.wolf.eyebrow")}
+					title={t("promo.wolf.title")}
+					cta={t("promo.wolf.cta")}
+					onOpen={() => setPremiumOpen(true)}
+				/>
 			),
 		},
 		{
 			key: "market",
-			// The lockup is the picture: big enough that its own motion (the
-			// torn-slice glitch, the gradient running through Square) reads.
-			title: (
-				<span className="mb-1 block">
-					<MarketSquareLockup
-						markClassName="h-[26px] w-auto"
-						wordClassName="font-display text-[calc(22px*var(--ws-fs))] font-semibold leading-none"
-					/>
-				</span>
+			label: "Market Square",
+			node: (
+				<MarketScene
+					key="market"
+					cta={t("promo.market.cta")}
+					href="https://tsionark.com"
+				/>
 			),
-			cta: t("promo.market.cta"),
-			href: "https://tsionark.com",
 		},
 	];
 
 	/** Card width plus the gap: one step of the track. */
 	const step = () => {
-		const el = track.current;
-		const card = el?.firstElementChild as HTMLElement | null;
+		const card = track.current?.firstElementChild as HTMLElement | null;
 		return card ? card.offsetWidth + 10 : 1;
 	};
 
@@ -141,117 +133,22 @@ export function PromoBanners() {
 				onScroll={(e) =>
 					setIndex(
 						Math.min(
-							slides.length - 1,
+							cards.length - 1,
 							Math.round(e.currentTarget.scrollLeft / step()),
 						),
 					)
 				}
 				className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 			>
-				{slides.map((slide) => {
-					const inner = (
-						<>
-							{/* the house ambience, light and dark */}
-							<img
-								src="/images/promo/ambience-dark.webp"
-								alt=""
-								aria-hidden="true"
-								className="promo-amb promo-amb-dark"
-							/>
-							<img
-								src="/images/promo/ambience-light.webp"
-								alt=""
-								aria-hidden="true"
-								className="promo-amb promo-amb-light"
-							/>
-
-							{/* the product's own picture, standing on the right edge */}
-							{slide.art && slide.artMotion === "flame" ? (
-								// Xstream's chili: a blurred copy underneath for the
-								// heat, the mark itself swaying above it.
-								<span className="pointer-events-none absolute right-2.5 top-[42%] size-[84px] -translate-y-1/2">
-									<img
-										src={slide.art}
-										alt=""
-										aria-hidden="true"
-										loading="lazy"
-										className={clsx("absolute inset-0 size-full object-contain", pm.heat)}
-									/>
-									<img
-										src={slide.art}
-										alt=""
-										aria-hidden="true"
-										loading="lazy"
-										className={clsx("absolute inset-0 size-full object-contain", pm.flame)}
-									/>
-								</span>
-							) : slide.art ? (
-								<img
-									src={slide.art}
-									alt=""
-									aria-hidden="true"
-									loading="lazy"
-									className="pointer-events-none absolute right-0 bottom-0 h-[92%] w-auto max-w-[56%] object-contain object-bottom"
-								/>
-							) : null}
-							{slide.mark && (
-								<span className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2">
-									{slide.mark}
-								</span>
-							)}
-
-							<span className="relative flex h-full max-w-[60%] flex-col justify-end gap-1 p-4">
-								{slide.eyebrow && (
-									<span className="block font-sans text-[calc(10px*var(--ws-fs))] font-semibold uppercase tracking-[0.16em] text-primary/60">
-										{slide.eyebrow}
-									</span>
-								)}
-								{slide.title && (
-									<span className="block font-sans text-[calc(15px*var(--ws-fs))] font-semibold leading-snug text-primary">
-										{slide.title}
-									</span>
-								)}
-								<span className="mt-2 inline-flex h-[30px] w-fit items-center whitespace-nowrap rounded-pill bg-primary px-3.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-page">
-									{slide.cta}
-								</span>
-							</span>
-						</>
-					);
-
-					// no-underline!: the Underline links setting is for links in
-					// running text; a whole card with a pill in it is plainly one.
-					const className =
-						"relative block h-[168px] w-[78%] shrink-0 snap-start cursor-pointer overflow-hidden rounded-xl bg-surface text-left no-underline!";
-
-					return slide.href ? (
-						<a
-							key={slide.key}
-							href={slide.href}
-							target="_blank"
-							rel="noopener noreferrer"
-							className={className}
-						>
-							{inner}
-						</a>
-					) : (
-						<button
-							key={slide.key}
-							type="button"
-							onClick={slide.onOpen}
-							className={className}
-						>
-							{inner}
-						</button>
-					);
-				})}
+				{cards.map((c) => c.node)}
 			</div>
 
 			<div className="mt-3 flex items-center justify-center gap-1.5">
-				{slides.map((slide, i) => (
+				{cards.map((c, i) => (
 					<button
-						key={slide.key}
+						key={c.key}
 						type="button"
-						aria-label={slide.eyebrow ?? slide.key}
+						aria-label={c.label}
 						aria-current={i === index}
 						onClick={() => goTo(i)}
 						className={clsx(
