@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 import type { IconProps } from "@/app/types";
+import m from "./mark-motion.module.css";
 
 /** The three membership levels a tick can represent. */
 export type VerifiedTier = "bronze" | "silver" | "gold";
@@ -59,13 +60,21 @@ const SEAL_PATH =
 const VerifiedIcon = ({
 	size,
 	tier = "gold",
-}: IconProps & { tier?: VerifiedTier }) => {
+	shine = false,
+}: IconProps & {
+	tier?: VerifiedTier;
+	/** A glint that crosses the metal every few seconds. Off everywhere
+	 *  but the Premium card on the rail; still under reduced motion. */
+	shine?: boolean;
+}) => {
 	const px = size?.width ? Number.parseInt(size.width, 10) : 18;
 	// Per-instance gradient ids: shared ids break when the first SVG that
 	// defined them unmounts or sits in a hidden subtree.
 	const uid = useId();
 	const metal = `vm-${uid}`;
 	const gloss = `vg-${uid}`;
+	const clip = `vc-${uid}`;
+	const band = `vb-${uid}`;
 	const stops = TIER_STOPS[tier] ?? TIER_STOPS.gold;
 
 	return (
@@ -88,9 +97,37 @@ const VerifiedIcon = ({
 					<stop offset="45%" stopColor="#FFFFFF" stopOpacity="0.08" />
 					<stop offset="60%" stopColor="#FFFFFF" stopOpacity="0" />
 				</linearGradient>
+				{shine && (
+					<>
+						<clipPath id={clip}>
+							<path d={SEAL_PATH} />
+						</clipPath>
+						<linearGradient id={band} x1="0" y1="0" x2="1" y2="0">
+							<stop offset="0%" stopColor="#FFFFFF" stopOpacity="0" />
+							<stop offset="50%" stopColor="#FFFFFF" stopOpacity="0.75" />
+							<stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+						</linearGradient>
+					</>
+				)}
 			</defs>
 			<path d={SEAL_PATH} fill={`url(#${metal})`} />
 			<path d={SEAL_PATH} fill={`url(#${gloss})`} />
+			{shine && (
+				// A slanted band parked off the left edge; the loop carries it
+				// across and off the right, so at rest there is nothing to see.
+				<g clipPath={`url(#${clip})`}>
+					<g transform="rotate(20 128 128)">
+						<rect
+							className={m.glint}
+							x="-150"
+							y="-80"
+							width="80"
+							height="420"
+							fill={`url(#${band})`}
+						/>
+					</g>
+				</g>
+			)}
 		</svg>
 	);
 };

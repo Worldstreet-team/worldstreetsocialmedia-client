@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getVoteCycle } from "@/lib/votes";
 import { VoteBox } from "@/components/votes/VoteBox";
+import { motionReduced } from "@/lib/motion";
 
 /** "1d 10h", "6h 12m", "14m": the two largest units, nothing smaller. */
 function leftText(ms: number) {
@@ -21,10 +22,36 @@ function leftText(ms: number) {
  * closes. The ticking digits live on /votes; a rail that is beside the feed
  * all day only needs to say how long is left, so this re-renders once a
  * minute, and not at all in a hidden tab.
+ *
+ * Its one motion (owner 2026-10-15, "a small motion for the weekly vote"):
+ * every few seconds the box opens, a ballot drops in and it shuts, using
+ * VoteBox's own hinges and ballot. Not in a hidden tab, not under reduced
+ * motion (either trigger, read through motionReduced()).
  */
+const DROP_EVERY_MS = 7000;
+const LID_OPEN_MS = 1100;
 export function VoteRow() {
 	const [endsAt, setEndsAt] = useState<number | null>(null);
 	const [now, setNow] = useState(() => Date.now());
+	const [open, setOpen] = useState(false);
+	const [ballot, setBallot] = useState(0);
+
+	useEffect(() => {
+		let shut = 0;
+		const drop = () => {
+			if (document.visibilityState === "hidden" || motionReduced()) return;
+			setOpen(true);
+			setBallot((b) => b + 1);
+			shut = window.setTimeout(() => setOpen(false), LID_OPEN_MS);
+		};
+		const first = window.setTimeout(drop, 1500);
+		const id = window.setInterval(drop, DROP_EVERY_MS);
+		return () => {
+			window.clearTimeout(first);
+			window.clearTimeout(shut);
+			window.clearInterval(id);
+		};
+	}, []);
 
 	useEffect(() => {
 		let alive = true;
@@ -55,7 +82,7 @@ export function VoteRow() {
 			className="flex items-center gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-primary/5"
 		>
 			<span className="flex size-9 shrink-0 items-center justify-center text-primary">
-				<VoteBox open={false} size={20} />
+				<VoteBox open={open} ballotKey={ballot} size={20} />
 			</span>
 			<span className="flex min-w-0 flex-col">
 				<span className="truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">

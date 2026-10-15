@@ -11,6 +11,7 @@ import { MarketSquareLockup } from "@/assets/icons/MarketMark";
 import { premiumOpenAtom } from "@/store/ui.atom";
 import { useT } from "@/i18n/client";
 import { XSTREAM_WEB_URL } from "@/const";
+import pm from "./promo-motion.module.css";
 
 interface Slide {
 	key: string;
@@ -23,6 +24,8 @@ interface Slide {
 	mark?: React.ReactNode;
 	/** Or the product's own picture, a transparent cut-out from its repo. */
 	art?: string;
+	/** The picture's idle motion (only Xstream's flame has one). */
+	artMotion?: "flame";
 }
 
 /**
@@ -55,8 +58,13 @@ export function PromoBanners() {
 			title: t("promo.premium.title"),
 			cta: t("promo.premium.cta"),
 			onOpen: () => setPremiumOpen(true),
-			// The real badge, not a lookalike: this advert sells the tick.
-			mark: <VerifiedIcon size={{ width: "52", height: "52" }} />,
+			// The real badge, not a lookalike: this advert sells the tick. It
+			// turns like a coin and a glint crosses the metal.
+			mark: (
+				<span className={clsx("block", pm.sway)}>
+					<VerifiedIcon size={{ width: "56", height: "56" }} shine />
+				</span>
+			),
 		},
 		{
 			key: "academy",
@@ -73,6 +81,7 @@ export function PromoBanners() {
 			cta: "Open Xstream",
 			href: XSTREAM_WEB_URL,
 			art: "/images/products/xstream.webp",
+			artMotion: "flame",
 		},
 		{
 			key: "arcade",
@@ -88,15 +97,23 @@ export function PromoBanners() {
 			title: t("promo.wolf.title"),
 			cta: t("promo.wolf.cta"),
 			onOpen: () => setPremiumOpen(true),
-			mark: <WolfIcon size={52} />,
+			mark: (
+				<span className={clsx("block", pm.breathe)}>
+					<WolfIcon size={56} animated />
+				</span>
+			),
 		},
 		{
 			key: "market",
+			// The lockup is the picture: big enough that its own motion (the
+			// torn-slice glitch, the gradient running through Square) reads.
 			title: (
-				<MarketSquareLockup
-					markClassName="h-[18px] w-auto"
-					wordClassName="font-display text-[calc(15px*var(--ws-fs))] font-semibold leading-none"
-				/>
+				<span className="mb-1 block">
+					<MarketSquareLockup
+						markClassName="h-[26px] w-auto"
+						wordClassName="font-display text-[calc(22px*var(--ws-fs))] font-semibold leading-none"
+					/>
+				</span>
 			),
 			cta: t("promo.market.cta"),
 			href: "https://tsionark.com",
@@ -149,7 +166,26 @@ export function PromoBanners() {
 							/>
 
 							{/* the product's own picture, standing on the right edge */}
-							{slide.art && (
+							{slide.art && slide.artMotion === "flame" ? (
+								// Xstream's chili: a blurred copy underneath for the
+								// heat, the mark itself swaying above it.
+								<span className="pointer-events-none absolute right-2.5 top-[42%] size-[84px] -translate-y-1/2">
+									<img
+										src={slide.art}
+										alt=""
+										aria-hidden="true"
+										loading="lazy"
+										className={clsx("absolute inset-0 size-full object-contain", pm.heat)}
+									/>
+									<img
+										src={slide.art}
+										alt=""
+										aria-hidden="true"
+										loading="lazy"
+										className={clsx("absolute inset-0 size-full object-contain", pm.flame)}
+									/>
+								</span>
+							) : slide.art ? (
 								<img
 									src={slide.art}
 									alt=""
@@ -157,7 +193,7 @@ export function PromoBanners() {
 									loading="lazy"
 									className="pointer-events-none absolute right-0 bottom-0 h-[92%] w-auto max-w-[56%] object-contain object-bottom"
 								/>
-							)}
+							) : null}
 							{slide.mark && (
 								<span className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2">
 									{slide.mark}
@@ -175,7 +211,7 @@ export function PromoBanners() {
 										{slide.title}
 									</span>
 								)}
-								<span className="mt-2 inline-flex h-[30px] w-fit items-center rounded-pill bg-primary px-3.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-page">
+								<span className="mt-2 inline-flex h-[30px] w-fit items-center whitespace-nowrap rounded-pill bg-primary px-3.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-page">
 									{slide.cta}
 								</span>
 							</span>

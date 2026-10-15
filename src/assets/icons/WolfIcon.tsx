@@ -1,5 +1,7 @@
 "use client";
 
+import m from "./mark-motion.module.css";
+
 /**
  * Wolf of WorldStreet.
  *
@@ -15,10 +17,14 @@ export function WolfIcon({
   size = 16,
   tier,
   title = "Wolf of WorldStreet",
+  animated = false,
 }: {
   size?: number;
   tier?: "champion" | "finalist" | "contender";
   title?: string;
+  /** Ears twitch and eyes blink now and then. Only the rail's Wolf card;
+   *  still under reduced motion. */
+  animated?: boolean;
 }) {
   // Champion is the full gold pelt; the lower tiers desaturate toward stone.
   //
@@ -51,11 +57,15 @@ export function WolfIcon({
     >
       <title>{title}</title>
 
-      {/* ears */}
-      <path d="M4.4 2.6 L8.9 6.2 L6.2 9.9 L3.3 6.6 Z" fill={mid} />
-      <path d="M19.6 2.6 L15.1 6.2 L17.8 9.9 L20.7 6.6 Z" fill={dark} />
-      <path d="M5.3 4.6 L7.9 6.7 L6.5 8.6 Z" fill={light} />
-      <path d="M18.7 4.6 L16.1 6.7 L17.5 8.6 Z" fill={mid} />
+      {/* ears, each hinged at its base so it can twitch */}
+      <g className={animated ? m.earL : undefined}>
+        <path d="M4.4 2.6 L8.9 6.2 L6.2 9.9 L3.3 6.6 Z" fill={mid} />
+        <path d="M5.3 4.6 L7.9 6.7 L6.5 8.6 Z" fill={light} />
+      </g>
+      <g className={animated ? m.earR : undefined}>
+        <path d="M19.6 2.6 L15.1 6.2 L17.8 9.9 L20.7 6.6 Z" fill={dark} />
+        <path d="M18.7 4.6 L16.1 6.7 L17.5 8.6 Z" fill={mid} />
+      </g>
 
       {/* skull, split down the centre so the two planes catch light differently */}
       <path d="M12 4.9 L18.4 8.4 L19.4 14.1 L12 16.6 Z" fill={dark} />
@@ -71,8 +81,10 @@ export function WolfIcon({
       <path d="M12 18.2 L13.6 19.5 L12 21.4 L10.4 19.5 Z" fill={dark} />
 
       {/* eyes, cut as negative wedges so they read at small sizes */}
-      <path d="M8.4 10.6 L10.6 11.5 L8.9 12.6 L7.7 11.6 Z" fill="#1C1917" />
-      <path d="M15.6 10.6 L13.4 11.5 L15.1 12.6 L16.3 11.6 Z" fill="#1C1917" />
+      <g className={animated ? m.eyes : undefined}>
+        <path d="M8.4 10.6 L10.6 11.5 L8.9 12.6 L7.7 11.6 Z" fill="#1C1917" />
+        <path d="M15.6 10.6 L13.4 11.5 L15.1 12.6 L16.3 11.6 Z" fill="#1C1917" />
+      </g>
     </svg>
   );
 }
