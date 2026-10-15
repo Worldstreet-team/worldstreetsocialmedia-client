@@ -1,0 +1,120 @@
+/*
+ * Paint and idle beats for StateArt (state-scenes.ts). Same contract as the
+ * Signal's module: every paint names fill, stroke, width and dashes, never
+ * `none`, so the driver can blend any paint into any other mid-morph; at
+ * rest the class IS the paint. Tokens only.
+ *
+ * The duotone pair is Phosphor's: the outline in ink, the fill under it in
+ * the same ink at 20%. The disc is the art kit's ground.
+ */
+
+.art {
+	--st-ink: var(--ws-text-primary);
+	--st-brand: var(--ws-brand-primary);
+	--st-tone: color-mix(in srgb, var(--ws-text-primary) 20%, transparent);
+	--st-disc: color-mix(in srgb, var(--ws-text-primary) 5%, transparent);
+	--st-dash: color-mix(in srgb, var(--ws-text-primary) 55%, transparent);
+	overflow: visible;
+}
+
+/* On paper the brand alone is faint for a thin line; lean it toward the ink,
+   as the Signal does. */
+html[data-ws-theme="platform-light"] .art {
+	--st-brand: color-mix(in srgb, var(--ws-brand-primary) 78%, var(--ws-text-primary));
+	--st-disc: color-mix(in srgb, var(--ws-text-primary) 4%, transparent);
+}
+
+.path {
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.disc {
+	fill: var(--st-disc);
+	stroke: transparent;
+	stroke-width: 3.2px;
+	stroke-dasharray: 1 0;
+}
+.tone {
+	fill: var(--st-tone);
+	stroke: transparent;
+	stroke-width: 3.2px;
+	stroke-dasharray: 1 0;
+}
+.ink {
+	fill: transparent;
+	stroke: var(--st-ink);
+	stroke-width: 3.2px;
+	stroke-dasharray: 1 0;
+}
+.hi {
+	fill: transparent;
+	stroke: var(--st-brand);
+	stroke-width: 3.2px;
+	stroke-dasharray: 1 0;
+}
+.dashed {
+	fill: transparent;
+	stroke: var(--st-dash);
+	stroke-width: 3.2px;
+	stroke-dasharray: 6 8;
+}
+
+/* ---- idle: one slow beat per scene, on the wrapper, never the path ---- */
+
+.beat {
+	transform-box: view-box;
+	transform-origin: 72px 72px;
+}
+
+/* The magnifier looks around: a small slow orbit. */
+.iLook {
+	animation: st-look 4.8s cubic-bezier(0.45, 0, 0.55, 1) infinite backwards;
+}
+@keyframes st-look {
+	0%,
+	100% {
+		transform: none;
+	}
+	25% {
+		transform: translate(4px, -2px);
+	}
+	50% {
+		transform: translate(2px, 3px);
+	}
+	75% {
+		transform: translate(-3px, 1px);
+	}
+}
+
+/* Nobody there: the dashed ring turns, so its dashes travel round it. */
+.iSpin {
+	transform-origin: 80px 80px;
+	animation: st-spin 28s linear infinite backwards;
+}
+@keyframes st-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Out of reach: the cloud drifts. */
+.iBob {
+	animation: st-bob 3.6s ease-in-out infinite backwards;
+}
+@keyframes st-bob {
+	0%,
+	100% {
+		transform: none;
+	}
+	50% {
+		transform: translateY(-3px);
+	}
+}
+
+.art[data-paused="true"] .beat {
+	animation-play-state: paused;
+}
+html[data-ws-motion="reduce"] .beat {
+	animation: none;
+}

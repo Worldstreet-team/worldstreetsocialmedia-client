@@ -9,7 +9,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { collapse, reveal } from "@/lib/motion-presets";
 import { useRouter } from "next/navigation";
 import { useAtom, useAtomValue } from "jotai";
-import { Grid3x3, Heart, MessageCircle, Plus, Search, Video } from "@/components/ui/icons";
+import { Grid3x3, Heart, MessageCircle, Plus, Video } from "@/components/ui/icons";
+import { StateArt, type StateScene } from "@/components/ui/state-art/StateArt";
 
 import {
 	hasRenderableBody,
@@ -123,6 +124,9 @@ export default function Profile({ username }: { username?: string }) {
 
 	const [loadingProfile, setLoadingProfile] = useState(!seedProfile);
 	const [notFound, setNotFound] = useState(false);
+	// Try again from the couldn't-load state: the state view stays up (its
+	// art morphs to the magnifier) instead of dropping to the skeleton.
+	const [retrying, setRetrying] = useState(false);
 
 	const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 	const [isFollowsModalOpen, setIsFollowsModalOpen] = useState(false);
@@ -172,13 +176,17 @@ export default function Profile({ username }: { username?: string }) {
 		data: cachedProfile,
 		loading: profileFetching,
 		error: profileError,
+		refresh: refreshProfile,
 	} = useCachedResource(
 		handle ? cacheKeys.profile(handle) : null,
 		async () => {
 			const result = await read(
 				`/api/users/${encodeURIComponent(handle as string)}`,
 			);
-			if (!result.success) throw new Error(result.message || "not found");
+			if (!result.success)
+				throw Object.assign(new Error(result.message || "not found"), {
+					status: result.status,
+				});
 			return result.data;
 		},
 		{ ttl: PROFILE_TTL },
@@ -195,11 +203,16 @@ export default function Profile({ username }: { username?: string }) {
 		setLoadingProfile(Boolean(handle) && profileFetching);
 	}, [handle, profileFetching]);
 
+	// Only the gateway saying 404 means the account does not exist. Any other
+	// failure (the gateway down, the network gone) used to land here too, so
+	// your OWN profile said "This account doesn't exist" whenever the gateway
+	// was unreachable (owner 2026-10-15). A failed revalidation of a profile
+	// we already have is neither.
+	const profileStatus = (profileError as { status?: number } | null)?.status;
+	const loadFailed = Boolean(profileError) && !cachedProfile && profileStatus !== 404;
 	useEffect(() => {
-		// Only a failure with nothing to fall back on is a 404 — a failed
-		// revalidation of a profile we already have is not.
-		if (profileError && !cachedProfile) setNotFound(true);
-	}, [profileError, cachedProfile]);
+		if (profileError && !cachedProfile && profileStatus === 404) setNotFound(true);
+	}, [profileError, cachedProfile, profileStatus]);
 
 	// Communities are only shown on your own profile: the gateway's list
 	// carries the viewer's membership, not the profile owner's.
@@ -459,17 +472,51 @@ export default function Profile({ username }: { username?: string }) {
 			});
 	}, [profileUser?.userId, router, toast]);
 
-	if (loadingProfile && !profileUser) return <ProfileSkeleton />;
+	if (loadingProfile && !profileUser && !retrying) return <ProfileSkeleton />;
 
-	if (notFound) {
+	// One state view for "not there" and "couldn't reach it", with ONE art
+	// that stays mounted: Try again morphs the cloud into the magnifier, and
+	// the answer morphs it on (back to the cloud, or the person for a 404).
+	const stateScene: StateScene | null = retrying
+		? "search"
+		: notFound
+			? "missing"
+			: loadFailed
+				? "offline"
+				: null;
+	if (stateScene) {
+		const missing = stateScene === "missing";
 		return (
-			<div className="flex min-h-[60dvh] flex-col items-center justify-center">
-				<EmptyState
-					icon={Search}
-					title="This account doesn't exist"
-					caption={`@${username} isn't on WorldSpace. Try searching for another account.`}
-					action={{ label: t("common.back"), onClick: () => router.back() }}
-				/>
+			<div className="flex min-h-[60dvh] animate-pop flex-col items-center justify-center gap-3 px-6 py-8 text-center">
+				<StateArt scene={stateScene} className="mb-1 size-28" />
+				<h2 aria-live="polite" className="font-sans text-base font-semibold text-primary">
+					{retrying
+						? "Looking again"
+						: missing
+							? "This account doesn't exist"
+							: "Couldn't load this profile"}
+				</h2>
+				<p className="max-w-[36ch] font-sans text-[calc(13px*var(--ws-fs))] leading-relaxed text-muted">
+					{missing
+						? `@${username} isn't on WorldSpace.`
+						: "Check your connection and try again."}
+				</p>
+				<button
+					type="button"
+					disabled={retrying}
+					onClick={
+						missing
+							? () => router.back()
+							: async () => {
+									setRetrying(true);
+									await refreshProfile();
+									setRetrying(false);
+								}
+					}
+					className="mt-1 h-9 cursor-pointer rounded-pill bg-brand px-[18px] font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active disabled:cursor-default disabled:opacity-60"
+				>
+					{missing ? t("common.back") : "Try again"}
+				</button>
 			</div>
 		);
 	}

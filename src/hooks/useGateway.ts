@@ -31,7 +31,13 @@ export function useGatewayRead() {
 			pick?: (body: any) => T,
 		): Promise<
 			| { success: true; data: T }
-			| { success: false; data?: undefined; message?: string }
+			| {
+					success: false;
+					data?: undefined;
+					message?: string;
+					/** The gateway's HTTP status; absent when it never answered. */
+					status?: number;
+			  }
 		> => {
 			try {
 				const token = await getToken();
@@ -47,6 +53,7 @@ export function useGatewayRead() {
 				return {
 					success: false,
 					message: err?.response?.data?.message,
+					status: err?.response?.status,
 				};
 			}
 		},

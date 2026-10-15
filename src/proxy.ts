@@ -157,10 +157,8 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 main{width:100%;max-width:380px;text-align:center;display:grid;justify-items:center;animation:rise .32s cubic-bezier(.16,1,.3,1) backwards}
 @keyframes rise{from{opacity:0;transform:translateY(8px)}}
 .stage{width:min(100%,312px);display:grid;grid-template-columns:72px 1fr 72px;column-gap:12px;align-items:start;margin-bottom:32px}
-figure{margin:0;display:grid;justify-items:center;gap:8px}
 .mark{width:72px;height:72px;display:grid;place-items:center}
 .mark img{display:block}
-figcaption{font-size:13px;line-height:1;color:var(--subtle);white-space:nowrap}
 .wire{position:relative;height:2px;margin-top:35px}
 .wire>span{position:absolute;top:0;height:2px;border-radius:2px}
 .half{width:50%;background:var(--line);transition:transform .32s cubic-bezier(.2,0,0,1)}
@@ -177,22 +175,10 @@ figcaption{font-size:13px;line-height:1;color:var(--subtle);white-space:nowrap}
 .broken .h1,.broken .h2{transform:scaleX(.8)}
 h1{font-size:22px;line-height:1.3;font-weight:600;letter-spacing:-.01em;margin:0 0 8px;text-wrap:balance}
 #p{margin:0;color:var(--muted);text-wrap:pretty}
+#p:empty{display:none}
 .act{display:grid;justify-items:center;gap:6px;margin-top:24px;width:100%}
 .cta{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 24px;border-radius:9999px;background:var(--brand);color:var(--brand-ink);font-weight:600;text-decoration:none}
-.alt{margin:6px 0 0;font-size:14px;color:var(--muted)}
-.alt a{color:var(--ink);font-weight:600;text-decoration:none;display:inline-block;padding:10px 4px}
-.alt a:hover{text-decoration:underline}
-details{width:100%;max-width:320px;font-size:14px;color:var(--muted)}
-summary{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 12px;border-radius:9999px;cursor:pointer;list-style:none;color:var(--muted)}
-summary::-webkit-details-marker{display:none}
-summary:hover{background:var(--wash);color:var(--ink)}
-summary svg{width:14px;height:14px;transition:transform .2s}
-details[open] summary svg{transform:rotate(180deg)}
-details ul{margin:8px 0 0;padding:14px 16px 14px 32px;text-align:left;border-top:1px solid var(--line)}
-details li+li{margin-top:4px}
-details p{margin:10px 0 0;text-align:left;padding-left:16px}
-small{display:block;margin-top:16px;font-size:13px;color:var(--subtle);word-break:break-all}
-a:focus-visible,summary:focus-visible{outline:2px solid var(--focus);outline-offset:3px}
+a:focus-visible{outline:2px solid var(--focus);outline-offset:3px}
 html[data-motion="reduce"] main,html[data-motion="reduce"] .ws{animation:none}
 html[data-motion="reduce"] .run b{animation:none;transform:translateX(-40%)}
 html[data-motion="reduce"] *{transition:none!important}
@@ -202,9 +188,9 @@ html[data-motion="reduce"] *{transition:none!important}
 /** The handover picture. `state`: "" (bridging), "ok" or "broken". */
 function handoverStage(state: "" | "ok" | "broken"): string {
 	return `<div class="stage ${state}" id="s" aria-hidden="true">
-<figure><span class="mark"><img src="/images/wsa-mark.png" alt="" width="58" height="33"></span><figcaption>WorldStreet</figcaption></figure>
+<span class="mark"><img src="/images/wsa-mark.png" alt="" width="58" height="33"></span>
 <div class="wire"><span class="half h1"></span><span class="half h2"></span><span class="lit"></span><span class="run"><b></b></span></div>
-<figure><span class="mark"><img class="ws" src="/images/worldspace-mark.png" alt="" width="72" height="72"></span><figcaption>WorldSpace</figcaption></figure>
+<span class="mark"><img class="ws" src="/images/worldspace-mark.png" alt="" width="72" height="72"></span>
 </div>`;
 }
 
@@ -219,8 +205,6 @@ ${body}
 </main></body></html>`;
 }
 
-const CARET = `<svg viewBox="0 0 256 256" aria-hidden="true"><path d="M208 96l-80 80-80-80" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-
 function handshakeLoopPage(req: NextRequest, retry: number): string {
 	const again = publicUrl(req);
 	again.searchParams.set("__ws_retry", String(retry + 1));
@@ -228,11 +212,11 @@ function handshakeLoopPage(req: NextRequest, retry: number): string {
 	clean.searchParams.delete("__ws_retry");
 	const login = new URL(HUB_LOGIN_URL);
 	login.searchParams.set("redirect_url", clean.href);
-	const register = new URL(HUB_REGISTER_URL);
-	register.searchParams.set("redirect_url", clean.href);
 	const bridging = retry < 1 && !isLocalDev;
+	// Kept to a heading, one line and the button (owner 2026-10-15: "plenty
+	// texts, just keep it clean").
 	const failHeading = "One more step";
-	const failBody = `Sign in with your WorldStreet account and we'll take you straight to ${destinationWords(req.nextUrl.pathname)}.`;
+	const failBody = `Sign in to continue to ${destinationWords(req.nextUrl.pathname)}.`;
 	const pk = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
 	const bridge = bridging
 		? `<script>
@@ -254,15 +238,10 @@ setTimeout(function(){if(!window.Clerk||!window.Clerk.loaded)fail();},12000);
 		`${handoverStage(bridging ? "" : "broken")}
 <div aria-live="polite">
 <h1 id="t">${bridging ? "Signing you in" : failHeading}</h1>
-<p id="p">${escHtml(bridging ? "Bringing your WorldStreet account over to WorldSpace." : failBody)}</p>
+<p id="p">${bridging ? "" : escHtml(failBody)}</p>
 </div>
 <div class="act" id="a"${bridging ? " hidden" : ""}>
 <a class="cta" href="${escHtml(login.href)}">Continue with WorldStreet</a>
-<p class="alt">New here? <a href="${escHtml(register.href)}">Create an account</a></p>
-<details><summary>Why am I seeing this? ${CARET}</summary>
-<ul><li>You're in a private or incognito window.</li><li>This browser blocks cookies for worldstreetgold.com.</li><li>You signed in to WorldStreet in a different browser or app.</li></ul>
-<p>Signing in once fixes it for this browser.</p>
-</details>
 </div>
 ${bridge}`,
 	);
@@ -800,10 +779,9 @@ function cookiesOffPage(req: NextRequest): string {
 		"Open in your browser",
 		`${handoverStage("broken")}
 <h1 id="t">Open this in your browser</h1>
-<p id="p">WorldSpace needs cookies to keep you signed in, and this browser isn't saving them. If you opened this link inside another app, use its menu to open the page in Safari or Chrome.</p>
+<p id="p">This browser isn't saving cookies, so WorldSpace can't keep you signed in.</p>
 <div class="act">
 <a class="cta" href="${escHtml(clean.href)}">Try again</a>
-<small>${escHtml(clean.href)}</small>
 </div>`,
 	);
 }
