@@ -2,7 +2,7 @@
  * Idle motion for the brand marks on the right rail's product strip
  * (owner 2026-10-15: "motion for the gold tick that will just be playing,
  * and the wolf ... the xtream and the market square"). Off by default:
- * VerifiedIcon `shine` and WolfIcon `animated` opt in, so the hundreds of
+ * VerifiedIcon `shine` and WolfIcon `shine` opt in, so the hundreds of
  * other ticks and wolves in the app stay still.
  *
  * Slow and small on purpose: the rail sits beside the feed all day. Every
@@ -25,81 +25,27 @@
 	}
 }
 
-/* ---- the wolf: ears twitch, eyes blink, on different clocks ------------- */
-.earL,
-.earR,
-.eyes {
-	transform-box: view-box;
+/* ---- the wolf: the same glint, in the wolf's 24-unit box ------------------ */
+.wolfGlint {
+	animation: mm-wolf-glint 6s cubic-bezier(0.45, 0, 0.25, 1) 1.2s infinite both;
 }
-.earL {
-	transform-origin: 7.4px 8.2px;
-	animation: mm-ear-l 6s ease-in-out 0.8s infinite both;
-}
-.earR {
-	transform-origin: 16.6px 8.2px;
-	animation: mm-ear-r 6s ease-in-out 0.8s infinite both;
-}
-@keyframes mm-ear-l {
-	0%,
-	78%,
-	86%,
+@keyframes mm-wolf-glint {
+	0% {
+		transform: translateX(0);
+	}
+	34%,
 	100% {
-		transform: none;
-	}
-	81% {
-		transform: rotate(-11deg);
-	}
-	90% {
-		transform: rotate(-5deg);
-	}
-	93% {
-		transform: none;
-	}
-}
-@keyframes mm-ear-r {
-	0%,
-	79%,
-	87%,
-	100% {
-		transform: none;
-	}
-	82% {
-		transform: rotate(10deg);
-	}
-	91% {
-		transform: rotate(4deg);
-	}
-	94% {
-		transform: none;
-	}
-}
-.eyes {
-	transform-origin: 12px 11.6px;
-	animation: mm-blink 3s ease-in-out 2s infinite both;
-}
-@keyframes mm-blink {
-	0%,
-	44%,
-	50%,
-	100% {
-		transform: none;
-	}
-	47% {
-		transform: scaleY(0.12);
+		transform: translateX(42px);
 	}
 }
 
 html[data-ws-motion="reduce"] .glint,
-html[data-ws-motion="reduce"] .earL,
-html[data-ws-motion="reduce"] .earR,
-html[data-ws-motion="reduce"] .eyes {
+html[data-ws-motion="reduce"] .wolfGlint {
 	animation: none;
 }
 @media (prefers-reduced-motion: reduce) {
 	.glint,
-	.earL,
-	.earR,
-	.eyes {
+	.wolfGlint {
 		animation: none;
 	}
 }

@@ -5,7 +5,6 @@ import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
 import VerifiedIcon from "@/assets/icons/VerifiedIcon";
 import WolfIcon from "@/assets/icons/WolfIcon";
-import { MarketSquareLockup } from "@/assets/icons/MarketMark";
 import { useMotionReduced } from "@/lib/motion";
 import s from "./promo-scenes.module.css";
 
@@ -174,57 +173,6 @@ export function PremiumScene(props: { eyebrow: string; title: string; cta: strin
 	);
 }
 
-/** Academy: a chart draws itself behind her while the lesson fills. */
-export function AcademyScene(props: { title: string; cta: string; href: string }) {
-	const candles = [
-		{ x: 14, y: 58, h: 22 },
-		{ x: 30, y: 50, h: 26 },
-		{ x: 46, y: 54, h: 18 },
-		{ x: 62, y: 38, h: 28 },
-		{ x: 78, y: 30, h: 24 },
-		{ x: 94, y: 20, h: 30 },
-	];
-	return (
-		<PromoScene
-			{...props}
-			eyebrow="Academy"
-			label={`Academy. ${props.title}. ${props.cta}`}
-			bg={s.academyBg}
-			far={
-				<svg className={s.chart} viewBox="0 0 110 90" preserveAspectRatio="none" aria-hidden>
-					{candles.map((c, i) => (
-						<rect
-							key={c.x}
-							className={s.candle}
-							x={c.x - 2.5}
-							y={c.y}
-							width="5"
-							height={c.h}
-							rx="1"
-							fill={i % 3 === 2 ? "rgb(248 113 113 / 0.55)" : "rgb(94 234 212 / 0.45)"}
-							style={{ animationDelay: `${i * 70}ms` }}
-						/>
-					))}
-					<path
-						className={s.chartLine}
-						pathLength={1}
-						d="M2 80 L14 66 L30 60 L46 64 L62 46 L78 40 L94 26 L108 14"
-					/>
-				</svg>
-			}
-			near={<img className={s.student} src="/images/products/academy.webp" alt="" />}
-			chip={
-				<span className={s.chip}>
-					Candles 101
-					<span className={s.progress}>
-						<span className={s.progressFill} />
-					</span>
-				</span>
-			}
-		/>
-	);
-}
-
 /** Xstream: on air. Stage light, the chili's heat, reactions floating up. */
 export function XstreamScene(props: { title: string; cta: string; href: string }) {
 	return (
@@ -266,100 +214,24 @@ export function XstreamScene(props: { title: string; cta: string; href: string }
 	);
 }
 
-/** Arcade: the board rolls in under her. */
-export function ArcadeScene(props: { title: string; cta: string; href: string }) {
-	return (
-		<PromoScene
-			{...props}
-			eyebrow="Arcade"
-			label={`Arcade. ${props.title}. ${props.cta}`}
-			bg={s.arcadeBg}
-			far={
-				<span className={s.floorWrap}>
-					<span className={s.floor} />
-				</span>
-			}
-			near={<img className={s.queen} src="/images/products/arcade.webp" alt="" />}
-			chip={
-				<span className={s.chip}>
-					<span className={s.pulseDot} />
-					Your move
-				</span>
-			}
-		/>
-	);
-}
-
-/** Wolf of WorldStreet: night over a skyline of candles, then the howl. */
+/**
+ * Wolf of WorldStreet: the mark in its own light. Still on purpose (the
+ * first cut, with a skyline rising and sinking, a howl ring and twitching
+ * ears, was "annoying"): the wolf stands in a gold halo, the camera pushes
+ * in, and one glint crosses its facets as the halo brightens.
+ */
 export function WolfScene(props: { eyebrow: string; title: string; cta: string; onOpen: () => void }) {
-	const bars = [38, 60, 46, 74, 56, 92];
-	const stars = [
-		{ top: "14%", left: "40%", d: "0s" },
-		{ top: "26%", left: "52%", d: "0.6s" },
-		{ top: "10%", left: "62%", d: "1.2s" },
-		{ top: "34%", left: "46%", d: "0.3s" },
-	];
 	return (
 		<PromoScene
 			{...props}
 			label={`${props.title}. ${props.cta}`}
 			bg={s.wolfBg}
-			far={
-				<>
-					{stars.map((st) => (
-						<span
-							key={st.left}
-							className={s.star}
-							style={{ top: st.top, left: st.left, animationDelay: st.d }}
-						/>
-					))}
-					<span className={s.moon} />
-					<span className={s.skyline}>
-						{bars.map((h, i) => (
-							<span
-								key={`${h}-${i}`}
-								className={s.bar}
-								style={{ height: `${h}%`, animationDelay: `${i * 60}ms` }}
-							/>
-						))}
-					</span>
-				</>
-			}
+			far={<span className={s.halo} />}
 			near={
-				<>
-					<span className={s.ring} />
-					<span className={s.wolf}>
-						<WolfIcon size={76} animated />
-					</span>
-				</>
-			}
-		/>
-	);
-}
-
-/** Market Square: a comet across an open grid; the lockup glitches on the beat. */
-export function MarketScene(props: { cta: string; href: string }) {
-	return (
-		<PromoScene
-			{...props}
-			label={`Market Square. ${props.cta}`}
-			bg={s.marketBg}
-			far={
-				<>
-					<span className={s.scan} />
-					<span className={s.comet} />
-					<span className={s.comet} style={{ top: "62%", animationDelay: "1.5s" }} />
-				</>
-			}
-			headline={
-				<span className={s.lockup}>
-					<MarketSquareLockup
-						markClassName="h-[26px] w-auto text-white"
-						wordClassName="font-display text-[calc(22px*var(--ws-fs))] font-semibold leading-none"
-					/>
+				<span className={s.wolf}>
+					<WolfIcon size={84} shine />
 				</span>
 			}
-			title="The universal platform"
 		/>
 	);
 }

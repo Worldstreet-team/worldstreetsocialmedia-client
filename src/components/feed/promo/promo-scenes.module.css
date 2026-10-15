@@ -1,22 +1,29 @@
 /*
  * The rail's product cards as six-second motion pieces (owner 2026-10-15:
  * "actual video motion for those cards ... 6 seconds loops with texts and
- * camera movements following the themes properly").
+ * camera movements following the themes properly"). Three cards are comps:
+ * Premium, Xstream and Wolf of WorldStreet. Market Square keeps its
+ * original still card (owner, same day: "leave the old market square
+ * design there without motion").
  *
- * Every card is a comp on ONE 6s clock: a camera that drifts in and back
- * out over the background and the product's art (two parallax depths), a
- * headline that builds word by word, holds, and leaves, and one story
- * beat per product. Every duration here divides 6s (1, 1.5, 2, 3, 6), so
- * the whole card loops without a seam; anything that has to jump does it
- * while invisible, under the light sweep that marks the cut.
+ * Every comp runs on ONE 6s clock: a camera that drifts in and back out
+ * over the background and the product's art (two parallax depths), a
+ * headline that builds word by word, holds, and leaves, and one story beat
+ * per product. Every duration divides 6s (1, 1.5, 3, 6), so the card loops
+ * without a seam; anything that has to jump does it while invisible, under
+ * the light sweep that marks the cut.
  *
  * The STATIC style of every element is the hero frame: headline set, chip
- * in, chart drawn, tick stamped. Animation is applied only while the card
- * is on screen (`.on`, set from an IntersectionObserver, so a card restarts
- * its story each time it slides into view) and only when neither
- * reduced-motion trigger is on. Under either, the card is that still frame.
+ * in, tick stamped. Animation applies only while the card is on screen
+ * (`.on`, set from an IntersectionObserver, so a card restarts its story
+ * each time it slides into view) and only when neither reduced-motion
+ * trigger is on. Under either, the card is that still frame.
  *
- * The cards are media, fixed dark in both themes like the creator glass:
+ * Restraint (the first Wolf comp was "annoying": a skyline rising and
+ * sinking, a howl ring, ears twitching, the wolf popping in and out every
+ * loop). One beat per card, and the hero object never leaves the frame.
+ *
+ * The comps are media, fixed dark in both themes like the creator glass:
  * literal colours, each product in its own light. Transform and opacity
  * only, except a static blur on the heat glow.
  */
@@ -39,9 +46,9 @@
 	transform-origin: 62% 50%;
 }
 .text {
+	box-sizing: border-box;
 	position: relative;
 	z-index: 2;
-	box-sizing: border-box;
 	display: flex;
 	height: 100%;
 	max-width: 62%;
@@ -161,59 +168,6 @@
 	display: inline-flex;
 }
 
-/* ---- Academy: a lesson charts itself behind her ------------------------- */
-
-.academyBg {
-	background:
-		linear-gradient(rgb(255 255 255 / 0.05) 1px, transparent 1px) 0 0 / 100% 21px,
-		linear-gradient(90deg, rgb(255 255 255 / 0.05) 1px, transparent 1px) 0 0 / 21px 100%,
-		radial-gradient(70% 80% at 72% 60%, rgb(45 212 191 / 0.18), transparent 70%),
-		#08131a;
-}
-.chart {
-	position: absolute;
-	right: 0;
-	bottom: 18px;
-	width: 78%;
-	height: 62%;
-	overflow: visible;
-}
-.chartLine {
-	fill: none;
-	stroke: #5eead4;
-	stroke-width: 2px;
-	stroke-linecap: round;
-	stroke-linejoin: round;
-	stroke-dasharray: 1;
-	stroke-dashoffset: 0;
-}
-.candle {
-	transform-box: fill-box;
-	transform-origin: 50% 100%;
-}
-.student {
-	position: absolute;
-	right: -18px;
-	bottom: 0;
-	height: 90%;
-	width: auto;
-}
-.progress {
-	position: relative;
-	width: 34px;
-	height: 4px;
-	overflow: hidden;
-	border-radius: 9999px;
-	background: rgb(255 255 255 / 0.18);
-}
-.progressFill {
-	position: absolute;
-	inset: 0;
-	border-radius: 9999px;
-	background: #5eead4;
-	transform-origin: left;
-}
-
 /* ---- Xstream: on air -------------------------------------------------------- */
 
 .xstreamBg {
@@ -271,142 +225,36 @@
 	opacity: 0;
 }
 
-/* ---- Arcade: the board comes at you ------------------------------------- */
-
-.arcadeBg {
-	background:
-		radial-gradient(60% 70% at 70% 30%, rgb(168 85 247 / 0.3), transparent 70%),
-		#0d0618;
-}
-.floorWrap {
-	position: absolute;
-	inset: 46% -40% -10% -40%;
-	perspective: 220px;
-	perspective-origin: 60% 0;
-	overflow: hidden;
-	-webkit-mask-image: linear-gradient(to bottom, transparent, #000 45%);
-	mask-image: linear-gradient(to bottom, transparent, #000 45%);
-}
-.floor {
-	position: absolute;
-	inset: -100% 0 0 0;
-	background: repeating-conic-gradient(
-			rgb(168 85 247 / 0.32) 0 25%,
-			transparent 0 50%
-		)
-		0 0 / 36px 36px;
-	transform: rotateX(62deg);
-	transform-origin: 50% 100%;
-}
-.queen {
-	position: absolute;
-	right: -4px;
-	bottom: 0;
-	height: 100%;
-	width: auto;
-}
-.pulseDot {
-	width: 7px;
-	height: 7px;
-	border-radius: 9999px;
-	background: #c084fc;
-}
-
-/* ---- Wolf of WorldStreet: the pack's night -------------------------------- */
+/* ---- Wolf of WorldStreet: the mark in its own light ------------------------
+   Still on purpose. The wolf stands in a gold halo that breathes once a
+   loop, the camera pushes in, and one glint crosses the facets (WolfIcon
+   `shine`, on the same clock as the tick's). */
 
 .wolfBg {
 	background:
-		radial-gradient(40% 50% at 78% 30%, rgb(253 230 138 / 0.2), transparent 70%),
-		#060914;
+		radial-gradient(70% 90% at 76% 50%, rgb(234 179 8 / 0.14), transparent 70%),
+		linear-gradient(180deg, #0a0c16, #05060b);
 }
-.moon {
+.halo {
 	position: absolute;
-	top: 16px;
-	right: 30px;
-	width: 46px;
-	height: 46px;
+	top: 50%;
+	right: 6px;
+	width: 132px;
+	height: 132px;
+	margin-top: -66px;
 	border-radius: 9999px;
-	background: radial-gradient(circle at 38% 36%, #fff7d6, #f5d77a 60%, #c99a2e);
-	opacity: 0.9;
-}
-.star {
-	position: absolute;
-	width: 2px;
-	height: 2px;
-	border-radius: 9999px;
-	background: #fff;
-	opacity: 0.6;
-}
-.skyline {
-	position: absolute;
-	right: 0;
-	bottom: 0;
-	left: 56%;
-	height: 34%;
-	display: flex;
-	align-items: flex-end;
-	gap: 5px;
-	padding: 0 8px;
-}
-.bar {
-	flex: 1;
-	border-radius: 2px 2px 0 0;
-	background: linear-gradient(180deg, #eab308, rgb(161 98 7 / 0.35));
-	transform-origin: 50% 100%;
+	background: radial-gradient(
+		circle,
+		rgb(253 224 71 / 0.3),
+		rgb(234 179 8 / 0.08) 45%,
+		transparent 68%
+	);
 }
 .wolf {
 	position: absolute;
 	top: 50%;
-	right: 34px;
-	margin-top: -38px;
-}
-.ring {
-	position: absolute;
-	top: 50%;
-	right: 24px;
-	width: 76px;
-	height: 76px;
-	margin-top: -38px;
-	border-radius: 9999px;
-	border: 1.5px solid rgb(250 204 21 / 0.7);
-	opacity: 0;
-}
-
-/* ---- Market Square: the open market -------------------------------------- */
-
-.marketBg {
-	background:
-		linear-gradient(rgb(34 211 238 / 0.1) 1px, transparent 1px) 0 0 / 100% 18px,
-		radial-gradient(70% 80% at 30% 40%, rgb(217 70 239 / 0.2), transparent 70%),
-		#05070b;
-}
-.scan {
-	position: absolute;
-	inset: 0;
-	background: repeating-linear-gradient(
-		180deg,
-		rgb(255 255 255 / 0.03) 0 1px,
-		transparent 1px 3px
-	);
-}
-.comet {
-	position: absolute;
-	top: 30%;
-	left: 0;
-	width: 70px;
-	height: 2px;
-	border-radius: 9999px;
-	background: linear-gradient(90deg, transparent, #67e8f9);
-	opacity: 0;
-	transform: translateX(-90px) rotate(-14deg);
-}
-.lockup {
-	margin-bottom: 2px;
-}
-.tagline {
-	font-size: calc(12px * var(--ws-fs));
-	font-weight: 500;
-	color: rgb(255 255 255 / 0.7);
+	right: 30px;
+	margin-top: -42px;
 }
 
 /* ---- the clock --------------------------------------------------------------
@@ -417,27 +265,21 @@
 .on .cam {
 	animation: ps-cam 6s cubic-bezier(0.45, 0, 0.55, 1) infinite both;
 }
-
 .on .far {
 	animation: ps-far 6s cubic-bezier(0.45, 0, 0.55, 1) infinite both;
 }
-
 .on .near {
 	animation: ps-near 6s cubic-bezier(0.45, 0, 0.55, 1) infinite both;
 }
-
 .on .eyebrow {
 	animation: ps-eyebrow 6s cubic-bezier(0.16, 1, 0.3, 1) infinite both;
 }
-
 .on .word {
 	animation: ps-word 6s cubic-bezier(0.16, 1, 0.3, 1) infinite both;
 }
-
 .on .sweep {
 	animation: ps-sweep 6s cubic-bezier(0.45, 0, 0.55, 1) infinite both;
 }
-
 .on .chip {
 	animation: ps-chip 6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite both;
 }
@@ -445,81 +287,31 @@
 .on .seal {
 	animation: ps-coin 6s cubic-bezier(0.45, 0, 0.55, 1) infinite both;
 }
-
 .on .mote {
 	animation: ps-mote 3s ease-out infinite both;
 }
-
 .on .stamp {
 	animation: ps-stamp 6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite both;
-}
-
-.on .chartLine {
-	animation: ps-draw 6s cubic-bezier(0.65, 0, 0.35, 1) infinite both;
-}
-
-.on .candle {
-	animation: ps-candle 6s cubic-bezier(0.16, 1, 0.3, 1) infinite both;
-}
-
-.on .progressFill {
-	animation: ps-progress 6s cubic-bezier(0.45, 0, 0.55, 1) infinite both;
 }
 
 .on .beam {
 	animation: ps-beam 3s ease-in-out infinite both;
 }
-
 .on .chiliImg {
 	animation: ps-flame 3s ease-in-out infinite both;
 }
-
 .on .heat {
 	animation: ps-heat 1.5s ease-in-out infinite both;
 }
-
 .on .liveDot {
 	animation: ps-blink 1s steps(2, jump-none) infinite both;
 }
-
 .on .heart {
 	animation: ps-heart 3s cubic-bezier(0.2, 0, 0, 1) infinite both;
 }
 
-.on .floor {
-	animation: ps-floor 1.5s linear infinite both;
-}
-
-.on .queen {
-	animation: ps-float 3s ease-in-out infinite both;
-}
-
-.on .pulseDot {
-	animation: ps-pulse 1.5s ease-in-out infinite both;
-}
-
-.on .bar {
-	animation: ps-bar 6s cubic-bezier(0.16, 1, 0.3, 1) infinite both;
-}
-
-.on .star {
-	animation: ps-twinkle 2s ease-in-out infinite both;
-}
-
-.on .wolf {
-	animation: ps-rise 6s cubic-bezier(0.16, 1, 0.3, 1) infinite both;
-}
-
-.on .ring {
-	animation: ps-howl 6s cubic-bezier(0.2, 0, 0, 1) infinite both;
-}
-
-.on .moon {
-	animation: ps-moon 6s cubic-bezier(0.45, 0, 0.55, 1) infinite both;
-}
-
-.on .comet {
-	animation: ps-comet 3s cubic-bezier(0.65, 0, 0.35, 1) infinite both;
+.on .halo {
+	animation: ps-halo 6s cubic-bezier(0.45, 0, 0.55, 1) infinite both;
 }
 
 /* The camera breathes in and back, so its loop has no seam. */
@@ -671,55 +463,6 @@
 	}
 }
 
-@keyframes ps-draw {
-	0%,
-	8% {
-		stroke-dashoffset: 1;
-		opacity: 1;
-	}
-	58%,
-	86% {
-		stroke-dashoffset: 0;
-		opacity: 1;
-	}
-	94%,
-	100% {
-		stroke-dashoffset: 0;
-		opacity: 0;
-	}
-}
-@keyframes ps-candle {
-	0%,
-	10% {
-		transform: scaleY(0);
-		opacity: 0;
-	}
-	24%,
-	86% {
-		transform: none;
-		opacity: 1;
-	}
-	94%,
-	100% {
-		transform: none;
-		opacity: 0;
-	}
-}
-@keyframes ps-progress {
-	0%,
-	18% {
-		transform: scaleX(0);
-	}
-	70%,
-	88% {
-		transform: none;
-	}
-	96%,
-	100% {
-		transform: scaleX(0);
-	}
-}
-
 @keyframes ps-beam {
 	0%,
 	100% {
@@ -779,112 +522,15 @@
 	}
 }
 
-/* One full tile pair per cycle, so the floor never jumps. */
-@keyframes ps-floor {
-	from {
-		transform: rotateX(62deg) translateY(0);
-	}
-	to {
-		transform: rotateX(62deg) translateY(36px);
-	}
-}
-@keyframes ps-float {
+/* The halo brightens as the glint crosses the wolf, then settles. */
+@keyframes ps-halo {
 	0%,
 	100% {
-		transform: none;
+		opacity: 0.75;
+		transform: scale(0.96);
 	}
-	50% {
-		transform: translateY(-4px);
-	}
-}
-@keyframes ps-pulse {
-	0%,
-	100% {
-		transform: none;
+	35% {
 		opacity: 1;
-	}
-	50% {
-		transform: scale(1.5);
-		opacity: 0.5;
-	}
-}
-
-@keyframes ps-bar {
-	0%,
-	4% {
-		transform: scaleY(0);
-	}
-	30%,
-	86% {
-		transform: none;
-	}
-	96%,
-	100% {
-		transform: scaleY(0);
-	}
-}
-@keyframes ps-twinkle {
-	0%,
-	100% {
-		opacity: 0.25;
-	}
-	50% {
-		opacity: 0.9;
-	}
-}
-@keyframes ps-rise {
-	0% {
-		opacity: 0;
-		transform: translateY(18px);
-	}
-	16%,
-	88% {
-		opacity: 1;
-		transform: none;
-	}
-	96%,
-	100% {
-		opacity: 0;
-		transform: translateY(-6px);
-	}
-}
-@keyframes ps-howl {
-	0%,
-	40% {
-		opacity: 0;
-		transform: scale(0.8);
-	}
-	44% {
-		opacity: 0.9;
-	}
-	70%,
-	100% {
-		opacity: 0;
-		transform: scale(1.9);
-	}
-}
-@keyframes ps-moon {
-	0%,
-	100% {
-		transform: translateY(4px);
-	}
-	50% {
-		transform: translateY(-3px);
-	}
-}
-
-@keyframes ps-comet {
-	0%,
-	20% {
-		opacity: 0;
-		transform: translateX(-90px) rotate(-14deg);
-	}
-	30% {
-		opacity: 1;
-	}
-	60%,
-	100% {
-		opacity: 0;
-		transform: translateX(320px) rotate(-14deg);
+		transform: scale(1.05);
 	}
 }
