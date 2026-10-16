@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { renderRichText } from "@/components/ui/RichText";
 
 /**
@@ -11,13 +11,18 @@ import { renderRichText } from "@/components/ui/RichText";
  * @mentions and bare links are live, the same as in a post.
  *
  * Hand-rolled on purpose (no markdown package in the app), and safe by
- * construction: it never sets HTML, and a link is only drawn for http(s)
- * or an in-app path. It reads a half-streamed answer too: an unclosed
- * marker shows as text until its pair arrives.
+ * construction: a link is only drawn for http(s) or an in-app path, and the
+ * only HTML it ever sets is KaTeX's own output for math (trust off). It
+ * reads a half-streamed answer too: an unclosed marker shows as text until
+ * its pair arrives.
+ *
+ * Math (owner 2026-10-16, "latex"): $$...$$ and \[...\] are display math,
+ * \(...\) is inline. A single $ never is: answers here are full of $5 and
+ * $BTC. KaTeX loads only when an answer has math (katex-render.ts).
  */
 
 const INLINE =
-	/(`[^`\n]+`)|(\[[^\]\n]+\]\((?:https?:\/\/|\/)[^\s)]+\))|(\*\*[^*\n]+\*\*|__[^_\n]+__)|((?<![\w*])\*[^*\s][^*\n]*?\*(?![\w*])|(?<![\w_])_[^_\s][^_\n]*?_(?![\w_]))/g;
+	/(\\\(.+?\\\)|\$\$[^$\n]+?\$\$)|(`[^`\n]+`)|(\[[^\]\n]+\]\((?:https?:\/\/|\/)[^\s)]+\))|(\*\*[^*\n]+\*\*|__[^_\n]+__)|((?<![\w*])\*[^*\s][^*\n]*?\*(?![\w*])|(?<![\w_])_[^_\s][^_\n]*?_(?![\w_]))/g;
 
 function inline(text: string, key: string): ReactNode[] {
 	const out: ReactNode[] = [];
@@ -30,8 +35,11 @@ function inline(text: string, key: string): ReactNode[] {
 	for (let m = re.exec(text); m; m = re.exec(text)) {
 		if (m.index > last) out.push(...plain(text.slice(last, m.index), `${key}p${i}`));
 		const k = `${key}i${i++}`;
-		const [whole, code, link, bold, em] = m;
-		if (code) {
+		const [whole, math, code, link, bold, em] = m;
+		if (math) {
+			// \(...\) and $$...$$ both carry two-character fences.
+			out.push(<TeX key={k} tex={math.slice(2, -2)} display={false} />);
+		} else if (code) {
 			out.push(
 				<code key={k} className="rounded-[5px] bg-primary/[0.07] px-1.5 py-px font-mono text-[0.88em] text-primary">
 					{code.slice(1, -1)}
@@ -88,6 +96,7 @@ function plain(text: string, key: string): ReactNode[] {
 
 type Block =
 	| { t: "p"; text: string }
+	| { t: "math"; tex: string }
 	| { t: "h"; level: number; text: string }
 	| { t: "ul" | "ol"; items: { text: string; depth: number; n?: number }[] }
 	| { t: "quote"; text: string }
@@ -126,6 +135,34 @@ function parse(src: string): Block[] {
 		if (!trimmed) {
 			flush();
 			continue;
+		}
+		// Display math: $$...$$ or \[...\], on one line or across several. An
+		// unclosed opener (still streaming) falls through as text.
+		if (trimmed.startsWith("$$") || trimmed.startsWith("\\[")) {
+			const close = trimmed.startsWith("$$") ? "$$" : "\\]";
+			const rest = trimmed.slice(2);
+			const here = rest.indexOf(close);
+			if (here !== -1) {
+				flush();
+				blocks.push({ t: "math", tex: rest.slice(0, here) });
+				const after = rest.slice(here + 2).trim();
+				if (after) para.push(after);
+				continue;
+			}
+			let j = i + 1;
+			const body = [rest];
+			while (j < lines.length && !lines[j].includes(close)) body.push(lines[j++]);
+			if (j < lines.length) {
+				flush();
+				const last = lines[j];
+				const at = last.indexOf(close);
+				body.push(last.slice(0, at));
+				blocks.push({ t: "math", tex: body.join("\n") });
+				const after = last.slice(at + 2).trim();
+				if (after) para.push(after);
+				i = j;
+				continue;
+			}
 		}
 		const h = /^(#{1,4})\s+(.*)$/.exec(trimmed);
 		if (h) {
@@ -246,6 +283,8 @@ export function VividMarkdown({ text, className }: { text: string; className?: s
 						);
 					case "hr":
 						return <hr key={k} className="border-hairline" />;
+					case "math":
+						return <TeX key={k} tex={b.tex} display />;
 					case "table":
 						return (
 							<div key={k} className="overflow-x-auto rounded-[10px] ring-1 ring-primary/[0.08]">
@@ -281,5 +320,33 @@ export function VividMarkdown({ text, className }: { text: string; className?: s
 				}
 			})}
 		</div>
+	);
+}
+
+/** One piece of math, rendered by KaTeX once it has loaded; the source shows until then. */
+function TeX({ tex, display }: { tex: string; display: boolean }) {
+	const [html, setHtml] = useState<string | null>(null);
+	useEffect(() => {
+		let alive = true;
+		void import("./katex-render").then((m) => {
+			if (alive) setHtml(m.renderTeX(tex.trim(), display));
+		});
+		return () => {
+			alive = false;
+		};
+	}, [tex, display]);
+	if (html === null) {
+		return display ? (
+			<pre className="overflow-x-auto font-mono text-[calc(13px*var(--ws-fs))] text-muted">{tex.trim()}</pre>
+		) : (
+			<code className="font-mono text-[0.9em] text-muted">{tex}</code>
+		);
+	}
+	return display ? (
+		// biome-ignore lint/security/noDangerouslySetInnerHtml: KaTeX output, trust off (katex-render.ts)
+		<div className="overflow-x-auto overflow-y-hidden py-1 text-primary" dangerouslySetInnerHTML={{ __html: html }} />
+	) : (
+		// biome-ignore lint/security/noDangerouslySetInnerHtml: KaTeX output, trust off (katex-render.ts)
+		<span className="text-primary" dangerouslySetInnerHTML={{ __html: html }} />
 	);
 }
