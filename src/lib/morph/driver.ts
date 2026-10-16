@@ -26,7 +26,9 @@
  *    at rest the class takes over again, so light and dark both work, even
  *    when the theme switches mid-morph.
  * 6. Idle beats are CSS keyframes on a wrapper <g>, never the path, homed
- *    smoothly when a morph starts.
+ *    smoothly when a morph starts. A beat marked `carry` is folded into the
+ *    outline instead, so the morph leaves from wherever the beat had taken
+ *    the part (a turn or a lift never plays backwards first).
  * 7. Reduced motion (both triggers, via motionReduced): a short crossfade
  *    between still scenes, no carriers, no idle beats.
  *
@@ -65,8 +67,12 @@ export type Sweep =
   | { kind: "angle"; c: Pt; start: number }
   | { kind: "radius"; c: Pt; max: number };
 
-/** A CSS loop on the part's wrapper at rest. `origin` is a pivot in user units (default: the part's own centre). */
-export type Idle = { kind: string; offset?: number; origin?: Pt };
+/**
+ * A CSS loop on the part's wrapper at rest. `origin` is a pivot in user
+ * units (default: the part's own centre). `carry`: when a morph starts, the
+ * beat's transform is baked into the outline rather than eased home.
+ */
+export type Idle = { kind: string; offset?: number; origin?: Pt; carry?: boolean };
 
 /** A shape that moves at rest: elapsed milliseconds (scaled by tempo) and a 0 to 1 level. */
 export type LiveShape = (elapsedMs: number, level: number) => Outline;
@@ -873,7 +879,13 @@ export class MorphDriver {
       if (!p.idle) continue;
       if (!instant) {
         const cs = getComputedStyle(p.beat);
-        caught.push([p, cs.transform, cs.opacity]);
+        const idle = p.pose?.idle;
+        let transform = cs.transform;
+        if (idle?.carry && transform && transform !== "none") {
+          this.carryBeat(p, idle, transform);
+          transform = "none";
+        }
+        caught.push([p, transform, cs.opacity]);
       }
       p.beat.classList.remove(p.idle);
       p.beat.style.animationDelay = "";
@@ -890,6 +902,36 @@ export class MorphDriver {
       p.beat.style.transform = "";
       p.beat.style.opacity = "";
     }
+  }
+
+  /** Bake a beat's current transform into the outline (an Idle with `carry`). */
+  private carryBeat(p: Part, idle: Idle, transform: string) {
+    let m: DOMMatrixReadOnly;
+    try {
+      m = new DOMMatrixReadOnly(transform);
+    } catch {
+      return;
+    }
+    // The pivot the beat turned about: the idle's origin, or the box centre.
+    let ox: number;
+    let oy: number;
+    if (idle.origin) [ox, oy] = idle.origin;
+    else
+      try {
+        const box = p.path.getBBox();
+        ox = box.x + box.width / 2;
+        oy = box.y + box.height / 2;
+      } catch {
+        [ox, oy] = center(p.cur);
+      }
+    const c = p.cur;
+    for (let i = 0; i < c.length; i += 2) {
+      const dx = c[i] - ox;
+      const dy = c[i + 1] - oy;
+      c[i] = ox + m.a * dx + m.c * dy + m.e;
+      c[i + 1] = oy + m.b * dx + m.d * dy + m.f;
+    }
+    p.path.setAttribute("d", toPath(c));
   }
 
   private onVisibility = () => {

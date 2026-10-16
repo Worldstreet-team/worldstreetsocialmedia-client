@@ -63,33 +63,38 @@ export function VividMorph({
 	);
 }
 
-/** The order the empty window plays: typing, the mark, thinking, hello. */
-const INTRO: { scene: HelloScene; at: number }[] = [
-	{ scene: "dots", at: 0 },
-	{ scene: "mark", at: 1100 },
-	{ scene: "spin", at: 2700 },
-	{ scene: "hello", at: 3900 },
+/**
+ * One lap of the empty window, then back to the dots: [scene, ms from the
+ * start of its morph to the next]. A morph takes about 0.95s, so each scene
+ * gets at least a second of its own beat: one typing wave, one breath, a
+ * lap and a half of the chase.
+ */
+const LAP: [HelloScene, number][] = [
+	["dots", 2200],
+	["mark", 2400],
+	["spin", 2600],
+	["hello", 3400],
 ];
 
 /**
- * The empty Vivid window's greeting: three dots become Vivid's mark, then
- * the ring Vivid thinks with, then a handwritten hello, where it rests.
- * Under reduced motion it opens on the hello.
+ * The empty Vivid window's greeting, on a loop: the three dots split into
+ * Vivid's mark, gather on the ring she thinks with, write a hello, then fold
+ * back into the three dots. Under reduced motion it rests on the hello.
  */
 export function VividIntro({ className }: { className?: string }) {
-	const [scene, setScene] = useState<HelloScene>(() => (motionReduced() ? "hello" : "dots"));
+	const [step, setStep] = useState(() => (motionReduced() ? 3 : 0));
 	useEffect(() => {
 		if (motionReduced()) return;
-		const timers = INTRO.slice(1).map((step) => window.setTimeout(() => setScene(step.scene), step.at));
-		return () => timers.forEach(clearTimeout);
-	}, []);
-	return <VividMorph scene={scene} className={className} />;
+		const t = window.setTimeout(() => setStep((i) => (i + 1) % LAP.length), LAP[step][1]);
+		return () => clearTimeout(t);
+	}, [step]);
+	return <VividMorph scene={LAP[step][0]} className={className} />;
 }
 
 /** The middle of the drawing: the dots and the ring, cropped to fill a small box. */
 const THINKING_VIEWBOX = "84 52 72 56";
 
-/** While Vivid works on an answer: the dots, then the turning ring. */
+/** While Vivid works on an answer: the dots, then the chasing ring. */
 export function VividThinking({ className }: { className?: string }) {
 	const [scene, setScene] = useState<HelloScene>("dots");
 	useEffect(() => {
