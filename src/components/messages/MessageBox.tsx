@@ -406,6 +406,8 @@ interface Conversation {
 	call?: { startedBy: string; startedAt: string; video: boolean } | null;
 	notifyLevel?: "all" | "mentions" | "none";
 	disappearSec?: number;
+	/** Vivid let into the group (owner 2026-10-16), with her id. */
+	vivid?: { on: boolean; id: string | null };
 	/** Group lock: only admins may post while true (register 99). */
 	adminsOnly?: boolean;
 	/** Member records with high-water read marks (gateway W1). */
@@ -2071,6 +2073,7 @@ export const MessageBox = ({
 								...(typeof patch.description === "string" ? { description: patch.description } : {}),
 								...(typeof patch.adminsOnly === "boolean" ? { adminsOnly: patch.adminsOnly } : {}),
 								...(Array.isArray(patch.pins) ? { pins: patch.pins.map(String) } : {}),
+								...(typeof patch.vivid === "boolean" ? { vivid: { on: patch.vivid, id: c.vivid?.id ?? null } } : {}),
 							};
 				setConversations((prev) => prev.map(apply));
 				setActiveConversation((prev) => (prev ? apply(prev) : prev));
@@ -2079,6 +2082,17 @@ export const MessageBox = ({
 				toast(`You're invited to ${ablyMessage.data.name ?? "a group"}`);
 			if (cid && cid === activeIdRef.current) setGroupEpoch((n) => n + 1);
 			void fetchConversationsRef.current?.();
+			return;
+		}
+		if (ablyMessage?.name === "event" && ablyMessage.data?.type === "vivid:notice") {
+			// Why Vivid didn't answer in a group, told to the asker alone
+			// (owner 2026-10-16); the room never sees it.
+			const d = ablyMessage.data;
+			const url = typeof d.subscribeUrl === "string" ? d.subscribeUrl : null;
+			toast(
+				String(d.message ?? "Vivid couldn't answer that."),
+				url ? { action: { label: "See the plan", onClick: () => window.open(url, "_blank", "noopener,noreferrer") } } : undefined,
+			);
 			return;
 		}
 		if (ablyMessage?.data?.type === "theme:updated") {
@@ -2652,13 +2666,19 @@ export const MessageBox = ({
 			}));
 	}, [isGroupThread, activeConversation, myProfileId]);
 
+	/** Vivid, when an admin let her into this group (owner 2026-10-16):
+	 *  her id names her while she types and offers her after an @. Kept
+	 *  out of groupRoster, which is also the list of money targets. */
+	const groupVividId =
+		isGroupThread && activeConversation?.vivid?.on ? (activeConversation.vivid.id ?? null) : null;
+
 	/** "Alice is typing…", "Alice and Bob are typing…", then "several
 	 *  people…" — names, never "someone" (owner 2026-09-02, register 106). */
 	const groupActivityLine = useCallback(
 		(typers: { id: string; kind: "typing" | "recording" }[]) => {
 			if (typers.length === 0) return null;
 			const names = typers
-        .map((t) => groupRoster.find((m) => m.id === t.id)?.name?.split(" ")[0])
+        .map((t) => (t.id === groupVividId ? "Vivid" : groupRoster.find((m) => m.id === t.id)?.name?.split(" ")[0]))
 				.filter(Boolean) as string[];
 			if (names.length === 1)
 				return typers[0].kind === "recording"
@@ -2669,7 +2689,7 @@ export const MessageBox = ({
 			// Roster miss (someone just added): stay generic rather than wrong.
       return typers[0].kind === "recording" ? "recording audio…" : "typing…";
 		},
-		[groupRoster],
+		[groupRoster, groupVividId],
 	);
 
 	/** The persisted read mark that drives ticks (survives reload).
@@ -4086,7 +4106,11 @@ export const MessageBox = ({
 								onFiles={addFiles}
 								onRecordStart={(startPoint) => setRecording(startPoint)}
 								mentionCandidates={
-									isGroupThread ? groupRoster : undefined
+									isGroupThread
+										? groupVividId
+											? [{ id: groupVividId, name: "Vivid", username: "vivid", orb: true }, ...groupRoster]
+											: groupRoster
+										: undefined
 								}
 							/>
 							{/* The recorder overlays the pill; gesture listeners live

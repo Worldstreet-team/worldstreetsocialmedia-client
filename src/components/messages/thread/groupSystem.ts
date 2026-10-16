@@ -113,6 +113,10 @@ export function systemEventCopy(
 			return viewerIsSubject
 				? "You own the group now"
 				: `${subject} owns the group now`;
+		case "group.vivid":
+			return p.on
+				? `${actor} added Vivid. Write @vivid to ask her`
+				: `${actor} turned Vivid off for the group`;
 		case "group.locked":
 			return `${actor} locked the group, only admins can send`;
 		case "group.unlocked":

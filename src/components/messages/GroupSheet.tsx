@@ -136,6 +136,8 @@ interface GroupInfo {
 	historyShare?: number;
 	slowModeSec?: number;
 	disappearSec?: number;
+	/** Vivid let into the group (owner 2026-10-16), and her id. */
+	vivid?: { on: boolean; id: string | null };
 	me: {
 		role: Role | null;
 		muted: boolean;
@@ -255,6 +257,7 @@ function applyGroupPatch(info: GroupInfo, body: Record<string, unknown>): GroupI
 	if (typeof body.historyShare === "number") next.historyShare = body.historyShare;
 	if (typeof body.slowModeSec === "number") next.slowModeSec = body.slowModeSec;
 	if (typeof body.disappearSec === "number") next.disappearSec = body.disappearSec;
+	if (typeof body.vivid === "boolean") next.vivid = { on: body.vivid, id: next.vivid?.id ?? null };
 	if (typeof body.adminsOnly === "boolean") next.settings.send = body.adminsOnly ? "admins" : "everyone";
 	return next;
 }
@@ -914,6 +917,16 @@ function SettingsView({
 				: "hidden";
 	return (
 		<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-[calc(20px+var(--ws-safe-bottom))]">
+			{/* First, so a room finds it (owner 2026-10-16: Vivid in groups).
+			    Off until an admin turns it on: she reads the room to answer. */}
+			<Group title="Vivid">
+				<ToggleRow
+					label="Vivid in this group"
+					hint="Anyone here can write @vivid to ask her. She reads the recent messages to answer."
+					checked={Boolean(info.vivid?.on)}
+					onChange={(v) => void patchGroup({ vivid: v }, "vivid")}
+				/>
+			</Group>
 			<Group title="Who can">
 				{SETTING_KEYS.map((k) => (
 					<SelectRow

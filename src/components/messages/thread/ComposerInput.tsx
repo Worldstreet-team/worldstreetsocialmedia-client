@@ -31,6 +31,7 @@ import {
 } from "react";
 import { useAtom } from "jotai";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import { VividOrb } from "@/components/vivid/VividOrb";
 import { vividDmDraftAtom } from "@/store/ui.atom";
 import { press, staggerItem } from "@/lib/motion-presets";
 import { MINE_FILL, MINE_INK } from "./MessageBubble";
@@ -45,6 +46,8 @@ export interface MentionCandidate {
 	username?: string;
 	name: string;
 	avatar?: string;
+	/** Vivid in a group (owner 2026-10-16): drawn as her orb, not a photo. */
+	orb?: boolean;
 }
 
 /** The @token under the caret, if the caret sits inside one. */
@@ -195,7 +198,7 @@ export const ComposerInput = forwardRef<
 						className="chat-chrome-solid flex shrink-0 cursor-pointer items-center gap-1.5 rounded-pill py-1 pl-1 pr-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium transition-opacity hover:opacity-90"
 					>
 						<span className="relative h-5 w-5 overflow-hidden rounded-pill [background:var(--chat-chrome-chip,var(--ws-bg-chip))]">
-							<SafeAvatar src={c.avatar} eager />
+							{c.orb ? <VividOrb size={20} speed={0.5} /> : <SafeAvatar src={c.avatar} eager />}
 						</span>
 						{c.name}
 					</button>
