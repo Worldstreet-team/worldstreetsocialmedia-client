@@ -1,6 +1,7 @@
 "use client";
 
 import { motionReduced } from "@/lib/motion";
+import { navigationInFlight } from "@/lib/pending-nav";
 
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
@@ -165,8 +166,13 @@ export function useOverlayDismiss(
 			if (onPop) window.removeEventListener("popstate", onPop);
 			// Closed by button/drag/Esc: consume our own entry so the NEXT
 			// back press leaves the page, not a ghost. Closed BY the pop:
-			// the entry is already gone.
-			if (backSentinel && !popped) window.history.back();
+			// the entry is already gone. Closed because the person tapped a
+			// link inside (a profile in a story): never step back, while the
+			// next page loads or after it lands, or the back cancels that
+			// navigation and returns them to the page they left (owner
+			// 2026-10-16: "if someone click on something let it go").
+			if (backSentinel && !popped && !navigationInFlight() && window.history.state?.wsOverlay)
+				window.history.back();
 		};
 	}, [open, backSentinel]);
 }

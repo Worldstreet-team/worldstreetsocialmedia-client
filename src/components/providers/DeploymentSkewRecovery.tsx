@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { navigationInFlight } from "@/lib/pending-nav";
 
 /**
  * Self-heal after a redeploy.
@@ -77,13 +78,18 @@ export function DeploymentSkewRecovery() {
 			} catch {
 				/* storage blocked — the in-memory flag still prevents loops */
 			}
-			const href = window.location.href;
 			setTimeout(() => {
-				// Still here, still on the same URL, no unload started — now
-				// the reload is safe and lands where the person actually is.
-				if (!navigating && window.location.href === href) {
-					window.location.reload();
-				}
+				if (navigating) return;
+				// A page the person asked for is still on its way: the 1.5s
+				// grace is shorter than a slow connection's navigation, and a
+				// reload now would reload the page they are LEAVING (owner
+				// 2026-10-16: "if i click on something and it delays it
+				// returns back to the former page"). Load the one they asked
+				// for instead; it arrives fresh, which is the fix anyway.
+				const target = navigationInFlight();
+				if (target) window.location.assign(target);
+				// Otherwise reload wherever they are now.
+				else window.location.reload();
 			}, 1_500);
 		};
 		const onRejection = (e: PromiseRejectionEvent) =>
