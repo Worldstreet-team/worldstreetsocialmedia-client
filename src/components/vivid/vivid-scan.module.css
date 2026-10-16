@@ -1,0 +1,43 @@
+/*
+ * The scan over a post Vivid is reading (owner 2026-10-16: "sending it a
+ * post having a scan animation"). One band of the brand colour sweeps down
+ * the card and starts again until the first words of the answer arrive.
+ * Transform only. The overlay is a size container, so 100cqh is the card's
+ * own height whatever the post's length.
+ */
+.scan {
+	container-type: size;
+}
+.band {
+	position: absolute;
+	inset-inline: 0;
+	top: 0;
+	height: 56px;
+	background: linear-gradient(
+		to bottom,
+		transparent,
+		color-mix(in srgb, var(--ws-brand-primary) 16%, transparent)
+	);
+	border-bottom: 2px solid var(--ws-brand-primary);
+	transform: translateY(-56px);
+	animation: vs-sweep 1.7s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@keyframes vs-sweep {
+	from {
+		transform: translateY(-56px);
+	}
+	to {
+		transform: translateY(100cqh);
+	}
+}
+
+/* Reduced motion, both triggers: no sweep; the corners alone say it is
+   being read. */
+@media (prefers-reduced-motion: reduce) {
+	.band {
+		display: none;
+	}
+}
+:global(html[data-ws-motion="reduce"]) .band {
+	display: none;
+}

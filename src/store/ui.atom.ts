@@ -146,3 +146,9 @@ export const vividGoLiveDraftAtom = atom<{ title?: string; category?: string } |
 export const vividSpaceDraftAtom = atom<{ title?: string } | null>(null);
 /** A draft for one conversation; that thread's composer takes it once. */
 export const vividDmDraftAtom = atom<{ conversationId: string; text: string } | null>(null);
+/**
+ * A post sent to Vivid from its menu ("Ask Vivid", owner 2026-10-16): Vivid's
+ * chat in Messages takes it once as it opens, sends it, and scans it while
+ * it reads. Carries what the card draws so it shows before the server answers.
+ */
+export const vividAskPostAtom = atom<import("@/lib/vivid.client").VividPostRef | null>(null);

@@ -31,6 +31,16 @@ export type VividCard =
 	  }
 	| { kind: "open"; tool: string; summary: string; intent: VividIntent };
 
+/** A post someone sent to Vivid ("Ask Vivid" on a post): what its card draws. */
+export type VividPostRef = {
+	id: string;
+	author: string;
+	authorName: string;
+	avatar?: string | null;
+	text: string;
+	image?: string | null;
+};
+
 /** What a confirm card draws, by tool (gateway tools.ts `prepare`). */
 export type VividPreview = {
 	text?: string;

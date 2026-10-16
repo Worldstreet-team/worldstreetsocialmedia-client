@@ -10,6 +10,7 @@ import { OverlayHeader, OverlayPanel, OverlayScrim, useOverlayDismiss } from "@/
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { VividIntro, VividThinking } from "@/components/vivid/VividHello";
 import { VividMarkdown } from "@/components/vivid/VividMarkdown";
+import { PostScanCard } from "@/components/vivid/PostScanCard";
 import { VividOrb } from "@/components/vivid/VividOrb";
 import { intentKind, useVividIntent } from "@/components/vivid/vivid-actions";
 import * as I from "@/components/vivid/vivid-icons";
@@ -22,6 +23,7 @@ import {
 	type VividCard,
 	type VividEvent,
 	type VividStoredMessage,
+	type VividPostRef,
 	type VividThreadRow,
 } from "@/lib/vivid.client";
 import { userAtom } from "@/store/user.atom";
@@ -71,7 +73,14 @@ interface Turn {
 	ask?: string;
 	/** Loaded from history: drafts in it are shown, not confirmable. */
 	past?: boolean;
+	/** A post the person sent with this message ("Ask Vivid" on a post). */
+	post?: VividPostRef;
+	/** On an answer: the post its question carried, so Ask again resends it. */
+	askPost?: VividPostRef;
 }
+
+/** What Vivid is asked when a post arrives with nothing typed. */
+const POST_ASK = "What's this post about? Give me the key points and anything worth knowing.";
 
 const TOOL_ICON: Record<string, Icon> = {
 	search_posts: I.IconSearch,
@@ -139,7 +148,10 @@ const scroller = () => document.getElementById("ws-main-scroll");
 
 /** A stored message back into a turn (history). */
 function fromStored(m: VividStoredMessage, ask?: string): Turn {
-	if (m.role === "user") return { id: m._id, role: "user", text: m.content };
+	if (m.role === "user") {
+		const post = m.blocks?.find((b) => b.kind === "post")?.data as VividPostRef | undefined;
+		return { id: m._id, role: "user", text: post && m.content === POST_ASK ? "" : m.content, post };
+	}
 	return {
 		id: m._id,
 		role: "vivid",
@@ -208,8 +220,9 @@ export function useVividChat(opts: { surface: "window" | "messages"; scroller: (
 
 	/** Send one turn; resolves with Vivid's final text (Talk mode speaks it). */
 	const send = useCallback(
-		async (text: string): Promise<string> => {
-			const q = text.trim();
+		async (text: string, extra: { post?: VividPostRef } = {}): Promise<string> => {
+			const typed = text.trim();
+			const q = typed || (extra.post ? POST_ASK : "");
 			if (!q || busy) return "";
 			setInput("");
 			setBusy(true);
@@ -217,8 +230,8 @@ export function useVividChat(opts: { surface: "window" | "messages"; scroller: (
 			const vid = uid();
 			setTurns((t) => [
 				...t,
-				{ id: uid(), role: "user", text: q },
-				{ id: vid, role: "vivid", text: "", steps: [], cards: [], streaming: true, ask: q },
+				{ id: uid(), role: "user", text: typed, post: extra.post },
+				{ id: vid, role: "vivid", text: "", steps: [], cards: [], streaming: true, ask: q, askPost: extra.post },
 			]);
 			const patch = (fn: (t: Turn) => Turn) => setTurns((all) => all.map((x) => (x.id === vid ? fn(x) : x)));
 			let answer = "";
@@ -228,7 +241,7 @@ export function useVividChat(opts: { surface: "window" | "messages"; scroller: (
 				text: q,
 				threadId,
 				surface: opts.surface,
-				context: web ? { web: true } : null,
+				context: web || extra.post ? { ...(web ? { web: true } : {}), ...(extra.post ? { postId: extra.post.id } : {}) } : null,
 				signal: ac.signal,
 				onEvent: (e: VividEvent) => {
 					if (e.type === "thread") setThreadId(e.threadId);
@@ -308,19 +321,22 @@ export function useVividChat(opts: { surface: "window" | "messages"; scroller: (
 
 export type VividChatState = ReturnType<typeof useVividChat>;
 
+/** Vivid is still reading what it was sent: no words or cards yet. */
+const isReading = (next?: Turn) => !!next && next.role === "vivid" && !!next.streaming && !next.text && !next.cards?.length;
+
 /** The conversation itself: questions and Vivid's answers, as a column. */
 export function VividTurns({ chat, className }: { chat: VividChatState; className?: string }) {
 	return (
 		<div className={className}>
-			{chat.turns.map((t) =>
+			{chat.turns.map((t, i) =>
 				t.role === "user" ? (
-					<UserTurn key={t.id} turn={t} />
+					<UserTurn key={t.id} turn={t} scanning={isReading(chat.turns[i + 1])} />
 				) : (
 					<VividAnswer
 						key={t.id}
 						turn={t}
 						subscribeUrl={chat.plan.entitled === false ? chat.plan.url : undefined}
-						onRetry={t.ask && !chat.busy ? () => void chat.send(t.ask as string) : undefined}
+						onRetry={t.ask && !chat.busy ? () => void chat.send(t.ask as string, { post: t.askPost }) : undefined}
 						onFeedback={(v) => chat.rate(t, v)}
 					/>
 				),
@@ -608,16 +624,19 @@ export function Composer({
 	);
 }
 
-export function UserTurn({ turn }: { turn: Turn }) {
+export function UserTurn({ turn, scanning = false }: { turn: Turn; scanning?: boolean }) {
 	return (
 		<motion.div
 			initial={{ opacity: 0, y: 8 }}
 			animate={{ opacity: 1, y: 0, transition: { duration: 0.26, ease: EASE_OUT_EXPO } }}
-			className="flex justify-end"
+			className="flex flex-col items-end gap-2"
 		>
-			<p className="max-w-[82%] whitespace-pre-wrap break-words rounded-[22px] bg-raised px-4 py-2.5 font-sans text-[calc(15.5px*var(--ws-fs))] leading-relaxed text-primary">
-				{turn.text}
-			</p>
+			{turn.post && <PostScanCard post={turn.post} scanning={scanning} />}
+			{turn.text && (
+				<p className="max-w-[82%] whitespace-pre-wrap break-words rounded-[22px] bg-raised px-4 py-2.5 font-sans text-[calc(15.5px*var(--ws-fs))] leading-relaxed text-primary">
+					{turn.text}
+				</p>
+			)}
 		</motion.div>
 	);
 }

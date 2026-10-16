@@ -45,6 +45,7 @@ const MediaEditor = dynamic(() => import("@/components/editor/MediaEditor"), {
   ssr: false,
 });
 import { ConversationList, InboxThumb } from "./ConversationList";
+import { VividOrb } from "@/components/vivid/VividOrb";
 import { VividChat, VividInboxRow } from "@/components/vivid/VividChat";
 import { StoriesRail } from "@/components/feed/StoriesRail";
 import { GIPHY_KEY, GifPicker } from "./GifPicker";
@@ -2854,6 +2855,21 @@ export const MessageBox = ({
 								{...menuStagger("bottom-right")}
 								className="flex flex-col items-end gap-2"
 							>
+								{/* Vivid rides the plus too (owner 2026-10-16). */}
+								<motion.button
+									variants={staggerItem}
+									type="button"
+									onClick={() => {
+										setFabOpen(false);
+										openVivid();
+									}}
+									className="pointer-events-auto flex h-11 cursor-pointer items-center gap-2 rounded-pill glass-frost pl-2.5 pr-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary shadow-nav"
+								>
+									<span className="flex h-7 w-7 items-center justify-center rounded-pill bg-raised">
+										<VividOrb size={22} speed={0.5} />
+									</span>
+									{t("messages.askVivid")}
+								</motion.button>
 								<motion.button
 									variants={staggerItem}
 									type="button"

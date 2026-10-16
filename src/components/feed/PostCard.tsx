@@ -32,6 +32,7 @@ import {
 	Lock as PhLock,
 	Pulse as PhPulse,
 	Repeat as PhRepeat,
+	Sparkle as PhSparkle,
 	Translate as PhTranslate,
 	Users as PhUsers,
 	VideoCamera as PhVideoCamera,
@@ -77,6 +78,7 @@ import ImageModal from "@/components/ui/ImageModal";
 import { FeedImage } from "@/components/ui/FeedImage";
 import { PostPoll } from "@/components/feed/PostPoll";
 import { ShareMenu, sharePost } from "@/components/feed/ShareMenu";
+import { useAskVivid } from "@/components/vivid/ask-vivid";
 import {
     EmbeddedPost,
     firstPlatformPostId,
@@ -846,6 +848,10 @@ const PostCardBody = memo(
         }
     }, [post.id, toast]);
 
+    // "Ask Vivid" (owner 2026-10-16): the post goes to Vivid's chat in
+    // Messages, scanned while it reads.
+    const askVivid = useAskVivid();
+
     const handleMenuAction = useCallback(
         (action: string) => {
             setIsMenuOpen(false);
@@ -1395,6 +1401,26 @@ const PostCardBody = memo(
                                         className="absolute right-0 top-8 w-[220px] bg-surface rounded-lg border border-hairline shadow-nav z-dropdown overflow-hidden py-1.5"
                                         onClick={(e) => e.stopPropagation()}
                                     >
+                                        <motion.button
+                                            variants={staggerItem}
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setIsMenuOpen(false);
+                                                askVivid({
+                                                    id: post.id,
+                                                    author: post.author.username,
+                                                    authorName: post.author.name,
+                                                    avatar: post.author.avatar,
+                                                    text: post.content ?? "",
+                                                    image: post.images?.[0] ?? null,
+                                                });
+                                            }}
+                                            className="w-full text-left px-3.5 py-2.5 hover:bg-raised flex items-center gap-2.5 text-sm font-medium text-primary transition-colors font-sans"
+                                        >
+                                            <PhSparkle size={16} />
+                                            Ask Vivid
+                                        </motion.button>
                                         {isOwnPost ? (
                                             <>
                                                 <motion.button

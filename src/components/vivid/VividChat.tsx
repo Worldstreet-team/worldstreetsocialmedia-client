@@ -2,6 +2,7 @@
 
 import clsx from "clsx";
 import { AnimatePresence } from "framer-motion";
+import { getDefaultStore } from "jotai";
 import { ArrowLeft } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { VividIntro } from "@/components/vivid/VividHello";
@@ -20,6 +21,7 @@ import {
 import * as I from "@/components/vivid/vivid-icons";
 import { formatTimeAgo } from "@/lib/utils";
 import { type VividThreadRow, vividApi } from "@/lib/vivid.client";
+import { vividAskPostAtom } from "@/store/ui.atom";
 
 /**
  * Vivid in Messages (plan P3, owner 2026-10-16: "how do i even see vivid in
@@ -52,10 +54,20 @@ export function VividChat({ onBack }: { onBack?: () => void }) {
 	const [voiceOpen, setVoiceOpen] = useState(false);
 	const empty = chat.turns.length === 0;
 
-	// Like any chat, it opens where the conversation left off.
+	// Like any chat, it opens where the conversation left off, unless a post
+	// was just sent to Vivid ("Ask Vivid"): that starts a conversation of its
+	// own and goes straight off, scanning while Vivid reads it.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: once, on open
 	useEffect(() => {
 		let alive = true;
+		const store = getDefaultStore();
+		const asked = store.get(vividAskPostAtom);
+		if (asked) {
+			store.set(vividAskPostAtom, null);
+			setLoading(false);
+			void chat.send("", { post: asked });
+			return;
+		}
 		void latestThread(true).then(async (row) => {
 			if (row && alive) await chat.openThread(row._id);
 			if (alive) setLoading(false);
