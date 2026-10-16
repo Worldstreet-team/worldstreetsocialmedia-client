@@ -2,6 +2,7 @@
 
 import clsx from "clsx";
 import { useEffect, useRef } from "react";
+import { motionReduced } from "@/lib/motion";
 
 /**
  * Vivid's mark: a sphere of dots turning on its axis, the same construction
@@ -11,7 +12,13 @@ import { useEffect, useRef } from "react";
  * swap needs no prop. Front dots solid, back dots faint.
  *
  * `speed` is radians per second; `level` (0..1) swells the sphere while Vivid
- * is listening or speaking. Still under reduced motion; paused while hidden.
+ * is listening or speaking. Still under reduced motion (both triggers).
+ *
+ * Cheap on purpose (owner 2026-10-16, asking why things felt heavy): several
+ * orbs can be mounted at once (the inbox row, under each plus, headers), so
+ * each one draws only while it is on screen and the tab is visible, small
+ * ones at 30 frames a second, and the ink is read about once a second rather
+ * than forcing a style read every frame.
  */
 export function VividOrb({
 	size = 28,
@@ -53,19 +60,37 @@ export function VividOrb({
 		const dot = size < 48 ? size / 34 : size / 90;
 		const cosT = Math.cos(0.42);
 		const sinT = Math.sin(0.42);
-		const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+		const still = motionReduced();
+		// Small orbs read the same at half the frame rate.
+		const minFrame = size < 48 ? 1000 / 30 : 0;
 
 		let raf = 0;
 		let last = performance.now();
 		let angle = 0.6;
 		let swell = 0;
+		let onScreen = true;
+		let drawn = false;
+		let ink = getComputedStyle(canvas).color || "rgb(238,242,246)";
+		let inkAt = last;
 
+		const schedule = () => {
+			if (!raf && !still && onScreen && !document.hidden) raf = requestAnimationFrame(draw);
+		};
 		const draw = (now: number) => {
+			raf = 0;
+			if (drawn && now - last < minFrame) {
+				schedule();
+				return;
+			}
 			const dt = Math.min(0.05, (now - last) / 1000);
 			last = now;
 			if (!still) angle += speedRef.current * dt;
 			swell += (levelRef.current - swell) * Math.min(1, dt * 10);
-			const ink = getComputedStyle(canvas).color || "rgb(238,242,246)";
+			// The theme can change under it; a second is soon enough to follow.
+			if (now - inkAt > 1000) {
+				ink = getComputedStyle(canvas).color || ink;
+				inkAt = now;
+			}
 			const R = baseR * (1 + swell * 0.14);
 			const cosA = Math.cos(angle);
 			const sinA = Math.sin(angle);
@@ -83,18 +108,35 @@ export function VividOrb({
 				ctx.fill();
 			}
 			ctx.globalAlpha = 1;
-			if (!still && !document.hidden) raf = requestAnimationFrame(draw);
+			drawn = true;
+			schedule();
+		};
+		const resume = () => {
+			last = performance.now();
+			schedule();
 		};
 		const onVisibility = () => {
-			if (document.hidden || still) return;
-			cancelAnimationFrame(raf);
-			last = performance.now();
-			raf = requestAnimationFrame(draw);
+			if (!document.hidden) resume();
 		};
+		// Off screen (scrolled away, under a pane, the hidden layout copy): no frames.
+		const io =
+			typeof IntersectionObserver === "undefined"
+				? null
+				: new IntersectionObserver((entries) => {
+						onScreen = entries[entries.length - 1]?.isIntersecting ?? true;
+						if (onScreen) resume();
+						else {
+							cancelAnimationFrame(raf);
+							raf = 0;
+						}
+					});
+		io?.observe(canvas);
 		document.addEventListener("visibilitychange", onVisibility);
+		// Always one frame, so a still orb (reduced motion) is drawn too.
 		raf = requestAnimationFrame(draw);
 		return () => {
 			cancelAnimationFrame(raf);
+			io?.disconnect();
 			document.removeEventListener("visibilitychange", onVisibility);
 		};
 	}, [size]);
