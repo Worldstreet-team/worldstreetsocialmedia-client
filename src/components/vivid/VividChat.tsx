@@ -151,6 +151,10 @@ export function VividChat({ onBack }: { onBack?: () => void }) {
 					web={chat.web}
 					onWeb={() => chat.setWeb((w) => !w)}
 					hero={false}
+					files={chat.files}
+					onAddFiles={chat.addFiles}
+					onRemoveFile={chat.removeFile}
+					canAttach={chat.plan.entitled !== false}
 				/>
 			</div>
 

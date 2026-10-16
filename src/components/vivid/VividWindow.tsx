@@ -10,19 +10,31 @@ import { OverlayHeader, OverlayPanel, OverlayScrim, useOverlayDismiss } from "@/
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { VividIntro, VividThinking } from "@/components/vivid/VividHello";
 import { VividMarkdown } from "@/components/vivid/VividMarkdown";
-import { PostScanCard } from "@/components/vivid/PostScanCard";
+import { PostScanCard, ScanOverlay } from "@/components/vivid/PostScanCard";
+import {
+	MAX_FILES,
+	VIVID_FILE_ACCEPT,
+	audioDuration,
+	clock,
+	type FileFamily,
+	familyOf,
+	shrinkImage,
+} from "@/components/vivid/vivid-files";
 import { VividOrb } from "@/components/vivid/VividOrb";
 import { intentKind, useVividIntent } from "@/components/vivid/vivid-actions";
 import * as I from "@/components/vivid/vivid-icons";
 import { DUR, EASE, EASE_OUT_EXPO, press, staggerItem, staggerParent, swap } from "@/lib/motion-presets";
 import { formatTimeAgo } from "@/lib/utils";
 import {
+	deleteVividFile,
 	settleVividAction,
 	streamVividTurn,
+	uploadVividFile,
 	vividApi,
 	type VividCard,
 	type VividEvent,
 	type VividStoredMessage,
+	type VividFile,
 	type VividPostRef,
 	type VividThreadRow,
 } from "@/lib/vivid.client";
@@ -77,6 +89,24 @@ interface Turn {
 	post?: VividPostRef;
 	/** On an answer: the post its question carried, so Ask again resends it. */
 	askPost?: VividPostRef;
+	/** Files sent with this message; pictures keep a local preview while the page is open. */
+	files?: (VividFile & { preview?: string })[];
+}
+
+/** What Vivid is asked when files arrive with nothing typed. */
+const FILE_ASK = "Read what I attached and give me the key points.";
+
+/** A file on its way into the composer (owner 2026-10-16: "uploading of files, latex files, audio"). */
+export interface PendingFile {
+	key: string;
+	name: string;
+	family: FileFamily;
+	status: "uploading" | "reading" | "ready" | "failed";
+	progress: number;
+	preview?: string;
+	file?: VividFile;
+	error?: string;
+	abort?: AbortController;
 }
 
 /** What Vivid is asked when a post arrives with nothing typed. */
@@ -154,7 +184,9 @@ const scroller = () => document.getElementById("ws-main-scroll");
 function fromStored(m: VividStoredMessage, ask?: string): Turn {
 	if (m.role === "user") {
 		const post = m.blocks?.find((b) => b.kind === "post")?.data as VividPostRef | undefined;
-		return { id: m._id, role: "user", text: post && m.content === POST_ASK ? "" : m.content, post };
+		const files = (m.blocks ?? []).filter((b) => b.kind === "file").map((b) => b.data as unknown as VividFile);
+		const stock = (post && m.content === POST_ASK) || (files.length > 0 && m.content === FILE_ASK);
+		return { id: m._id, role: "user", text: stock ? "" : m.content, post, files: files.length ? files : undefined };
 	}
 	return {
 		id: m._id,
@@ -197,6 +229,9 @@ export function useVividChat(opts: { surface: "window" | "messages"; scroller: (
 	const inputRef = useRef<HTMLTextAreaElement>(null);
 	/** Follow the answer down only while the reader is at the bottom. */
 	const stickRef = useRef(true);
+	const [files, setFiles] = useState<PendingFile[]>([]);
+	const filesRef = useRef(files);
+	filesRef.current = files;
 	const scrollerRef = useRef(opts.scroller);
 	scrollerRef.current = opts.scroller;
 
@@ -226,15 +261,20 @@ export function useVividChat(opts: { surface: "window" | "messages"; scroller: (
 	const send = useCallback(
 		async (text: string, extra: { post?: VividPostRef } = {}): Promise<string> => {
 			const typed = text.trim();
-			const q = typed || (extra.post ? POST_ASK : "");
+			// Files still on their way hold the send; failed ones are left behind.
+			if (filesRef.current.some((f) => f.status === "uploading" || f.status === "reading")) return "";
+			const ready = filesRef.current.filter((f) => f.status === "ready" && f.file);
+			const q = typed || (extra.post ? POST_ASK : ready.length ? FILE_ASK : "");
 			if (!q || busy) return "";
+			const sent = ready.map((f) => ({ ...(f.file as VividFile), preview: f.preview }));
+			if (filesRef.current.length) setFiles([]);
 			setInput("");
 			setBusy(true);
 			stickRef.current = true;
 			const vid = uid();
 			setTurns((t) => [
 				...t,
-				{ id: uid(), role: "user", text: typed, post: extra.post },
+				{ id: uid(), role: "user", text: typed, post: extra.post, files: sent.length ? sent : undefined },
 				{ id: vid, role: "vivid", text: "", steps: [], cards: [], streaming: true, ask: q, askPost: extra.post },
 			]);
 			const patch = (fn: (t: Turn) => Turn) => setTurns((all) => all.map((x) => (x.id === vid ? fn(x) : x)));
@@ -245,6 +285,7 @@ export function useVividChat(opts: { surface: "window" | "messages"; scroller: (
 				text: q,
 				threadId,
 				surface: opts.surface,
+				attachments: sent.map((f) => f.id),
 				context: web || extra.post ? { ...(web ? { web: true } : {}), ...(extra.post ? { postId: extra.post.id } : {}) } : null,
 				signal: ac.signal,
 				onEvent: (e: VividEvent) => {
@@ -278,6 +319,11 @@ export function useVividChat(opts: { surface: "window" | "messages"; scroller: (
 	const stop = useCallback(() => abortRef.current?.abort(), []);
 	const newChat = useCallback(() => {
 		abortRef.current?.abort();
+		for (const f of filesRef.current) {
+			f.abort?.abort();
+			if (f.file?.id) void deleteVividFile(f.file.id);
+		}
+		setFiles([]);
 		setTurns([]);
 		setThreadId(null);
 		setInput("");
@@ -305,6 +351,42 @@ export function useVividChat(opts: { surface: "window" | "messages"; scroller: (
 		[threadId],
 	);
 
+	/** Upload files for the next message: pictures shrunk first, audio measured. */
+	const addFiles = useCallback((list: File[]) => {
+		const room = Math.max(0, MAX_FILES - filesRef.current.length);
+		for (const raw of list.slice(0, room)) {
+			const key = uid();
+			const family = familyOf(raw);
+			const abort = new AbortController();
+			const preview = family === "image" ? URL.createObjectURL(raw) : undefined;
+			setFiles((all) => [...all, { key, name: raw.name, family, status: "uploading", progress: 0, preview, abort }]);
+			const update = (fn: (f: PendingFile) => PendingFile) =>
+				setFiles((all) => all.map((f) => (f.key === key ? fn(f) : f)));
+			void (async () => {
+				const file = family === "image" ? await shrinkImage(raw) : raw;
+				const durationSec = family === "audio" ? await audioDuration(raw) : null;
+				const r = await uploadVividFile(file, {
+					durationSec,
+					signal: abort.signal,
+					onProgress: (frac) => update((f) => ({ ...f, progress: frac, status: frac >= 1 ? "reading" : "uploading" })),
+				});
+				if (!r.ok) {
+					if (!r.aborted) update((f) => ({ ...f, status: "failed", error: r.message }));
+					return;
+				}
+				update((f) => ({ ...f, status: "ready", file: r.file, progress: 1 }));
+			})();
+		}
+	}, []);
+
+	const removeFile = useCallback((key: string) => {
+		const f = filesRef.current.find((x) => x.key === key);
+		f?.abort?.abort();
+		if (f?.file?.id) void deleteVividFile(f.file.id);
+		if (f?.preview) URL.revokeObjectURL(f.preview);
+		setFiles((all) => all.filter((x) => x.key !== key));
+	}, []);
+
 	const fillComposer = useCallback((text: string) => {
 		setInput(text);
 		requestAnimationFrame(() => {
@@ -320,7 +402,26 @@ export function useVividChat(opts: { surface: "window" | "messages"; scroller: (
 		if (t.messageId) void vividApi.feedback(t.messageId, v);
 	}, []);
 
-	return { turns, input, setInput, busy, threadId, web, setWeb, plan, inputRef, send, stop, newChat, openThread, fillComposer, rate };
+	return {
+		turns,
+		input,
+		setInput,
+		busy,
+		threadId,
+		web,
+		setWeb,
+		plan,
+		inputRef,
+		send,
+		stop,
+		newChat,
+		openThread,
+		fillComposer,
+		rate,
+		files,
+		addFiles,
+		removeFile,
+	};
 }
 
 export type VividChatState = ReturnType<typeof useVividChat>;
@@ -433,6 +534,10 @@ export function VividWindow() {
 					web={chat.web}
 					onWeb={() => chat.setWeb((w) => !w)}
 					hero={empty}
+					files={chat.files}
+					onAddFiles={chat.addFiles}
+					onRemoveFile={chat.removeFile}
+					canAttach={chat.plan.entitled !== false}
 				/>
 				{empty && (
 					<QuickStarts
@@ -531,6 +636,10 @@ export function Composer({
 	web,
 	onWeb,
 	hero,
+	files = [],
+	onAddFiles,
+	onRemoveFile,
+	canAttach = true,
 }: {
 	inputRef: React.RefObject<HTMLTextAreaElement | null>;
 	value: string;
@@ -542,7 +651,17 @@ export function Composer({
 	web: boolean;
 	onWeb: () => void;
 	hero: boolean;
+	files?: PendingFile[];
+	onAddFiles?: (files: File[]) => void;
+	onRemoveFile?: (key: string) => void;
+	/** False on the preview: files come with the plan. */
+	canAttach?: boolean;
 }) {
+	const pickRef = useRef<HTMLInputElement>(null);
+	const [dragging, setDragging] = useState(false);
+	const attach = canAttach && !!onAddFiles;
+	const waiting = files.some((f) => f.status === "uploading" || f.status === "reading");
+	const hasReady = files.some((f) => f.status === "ready");
 	// Grows with the text, up to about eight lines.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: re-measure when the text or the size changes
 	useLayoutEffect(() => {
@@ -552,18 +671,39 @@ export function Composer({
 		el.style.height = `${Math.min(el.scrollHeight, 220)}px`;
 	}, [value, hero]);
 
-	const action = busy ? "stop" : value.trim() ? "send" : "talk";
+	const action = busy ? "stop" : value.trim() || hasReady ? "send" : "talk";
 	return (
 		<form
 			onSubmit={(e) => {
 				e.preventDefault();
-				if (!busy) onSend();
+				if (!busy && !waiting) onSend();
+			}}
+			onDragOver={(e) => {
+				if (!attach || !e.dataTransfer.types.includes("Files")) return;
+				e.preventDefault();
+				setDragging(true);
+			}}
+			onDragLeave={() => setDragging(false)}
+			onDrop={(e) => {
+				if (!attach) return;
+				e.preventDefault();
+				setDragging(false);
+				const dropped = Array.from(e.dataTransfer.files ?? []);
+				if (dropped.length) onAddFiles?.(dropped);
 			}}
 			className={clsx(
-				"flex flex-col rounded-[26px] bg-surface ring-1 ring-primary/[0.08] transition-shadow focus-within:ring-primary/[0.16]",
+				"flex flex-col rounded-[26px] bg-surface ring-1 transition-shadow focus-within:ring-primary/[0.16]",
+				dragging ? "ring-2 ring-[color:var(--ws-brand-primary)]" : "ring-primary/[0.08]",
 				hero ? "px-5 pt-4 pb-3" : "px-4 pt-3 pb-2.5",
 			)}
 		>
+			{files.length > 0 && (
+				<div className="-mx-1 mb-2 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+					{files.map((f) => (
+						<FileChip key={f.key} file={f} onRemove={() => onRemoveFile?.(f.key)} />
+					))}
+				</div>
+			)}
 			<textarea
 				ref={inputRef}
 				value={value}
@@ -572,8 +712,15 @@ export function Composer({
 					// Enter sends on a keyboard; on a phone it is a new line.
 					if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && !matchMedia("(pointer: coarse)").matches) {
 						e.preventDefault();
-						if (!busy) onSend();
+						if (!busy && !waiting) onSend();
 					}
+				}}
+				onPaste={(e) => {
+					if (!attach) return;
+					const pasted = Array.from(e.clipboardData?.files ?? []);
+					if (!pasted.length) return;
+					e.preventDefault();
+					onAddFiles?.(pasted);
 				}}
 				rows={1}
 				aria-label="Message Vivid"
@@ -584,12 +731,38 @@ export function Composer({
 				)}
 			/>
 			<div className="mt-1.5 flex items-center gap-1">
+				{attach && (
+					<>
+						<button
+							type="button"
+							onClick={() => pickRef.current?.click()}
+							aria-label="Attach files"
+							title="Attach files: PDF, Word, text, LaTeX, CSV, pictures, audio"
+							className="-ml-2 flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
+						>
+							<I.IconPaperclip size={18} />
+						</button>
+						<input
+							ref={pickRef}
+							type="file"
+							multiple
+							accept={VIVID_FILE_ACCEPT}
+							className="hidden"
+							onChange={(e) => {
+								const picked = Array.from(e.target.files ?? []);
+								e.target.value = "";
+								if (picked.length) onAddFiles?.(picked);
+							}}
+						/>
+					</>
+				)}
 				<button
 					type="button"
 					onClick={onWeb}
 					aria-pressed={web}
 					className={clsx(
-						"-ml-2 flex h-9 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors",
+						"flex h-9 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors",
+						!attach && "-ml-2",
 						web ? "bg-primary/10 text-primary" : "text-muted hover:bg-primary/5 hover:text-primary",
 					)}
 				>
@@ -616,8 +789,9 @@ export function Composer({
 							{...swap}
 							type={action === "send" ? "submit" : "button"}
 							onClick={action === "stop" ? onStop : undefined}
-							aria-label={action === "stop" ? "Stop" : "Send"}
-							className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill bg-primary text-page"
+							disabled={action === "send" && waiting}
+							aria-label={action === "stop" ? "Stop" : waiting ? "Waiting for files" : "Send"}
+							className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill bg-primary text-page disabled:cursor-default disabled:opacity-40"
 						>
 							{action === "stop" ? <I.IconStop size={20} /> : <I.IconSend size={19} strokeWidth={2.2} />}
 						</motion.button>
@@ -625,6 +799,112 @@ export function Composer({
 				</AnimatePresence>
 			</div>
 		</form>
+	);
+}
+
+const fileLabel = (f: { kind: string; name: string; pages: number | null; durationSec: number | null }) => {
+	if (f.kind === "audio") return f.durationSec ? `Voice note · ${clock(f.durationSec)}` : "Voice note";
+	if (f.kind === "pdf") return f.pages ? `PDF · ${f.pages} page${f.pages === 1 ? "" : "s"}` : "PDF";
+	if (f.kind === "docx") return "Word document";
+	if (f.kind === "image") return "Picture";
+	const ext = f.name.split(".").pop()?.toLowerCase() ?? "";
+	return ext === "tex" ? "LaTeX" : ext === "csv" || ext === "tsv" ? "Spreadsheet data" : ext === "md" || ext === "markdown" ? "Markdown" : "Text";
+};
+
+/** A file in the composer: what it is and how far along, with a way out. */
+function FileChip({ file: f, onRemove }: { file: PendingFile; onRemove: () => void }) {
+	const working = f.status === "uploading" || f.status === "reading";
+	const line =
+		f.status === "uploading"
+			? `Uploading ${Math.round(f.progress * 100)}%`
+			: f.status === "reading"
+				? f.family === "audio"
+					? "Transcribing"
+					: f.family === "image"
+						? "Preparing"
+						: "Reading"
+				: f.status === "failed"
+					? f.error || "Couldn't read it"
+					: f.file
+						? fileLabel(f.file)
+						: "Ready";
+	return (
+		<div className="relative flex h-14 w-[220px] shrink-0 items-center gap-2.5 rounded-[14px] bg-primary/5 pr-10 pl-1.5">
+			<span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-raised text-muted">
+				{f.preview ? (
+					// biome-ignore lint/performance/noImgElement: a local object URL
+					<img src={f.preview} alt="" className="h-full w-full object-cover" />
+				) : f.family === "audio" ? (
+					<I.IconWave size={18} />
+				) : (
+					<I.IconFile size={18} />
+				)}
+				{working && (
+					<span className="absolute inset-0 flex items-center justify-center bg-page/55 text-primary">
+						<Spinner />
+					</span>
+				)}
+			</span>
+			<span className="flex min-w-0 flex-col">
+				<span className="truncate font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">{f.name}</span>
+				<span
+					className={clsx(
+						"truncate font-sans text-[calc(12px*var(--ws-fs))] tabular-nums",
+						f.status === "failed" ? "text-danger" : "text-muted",
+					)}
+				>
+					{line}
+				</span>
+			</span>
+			<button
+				type="button"
+				onClick={onRemove}
+				aria-label={`Remove ${f.name}`}
+				className="absolute top-1/2 right-0.5 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-pill text-muted hover:bg-primary/10 hover:text-primary"
+			>
+				<I.IconClose size={14} />
+			</button>
+		</div>
+	);
+}
+
+/** Files sent to Vivid, as the person's message, scanned while Vivid reads them. */
+function FileScanCard({ files, scanning }: { files: (VividFile & { preview?: string })[]; scanning: boolean }) {
+	const pics = files.filter((f) => f.kind === "image");
+	const docs = files.filter((f) => f.kind !== "image");
+	return (
+		<div className="relative w-[min(320px,84%)] overflow-hidden rounded-[20px] bg-surface ring-1 ring-primary/[0.08]">
+			{pics.length > 0 && (
+				<div className={clsx("grid gap-0.5", pics.length > 1 ? "grid-cols-2" : "grid-cols-1")}>
+					{pics.slice(0, 4).map((p) =>
+						p.preview ? (
+							// biome-ignore lint/performance/noImgElement: a local object URL
+							<img key={p.id} src={p.preview} alt="" className={clsx("w-full object-cover", pics.length > 1 ? "aspect-square" : "aspect-[4/3]")} />
+						) : (
+							<span key={p.id} className="flex aspect-[4/3] items-center justify-center bg-raised text-muted">
+								<I.IconImage size={22} />
+							</span>
+						),
+					)}
+				</div>
+			)}
+			{docs.length > 0 && (
+				<div className="flex flex-col divide-y divide-hairline">
+					{docs.map((d) => (
+						<div key={d.id} className="flex items-center gap-3 px-3.5 py-3">
+							<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-primary/[0.07] text-primary">
+								{d.kind === "audio" ? <I.IconWave size={19} /> : <I.IconFile size={19} />}
+							</span>
+							<span className="flex min-w-0 flex-col">
+								<span className="truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">{d.name}</span>
+								<span className="font-sans text-[calc(12.5px*var(--ws-fs))] text-muted">{fileLabel(d)}</span>
+							</span>
+						</div>
+					))}
+				</div>
+			)}
+			<ScanOverlay scanning={scanning} label="Vivid is reading your files" />
+		</div>
 	);
 }
 
@@ -636,6 +916,7 @@ export function UserTurn({ turn, scanning = false }: { turn: Turn; scanning?: bo
 			className="flex flex-col items-end gap-2"
 		>
 			{turn.post && <PostScanCard post={turn.post} scanning={scanning} />}
+			{turn.files && turn.files.length > 0 && <FileScanCard files={turn.files} scanning={scanning && !turn.post} />}
 			{turn.text && (
 				<p className="max-w-[82%] whitespace-pre-wrap break-words rounded-[22px] bg-raised px-4 py-2.5 font-sans text-[calc(15.5px*var(--ws-fs))] leading-relaxed text-primary">
 					{turn.text}

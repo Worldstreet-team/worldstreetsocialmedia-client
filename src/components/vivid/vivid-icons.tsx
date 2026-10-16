@@ -434,3 +434,49 @@ export const IconVideo = icon(
 	),
 	"IconVideo",
 );
+
+/** Attach a file. */
+export const IconPaperclip = icon(
+	() => <path d="M19.5 11.6 12.4 18.7a4.7 4.7 0 0 1-6.6-6.6l7.6-7.6a3.1 3.1 0 0 1 4.4 4.4l-7.5 7.5a1.6 1.6 0 0 1-2.2-2.2l6.8-6.8" />,
+	"IconPaperclip",
+);
+
+/** A document. */
+export const IconFile = icon(
+	() => (
+		<>
+			<path d="M13.5 3.5H7.5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V8.5z" />
+			<path d="M13.5 3.5v5h5" />
+			<path d="M9 13h6" />
+			<path d="M9 16.5h4" />
+		</>
+	),
+	"IconFile",
+);
+
+/** A picture. */
+export const IconImage = icon(
+	() => (
+		<>
+			<rect x="3.5" y="4.5" width="17" height="15" rx="2.8" />
+			<circle cx="9" cy="10" r="1.7" />
+			<path d="M20.5 15.5 15.8 11l-8.3 8.5" />
+		</>
+	),
+	"IconImage",
+);
+
+/** Audio: a short wave. */
+export const IconWave = icon(
+	() => (
+		<>
+			<path d="M3.5 12h1.5" />
+			<path d="M7 8.5v7" />
+			<path d="M10.5 5.5v13" />
+			<path d="M14 8.5v7" />
+			<path d="M17.5 10.5v3" />
+			<path d="M20.5 12h0" />
+		</>
+	),
+	"IconWave",
+);

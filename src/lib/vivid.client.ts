@@ -1,6 +1,7 @@
 "use client";
 
 import { BACKEND_URL } from "@/const";
+import { sendFormProgress } from "@/lib/upload-direct";
 
 /**
  * The Vivid window's client: one streamed turn at a time against the
@@ -116,6 +117,8 @@ export async function streamVividTurn(input: {
 	context?: { web?: boolean; page?: string; postId?: string } | null;
 	/** Where the conversation is happening: the window, or the Vivid chat in Messages. */
 	surface?: "window" | "messages";
+	/** Files uploaded with uploadVividFile, at most five. */
+	attachments?: string[];
 	signal?: AbortSignal;
 	onEvent: (e: VividEvent) => void;
 }) {
@@ -134,6 +137,7 @@ export async function streamVividTurn(input: {
 				threadId: input.threadId ?? undefined,
 				context: input.context ?? undefined,
 				surface: input.surface ?? "window",
+				attachments: input.attachments?.length ? input.attachments : undefined,
 			}),
 			signal: input.signal,
 		});
@@ -238,3 +242,34 @@ export const vividApi = {
 		call<unknown>("POST", `/messages/${encodeURIComponent(messageId)}/feedback`, { value }),
 	usage: () => call<VividUsage>("GET", "/usage"),
 };
+
+/* ── files ───────────────────────────────────────────────────────────────── */
+
+/** A file Vivid has read (gateway vivid-attachments.service summaryOf). */
+export type VividFile = {
+	id: string;
+	kind: "pdf" | "docx" | "text" | "image" | "audio";
+	name: string;
+	chars: number;
+	truncated: boolean;
+	pages: number | null;
+	durationSec: number | null;
+};
+
+/** Upload one file for Vivid to read; the gateway extracts it before answering. */
+export async function uploadVividFile(
+	file: File,
+	opts: { durationSec?: number | null; onProgress?: (frac: number) => void; signal?: AbortSignal } = {},
+): Promise<{ ok: true; file: VividFile } | { ok: false; message: string; aborted?: boolean }> {
+	const fd = new FormData();
+	fd.append("file", file, file.name);
+	if (opts.durationSec) fd.append("durationSec", String(Math.round(opts.durationSec)));
+	const r = await sendFormProgress("/api/vivid/attachments", fd, { onProgress: opts.onProgress, signal: opts.signal });
+	if (!r.success) return { ok: false, message: r.message, aborted: r.aborted };
+	const data = r.data?.data ?? r.data;
+	if (!data?.id) return { ok: false, message: "That file couldn't be read." };
+	return { ok: true, file: data as VividFile };
+}
+
+/** Drop a file that was never sent. */
+export const deleteVividFile = (id: string) => call<unknown>("DELETE", `/attachments/${encodeURIComponent(id)}`);
