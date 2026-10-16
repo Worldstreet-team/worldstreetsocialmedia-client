@@ -208,6 +208,7 @@ export function ConversationList({
 	onOpenPerson,
 	heading,
 	banner,
+	pinned,
 	door,
 	onBack,
 	headerAside,
@@ -232,6 +233,9 @@ export function ConversationList({
 	/** A state that has announced itself, above the rows: the requests row
 	 *  (owner 2026-09-20). Nothing renders here when nothing is waiting. */
 	banner?: React.ReactNode;
+	/** A chat that is not a conversation, first under the banner: Vivid
+	 *  (plan P3, 2026-10-16). Hidden while a search is typed, like the banner. */
+	pinned?: React.ReactNode;
 	/** The archived shelf, at the TOP beside the banner (owner 2026-09-20).
 	 *  A shelf is a place, and places belong with the other places, not
 	 *  under the list they are not part of. */
@@ -426,6 +430,7 @@ export function ConversationList({
 						</div>
 					)}
 					{!query.trim() && banner}
+			{!query.trim() && pinned}
 					{!query.trim() && door}
 					{/* Rises when a shelf turns out empty; a search that finds
 					    nothing is typed, so that one cuts, and so does a line
@@ -466,6 +471,7 @@ export function ConversationList({
 			{/* A state, not a filter (owner 2026-09-20): it is here when
 			    something is waiting and absent when nothing is. */}
 			{!query.trim() && banner}
+			{!query.trim() && pinned}
 			{!query.trim() && door}
 			{/* Who is on, right inside the chats block: faces only, no header
 			    of its own (owner 2026-09-20). */}

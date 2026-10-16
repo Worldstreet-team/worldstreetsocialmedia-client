@@ -45,6 +45,7 @@ const MediaEditor = dynamic(() => import("@/components/editor/MediaEditor"), {
   ssr: false,
 });
 import { ConversationList, InboxThumb } from "./ConversationList";
+import { VividChat, VividInboxRow } from "@/components/vivid/VividChat";
 import { StoriesRail } from "@/components/feed/StoriesRail";
 import { GIPHY_KEY, GifPicker } from "./GifPicker";
 import { AnimatePresence, motion } from "framer-motion";
@@ -445,11 +446,21 @@ export const MessageBox = ({
 			}
 			return null;
 		});
+	/** Vivid's chat (plan P3, 2026-10-16): a pane of its own at
+	 *  /messages/vivid, pinned first in the inbox. It is not a Conversation,
+	 *  so none of the thread machinery runs for it. */
+	const [vividOpen, setVividOpen] = useState(initialConversationId === "vivid");
 	// The thread opens/closes with shallow pushStates, so browser
 	// back/forward only change the address bar — this maps the URL back
 	// onto thread state.
 	useEffect(() => {
 		const onPop = () => {
+			const vivid = /\/messages\/vivid\/?$/.test(window.location.pathname);
+			setVividOpen(vivid);
+			if (vivid) {
+				setActiveConversation(null);
+				return;
+			}
       const m = window.location.pathname.match(/\/messages\/([a-f0-9]{24})/i);
 			if (!m) {
 				setActiveConversation(null);
@@ -477,7 +488,7 @@ export const MessageBox = ({
 		window.location.pathname.replace(/\/messages(\/.*)?$/, "/messages");
 	const openThreadShallow = (id: string) => {
 		const url = `${inboxUrl()}/${id}`;
-		const inChat = /\/messages\/[a-f0-9]{24}/i.test(window.location.pathname);
+		const inChat = /\/messages\/([a-f0-9]{24}|vivid)/i.test(window.location.pathname);
 		if (inChat) {
 			const fromInbox = Boolean(window.history.state?.wsFromInbox);
 			window.history.replaceState({ wsChat: id, wsFromInbox: fromInbox }, "", url);
@@ -487,9 +498,26 @@ export const MessageBox = ({
 	};
 	const closeThreadShallow = () => {
 		setActiveConversation(null);
+		setVividOpen(false);
 		if (window.history.state?.wsFromInbox) window.history.back();
 		else window.history.replaceState({}, "", inboxUrl());
 	};
+	/** Open Vivid's chat the way a thread opens: one inbox-marked entry. */
+	const openVivid = () => {
+		setActiveConversation(null);
+		setVividOpen(true);
+		const url = `${inboxUrl()}/vivid`;
+		if (/\/messages\/([a-f0-9]{24}|vivid)/i.test(window.location.pathname)) {
+			const fromInbox = Boolean(window.history.state?.wsFromInbox);
+			window.history.replaceState({ wsChat: "vivid", wsFromInbox: fromInbox }, "", url);
+		} else {
+			window.history.pushState({ wsChat: "vivid", wsFromInbox: true }, "", url);
+		}
+	};
+	// Opening any real chat closes Vivid's.
+	useEffect(() => {
+		if (activeConversation) setVividOpen(false);
+	}, [activeConversation]);
 	const [messageCache, setMessageCache] = useAtom(messageCacheAtom);
 	const setUnreadMessages = useSetAtom(unreadMessagesCountAtom);
 	const setActiveConversationId = useSetAtom(activeConversationIdAtom);
@@ -3052,6 +3080,7 @@ export const MessageBox = ({
 						/>
 					)}
 					<ConversationList
+						pinned={inboxTab === "primary" ? <VividInboxRow active={vividOpen} onOpen={openVivid} /> : null}
 						banner={
 							inboxTab === "primary" && (requestConversations.length > 0 || askingTotal > 0) ? (
 								<motion.button
@@ -3199,7 +3228,15 @@ export const MessageBox = ({
 			    positioned ancestor; static let it resolve against the whole
 			    MessageBox and paint over the inbox list. */}
 			<AnimatePresence initial={false}>
-			{activeConversation ? (
+			{vividOpen ? (
+				<motion.div
+					key="vivid"
+					{...threadSlide}
+					className="absolute inset-0 z-10 flex min-w-0 flex-col p-0 md:relative md:inset-auto md:z-auto md:flex-1 md:border-l md:border-hairline md:p-3"
+				>
+					<VividChat onBack={closeThreadShallow} />
+				</motion.div>
+			) : activeConversation ? (
 				<motion.div
 					key={activeConversation._id}
 					{...threadSlide}

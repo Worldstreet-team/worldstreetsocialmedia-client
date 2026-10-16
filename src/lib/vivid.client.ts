@@ -86,6 +86,8 @@ export async function streamVividTurn(input: {
 	threadId?: string | null;
 	/** `web`: the composer's "Search the web" is on. `page`: where they asked from. */
 	context?: { web?: boolean; page?: string; postId?: string } | null;
+	/** Where the conversation is happening: the window, or the Vivid chat in Messages. */
+	surface?: "window" | "messages";
 	signal?: AbortSignal;
 	onEvent: (e: VividEvent) => void;
 }) {
@@ -103,6 +105,7 @@ export async function streamVividTurn(input: {
 				text: input.text,
 				threadId: input.threadId ?? undefined,
 				context: input.context ?? undefined,
+				surface: input.surface ?? "window",
 			}),
 			signal: input.signal,
 		});

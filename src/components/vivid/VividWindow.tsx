@@ -152,15 +152,26 @@ function fromStored(m: VividStoredMessage, ask?: string): Turn {
 	};
 }
 
-export function VividWindow() {
+/** "Good afternoon, Ada", by the clock on this device. */
+export function useGreeting() {
 	const user = useAtomValue(userAtom);
+	const h = new Date().getHours();
+	const part = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+	return user?.firstName ? `${part}, ${user.firstName}` : part;
+}
+
+/**
+ * One Vivid conversation: the turns, the composer's text, streaming, history
+ * and the plan. The window (/vivid) and the Vivid chat in Messages both run
+ * on it, so a thread started in one carries on in the other.
+ * `scroller` is the element the conversation scrolls in.
+ */
+export function useVividChat(opts: { surface: "window" | "messages"; scroller: () => HTMLElement | null }) {
 	const [turns, setTurns] = useState<Turn[]>([]);
 	const [input, setInput] = useState("");
 	const [busy, setBusy] = useState(false);
 	const [threadId, setThreadId] = useState<string | null>(null);
 	const [web, setWeb] = useState(false);
-	const [voiceOpen, setVoiceOpen] = useState(false);
-	const [historyOpen, setHistoryOpen] = useState(false);
 	/** The WorldStreet Vivid plan: false shows Subscribe; null is unknown. */
 	const [plan, setPlan] = useState<{ entitled: boolean | null; url: string }>({
 		entitled: null,
@@ -170,12 +181,8 @@ export function VividWindow() {
 	const inputRef = useRef<HTMLTextAreaElement>(null);
 	/** Follow the answer down only while the reader is at the bottom. */
 	const stickRef = useRef(true);
-
-	const greeting = (() => {
-		const h = new Date().getHours();
-		const part = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
-		return user?.firstName ? `${part}, ${user.firstName}` : part;
-	})();
+	const scrollerRef = useRef(opts.scroller);
+	scrollerRef.current = opts.scroller;
 
 	useEffect(() => {
 		void vividApi.usage().then((r) => {
@@ -184,7 +191,7 @@ export function VividWindow() {
 	}, []);
 
 	useEffect(() => {
-		const el = scroller();
+		const el = scrollerRef.current();
 		if (!el) return;
 		const onScroll = () => {
 			stickRef.current = el.scrollTop + el.clientHeight >= el.scrollHeight - 96;
@@ -195,7 +202,7 @@ export function VividWindow() {
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: follow the thread as it grows
 	useLayoutEffect(() => {
-		const el = scroller();
+		const el = scrollerRef.current();
 		if (el && stickRef.current) el.scrollTop = el.scrollHeight;
 	}, [turns]);
 
@@ -220,6 +227,7 @@ export function VividWindow() {
 			await streamVividTurn({
 				text: q,
 				threadId,
+				surface: opts.surface,
 				context: web ? { web: true } : null,
 				signal: ac.signal,
 				onEvent: (e: VividEvent) => {
@@ -247,36 +255,40 @@ export function VividWindow() {
 			setBusy(false);
 			return answer;
 		},
-		[busy, threadId, web],
+		[busy, threadId, web, opts.surface],
 	);
 
-	const stop = () => abortRef.current?.abort();
-	const newChat = () => {
-		stop();
+	const stop = useCallback(() => abortRef.current?.abort(), []);
+	const newChat = useCallback(() => {
+		abortRef.current?.abort();
 		setTurns([]);
 		setThreadId(null);
 		setInput("");
 		inputRef.current?.focus();
-	};
+	}, []);
 
-	const openThread = async (row: VividThreadRow) => {
-		setHistoryOpen(false);
-		if (row._id === threadId) return;
-		stop();
-		const r = await vividApi.thread(row._id);
-		if (!r.ok) return;
-		let ask: string | undefined;
-		const mapped: Turn[] = [];
-		for (const m of r.data.messages) {
-			if (m.role === "user") ask = m.content;
-			mapped.push(fromStored(m, ask));
-		}
-		stickRef.current = true;
-		setThreadId(row._id);
-		setTurns(mapped);
-	};
+	/** Load a past conversation; false when it couldn't be read. */
+	const openThread = useCallback(
+		async (id: string): Promise<boolean> => {
+			if (id === threadId) return true;
+			abortRef.current?.abort();
+			const r = await vividApi.thread(id);
+			if (!r.ok) return false;
+			let ask: string | undefined;
+			const mapped: Turn[] = [];
+			for (const m of r.data.messages) {
+				if (m.role === "user") ask = m.content;
+				mapped.push(fromStored(m, ask));
+			}
+			stickRef.current = true;
+			setThreadId(id);
+			setTurns(mapped);
+			return true;
+		},
+		[threadId],
+	);
 
-	const fillComposer = (text: string) => {
+	const fillComposer = useCallback((text: string) => {
 		setInput(text);
 		requestAnimationFrame(() => {
 			const el = inputRef.current;
@@ -284,9 +296,65 @@ export function VividWindow() {
 			el.focus();
 			el.setSelectionRange(text.length, text.length);
 		});
-	};
+	}, []);
 
-	const empty = turns.length === 0;
+	const rate = useCallback((t: Turn, v: "up" | "down" | null) => {
+		setTurns((all) => all.map((x) => (x.id === t.id ? { ...x, feedback: v } : x)));
+		if (t.messageId) void vividApi.feedback(t.messageId, v);
+	}, []);
+
+	return { turns, input, setInput, busy, threadId, web, setWeb, plan, inputRef, send, stop, newChat, openThread, fillComposer, rate };
+}
+
+export type VividChatState = ReturnType<typeof useVividChat>;
+
+/** The conversation itself: questions and Vivid's answers, as a column. */
+export function VividTurns({ chat, className }: { chat: VividChatState; className?: string }) {
+	return (
+		<div className={className}>
+			{chat.turns.map((t) =>
+				t.role === "user" ? (
+					<UserTurn key={t.id} turn={t} />
+				) : (
+					<VividAnswer
+						key={t.id}
+						turn={t}
+						subscribeUrl={chat.plan.entitled === false ? chat.plan.url : undefined}
+						onRetry={t.ask && !chat.busy ? () => void chat.send(t.ask as string) : undefined}
+						onFeedback={(v) => chat.rate(t, v)}
+					/>
+				),
+			)}
+		</div>
+	);
+}
+
+/** The quick starts under an empty composer: some fill it in, one just asks. */
+export function QuickStarts({ chat, className }: { chat: VividChatState; className?: string }) {
+	return (
+		<motion.div variants={staggerParent} initial="hidden" animate="show" className={className}>
+			{STARTS.map((s) => (
+				<motion.button
+					key={s.label}
+					type="button"
+					variants={staggerItem}
+					onClick={() => (s.ask ? void chat.send(s.ask) : chat.fillComposer(s.fill ?? ""))}
+					className="flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-pill bg-primary/5 px-4 font-sans text-[calc(13.5px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/10"
+				>
+					<s.icon size={17} className="text-muted" />
+					{s.label}
+				</motion.button>
+			))}
+		</motion.div>
+	);
+}
+
+export function VividWindow() {
+	const greeting = useGreeting();
+	const chat = useVividChat({ surface: "window", scroller });
+	const [voiceOpen, setVoiceOpen] = useState(false);
+	const [historyOpen, setHistoryOpen] = useState(false);
+	const empty = chat.turns.length === 0;
 
 	return (
 		// The window takes the right rail's space too (MainShell fullCanvas) and
@@ -298,11 +366,11 @@ export function VividWindow() {
 					<I.IconHistory size={20} />
 				</IconButton>
 				<div className="flex items-center gap-2 pl-1">
-					<VividOrb size={22} speed={busy ? 1.6 : 0.6} />
+					<VividOrb size={22} speed={chat.busy ? 1.6 : 0.6} />
 					<h1 className="font-display text-[calc(16px*var(--ws-fs))] font-semibold text-primary">Vivid</h1>
 				</div>
 				<span className="flex-1" />
-				<IconButton label="New chat" onClick={newChat} disabled={empty}>
+				<IconButton label="New chat" onClick={chat.newChat} disabled={empty}>
 					<I.IconCompose size={20} />
 				</IconButton>
 			</header>
@@ -317,24 +385,7 @@ export function VividWindow() {
 					</h2>
 				</div>
 			) : (
-				<div className="flex flex-1 flex-col gap-9 px-4 pt-3 pb-8 sm:px-6">
-					{turns.map((t) =>
-						t.role === "user" ? (
-							<UserTurn key={t.id} turn={t} />
-						) : (
-							<VividAnswer
-								key={t.id}
-								turn={t}
-								subscribeUrl={plan.entitled === false ? plan.url : undefined}
-								onRetry={t.ask && !busy ? () => void send(t.ask as string) : undefined}
-								onFeedback={(v) => {
-									setTurns((all) => all.map((x) => (x.id === t.id ? { ...x, feedback: v } : x)));
-									if (t.messageId) void vividApi.feedback(t.messageId, v);
-								}}
-							/>
-						),
-					)}
-				</div>
+				<VividTurns chat={chat} className="flex flex-1 flex-col gap-9 px-4 pt-3 pb-8 sm:px-6" />
 			)}
 
 			{/* One composer for the whole life of the window: it sits in the
@@ -349,47 +400,40 @@ export function VividWindow() {
 				)}
 			>
 				<AnimatePresence initial={false}>
-					{plan.entitled === false && <PlanBar key="plan" url={plan.url} />}
+					{chat.plan.entitled === false && <PlanBar key="plan" url={chat.plan.url} />}
 				</AnimatePresence>
 				<Composer
-					inputRef={inputRef}
-					value={input}
-					onChange={setInput}
-					onSend={() => void send(input)}
-					onStop={stop}
+					inputRef={chat.inputRef}
+					value={chat.input}
+					onChange={chat.setInput}
+					onSend={() => void chat.send(chat.input)}
+					onStop={chat.stop}
 					onVoice={() => setVoiceOpen(true)}
-					busy={busy}
-					web={web}
-					onWeb={() => setWeb((w) => !w)}
+					busy={chat.busy}
+					web={chat.web}
+					onWeb={() => chat.setWeb((w) => !w)}
 					hero={empty}
 				/>
 				{empty && (
-					<motion.div
-						variants={staggerParent}
-						initial="hidden"
-						animate="show"
+					<QuickStarts
+						chat={chat}
 						className="-mx-3 mt-3 flex gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none] sm:flex-wrap sm:justify-center sm:overflow-visible [&::-webkit-scrollbar]:hidden"
-					>
-						{STARTS.map((s) => (
-							<motion.button
-								key={s.label}
-								type="button"
-								variants={staggerItem}
-								onClick={() => (s.ask ? void send(s.ask) : fillComposer(s.fill ?? ""))}
-								className="flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-pill bg-primary/5 px-4 font-sans text-[calc(13.5px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/10"
-							>
-								<s.icon size={17} className="text-muted" />
-								{s.label}
-							</motion.button>
-						))}
-					</motion.div>
+					/>
 				)}
 			</motion.div>
 			{/* Below the composer, so it sits in the middle while empty. */}
 			{empty && <div className="flex-[1.2]" />}
 
-			<HistorySheet open={historyOpen} current={threadId} onClose={() => setHistoryOpen(false)} onOpen={openThread} />
-			<AnimatePresence>{voiceOpen && <VoiceMode key="voice" onClose={() => setVoiceOpen(false)} send={send} />}</AnimatePresence>
+			<HistorySheet
+				open={historyOpen}
+				current={chat.threadId}
+				onClose={() => setHistoryOpen(false)}
+				onOpen={(row) => {
+					setHistoryOpen(false);
+					void chat.openThread(row._id);
+				}}
+			/>
+			<AnimatePresence>{voiceOpen && <VoiceMode key="voice" onClose={() => setVoiceOpen(false)} send={chat.send} />}</AnimatePresence>
 		</div>
 	);
 }
@@ -401,7 +445,7 @@ export function VividWindow() {
  * plan). Without it Vivid still talks, the way the hub's locked chat does;
  * this says what the plan adds and where to get it, once, above the composer.
  */
-function PlanBar({ url }: { url: string }) {
+export function PlanBar({ url }: { url: string }) {
 	return (
 		<motion.div
 			initial={{ opacity: 0, y: 6 }}
@@ -426,7 +470,7 @@ function PlanBar({ url }: { url: string }) {
 	);
 }
 
-function IconButton({
+export function IconButton({
 	label,
 	onClick,
 	disabled,
@@ -456,7 +500,7 @@ function IconButton({
 	);
 }
 
-function Composer({
+export function Composer({
 	inputRef,
 	value,
 	onChange,
@@ -564,7 +608,7 @@ function Composer({
 	);
 }
 
-function UserTurn({ turn }: { turn: Turn }) {
+export function UserTurn({ turn }: { turn: Turn }) {
 	return (
 		<motion.div
 			initial={{ opacity: 0, y: 8 }}
@@ -578,7 +622,7 @@ function UserTurn({ turn }: { turn: Turn }) {
 	);
 }
 
-function VividAnswer({
+export function VividAnswer({
 	turn,
 	onRetry,
 	onFeedback,
@@ -1100,7 +1144,7 @@ function OpenCard({ card, streaming }: { card: LiveCard & { kind: "open" }; stre
 
 /* ── history ────────────────────────────────────────────────────────────── */
 
-function HistorySheet({
+export function HistorySheet({
 	open,
 	current,
 	onClose,
@@ -1207,7 +1251,7 @@ type VoiceState = "listening" | "thinking" | "speaking" | "idle" | "unsupported"
  * goes through the same harness, and the answer is spoken back with speech
  * synthesis, then it listens again. Captions show what's being said.
  */
-function VoiceMode({ onClose, send }: { onClose: () => void; send: (t: string) => Promise<string> }) {
+export function VoiceMode({ onClose, send }: { onClose: () => void; send: (t: string) => Promise<string> }) {
 	const [state, setState] = useState<VoiceState>("idle");
 	const [caption, setCaption] = useState("");
 	const [muted, setMuted] = useState(false);
