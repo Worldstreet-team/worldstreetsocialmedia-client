@@ -4,7 +4,7 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { userAtom } from "@/store/user.atom";
 import { useClerk } from "@clerk/nextjs";
 import { useAppPathname } from "@/i18n/useAppPathname";
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -31,6 +31,7 @@ import { LanguageMenu } from "@/components/ui/LanguageMenu";
 import { useT } from "@/i18n/client";
 
 import { BrandRitual } from "@/components/layout/BrandRitual";
+import { ProductsWheel } from "@/components/layout/products/ProductsWheel";
 import { SidebarWallet } from "@/components/layout/SidebarWallet";
 import {
 	OverlayHeader,
@@ -62,6 +63,9 @@ export function MobileNavigation() {
 	const [isOpen, setIsOpen] = useState(false);
 	const [langOpen, setLangOpen] = useState(false);
 	const [productsOpen, setProductsOpen] = useState(false);
+	// The Products row: where the wheel's blur spreads from.
+	const productsRow = useRef<HTMLButtonElement>(null);
+	const closeProducts = useCallback(() => setProductsOpen(false), []);
 	const setSearchOpen = useSetAtom(searchOpenAtom);
 	useEffect(() => setMounted(true), []);
 	const isLight = mounted && resolvedTheme === "light";
@@ -258,51 +262,23 @@ export function MobileNavigation() {
 											: "text-muted hover:text-primary hover:bg-primary/5",
 									);
 
-								// The Products entry is a disclosure over the ecosystem
-								// links, not a route — href="#" renders an inert row.
+								// The Products entry opens the wheel of apps (owner
+								// 2026-10-16: "let mobile have its own animation too").
 								if (item.isDropdown) {
 									return (
 										<motion.div key={item.labelKey} variants={staggerItem}>
 											<button
+												ref={productsRow}
 												type="button"
-												onClick={() => setProductsOpen((v) => !v)}
+												onClick={() => setProductsOpen(true)}
+												aria-haspopup="dialog"
 												aria-expanded={productsOpen}
 												className={clsx(rowClasses(false), "w-full cursor-pointer")}
 											>
 												<item.icon isActive={false} />
 												<span className="flex-1 text-left">{t(item.labelKey)}</span>
-												<CaretDown
-													size={14}
-													className={clsx(
-														"transition-transform",
-														productsOpen && "rotate-180",
-													)}
-												/>
 											</button>
-											{/* Opens with height like the desktop rail's
-											    disclosure, instead of shoving the rows below. */}
-											<AnimatePresence initial={false}>
-												{productsOpen && (
-													<motion.div
-														key="products"
-														{...collapse}
-														className="overflow-hidden"
-													>
-														{item.dropdownItems?.map((product) => (
-															<a
-																key={product.title}
-																href={product.link}
-																target="_blank"
-																rel="noopener noreferrer"
-																className="flex items-center gap-2 pl-[52px] pr-4 py-2.5 rounded-pill text-muted hover:text-primary hover:bg-primary/5 transition-colors font-sans text-sm"
-															>
-																{product.title}
-																<ArrowUpRight size={13} />
-															</a>
-														))}
-													</motion.div>
-												)}
-											</AnimatePresence>
+											<ProductsWheel origin={productsRow} open={productsOpen} onClose={closeProducts} />
 										</motion.div>
 									);
 								}

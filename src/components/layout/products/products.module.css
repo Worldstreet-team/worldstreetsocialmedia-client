@@ -1,67 +1,39 @@
 /*
- * The Products dial (ProductsOrbit.tsx): the glass, and the hub glyph's
- * paints (product-scenes.ts).
- *
- * The glass is ONE element: the blur, the fill and the clip-path that the
- * morph draws all sit on it. Nothing above it in the tree may carry an
- * opacity, filter, mask or clip-path, or the browser stops blurring the page
- * at that ancestor and the glass turns into a flat tint (what the first
- * orbit did: its clip-path reveal lived on the parent).
+ * The Products dial (ProductsOrbit.tsx) and its phone sheet
+ * (EcosystemSheet.tsx): the blurred backdrop, and the hub glyph's paints
+ * (product-scenes.ts).
  */
 
-.glass {
-	/* Neutral, never stone (black theme rule), and light enough that the
-	   blur shows: over a black page the glass is the only light there is. */
-	--pd-fill: rgb(38 38 38 / 0.5);
-	background: var(--pd-fill);
-	-webkit-backdrop-filter: blur(30px) saturate(180%) brightness(1.12);
-	backdrop-filter: blur(30px) saturate(180%) brightness(1.12);
+/* The page behind goes soft (owner 2026-10-16: "blur background"). The blur
+   is on this element alone, revealed by a clip-path circle that grows out of
+   the Products button; nothing above it may carry an opacity, filter, mask
+   or clip-path, or the browser stops blurring at that ancestor. */
+.backdrop {
+	/* Dim enough that a black card (a video's letterbox) blends into the
+	   page under the blur instead of reading as a box. */
+	background: rgb(0 0 0 / 0.5);
+	-webkit-backdrop-filter: blur(20px) saturate(140%);
+	backdrop-filter: blur(20px) saturate(140%);
 }
-html[data-ws-theme="platform-light"] .glass {
-	--pd-fill: rgb(255 255 255 / 0.56);
-	-webkit-backdrop-filter: blur(30px) saturate(180%);
-	backdrop-filter: blur(30px) saturate(180%);
-}
-
-/* A hairline on the glass's edge, so the shape reads over anything. */
-.edge {
-	fill: none;
-	stroke: color-mix(in srgb, var(--ws-text-primary) 18%, transparent);
-	stroke-width: 1px;
-}
-
-/* The shadow is the same path, blurred, under the glass: a sibling, never
-   a filter on an ancestor. */
-.shade {
-	fill: rgb(0 0 0 / 0.5);
-	filter: blur(26px);
-	transform: translateY(10px);
-}
-html[data-ws-theme="platform-light"] .shade {
-	fill: rgb(26 43 66 / 0.18);
-}
-
-/* The arc the apps ride. */
-.track {
-	fill: none;
-	stroke: color-mix(in srgb, var(--ws-text-primary) 9%, transparent);
-	stroke-width: 1px;
+html[data-ws-theme="platform-light"] .backdrop {
+	background: rgb(255 255 255 / 0.46);
 }
 
 /* ---- the hub glyph: StateArt's contract. Every paint names fill, stroke,
    width and dashes, never `none`, so the driver can blend any paint into
-   any other mid-morph; at rest the class IS the paint. Tokens only. ---- */
+   any other mid-morph; at rest the class IS the paint. The marks keep their
+   own colours (WorldStreet gold, the chilli and its flames): a logo is a
+   literal, like the verified tick. ---- */
 
 .art {
 	--pg-ink: var(--ws-text-primary);
 	--pg-brand: var(--ws-brand-primary);
 	--pg-tone: color-mix(in srgb, var(--ws-text-primary) 20%, transparent);
-	--pg-disc: color-mix(in srgb, var(--ws-text-primary) 6%, transparent);
+	--pg-faint: color-mix(in srgb, var(--ws-text-primary) 42%, transparent);
 	overflow: visible;
 }
 html[data-ws-theme="platform-light"] .art {
 	--pg-brand: color-mix(in srgb, var(--ws-brand-primary) 78%, var(--ws-text-primary));
-	--pg-disc: color-mix(in srgb, var(--ws-text-primary) 5%, transparent);
 }
 
 .path {
@@ -69,12 +41,6 @@ html[data-ws-theme="platform-light"] .art {
 	stroke-linejoin: round;
 }
 
-.disc {
-	fill: var(--pg-disc);
-	stroke: transparent;
-	stroke-width: 3.2px;
-	stroke-dasharray: 1 0;
-}
 .tone {
 	fill: var(--pg-tone);
 	stroke: transparent;
@@ -93,10 +59,52 @@ html[data-ws-theme="platform-light"] .art {
 	stroke-width: 0.01px;
 	stroke-dasharray: 1 0;
 }
+.faint {
+	fill: var(--pg-faint);
+	stroke: var(--pg-faint);
+	stroke-width: 0.01px;
+	stroke-dasharray: 1 0;
+}
 .hi {
 	fill: transparent;
 	stroke: var(--pg-brand);
 	stroke-width: 3.2px;
+	stroke-dasharray: 1 0;
+}
+.gold {
+	fill: #ffc72c;
+	stroke: #ffc72c;
+	stroke-width: 0.01px;
+	stroke-dasharray: 1 0;
+}
+.chilli {
+	fill: #e5261b;
+	stroke: #e5261b;
+	stroke-width: 0.01px;
+	stroke-dasharray: 1 0;
+}
+.flame {
+	fill: #ff5e1a;
+	stroke: #ff5e1a;
+	stroke-width: 0.01px;
+	stroke-dasharray: 1 0;
+}
+.flame2 {
+	fill: #ff8a1f;
+	stroke: #ff8a1f;
+	stroke-width: 0.01px;
+	stroke-dasharray: 1 0;
+}
+.ember {
+	fill: #ffb21f;
+	stroke: #ffb21f;
+	stroke-width: 0.01px;
+	stroke-dasharray: 1 0;
+}
+.stem {
+	fill: transparent;
+	stroke: #3e9e48;
+	stroke-width: 4px;
 	stroke-dasharray: 1 0;
 }
 
