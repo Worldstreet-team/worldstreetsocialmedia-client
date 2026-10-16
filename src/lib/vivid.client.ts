@@ -29,7 +29,22 @@ export type VividCard =
 			status: "pending" | "done" | "cancelled" | "expired" | "failed";
 			expiresAt?: string;
 	  }
-	| { kind: "open"; tool: string; summary: string; intent: VividIntent };
+	| { kind: "open"; tool: string; summary: string; intent: VividIntent }
+	| { kind: "meeting"; meeting: VividMeeting };
+
+/** A WorldMeet recap (gateway tools.ts meetingCard). */
+export type VividMeeting = {
+	id: string;
+	title: string;
+	recordedAt: string | null;
+	durationMin: number;
+	people: { name: string; avatar: string | null }[];
+	summary: string;
+	actions: { text: string; owner: string | null; done: boolean }[];
+	chapters: string[];
+	status: string;
+	url: string;
+};
 
 /** A post someone sent to Vivid ("Ask Vivid" on a post): what its card draws. */
 export type VividPostRef = {
@@ -47,6 +62,9 @@ export type VividPreview = {
 	title?: string;
 	startsAt?: string | null;
 	person?: { id: string; username: string; name: string; avatar: string | null; isVerified?: boolean };
+	/** start_meeting: the group the link goes to. */
+	group?: string;
+	members?: number | null;
 	post?: { id: string; text: string; author: string | null };
 	poll?: { options: string[] } | null;
 	[key: string]: unknown;

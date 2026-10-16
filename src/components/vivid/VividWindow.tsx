@@ -109,6 +109,9 @@ const TOOL_ICON: Record<string, Icon> = {
 	open_page: I.IconArrowOut,
 	set_appearance: I.IconContrast,
 	open_linked_app: I.IconApps,
+	my_meetings: I.IconVideo,
+	meeting_details: I.IconVideo,
+	start_meeting: I.IconVideo,
 };
 const toolIcon = (name: string): Icon => TOOL_ICON[name] ?? I.IconSpark;
 
@@ -122,6 +125,7 @@ const DRAFT_LABEL: Record<string, string> = {
 	bookmark: "Bookmark",
 	schedule_space: "Space",
 	message_someone: "Message",
+	start_meeting: "WorldMeet",
 };
 
 /** Quick starts under the empty composer: some fill it in, one just asks. Five, so they sit on one row. */
@@ -941,6 +945,7 @@ function CardView({ card, past, streaming }: { card: LiveCard; past?: boolean; s
 			</div>
 		);
 	if (card.kind === "confirm") return <DraftCard card={card} past={past} />;
+	if (card.kind === "meeting") return <MeetingCard meeting={card.meeting} />;
 	if (card.kind === "open") return <OpenCard card={card} streaming={!!streaming} />;
 	return null;
 }
@@ -973,7 +978,9 @@ function DraftCard({ card, past }: { card: Extract<VividCard, { kind: "confirm" 
 			)
 		: null;
 	const resultHref =
-		typeof result?.postId === "string"
+		typeof result?.link === "string"
+			? (result.link as string)
+			: typeof result?.postId === "string"
 			? `/post/${result.postId}`
 			: typeof result?.spaceId === "string" && result.spaceId
 				? `/voice?space=${result.spaceId}`
@@ -1015,6 +1022,20 @@ function DraftCard({ card, past }: { card: Extract<VividCard, { kind: "confirm" 
 						<p className="line-clamp-3 font-sans text-[calc(13.5px*var(--ws-fs))] text-muted">{pv.post.text}</p>
 					</div>
 				)}
+				{card.tool === "start_meeting" && pv.group && (
+					<div className="flex items-center gap-3">
+						<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/[0.07] text-primary">
+							<I.IconVideo size={19} />
+						</span>
+						<span className="flex min-w-0 flex-col">
+							<span className="truncate font-sans text-[calc(15px*var(--ws-fs))] font-semibold text-primary">{pv.title || pv.group}</span>
+							<span className="font-sans text-[calc(13px*var(--ws-fs))] text-muted">
+								Starts now · the link goes to {pv.group}
+								{pv.members ? ` (${pv.members} people)` : ""}
+							</span>
+						</span>
+					</div>
+				)}
 				{pv.title && card.tool === "schedule_space" && (
 					<div className="flex items-center gap-3">
 						<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/[0.07] text-primary">
@@ -1026,7 +1047,7 @@ function DraftCard({ card, past }: { card: Extract<VividCard, { kind: "confirm" 
 						</span>
 					</div>
 				)}
-				{!pv.person && !pv.text && !pv.post && !pv.title && (
+				{!pv.person && !pv.text && !pv.post && !pv.title && !pv.group && (
 					<p className="font-sans text-[calc(14.5px*var(--ws-fs))] text-primary">{card.summary}</p>
 				)}
 			</div>
@@ -1034,11 +1055,21 @@ function DraftCard({ card, past }: { card: Extract<VividCard, { kind: "confirm" 
 				{state === "done" ? (
 					<span className="flex items-center gap-1.5 px-1 font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-success">
 						<I.IconCheck size={16} strokeWidth={2.2} /> Done
-						{resultHref && (
-							<Link href={resultHref} className="ml-2 font-medium text-primary underline decoration-primary/30 underline-offset-[3px]">
-								View
-							</Link>
-						)}
+						{resultHref &&
+							(resultHref.startsWith("http") ? (
+								<a
+									href={resultHref}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="ml-2 font-medium text-primary underline decoration-primary/30 underline-offset-[3px]"
+								>
+									Join
+								</a>
+							) : (
+								<Link href={resultHref} className="ml-2 font-medium text-primary underline decoration-primary/30 underline-offset-[3px]">
+									View
+								</Link>
+							))}
 					</span>
 				) : state === "cancelled" ? (
 					<span className="px-1 font-sans text-[calc(13.5px*var(--ws-fs))] text-muted">Cancelled</span>
@@ -1157,6 +1188,71 @@ function OpenCard({ card, streaming }: { card: LiveCard & { kind: "open" }; stre
 					Open
 				</motion.button>
 			)}
+		</div>
+	);
+}
+
+/** A WorldMeet recap: what was said, what was agreed, who is doing what. */
+function MeetingCard({ meeting: m }: { meeting: import("@/lib/vivid.client").VividMeeting }) {
+	const when = m.recordedAt
+		? new Intl.DateTimeFormat(undefined, { weekday: "short", day: "numeric", month: "short" }).format(new Date(m.recordedAt))
+		: null;
+	const meta = [when, m.durationMin ? `${m.durationMin} min` : null, m.people.length ? `${m.people.length} people` : null]
+		.filter(Boolean)
+		.join(" · ");
+	return (
+		<div className={clsx(cardBox, "flex flex-col gap-3 px-4 py-3.5")}>
+			<div className="flex items-center gap-2 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-muted">
+				<I.IconVideo size={15} strokeWidth={2} />
+				WorldMeet
+				{meta && <span className="font-normal text-subtle">· {meta}</span>}
+			</div>
+			<p className="font-sans text-[calc(15.5px*var(--ws-fs))] font-semibold text-primary">{m.title}</p>
+			{m.status !== "ready" && !m.summary ? (
+				<p className="font-sans text-[calc(14px*var(--ws-fs))] text-muted">The notes are still being written. They usually land a minute after the call ends.</p>
+			) : (
+				m.summary && <p className="font-sans text-[calc(14px*var(--ws-fs))] leading-relaxed text-muted">{m.summary}</p>
+			)}
+			{m.actions.length > 0 && (
+				<ul className="flex flex-col gap-1.5">
+					{m.actions.map((a, i) => (
+						// biome-ignore lint/suspicious/noArrayIndexKey: action items have no identity beyond their place
+						<li key={i} className="flex items-start gap-2.5 font-sans text-[calc(14px*var(--ws-fs))] text-primary">
+							<span
+								className={clsx(
+									"mt-[3px] flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] ring-1",
+									a.done ? "bg-primary text-page ring-primary" : "ring-primary/30",
+								)}
+							>
+								{a.done && <I.IconCheck size={12} strokeWidth={2.6} />}
+							</span>
+							<span className={clsx("min-w-0", a.done && "text-muted line-through decoration-primary/30")}>
+								{a.text}
+								{a.owner && <span className="text-subtle"> · {a.owner}</span>}
+							</span>
+						</li>
+					))}
+				</ul>
+			)}
+			<div className="flex items-center gap-3 pt-0.5">
+				<span className="flex -space-x-2">
+					{m.people.slice(0, 5).map((p) => (
+						<span key={p.name} title={p.name} className="relative h-7 w-7 overflow-hidden rounded-full bg-raised ring-2 ring-surface">
+							<SafeAvatar src={p.avatar} className="object-cover" eager />
+						</span>
+					))}
+				</span>
+				<span className="flex-1" />
+				<a
+					href={m.url}
+					target="_blank"
+					rel="noopener noreferrer"
+					className="flex h-9 items-center gap-1.5 rounded-pill bg-primary/[0.07] px-3.5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary hover:bg-primary/[0.12]"
+				>
+					Open notes
+					<I.IconArrowOut size={14} strokeWidth={2} />
+				</a>
+			</div>
 		</div>
 	);
 }

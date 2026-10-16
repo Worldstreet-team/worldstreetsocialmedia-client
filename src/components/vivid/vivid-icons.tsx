@@ -423,3 +423,14 @@ export const IconApps = icon(
 	),
 	"IconApps",
 );
+
+/** WorldMeet: a video camera. */
+export const IconVideo = icon(
+	() => (
+		<>
+			<rect x="3.5" y="6.5" width="12.5" height="11" rx="2.8" />
+			<path d="M16 10.4 20.5 8v8L16 13.6" />
+		</>
+	),
+	"IconVideo",
+);
