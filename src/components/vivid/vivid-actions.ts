@@ -39,7 +39,7 @@ import {
  */
 
 /** Routes an open_page intent may go to: the app's own pages, nothing else. */
-const SAFE_ROUTE = /^\/(?:$|explore|notifications|messages|bookmarks|voice|votes|communities|studio|live|vivid|settings(?:\/[a-z-]+)?(?:#group-[a-z-]+)?|profile\/[A-Za-z0-9_.]{1,40})(?:[?#].*)?$/;
+const SAFE_ROUTE = /^\/(?:$|explore|notifications|messages|bookmarks|voice|votes|communities|studio|live|vivid|bm|settings(?:\/[a-z-]+)?(?:#group-[a-z-]+)?|profile\/[A-Za-z0-9_.]{1,40})(?:[?#].*)?$/;
 
 const TEXT_SCALES: TextScale[] = ["auto", 90, 100, 110, 115, 125, 150, 175];
 

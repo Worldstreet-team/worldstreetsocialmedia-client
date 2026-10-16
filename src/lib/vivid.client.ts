@@ -114,9 +114,9 @@ export async function streamVividTurn(input: {
 	text: string;
 	threadId?: string | null;
 	/** `web`: the composer's "Search the web" is on. `page`: where they asked from. */
-	context?: { web?: boolean; page?: string; postId?: string } | null;
-	/** Where the conversation is happening: the window, or the Vivid chat in Messages. */
-	surface?: "window" | "messages";
+	context?: { web?: boolean; page?: string; postId?: string; dealId?: string } | null;
+	/** Where the conversation is happening: the window, Vivid's chat in Messages, or in Business. */
+	surface?: "window" | "messages" | "business";
 	/** Files uploaded with uploadVividFile, at most five. */
 	attachments?: string[];
 	signal?: AbortSignal;

@@ -12,6 +12,7 @@ import {
 	HistorySheet,
 	IconButton,
 	PlanBar,
+	type QuickStart,
 	QuickStarts,
 	VividTurns,
 	VoiceMode,
@@ -35,6 +36,22 @@ import { vividAskPostAtom } from "@/store/ui.atom";
  * are documents (lists, tables, cards, drafts), which a bubble would cramp.
  */
 
+/** Business, no deal open: the deals as a whole (owner 2026-10-16, "the business part too"). */
+const BUSINESS_STARTS: QuickStart[] = [
+	{ icon: I.IconBriefcase, label: "What needs my move?", ask: "Which of my deals need my move, and what would you do with each?" },
+	{ icon: I.IconTrending, label: "How are my deals doing?", ask: "How are my live and finished deals doing? Impressions, clicks and money." },
+	{ icon: I.IconSearch, label: "Check a creator's rates", fill: "What are the ad rates for @" },
+	{ icon: I.IconWallet, label: "How escrow works", ask: "How do escrow and payouts work on my deals?" },
+];
+
+/** Business, about one deal. */
+const DEAL_STARTS: QuickStart[] = [
+	{ icon: I.IconBriefcase, label: "Sum up this deal", ask: "Sum up this deal: where it stands, whose move it is, and what to watch." },
+	{ icon: I.IconTrending, label: "Is the price fair?", ask: "Is the price on this deal fair? Compare it with the rate card and my past deals." },
+	{ icon: I.IconPen, label: "Draft a counter", fill: "Draft a counter-offer: " },
+	{ icon: I.IconMessage, label: "Reply to them", fill: "Write a reply to them in the deal room: " },
+];
+
 /** The newest Vivid conversation, shared by the inbox row and the pane. */
 let latestCache: { row: VividThreadRow | null; at: number } | null = null;
 async function latestThread(fresh = false): Promise<VividThreadRow | null> {
@@ -45,10 +62,23 @@ async function latestThread(fresh = false): Promise<VividThreadRow | null> {
 	return row;
 }
 
-export function VividChat({ onBack }: { onBack?: () => void }) {
+export function VividChat({
+	onBack,
+	surface = "messages",
+	dealId = null,
+	dealWith = null,
+}: {
+	onBack?: () => void;
+	/** Messages, or Business (owner 2026-10-16: "the business part too"). */
+	surface?: "messages" | "business";
+	/** A Business deal this chat is about ("Ask Vivid" on a deal). */
+	dealId?: string | null;
+	dealWith?: string | null;
+}) {
 	const greeting = useGreeting();
 	const listRef = useRef<HTMLDivElement>(null);
-	const chat = useVividChat({ surface: "messages", scroller: () => listRef.current });
+	const chat = useVividChat({ surface, scroller: () => listRef.current, context: dealId ? { dealId } : null });
+	const business = surface === "business";
 	const [loading, setLoading] = useState(true);
 	const [historyOpen, setHistoryOpen] = useState(false);
 	const [voiceOpen, setVoiceOpen] = useState(false);
@@ -60,6 +90,11 @@ export function VividChat({ onBack }: { onBack?: () => void }) {
 	// biome-ignore lint/correctness/useExhaustiveDependencies: once, on open
 	useEffect(() => {
 		let alive = true;
+		// Business starts fresh: a chat about deals, not the last one from Messages.
+		if (business) {
+			setLoading(false);
+			return;
+		}
 		const store = getDefaultStore();
 		const asked = store.get(vividAskPostAtom);
 		if (asked) {
@@ -96,7 +131,7 @@ export function VividChat({ onBack }: { onBack?: () => void }) {
 				<span className="ml-2 flex min-w-0 flex-1 flex-col">
 					<span className="truncate font-sans text-[calc(15px*var(--ws-fs))] font-semibold text-primary">Vivid</span>
 					<span className="truncate font-sans text-[calc(12.5px*var(--ws-fs))] text-muted">
-						{chat.busy ? "Working on it" : "Your assistant"}
+						{chat.busy ? "Working on it" : dealWith ? `About your deal with ${dealWith}` : business ? "Your deals assistant" : "Your assistant"}
 					</span>
 				</span>
 				<IconButton label="Your chats" onClick={() => setHistoryOpen(true)}>
@@ -122,7 +157,7 @@ export function VividChat({ onBack }: { onBack?: () => void }) {
 					<div className="flex h-full flex-col items-center justify-center gap-4 px-6 py-10 text-center">
 						<VividIntro className="h-[96px] w-[144px]" />
 						<h2 className="font-display text-[calc(22px*var(--ws-fs))] font-medium tracking-[-0.01em] text-balance text-primary">
-							{greeting}
+							{dealWith ? `Your deal with ${dealWith}` : greeting}
 						</h2>
 					</div>
 				) : (
@@ -134,6 +169,7 @@ export function VividChat({ onBack }: { onBack?: () => void }) {
 				{empty && !loading && (
 					<QuickStarts
 						chat={chat}
+						starts={business ? (dealId ? DEAL_STARTS : BUSINESS_STARTS) : undefined}
 						className="-mx-3 mb-2.5 flex gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 					/>
 				)}

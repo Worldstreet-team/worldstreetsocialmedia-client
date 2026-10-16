@@ -142,6 +142,13 @@ const TOOL_ICON: Record<string, Icon> = {
 	my_meetings: I.IconVideo,
 	meeting_details: I.IconVideo,
 	start_meeting: I.IconVideo,
+	my_deals: I.IconBriefcase,
+	deal_details: I.IconBriefcase,
+	rate_card: I.IconBriefcase,
+	counter_offer: I.IconBriefcase,
+	decline_deal: I.IconBriefcase,
+	deal_message: I.IconMessage,
+	open_deal: I.IconBriefcase,
 };
 const toolIcon = (name: string): Icon => TOOL_ICON[name] ?? I.IconSpark;
 
@@ -156,10 +163,15 @@ const DRAFT_LABEL: Record<string, string> = {
 	schedule_space: "Space",
 	message_someone: "Message",
 	start_meeting: "WorldMeet",
+	counter_offer: "Counter-offer",
+	decline_deal: "Decline",
+	deal_message: "Deal message",
 };
 
+export type QuickStart = { icon: Icon; label: string; fill?: string; ask?: string };
+
 /** Quick starts under the empty composer: some fill it in, one just asks. Five, so they sit on one row. */
-const STARTS: { icon: Icon; label: string; fill?: string; ask?: string }[] = [
+const STARTS: QuickStart[] = [
 	{ icon: I.IconLive, label: "Go live", fill: "I want to go live about " },
 	{ icon: I.IconMessage, label: "Message someone", fill: "Message @" },
 	{ icon: I.IconSpace, label: "Start a Space", fill: "Start a Space about " },
@@ -214,7 +226,12 @@ export function useGreeting() {
  * on it, so a thread started in one carries on in the other.
  * `scroller` is the element the conversation scrolls in.
  */
-export function useVividChat(opts: { surface: "window" | "messages"; scroller: () => HTMLElement | null }) {
+export function useVividChat(opts: {
+	surface: "window" | "messages" | "business";
+	scroller: () => HTMLElement | null;
+	/** Sent with every turn: the Business deal the chat is about. */
+	context?: { dealId?: string } | null;
+}) {
 	const [turns, setTurns] = useState<Turn[]>([]);
 	const [input, setInput] = useState("");
 	const [busy, setBusy] = useState(false);
@@ -286,7 +303,14 @@ export function useVividChat(opts: { surface: "window" | "messages"; scroller: (
 				threadId,
 				surface: opts.surface,
 				attachments: sent.map((f) => f.id),
-				context: web || extra.post ? { ...(web ? { web: true } : {}), ...(extra.post ? { postId: extra.post.id } : {}) } : null,
+				context:
+					web || extra.post || opts.context?.dealId
+						? {
+								...(web ? { web: true } : {}),
+								...(extra.post ? { postId: extra.post.id } : {}),
+								...(opts.context?.dealId ? { dealId: opts.context.dealId } : {}),
+							}
+						: null,
 				signal: ac.signal,
 				onEvent: (e: VividEvent) => {
 					if (e.type === "thread") setThreadId(e.threadId);
@@ -313,7 +337,7 @@ export function useVividChat(opts: { surface: "window" | "messages"; scroller: (
 			setBusy(false);
 			return answer;
 		},
-		[busy, threadId, web, opts.surface],
+		[busy, threadId, web, opts.surface, opts.context?.dealId],
 	);
 
 	const stop = useCallback(() => abortRef.current?.abort(), []);
@@ -451,10 +475,18 @@ export function VividTurns({ chat, className }: { chat: VividChatState; classNam
 }
 
 /** The quick starts under an empty composer: some fill it in, one just asks. */
-export function QuickStarts({ chat, className }: { chat: VividChatState; className?: string }) {
+export function QuickStarts({
+	chat,
+	className,
+	starts = STARTS,
+}: {
+	chat: VividChatState;
+	className?: string;
+	starts?: QuickStart[];
+}) {
 	return (
 		<motion.div variants={staggerParent} initial="hidden" animate="show" className={className}>
-			{STARTS.map((s) => (
+			{starts.map((s) => (
 				<motion.button
 					key={s.label}
 					type="button"

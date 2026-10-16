@@ -480,3 +480,15 @@ export const IconWave = icon(
 	),
 	"IconWave",
 );
+
+/** Business: a briefcase. */
+export const IconBriefcase = icon(
+	() => (
+		<>
+			<rect x="3.5" y="7.5" width="17" height="12" rx="2.6" />
+			<path d="M9 7.5V6a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 6v1.5" />
+			<path d="M3.5 12.5h17" />
+		</>
+	),
+	"IconBriefcase",
+);
