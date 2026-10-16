@@ -1,0 +1,77 @@
+/*
+ * Paint and idle beats for Vivid's hello (vivid-hello-scenes.ts), on the
+ * morph engine's contract: every paint names fill, stroke, width and
+ * dashes, never `none`, so a dot can blend into a letter mid-morph.
+ * Monochrome ink, like the orb. Beats move the wrapper, never the path,
+ * and start and end on the resting pose.
+ */
+.art {
+	--vh-ink: var(--ws-text-primary);
+	--vh-faint: color-mix(in srgb, var(--ws-text-primary) 42%, transparent);
+	overflow: visible;
+	color: var(--vh-ink);
+}
+.path {
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+.dot {
+	fill: var(--vh-ink);
+	stroke: transparent;
+	stroke-width: 6px;
+	stroke-dasharray: 1 0;
+}
+.faint {
+	fill: var(--vh-faint);
+	stroke: transparent;
+	stroke-width: 6px;
+	stroke-dasharray: 1 0;
+}
+.line {
+	fill: transparent;
+	stroke: var(--vh-ink);
+	stroke-width: 6px;
+	stroke-dasharray: 1 0;
+}
+
+.beat {
+	transform-box: fill-box;
+	transform-origin: center;
+}
+
+/* Typing: each dot lifts in turn. */
+.iWave {
+	animation: vh-wave 1.2s cubic-bezier(0.45, 0, 0.55, 1) infinite backwards;
+}
+@keyframes vh-wave {
+	0%,
+	60%,
+	100% {
+		transform: none;
+	}
+	30% {
+		transform: translateY(-6px);
+	}
+}
+
+/* The mark turns slowly, the way the orb does. */
+.iTurn {
+	animation: vh-turn 9s linear infinite backwards;
+}
+@keyframes vh-turn {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Thinking: the ring turns quickly. */
+.iSpin {
+	animation: vh-turn 1.1s linear infinite backwards;
+}
+
+.art[data-paused="true"] .beat {
+	animation-play-state: paused;
+}
+html[data-ws-motion="reduce"] .beat {
+	animation: none;
+}

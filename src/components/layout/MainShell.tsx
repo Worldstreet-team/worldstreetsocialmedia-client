@@ -34,7 +34,9 @@ export function MainShell({ children }: { children: React.ReactNode }) {
 	const pathname = useAppPathname();
 	const onSettings = pathname.startsWith("/settings");
 	const onVoice = pathname === "/voice" || pathname.startsWith("/voice/");
-	const fullCanvas = onSettings || onVoice;
+	// The Vivid window takes the rail's space too and centres itself in it.
+	const onVivid = pathname === "/vivid" || pathname.startsWith("/vivid/");
+	const fullCanvas = onSettings || onVoice || onVivid;
 
 	return (
 		<PostLayerContext.Provider value={!onSettings}>
