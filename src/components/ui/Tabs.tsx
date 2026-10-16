@@ -190,7 +190,7 @@ export function Tabs<K extends string>({
 						onClick={() => onChange(key)}
 						className={clsx(
 							variant === "line"
-								? "relative flex h-12 shrink-0 items-center gap-2 whitespace-nowrap px-4 font-sans text-[calc(15px*var(--ws-fs))] transition-colors"
+								? "relative flex h-full min-h-[46px] shrink-0 items-center gap-2 whitespace-nowrap px-4 font-sans text-[calc(15px*var(--ws-fs))] transition-colors"
 								: size === "lg"
 									? "relative flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-pill px-4 font-sans text-[calc(15px*var(--ws-fs))] transition-colors"
 									: "relative flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-pill px-3.5 font-sans text-[calc(13.5px*var(--ws-fs))] transition-colors",

@@ -248,34 +248,34 @@ export default function CommunitiesPage() {
 				)}
 			</AnimatePresence>
 
-			<header className="sticky top-0 z-sticky border-b border-hairline bg-page md:top-0">
-				<div className="flex items-end justify-between gap-3 px-4 pb-3 pt-5">
-					<div className="min-w-0">
-						<span className="block font-sans text-[calc(11px*var(--ws-fs))] font-bold uppercase tracking-[0.16em] text-gold">
-							{t("community.eyebrow")}
-						</span>
-						<h1 className="mt-1 font-display text-[calc(24px*var(--ws-fs))] font-semibold leading-none text-primary">
-							{t("nav.communities")}
-						</h1>
+			{/* Home's bar, exactly (owner 2026-10-16: "the home explore tab on
+			    communities should be like the home for the for you and
+			    following ... same clean style"): the tab row IS the header, a
+			    small + at the end. */}
+			<header className="sticky top-0 z-sticky h-12 border-b border-hairline bg-page/75 backdrop-blur-xl backdrop-saturate-150">
+				<h1 className="sr-only">{t("nav.communities")}</h1>
+				<div className="flex h-full items-stretch">
+					<Tabs
+						items={TABS}
+						value={tab}
+						onChange={setTab}
+						ariaLabel={t("nav.communities")}
+						variant="line"
+						rootClassName="h-full min-w-0 flex-1"
+						className="h-full"
+					/>
+					<div className="flex shrink-0 items-center px-2">
+						<motion.button
+							type="button"
+							{...press}
+							onClick={() => setCreating(true)}
+							aria-label={t("community.create")}
+							className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-pill bg-primary/[0.07] text-muted transition-colors hover:bg-primary/[0.12] hover:text-primary"
+						>
+							<Plus size={14} weight="bold" />
+						</motion.button>
 					</div>
-					<motion.button
-						type="button"
-						{...press}
-						onClick={() => setCreating(true)}
-						aria-label={t("community.create")}
-						className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-brand text-brand-on transition-colors hover:bg-brand-active"
-					>
-						<Plus size={16} weight="bold" />
-					</motion.button>
 				</div>
-
-				<Tabs
-					items={TABS}
-					value={tab}
-					onChange={setTab}
-					ariaLabel={t("nav.communities")}
-					variant="line"
-				/>
 			</header>
 
 			{/* The new tab body rises in; the old one is cut. No exit on
