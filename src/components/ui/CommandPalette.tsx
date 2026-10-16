@@ -96,6 +96,13 @@ export function CommandPalette() {
         setOpen((prev) => !prev);
         return;
       }
+      // Cmd/Ctrl+J: Vivid, from anywhere (plan D7).
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "j") {
+        e.preventDefault();
+        close();
+        router.push("/vivid");
+        return;
+      }
       if (e.key === "Escape" && open) {
         close();
         return;
@@ -119,7 +126,7 @@ export function CommandPalette() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, close, setOpen, setSearchOpen, focusComposer]);
+  }, [open, close, setOpen, setSearchOpen, focusComposer, router]);
 
   // Lock page scroll behind the overlay.
   useEffect(() => {
@@ -183,6 +190,14 @@ export function CommandPalette() {
         keywords: "dm chat inbox",
         icon: MessageCircle,
         run: () => go("/messages"),
+      },
+      {
+        id: "nav-vivid",
+        group: "Navigate",
+        label: "Vivid",
+        keywords: "ai assistant ask chat help go live",
+        icon: Sparkles,
+        run: () => go("/vivid"),
       },
       {
         id: "nav-bookmarks",

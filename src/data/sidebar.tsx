@@ -12,6 +12,7 @@ import {
 	ChatCircleDots,
 	House,
 	MonitorPlay,
+	Sparkle,
 	SquaresFour,
 	UserCircle,
 	UsersThree,
@@ -82,6 +83,14 @@ export const mainNav: SidebarItem[] = [
 		title: "Messages",
 		link: "/messages",
 		icon: navIcon(ChatCircleDots),
+	},
+	{
+		// The in-app assistant (owner 2026-10-16). Its own window in the middle
+		// of the page; Cmd/Ctrl+J opens it from anywhere.
+		labelKey: "nav.vivid",
+		title: "Vivid",
+		link: "/vivid",
+		icon: navIcon(Sparkle),
 	},
 	{
 		labelKey: "nav.bookmarks",
