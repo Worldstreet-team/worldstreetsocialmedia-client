@@ -58,6 +58,7 @@ import VerifiedIcon from "@/assets/icons/VerifiedIcon";
 import { composeOpenAtom, premiumOpenAtom } from "@/store/ui.atom";
 import { BrandRitual } from "@/components/layout/BrandRitual";
 import { LanguageMenu } from "@/components/ui/LanguageMenu";
+import { ProductsOrbit } from "@/components/layout/ProductsOrbit";
 import { useT } from "@/i18n/client";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
@@ -99,6 +100,7 @@ export function LeftSidebar() {
 	const router = useRouter();
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [productsOpen, setProductsOpen] = useState(false);
+	const productsRef = useRef<HTMLButtonElement>(null);
 	const [langOpen, setLangOpen] = useState(false);
 
 	// Theme is only knowable client-side; render the toggle after mount so
@@ -320,9 +322,11 @@ export function LeftSidebar() {
 				{/* Products expands inline so the ecosystem is one glance away. */}
 				<div className="animate-rise" style={{ animationDelay: "300ms" }}>
 					<button
+						ref={productsRef}
 						type="button"
 						onClick={() => setProductsOpen((v) => !v)}
 						aria-expanded={productsOpen}
+						aria-haspopup="dialog"
 						className={clsx(
 							"flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors w-full text-left cursor-pointer",
 							productsOpen
@@ -345,54 +349,13 @@ export function LeftSidebar() {
 						/>
 					</button>
 
-					<div
-						className={clsx(
-							"grid transition-[grid-template-rows] duration-200",
-							productsOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
-						)}
-					>
-						<div className="overflow-hidden">
-							{/* No rail/divider: the rows are indented to sit under the
-							    parent's label, which is enough to read as nested. The
-							    arrow is absolutely placed so it costs no row width 
-							    "Cryptocurrencies" needs every pixel in this rail. */}
-							{/* The rows stay mounted (the grid does the height), so
-							    the cascade is driven by the open flag, not by mount. */}
-							<motion.div
-								variants={staggerParentFast}
-								initial={false}
-								animate={productsOpen ? "show" : "exit"}
-								className="flex flex-col py-0.5 pl-3"
-							>
-								{ECOSYSTEM.map((app) => (
-									<motion.a
-										key={app.title}
-										variants={staggerItem}
-										href={app.href}
-										target="_blank"
-										rel="noopener noreferrer"
-										className="relative flex items-center gap-2.5 pl-3 pr-7 py-2 rounded-xl text-muted hover:bg-primary/5 hover:text-primary transition-colors group/app"
-									>
-										<Image
-											src="/images/wsa-mark.png"
-											alt=""
-											width={15}
-											height={15}
-											aria-hidden
-											className="h-[15px] w-[15px] object-contain shrink-0 opacity-70 group-hover/app:opacity-100 transition-opacity"
-										/>
-										<span className="font-sans text-[calc(13.5px*var(--ws-fs))] flex-1 min-w-0 truncate">
-											{app.title}
-										</span>
-										<ArrowUpRight
-											size={12}
-											className="absolute right-2.5 top-1/2 -translate-y-1/2 text-subtle opacity-0 group-hover/app:opacity-100 transition-opacity"
-										/>
-									</motion.a>
-								))}
-							</motion.div>
-						</div>
-					</div>
+					{/* Products open as an orbit beside the rail (owner
+					    2026-10-16): the apps sweep in around the WorldStreet mark. */}
+					<ProductsOrbit
+						anchor={productsRef}
+						open={productsOpen}
+						onClose={() => setProductsOpen(false)}
+					/>
 				</div>
 
 				{/* Quick actions: the one gold CTA + the glossy Go Live beside it.

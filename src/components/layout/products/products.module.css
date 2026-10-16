@@ -1,0 +1,106 @@
+/*
+ * The Products dial (ProductsOrbit.tsx): the glass, and the hub glyph's
+ * paints (product-scenes.ts).
+ *
+ * The glass is ONE element: the blur, the fill and the clip-path that the
+ * morph draws all sit on it. Nothing above it in the tree may carry an
+ * opacity, filter, mask or clip-path, or the browser stops blurring the page
+ * at that ancestor and the glass turns into a flat tint (what the first
+ * orbit did: its clip-path reveal lived on the parent).
+ */
+
+.glass {
+	/* Neutral, never stone (black theme rule), and light enough that the
+	   blur shows: over a black page the glass is the only light there is. */
+	--pd-fill: rgb(38 38 38 / 0.5);
+	background: var(--pd-fill);
+	-webkit-backdrop-filter: blur(30px) saturate(180%) brightness(1.12);
+	backdrop-filter: blur(30px) saturate(180%) brightness(1.12);
+}
+html[data-ws-theme="platform-light"] .glass {
+	--pd-fill: rgb(255 255 255 / 0.56);
+	-webkit-backdrop-filter: blur(30px) saturate(180%);
+	backdrop-filter: blur(30px) saturate(180%);
+}
+
+/* A hairline on the glass's edge, so the shape reads over anything. */
+.edge {
+	fill: none;
+	stroke: color-mix(in srgb, var(--ws-text-primary) 18%, transparent);
+	stroke-width: 1px;
+}
+
+/* The shadow is the same path, blurred, under the glass: a sibling, never
+   a filter on an ancestor. */
+.shade {
+	fill: rgb(0 0 0 / 0.5);
+	filter: blur(26px);
+	transform: translateY(10px);
+}
+html[data-ws-theme="platform-light"] .shade {
+	fill: rgb(26 43 66 / 0.18);
+}
+
+/* The arc the apps ride. */
+.track {
+	fill: none;
+	stroke: color-mix(in srgb, var(--ws-text-primary) 9%, transparent);
+	stroke-width: 1px;
+}
+
+/* ---- the hub glyph: StateArt's contract. Every paint names fill, stroke,
+   width and dashes, never `none`, so the driver can blend any paint into
+   any other mid-morph; at rest the class IS the paint. Tokens only. ---- */
+
+.art {
+	--pg-ink: var(--ws-text-primary);
+	--pg-brand: var(--ws-brand-primary);
+	--pg-tone: color-mix(in srgb, var(--ws-text-primary) 20%, transparent);
+	--pg-disc: color-mix(in srgb, var(--ws-text-primary) 6%, transparent);
+	overflow: visible;
+}
+html[data-ws-theme="platform-light"] .art {
+	--pg-brand: color-mix(in srgb, var(--ws-brand-primary) 78%, var(--ws-text-primary));
+	--pg-disc: color-mix(in srgb, var(--ws-text-primary) 5%, transparent);
+}
+
+.path {
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.disc {
+	fill: var(--pg-disc);
+	stroke: transparent;
+	stroke-width: 3.2px;
+	stroke-dasharray: 1 0;
+}
+.tone {
+	fill: var(--pg-tone);
+	stroke: transparent;
+	stroke-width: 3.2px;
+	stroke-dasharray: 1 0;
+}
+.ink {
+	fill: transparent;
+	stroke: var(--pg-ink);
+	stroke-width: 3.2px;
+	stroke-dasharray: 1 0;
+}
+.dot {
+	fill: var(--pg-ink);
+	stroke: var(--pg-ink);
+	stroke-width: 0.01px;
+	stroke-dasharray: 1 0;
+}
+.hi {
+	fill: transparent;
+	stroke: var(--pg-brand);
+	stroke-width: 3.2px;
+	stroke-dasharray: 1 0;
+}
+
+.beat {
+	transform-box: view-box;
+	transform-origin: 80px 80px;
+}
