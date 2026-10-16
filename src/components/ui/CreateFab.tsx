@@ -18,6 +18,7 @@ import {
   type GoLivePreset,
 } from "@/components/feed/GoLiveSheet";
 import { OverlayScrim, useOverlayDismiss } from "@/components/ui/Overlay";
+import { VividOrb } from "@/components/vivid/VividOrb";
 import { listPresetsAction } from "@/lib/creator.actions";
 import { liveSessionAtom } from "@/store/live.atom";
 import { DraftsSheet } from "@/components/ui/DraftsSheet";
@@ -278,6 +279,20 @@ export function CreateFab() {
             <Plus size={26} weight="bold" />
           </motion.span>
         </motion.button>
+        {/* Vivid's orb turns just below the plus, never inside it, on a
+            frosted chip that follows the theme: dark glass on dark, light
+            glass on light (owner 2026-10-16). */}
+        {!open && pathname !== "/vivid" && (
+          <button
+            type="button"
+            onClick={() => router.push("/vivid")}
+            aria-label={t("fab.vivid")}
+            title={t("fab.vivid")}
+            className="mr-1 flex h-12 w-12 cursor-pointer items-center justify-center rounded-pill glass-frost shadow-nav ring-1 ring-primary/[0.06] backdrop-blur-xl"
+          >
+            <VividOrb size={30} speed={0.7} />
+          </button>
+        )}
       </motion.div>
         )}
       </AnimatePresence>

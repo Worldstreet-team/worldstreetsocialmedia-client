@@ -2855,21 +2855,6 @@ export const MessageBox = ({
 								{...menuStagger("bottom-right")}
 								className="flex flex-col items-end gap-2"
 							>
-								{/* Vivid rides the plus too (owner 2026-10-16). */}
-								<motion.button
-									variants={staggerItem}
-									type="button"
-									onClick={() => {
-										setFabOpen(false);
-										openVivid();
-									}}
-									className="pointer-events-auto flex h-11 cursor-pointer items-center gap-2 rounded-pill glass-frost pl-2.5 pr-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary shadow-nav"
-								>
-									<span className="flex h-7 w-7 items-center justify-center rounded-pill bg-raised">
-										<VividOrb size={22} speed={0.5} />
-									</span>
-									{t("messages.askVivid")}
-								</motion.button>
 								<motion.button
 									variants={staggerItem}
 									type="button"
@@ -2923,6 +2908,19 @@ export const MessageBox = ({
 							</motion.span>
 						</AnimatePresence>
 					</motion.button>
+					{/* Vivid's orb turns just below the plus, never inside it, on a
+					    frosted chip that follows the theme (owner 2026-10-16). */}
+					{!fabOpen && (
+						<button
+							type="button"
+							onClick={openVivid}
+							aria-label={t("messages.askVivid")}
+							title={t("messages.askVivid")}
+							className="pointer-events-auto mr-1 flex h-12 w-12 cursor-pointer items-center justify-center rounded-pill glass-frost shadow-nav ring-1 ring-primary/[0.06] backdrop-blur-xl"
+						>
+							<VividOrb size={30} speed={0.7} />
+						</button>
+					)}
 				</div>
 
 				{/* The inbox reads as a stack of blocks (owner 2026-09-19):
