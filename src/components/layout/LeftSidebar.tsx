@@ -24,7 +24,6 @@ import {
 	staggerParentFast,
 	staggerPop,
 	swap,
-	thumbSpring,
 } from "@/lib/motion-presets";
 import { Flame } from "@phosphor-icons/react";
 import { BadgedIcon } from "@/components/ui/Badge";
@@ -183,23 +182,14 @@ export function LeftSidebar() {
 				{...press(href)}
 				style={{ animationDelay: `${offset + index * 30}ms` }}
 				className={clsx(
-					// Active = light chip + filled glyph; nothing heavier.
+					// Active is bold and nothing else (owner 2026-10-16: "the active nav
+					// will just be bold"): no chip, no colour change, the filled glyph.
 					"relative flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors group animate-rise",
 					isActive
-						? "text-primary font-semibold"
-						: "text-muted hover:bg-primary/5 hover:text-primary",
+						? "text-primary font-bold"
+						: "text-primary font-normal hover:bg-primary/5",
 				)}
 			>
-				{isActive && (
-					// One chip that slides between rows instead of jumping. The
-					// rail is a page singleton, so a fixed layoutId is safe.
-					<motion.span
-						layoutId="rail-active"
-						transition={thumbSpring}
-						aria-hidden
-						className="absolute inset-0 rounded-xl bg-primary/10"
-					/>
-				)}
 				<BadgedIcon count={badgeCount} label={t(item.labelKey)}>
 					<item.icon isActive={isActive} />
 				</BadgedIcon>
@@ -260,18 +250,10 @@ export function LeftSidebar() {
 					className={clsx(
 						"relative flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors group animate-rise",
 						pathname.startsWith("/votes")
-							? "text-primary font-semibold"
-							: "text-muted hover:bg-primary/5 hover:text-primary",
+							? "text-primary font-bold"
+							: "text-primary font-normal hover:bg-primary/5",
 					)}
 				>
-					{pathname.startsWith("/votes") && (
-						<motion.span
-							layoutId="rail-active"
-							transition={thumbSpring}
-							aria-hidden
-							className="absolute inset-0 rounded-xl bg-primary/10"
-						/>
-					)}
 					<span className="relative inline-flex">
 						<VoteBox open={pathname.startsWith("/votes")} size={24} />
 					</span>
