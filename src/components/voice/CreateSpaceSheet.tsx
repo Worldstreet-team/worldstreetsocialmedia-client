@@ -15,7 +15,8 @@ import {
 } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
-import { useAtomValue } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
+import { vividSpaceDraftAtom } from "@/store/ui.atom";
 import {
   useEffect,
   useMemo,
@@ -269,7 +270,14 @@ export default function CreateSpaceSheet({
   const [panelHost, setPanelHost] = useState<HTMLDivElement | null>(null);
 
   /* ---- 1. the room ---- */
-  const [title, setTitle] = useState(editing?.title ?? "");
+  // A new room Vivid set up ("start a Space about the CPI print") arrives
+  // with its title; read once as the sheet opens.
+  const [vividDraft, setVividDraft] = useAtom(vividSpaceDraftAtom);
+  const [fromVivid] = useState(() => (isEdit ? null : vividDraft));
+  useEffect(() => {
+    if (fromVivid) setVividDraft(null);
+  }, [fromVivid, setVividDraft]);
+  const [title, setTitle] = useState(editing?.title ?? fromVivid?.title ?? "");
   const [description, setDescription] = useState(editing?.description ?? "");
   const [descOpen, setDescOpen] = useState(Boolean(editing?.description));
   const [coverImage, setCoverImage] = useState(editing?.coverImage ?? "");

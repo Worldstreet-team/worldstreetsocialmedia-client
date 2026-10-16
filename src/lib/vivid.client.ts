@@ -9,7 +9,7 @@ import { BACKEND_URL } from "@/const";
  * reaches the gateway, because a server action cannot stream to the page.
  *
  * Events, as the harness sends them (gateway services/vivid-agent/agent.ts):
- *   thread · token · tool · card · title · done · error
+ *   thread · token · tool · card · title · access · done · error
  */
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || BACKEND_URL;
@@ -25,10 +25,45 @@ export type VividCard =
 			tool: string;
 			verb?: string;
 			summary: string;
-			preview?: unknown;
+			preview?: VividPreview;
 			status: "pending" | "done" | "cancelled" | "expired" | "failed";
 			expiresAt?: string;
-	  };
+	  }
+	| { kind: "open"; tool: string; summary: string; intent: VividIntent };
+
+/** What a confirm card draws, by tool (gateway tools.ts `prepare`). */
+export type VividPreview = {
+	text?: string;
+	title?: string;
+	startsAt?: string | null;
+	person?: { id: string; username: string; name: string; avatar: string | null; isVerified?: boolean };
+	post?: { id: string; text: string; author: string | null };
+	poll?: { options: string[] } | null;
+	[key: string]: unknown;
+};
+
+/**
+ * A quick action (plan: "Quick actions"): the app opens a screen filled in
+ * and the person finishes it. Runs in the browser, instantly, with no
+ * confirm, because nothing happens until they press the screen's own button.
+ * The gateway's open tools (tools.ts) produce these; vivid-actions.ts runs them.
+ */
+export type VividIntent =
+	| { type: "go_live"; title?: string; category?: string }
+	| { type: "compose"; text?: string }
+	| { type: "chat"; profileId: string; username: string; draft?: string }
+	| { type: "space"; title?: string }
+	| { type: "navigate"; to: string }
+	| {
+			type: "appearance";
+			theme?: "dark" | "light";
+			palette?: string;
+			textScale?: number | "auto";
+			dataSaver?: "on" | "off" | "auto";
+	  }
+	| { type: "premium" }
+	| { type: "search"; query: string }
+	| { type: "linked"; app: string; url: string };
 
 export type VividEvent =
 	| { type: "thread"; threadId: string }
@@ -36,7 +71,9 @@ export type VividEvent =
 	| { type: "tool"; id: string; name: string; status: "start" | "done" | "error"; label?: string }
 	| { type: "card"; card: VividCard }
 	| { type: "title"; title: string }
-	| { type: "done"; threadId: string; messageId: string; credits?: unknown }
+	/** Whether this turn has the WorldStreet Vivid plan ($100, billed on the hub). */
+	| { type: "access"; entitled: boolean; subscribeUrl: string }
+	| { type: "done"; threadId: string; messageId: string | null }
 	| { type: "error"; message: string; code?: string };
 
 async function token() {
@@ -47,6 +84,8 @@ async function token() {
 export async function streamVividTurn(input: {
 	text: string;
 	threadId?: string | null;
+	/** `web`: the composer's "Search the web" is on. `page`: where they asked from. */
+	context?: { web?: boolean; page?: string; postId?: string } | null;
 	signal?: AbortSignal;
 	onEvent: (e: VividEvent) => void;
 }) {
@@ -60,7 +99,11 @@ export async function streamVividTurn(input: {
 		res = await fetch(`${API_URL}/api/vivid/turns`, {
 			method: "POST",
 			headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" },
-			body: JSON.stringify({ text: input.text, threadId: input.threadId ?? undefined }),
+			body: JSON.stringify({
+				text: input.text,
+				threadId: input.threadId ?? undefined,
+				context: input.context ?? undefined,
+			}),
 			signal: input.signal,
 		});
 	} catch (e) {
@@ -118,3 +161,49 @@ export async function settleVividAction(actionId: string, verb: "confirm" | "can
 		return { ok: false as const, message: "Network error" };
 	}
 }
+
+/* ── history, feedback and the credits meter ─────────────────────────────── */
+
+async function call<T>(method: string, path: string, body?: unknown): Promise<{ ok: true; data: T } | { ok: false; message: string }> {
+	const t = await token();
+	if (!t) return { ok: false, message: "Sign in first." };
+	try {
+		const res = await fetch(`${API_URL}/api/vivid${path}`, {
+			method,
+			headers: { Authorization: `Bearer ${t}`, ...(body ? { "Content-Type": "application/json" } : {}) },
+			body: body ? JSON.stringify(body) : undefined,
+		});
+		const json = await res.json().catch(() => null);
+		if (!res.ok) return { ok: false, message: json?.message || "Something went wrong." };
+		return { ok: true, data: (json?.data ?? json) as T };
+	} catch {
+		return { ok: false, message: "Network error" };
+	}
+}
+
+export type VividThreadRow = { _id: string; title?: string | null; lastMessageAt?: string; createdAt?: string };
+export type VividStoredMessage = {
+	_id: string;
+	role: "user" | "assistant";
+	content: string;
+	blocks?: { kind: string; data: Record<string, unknown> }[];
+	feedback?: "up" | "down" | null;
+	createdAt?: string;
+};
+/** The window's plan state. `entitled` is null when the hub couldn't be read. */
+export type VividUsage = {
+	entitled: boolean | null;
+	subscribeUrl: string;
+	turnsToday: number;
+	available: boolean;
+};
+
+export const vividApi = {
+	threads: () => call<VividThreadRow[]>("GET", "/threads"),
+	thread: (id: string) =>
+		call<{ thread: VividThreadRow; messages: VividStoredMessage[] }>("GET", `/threads/${encodeURIComponent(id)}`),
+	deleteThread: (id: string) => call<unknown>("DELETE", `/threads/${encodeURIComponent(id)}`),
+	feedback: (messageId: string, value: "up" | "down" | null) =>
+		call<unknown>("POST", `/messages/${encodeURIComponent(messageId)}/feedback`, { value }),
+	usage: () => call<VividUsage>("GET", "/usage"),
+};

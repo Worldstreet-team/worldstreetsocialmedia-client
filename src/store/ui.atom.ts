@@ -135,3 +135,14 @@ export const profileRatesRequestAtom = atom(false);
  * surface. null means "the page colour". Read by <ThemeColorSync>.
  */
 export const browserChromeAtom = atom<string | null>(null);
+
+/**
+ * What Vivid filled in for a screen it opened (quick actions, 2026-10-16:
+ * "I want to go live" opens Go Live with the title and category set). Each
+ * sheet reads its own once, as it opens, and clears it, so a sheet the
+ * person opens themselves always starts empty.
+ */
+export const vividGoLiveDraftAtom = atom<{ title?: string; category?: string } | null>(null);
+export const vividSpaceDraftAtom = atom<{ title?: string } | null>(null);
+/** A draft for one conversation; that thread's composer takes it once. */
+export const vividDmDraftAtom = atom<{ conversationId: string; text: string } | null>(null);

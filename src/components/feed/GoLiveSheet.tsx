@@ -19,7 +19,7 @@ import {
 	X,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { useAtomValue, useSetAtom } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { userAtom } from "@/store/user.atom";
 import { XSTREAM_WEB_URL } from "@/const";
 import { useT } from "@/i18n/client";
@@ -29,6 +29,7 @@ import {
 	type GoLiveSource,
 } from "@/lib/live.actions";
 import { liveSessionAtom } from "@/store/live.atom";
+import { vividGoLiveDraftAtom } from "@/store/ui.atom";
 import { CATEGORIES as TAXONOMY, VERTICALS } from "@/data/categories";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import {
@@ -192,9 +193,17 @@ export function GoLiveSheet({
 	const t = useT();
 	const { toast } = useToast();
 	const setLiveSession = useSetAtom(liveSessionAtom);
-	// No prefilled title: the broadcaster names their own stream, and cannot
-	// start without one.
-	const [title, setTitle] = useState("");
+	// What Vivid filled in, when the person asked it to open Go Live ("I
+	// want to go live about the match"): read once as the sheet opens.
+	const [vividDraft, setVividDraft] = useAtom(vividGoLiveDraftAtom);
+	const [fromVivid] = useState(vividDraft);
+	useEffect(() => {
+		if (fromVivid) setVividDraft(null);
+	}, [fromVivid, setVividDraft]);
+	// No prefilled title from a preset: the broadcaster names their own
+	// stream, and cannot start without one. Asking Vivid to go live about
+	// something is naming it, so that title comes through.
+	const [title, setTitle] = useState(fromVivid?.title ?? "");
 	// Both of these are what the preset exists to remember: the sheet used
 	// to ask every stream and forget the answer.
 	const [notifyFollowers, setNotifyFollowers] = useState(
@@ -202,7 +211,7 @@ export function GoLiveSheet({
 	);
 	const me = useAtomValue(userAtom);
 	const [category, setCategory] = useState(() => {
-		const raw = preset?.category ?? "";
+		const raw = fromVivid?.category ?? preset?.category ?? "";
 		const mapped = LEGACY_PRESET_CATEGORY[raw.toLowerCase()] ?? raw;
 		return mapped || "Crypto Markets";
 	});

@@ -23,12 +23,15 @@ const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
 import { useTheme } from "next-themes";
 import {
 	forwardRef,
+	useEffect,
 	useImperativeHandle,
 	useMemo,
 	useRef,
 	useState,
 } from "react";
+import { useAtom } from "jotai";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import { vividDmDraftAtom } from "@/store/ui.atom";
 import { press, staggerItem } from "@/lib/motion-presets";
 import { MINE_FILL, MINE_INK } from "./MessageBubble";
 
@@ -110,6 +113,15 @@ export const ComposerInput = forwardRef<
 ) {
 	const { prefs } = usePreferences();
 	const [value, setValue] = useState("");
+	// A draft Vivid wrote for this chat ("open my chat with Greg and draft a
+	// reply"): the thread's composer takes it once. Threads open by shallow
+	// pushState, so the path names the open conversation.
+	const [vividDraft, setVividDraft] = useAtom(vividDmDraftAtom);
+	useEffect(() => {
+		if (!vividDraft || !window.location.pathname.endsWith(`/${vividDraft.conversationId}`)) return;
+		setValue(vividDraft.text);
+		setVividDraft(null);
+	}, [vividDraft, setVividDraft]);
 	const [showEmoji, setShowEmoji] = useState(false);
 	const [mentionQuery, setMentionQuery] = useState<{
 		query: string;
