@@ -12,7 +12,6 @@ import {
 	ChatCircleDots,
 	House,
 	MonitorPlay,
-	Sparkle,
 	SquaresFour,
 	UserCircle,
 	UsersThree,
@@ -20,6 +19,7 @@ import {
 } from "@phosphor-icons/react";
 
 import type { IconProps } from "@/app/types";
+import { VividOrb } from "@/components/vivid/VividOrb";
 
 export interface SidebarItem {
 	/** i18n key — LeftSidebar renders t(labelKey); title stays as fallback. */
@@ -42,6 +42,18 @@ const navIcon = (Icon: PhosphorIcon): React.FC<IconProps> => {
 	NavIcon.displayName = `NavIcon(${Icon.displayName ?? "icon"})`;
 	return NavIcon;
 };
+
+/**
+ * Vivid wears its own mark, the rotating dot sphere (owner 2026-10-16:
+ * "vivid on the nav should use its rotating dots"), turning a little faster
+ * while its page is open. The orb draws only while on screen.
+ */
+const VividNavIcon: React.FC<IconProps> = ({ isActive }) => (
+	<span aria-hidden="true" className="flex h-[22px] w-[22px] shrink-0 items-center justify-center">
+		<VividOrb size={22} speed={isActive ? 0.9 : 0.45} />
+	</span>
+);
+VividNavIcon.displayName = "NavIcon(Vivid)";
 
 /** The rail's primary destinations. */
 export const mainNav: SidebarItem[] = [
@@ -90,7 +102,7 @@ export const mainNav: SidebarItem[] = [
 		labelKey: "nav.vivid",
 		title: "Vivid",
 		link: "/vivid",
-		icon: navIcon(Sparkle),
+		icon: VividNavIcon,
 	},
 	{
 		labelKey: "nav.bookmarks",
