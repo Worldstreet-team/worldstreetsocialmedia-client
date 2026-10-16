@@ -274,6 +274,7 @@ export default function CommunitiesPage() {
 					value={tab}
 					onChange={setTab}
 					ariaLabel={t("nav.communities")}
+					variant="line"
 				/>
 			</header>
 

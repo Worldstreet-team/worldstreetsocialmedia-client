@@ -29,7 +29,15 @@ export interface TabItem<K extends string = string> {
 /**
  * THE tab control.
  *
- * Pill chips, matching FeedTabs, which is the grammar the app actually ships.
+ * Two looks, one control. `pill` (the default): chips with a sliding fill.
+ * `line`: Home's own row (FeedTabs, owner 2026-10-16, X's grammar), plain
+ * words, the active one bold with a short brand bar sliding under it (the
+ * hairline under the row is the page's: a header border, or `className`).
+ * Communities wears `line` so it reads as one tab
+ * system with Home (owner 2026-10-16: "use one tab system for the
+ * communities as it's on the home").
+ *
+ * The pills matched FeedTabs, which was the grammar the app shipped then.
  * Underline tabs kept reappearing on new surfaces because each one was
  * hand-rolled from whatever the nearest reference looked like, so the app had
  * two tab languages at once. There is one here now.
@@ -57,6 +65,7 @@ export function Tabs<K extends string>({
 	className,
 	rootClassName,
 	size = "md",
+	variant = "pill",
 }: {
 	items: TabItem<K>[];
 	value: K;
@@ -64,6 +73,8 @@ export function Tabs<K extends string>({
 	ariaLabel: string;
 	/** md = the app default; lg for surfaces owner review wants louder (profile). */
 	size?: "md" | "lg";
+	/** pill = chips (the default); line = Home's underline row. */
+	variant?: "pill" | "line";
 	/** On the scrolling row itself (padding overrides, as before). */
 	className?: string;
 	/** On the wrapper that holds the row and its arrows: sizing in a flex row. */
@@ -162,7 +173,9 @@ export function Tabs<K extends string>({
 			layoutScroll
 			style={mask ? { maskImage: mask, WebkitMaskImage: mask } : undefined}
 			className={clsx(
-				"flex gap-1.5 overflow-x-auto px-2 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+				variant === "line"
+					? "flex overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+					: "flex gap-1.5 overflow-x-auto px-2 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
 				className,
 			)}
 		>
@@ -176,12 +189,18 @@ export function Tabs<K extends string>({
 						aria-selected={active}
 						onClick={() => onChange(key)}
 						className={clsx(
-							size === "lg"
-								? "relative flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-pill px-4 font-sans text-[calc(15px*var(--ws-fs))] transition-colors"
-								: "relative flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-pill px-3.5 font-sans text-[calc(13.5px*var(--ws-fs))] transition-colors",
-							active
-								? "font-semibold text-primary"
-								: "cursor-pointer font-medium text-muted hover:bg-raised/50 hover:text-primary",
+							variant === "line"
+								? "relative flex h-12 shrink-0 items-center gap-2 whitespace-nowrap px-4 font-sans text-[calc(15px*var(--ws-fs))] transition-colors"
+								: size === "lg"
+									? "relative flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-pill px-4 font-sans text-[calc(15px*var(--ws-fs))] transition-colors"
+									: "relative flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-pill px-3.5 font-sans text-[calc(13.5px*var(--ws-fs))] transition-colors",
+							variant === "line"
+								? active
+									? "font-bold text-primary"
+									: "cursor-pointer font-medium text-muted hover:text-primary"
+								: active
+									? "font-semibold text-primary"
+									: "cursor-pointer font-medium text-muted hover:bg-raised/50 hover:text-primary",
 						)}
 					>
 						{active && (
@@ -189,12 +208,17 @@ export function Tabs<K extends string>({
 								aria-hidden
 								layoutId={thumbId}
 								transition={thumbSpring}
-								className="absolute inset-0 rounded-pill bg-raised"
+								className={
+									variant === "line"
+										? "absolute inset-x-0 bottom-0 mx-auto h-[3px] w-7 rounded-pill bg-brand"
+										: "absolute inset-0 rounded-pill bg-raised"
+								}
 							/>
 						)}
 						{/* Positioned, so it paints above the thumb. */}
 						<span className="relative flex items-center gap-1.5">
-							{Icon && (
+							{/* Home's row is plain words: no glyph in the line look. */}
+							{Icon && variant !== "line" && (
 								<Icon
 									size={15}
 									weight={active ? "fill" : "regular"}
