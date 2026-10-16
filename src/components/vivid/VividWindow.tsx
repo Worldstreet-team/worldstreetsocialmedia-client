@@ -23,7 +23,7 @@ import {
 import { VividOrb } from "@/components/vivid/VividOrb";
 import { intentKind, useVividIntent } from "@/components/vivid/vivid-actions";
 import * as I from "@/components/vivid/vivid-icons";
-import { DUR, EASE, EASE_OUT_EXPO, press, staggerItem, staggerParent, swap } from "@/lib/motion-presets";
+import { DUR, EASE, EASE_OUT_EXPO, press, snappySpring, staggerItem, staggerParent, swap } from "@/lib/motion-presets";
 import { formatTimeAgo } from "@/lib/utils";
 import {
 	deleteVividFile,
@@ -788,18 +788,35 @@ export function Composer({
 						/>
 					</>
 				)}
+				{/* A mini switch (owner 2026-10-16: "search the web should be like a
+				    mini toggle"): it is a setting for the next answers, so it
+				    reads as on or off, not as a button that does something. */}
 				<button
 					type="button"
+					role="switch"
+					aria-checked={web}
 					onClick={onWeb}
-					aria-pressed={web}
 					className={clsx(
-						"flex h-9 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors",
+						"flex h-9 cursor-pointer items-center gap-2 rounded-pill pr-2 pl-2.5 font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors hover:bg-primary/5",
 						!attach && "-ml-2",
-						web ? "bg-primary/10 text-primary" : "text-muted hover:bg-primary/5 hover:text-primary",
+						web ? "text-primary" : "text-muted hover:text-primary",
 					)}
 				>
 					<I.IconGlobe size={17} />
 					Search the web
+					{/* Off is a grey dot on a faint track: at this size the big
+					    switch's page-coloured thumb vanished on black. */}
+					<span aria-hidden className={clsx("relative block h-4 w-7 shrink-0 rounded-pill transition-colors", web ? "bg-brand" : "bg-primary/15")}>
+						<motion.span
+							initial={false}
+							animate={{ x: web ? 12 : 0 }}
+							transition={snappySpring}
+							className={clsx(
+								"absolute top-0.5 left-0.5 block h-3 w-3 rounded-pill transition-colors",
+								web ? "bg-page shadow-nav" : "bg-primary/55",
+							)}
+						/>
+					</span>
 				</button>
 				<span className="flex-1" />
 				<AnimatePresence mode="popLayout" initial={false}>
