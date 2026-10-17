@@ -174,7 +174,9 @@ export function SendMoneySheet({
 					<OverlayScrim onClose={onClose} />
 					<OverlayPanel variant="center" label="Send money">
 						<OverlayHeader onClose={onClose}>
-							<span className="font-sans text-[calc(15px*var(--ws-fs))] font-semibold text-primary">
+							{/* flex-1: custom header children must take the row, or the
+							    close button sits against the title instead of the edge. */}
+							<span className="min-w-0 flex-1 truncate font-sans text-[calc(15px*var(--ws-fs))] font-semibold text-primary">
 								<AnimatePresence mode="wait" initial={false}>
 									<motion.span key={step} {...swap} className="inline-block">
 										{confirming

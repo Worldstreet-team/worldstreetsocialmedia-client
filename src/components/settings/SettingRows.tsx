@@ -1,32 +1,42 @@
 "use client";
 
-import { SelectRow, ToggleRow } from "./inspector";
+import { type RowTag, SelectRow, ToggleRow } from "./inspector";
 
 /**
  * The two row shapes every settings group is built from. Shared so a new
  * group is a list of rows, not a new design.
  *
- * Since the Inspector layout (owner 2026-09-20) these are thin names over
- * `inspector.tsx`: a Choice is a dropdown row, a Toggle is a switch row.
- * The pill-chip Choice is gone on purpose; do not bring it back for a
- * "short" list of options, a settings page reads as one system or not at all.
+ * Thin names over `inspector.tsx`: a Choice is a choice row, a Toggle is a
+ * switch row. A Choice with three or fewer short options shows them side by
+ * side on a desktop (owner 2026-10-07); anything longer, and every choice
+ * on a phone, is the dropdown.
  */
 
 export function Choice({
 	label,
 	hint,
+	tag,
 	value,
 	options,
 	onPick,
 }: {
 	label: string;
 	hint?: string;
+	tag?: RowTag;
 	value: string | number;
 	options: [string | number, string][];
 	onPick: (v: string | number) => void;
 }) {
 	return (
-		<SelectRow label={label} hint={hint} value={value} options={options} onPick={onPick} />
+		<SelectRow
+			label={label}
+			hint={hint}
+			tag={tag}
+			value={value}
+			options={options}
+			onPick={onPick}
+			segmented="auto"
+		/>
 	);
 }
 

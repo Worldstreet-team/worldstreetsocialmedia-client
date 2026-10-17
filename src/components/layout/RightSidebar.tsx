@@ -1,5 +1,7 @@
 "use client";
 
+import { VividOrb } from "@/components/vivid/VividOrb";
+
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -18,7 +20,7 @@ import { MagnifyingGlass } from "@phosphor-icons/react";
 import { PromoBanners } from "@/components/feed/PromoBanners";
 import { SidebarWallet } from "@/components/layout/SidebarWallet";
 import { SectionHead } from "@/components/layout/SectionHead";
-import { VoteRow } from "@/components/votes/VoteRow";
+import { WeeklyVoteCard } from "@/components/votes/WeeklyVoteCard";
 import { effectiveFollowing } from "@/lib/engagementStore";
 import { useFollowVersion } from "@/hooks/useFollowState";
 import { SpacesRail } from "@/components/layout/SpacesRail";
@@ -204,11 +206,13 @@ export function RightSidebar() {
 
 	return (
 		<aside className="w-[350px] shrink-0 hidden lg:flex flex-col gap-7 sticky top-0 h-dvh py-4 pl-8 pr-4 overflow-y-auto no-scrollbar">
+			{/* Search, with Vivid's turning orb beside it (owner 2026-10-16:
+			    Vivid takes Go Live's old place). */}
+			<div className="mt-2 flex shrink-0 items-center gap-2.5 animate-rise" style={{ animationDelay: "60ms" }}>
 			<button
 				type="button"
 				onClick={() => setSearchOpen(true)}
-				style={{ animationDelay: "60ms" }}
-				className="relative mt-2 shrink-0 flex items-center w-full h-11 bg-primary/5 rounded-pill pl-[42px] pr-3 font-sans text-sm text-subtle hover:text-muted transition-colors cursor-pointer animate-rise"
+				className="relative flex min-w-0 flex-1 items-center h-11 bg-primary/5 rounded-pill pl-[42px] pr-3 font-sans text-sm text-subtle hover:text-muted transition-colors cursor-pointer"
 			>
 				<MagnifyingGlass
 					size={16}
@@ -222,6 +226,20 @@ export function RightSidebar() {
 					/
 				</kbd>
 			</button>
+			<Link
+				href="/vivid"
+				aria-label="Vivid"
+				className="flex h-11 w-11 shrink-0 items-center justify-center rounded-pill transition-colors hover:bg-primary/5"
+			>
+				<VividOrb size={32} />
+			</Link>
+			</div>
+
+			{/* The third rail's room slot (owner 2026-10-12): a Space Voice room
+			    you minimise docks here, rendered by VoiceRoomHost through a
+			    portal so its audio and presence never remount. Empty and
+			    collapsed when you're not in a room. */}
+			<div id="ws-rail-room" className="shrink-0 empty:hidden" />
 
 			{/* Balance first: it is the one number on this rail that is about
 			    you rather than about other people. */}
@@ -244,12 +262,11 @@ export function RightSidebar() {
 				</div>
 			</section>
 
-			{/* The Weekly Vote as one row: what is at stake and how long is
-			    left. The ticking clock lives on /votes, which the row opens. */}
-			<section className="animate-rise" style={{ animationDelay: "150ms" }}>
-				<SectionHead label="This week" />
-				<VoteRow />
-			</section>
+			{/* The Weekly Vote, Concept B (owner pick 2026-10-16): the leader's
+			    post, where yours sits, and one button to vote. */}
+			<div className="animate-rise" style={{ animationDelay: "150ms" }}>
+				<WeeklyVoteCard />
+			</div>
 
 			{/* Live rings the red ring grammar, above Happening now. Click a
 			    ring to watch in-app; See all opens the live directory. */}

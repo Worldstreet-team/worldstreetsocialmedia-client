@@ -157,7 +157,7 @@ export default function MediaModal({
 									onClick={handlePrev}
 									aria-label="Previous item"
 									{...press}
-									className="w-12 h-12 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
+									className="w-12 h-12 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised rounded-pill transition-colors cursor-pointer"
 								>
 									<ChevronLeft className="w-8 h-8" />
 								</motion.button>
@@ -168,7 +168,7 @@ export default function MediaModal({
 									onClick={handleNext}
 									aria-label="Next item"
 									{...press}
-									className="w-12 h-12 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
+									className="w-12 h-12 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised rounded-pill transition-colors cursor-pointer"
 								>
 									<ChevronRight className="w-8 h-8" />
 								</motion.button>
@@ -247,7 +247,7 @@ export default function MediaModal({
 
 						{/* Counter */}
 						{media.length > 1 && (
-							<div className="absolute bottom-6 left-1/2 -translate-x-1/2 overflow-hidden bg-raised text-primary px-3 py-1 rounded-pill text-[calc(13px*var(--ws-fs))] font-medium border border-hairline font-sans tabular-nums">
+							<div className="absolute bottom-6 left-1/2 -translate-x-1/2 overflow-hidden bg-raised text-primary px-3 py-1 rounded-pill text-[calc(13px*var(--ws-fs))] font-medium font-sans tabular-nums">
 								{/* Only the index rolls; the total stands still. */}
 								<span className="relative inline-flex">
 									<AnimatePresence mode="popLayout" initial={false}>

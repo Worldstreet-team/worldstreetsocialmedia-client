@@ -25,6 +25,7 @@ import {
 	PALETTE_IDS,
 	type PaletteId,
 } from "@/data/palettes";
+import { DEFAULT_GROUND, GROUND_IDS, type GroundId } from "@/data/grounds";
 import {
 	CUSTOM_PALETTE_KEYS,
 	CUSTOM_PALETTE_VARS,
@@ -68,6 +69,8 @@ export interface Preferences {
 		mode: Appearance;
 		/** The app's brand colour. Orthogonal to mode and to a chat's theme. */
 		palette: PaletteId;
+		/** The app's surface family (Lagoon by default, owner 2026-10-09). */
+		ground: GroundId;
 		/** The twelve values behind `palette: "custom"`, derived from a
 		 *  picture (owner 2026-09-25). Kept when another palette is chosen,
 		 *  so the picture's colour is still on the account; painted only
@@ -118,6 +121,9 @@ export interface Preferences {
 		 *  means the sidebar opens showing everything, which is the default
 		 *  (owner 2026-09-21: a collapse that flips back is not a collapse). */
 		collapsedSettings: string[];
+		/** Messages on a desktop: keep the full inbox open beside a chat
+		 *  instead of folding it into the rail of faces (owner 2026-10-08). */
+		messagesInboxPinned: boolean;
 	};
 	content: {
 		defaultFeed: FeedTab;
@@ -154,7 +160,7 @@ export const DEFAULTS: Preferences = {
 		underlineLinks: false,
 		chatTextScale: "match",
 	},
-	appearance: { mode: "dark", palette: DEFAULT_PALETTE },
+	appearance: { mode: "dark", palette: DEFAULT_PALETTE, ground: DEFAULT_GROUND },
 	data: {
 		// Automatic, not off: a phone that has asked the web to save data has
 		// already told us what this person wants.
@@ -187,7 +193,7 @@ export const DEFAULTS: Preferences = {
 		showLikes: true,
 	},
 	notifications: { messageAlerts: true, defaultTab: "all" },
-	advanced: { seenTours: [], collapsedSettings: [] },
+	advanced: { seenTours: [], collapsedSettings: [], messagesInboxPinned: false },
 	content: {
 		defaultFeed: "foryou",
 		showStories: true,
@@ -285,6 +291,7 @@ export function normalizePrefs(raw: unknown): Preferences {
 		},
 		appearance: {
 			mode: oneOf(["dark", "light", "system"] as const, ap.mode, DEFAULTS.appearance.mode),
+			ground: oneOf(GROUND_IDS, ap.ground, DEFAULTS.appearance.ground),
 			...customAppearance(ap),
 		},
 		data: {
@@ -330,6 +337,10 @@ export function normalizePrefs(raw: unknown): Preferences {
 						.filter((k): k is string => typeof k === "string" && k.length <= 32)
 						.slice(0, 20)
 				: [],
+			messagesInboxPinned: bool(
+				(p.advanced as { messagesInboxPinned?: unknown })?.messagesInboxPinned,
+				false,
+			),
 			seenTours: Array.isArray((p.advanced as { seenTours?: unknown })?.seenTours)
 				? ((p.advanced as { seenTours: unknown[] }).seenTours
 						.filter((k): k is string => typeof k === "string" && k.length <= 64)
@@ -418,6 +429,9 @@ export function applyPrefsToDocument(p: Preferences) {
 	// The default palette carries no attribute: it is the token file itself.
 	h.dataset.wsPalette =
 		p.appearance.palette === DEFAULT_PALETTE ? "" : p.appearance.palette;
+	// Same for the ground: Lagoon is the base block in globals.css.
+	h.dataset.wsGround =
+		p.appearance.ground === DEFAULT_GROUND ? "" : p.appearance.ground;
 
 	for (const k of Object.keys(h.dataset)) {
 		if (k.startsWith("ws") && h.dataset[k] === "") delete h.dataset[k];

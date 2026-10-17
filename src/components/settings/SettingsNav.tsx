@@ -1,49 +1,44 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { usePreferences } from "@/components/providers/PreferencesProvider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAtomValue } from "jotai";
-import { CaretDown, CaretRight, MagnifyingGlass, X } from "@phosphor-icons/react";
+import { MagnifyingGlass, X } from "@phosphor-icons/react";
 import { LayoutGrid } from "@/components/ui/icons";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { collapse, staggerItem, staggerParentFast, thumbSpring } from "@/lib/motion-presets";
 import {
+	CATEGORIES,
 	GROUPS,
+	MESSAGES_MOVED_KEY,
 	SECTIONS,
 	type SectionId,
 	searchSettings,
 } from "@/components/settings/sections";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import { useTourSeen } from "@/lib/use-tour-seen";
 import { userAtom } from "@/store/user.atom";
 import { useT } from "@/i18n/client";
 import { SettingsHub } from "./SettingsHub";
 
 /**
- * The settings sidebar, built the way the Messages inbox is (owner
- * 2026-09-20: "the make over we gave the messages, do it the same for the
- * settings ... actual proper sidebar, nice use of icons and headers, master
- * search").
+ * The settings sidebar (owner 2026-10-07, replacing the two frosted blocks
+ * of 2026-09-20).
  *
- * Two frosted blocks in a padded column. The first is the masthead: the
- * page title in the display face, who you are, and the master search, a
- * well in the rest wash. The second is the map: sections under two labels,
- * each an icon in a wash chip and a name, the open one on a sliding
- * pressed wash, its groups folded out beneath it.
+ * Flat on the page: the title and the master search, then the map. The map
+ * is Overview and the sections under five labels (Activity, Privacy,
+ * Content, App, Account), each a bare glyph and a name, the open one on a
+ * sliding pressed wash. Only the OPEN section folds out its groups: with
+ * every section open by default the rail ran to some twenty-two rows and
+ * needed per-account carets to get short again. `prefs.advanced
+ * .collapsedSettings` is no longer read.
  *
  * The search covers every row of every section (sections.tsx SEARCH_INDEX).
  * A result opens the section, scrolls to the block and lights it; Enter
  * takes the first result, arrows walk the list, Escape clears.
  */
-
-/** The label that opens above a section, by the section it precedes. */
-const RAIL_LABELS: Partial<Record<SectionId, string>> = {
-	notifications: "App",
-	account: "Account",
-};
-
 export function SettingsNav({
 	activeId,
 	activeGroup,
@@ -61,57 +56,46 @@ export function SettingsNav({
 	const user = useAtomValue(userAtom);
 	const [query, setQuery] = useState("");
 	const [cursor, setCursor] = useState(0);
-	// Sections the person has shut. Empty by default: the sidebar opens
-	// showing everything it holds. Kept on the ACCOUNT, not in component
-	// state (owner 2026-09-21: "if i close or collapse sumn it doesn't
-	// persist, it just flips back to default") — a reload, a second tab or
-	// another device all find the rail the way it was left.
-	const { prefs, setPrefs } = usePreferences();
-	const collapsed = useMemo(
-		() => new Set(prefs.advanced.collapsedSettings),
-		[prefs.advanced.collapsedSettings],
-	);
-	const toggleCollapsed = (id: SectionId) => {
-		const next = new Set(collapsed);
-		if (next.has(id)) next.delete(id);
-		else next.add(id);
-		// Optimistic, like every other preference: it paints now and saves
-		// behind the tap.
-		setPrefs({ advanced: { collapsedSettings: [...next] } });
-	};
 	const inputRef = useRef<HTMLInputElement>(null);
 	const results = useMemo(() => searchSettings(query), [query]);
 	const searching = query.trim().length > 0;
 	useEffect(() => setCursor(0), [query]);
+	// Messages is new since the regroup; the badge goes with the notice.
+	const moved = useTourSeen(MESSAGES_MOVED_KEY);
 
 	const subRow =
-		"flex h-8 w-full cursor-pointer items-center rounded-[8px] px-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] transition-colors";
-	const subRowOn = "font-semibold text-primary";
-	const subRowOff = "text-muted hover:bg-primary/5 hover:text-primary";
+		"flex h-8 w-full cursor-pointer items-center rounded-[8px] px-2.5 text-left font-sans text-[calc(13.5px*var(--ws-fs))] transition-colors";
 
 	const hrefOf = (r: { section: SectionId; group: string }) =>
 		`/settings/${r.section}#group-${r.group}`;
 	const name =
 		[user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.username;
 
+	const row = (on: boolean) =>
+		clsx(
+			"relative flex min-h-[40px] items-center gap-3 rounded-xl px-3 transition-colors",
+			!on && "hover:bg-primary/5",
+		);
+
 	return (
-		<div className="flex min-h-full flex-col gap-2 p-2 md:gap-2 md:p-2.5">
-			{/* Masthead: title, identity, master search. */}
-			<div className="rounded-2xl px-3 pb-3 pt-3 glass-frost backdrop-blur-xl">
-				<div className="flex items-center gap-3">
+		<div className="flex min-h-full flex-col gap-4 px-3 pb-4 pt-5 lg:px-4 lg:pt-7">
+			{/* Masthead: title and master search. On a phone it also says
+			    whose settings these are; a desktop has the Overview for that. */}
+			<div className="flex flex-col gap-4">
+				<div className="flex items-center gap-3 px-2">
 					<div className="min-w-0 flex-1">
-						<h1 className="font-display text-[calc(20px*var(--ws-fs))] font-semibold tracking-tight text-primary">
+						<h1 className="font-display text-[calc(26px*var(--ws-fs))] font-semibold tracking-tight text-primary">
 							{t("settings.title")}
 						</h1>
-						<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
+						<p className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted lg:hidden">
 							{name} · @{user?.username}
 						</p>
 					</div>
-					<span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-pill bg-sunken">
+					<span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-pill bg-sunken lg:hidden">
 						<SafeAvatar src={user?.avatar} />
 					</span>
 				</div>
-				<label className="relative mt-2.5 block">
+				<label className="relative block">
 					<MagnifyingGlass
 						size={16}
 						weight="bold"
@@ -162,27 +146,18 @@ export function SettingsNav({
 					)}
 				</label>
 			</div>
-
 			{/* On a phone `/settings` IS this column (owner 2026-09-20, mobile
 			    directions A + B): tiles for the common changes, then the
-			    sections as a list that says what each is set to. The tree
+			    sections as a list that says what each is set to. The map
 			    below is a desktop idiom and stays on the desktop. */}
 			{!searching && (
 				<div className="lg:hidden">
 					<SettingsHub />
 				</div>
 			)}
-
-			{/* The map, or the results while a search is running. */}
-			{/* flex-1: the map block runs to the bottom of the rail. */}
-			<div
-				className={clsx(
-					"rounded-2xl px-1.5 pb-1.5 pt-1.5 glass-frost backdrop-blur-xl lg:flex-1",
-					// The tree is the desktop's; a phone shows this block only
-					// for search results.
-					!searching && "hidden lg:block",
-				)}
-			>
+			{/* The map, or the results while a search is running. A phone
+			    shows this only for search results. */}
+			<div className={clsx(!searching && "hidden lg:block")}>
 				{searching ? (
 					<div id="settings-search-results" role="listbox" aria-label="Search results">
 						{results.length === 0 ? (
@@ -238,38 +213,32 @@ export function SettingsNav({
 						variants={staggerParentFast}
 						initial="hidden"
 						animate="show"
-						className="flex flex-col"
+						className="flex flex-col gap-px"
 					>
-						{/* The landing is addressable, so it is a row like any
-						    other. Desktop only: on a phone `/settings` IS the hub,
-						    and the overview is rendered inline above this map. */}
-						<motion.div variants={staggerItem} className="hidden lg:flex lg:flex-col">
+						<motion.div variants={staggerItem}>
 							<Link
 								href="/settings"
 								aria-current={!activeId ? "page" : undefined}
-								className={clsx(
-									"relative flex min-h-[34px] items-center gap-2.5 rounded-[10px] px-2.5 transition-colors",
-									activeId && "hover:bg-primary/5",
-								)}
+								className={row(!activeId)}
 							>
 								{!activeId && (
 									<motion.span
 										aria-hidden
 										layoutId="settings-nav-active"
 										transition={thumbSpring}
-										className="absolute inset-0 rounded-[10px] bg-primary/10"
+										className="absolute inset-0 rounded-xl bg-primary/10"
 									/>
 								)}
 								<LayoutGrid
 									className={clsx(
 										"relative h-[18px] w-[18px] shrink-0",
-										activeId ? "text-muted" : "text-primary",
+										activeId ? "text-muted" : "text-brand",
 									)}
 									strokeWidth={activeId ? 2 : 2.5}
 								/>
 								<span
 									className={clsx(
-										"relative truncate font-sans text-[calc(14px*var(--ws-fs))] text-primary",
+										"relative truncate font-sans text-[calc(14.5px*var(--ws-fs))] text-primary",
 										activeId ? "font-medium" : "font-semibold",
 									)}
 								>
@@ -277,156 +246,101 @@ export function SettingsNav({
 								</span>
 							</Link>
 						</motion.div>
-						{SECTIONS.map(({ id, labelKey, icon: Icon }) => {
-							const active = id === activeId;
-							const subs = GROUPS[id];
-							// Every section shows what is inside it (owner 2026-09-20:
-							// "showing the sub items by default with a caret to switch
-							// back up"), so the map is the whole map, not a drawer that
-							// only opens where you already are. Collapsing is per person
-							// per person; the set holds only what they shut, on the account.
-							const open = subs.length > 1 && !collapsed.has(id);
-							return (
-								<motion.div key={id} variants={staggerItem} className="flex flex-col">
-									{RAIL_LABELS[id] && (
-										<span
-											className={clsx(
-												"px-2.5 pb-1 pt-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-muted",
-											)}
-										>
-											{RAIL_LABELS[id]}
-										</span>
-									)}
-									{/* The row is a link and a disclosure side by side, not a
-									    button inside a link: a caret nested in an anchor is
-									    invalid, and a tap meant for one would fire the other. */}
-									<div
-										className={clsx(
-											"relative flex min-h-[34px] items-center rounded-[10px] transition-colors",
-											!active && "hover:bg-primary/5",
-										)}
-									>
-										{/* One pressed wash that slides between sections. The
-										    page never unmounts across sections and this nav is
-										    a page singleton, so a fixed id is safe. */}
-										{active && (
-											<motion.span
-												aria-hidden
-												layoutId="settings-nav-active"
-												transition={thumbSpring}
-												className="absolute inset-0 rounded-[10px] bg-primary/10"
-											/>
-										)}
-										<Link
-											href={`/settings/${id}`}
-											aria-current={active ? "page" : undefined}
-											className="relative flex min-w-0 flex-1 items-center gap-2.5 self-stretch rounded-[10px] pl-2.5 pr-1"
-										>
-											{/* Bare glyphs (owner 2026-09-20). The open section is
-											    told by the sliding wash behind the row and by
-											    weight, not by a filled chip. */}
-											<Icon
-												className={clsx(
-													"h-[18px] w-[18px] shrink-0 transition-colors",
-													active ? "text-primary" : "text-muted",
-												)}
-												strokeWidth={active ? 2.5 : 2}
-											/>
-											{/* The name alone (owner 2026-09-20: "remove the tagline
-											    in the settings"). What is in a section is told by the
-											    sub-items under it now, not by a line of prose. */}
-											<span
-												className={clsx(
-													"min-w-0 flex-1 truncate py-1 font-sans text-[calc(13.5px*var(--ws-fs))] text-primary",
-													active ? "font-semibold" : "font-medium",
-												)}
+						{CATEGORIES.map((cat) => (
+							<motion.div key={cat.label} variants={staggerItem} className="flex flex-col gap-px">
+								<span className="px-3 pb-1.5 pt-5 font-sans text-[calc(11.5px*var(--ws-fs))] font-semibold uppercase tracking-[0.1em] text-subtle">
+									{cat.label}
+								</span>
+								{cat.ids.map((id) => {
+									const def = SECTIONS.find((s) => s.id === id);
+									if (!def) return null;
+									const { labelKey, icon: Icon } = def;
+									const active = id === activeId;
+									const subs = GROUPS[id];
+									const isNew = id === "messages" && moved.ready && !moved.seen;
+									return (
+										<div key={id} className="flex flex-col">
+											<Link
+												href={`/settings/${id}`}
+												aria-current={active ? "page" : undefined}
+												className={row(active)}
 											>
-												{t(labelKey)}
-											</span>
-										</Link>
-										{subs.length > 1 ? (
-											<button
-												type="button"
-												onClick={() => toggleCollapsed(id)}
-												aria-expanded={open}
-												aria-controls={`settings-subs-${id}`}
-												aria-label={`${open ? "Hide" : "Show"} what is in ${t(labelKey)}`}
-												className="relative mr-0.5 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-pill text-subtle transition-colors hover:text-primary"
-											>
-												<CaretDown
-													size={13}
-													weight="bold"
-													className={clsx("transition-transform", !open && "-rotate-90")}
+												{/* One pressed wash that slides between sections.
+												    The page never unmounts across sections and this
+												    nav is a page singleton, so a fixed id is safe. */}
+												{active && (
+													<motion.span
+														aria-hidden
+														layoutId="settings-nav-active"
+														transition={thumbSpring}
+														className="absolute inset-0 rounded-xl bg-primary/10"
+													/>
+												)}
+												<Icon
+													className={clsx(
+														"relative h-[18px] w-[18px] shrink-0 transition-colors",
+														active ? "text-brand" : "text-muted",
+													)}
+													strokeWidth={active ? 2.5 : 2}
 												/>
-											</button>
-										) : (
-											<CaretRight
-												size={13}
-												weight="bold"
-												className="relative mr-3 shrink-0 text-subtle lg:hidden"
-											/>
-										)}
-									</div>
-									{/* What is inside the section: tap to go there. Inside the
-									    open section the one in view is lit and tapping scrolls;
-									    anywhere else it opens that section on that group.
-									    initial={false}: a first paint arrives already open. */}
-									<AnimatePresence initial={false}>
-										{open && (
-											<motion.div
-												key="subs"
-												id={`settings-subs-${id}`}
-												{...collapse}
-												className="overflow-hidden"
-											>
-												<ul className="mb-1 ml-[21px] flex flex-col border-l border-hairline pl-3">
-													{subs.map((g) => {
-														const on = active && g.id === activeGroup;
-														return (
-															<li key={g.id} className="relative">
-																{/* The id carries the section: a closing list
-																    is still mounted while the next opens, and a
-																    shared id would fly the marker between them. */}
-																{on && (
-																	<motion.span
-																		aria-hidden
-																		layoutId={`settings-subnav-marker-${id}`}
-																		transition={thumbSpring}
-																		className="absolute -left-[13px] bottom-1 top-1 w-[2px] rounded-pill bg-primary"
-																	/>
-																)}
-																{/* Inside the open section this scrolls, so it is a
-																    button; anywhere else it opens that section on
-																    that group, which is a link and has to be one:
-																    router.push is a no-op here, the row is already
-																    inside the same catch-all route. */}
-																{active ? (
-																	<button
-																		type="button"
-																		aria-current={on ? "true" : undefined}
-																		onClick={() => onGroup?.(g.id)}
-																		className={clsx(subRow, on ? subRowOn : subRowOff)}
-																	>
-																		{g.label}
-																	</button>
-																) : (
-																	<Link
-																		href={`/settings/${id}#group-${g.id}`}
-																		className={clsx(subRow, subRowOff)}
-																	>
-																		{g.label}
-																	</Link>
-																)}
-															</li>
-														);
-													})}
-												</ul>
-											</motion.div>
-										)}
-									</AnimatePresence>
-								</motion.div>
-							);
-						})}
+												<span
+													className={clsx(
+														"relative min-w-0 flex-1 truncate py-1 font-sans text-[calc(14.5px*var(--ws-fs))] text-primary",
+														active ? "font-semibold" : "font-medium",
+													)}
+												>
+													{t(labelKey)}
+												</span>
+												{isNew && (
+													<span className="relative shrink-0 rounded-pill bg-brand/10 px-2 py-0.5 font-sans text-[calc(11px*var(--ws-fs))] font-semibold text-brand">
+														New
+													</span>
+												)}
+											</Link>
+											{/* The open section's groups, tap to scroll; the one
+											    in view is lit. initial={false}: a first paint
+											    arrives already open. */}
+											<AnimatePresence initial={false}>
+												{active && subs.length > 1 && (
+													<motion.div key="subs" {...collapse} className="overflow-hidden">
+														<ul className="mb-1.5 ml-[21px] mt-0.5 flex flex-col border-l border-hairline pl-3">
+															{subs.map((g) => {
+																const on = g.id === activeGroup;
+																return (
+																	<li key={g.id} className="relative">
+																		{on && (
+																			<motion.span
+																				aria-hidden
+																				layoutId={`settings-subnav-marker-${id}`}
+																				transition={thumbSpring}
+																				className="absolute -left-[13px] bottom-1 top-1 w-[2px] rounded-pill bg-brand"
+																			/>
+																		)}
+																		<button
+																			type="button"
+																			aria-current={on ? "true" : undefined}
+																			onClick={() => onGroup?.(g.id)}
+																			className={clsx(
+																				subRow,
+																				on
+																					? "font-semibold text-primary"
+																					: "text-subtle hover:bg-primary/5 hover:text-primary",
+																			)}
+																		>
+																			{g.label}
+																		</button>
+																	</li>
+																);
+															})}
+														</ul>
+													</motion.div>
+												)}
+											</AnimatePresence>
+										</div>
+									);
+								})}
+							</motion.div>
+						))}
 					</motion.nav>
 				)}
 			</div>

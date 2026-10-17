@@ -49,8 +49,9 @@ export const PRESETS: Preset[] = [
     adjustments: { brightness: -8, saturation: -35, contrast: 10, warmth: -25 },
   },
   {
+    // id kept so saved edit docs still resolve; renamed 2026-10-12.
     id: "ticker",
-    label: "Ticker",
+    label: "Mono",
     adjustments: { contrast: 35 },
     grayscale: 1,
   },

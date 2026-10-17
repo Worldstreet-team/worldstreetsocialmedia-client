@@ -16,6 +16,7 @@ import {
 	OverlayScrim,
 	useOverlayDismiss,
 } from "@/components/ui/Overlay";
+import { HaloChip, HaloChips } from "@/components/ui/Halo";
 import { staggerItem, staggerParent } from "@/lib/motion-presets";
 
 /** Where the + button is, so the sheet grows from it on a desktop. */
@@ -67,15 +68,19 @@ export function AttachSheet({
 		onClose();
 		fn();
 	};
-	const rows: { icon: ReactNode; label: string; hint: string; go: () => void }[] = [
-		{ icon: <RiImageLine size={19} />, label: "Photo or video", hint: "From your library", go: pick(onPhoto) },
-		{ icon: <RiMusic2Line size={19} />, label: "Audio", hint: "A song or an audio file", go: pick(onAudio) },
-		{ icon: <RiWallet3Line size={19} />, label: "Send money", hint: "From your WorldStreet wallet", go: pick(onMoney) },
-		{ icon: <RiUserSharedLine size={19} />, label: "WorldSpace contact", hint: "Share someone's profile", go: pick(onContact) },
-		...(onPoll ? [{ icon: <RiBarChartHorizontalLine size={19} />, label: "Poll", hint: "Ask the room", go: pick(onPoll) }] : []),
+	// Halo layout (owner pick, round 3): the everyday picks as round chips,
+	// the rest as rows, money last and lit.
+	const chips: { icon: ReactNode; label: string; go: () => void }[] = [
+		{ icon: <RiImageLine size={20} />, label: "Photo & video", go: pick(onPhoto) },
+		{ icon: <RiMusic2Line size={20} />, label: "Audio", go: pick(onAudio) },
+		{ icon: <RiUserSharedLine size={20} />, label: "Contact", go: pick(onContact) },
+	];
+	const rows: { icon: ReactNode; label: string; hint: string; go: () => void; lit?: boolean }[] = [
+		...(onPoll ? [{ icon: <RiBarChartHorizontalLine size={18} />, label: "Poll", hint: "Ask the room", go: pick(onPoll) }] : []),
 	];
 	if (phoneContactsSupported())
-		rows.push({ icon: <RiContactsBookLine size={19} />, label: "Contact from your phone", hint: "Name and number", go: pick(onPhoneContact) });
+		rows.push({ icon: <RiContactsBookLine size={18} />, label: "Contact from your phone", hint: "Name and number", go: pick(onPhoneContact) });
+	rows.push({ icon: <RiWallet3Line size={18} />, label: "Send money", hint: "From your WorldStreet wallet", go: pick(onMoney), lit: true });
 
 	return (
 		<AnimatePresence>
@@ -86,9 +91,9 @@ export function AttachSheet({
 						key="attach-panel"
 						variant="anchored"
 						label="Attach"
-						ground="none"
+						ground="solid"
 						dragClose={onClose}
-						className={clsx("bg-surface", desktop && "sm:w-[280px]")}
+						className={clsx(desktop && "sm:w-[280px]")}
 						style={
 							desktop && anchor
 								? {
@@ -107,29 +112,46 @@ export function AttachSheet({
 							variants={staggerParent}
 							initial="hidden"
 							animate="show"
-							className="flex flex-col py-2 pb-[calc(8px+var(--ws-safe-bottom))]"
+							className="flex flex-col gap-3 p-3 pb-[calc(12px+var(--ws-safe-bottom))]"
 						>
-							{rows.map((r) => (
-								<motion.button
-									key={r.label}
-									variants={staggerItem}
-									type="button"
-									onClick={r.go}
-									className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-primary/5"
-								>
-									<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-pill bg-primary/5 text-primary">
-										{r.icon}
-									</span>
-									<span className="min-w-0">
-										<span className="block font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary">
-											{r.label}
+							<motion.div variants={staggerItem}>
+								<HaloChips>
+									{chips.map((c) => (
+										<HaloChip key={c.label} icon={c.icon} label={c.label} onClick={c.go} />
+									))}
+								</HaloChips>
+							</motion.div>
+							<div className="flex flex-col gap-1.5">
+								{rows.map((r) => (
+									<motion.button
+										key={r.label}
+										variants={staggerItem}
+										type="button"
+										onClick={r.go}
+										className={clsx(
+											"flex w-full cursor-pointer items-center gap-3 rounded-[18px] px-3 py-2.5 text-left transition-colors",
+											r.lit ? "bg-brand/12 hover:bg-brand/20" : "hover:bg-primary/[0.06]",
+										)}
+									>
+										<span
+											className={clsx(
+												"flex h-9 w-9 shrink-0 items-center justify-center rounded-pill",
+												r.lit ? "bg-brand text-brand-on" : "bg-primary/[0.07] text-primary",
+											)}
+										>
+											{r.icon}
 										</span>
-										<span className="block font-sans text-[calc(12px*var(--ws-fs))] text-muted">
-											{r.hint}
+										<span className="min-w-0">
+											<span className="block font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
+												{r.label}
+											</span>
+											<span className="block font-sans text-[calc(12px*var(--ws-fs))] text-muted">
+												{r.hint}
+											</span>
 										</span>
-									</span>
-								</motion.button>
-							))}
+									</motion.button>
+								))}
+							</div>
 						</motion.div>
 					</OverlayPanel>
 				</>

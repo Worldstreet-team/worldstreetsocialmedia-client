@@ -156,7 +156,7 @@ export function GroupCreateModal({
 			{isOpen && (
 				<>
 					<OverlayScrim onClose={onClose} />
-					<OverlayPanel dragClose={onClose} variant="sheet" label="New group">
+					<OverlayPanel ground="solid" dragClose={onClose} variant="sheet" label="New group">
 						<OverlayHeader title={done ? "Group created" : "New group"} onClose={onClose} />
 
 						<AnimatePresence mode="wait" initial={false}>

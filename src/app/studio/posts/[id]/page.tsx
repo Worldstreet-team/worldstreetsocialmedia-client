@@ -23,7 +23,7 @@ export default function StudioPostDrilldown({
 				<Link
 					href="/studio/posts"
 					aria-label={t("studio.back")}
-					className="flex h-9 w-9 shrink-0 items-center justify-center rounded-pill bg-[#fafaf9]/[0.06] glass-ink-dim transition-colors hover:glass-ink hover:bg-[#fafaf9]/[0.1]"
+					className="flex h-9 w-9 shrink-0 items-center justify-center rounded-pill bg-primary/[0.06] glass-ink-dim transition-colors hover:glass-ink hover:bg-primary/[0.1]"
 				>
 					<ArrowLeft size={16} />
 				</Link>

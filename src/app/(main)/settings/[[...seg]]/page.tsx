@@ -4,40 +4,34 @@ import { mainScrollEl } from "@/lib/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAtom, useSetAtom } from "jotai";
 import { useTheme } from "next-themes";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-	ArrowLeft,
-	BadgeCheck,
-	Bell,
-	BellRing,
-	Eye,
-	Gauge,
-	Lock,
-	MessageSquare,
-	Palette,
-	Rss,
-	ShieldAlert,
-	ShieldCheck,
-	SlidersHorizontal,
-	UserCircle,
-} from "@/components/ui/icons";
+import { ArrowLeft, ChevronRight, Info } from "@/components/ui/icons";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { AccessibilitySettings } from "@/components/settings/AccessibilitySettings";
 import { ContentSettings, DataSettings } from "@/components/settings/DataSettings";
-import { MessagingSettings } from "@/components/settings/MessagingSettings";
-import { NotificationBehaviour, PrivacySettings } from "@/components/settings/PrivacySettings";
+import {
+	MessagesChat,
+	MessagesReach,
+	MessagesSeen,
+	MessagesVoice,
+} from "@/components/settings/MessagingSettings";
+import { NotificationBehaviour, VisibilitySettings } from "@/components/settings/PrivacySettings";
 import { InstallAppRow } from "@/components/settings/InstallAppRow";
 import { InterestPicker } from "@/components/onboarding/InterestPicker";
 import { BlockedAccounts } from "@/components/settings/BlockedAccounts";
+import { MutedAccounts } from "@/components/settings/MutedAccounts";
+import { MutedWords } from "@/components/settings/MutedWords";
 import { AccountLifecycle } from "@/components/settings/AccountLifecycle";
 import { UsernameSetting } from "@/components/settings/UsernameSetting";
-import { LayoutGrid } from "@/components/ui/icons";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { NotificationPrefs } from "@/components/settings/NotificationPrefs";
+import { SpaceRecapRows } from "@/components/settings/SpaceSettings";
+import { GroundSetting } from "@/components/settings/GroundSetting";
 import { PaletteSetting } from "@/components/settings/PaletteSetting";
+import { SaveStatus } from "@/components/settings/SaveStatus";
 import { SettingsNav } from "@/components/settings/SettingsNav";
 import { SettingsOverview } from "@/components/settings/SettingsOverview";
 import {
@@ -48,14 +42,17 @@ import {
 } from "@/components/settings/inspector";
 import {
 	GROUPS,
+	LEGACY_SECTIONS,
+	MESSAGES_MOVED_KEY,
 	SECTIONS,
 	type SectionId,
 	isSectionId,
 } from "@/components/settings/sections";
 import { motionReduced } from "@/lib/motion";
-import { press, reveal, swap, thumbSpring } from "@/lib/motion-presets";
+import { press, reveal, swap } from "@/lib/motion-presets";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { updateMyProfileAction } from "@/lib/user.actions";
+import { useTourSeen } from "@/lib/use-tour-seen";
 import { withThemeTransition } from "@/lib/theme-transition";
 import { userAtom } from "@/store/user.atom";
 import { premiumOpenAtom } from "@/store/ui.atom";
@@ -104,6 +101,15 @@ export default function SettingsPage() {
 	const activeId: SectionId = valid ?? "account";
 	const activeDef = SECTIONS.find((s) => s.id === activeId)!;
 	const groups = GROUPS[activeId];
+
+	// Sections from before the regroup (2026-10-07) land where those
+	// settings live now, keeping any #group- hash the link carried.
+	const router = useRouter();
+	useEffect(() => {
+		const to = rawSeg ? LEGACY_SECTIONS[rawSeg] : undefined;
+		if (to) router.replace(`/settings/${to}${window.location.hash}`);
+	}, [rawSeg, router]);
+	const moved = useTourSeen(MESSAGES_MOVED_KEY);
 
 	// Sub-nav (owner 2026-09-15): the groups of the open section, tap to
 	// scroll. The group in view is lit by an observer against the main
@@ -285,7 +291,7 @@ export default function SettingsPage() {
 					// border run to the bottom of the window however short the
 					// open section is, and it scrolls on its own when the map,
 					// with every group folded out, is taller than the window.
-					"pb-nav lg:sticky lg:top-0 lg:block lg:h-dvh lg:w-[288px] lg:shrink-0 lg:overflow-y-auto lg:border-r lg:border-hairline lg:pb-0 lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden",
+					"pb-nav lg:sticky lg:top-0 lg:block lg:h-dvh lg:w-[300px] lg:shrink-0 lg:overflow-y-auto lg:border-r lg:border-hairline lg:pb-0 lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden",
 					valid ? "hidden" : "block w-full",
 				)}
 			>
@@ -301,15 +307,14 @@ export default function SettingsPage() {
 					valid ? "block" : "hidden lg:block",
 				)}
 			>
-				{/* The Messages thread's grammar: the title rides in a frosted pill
-				    floating over the blocks, with the section's own icon. The
-				    pill blurs what scrolls under it; the blocks are its siblings,
-				    never its children, so no blur sits inside another. */}
+				{/* A plain bar on the page colour (owner 2026-10-07): where you
+				    are on the left, the save receipt on the right. It stays
+				    put while the groups scroll under it. */}
 				<header
 					data-settings-header
-					className="sticky top-0 z-sticky px-2 pt-2 md:px-3 md:pt-3"
+					className="sticky top-0 z-sticky bg-page/85 px-2 backdrop-blur-xl md:px-6 lg:px-12"
 				>
-					<div className="flex h-14 items-center gap-2.5 rounded-pill px-2 glass-frost backdrop-blur-xl">
+					<div className="flex h-14 items-center gap-2">
 						<Link
 							href="/settings"
 							aria-label="Back to settings"
@@ -317,48 +322,245 @@ export default function SettingsPage() {
 						>
 							<ArrowLeft className="h-5 w-5" strokeWidth={2.5} />
 						</Link>
-						{valid ? (
-							<activeDef.icon
-								className="ml-2 hidden h-[19px] w-[19px] shrink-0 text-primary lg:block"
+						<nav
+							aria-label="Breadcrumb"
+							className="flex min-w-0 flex-1 items-center gap-1.5 font-sans text-[calc(14px*var(--ws-fs))]"
+						>
+							<Link
+								href="/settings"
+								className="hidden shrink-0 text-subtle transition-colors hover:text-primary lg:inline"
+							>
+								{t("settings.title")}
+							</Link>
+							<ChevronRight
+								aria-hidden
+								className="hidden h-3.5 w-3.5 shrink-0 text-subtle lg:block"
 								strokeWidth={2.25}
 							/>
-						) : (
-							<LayoutGrid
-								className="ml-2 hidden h-[19px] w-[19px] shrink-0 text-primary lg:block"
-								strokeWidth={2.25}
-							/>
-						)}
-						<h2 className="min-w-0 flex-1 truncate font-display text-[calc(17px*var(--ws-fs))] font-semibold tracking-tight text-primary">
-							{valid ? t(activeDef.labelKey) : "Overview"}
-						</h2>
-						<span className="mr-3 hidden shrink-0 items-center gap-1.5 font-sans text-[calc(12.5px*var(--ws-fs))] text-muted sm:flex">
-							<span className="h-1.5 w-1.5 rounded-pill bg-success" />
-							Synced to your account
-						</span>
+							<span aria-current="page" className="truncate font-semibold text-primary">
+								{valid ? t(activeDef.labelKey) : "Overview"}
+							</span>
+						</nav>
+						<SaveStatus />
 					</div>
-					{/* The sub-nav on a phone: the section's groups as chips, tap to
-					    scroll. The desktop list carries the same groups under the
-					    open section, so this strip is mobile only. */}
-					{/* No chip strip on a phone any more (mobile direction A): a
-					    section is a back arrow, a title and its blocks. The
-					    sidebar carries the groups on a desktop. */}
 				</header>
 
-				<div ref={detailRef} className="flex w-full max-w-[980px] flex-col gap-2 p-2 md:gap-3 md:p-3">
+				<div
+					ref={detailRef}
+					className="flex w-full max-w-[880px] flex-col gap-8 px-4 pt-2 md:px-6 lg:px-12"
+				>
+					{valid && (
+						<motion.div {...reveal(0)}>
+							<h1 className="font-display text-[calc(26px*var(--ws-fs))] font-semibold tracking-tight text-primary lg:text-[calc(30px*var(--ws-fs))]">
+								{t(activeDef.labelKey)}
+							</h1>
+							<p className="mt-2 max-w-[62ch] font-sans text-[calc(15px*var(--ws-fs))] leading-relaxed text-muted">
+								{activeDef.caption}
+							</p>
+						</motion.div>
+					)}
+
 					{/* The landing (owner 2026-09-20): who you are, then the few
-					    things most people came to change. It used to open on
-					    Account, so the first screen was a username field and a
-					    Delete account button. */}
+					    things most people came to change. */}
 					{!valid && <SettingsOverview />}
+
+					{valid && activeId === "notifications" && (
+						<>
+							<Section id="alerts" title={t("settings.notify.title")}>
+								<NotificationPrefs />
+							</Section>
+							<Section id="behaviour" order={1} title="Behaviour">
+								<NotificationBehaviour />
+							</Section>
+							<Section
+								id="spaces"
+								order={2}
+								title="Spaces"
+								caption="Recaps land in your notifications, and on your phone if you use the app."
+							>
+								<SpaceRecapRows />
+							</Section>
+						</>
+					)}
+
+					{valid && activeId === "messages" && (
+						<>
+							<AnimatePresence initial={false}>
+								{moved.ready && !moved.seen && (
+									<motion.div
+										key="moved"
+										{...reveal(0)}
+										exit={{ opacity: 0, height: 0, marginBottom: -32 }}
+										className="flex items-center gap-3 overflow-hidden rounded-2xl bg-brand/10 px-4 py-3"
+									>
+										<Info className="h-[17px] w-[17px] shrink-0 text-brand" strokeWidth={2.25} />
+										<p className="min-w-0 flex-1 font-sans text-[calc(13.5px*var(--ws-fs))] leading-snug text-primary">
+											Chat settings used to be split across Safety, Data &amp; feed
+											and Notifications. They&apos;re all here now.
+										</p>
+										<button
+											type="button"
+											onClick={moved.markSeen}
+											className="shrink-0 cursor-pointer font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-brand"
+										>
+											Got it
+										</button>
+									</motion.div>
+								)}
+							</AnimatePresence>
+							<Section id="reach" title="Who can reach you">
+								<MessagesReach />
+							</Section>
+							<Section id="seen" order={1} title="What they see from you">
+								<MessagesSeen />
+							</Section>
+							<Section id="chat" order={2} title="In a chat">
+								<MessagesChat />
+							</Section>
+							<Section id="voice" order={3} title="Voice notes">
+								<MessagesVoice />
+							</Section>
+						</>
+					)}
+
+					{valid && activeId === "privacy" && (
+						<Section id="visibility" title="Visibility">
+							<VisibilitySettings />
+						</Section>
+					)}
+
+					{valid && activeId === "muted" && (
+						<>
+							<Section
+								id="muted-accounts"
+								title="Muted accounts"
+								caption="Their posts leave your feed and their likes, replies and mentions stop notifying you. They can still see your posts and message you."
+							>
+								<MutedAccounts />
+							</Section>
+							<Section
+								id="muted-words"
+								order={1}
+								title="Muted words"
+								caption="Posts with these words leave your feed, and replies or mentions with them stay quiet."
+							>
+								<MutedWords />
+							</Section>
+						</>
+					)}
+
+					{valid && activeId === "blocked" && (
+						<Section
+							id="blocked"
+							title={t("settings.blocked.title")}
+							caption={t("settings.blocked.caption")}
+						>
+							<BlockedAccounts />
+						</Section>
+					)}
+
+					{valid && activeId === "feed" && (
+						<>
+							<Section
+								id="interests"
+								title={t("settings.topics.title")}
+								caption={t("settings.topics.caption")}
+							>
+								<div className="py-4">
+									<InterestPicker selected={interests} onToggle={toggleInterest} />
+								</div>
+								<div className="flex min-h-[52px] items-center justify-between gap-3 border-y border-hairline py-1.5">
+									<span className="font-sans text-[calc(13px*var(--ws-fs))] tabular-nums text-muted">
+										{countBefore}
+										<span className="relative inline-flex overflow-hidden align-bottom">
+											<AnimatePresence mode="popLayout" initial={false}>
+												<motion.span
+													key={interests.length}
+													{...swap}
+													className="inline-block"
+												>
+													{interests.length}
+												</motion.span>
+											</AnimatePresence>
+										</span>
+										{countAfter}
+									</span>
+									<motion.button
+										type="button"
+										{...press}
+										onClick={saveTopics}
+										disabled={!dirty || savingTopics}
+										className="h-10 cursor-pointer rounded-pill bg-brand px-5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+									>
+										<AnimatePresence mode="wait" initial={false}>
+											<motion.span
+												key={savingTopics ? "saving" : "save"}
+												{...swap}
+												className="inline-block"
+											>
+												{savingTopics
+													? t("settings.topics.saving")
+													: t("common.save")}
+											</motion.span>
+										</AnimatePresence>
+									</motion.button>
+								</div>
+							</Section>
+							<Section id="timeline" order={1} title="Timeline">
+								<ContentSettings />
+							</Section>
+						</>
+					)}
+
+					{valid && activeId === "display" && (
+						<>
+							<Section id="accessibility" title="Accessibility">
+								<AccessibilitySettings />
+							</Section>
+
+							<Section id="appearance" order={1} title={t("settings.display.title")}>
+								<InstallAppRow />
+								<SelectRow
+									label={t("settings.display.theme")}
+									hint="Dark or light."
+									tag="device"
+									segmented
+									// next-themes resolves on the client; until then the
+									// row says Dark, which is what the server rendered.
+									value={mounted && isLight ? "light" : "dark"}
+									options={[
+										["dark", t("settings.display.dark")],
+										["light", t("settings.display.light")],
+									]}
+									onPick={(v) => withThemeTransition(() => setTheme(v))}
+								/>
+
+								<GroundSetting />
+
+								<PaletteSetting />
+
+								<SelectRow
+									label={t("settings.display.language")}
+									tag="device"
+									value={locale}
+									options={LOCALES.map((code) => [code, LANGUAGE_NAMES[code]] as const)}
+									onPick={(code) => pickLocale(code)}
+								/>
+							</Section>
+						</>
+					)}
+
+					{valid && activeId === "data" && (
+						<Section id="usage" title="Data usage">
+							<DataSettings />
+						</Section>
+					)}
 
 					{valid && activeId === "account" && (
 						<>
-							{/* Identity card: gives the page a subject rather than
+							{/* Identity: gives the page a subject rather than
 							    opening on a bare label/value list. */}
-							<motion.div
-								{...reveal(0)}
-								className="flex items-center gap-3.5 rounded-2xl p-4 glass-frost backdrop-blur-xl lg:px-5"
-							>
+							<motion.div {...reveal(0)} className="flex items-center gap-3.5">
 								<span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-pill bg-sunken">
 									<SafeAvatar src={user?.avatar} />
 								</span>
@@ -382,13 +584,7 @@ export default function SettingsPage() {
 								</div>
 							</motion.div>
 
-							<Section
-								id="account"
-								order={1}
-								icon={UserCircle}
-								title={t("settings.account.title")}
-								caption={t("settings.account.managedNote")}
-							>
+							<Section id="account" order={1} title={t("settings.account.title")}>
 								<UsernameSetting />
 								<Row
 									label={t("settings.account.email")}
@@ -399,7 +595,6 @@ export default function SettingsPage() {
 							<Section
 								id="danger"
 								order={2}
-								icon={ShieldAlert}
 								title={t("settings.danger.title")}
 								caption={t("settings.danger.caption")}
 								tone="danger"
@@ -410,12 +605,7 @@ export default function SettingsPage() {
 					)}
 
 					{valid && activeId === "premium" && (
-						<Section
-							id="plan"
-							icon={BadgeCheck}
-							title={t("premium.eyebrow")}
-							caption={t("premium.pitch")}
-						>
+						<Section id="plan" title={t("premium.eyebrow")} caption={t("premium.pitch")}>
 							<Row
 								label={t("premium.active")}
 								value={
@@ -458,176 +648,6 @@ export default function SettingsPage() {
 							</SettingRow>
 						</Section>
 					)}
-
-					{valid && activeId === "topics" && (
-						<Section
-							id="interests"
-							icon={SlidersHorizontal}
-							title={t("settings.topics.title")}
-							caption={t("settings.topics.caption")}
-						>
-							<div className="py-4">
-								<InterestPicker selected={interests} onToggle={toggleInterest} />
-							</div>
-							<div className="flex min-h-[52px] items-center justify-between gap-3 border-y border-hairline py-1.5">
-								<span className="font-sans text-[calc(13px*var(--ws-fs))] tabular-nums text-muted">
-									{countBefore}
-									<span className="relative inline-flex overflow-hidden align-bottom">
-										<AnimatePresence mode="popLayout" initial={false}>
-											<motion.span
-												key={interests.length}
-												{...swap}
-												className="inline-block"
-											>
-												{interests.length}
-											</motion.span>
-										</AnimatePresence>
-									</span>
-									{countAfter}
-								</span>
-								<motion.button
-									type="button"
-									{...press}
-									onClick={saveTopics}
-									disabled={!dirty || savingTopics}
-									className="h-10 cursor-pointer rounded-pill bg-brand px-5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-								>
-									<AnimatePresence mode="wait" initial={false}>
-										<motion.span
-											key={savingTopics ? "saving" : "save"}
-											{...swap}
-											className="inline-block"
-										>
-											{savingTopics
-												? t("settings.topics.saving")
-												: t("common.save")}
-										</motion.span>
-									</AnimatePresence>
-								</motion.button>
-							</div>
-						</Section>
-					)}
-
-					{valid && activeId === "notifications" && (
-						<>
-							<Section
-								id="alerts"
-								icon={Bell}
-								title={t("settings.notify.title")}
-								caption={t("settings.notify.caption")}
-							>
-								<NotificationPrefs />
-							</Section>
-
-							<Section
-								id="behaviour"
-								order={1}
-								icon={BellRing}
-								title="Notification behaviour"
-								caption="How notifications reach you inside the app."
-							>
-								<NotificationBehaviour />
-							</Section>
-						</>
-					)}
-
-					{valid && activeId === "safety" && (
-						<>
-							<Section
-								id="privacy"
-								icon={Lock}
-								title="Privacy"
-								caption="Who sees what about you. Each of these is enforced on the server, not just hidden in the app."
-							>
-								<PrivacySettings />
-							</Section>
-
-							<Section
-								id="blocked"
-								order={1}
-								icon={ShieldCheck}
-								title={t("settings.blocked.title")}
-								caption={t("settings.blocked.caption")}
-							>
-								<BlockedAccounts />
-							</Section>
-						</>
-					)}
-
-					{valid && activeId === "data" && (
-						<>
-							<Section
-								id="usage"
-								icon={Gauge}
-								title="Data usage"
-								caption="What the app downloads on its own. Most of these follow one switch, so a phone already saving data gets the lighter app."
-							>
-								<DataSettings />
-							</Section>
-							<Section
-								id="timeline"
-								order={1}
-								icon={Rss}
-								title="Timeline"
-								caption="What shows up when you open Home, and how much of it loads at once."
-							>
-								<ContentSettings />
-							</Section>
-							<Section
-								id="messaging"
-								order={2}
-								icon={MessageSquare}
-								title="Messaging"
-								caption="How chat behaves for you. None of it changes what the other person sees."
-							>
-								<MessagingSettings />
-							</Section>
-						</>
-					)}
-
-					{valid && activeId === "display" && (
-						<>
-							<Section
-								id="accessibility"
-								icon={Eye}
-								title="Accessibility"
-								caption="Size, colour and motion. Saved to your account, so it follows you to every device you sign in on."
-							>
-								<AccessibilitySettings />
-							</Section>
-
-							<Section
-								id="appearance"
-								order={1}
-								icon={Palette}
-								title={t("settings.display.title")}
-								caption={t("settings.display.caption")}
-							>
-								<InstallAppRow />
-								<SelectRow
-									label={t("settings.display.theme")}
-									hint="Dark or light. Stays on this device."
-									// next-themes resolves on the client; until then the
-									// row says Dark, which is what the server rendered.
-									value={mounted && isLight ? "light" : "dark"}
-									options={[
-										["dark", t("settings.display.dark")],
-										["light", t("settings.display.light")],
-									]}
-									onPick={(v) => withThemeTransition(() => setTheme(v))}
-								/>
-
-								<PaletteSetting />
-
-								<SelectRow
-									label={t("settings.display.language")}
-									value={locale}
-									options={LOCALES.map((code) => [code, LANGUAGE_NAMES[code]] as const)}
-									onPick={(code) => pickLocale(code)}
-								/>
-							</Section>
-						</>
-					)}
 				</div>
 			</div>
 		</div>
@@ -635,14 +655,12 @@ export default function SettingsPage() {
 }
 
 /**
- * A settings group: a frosted block with an icon header, the same
- * architecture as the Messages inbox blocks (owner 2026-09-20). The block
- * itself lives in settings/inspector.tsx; this adds the first-open rise.
+ * A settings group: a small uppercase heading over its rows (the kit lives
+ * in settings/inspector.tsx). This adds the first-open rise.
  */
 function Section({
 	id,
 	order = 0,
-	icon,
 	title,
 	caption,
 	children,
@@ -653,15 +671,14 @@ function Section({
 	/** Position on the page. The groups rise in sequence when a section
 	 *  opens; they mount once per open, so it never replays on a re-render. */
 	order?: number;
-	icon?: React.ComponentType<{ className?: string; strokeWidth?: number }>;
 	title: string;
-	caption: string;
+	caption?: string;
 	children: React.ReactNode;
 	tone?: "danger";
 }) {
 	return (
 		<motion.div {...reveal(order)}>
-			<SettingGroup id={id} icon={icon} title={title} caption={caption} tone={tone}>
+			<SettingGroup id={id} title={title} caption={caption} tone={tone}>
 				{children}
 			</SettingGroup>
 		</motion.div>

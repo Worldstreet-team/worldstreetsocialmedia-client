@@ -37,6 +37,9 @@ export function MainShell({ children }: { children: React.ReactNode }) {
 	// The Vivid window takes the rail's space too and centres itself in it.
 	const onVivid = pathname === "/vivid" || pathname.startsWith("/vivid/");
 	const fullCanvas = onSettings || onVoice || onVivid;
+	// Communities v2 (owner 2026-10-15): no stories bar there; the page is
+	// about communities, and Explore is "just the communities".
+	const noStories = fullCanvas || pathname === "/communities" || pathname.startsWith("/communities/");
 
 	return (
 		<PostLayerContext.Provider value={!onSettings}>
@@ -53,7 +56,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
 					fullCanvas ? "max-w-none" : "max-w-[var(--ws-feed-width)]",
 				)}
 			>
-				{!fullCanvas && (
+				{!noStories && (
 					<div className="shrink-0">
 						<StoriesRail />
 					</div>

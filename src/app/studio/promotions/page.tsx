@@ -78,8 +78,8 @@ export default function StudioPromotions() {
 			{/* Promotion is LIVE and paid now — the banner states the money
 			    terms instead of the old "coming soon" that shipped beside
 			    working controls. */}
-			<div className="mb-3 flex items-start gap-3 rounded-2xl bg-[#171614] p-4">
-				<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[var(--ws-brand-primary)]/12 text-[var(--ws-brand-primary)]">
+			<div className="mb-3 flex items-start gap-3 rounded-2xl bg-primary/[0.04] p-4">
+				<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-brand/[0.12] text-brand">
 					<Megaphone size={16} weight="bold" />
 				</span>
 				<div className="min-w-0">
@@ -95,15 +95,15 @@ export default function StudioPromotions() {
 			{loading ? (
 				<div className="space-y-3">
 					{[1, 2].map((i) => (
-						<div key={i} className="rounded-2xl h-24 bg-[#fafaf9]/[0.05] animate-pulse" />
+						<div key={i} className="rounded-2xl h-24 bg-primary/[0.05] animate-pulse" />
 					))}
 				</div>
 			) : campaigns.length === 0 ? (
 				<motion.div
 					{...reveal(0)}
-					className="rounded-2xl bg-[#171614] p-8 text-center"
+					className="rounded-2xl bg-primary/[0.04] p-8 text-center"
 				>
-					<span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-pill bg-[#fafaf9]/[0.07] glass-ink-faint">
+					<span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-pill bg-primary/[0.07] glass-ink-faint">
 						<Megaphone size={22} />
 					</span>
 					<p className="font-sans text-sm glass-ink-dim">
@@ -136,7 +136,7 @@ export default function StudioPromotions() {
 							<motion.div
 								key={c._id}
 								variants={staggerItem}
-								className="rounded-2xl bg-[#171614] p-4"
+								className="rounded-2xl bg-primary/[0.04] p-4"
 							>
 								<div className="flex items-start justify-between gap-3">
 									<p className="font-sans text-[calc(14px*var(--ws-fs))] glass-ink line-clamp-1 min-w-0">
@@ -151,7 +151,7 @@ export default function StudioPromotions() {
 												c.status === "active" &&
 													"bg-success/10 text-success",
 												c.status === "paused" &&
-													"bg-[#fafaf9]/[0.09] glass-ink-dim",
+													"bg-primary/[0.09] glass-ink-dim",
 												c.status === "exhausted" &&
 													"bg-danger/10 text-danger",
 											)}
@@ -170,7 +170,7 @@ export default function StudioPromotions() {
 											{t("studio.promo.bid")} {usd(c.bidUsdMinor)}
 										</span>
 									</div>
-									<div className="h-1.5 rounded-pill bg-[#fafaf9]/[0.08] overflow-hidden">
+									<div className="h-1.5 rounded-pill bg-primary/[0.08] overflow-hidden">
 										{/* A full-width fill slid under the track's clip, not
 										    a width: a top-up now travels, on transform only,
 										    and the cap stays round. */}
@@ -216,7 +216,7 @@ export default function StudioPromotions() {
 																: "active",
 													})
 												}
-												className="h-8 px-3.5 rounded-pill bg-[#fafaf9]/[0.06] glass-ink-dim hover:glass-ink hover:bg-[#fafaf9]/[0.1] font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold transition-colors cursor-pointer disabled:opacity-50"
+												className="h-8 px-3.5 rounded-pill bg-primary/[0.06] glass-ink-dim hover:glass-ink hover:bg-primary/[0.1] font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold transition-colors cursor-pointer disabled:opacity-50"
 											>
 												<AnimatePresence mode="wait" initial={false}>
 													<motion.span
@@ -241,7 +241,7 @@ export default function StudioPromotions() {
 													confirmCharge: true,
 												})
 											}
-											className="h-8 px-3.5 rounded-pill bg-[#fafaf9] text-[#0c0a09] hover:bg-white font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold transition-colors cursor-pointer disabled:opacity-50 active:brightness-95"
+											className="h-8 px-3.5 rounded-pill bg-primary text-page hover:bg-primary/90 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold transition-colors cursor-pointer disabled:opacity-50 active:brightness-95"
 										>
 											{t("studio.promo.topUp")}
 										</motion.button>

@@ -66,7 +66,7 @@ const ALL_STEPS = [
   {
     key: "markets",
     title: "Built for market talk",
- body: "Tag tickers with $cashtags and pick topics as you post — the feed ranks by topic now, and each one links straight to the posts behind it.",
+ body: "Pick topics as you post: the feed ranks by topic now, and each one links straight to the posts behind it.",
     hero: (
       // The entities themselves, at the size you would actually read them —
       // a chart glyph in a gold-era `bg-convert` tile said nothing the copy

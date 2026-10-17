@@ -119,6 +119,11 @@ export const ThreadList = forwardRef<ThreadListHandle, ThreadListProps>(
 	) {
 		const { prefs: wsPrefs } = usePreferences();
 		const [atBottom, setAtBottom] = useState(true);
+		// Late growth (a link card landing under a message, owner 2026-10-08)
+		// must not lift the newest message off the floor for someone sitting
+		// at the bottom. A ref, so the height callback reads the state from
+		// BEFORE the growth, not virtuoso's verdict after it.
+		const pinnedRef = useRef(true);
 		// One beat of invisibility per thread: virtuoso paints at estimated
 		// heights, measures, then snaps to the true bottom — visible as a
 		// flicker. Two frames cover the correction without reading as a load.
@@ -153,7 +158,7 @@ export const ThreadList = forwardRef<ThreadListHandle, ThreadListProps>(
 
 		const Footer = useCallback(
 			() => (
-				<div className="mx-auto flex h-11 w-full max-w-[52rem] items-end px-4 pb-1 sm:px-6">
+				<div className="mx-auto flex h-11 w-full max-w-[44rem] items-end px-4 pb-1 sm:px-6">
 					{(peerTyping || peerRecording) && (
 						<div className="pl-[34px] animate-pop">
 							<TypingIndicator
@@ -492,7 +497,12 @@ export const ThreadList = forwardRef<ThreadListHandle, ThreadListProps>(
 					}
 					followOutput={FOLLOW_OUTPUT}
 					atBottomThreshold={80}
+					totalListHeightChanged={() => {
+						if (pinnedRef.current)
+							virtuosoRef.current?.scrollToIndex({ index: "LAST", align: "end", behavior: "auto" });
+					}}
 					atBottomStateChange={(bottom) => {
+						pinnedRef.current = bottom;
 						setAtBottom(bottom);
 						onAtBottomChange(bottom);
 					}}

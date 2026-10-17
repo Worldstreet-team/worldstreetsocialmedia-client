@@ -37,13 +37,22 @@ interface Ctx {
 	resetPrefs: () => Promise<void>;
 	/** False until the account's copy has arrived (the cache paints first). */
 	synced: boolean;
+	/** Where the last change is on its way to the account. `saved` holds for
+	 *  two seconds after a write lands, then settles back to `idle`. */
+	saveState: SaveState;
+	/** Send whatever failed to save again. */
+	retrySave: () => void;
 }
+
+export type SaveState = "idle" | "saving" | "saved" | "error";
 
 const PreferencesContext = createContext<Ctx>({
 	prefs: DEFAULTS,
 	setPrefs: () => {},
 	resetPrefs: async () => {},
 	synced: false,
+	saveState: "idle",
+	retrySave: () => {},
 });
 
 export const usePreferences = () => useContext(PreferencesContext);
@@ -83,8 +92,10 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
 	const me = useAtomValue(userAtom);
 	const [prefs, setState] = useState<Preferences>(DEFAULTS);
 	const [synced, setSynced] = useState(false);
+	const [saveState, setSaveState] = useState<SaveState>("idle");
 	const pending = useRef<Patch>({});
 	const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const settle = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	// Paint from the cache on mount. The pre-paint script in the root layout
 	// has already stamped <html>; this brings React state in line with it.
@@ -131,10 +142,33 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
 				{ preferences: patch },
 				{ headers: { Authorization: `Bearer ${token}` } },
 			);
+			// A change made while this one was in flight is still on its way.
+			if (Object.keys(pending.current).length) return;
+			setSaveState("saved");
+			if (settle.current) clearTimeout(settle.current);
+			settle.current = setTimeout(
+				() => setSaveState((s) => (s === "saved" ? "idle" : s)),
+				2000,
+			);
 		} catch {
-			/* the cache still holds it; the next change retries the lot */
+			// Put the failed patch back UNDER anything newer, so the next change
+			// or a Retry sends the lot. It used to be dropped here, and the
+			// change lived only in this device's cache.
+			for (const [ns, bag] of Object.entries(patch)) {
+				(pending.current as any)[ns] = {
+					...(bag as object),
+					...((pending.current as any)[ns] ?? {}),
+				};
+			}
+			setSaveState("error");
 		}
 	}, [getToken, isSignedIn]);
+
+	const retrySave = useCallback(() => {
+		if (timer.current) clearTimeout(timer.current);
+		setSaveState("saving");
+		void flush();
+	}, [flush]);
 
 	const setPrefs = useCallback(
 		(patch: Patch) => {
@@ -158,10 +192,11 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
 					...(bag as object),
 				};
 			}
+			if (isSignedIn) setSaveState("saving");
 			if (timer.current) clearTimeout(timer.current);
 			timer.current = setTimeout(() => void flush(), 400);
 		},
-		[flush],
+		[flush, isSignedIn],
 	);
 
 	// A tab closing mid-debounce must not lose the change.
@@ -241,7 +276,7 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
 	const reducedMotion = useMotionReduced();
 
 	return (
-		<PreferencesContext.Provider value={{ prefs, setPrefs, resetPrefs, synced }}>
+		<PreferencesContext.Provider value={{ prefs, setPrefs, resetPrefs, synced, saveState, retrySave }}>
 			<MotionConfig reducedMotion={reducedMotion ? "always" : "never"}>
 				{children}
 			</MotionConfig>

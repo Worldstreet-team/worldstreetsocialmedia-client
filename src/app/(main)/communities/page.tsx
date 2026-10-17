@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Compass as CompassIcon, House, MagnifyingGlass, Plus } from "@phosphor-icons/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowRight, Compass as CompassIcon, House, MagnifyingGlass, Plus } from "@phosphor-icons/react";
+import clsx from "clsx";
 import { AnimatePresence, motion, useReducedMotionConfig } from "framer-motion";
 import { useAtom, useSetAtom } from "jotai";
 import { Compass, UsersRound } from "@/components/ui/icons";
@@ -28,6 +29,7 @@ import {
 	getCommunityHomeAction,
 	toggleCommunityAction,
 } from "@/lib/community.actions";
+import { resolveCategoryLabel } from "@/lib/categories";
 import { press, swap } from "@/lib/motion-presets";
 import { sendFormDirect } from "@/lib/upload-direct";
 import { mapApiPost as mapPost } from "@/lib/post-mapper";
@@ -59,10 +61,13 @@ export default function CommunitiesPage() {
 	const router = useRouter();
 	const { toast } = useToast();
 
-	const [tab, setTab] = useState<Tab>("home");
+	// ?tab=explore lands on discovery (the feed bar's + links here).
+	const params = useSearchParams();
+	const [tab, setTab] = useState<Tab>(params.get("tab") === "explore" ? "explore" : "home");
 	const [creating, setCreating] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const [query, setQuery] = useState("");
+	const [cat, setCat] = useState<string | null>(null);
 
 	// Both halves are cached app-wide (stale-while-revalidate): a revisit
 	// paints the last result immediately and refreshes quietly underneath.
@@ -91,6 +96,7 @@ export default function CommunitiesPage() {
 				posts: res.posts.map(mapPost),
 				cursor: res.nextCursor ?? null,
 				hasMore: Boolean(res.hasMore),
+				popular: res.popular,
 			});
 			setHomeFetchedAt(Date.now());
 		}
@@ -218,14 +224,24 @@ export default function CommunitiesPage() {
 	);
 
 	const q = query.trim().toLowerCase();
+	const inCat = cat ? rows.filter((r) => r.category === cat) : rows;
 	const filtered = q
-		? rows.filter(
+		? inCat.filter(
 				(r) =>
 					r.name.toLowerCase().includes(q) ||
 					r.description?.toLowerCase().includes(q) ||
 					r.category?.toLowerCase().includes(q),
 			)
-		: rows;
+		: inCat;
+	// Explore's chips: the categories that actually have communities.
+	const cats = Array.from(new Set(rows.map((r) => r.category).filter(Boolean)));
+	// New here: the three biggest they haven't joined lead Home.
+	const top = rows
+		.filter((r) => !r.joined)
+		.sort((a, b) => b.membersCount - a.membersCount)
+		.slice(0, 3);
+	const label =
+		"font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-subtle";
 	const unjoined = filtered.filter((r) => !r.joined);
 
 	const TABS = [
@@ -283,40 +299,44 @@ export default function CommunitiesPage() {
 			    the old body to leave. */}
 			{tab === "home" ? (
 				<motion.div key="home" initial={swap.initial} animate={swap.animate}>
-					{mine.length > 0 && (
-						<section
-							className="animate-rise border-b border-hairline px-4 py-4"
-							style={{ animationDelay: "60ms" }}
-						>
-							<h2 className="mb-3 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-subtle">
-								{t("community.yours")}
-							</h2>
-							<MyCommunitiesRail
-								communities={mine}
-								onCreate={() => setCreating(true)}
-							/>
+					{/* Communities v2: in some, they lead as tiles; in none, the
+					    top three for you lead with one way to see them all. */}
+					{mine.length > 0 ? (
+						<section className="animate-rise px-4 pb-1 pt-4" style={{ animationDelay: "60ms" }}>
+							<h2 className={clsx(label, "mb-3")}>{t("community.yours")}</h2>
+							<MyCommunitiesRail communities={mine} onCreate={() => setCreating(true)} />
 						</section>
+					) : (
+						top.length > 0 && (
+							<section className="animate-rise pt-4" style={{ animationDelay: "60ms" }}>
+								<div className="flex items-center justify-between gap-3 px-4 pb-1">
+									<h2 className={label}>{t("community.topForYou")}</h2>
+									<motion.button
+										type="button"
+										{...press}
+										onClick={() => setTab("explore")}
+										className="flex h-8 cursor-pointer items-center gap-1.5 rounded-pill bg-primary/[0.08] px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-primary/[0.13]"
+									>
+										{t("community.exploreAll")}
+										<ArrowRight size={12} weight="bold" />
+									</motion.button>
+								</div>
+								{top.map((row) => (
+									<DiscoverRow key={row.id} row={row} onToggle={toggle} />
+								))}
+							</section>
+						)
+					)}
+
+					{posts.length > 0 && (
+						<h2 className={clsx(label, "px-4 pb-1 pt-5")}>
+							{home?.popular ? t("community.popular") : t("community.fromYours")}
+						</h2>
 					)}
 
 					{homeLoading ? (
 						[0, 1, 2].map((i) => <PostSkeleton key={i} />)
-					) : mine.length === 0 ? (
-						<EmptyState
-							icon={UsersRound}
-							title={t("community.homeEmptyTitle")}
-							caption={t("community.homeEmptyCaption")}
-							action={{
-								label: t("community.browse"),
-								onClick: () => setTab("explore"),
-							}}
-						/>
-					) : posts.length === 0 ? (
-						<EmptyState
-							icon={Compass}
-							title={t("community.emptyTitle")}
-							caption={t("community.emptyCaptionMember")}
-						/>
-					) : (
+					) : posts.length > 0 ? (
 						<>
 							{posts.map((post, i) => (
 								<ImpressionSensor key={post.id} meta={{ post: post.id, author: post.author?.id ?? "", surface: "community", position: i }}>
@@ -326,6 +346,24 @@ export default function CommunitiesPage() {
 							<div ref={sentinel} className="h-px" />
 							{loadingMore && <PostSkeleton />}
 						</>
+					) : mine.length > 0 ? (
+						<EmptyState
+							icon={Compass}
+							title={t("community.emptyTitle")}
+							caption={t("community.emptyCaptionMember")}
+						/>
+					) : (
+						top.length === 0 && (
+							<EmptyState
+								icon={UsersRound}
+								title={t("community.homeEmptyTitle")}
+								caption={t("community.homeEmptyCaption")}
+								action={{
+									label: t("community.browse"),
+									onClick: () => setTab("explore"),
+								}}
+							/>
+						)
 					)}
 				</motion.div>
 			) : (
@@ -334,7 +372,30 @@ export default function CommunitiesPage() {
 					initial={swap.initial}
 					animate={swap.animate}
 				>
-					<div className="border-b border-hairline px-4 py-3">
+					{/* Categories as solid chips; only ones that have communities. */}
+					{cats.length > 1 && (
+						<div className="flex gap-2 overflow-x-auto px-4 pb-1 pt-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+							{[null, ...cats].map((c) => (
+								<motion.button
+									key={c ?? "all"}
+									type="button"
+									{...press}
+									onClick={() => setCat(c)}
+									aria-pressed={cat === c}
+									className={clsx(
+										"h-8 shrink-0 cursor-pointer rounded-pill px-3.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold transition-colors",
+										cat === c
+											? "bg-primary text-page"
+											: "bg-primary/[0.07] text-primary hover:bg-primary/[0.12]",
+									)}
+								>
+									{c ? resolveCategoryLabel(c) || c : t("community.all")}
+								</motion.button>
+							))}
+						</div>
+					)}
+
+					<div className="px-4 pb-1 pt-3">
 						<div className="group relative">
 							<MagnifyingGlass
 								size={16}
@@ -343,16 +404,14 @@ export default function CommunitiesPage() {
 							<input
 								value={query}
 								onChange={(e) => setQuery(e.target.value)}
-								placeholder={t("community.browse")}
+								placeholder={t("community.search")}
 								// text-base on mobile or iOS Safari zooms on focus.
 								className="h-10 w-full rounded-pill bg-chip pl-10 pr-4 font-sans text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised sm:text-[calc(14px*var(--ws-fs))]"
 							/>
 						</div>
 					</div>
 
-					<h2 className="px-4 pb-1 pt-4 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-subtle">
-						{t("community.discover")}
-					</h2>
+					<h2 className={clsx(label, "px-4 pb-1 pt-4")}>{t("community.discover")}</h2>
 
 					{dirLoading ? (
 						<div className="flex flex-col gap-2 p-4">

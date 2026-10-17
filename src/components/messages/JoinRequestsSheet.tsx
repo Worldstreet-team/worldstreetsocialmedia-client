@@ -141,7 +141,7 @@ export function JoinRequestsSheet({
 			{open && (
 				<>
 					<OverlayScrim onClose={onClose} />
-					<OverlayPanel dragClose={onClose} variant="sheet" label={`Requests for ${name}`}>
+					<OverlayPanel ground="solid" dragClose={onClose} variant="sheet" label={`Requests for ${name}`}>
 						<OverlayHeader title={name} onClose={onClose} />
 						<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[calc(12px+var(--ws-safe-bottom))]">
 							{rows === null ? (

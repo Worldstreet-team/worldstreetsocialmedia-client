@@ -49,6 +49,7 @@ export function DraftsSheet() {
     <AnimatePresence>
       {open && (
         <OverlayScrim
+          blur
           key="drafts-scrim"
           onClose={close}
           label={t("drafts.title")}
@@ -58,6 +59,7 @@ export function DraftsSheet() {
         <OverlayPanel
           key="drafts-panel"
           variant="center"
+          ground="solid"
           label={t("drafts.title")}
           className="max-w-[440px]"
         >

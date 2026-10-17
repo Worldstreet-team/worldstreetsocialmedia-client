@@ -173,7 +173,13 @@ export function wallpaperSrc(w: ThemeWallpaper): string | null {
 /* ------------------------------------------------------------------ */
 /* Bubble presets. */
 
-const TIDE: MineFill = {
+/** The house "mine" bubble (owner 2026-10-09): ONE solid colour, not the
+ *  cyan-to-violet gradient of 2026-09-03. Lagoon's deep tide: the brand
+ *  family, dark enough for white ink (5.2:1), calm against the blue-slate
+ *  ground. The gradient lives on as the optional "Aurora" preset. */
+export const TIDE_SOLID = "#087A94";
+const TIDE: MineFill = { kind: "solid", color: TIDE_SOLID };
+const AURORA: MineFill = {
 	kind: "gradient",
 	stops: ["#22B8D6", "#6D5BFF"],
 	angle: 135,
@@ -181,6 +187,7 @@ const TIDE: MineFill = {
 
 export const MINE_PRESETS: { id: string; label: string; fill: MineFill }[] = [
 	{ id: "tide", label: "Tide", fill: TIDE },
+	{ id: "aurora", label: "Aurora", fill: AURORA },
 	{ id: "cyan", label: "Cyan", fill: { kind: "solid", color: "#22B8D6" } },
 	{ id: "ember", label: "Ember", fill: { kind: "gradient", stops: ["#F59E0B", "#EF4444"], angle: 135 } },
 	{ id: "moss", label: "Moss", fill: { kind: "gradient", stops: ["#10B981", "#22B8D6"], angle: 135 } },
@@ -206,7 +213,8 @@ export const THEIRS_PRESETS: { id: string; label: string; color: string }[] = [
  * is an Advanced control only, never part of a theme.
  */
 export const SHAPES: Record<BubbleShape, { label: string; r: number; rin: number }> = {
-	rounded: { label: "Rounded", r: 22, rin: 8 },
+	// 22 with a 6 run corner (bubble catalogue, owner 2026-10-09; was 22/8).
+	rounded: { label: "Rounded", r: 22, rin: 6 },
 	soft: { label: "Soft", r: 16, rin: 6 },
 	square: { label: "Square", r: 10, rin: 4 },
 };
@@ -270,14 +278,14 @@ const CARDS: {
 	{
 		id: "worldspace",
 		label: "Worldspace",
-		blurb: "The house look. Cyan into indigo on the app's own ground.",
+		blurb: "The house look. Solid deep tide on the app's own ground.",
 		dark: {
 			wallpaper: { type: "flat", frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#22B8D6", "#6D5BFF"], angle: 135 }, theirs: { color: HOUSE_THEIRS } },
+			bubbles: { mine: TIDE, theirs: { color: HOUSE_THEIRS } },
 		},
 		light: {
 			wallpaper: { type: "flat", frost: 0, hue: "none", dim: 0 },
-			bubbles: { mine: { kind: "gradient", stops: ["#22B8D6", "#6D5BFF"], angle: 135 }, theirs: { color: HOUSE_THEIRS } },
+			bubbles: { mine: TIDE, theirs: { color: HOUSE_THEIRS } },
 		},
 	},
 	{
@@ -1413,8 +1421,10 @@ export const inkOn = (fill: string) =>
  *  the emitted values stay `var(--ws-*)` so the house look follows the
  *  app palette and mode by itself. */
 const LADDER: Record<ThemeMode, { page: string; raised: string; ink: string }> = {
-	dark: { page: "#000000", raised: "#1A1A1A", ink: "#FFFFFF" },
-	light: { page: "#FFFFFF", raised: "#EFEFEF", ink: "#1C1917" },
+	// Lagoon, the default ground (2026-10-09). Contrast tests only: the
+	// emitted values stay tokens, so other grounds still paint correctly.
+	dark: { page: "#0B0F14", raised: "#1C2533", ink: "#F3F7FB" },
+	light: { page: "#F3F6F9", raised: "#EAF0F5", ink: "#0E1722" },
 };
 
 function chromeOf(t: ChatTheme): Record<string, string> {

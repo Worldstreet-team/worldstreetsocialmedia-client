@@ -24,6 +24,8 @@ import {
   MoreHorizontal,
   Settings,
   Share2,
+  Volume2,
+  VolumeX,
 } from "@/components/ui/icons";
 import { toast } from "sonner";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
@@ -52,6 +54,7 @@ export function ProfileHeader({
   followLoading,
   blockedByYou,
   blockedByThem,
+  mutedByYou,
   onBack,
   onEdit,
   onFollowToggle,
@@ -59,6 +62,8 @@ export function ProfileHeader({
   canMessage,
   onBlock,
   onUnblock,
+  onMute,
+  onUnmute,
   onReport,
   onShare,
   onAvatarClick,
@@ -77,6 +82,7 @@ export function ProfileHeader({
   followLoading: boolean;
   blockedByYou?: boolean;
   blockedByThem?: boolean;
+  mutedByYou?: boolean;
   onBack: () => void;
   onEdit: () => void;
   onFollowToggle: () => void;
@@ -84,6 +90,8 @@ export function ProfileHeader({
   canMessage?: boolean;
   onBlock: () => void;
   onUnblock: () => void;
+  onMute: () => void;
+  onUnmute: () => void;
   onReport: () => void;
   onShare: () => void;
   onAvatarClick?: () => void;
@@ -370,6 +378,28 @@ export function ProfileHeader({
                     <Flag className={menuIcon} />
                     {t("safety.report")} @{username}
                   </motion.button>
+                  {/* Mute before Block: the quiet option first, the
+                      severe one last and in red. Nothing to mute once
+                      either side has blocked. */}
+                  {!blockedByThem && !blockedByYou && (
+                    <motion.button
+                      variants={staggerItem}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        mutedByYou ? onUnmute() : onMute();
+                      }}
+                      className={menuItem}
+                    >
+                      {mutedByYou ? (
+                        <Volume2 className={menuIcon} />
+                      ) : (
+                        <VolumeX className={menuIcon} />
+                      )}
+                      {mutedByYou ? "Unmute" : "Mute"} @{username}
+                    </motion.button>
+                  )}
                   {!blockedByThem && (
                     <motion.button
                       variants={staggerItem}

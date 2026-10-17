@@ -375,7 +375,9 @@ export function OverlayPanel({
 						// Glass since 2026-10-12 (owner: "clean dark blurs",
 						// white in the light theme): the surface step at 80%
 						// over a strong backdrop blur, so it follows the theme.
-						"bg-surface/80 shadow-pop backdrop-blur-2xl backdrop-saturate-150",
+						// The raised step reads as lighter glass over the dimmed
+						// page (owner 2026-10-16, matching the Messages designs).
+						"bg-raised/75 [html[data-ws-theme=platform-light]_&]:bg-surface/90 shadow-pop backdrop-blur-2xl backdrop-saturate-150",
 						variant === "center"
 							? "!rounded-[28px]"
 							: "!rounded-t-[28px] sm:!rounded-[28px]",

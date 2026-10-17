@@ -9,7 +9,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, UsersThree } from "@phosphor-icons/react";
+import { ArrowLeft, Check, ShareNetwork, UsersThree } from "@phosphor-icons/react";
+import { Tabs } from "@/components/ui/Tabs";
 import { MessageSquarePlus, Search } from "@/components/ui/icons";
 
 import { PostCard, type PostProps } from "@/components/feed/PostCard";
@@ -21,7 +22,9 @@ import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { UserBadges } from "@/components/ui/UserBadges";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import {
+	type CommunityMemberRow,
 	getCommunityAction,
+	getCommunityMembersAction,
 	getCommunityPostsAction,
 	toggleCommunityAction,
 } from "@/lib/community.actions";
@@ -89,6 +92,27 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 
 	// Bumped by ManageCommunity after an edit/removal so the header refetches.
 	const [refetch, setRefetch] = useState(0);
+	// Communities v2, inside: Posts and the people in it.
+	const [tab, setTab] = useState<"posts" | "members">("posts");
+	const [members, setMembers] = useState<CommunityMemberRow[] | null>(null);
+	useEffect(() => {
+		if (tab !== "members" || members) return;
+		void getCommunityMembersAction(slug).then((r) => setMembers(r.members));
+	}, [tab, members, slug]);
+
+	const share = useCallback(async () => {
+		const url = `${window.location.origin}/communities/${slug}`;
+		if (navigator.share) {
+			try {
+				await navigator.share({ title: community?.name, url });
+			} catch {
+				/* dismissed */
+			}
+			return;
+		}
+		await navigator.clipboard.writeText(url);
+		toast(t("community.linkCopied"), { type: "success" });
+	}, [slug, community?.name, toast, t]);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: refetch is the signal; its value is unused.
 	useEffect(() => {
@@ -218,39 +242,31 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 
 	return (
 		<div className="flex min-h-dvh flex-col pb-nav md:pb-20">
-			<header className="sticky top-0 z-sticky flex items-center gap-3 border-b border-hairline bg-page px-2 py-2 sm:px-4 md:top-0">
+			{/* Frosted, no rule (owner 2026-10-16): the cover below leads. */}
+			<header className="sticky top-0 z-sticky flex items-center gap-2 bg-page/75 px-2 py-2 backdrop-blur-xl backdrop-saturate-150 sm:px-3">
 				<button
 					type="button"
 					aria-label={t("common.back")}
 					onClick={() => goBack("/communities")}
-					className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-primary transition-colors hover:bg-raised"
+					className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-primary transition-colors hover:bg-primary/[0.08]"
 				>
 					<ArrowLeft size={19} weight="bold" />
 				</button>
-				<div className="flex min-w-0 flex-col">
-					<h1 className="truncate font-sans text-xl font-bold leading-6 text-primary">
-						{community?.name ?? slug.replace(/-/g, " ")}
-					</h1>
-					{community && (
-						<span className="font-sans text-[calc(13px*var(--ws-fs))] tabular-nums text-muted">
-							{formatCompact(community.membersCount)} {t("community.members")}
-						</span>
-					)}
-				</div>
+				<h1 className="min-w-0 flex-1 truncate font-sans text-[calc(16px*var(--ws-fs))] font-semibold text-primary">
+					{community?.name ?? slug.replace(/-/g, " ")}
+				</h1>
 				{community?.isOwner && (
-					<div className="ml-auto">
-						<ManageCommunity
-							community={{
-								id: community.id,
-								slug: community.slug,
-								name: community.name,
-								description: community.description,
-								category: community.category,
-								avatar: community.avatar,
-							}}
-							onChanged={() => setRefetch((n) => n + 1)}
-						/>
-					</div>
+					<ManageCommunity
+						community={{
+							id: community.id,
+							slug: community.slug,
+							name: community.name,
+							description: community.description,
+							category: community.category,
+							avatar: community.avatar,
+						}}
+						onChanged={() => setRefetch((n) => n + 1)}
+					/>
 				)}
 			</header>
 
@@ -262,71 +278,95 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 				</div>
 			) : (
 				<>
-					<section className="animate-rise border-b border-hairline px-4 py-5">
-						<div className="flex gap-4">
-							<div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-raised">
-								{community.avatar ? (
-									<SafeAvatar src={community.avatar} className="object-cover" sizes="64px" />
-								) : (
-									<span className="flex h-full w-full items-center justify-center font-display text-2xl font-semibold text-gold">
-										{community.name.charAt(0).toUpperCase()}
-									</span>
-								)}
-							</div>
-
-							<div className="flex min-w-0 flex-1 flex-col gap-1">
-								<span className="font-sans text-[calc(12px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-gold">
-									{resolveCategoryLabel(community.category) || community.category}
+					{/* Inside a community (Communities v2): the cover leads as
+					    content, then what it is, who's in it, and one wide way
+					    to join, with share beside it. */}
+					<section className="animate-rise px-4 pb-2 pt-1">
+						<div className="relative aspect-[2/1] w-full overflow-hidden rounded-[22px] bg-raised">
+							{community.avatar ? (
+								<SafeAvatar src={community.avatar} className="object-cover" sizes="(max-width: 640px) 100vw, 600px" />
+							) : (
+								<span className="flex h-full w-full items-center justify-center font-display text-5xl font-semibold text-gold">
+									{community.name.charAt(0).toUpperCase()}
 								</span>
-								<h2 className="truncate font-display text-[calc(26px*var(--ws-fs))] font-semibold leading-tight text-primary">
-									{community.name}
-								</h2>
-								{community.owner && (
-									<Link
-										href={`/profile/${community.owner.username}`}
-										className="flex items-center gap-1.5 font-sans text-[calc(14px*var(--ws-fs))] text-muted hover:text-primary"
-									>
-										<span className="relative h-4 w-4 shrink-0 overflow-hidden rounded-pill bg-raised">
-											<SafeAvatar src={community.owner.avatar} />
-										</span>
-										<span className="truncate">@{community.owner.username}</span>
-										<UserBadges
-											isVerified={community.owner.isVerified}
-											verification={(community.owner as any).verification}
-											badges={community.owner?.badges}
-											size={11}
-										/>
-										<span className="text-subtle">· {t("community.owner")}</span>
-									</Link>
-								)}
-							</div>
+							)}
+						</div>
 
+						<span className="mt-4 block font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.16em] text-muted">
+							{resolveCategoryLabel(community.category) || community.category}
+						</span>
+						<h2 className="mt-1 break-words font-display text-[calc(26px*var(--ws-fs))] font-semibold leading-tight text-primary">
+							{community.name}
+						</h2>
+						{community.description && (
+							<p className="mt-2 break-words font-sans text-[calc(15px*var(--ws-fs))] leading-relaxed text-primary/85">
+								{community.description}
+							</p>
+						)}
+
+						<div className="mt-3 flex min-w-0 items-center gap-2">
+							<motion.span className="flex shrink-0 items-center" variants={staggerParent} initial="hidden" animate="show">
+								{(community.memberPreview ?? []).slice(0, 5).map((m, i) => (
+									<motion.span
+										key={m.userId}
+										variants={staggerPop}
+										className="relative -ml-2 h-7 w-7 shrink-0 overflow-hidden rounded-pill bg-raised ring-2 ring-page first:ml-0"
+										style={{ zIndex: 5 - i }}
+									>
+										<SafeAvatar src={m.avatar} />
+									</motion.span>
+								))}
+							</motion.span>
+							<span className="min-w-0 truncate font-sans text-[calc(14px*var(--ws-fs))] text-muted">
+								<span className="relative inline-flex overflow-hidden align-bottom font-semibold tabular-nums text-primary">
+									<AnimatePresence mode="popLayout" initial={false}>
+										<motion.span key={community.membersCount} {...swap} className="inline-block">
+											{formatCompact(community.membersCount)}
+										</motion.span>
+									</AnimatePresence>
+								</span>{" "}
+								{t("community.members")}
+								{community.owner && (
+									<>
+										{" · "}
+										<Link href={`/profile/${community.owner.username}`} className="hover:text-primary">
+											@{community.owner.username}
+										</Link>
+									</>
+								)}
+							</span>
+							{community.owner && (
+								<UserBadges
+									isVerified={community.owner.isVerified}
+									verification={(community.owner as any).verification}
+									badges={community.owner?.badges}
+									size={11}
+								/>
+							)}
+						</div>
+
+						<div className="mt-4 flex items-center gap-2">
 							<motion.button
 								type="button"
 								onClick={toggleJoin}
 								disabled={joinBusy || community.isOwner}
 								{...press}
 								className={clsx(
-									"h-10 shrink-0 self-start overflow-hidden rounded-pill px-5 font-sans text-[calc(14px*var(--ws-fs))] font-semibold transition-colors",
+									"flex h-11 min-w-0 flex-1 items-center justify-center gap-2 overflow-hidden rounded-pill font-sans text-[calc(14.5px*var(--ws-fs))] font-semibold transition-colors",
 									community.isOwner
-										? "cursor-default bg-raised text-muted"
+										? "cursor-default bg-primary/[0.08] text-muted"
 										: community.joined
-											? "cursor-pointer bg-raised text-muted hover:text-danger"
-											: "cursor-pointer bg-primary text-page hover:bg-muted",
+											? "cursor-pointer bg-primary/[0.08] text-primary hover:text-danger"
+											: "cursor-pointer bg-brand text-brand-on hover:bg-brand-active",
 								)}
 							>
 								<AnimatePresence mode="wait" initial={false}>
 									<motion.span
-										key={
-											community.isOwner
-												? "owner"
-												: community.joined
-													? "joined"
-													: "join"
-										}
+										key={community.isOwner ? "owner" : community.joined ? "joined" : "join"}
 										{...swap}
-										className="block"
+										className="flex items-center gap-2"
 									>
+										{community.joined && !community.isOwner && <Check size={15} weight="bold" />}
 										{community.isOwner
 											? t("community.owner")
 											: community.joined
@@ -335,59 +375,64 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 									</motion.span>
 								</AnimatePresence>
 							</motion.button>
-						</div>
-
-						{community.description && (
-							<p className="mt-3.5 break-words font-sans text-[calc(16px*var(--ws-fs))] leading-relaxed text-primary">
-								{community.description}
-							</p>
-						)}
-
-						<div className="mt-3.5 flex flex-wrap items-center gap-4">
-							<motion.span
-								className="flex items-center gap-2"
-								variants={staggerParent}
-								initial="hidden"
-								animate="show"
+							<motion.button
+								type="button"
+								onClick={() => void share()}
+								aria-label={t("community.share")}
+								{...press}
+								className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-primary/[0.08] text-primary transition-colors hover:bg-primary/[0.13]"
 							>
-								{(community.memberPreview ?? []).slice(0, 5).map((m, i) => (
-									<motion.span
-										key={m.userId}
-										variants={staggerPop}
-										className="relative -ml-2 h-6 w-6 shrink-0 overflow-hidden rounded-pill bg-raised ring-2 ring-page first:ml-0"
-										style={{ zIndex: 5 - i }}
-									>
-										<SafeAvatar src={m.avatar} />
-									</motion.span>
-								))}
-								<span className="font-sans text-[calc(14px*var(--ws-fs))] text-muted">
-									{/* Rolls with the optimistic join. The header repeats
-									    this number and stays still: one roll per press. */}
-									<span className="relative inline-flex overflow-hidden align-bottom font-semibold tabular-nums text-primary">
-										<AnimatePresence mode="popLayout" initial={false}>
-											<motion.span
-												key={community.membersCount}
-												{...swap}
-												className="inline-block"
-											>
-												{formatCompact(community.membersCount)}
-											</motion.span>
-										</AnimatePresence>
-									</span>{" "}
-									{t("community.members")}
-								</span>
-							</motion.span>
-							{community.createdAt && (
-								<span className="font-sans text-[calc(14px*var(--ws-fs))] text-subtle">
-									{t("community.created.on")}{" "}
-									{new Date(community.createdAt).toLocaleDateString(t.locale, {
-										month: "long",
-										year: "numeric",
-									})}
-								</span>
-							)}
+								<ShareNetwork size={18} weight="bold" />
+							</motion.button>
 						</div>
 					</section>
+
+					<Tabs
+						items={[
+							{ key: "posts" as const, label: t("community.posts") },
+							{ key: "members" as const, label: t("community.membersTab") },
+						]}
+						value={tab}
+						onChange={setTab}
+						ariaLabel={community.name}
+						variant="line"
+						className="border-b border-hairline"
+					/>
+
+					{tab === "members" ? (
+						<div className="flex flex-col py-1">
+							{members === null
+								? [0, 1, 2, 3].map((i) => (
+										<div key={i} className="flex items-center gap-3 px-4 py-2.5">
+											<span className="skeleton h-10 w-10 rounded-pill" />
+											<span className="skeleton h-3.5 w-40 rounded-[4px]" />
+										</div>
+									))
+								: members.map((m) => (
+										<Link
+											key={m.id}
+											href={`/profile/${m.username}`}
+											className="flex items-center gap-3 rounded-[18px] px-4 py-2.5 transition-colors hover:bg-primary/[0.05]"
+										>
+											<span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-pill bg-raised">
+												<SafeAvatar src={m.avatar} />
+											</span>
+											<span className="flex min-w-0 flex-1 flex-col">
+												<span className="truncate font-sans text-[calc(15px*var(--ws-fs))] font-semibold text-primary">
+													{[m.firstName, m.lastName].filter(Boolean).join(" ") || m.username}
+												</span>
+												<span className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">@{m.username}</span>
+											</span>
+											{m.isOwner && (
+												<span className="shrink-0 rounded-pill bg-primary/[0.08] px-2.5 py-1 font-sans text-[calc(11.5px*var(--ws-fs))] font-semibold text-primary">
+													{t("community.owner")}
+												</span>
+											)}
+										</Link>
+									))}
+						</div>
+					) : (
+					<>
 
 					{/* initial={false}: whatever is true on load is simply there. Only
 					    a join made here brings the composer in. It rises, it does
@@ -397,7 +442,6 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 						<motion.div
 							key="composer"
 							{...reveal()}
-							className="border-b border-hairline"
 						>
 							<PostComposer
 								community={{
@@ -461,6 +505,8 @@ export default function CommunityScreen({ slug }: { slug: string }) {
 							</>
 						)}
 					</div>
+					</>
+					)}
 				</>
 			)}
 		</div>

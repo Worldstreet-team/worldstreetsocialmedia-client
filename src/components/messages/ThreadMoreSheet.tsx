@@ -27,12 +27,15 @@ export function ThreadMoreSheet({
 	open,
 	onClose,
 	title,
-	items,
+	items = [],
+	children,
 }: {
 	open: boolean;
 	onClose: () => void;
 	title: string;
-	items: ThreadMoreItem[];
+	items?: ThreadMoreItem[];
+	/** The full menu body (identity, chips, rows); replaces `items`. */
+	children?: ReactNode;
 }) {
 	useOverlayDismiss(open, onClose);
 	return (
@@ -40,7 +43,10 @@ export function ThreadMoreSheet({
 			{open && (
 				<>
 					<OverlayScrim onClose={onClose} />
-					<OverlayPanel dragClose={onClose} variant="anchored" label={`More for ${title}`}>
+					<OverlayPanel ground="solid" dragClose={onClose} variant="anchored" label={`More for ${title}`}>
+						{children ? (
+							<div className="px-2 pb-[calc(12px+var(--ws-safe-bottom))]">{children}</div>
+						) : (
 						<motion.div
 							variants={staggerParentFast}
 							initial="hidden"
@@ -86,6 +92,7 @@ export function ThreadMoreSheet({
 								</motion.button>
 							))}
 						</motion.div>
+						)}
 					</OverlayPanel>
 				</>
 			)}

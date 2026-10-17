@@ -6,7 +6,7 @@ import { GroupInviteBubble, type GroupInviteCard } from "./GroupInviteBubble";
 import clsx from "clsx";
 import { format } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
-import { memo, useEffect, useRef } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { RiErrorWarningFill, RiReplyLine } from "@remixicon/react";
 import { haptic } from "@/lib/haptics";
 import { DUR, EASE, EASE_IN, pop, press, swap } from "@/lib/motion-presets";
@@ -14,6 +14,7 @@ import {
 	EmbeddedPost,
 	firstPlatformPostId,
 } from "@/components/feed/EmbeddedPost";
+import { LinkPreviewCard, firstPreviewableUrl } from "./LinkPreview";
 import { MessageTicks, tickStateFor } from "@/components/messages/MessageTicks";
 import { VoiceMessage } from "@/components/messages/VoiceMessage";
 import { PaymentBubble } from "@/components/messages/PaymentBubble";
@@ -184,6 +185,35 @@ function linkify(text: string, mine: boolean) {
 	});
 }
 
+// Built at runtime: the tsconfig target predates \p{} in regex literals.
+// biome-ignore lint/complexity/useRegexLiterals: see above
+const PICTO_RE = new RegExp("\\p{Extended_Pictographic}|\\p{Regional_Indicator}", "u");
+
+/** One to three emoji and nothing else drop the bubble and scale up (bubble
+ *  catalogue, owner 2026-10-09). Returns how many, or 0 for a normal bubble. */
+function jumboCount(text?: string): number {
+	if (!text || text.length > 40) return 0;
+	const bare = text.replace(/\s+/g, "");
+	if (!bare) return 0;
+	const parts =
+		typeof Intl !== "undefined" && "Segmenter" in Intl
+			? Array.from(new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(bare), (s) => s.segment)
+			: Array.from(bare);
+	if (parts.length > 3) return 0;
+	return parts.every((p) => PICTO_RE.test(p)) ? parts.length : 0;
+}
+
+/** Past five lines the body clips under a soft fade, and Read more opens it
+ *  in place (bubble catalogue). */
+const CLAMP_STYLE = {
+	display: "-webkit-box",
+	WebkitBoxOrient: "vertical",
+	WebkitLineClamp: 5,
+	overflow: "hidden",
+} as const;
+const FADE = "linear-gradient(to bottom, #000 calc(100% - 1.4em), transparent)";
+const FADE_STYLE = { maskImage: FADE, WebkitMaskImage: FADE } as const;
+
 /**
  * The centred stamp between message groups — Instagram's grammar: a time
  * today, weekday + time this week, date + time beyond. Shown only across a
@@ -215,12 +245,13 @@ export interface BubbleLift {
 }
 
 const R = "var(--chat-r, 22px)";
-const RIN = "var(--chat-r-in, 8px)";
+const RIN = "var(--chat-r-in, 6px)";
 // Exported so the composer's send disc wears the same fill. The fallback is
 // the brand token into its own deeper step with the brand's ink: it used to
 // end on a literal indigo under white, which no app palette could move.
-export const MINE_FILL = "var(--chat-mine, linear-gradient(135deg, var(--ws-brand-primary), var(--ws-brand-dim)))";
-export const MINE_INK = "var(--chat-mine-ink, var(--ws-brand-on-primary))";
+// Solid by default (owner 2026-10-09); the fallback is the house Tide.
+export const MINE_FILL = "var(--chat-mine, #087A94)";
+export const MINE_INK = "var(--chat-mine-ink, #FFFFFF)";
 const THEIRS_FILL = "var(--chat-theirs, var(--ws-bg-raised))";
 const THEIRS_INK = "var(--chat-theirs-ink, var(--ws-text-primary))";
 
@@ -420,6 +451,19 @@ export const MessageBubble = memo(function MessageBubble({
 		liveRef.current = true;
 	}, []);
 	const isTemp = m._id.startsWith("temp-");
+	const jumbo =
+		m.type === "text" && !m.mediaUrl && !m.storyRef ? jumboCount(m.content) : 0;
+	const unfilled =
+		jumbo > 0 || ((m.type === "image" || m.type === "video") && !m.content);
+	const textRef = useRef<HTMLParagraphElement | null>(null);
+	const [expanded, setExpanded] = useState(false);
+	const [clamped, setClamped] = useState(false);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: re-measure when the words change
+	useEffect(() => {
+		const el = textRef.current;
+		if (!el || expanded) return;
+		setClamped(el.scrollHeight > el.clientHeight + 1);
+	}, [m.content, expanded]);
 
 	const setDx = (dx: number) => {
 		dxRef.current = dx;
@@ -475,7 +519,7 @@ export const MessageBubble = memo(function MessageBubble({
 		if (!copy) return null;
 		const actorAvatar = (m.sender as { avatar?: string })?.avatar;
 		return (
-			<div className="mx-auto flex w-full max-w-[52rem] justify-center px-4 py-1.5">
+			<div className="mx-auto flex w-full max-w-[44rem] justify-center px-4 py-1.5">
 				<span
 					className="inline-flex items-center gap-1.5 rounded-pill px-3 py-1 text-center font-sans text-[calc(12.5px*var(--ws-fs))] font-medium"
 					style={{ background: PILL_BG, color: PILL_INK }}
@@ -518,7 +562,7 @@ export const MessageBubble = memo(function MessageBubble({
 			// The same reading column as every bubble — without it the money
 			// card ignored the centred max-width and gutters and sat on the
 			// pane's raw edge, visibly outside the bubble grammar.
-			<div className="mx-auto w-full max-w-[52rem] px-4 sm:px-6">
+			<div className="mx-auto w-full max-w-[44rem] px-4 sm:px-6">
 				<PaymentBubble
 					amountMinor={m.amountMinor ?? 0}
 					note={m.content}
@@ -530,13 +574,14 @@ export const MessageBubble = memo(function MessageBubble({
 					senderName={isGroup ? senderName : peerName}
 					fromAvatar={fromAvatar}
 					toAvatar={toAvatar}
+					reference={m._id}
 				/>
 			</div>
 		);
 	}
 	if (m.type === "call") {
 		return (
-			<div className="mx-auto w-full max-w-[52rem]">
+			<div className="mx-auto w-full max-w-[44rem]">
 				<CallLogRow
 					content={m.content}
 					at={m.createdAt}
@@ -552,7 +597,7 @@ export const MessageBubble = memo(function MessageBubble({
 		<>
 			{showUnreadDivider && (
 				// Telegram's rule (owner pick): the thread opens here.
-				<div className="mx-auto flex w-full max-w-[52rem] items-center gap-3 px-4 py-3 sm:px-6">
+				<div className="mx-auto flex w-full max-w-[44rem] items-center gap-3 px-4 py-3 sm:px-6">
 					<span className="h-px flex-1" style={{ background: ACCENT_40 }} />
 					<span className="font-sans text-[calc(12px*var(--ws-fs))] font-semibold" style={{ color: "var(--chat-accent-on-ground, var(--ws-brand-primary))" }}>
 						{unreadLabel && unreadLabel > 1
@@ -630,9 +675,10 @@ export const MessageBubble = memo(function MessageBubble({
 					// A reading column, not a wall: real gutters so bubbles never
 					// kiss the viewport edge, and a centered max-width on wide
 					// panes — every messenger does this (owner, 2026-09-02).
-					"group/msg relative mx-auto flex w-full max-w-[52rem] flex-col scroll-mt-24 touch-pan-y px-4 sm:px-6",
-					// Three tiers (audit #5): 2px inside a run, 8px between
-					// runs, the centred stamp carries the big gap.
+					"group/msg relative mx-auto flex w-full max-w-[44rem] flex-col scroll-mt-24 touch-pan-y px-4 sm:px-6",
+					// Three tiers (audit #5; bubble catalogue 2026-10-09): 3px
+					// inside a run, 14px between runs, the centred stamp
+					// carries the big gap.
 					// PADDING, never margin (owner 2026-09-21: "if a chat is very
 					// long the scroll starts bouncing"). This row is the first
 					// child of virtuoso's item wrapper, so a top margin collapses
@@ -640,7 +686,7 @@ export const MessageBubble = memo(function MessageBubble({
 					// short, the error grew with the thread, and scrolling a long
 					// one made virtuoso correct its offsets over and over, which
 					// is the bounce. Padding is inside the box it measures.
-					sameRunAsPrev ? "pt-[2px]" : "pt-2",
+					sameRunAsPrev ? "pt-[3px]" : "pt-[14px]",
 					isMe ? "items-end" : "items-start",
 				)}
 			>
@@ -699,12 +745,56 @@ export const MessageBubble = memo(function MessageBubble({
 								// face leads an incoming message (owner 2026-09-02;
 								// the old row-reverse painted it backwards).
 								isMe ? "order-1" : "order-3",
-								"-mx-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-pill text-subtle transition hover:bg-primary/5 hover:text-muted",
-								"opacity-100 md:opacity-0 md:group-hover/msg:opacity-100 md:focus-visible:opacity-100",
+								// Phones only: desktop gets the hover bar below.
+								"-mx-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-pill text-subtle transition hover:bg-primary/5 hover:text-muted md:hidden",
 							)}
 						>
 							<RiReplyLine size={14} />
 						</button>
+					)}
+					{/* Desktop hover bar (owner pick, Messages round 3): a slim glass
+					    strip with three quick reactions, reply and more, beside the
+					    bubble it belongs to. Focus reveals it for keyboards too. */}
+					{!isTemp && !m.failed && (
+						<span
+							className={clsx(
+								isMe ? "order-1" : "order-3",
+								"hidden shrink-0 items-center gap-0.5 rounded-pill bg-surface/80 p-1 shadow-pop backdrop-blur-xl transition-opacity md:flex",
+								"md:pointer-events-none md:opacity-0 md:group-hover/msg:pointer-events-auto md:group-hover/msg:opacity-100 md:focus-within:pointer-events-auto md:focus-within:opacity-100",
+							)}
+						>
+							{onReact &&
+								["👍", "❤️", "😂"].map((emoji) => (
+									<button
+										key={emoji}
+										type="button"
+										onClick={() => onReact(m, emoji)}
+										aria-label={`React ${emoji}`}
+										className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-pill text-[calc(16px*var(--ws-fs))] transition-colors hover:bg-primary/10"
+									>
+										{emoji}
+									</button>
+								))}
+							<button
+								type="button"
+								onClick={() => onReply(m)}
+								aria-label="Reply to this message"
+								className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/10 hover:text-primary"
+							>
+								<RiReplyLine size={15} />
+							</button>
+							<button
+								type="button"
+								onClick={(e) => {
+									const r = e.currentTarget.getBoundingClientRect();
+									onMenu(r.left + r.width / 2, r.bottom, m, liftBubble());
+								}}
+								aria-label="More actions"
+								className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/10 hover:text-primary"
+							>
+								<span aria-hidden className="text-[15px] leading-none">⋯</span>
+							</button>
+						</span>
 					)}
 					{/* Inbound face: only the first message of a run wears it —
 					    ink-and-air density (register 43-44). */}
@@ -779,21 +869,20 @@ export const MessageBubble = memo(function MessageBubble({
 							// chat-bubble-ink: app ink classes inside mean the bubble's
 							// own ink (the embedded post, a failed upload's Retry).
 							"chat-bubble-ink relative min-w-0 max-w-full overflow-hidden",
-							// A GIF/photo-only bubble has no fill of its own.
-							(m.type === "image" || m.type === "video") && !m.content
-								? "p-0 text-primary"
-								: "px-4 py-2.5",
+							// A GIF/photo-only bubble has no fill of its own, and
+							// neither do one to three emoji.
+							unfilled ? "p-0 text-primary" : "px-[14px] py-[9px]",
 						)}
 						// Fill, ink and corners come from the thread's theme
 						// variables (theme pack 2026-09-10); the fallbacks are
-						// the owner's 2026-09-03 picks - gradient mine, raised
-						// theirs, 22px with an 8px inner run corner - so a
+						// the house look - solid tide mine (2026-10-09), raised
+						// theirs, 22px with a 6px inner run corner - so a
 						// bubble outside a themed pane (the dock) looks as before.
 						style={{
 							borderRadius: isMe
 								? `${R} ${sameRunAsPrev ? RIN : R} ${!endsRun ? RIN : R} ${R}`
 								: `${sameRunAsPrev ? RIN : R} ${R} ${R} ${!endsRun ? RIN : R}`,
-							...((m.type === "image" || m.type === "video") && !m.content
+							...(unfilled
 								? {}
 								: isMe
 									? { background: MINE_FILL, color: MINE_INK }
@@ -965,7 +1054,7 @@ export const MessageBubble = memo(function MessageBubble({
 							<button
 								type="button"
 								onClick={() => m.storyRef && onStory(m.storyRef)}
-								className="relative mb-1.5 block h-40 w-28 cursor-pointer overflow-hidden rounded-lg border border-current/15 transition-opacity hover:opacity-90"
+								className="relative mb-1.5 block h-40 w-28 cursor-pointer overflow-hidden rounded-[14px] transition-opacity hover:opacity-90"
 								aria-label="View story"
 							>
 								{/* eslint-disable-next-line @next/next/no-img-element */}
@@ -979,18 +1068,47 @@ export const MessageBubble = memo(function MessageBubble({
 								</span>
 							</button>
 						)}
-						{m.content && (
+						{m.content && jumbo > 0 && (
 							<p
-								className={clsx(
-									"text-[calc(14px*var(--ws-fs))] leading-[1.6] break-words whitespace-pre-wrap",
-									m.mediaUrl && "mt-2",
-								)}
+								className="leading-[1.1] tracking-[0.02em]"
+								style={{ fontSize: `calc(${jumbo === 1 ? 48 : 34}px * var(--ws-fs))` }}
 							>
-								{linkify(m.content, isMe)}
+								{m.content.trim()}
 								{m.editedAt && (
-									<span className="ml-1.5 font-sans text-[calc(11px*var(--ws-fs))] opacity-60">edited</span>
+									<span className="ml-1.5 align-middle font-sans text-[calc(11px*var(--ws-fs))] text-muted">edited</span>
 								)}
 							</p>
+						)}
+						{m.content && jumbo === 0 && (
+							<>
+								<p
+									ref={textRef}
+									className={clsx(
+										"text-[calc(15px*var(--ws-fs))] leading-[1.4] break-words whitespace-pre-wrap",
+										m.mediaUrl && "mt-2",
+									)}
+									style={expanded ? undefined : { ...CLAMP_STYLE, ...(clamped ? FADE_STYLE : {}) }}
+								>
+									{linkify(m.content, isMe)}
+									{m.editedAt && (
+										<span className="ml-1.5 font-sans text-[calc(11px*var(--ws-fs))] opacity-60">edited</span>
+									)}
+								</p>
+								{clamped && (
+									<button
+										type="button"
+										onClick={(e) => {
+											e.stopPropagation();
+											setExpanded((v) => !v);
+										}}
+										aria-expanded={expanded}
+										className="mt-1 cursor-pointer font-sans text-[calc(13px*var(--ws-fs))] font-semibold opacity-90 transition-opacity hover:opacity-100"
+										style={isMe ? undefined : { color: LINK_THEIRS }}
+									>
+										{expanded ? "Show less" : "Read more"}
+									</button>
+								)}
+							</>
 						)}
 						{/* A WorldSpace post link renders as the post (owner pick),
 						    the same embed the feed uses. */}
@@ -998,6 +1116,10 @@ export const MessageBubble = memo(function MessageBubble({
 							<div className="mt-2 w-[260px] max-w-full">
 								<EmbeddedPost postId={firstPlatformPostId(m.content, "")!} />
 							</div>
+						)}
+						{/* Any other link carries its page's own card (owner 2026-10-08). */}
+						{m.type === "text" && !m.removedBy && firstPreviewableUrl(m.content) && (
+							<LinkPreviewCard url={firstPreviewableUrl(m.content)!} mine={isMe} />
 						)}
 					</div>
 					</div>

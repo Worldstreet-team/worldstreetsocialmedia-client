@@ -3,15 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
-import { Camera, Check } from "@phosphor-icons/react";
+import { Check, ImageSquare, X } from "@phosphor-icons/react";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import {
-  OverlayHeader,
   OverlayPanel,
   OverlayScrim,
   useOverlayDismiss,
 } from "@/components/ui/Overlay";
-import GlassSelect from "@/components/ui/GlassSelect";
 import { CATEGORIES, VERTICALS, type VerticalId } from "@/data/categories";
 import { checkSlugAction } from "@/lib/community.actions";
 import { useT } from "@/i18n/client";
@@ -110,87 +108,91 @@ export default function CreateCommunitySheet({
   };
 
   const field =
-    "block font-sans text-[calc(11px*var(--ws-fs))] font-bold uppercase tracking-[0.14em] text-subtle";
-  // The panel follows the theme, so the field fills come from tokens — a
-  // fixed-white glass-input is a white block on the light frost.
+    "font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-[0.14em] text-muted";
+  // Soft fills from the theme tokens, no rules (Communities v2 "Start one").
   const input =
-    "w-full rounded-xl bg-sunken px-3.5 py-3 font-sans text-[calc(15px*var(--ws-fs))] text-primary outline-none transition-colors placeholder:text-subtle focus:bg-raised";
+    "w-full rounded-[16px] bg-primary/[0.06] px-4 py-3 font-sans text-base text-primary outline-none transition-colors placeholder:text-subtle focus:bg-primary/[0.09] sm:text-[calc(15px*var(--ws-fs))]";
+  const chip = (on: boolean) =>
+    clsx(
+      "flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-pill px-3.5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-colors",
+      on ? "bg-primary text-page" : "bg-primary/[0.06] text-muted hover:text-primary",
+    );
 
   return (
     <ConfirmModalPortal>
       <OverlayScrim onClose={onClose} label={t("common.cancel")} />
-      <OverlayPanel dragClose={onClose} variant="sheet" label={t("community.new.title")}>
-        <OverlayHeader onClose={onClose} closeLabel={t("common.cancel")}>
-          <div className="min-w-0 flex-1">
-            <h2 className="truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
-              {t("community.new.title")}
-            </h2>
-            <p className="truncate font-sans text-[calc(11.5px*var(--ws-fs))] text-subtle">
-              {t("community.new.subtitle")}
-            </p>
-          </div>
-        </OverlayHeader>
+      <OverlayPanel
+        dragClose={onClose}
+        variant="sheet"
+        ground="solid"
+        label={t("community.new.title")}
+      >
+        {/* Communities v2, "Start one" (owner 2026-10-16: the old sheet was
+            "rubbish"): one screen, a big title, a cover, three fields and
+            one button. */}
+        <div className="flex shrink-0 items-center justify-between gap-3 px-5 pb-2 pt-5">
+          <h2 className="truncate font-display text-[calc(20px*var(--ws-fs))] font-semibold text-primary">
+            {t("community.new.title")}
+          </h2>
+          <motion.button
+            type="button"
+            onClick={onClose}
+            aria-label={t("common.cancel")}
+            {...press}
+            className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-primary/[0.08] text-primary transition-colors hover:bg-primary/[0.13]"
+          >
+            <X size={15} weight="bold" />
+          </motion.button>
+        </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-5">
-          <div className="flex flex-col gap-4">
-            {/* icon */}
-            <div className="flex items-center gap-3.5">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4 pt-2">
+          <div className="flex flex-col gap-5">
+            {/* cover */}
+            <div className="flex items-center gap-4">
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
                 aria-label={t("community.field.avatarAdd")}
-                className="relative h-16 w-16 shrink-0 cursor-pointer overflow-hidden rounded-xl bg-sunken transition-opacity hover:opacity-90"
+                className="relative h-[72px] w-[72px] shrink-0 cursor-pointer overflow-hidden rounded-[20px] bg-primary/[0.06] transition-colors hover:bg-primary/[0.09]"
               >
                 <AnimatePresence mode="wait" initial={false}>
                   {avatarUrl ? (
-                    <motion.img
-                      key={avatarUrl}
-                      {...swap}
-                      src={avatarUrl}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
+                    <motion.img key={avatarUrl} {...swap} src={avatarUrl} alt="" className="h-full w-full object-cover" />
                   ) : (
-                    <motion.span
-                      key="empty"
-                      {...swap}
-                      className="flex h-full w-full items-center justify-center text-subtle"
-                    >
-                      <Camera size={20} weight="duotone" />
+                    <motion.span key="empty" {...swap} className="flex h-full w-full items-center justify-center text-muted">
+                      <ImageSquare size={24} />
                     </motion.span>
                   )}
                 </AnimatePresence>
               </button>
-              <div className="min-w-0">
-                <span className={field}>{t("community.field.avatar")}</span>
-                <div className="mt-1.5 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => fileRef.current?.click()}
-                    className="h-7 cursor-pointer rounded-pill bg-chip px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-raised"
-                  >
-                    {avatarUrl
-                      ? t("community.field.avatarChange")
-                      : t("community.field.avatarAdd")}
-                  </button>
-                  <AnimatePresence initial={false}>
-                    {avatarUrl && (
-                      <motion.button
-                        key="remove"
-                        type="button"
-                        {...pop}
-                        onClick={() => {
-                          URL.revokeObjectURL(avatarUrl);
-                          setAvatar(null);
-                          setAvatarUrl(null);
-                        }}
-                        className="h-7 cursor-pointer rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-muted transition-colors hover:text-primary"
-                      >
-                        {t("community.field.avatarRemove")}
-                      </motion.button>
-                    )}
-                  </AnimatePresence>
-                </div>
+              <div className="flex min-w-0 flex-col gap-1">
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="w-fit cursor-pointer font-sans text-[calc(15px*var(--ws-fs))] font-semibold text-primary hover:underline"
+                >
+                  {avatarUrl ? t("community.field.avatarChange") : t("community.field.coverAdd")}
+                </button>
+                <span className="font-sans text-[calc(12.5px*var(--ws-fs))] text-muted">
+                  {t("community.field.coverHint")}
+                </span>
+                <AnimatePresence initial={false}>
+                  {avatarUrl && (
+                    <motion.button
+                      key="remove"
+                      type="button"
+                      {...pop}
+                      onClick={() => {
+                        URL.revokeObjectURL(avatarUrl);
+                        setAvatar(null);
+                        setAvatarUrl(null);
+                      }}
+                      className="w-fit cursor-pointer font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-danger"
+                    >
+                      {t("community.field.avatarRemove")}
+                    </motion.button>
+                  )}
+                </AnimatePresence>
               </div>
               <input
                 ref={fileRef}
@@ -203,20 +205,24 @@ export default function CreateCommunitySheet({
 
             {/* name */}
             <div>
-              <label htmlFor="community-name" className={field}>
-                {t("community.field.name")}
-              </label>
+              <div className="mb-2 flex items-baseline justify-between">
+                <label htmlFor="community-name" className={field}>
+                  {t("community.field.name")}
+                </label>
+                <span className="font-sans text-[calc(11.5px*var(--ws-fs))] tabular-nums text-subtle">
+                  {name.length} / {MAX_NAME}
+                </span>
+              </div>
               <input
                 id="community-name"
                 value={name}
                 onChange={(e) => setName(e.target.value.slice(0, MAX_NAME))}
                 placeholder={t("community.field.namePlaceholder")}
-                // text-base on mobile or iOS Safari zooms the page on focus.
-                className={clsx(input, "mt-1.5 text-base sm:text-[calc(15px*var(--ws-fs))]")}
+                className={input}
                 autoFocus
               />
               <p className="mt-1.5 min-h-[18px] font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
-                {!nameValid ? (
+                {!nameValid && name.length > 0 ? (
                   t("community.field.nameHint")
                 ) : slug?.slug ? (
                   <>
@@ -229,45 +235,52 @@ export default function CreateCommunitySheet({
               </p>
             </div>
 
-            {/* description */}
+            {/* about */}
             <div>
-              <label htmlFor="community-desc" className={field}>
-                {t("community.field.description")}
-              </label>
+              <div className="mb-2 flex items-baseline justify-between">
+                <label htmlFor="community-desc" className={field}>
+                  {t("community.field.description")}
+                </label>
+                <span className="font-sans text-[calc(11.5px*var(--ws-fs))] text-subtle">
+                  {description.length > 0 ? `${description.length} / ${MAX_DESC}` : t("community.field.optional")}
+                </span>
+              </div>
               <textarea
                 id="community-desc"
                 value={description}
                 onChange={(e) => setDescription(e.target.value.slice(0, MAX_DESC))}
                 placeholder={t("community.field.descriptionPlaceholder")}
                 rows={3}
-                className={clsx(input, "mt-1.5 resize-none text-base sm:text-[calc(15px*var(--ws-fs))]")}
+                className={clsx(input, "resize-none")}
               />
-              <p className="mt-1 text-right font-sans text-[calc(11px*var(--ws-fs))] tabular-nums text-subtle">
-                {description.length}/{MAX_DESC}
-              </p>
             </div>
 
-            {/* topic, from the 100-category taxonomy */}
+            {/* topic: the area, then its categories, each one chip row */}
             <div>
-              <span className={field}>{t("community.field.topic")}</span>
-              <div className="mt-1.5">
-                <GlassSelect
-                  value={vertical}
-                  onChange={(id) => {
-                    setVertical(id as VerticalId);
-                    setCategory("");
-                  }}
-                  options={VERTICALS.map((v) => ({ id: v.id, label: v.label }))}
-                />
+              <span className={clsx(field, "mb-2 block")}>{t("community.field.topic")}</span>
+              <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {VERTICALS.map((v) => (
+                  <motion.button
+                    key={v.id}
+                    type="button"
+                    {...press}
+                    aria-pressed={vertical === v.id}
+                    onClick={() => {
+                      setVertical(v.id as VerticalId);
+                      setCategory("");
+                    }}
+                    className={chip(vertical === v.id)}
+                  >
+                    {v.label}
+                  </motion.button>
+                ))}
               </div>
-              {/* Keyed by vertical: a new vertical deals a new set of chips.
-                  Picking one never replays it. */}
               <motion.div
                 key={vertical}
                 variants={staggerParentFast}
                 initial="hidden"
                 animate="show"
-                className="mt-2.5 flex max-h-[132px] flex-wrap gap-1.5 overflow-y-auto"
+                className="-mx-5 mt-2 flex gap-1.5 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               >
                 {categoriesInVertical.map((c) => {
                   const on = category === c.id;
@@ -278,12 +291,9 @@ export default function CreateCommunitySheet({
                       onClick={() => setCategory(on ? "" : c.id)}
                       aria-pressed={on}
                       variants={staggerItem}
-                      {...press}
                       className={clsx(
-                        "flex h-8 cursor-pointer items-center gap-1 rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-medium transition-colors",
-                        on
-                          ? "bg-primary text-page"
-                          : "bg-chip text-muted hover:text-primary",
+                        "flex h-8 shrink-0 cursor-pointer items-center gap-1 rounded-pill px-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium transition-colors",
+                        on ? "bg-brand text-brand-on" : "text-muted hover:text-primary",
                       )}
                     >
                       {on && (
@@ -296,21 +306,14 @@ export default function CreateCommunitySheet({
                   );
                 })}
               </motion.div>
-              <p className="mt-1.5 font-sans text-[calc(12px*var(--ws-fs))] text-subtle">
-                {t("community.field.topicHint")}
-              </p>
             </div>
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center justify-end gap-2 px-4 pb-[calc(16px+var(--ws-safe-bottom))] pt-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-10 cursor-pointer rounded-pill px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-muted transition-colors hover:text-primary"
-          >
-            {t("common.cancel")}
-          </button>
+        <div className="flex shrink-0 items-center justify-between gap-3 px-5 pb-[calc(16px+var(--ws-safe-bottom))] pt-3">
+          <span className="font-sans text-[calc(12.5px*var(--ws-fs))] text-muted">
+            {t("community.new.admin")}
+          </span>
           <motion.button
             type="button"
             disabled={!valid}
@@ -324,10 +327,10 @@ export default function CreateCommunitySheet({
               })
             }
             className={clsx(
-              "flex h-10 items-center gap-2 rounded-pill px-5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-colors",
+              "flex h-11 items-center gap-2 rounded-pill px-6 font-sans text-[calc(14px*var(--ws-fs))] font-semibold transition-colors",
               valid
                 ? "cursor-pointer bg-brand text-brand-on hover:bg-brand-active"
-                : "cursor-not-allowed bg-chip text-muted opacity-60",
+                : "cursor-not-allowed bg-primary/[0.08] text-muted",
             )}
           >
             {busy && (

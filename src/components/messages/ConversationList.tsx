@@ -173,12 +173,11 @@ const sectionTitleBare =
 /** A store that never changes; see `clientMount` in the list. */
 const subscribeNever = () => () => {};
 
+/** Retired (owner 2026-10-16): the inbox is one flat column again, as in
+ *  the final-picks design, so blocks no longer need a thumb between them.
+ *  Kept as a no-op so its call sites stay valid. */
 export function InboxThumb() {
-	return (
-		<div aria-hidden className="flex justify-center pb-1 pt-2">
-			<span className="h-1 w-10 rounded-pill bg-primary/15" />
-		</div>
-	);
+	return null;
 }
 
 /** The way back off a shelf. A chip, not an arrow alone: it says where to. */
@@ -356,7 +355,7 @@ export function ConversationList({
 		// for real; only what the network owes is grey.
 		return (
 			<div className="flex flex-col px-2">
-				<div className="flex flex-col rounded-2xl px-2 pb-2 pt-4 glass-frost backdrop-blur-xl">
+				<div className="flex flex-col px-0 pb-2 pt-2">
 					{heading && (
 						<div className="mb-3 flex items-center gap-2 px-4">
 							<h2 className={clsx(sectionTitleBare, "flex-1")}>{heading}</h2>
@@ -456,7 +455,7 @@ export function ConversationList({
 				variants={staggerParentFast}
 				initial={clientMount && !rowsPlayed.current ? "hidden" : false}
 				animate="show"
-				className="flex flex-col rounded-2xl px-2 pb-2 pt-4 glass-frost backdrop-blur-xl"
+				className="flex flex-col px-0 pb-2 pt-2"
 			>
 			{/* The back chip is the only way off a shelf now, so the header
 			    survives a search there; in the inbox a search still owns the
@@ -475,7 +474,9 @@ export function ConversationList({
 			{!query.trim() && door}
 			{/* Who is on, right inside the chats block: faces only, no header
 			    of its own (owner 2026-09-20). */}
-			{onlineNow.length > 0 && !query.trim() && (
+			{/* Faces only earn a row when there are enough chats that finding
+			    who is on is a shortcut; with a few, they repeated the list. */}
+			{onlineNow.length > 0 && rows.length >= 4 && !query.trim() && (
 				<motion.div
 					aria-label={t("messages.onlineNow")}
 					// Its own root, not a child of the rows' cascade: presence
@@ -586,12 +587,13 @@ export function ConversationList({
 							// Full width inside the list's own px-2: the selected chip
 							// runs the whole row, inset from the block's edges but
 							// never short of the text (owner 2026-09-20).
-							"group relative flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors",
-							active ? "bg-primary/10" : "hover:bg-primary/5",
+							// Softer, roomier rows (owner 2026-10-16, "more modern").
+							"group relative flex w-full cursor-pointer items-center gap-3.5 rounded-[18px] px-3 py-2.5 text-left transition-colors",
+							active ? "bg-primary/[0.09]" : "hover:bg-primary/[0.05]",
 						)}
 					>
 						<span className="relative shrink-0">
-							<span className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-pill bg-raised">
+							<span className="relative flex h-[52px] w-[52px] items-center justify-center overflow-hidden rounded-pill bg-raised">
 								{isGroup && !identity.avatar ? (
 									<Users className="h-6 w-6 text-muted" />
 								) : (

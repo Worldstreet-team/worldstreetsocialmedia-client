@@ -182,6 +182,8 @@ export function LeftSidebar() {
 				key={item.title}
 				href={href}
 				{...press(href)}
+				// The notification island points its notch at this row.
+				data-notif-anchor={item.link === "/notifications" ? "" : undefined}
 				style={{ animationDelay: `${offset + index * 30}ms` }}
 				className={clsx(
 					// Active is bold and nothing else (owner 2026-10-16: "the active nav

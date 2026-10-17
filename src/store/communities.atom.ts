@@ -24,6 +24,8 @@ export interface CommunityHomeCache {
   posts: PostProps[];
   cursor: string | null;
   hasMore: boolean;
+  /** The posts are the biggest communities', for someone in none yet. */
+  popular?: boolean;
 }
 
 export const communityHomeAtom = atom<CommunityHomeCache | null>(null);

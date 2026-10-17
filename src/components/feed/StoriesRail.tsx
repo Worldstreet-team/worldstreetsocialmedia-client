@@ -10,6 +10,9 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAtom, useAtomValue } from "jotai";
 import { storyRailAtom, storyStudioSignalAtom } from "@/store/ui.atom";
+import { type StoryUpload, storyUploadAtom } from "@/store/storyUpload.atom";
+import { HaloPopover, HaloRow } from "@/components/ui/Halo";
+import { ArrowClockwise, X } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { motion } from "framer-motion";
 import { Plus } from "@/components/ui/icons";
@@ -182,7 +185,10 @@ export function StoriesRail({ compact }: { compact?: boolean | "thumbs" } = {}) 
 	// 152px cover card in a 372px column crowded the chats below it).
 	const circlesOnly = compact === true;
 	const thumbs = compact === "thumbs";
-	const card = !circlesOnly && !thumbs;
+	// Circles at every width (owner 2026-10-11: "let the story across be
+	// circle instead"). The tall cover card is retired; its sm: classes
+	// below are inert while this is false.
+	const card = false;
 	const t = useT();
 	const [rail, setRail] = useAtom(storyRailAtom) as [
 		RailEntry[],
@@ -256,6 +262,15 @@ export function StoriesRail({ compact }: { compact?: boolean | "thumbs" } = {}) 
 		if (event === "story" && isVisible()) void load();
 	});
 
+	// A story in flight fills the Your story circle (owner pick 2026-10-11).
+	const upload = useAtomValue(storyUploadAtom);
+	const uploadPct = upload ? Math.round(upload.pct * 100) : 0;
+	const selfRef = useRef<HTMLButtonElement>(null);
+	const [uploadMenu, setUploadMenu] = useState(false);
+	useEffect(() => {
+		if (!upload || upload.status === "done") setUploadMenu(false);
+	}, [upload]);
+
 	const me = useAtomValue(userAtom);
 	const self = rail.find((r) => r.isSelf);
 	/**
@@ -298,7 +313,7 @@ export function StoriesRail({ compact }: { compact?: boolean | "thumbs" } = {}) 
 			aria-hidden={collapsed}
 		>
 			<div className="min-h-0 overflow-hidden">
-				<div className={clsx(thumbs ? "py-1" : "border-b border-hairline py-2")}>
+				<div className={clsx(thumbs ? "py-1" : "py-2")}>
 					<div
 						ref={rootRef}
 						className={clsx("flex overflow-x-auto py-1.5 [scrollbar-width:none]", thumbs ? "gap-1 px-1" : "gap-3 px-3")}
@@ -308,12 +323,15 @@ export function StoriesRail({ compact }: { compact?: boolean | "thumbs" } = {}) 
 			    below sm, the tall cover card from sm up. The pieces that only
 			    belong to one shape carry the breakpoint. */}
 			<motion.button
+				ref={selfRef}
 				{...press}
 				type="button"
 				onClick={() =>
-					self && self.stories.length > 0
-						? setOpen(self)
-						: setCreateOpen(true)
+					upload && upload.status !== "done"
+						? setUploadMenu((v) => !v)
+						: self && self.stories.length > 0
+							? setOpen(self)
+							: setCreateOpen(true)
 				}
 				className={clsx(
 						"flex shrink-0 cursor-pointer flex-col items-center",
@@ -330,11 +348,24 @@ export function StoriesRail({ compact }: { compact?: boolean | "thumbs" } = {}) 
 						"relative block h-16 w-16 rounded-pill p-[3px]",
 							card &&
 								"sm:h-[152px] sm:w-[100px] sm:rounded-xl sm:p-0",
-						self?.hasUnseen ? "ring-2 ring-brand" : "ring-1 ring-hairline",
+						upload
+							? ""
+							: self?.hasUnseen
+								? "ring-2 ring-brand"
+								: "ring-1 ring-hairline",
 					)}
 				>
+					{upload && <UploadRing upload={upload} />}
 					<span className={clsx("relative block h-full w-full overflow-hidden rounded-pill bg-sunken", card && "sm:rounded-xl")}>
-						{selfCover?.type === "video" ? (
+						{upload?.thumb ? (
+							// eslint-disable-next-line @next/next/no-img-element
+							<img
+								src={upload.thumb}
+								alt=""
+								className="absolute inset-0 h-full w-full object-cover"
+								draggable={false}
+							/>
+						) : selfCover?.type === "video" ? (
 							// eslint-disable-next-line jsx-a11y/media-has-caption
 							<video
 								src={`${selfCover.url}#t=0.1`}
@@ -389,8 +420,21 @@ export function StoriesRail({ compact }: { compact?: boolean | "thumbs" } = {}) 
 				</span>
 
 				{/* Circle-only: name beneath. */}
-				<span className={clsx("w-full truncate text-center font-sans text-[calc(12px*var(--ws-fs))] font-medium text-muted", card && "sm:hidden", circlesOnly ? "hidden" : "block")}>
-					{t("story.yours")}
+				<span
+					className={clsx(
+						"w-full truncate text-center font-sans text-[calc(12px*var(--ws-fs))] font-medium tabular-nums",
+						upload?.status === "failed" ? "text-danger" : upload ? "text-primary" : "text-muted",
+						card && "sm:hidden",
+						circlesOnly ? "hidden" : "block",
+					)}
+				>
+					{!upload || upload.status === "done"
+						? t("story.yours")
+						: upload.status === "failed"
+							? t("story.notPosted")
+							: upload.total > 1
+								? `${upload.slide}/${upload.total} · ${uploadPct}%`
+								: `${uploadPct}%`}
 				</span>
 			</motion.button>
 
@@ -520,6 +564,66 @@ export function StoriesRail({ compact }: { compact?: boolean | "thumbs" } = {}) 
 			    hidden one (the original below-lg "FAB → Story does nothing" bug).
 			    They sit outside the collapsing wrapper so a collapsed rail never
 			    puts an open viewer inside an aria-hidden subtree. */}
+			{upload && (
+				<HaloPopover
+					anchor={selfRef}
+					open={uploadMenu}
+					onClose={() => setUploadMenu(false)}
+					align="start"
+					width={260}
+					label={t("story.posting")}
+				>
+					<div className="flex items-center gap-3 pb-3">
+						<span className="relative block h-11 w-11 shrink-0 rounded-pill p-[3px]">
+							<UploadRing upload={upload} />
+							<span className="relative block h-full w-full overflow-hidden rounded-pill bg-sunken">
+								{upload.thumb ? (
+									// eslint-disable-next-line @next/next/no-img-element
+									<img src={upload.thumb} alt="" className="absolute inset-0 h-full w-full object-cover" />
+								) : (
+									<SafeAvatar src={selfAvatar} className="object-cover" />
+								)}
+							</span>
+						</span>
+						<span className="min-w-0">
+							<span className="block truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary">
+								{upload.status === "failed" ? t("story.notPosted") : t("story.posting")}
+							</span>
+							<span className="block truncate font-sans text-[calc(12px*var(--ws-fs))] text-subtle tabular-nums">
+								{upload.status === "failed"
+									? upload.message
+									: upload.total > 1
+										? `${t("story.slideOf")
+												.replace("{i}", String(upload.slide))
+												.replace("{n}", String(upload.total))} · ${uploadPct}%`
+										: `${uploadPct}%`}
+							</span>
+						</span>
+					</div>
+					<div className="flex flex-col gap-2">
+						{upload.status === "failed" && upload.retry && (
+							<HaloRow
+								icon={<ArrowClockwise size={16} weight="bold" />}
+								label={t("rail.retry")}
+								onClick={() => {
+									setUploadMenu(false);
+									upload.retry?.();
+								}}
+							/>
+						)}
+						<HaloRow
+							danger
+							icon={<X size={15} weight="bold" />}
+							label={upload.status === "failed" ? t("story.discard") : t("story.cancelUpload")}
+							onClick={() => {
+								setUploadMenu(false);
+								upload.cancel?.();
+							}}
+						/>
+					</div>
+				</HaloPopover>
+			)}
+
 			{open &&
 				createPortal(
 					<StoryViewer entry={open} onClose={() => setOpen(null)} />,
@@ -548,5 +652,42 @@ export function StoriesRail({ compact }: { compact?: boolean | "thumbs" } = {}) 
 					document.body,
 				)}
 		</>
+	);
+}
+
+/**
+ * The Your story circle while a story posts: a brand arc that fills with the
+ * upload, solid brand when it lands, danger red if it failed. Drawn as an
+ * SVG over the 64px tile, so it replaces the ring classes rather than
+ * stacking on them.
+ */
+function UploadRing({ upload }: { upload: StoryUpload }) {
+	const r = 30;
+	const c = 2 * Math.PI * r;
+	const done = upload.status === "done";
+	const failed = upload.status === "failed";
+	return (
+		<svg
+			aria-hidden="true"
+			role="presentation"
+			viewBox="0 0 64 64"
+			className="pointer-events-none absolute inset-0 h-full w-full -rotate-90"
+		>
+			<circle cx="32" cy="32" r={r} fill="none" strokeWidth="3" className="stroke-hairline" />
+			<circle
+				cx="32"
+				cy="32"
+				r={r}
+				fill="none"
+				strokeWidth="3"
+				strokeLinecap="round"
+				strokeDasharray={c}
+				strokeDashoffset={failed || done ? 0 : c * (1 - upload.pct)}
+				className={clsx(
+					"transition-[stroke-dashoffset] duration-300 ease-out",
+					failed ? "stroke-danger" : "stroke-brand",
+				)}
+			/>
+		</svg>
 	);
 }

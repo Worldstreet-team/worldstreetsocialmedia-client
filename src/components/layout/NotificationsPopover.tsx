@@ -129,6 +129,7 @@ export function NotificationsPopover({
 				aria-haspopup="dialog"
 				aria-expanded={open}
 				aria-label={t("nav.notifications")}
+				data-notif-anchor
 				className={
 					compact
 						? "relative flex h-11 w-11 items-center justify-center rounded-pill text-muted transition-colors active:bg-raised"

@@ -269,7 +269,7 @@ export default function ImageModal({
 									aria-label="Previous image"
 									onClick={handlePrev}
 									{...press}
-									className="w-12 h-12 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
+									className="w-12 h-12 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised rounded-pill transition-colors cursor-pointer"
 								>
 									<ChevronLeft className="w-6 h-6" />
 								</motion.button>
@@ -280,7 +280,7 @@ export default function ImageModal({
 									aria-label="Next image"
 									onClick={handleNext}
 									{...press}
-									className="w-12 h-12 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised border border-hairline rounded-pill transition-colors cursor-pointer"
+									className="w-12 h-12 flex items-center justify-center text-muted hover:text-primary bg-surface/80 hover:bg-raised rounded-pill transition-colors cursor-pointer"
 								>
 									<ChevronRight className="w-6 h-6" />
 								</motion.button>
@@ -342,7 +342,7 @@ export default function ImageModal({
 
 						{/* Image Counter */}
 						{images.length > 1 && (
-							<div className="absolute bottom-6 left-1/2 -translate-x-1/2 overflow-hidden bg-raised/90 text-primary px-3 py-1 rounded-pill text-[calc(13px*var(--ws-fs))] font-medium font-sans tabular-nums border border-hairline">
+							<div className="absolute bottom-6 left-1/2 -translate-x-1/2 overflow-hidden bg-raised/90 text-primary px-3 py-1 rounded-pill text-[calc(13px*var(--ws-fs))] font-medium font-sans tabular-nums">
 								{/* Only the index rolls; the total stands still. */}
 								<span className="relative inline-flex">
 									<AnimatePresence mode="popLayout" initial={false}>

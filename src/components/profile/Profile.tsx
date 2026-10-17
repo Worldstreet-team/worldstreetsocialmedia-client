@@ -36,6 +36,7 @@ import {
 	blockUserAction,
 	unblockUserAction,
 } from "@/lib/user.actions";
+import { muteUserAction, unmuteUserAction } from "@/lib/mute.actions";
 import { useFeedEvents } from "@/hooks/useUserEvents";
 import { StoryViewer, type RailEntry } from "@/components/feed/StoryViewer";
 import { startConversationAction } from "@/lib/conversation.actions";
@@ -447,6 +448,30 @@ export default function Profile({ username }: { username?: string }) {
 		}
 	}, [profileUser?._id, router, toast, t]);
 
+	/** Mute stays on the page: unlike a block, nothing about the profile
+	 *  changes for you, only your feed and your notifications. */
+	const handleMuteToggle = useCallback(
+		async (mute: boolean) => {
+			if (!profileUser?._id) return;
+			const res = mute
+				? await muteUserAction(profileUser._id)
+				: await unmuteUserAction(profileUser._id);
+			if (!res.success) {
+				toast(res.message ?? (mute ? "Could not mute" : "Could not unmute"), {
+					type: "error",
+				});
+				return;
+			}
+			toast(
+				mute
+					? `Muted @${profileUser.username}. Their posts won't show in your feed.`
+					: `Unmuted @${profileUser.username}`,
+			);
+			setProfileUser((prev: any) => ({ ...prev, isMutedByYou: mute }));
+		},
+		[profileUser?._id, profileUser?.username, toast],
+	);
+
 	const handleUnblock = useCallback(async () => {
 		if (!profileUser?._id) return;
 		const res = await unblockUserAction(profileUser._id);
@@ -625,6 +650,7 @@ export default function Profile({ username }: { username?: string }) {
 				followLoading={followLoading}
 				blockedByYou={profileUser.isBlockedByYou}
 				blockedByThem={profileUser.isBlockedByThem}
+				mutedByYou={Boolean(profileUser.isMutedByYou)}
 				onBack={() => goBack("/")}
 				onEdit={() => setIsEditProfileOpen(true)}
 				onFollowToggle={handleFollowToggle}
@@ -632,6 +658,8 @@ export default function Profile({ username }: { username?: string }) {
 				canMessage={canMessage}
 				onBlock={() => setIsBlockModalOpen(true)}
 				onUnblock={handleUnblock}
+				onMute={() => void handleMuteToggle(true)}
+				onUnmute={() => void handleMuteToggle(false)}
 				onReport={() => setIsReportOpen(true)}
 				onShare={() => setIsShareOpen(true)}
 			/>

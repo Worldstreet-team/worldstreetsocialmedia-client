@@ -29,7 +29,7 @@ const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
 import { useT } from "@/i18n/client";
 import { getUserStoriesAction } from "@/lib/stories.actions";
 import { startConversationAction } from "@/lib/conversation.actions";
-import { getFollowersAction, getFollowingAction } from "@/lib/user.actions";
+import { blockUserAction, getFollowersAction, getFollowingAction } from "@/lib/user.actions";
 import { StoryViewer, type RailEntry } from "@/components/feed/StoryViewer";
 import { toast } from "sonner";
 import { useToast } from "@/components/ui/Toast/ToastContext";
@@ -46,7 +46,7 @@ const MediaEditor = dynamic(() => import("@/components/editor/MediaEditor"), {
 });
 import { ConversationList, InboxThumb } from "./ConversationList";
 import { VividOrb } from "@/components/vivid/VividOrb";
-import { VividChat, VividInboxRow } from "@/components/vivid/VividChat";
+import { VividChat, VividInboxRow, VividRailFace } from "@/components/vivid/VividChat";
 import { StoriesRail } from "@/components/feed/StoriesRail";
 import { GIPHY_KEY, GifPicker } from "./GifPicker";
 import { AnimatePresence, motion } from "framer-motion";
@@ -145,6 +145,29 @@ import {
 // row and the archived door. The Remix swap was for the chat MESSAGE glyphs,
 // not for chrome like these.
 import { Archive, Tray } from "@phosphor-icons/react";
+import {
+	Archive as PhArchiveBox,
+	Bell as PhBell,
+	BellSlash as PhBellSlash,
+	CaretDown as PhCaretDown,
+	Flag as PhFlag,
+	Hourglass as PhHourglass,
+	MagnifyingGlass as PhMagnifyingGlass,
+	NotePencil as PhNotePencil,
+	Palette as PhPalette,
+	Prohibit as PhProhibit,
+	Trash as PhTrash,
+	UserCircle as PhUserCircle,
+	UsersThree as PhUsersThree,
+	Wallet as PhWallet,
+} from "@phosphor-icons/react";
+import { MenuDivider, MenuItem, Popover, useAnchoredMenu } from "@/components/messages/ThreadHeaderMenus";
+import { RailFace } from "@/components/messages/RailFace";
+import { SidebarSimple as PhSidebarSimple } from "@phosphor-icons/react";
+import ReportSheet from "@/components/safety/ReportSheet";
+import ConfirmModal from "@/components/ui/ConfirmModal";
+import { HaloChip, HaloChips } from "@/components/ui/Halo";
+import { GlassTip } from "@/components/ui/GlassTip";
 import { RiArrowRightSLine, RiSettings3Line } from "@remixicon/react";
 import { MessageSettingsSheet } from "@/components/messages/MessageSettingsSheet";
 import { SendMoneySheet } from "@/components/messages/SendMoneySheet";
@@ -713,7 +736,7 @@ export const MessageBox = ({
 	}, [vividPay, activeConversation?._id, setVividPay]);
 	// Picker follows the app theme instead of hardcoding dark.
 	const { resolvedTheme } = useTheme();
-	const { prefs } = usePreferences();
+	const { prefs, setPrefs } = usePreferences();
 	const themeMode = resolvedTheme === "light" ? "light" : "dark";
 	const myMemberTheme = useMemo(() => {
 		const mine = activeConversation?.members?.find((mm) => {
@@ -902,6 +925,8 @@ export const MessageBox = ({
 		searchFocused || searchQuery.trim().length > 0 || kindFilter !== "all";
 	const [fabOpen, setFabOpen] = useState(false);
 	const [msgSettingsOpen, setMsgSettingsOpen] = useState(false);
+	/** The thread is resting on its newest message (drives the phone switcher). */
+	const [threadAtBottom, setThreadAtBottom] = useState(true);
 	const showRequests = inboxTab === "requests";
 	const shelfConversations =
 		inboxTab === "requests"
@@ -2733,6 +2758,7 @@ export const MessageBox = ({
 
 	const handleAtBottom = useCallback((b: boolean) => {
 		atBottomRef.current = b;
+		setThreadAtBottom(b);
 		if (b) {
 			setPendingNew(0);
 			const id = activeIdRef.current;
@@ -2834,6 +2860,286 @@ export const MessageBox = ({
 		if (activeConversation) fetchMessages(activeConversation._id);
 	}, [activeConversation?._id]); // Only trigger when ID changes
 
+	// ── Focus header (owner pick 2026-10-07) ─────────────────────────────
+	const callMenu = useAnchoredMenu();
+	const moreMenu = useAnchoredMenu();
+	const nameCard = useAnchoredMenu();
+	const [muteOpen, setMuteOpen] = useState(false);
+	const [reportOpen, setReportOpen] = useState(false);
+	const [blockConfirmOpen, setBlockConfirmOpen] = useState(false);
+	const peerFirst =
+		activeConversation?.otherParticipant?.firstName ||
+		activeConversation?.otherParticipant?.username ||
+		"them";
+	// The head of every Halo menu in the thread header (round 3): the face
+	// in a soft halo, the name, and where they are right now.
+	const peerSeen = (activeConversation?.otherParticipant as any)?.lastSeenAt;
+	const threadIdentity = (
+		<div className="flex max-w-full flex-col items-center gap-1.5 text-center">
+			<span className="mb-1 flex h-[84px] w-[84px] items-center justify-center rounded-pill bg-brand/10">
+				<span className="relative block h-[68px] w-[68px] overflow-hidden rounded-pill bg-raised ring-2 ring-brand/30">
+					<SafeAvatar src={headerIdentity.avatar} />
+				</span>
+			</span>
+			<span className="flex max-w-full items-center gap-1 font-display text-[calc(17px*var(--ws-fs))] font-semibold text-primary">
+				<span className="truncate">{headerIdentity.title}</span>
+				{!isGroupThread && (
+					<UserBadges
+						isVerified={(activeConversation?.otherParticipant as any)?.isVerified}
+						verification={(activeConversation?.otherParticipant as any)?.verification}
+						badges={(activeConversation?.otherParticipant as any)?.badges}
+						size={14}
+					/>
+				)}
+			</span>
+			<span className="flex items-center gap-1.5 font-sans text-[calc(12.5px*var(--ws-fs))] text-muted" suppressHydrationWarning>
+				{isGroupThread ? (
+					headerIdentity.memberCount ? `${headerIdentity.memberCount} members` : "Group chat"
+				) : peerOnline ? (
+					<>
+						<span aria-hidden className="h-1.5 w-1.5 rounded-pill bg-success" />
+						Active now
+					</>
+				) : peerSeen ? (
+					`Last seen ${formatLastSeen(peerSeen)}`
+				) : (
+					`@${activeConversation?.otherParticipant?.username ?? ""}`
+				)}
+			</span>
+		</div>
+	);
+	const threadMuted = Boolean((activeConversation as any)?.muted);
+	const threadArchived = Boolean((activeConversation as any)?.archived);
+	/** The thread's ⋯ menu, one body for both homes (owner 2026-10-16): the
+	 *  Halo popover on desktop and the bottom sheet on a phone, which used to
+	 *  offer only four rows and no mute, archive, report, block or delete. */
+	const moreBody = (close: () => void) =>
+		!activeConversation ? null : (
+		<>
+						<div className="flex flex-col items-center gap-4 px-2 pb-3 pt-4">
+							{threadIdentity}
+							<HaloChips>
+								<HaloChip
+									icon={isGroupThread ? <PhUsersThree size={20} /> : <PhUserCircle size={20} />}
+									label={isGroupThread ? "Group" : "Profile"}
+									onClick={() => {
+										close();
+										if (isGroupThread) {
+											if (!iLeftGroup) setGroupSheetOpen(true);
+										} else {
+											router.push(`/profile/${activeConversation.otherParticipant?.username ?? ""}`);
+										}
+									}}
+								/>
+								<HaloChip
+									icon={<PhMagnifyingGlass size={20} />}
+									label="Search"
+									onClick={() => {
+										close();
+										setSearchOpen(true);
+									}}
+								/>
+								<HaloChip
+									icon={<PhPalette size={20} />}
+									label="Theme"
+									onClick={() => {
+										close();
+										setThemeSheet("gallery");
+									}}
+								/>
+							</HaloChips>
+						</div>
+						{threadMuted ? (
+							<MenuItem
+								icon={<PhBell size={17} />}
+								label="Unmute"
+								onClick={() => {
+									close();
+									void muteThread(null);
+								}}
+							/>
+						) : (
+							<>
+								<MenuItem
+									icon={<PhBellSlash size={17} />}
+									label="Mute"
+									chevron
+									active={muteOpen}
+									onClick={() => setMuteOpen((v) => !v)}
+								/>
+								<AnimatePresence initial={false}>
+									{muteOpen && (
+										<motion.div key="mute" {...collapse} className="overflow-hidden pl-3">
+											{(
+												[
+													["8h", "8 hours"],
+													["1w", "1 week"],
+													["forever", "Until I turn it back on"],
+												] as const
+											).map(([until, label]) => (
+												<MenuItem
+													key={until}
+													nested
+													icon={<PhHourglass size={16} />}
+													label={label}
+													onClick={() => {
+														close();
+														setMuteOpen(false);
+														void muteThread(until);
+													}}
+												/>
+											))}
+										</motion.div>
+									)}
+								</AnimatePresence>
+							</>
+						)}
+						<MenuItem
+							icon={<PhArchiveBox size={17} />}
+							label={threadArchived ? "Unarchive chat" : "Archive chat"}
+							onClick={() => {
+								close();
+								void setArchived(activeConversation._id, !threadArchived);
+							}}
+						/>
+						<span aria-hidden className="block h-1.5" />
+						{!isGroupThread && (
+							<>
+								<MenuItem
+									icon={<PhFlag size={17} />}
+									label="Report"
+									onClick={() => {
+										close();
+										setReportOpen(true);
+									}}
+								/>
+								<MenuItem
+									icon={<PhProhibit size={17} />}
+									label={`Block ${peerFirst}`}
+									danger
+									onClick={() => {
+										close();
+										setBlockConfirmOpen(true);
+									}}
+								/>
+							</>
+						)}
+						<MenuItem
+							icon={<PhTrash size={17} />}
+							label="Delete chat"
+							danger
+							onClick={() => {
+								close();
+								setPendingDeleteConv(activeConversation as any);
+							}}
+						/>
+		</>
+	);
+	const isPhone = () => typeof window !== "undefined" && window.innerWidth < 768;
+	const startThreadCall = (isVideo: boolean) => {
+		if (!activeConversation) return;
+		const other = activeConversation.otherParticipant;
+		startCall(
+			isGroupThread
+				? {
+						conversationId: activeConversation._id,
+						peer: { id: activeConversation._id, name: headerIdentity.title, avatar: headerIdentity.avatar, username: "" },
+						isVideo,
+						isGroup: true,
+					}
+				: {
+						conversationId: activeConversation._id,
+						peer: {
+							id: other?._id || "",
+							name: `${other?.firstName || ""} ${other?.lastName || ""}`.trim() || other?.username || "",
+							avatar: other?.avatar || "",
+							username: other?.username || "",
+						},
+						isVideo,
+					},
+		);
+	};
+	/** Mute for me (gateway PATCH /conversations/:id/mute: 8h, 1w, forever or null). */
+	const muteThread = async (until: "8h" | "1w" | "forever" | null) => {
+		const id = activeConversation?._id;
+		if (!id) return;
+		try {
+			const token = await getToken();
+			const r = await fetch(`${API_URL}/api/messages/conversations/${id}/mute`, {
+				method: "PATCH",
+				headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+				body: JSON.stringify({ until }),
+			});
+			if (!r.ok) throw new Error(String(r.status));
+			const muted = until !== null;
+			setConversations((prev) => prev.map((c) => (c._id === id ? ({ ...c, muted } as any) : c)));
+			setActiveConversation((prev) => (prev && prev._id === id ? ({ ...prev, muted } as any) : prev));
+			toast.success(
+				!muted ? "Notifications back on" : until === "forever" ? "Muted until you turn it back on" : `Muted for ${until === "8h" ? "8 hours" : "1 week"}`,
+			);
+		} catch {
+			toast.error("Couldn't change notifications for this chat");
+		}
+	};
+	const blockPeer = async () => {
+		const u = activeConversation?.otherParticipant;
+		if (!u?._id) return;
+		const r = await blockUserAction(u._id);
+		if (!r.success) {
+			toast.error(r.message || "Couldn't block");
+			return;
+		}
+		toast.success(`Blocked @${u.username}`);
+		closeThreadShallow();
+	};
+	// The switcher (phones): the people you are likely to jump to, ranked ONCE
+	// per opened chat so faces never reshuffle under a thumb. Unread first,
+	// then recent. Shown only when two or more of them are lively (unread or
+	// active in the last day); a lone face is clutter, not a shortcut.
+	const switcherIds = useRef<{ id: string | null; ids: string[] }>({ id: null, ids: [] });
+	const activeIdForSwitcher = activeConversation?._id ?? null;
+	if (switcherIds.current.id !== activeIdForSwitcher) {
+		const now = Date.now();
+		const ranked = inboxConversations
+			.filter((c) => c._id !== activeIdForSwitcher)
+			.sort(
+				(a, b) =>
+					Number(b.unreadCount > 0) - Number(a.unreadCount > 0) ||
+					new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime(),
+			);
+		const lively = ranked.filter(
+			(c) => c.unreadCount > 0 || now - new Date(c.lastMessageAt).getTime() < 86_400_000,
+		);
+		switcherIds.current = {
+			id: activeIdForSwitcher,
+			ids: lively.length >= 2 ? ranked.slice(0, 5).map((c) => c._id) : [],
+		};
+	}
+	const switcherFaces = switcherIds.current.ids
+		.map((id) => conversations.find((c) => c._id === id))
+		.filter((c): c is Conversation => Boolean(c));
+	const unreadElsewhere = switcherFaces.filter((c) => c.unreadCount > 0).length;
+	/** Desktop: fold the inbox into the rail while a chat is open, unless the
+	 *  person pinned it open (saved on the account, owner 2026-10-08). */
+	const railMode = (Boolean(activeConversation) || vividOpen) && !prefs.advanced.messagesInboxPinned;
+	const setInboxPinned = (pinned: boolean) =>
+		setPrefs({ advanced: { messagesInboxPinned: pinned } });
+	const railPreview = (c: Conversation) => {
+		const m = c.lastMessage as (Message & { amountMinor?: number }) | undefined;
+		if (!m) return "";
+		const body =
+			m.type === "payment"
+				? `Payment · $${((m.amountMinor ?? 0) / 100).toFixed(2)}`
+				: m.type === "call"
+					? m.content || "Call"
+					: quotedPreview(m);
+		return m.sender?._id === myProfileId ? `You: ${body}` : body;
+	};
+	const openFromRail = (conv: Conversation) => {
+		setActiveConversation(conv as any);
+		openThreadShallow(conv._id);
+	};
+
 	return (
 		// 100dvh, not 100vh: on mobile 100vh is the address-bar-expanded height,
 		// so the composer sat below the fold until the bar collapsed.
@@ -2860,14 +3166,27 @@ export const MessageBox = ({
 				initialIndex={currentMediaIndex}
 			/>
 
+			{/* The inbox slot (owner 2026-10-08): its WIDTH animates between the
+			    full inbox (372) and the rail (84) on a desktop, and the inbox
+			    keeps its own 372px inside it, so the list is clipped and faded
+			    rather than squeezed and reflowed while it folds. */}
+			<div
+				className={clsx(
+					"relative z-10 flex w-full shrink-0 md:overflow-hidden md:transition-[width] md:duration-[420ms] md:ease-[cubic-bezier(0.22,1,0.36,1)]",
+					railMode ? "md:w-[84px]" : "md:w-[372px]",
+				)}
+			>
 			{/* Sidebar. On a phone it stays mounted UNDER the thread pane;
 			    open/close is static (owner 2026-09-06) — no parallax slide. */}
 			<div
 				className={clsx(
 					// The column keeps the grid border that divides it from the
 					// chat; the CARD lives inside it (owner 2026-09-19).
-					"relative z-10 flex w-full shrink-0 min-w-0 flex-col gap-2 p-2 md:w-[372px] md:gap-3 md:p-3",
+					"relative z-10 flex w-full shrink-0 min-w-0 flex-col gap-2 p-2 md:w-[372px] md:min-w-[372px] md:gap-3 md:p-3 md:transition-[opacity,transform] md:duration-300 md:ease-out",
 					sectionHasPicture && "bg-page/70",
+					// Focus: with a chat open the desktop inbox folds into the
+					// rail of faces (unless pinned open).
+					railMode && "md:pointer-events-none md:-translate-x-4 md:opacity-0",
 				)}
 			>
 				{/* New chat and new group live in a FAB over the list now
@@ -2959,7 +3278,13 @@ export const MessageBox = ({
 				    each carry their own ground, the same sunken fill the chat
 				    card uses, with a thumb between them. */}
 				<div className="flex min-h-0 flex-1 flex-col md:overflow-hidden">
-				<div className="shrink-0 rounded-2xl glass-frost backdrop-blur-xl px-4 pb-3 pt-4 [&:has(+*>.ws-inbox-story)]:rounded-b-none">
+				<div
+					className={clsx(
+						// One flat column (owner 2026-10-16, the final-picks inbox):
+						// no card grounds, the page itself is the surface.
+						"shrink-0 px-4 pb-2 pt-4",
+					)}
+				>
 					<div className="mb-3 flex items-center gap-2">
 						{/* Phones only. On desktop the inbox sits inside the app
 						    shell with the rail right there; on a phone it fills
@@ -3010,6 +3335,19 @@ export const MessageBox = ({
 						>
 							<RiSettings3Line size={19} />
 						</motion.button>
+						{/* Pinned open beside a chat: fold back into the rail. */}
+						{activeConversation && (
+							<motion.button
+								type="button"
+								{...press}
+								onClick={() => setInboxPinned(false)}
+								aria-label="Collapse to faces"
+								title="Collapse to faces"
+								className="-mr-2 hidden h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary md:flex"
+							>
+								<PhSidebarSimple size={19} />
+							</motion.button>
+						)}
 					</div>
 					<div className="relative">
               <RiSearchLine
@@ -3080,6 +3418,45 @@ export const MessageBox = ({
 							</motion.div>
 						)}
 					</AnimatePresence>
+					{/* Faces (phones, owner pick 2026-10-07): the people you talk
+					    to most, one tap from the top. Unread wears the brand ring.
+					    Hidden while searching or on a shelf, where it would only
+					    repeat the list. */}
+					{inboxTab === "primary" && !scopeOpen && inboxConversations.length >= 3 && (
+						<div className="-mx-1 mt-3 flex gap-3 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden">
+							{inboxConversations.slice(0, 6).map((c) => {
+								const id = conversationIdentity(c as never);
+								const hot = c.unreadCount > 0;
+								return (
+									<button
+										key={c._id}
+										type="button"
+										onClick={() => openFromRail(c)}
+										className="flex w-[52px] shrink-0 cursor-pointer flex-col items-center gap-1"
+									>
+										<span
+											className={clsx(
+												"flex h-12 w-12 items-center justify-center rounded-pill ring-2",
+												hot ? "ring-brand" : "ring-transparent",
+											)}
+										>
+											<span className="relative h-[42px] w-[42px] overflow-hidden rounded-pill bg-raised">
+												{id.avatar ? <SafeAvatar src={id.avatar} /> : <Users className="m-2.5 h-5 w-5 text-muted" />}
+											</span>
+										</span>
+										<span
+											className={clsx(
+												"w-full truncate text-center font-sans text-[calc(11px*var(--ws-fs))]",
+												hot ? "font-semibold text-primary" : "text-muted",
+											)}
+										>
+											{id.title.split(" ")[0]}
+										</span>
+									</button>
+								);
+							})}
+						</div>
+					)}
 				</div>
 
 				{/* pb-nav: the conversation list is the one messages view where the
@@ -3087,8 +3464,16 @@ export const MessageBox = ({
 				<div className="flex-1 overflow-y-auto overscroll-contain pb-nav md:pb-0">
 					{/* Stories of the people you're aligned with — messaging is
 					    where you already are when you want to reply to one. */}
+					{/* On a phone the Faces row above takes this row's place
+					    (owner pick 2026-10-07): two rows of faces read as bulk.
+					    Stories stay on Home and in the desktop inbox. */}
 					{prefs.messaging.inboxStories && (
-						<div className="ws-inbox-story rounded-2xl rounded-t-none glass-frost backdrop-blur-xl px-1 pb-1 pt-1">
+						<div
+							className={clsx(
+								"ws-inbox-story px-2 pb-1",
+								inboxTab === "primary" && !scopeOpen && inboxConversations.length >= 3 && "hidden md:block",
+							)}
+						>
 							<StoriesRail compact="thumbs" />
 						</div>
 					)}
@@ -3127,32 +3512,47 @@ export const MessageBox = ({
 					<ConversationList
 						pinned={inboxTab === "primary" ? <VividInboxRow active={vividOpen} onOpen={openVivid} /> : null}
 						banner={
-							inboxTab === "primary" && (requestConversations.length > 0 || askingTotal > 0) ? (
-								<motion.button
-									type="button"
-									{...press}
-									onClick={() => setInboxTab("requests")}
-									className="mx-2 mb-2 flex cursor-pointer items-center gap-3 rounded-xl bg-primary/5 px-2 py-2 text-left transition-colors hover:bg-primary/10"
-								>
-									<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary/10 text-primary">
-										<Tray size={17} />
-									</span>
-									<span className="min-w-0 flex-1">
-										<span className="block font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-primary">
-											{requestConversations.length > 0
-												? `${requestConversations.length} ${requestConversations.length === 1 ? "message request" : "message requests"}`
-												: ""}
-											{requestConversations.length > 0 && askingTotal > 0 ? " · " : ""}
-											{askingTotal > 0 ? `${askingTotal} asking to join` : ""}
+							inboxTab === "primary" ? (
+								// One split row (owner pick 2026-10-07): Requests and
+								// Archived are places, so they sit together at the top.
+								// Requests is the half that asks for something.
+								// Two chips (owner 2026-10-16, "more modern"): Requests and
+								// Archived are places, side by side; Requests carries the
+								// brand count when something is waiting.
+								<div className="mx-2 mb-3 flex gap-2">
+									<motion.button
+										type="button"
+										{...press}
+										onClick={() => setInboxTab("requests")}
+										className="flex h-10 min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-pill bg-primary/[0.06] pl-3.5 pr-2 text-left transition-colors hover:bg-primary/[0.1]"
+									>
+										<Tray size={16} className="shrink-0 text-primary" />
+										<span className="min-w-0 flex-1 truncate font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-primary">
+											{t("messages.requests")}
 										</span>
-										<span className="block truncate font-sans text-[calc(12px*var(--ws-fs))] text-muted">
-											{requestConversations.length > 0
-												? `${requestNames}${requestConversations.length > 2 ? ` and ${requestConversations.length - 2} more` : ""}`
-												: askingGroups.map((c) => conversationIdentity(c as never).title).slice(0, 2).join(", ")}
+										{requestConversations.length + askingTotal > 0 ? (
+											<span className="flex h-6 min-w-6 shrink-0 items-center justify-center rounded-pill bg-brand px-2 font-sans text-[calc(11.5px*var(--ws-fs))] font-bold tabular-nums text-brand-on">
+												{requestConversations.length + askingTotal}
+											</span>
+										) : (
+											<span className="shrink-0 pr-1.5 font-sans text-[calc(12px*var(--ws-fs))] text-subtle">0</span>
+										)}
+									</motion.button>
+									<motion.button
+										type="button"
+										{...press}
+										onClick={() => setInboxTab("archived")}
+										className="flex h-10 min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-pill bg-primary/[0.06] pl-3.5 pr-3.5 text-left transition-colors hover:bg-primary/[0.1]"
+									>
+										<Archive size={16} className="shrink-0 text-primary" />
+										<span className="min-w-0 flex-1 truncate font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-primary">
+											{t("messages.archived")}
 										</span>
-									</span>
-									<RiArrowRightSLine size={18} className="shrink-0 text-subtle" />
-								</motion.button>
+										<span className="shrink-0 font-sans text-[calc(12px*var(--ws-fs))] tabular-nums text-subtle">
+											{archivedConversations.length}
+										</span>
+									</motion.button>
+								</div>
 							) : inboxTab === "requests" && askingGroups.length > 0 ? (
 								// Join requests for the groups I run (audit G173), a
 								// block above the strangers' openers.
@@ -3188,40 +3588,13 @@ export const MessageBox = ({
 								</div>
 							) : null
 						}
-						door={
-							// Always, even at zero (owner 2026-09-20: "where is the
-							// archives?"), and at the TOP beside the requests row
-							// rather than under the list: the two shelves are places,
-							// and they read as a pair. Quieter than requests, which is
-							// the one actually asking for something.
-							inboxTab === "primary" ? (
-								<motion.button
-									type="button"
-									{...press}
-									onClick={() => setInboxTab("archived")}
-									className="mx-2 mb-2 flex cursor-pointer items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-primary/5"
-								>
-									<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary/5 text-muted">
-										<Archive size={17} />
-									</span>
-									<span className="flex-1 font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-primary">
-										{t("messages.archived")}
-									</span>
-									{archivedConversations.length > 0 && (
-										<span className="font-sans text-[calc(12.5px*var(--ws-fs))] tabular-nums text-subtle">
-											{archivedConversations.length}
-										</span>
-									)}
-									<RiArrowRightSLine size={18} className="shrink-0 text-subtle" />
-								</motion.button>
-							) : null
-						}
+						door={null}
 						onBack={
 							inboxTab === "primary" ? undefined : () => setInboxTab("primary")
 						}
 						headerAside={
 							inboxTab === "primary" && listConversations.length > 0 ? (
-								<span className="font-sans text-[calc(12.5px*var(--ws-fs))] tabular-nums text-subtle">
+								<span className="flex h-6 min-w-6 items-center justify-center rounded-pill bg-primary/[0.07] px-2 font-sans text-[calc(12px*var(--ws-fs))] font-semibold tabular-nums text-muted">
 									{listConversations.length}
 								</span>
 							) : null
@@ -3264,6 +3637,93 @@ export const MessageBox = ({
 					/>
 				</div>
 				</div>
+			</div>
+
+			{/* The rail (owner pick 2026-10-07, "Focus"): one conversation at a
+			    time. Rides in the slot above the folded inbox and fades in as
+			    the slot narrows. Hovering a face lifts a card (RailFace). */}
+			{(activeConversation || vividOpen) && (
+				<nav
+					aria-label="Chats"
+					aria-hidden={!railMode}
+					className={clsx(
+						"absolute inset-y-0 left-0 z-10 hidden w-[84px] flex-col items-center gap-2.5 py-3 transition-opacity duration-300 md:flex",
+						railMode ? "opacity-100 delay-150" : "pointer-events-none opacity-0",
+					)}
+				>
+					<motion.button
+						{...press}
+						type="button"
+						onClick={() => setInboxPinned(true)}
+						aria-label="Show all chats"
+						title="Show all chats"
+						className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-subtle transition-colors hover:bg-primary/5 hover:text-primary"
+					>
+						<PhSidebarSimple size={18} />
+					</motion.button>
+					<motion.button
+						{...press}
+						type="button"
+						onClick={() => setShowNewConversationModal(true)}
+						aria-label={t("messages.newChat")}
+						title={t("messages.newChat")}
+						className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-pill bg-brand text-brand-on transition-colors hover:bg-brand-active"
+					>
+						<PhNotePencil size={19} weight="bold" />
+					</motion.button>
+					<motion.button
+						{...press}
+						type="button"
+						onClick={() => {
+							closeThreadShallow();
+							window.setTimeout(() => searchInputRef.current?.focus(), 60);
+						}}
+						aria-label={t("messages.searchPlaceholder")}
+						title={t("messages.searchPlaceholder")}
+						className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-pill bg-primary/5 text-muted transition-colors hover:bg-primary/10 hover:text-primary"
+					>
+						<PhMagnifyingGlass size={18} />
+					</motion.button>
+					<span aria-hidden className="my-1 h-px w-8 bg-hairline" />
+					<div className="flex min-h-0 flex-1 flex-col items-center gap-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+						<VividRailFace active={vividOpen} onOpen={openVivid} />
+						{inboxConversations.slice(0, 14).map((c) => {
+							const id = conversationIdentity(c as never);
+							return (
+								<RailFace
+									key={c._id}
+									title={id.title}
+									avatar={id.avatar}
+									preview={railPreview(c)}
+									time={c.lastMessageAt ? formatTimeAgo(c.lastMessageAt) : ""}
+									unread={c.unreadCount}
+									active={c._id === activeConversation?._id}
+									isGroup={c.kind === "group"}
+									memberCount={c.memberCount}
+									onClick={() => openFromRail(c)}
+								/>
+							);
+						})}
+					</div>
+					{requestConversations.length > 0 && (
+						<button
+							type="button"
+							onClick={() => {
+								closeThreadShallow();
+								setInboxTab("requests");
+							}}
+							aria-label={`${requestConversations.length} message requests`}
+							title="Requests"
+							className="relative flex h-14 w-14 cursor-pointer items-center justify-center rounded-[18px] bg-primary/5 text-muted transition-colors hover:bg-primary/10 hover:text-primary"
+						>
+							<Tray size={20} />
+							<span className="absolute right-1 top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-pill bg-brand px-1 font-sans text-[10.5px] font-bold text-brand-on">
+								{requestConversations.length}
+							</span>
+						</button>
+					)}
+				</nav>
+			)}
 			</div>
 
 			{/* Chat Area. Open and close are STATIC (owner 2026-09-06): the
@@ -3318,7 +3778,12 @@ export const MessageBox = ({
 							// A phone gets the whole top edge, square, no inset (owner
 							// 2026-09-25: "it should fill the top, no radius"); the
 							// floating pill is a desktop shape.
-							"chat-chrome relative z-10 mx-0 mt-0 flex h-14 shrink-0 items-center gap-2 rounded-none px-2 md:mx-3 md:mt-3 md:rounded-pill",
+							// Title header (owner pick 2026-10-07): a quiet bar with a hairline
+							// under it, replacing the floating pill; the name card and the
+							// menus hang from it.
+							// No hairline (owner 2026-10-16, "sleek"): the bar's own frost
+							// separates it from the thread.
+							"chat-chrome relative z-10 flex h-14 shrink-0 items-center gap-2 px-2 md:mx-3 md:mt-3 md:h-16 md:rounded-pill md:px-3 md:shadow-pop md:backdrop-blur-xl",
 						)}
 					>
 						<div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3">
@@ -3388,9 +3853,13 @@ export const MessageBox = ({
 									</div>
 								</button>
 							) : (
-								<Link
-									href={`/profile/${activeConversation.otherParticipant?.username ?? ""}`}
-									className="-my-1 flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 transition-colors hover:bg-primary/5 md:gap-3"
+								<button
+									ref={nameCard.ref}
+									type="button"
+									onClick={nameCard.toggle}
+									aria-haspopup="dialog"
+									aria-expanded={nameCard.open}
+									className="-my-1 flex min-w-0 cursor-pointer items-center gap-2 rounded-xl px-1 py-1 text-left transition-colors hover:bg-primary/5 md:gap-3"
 								>
 								<span className="relative shrink-0">
 									<SafeAvatar
@@ -3501,167 +3970,194 @@ export const MessageBox = ({
 										)}
 									</AnimatePresence>
 								</div>
-								</Link>
+								</button>
 							)}
 						</div>
-					{/* ONE right-hand cluster. The palette used to be a third
-					    child of the justify-between row, which is how it ended up
-					    floating in the middle of the header (owner 2026-09-15). */}
+					{/* Title header actions (owner pick 2026-10-07): one labelled Call
+					    that opens Voice and Video, search, and an overflow menu. A
+					    phone keeps Call and the overflow, which opens the More sheet. */}
 					<div className="flex shrink-0 items-center gap-1">
-					{/* Audio | video as ONE segmented pill (owner 2026-09-06):
-						    no outer border, the resting wash as fill, a
-						    hairline between the segments; the theme control sits
-						    LAST, the secondary slot every messenger keeps at the
-						    far right. */}
-						{/* Each segment dips a hair under the finger (press); starting
-						    a call is rare and deliberate, so it earns the feedback. */}
-						<div className="flex shrink-0 items-center overflow-hidden rounded-pill bg-primary/5 text-muted">
-							{isGroupThread && (
-								<>
-									<motion.button
-										{...press}
-										type="button"
-										aria-label="Start group voice call"
-										className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/10 hover:text-primary"
-										onClick={() =>
-											startCall({
-												conversationId: activeConversation._id,
-												peer: {
-													id: activeConversation._id,
-													name: headerIdentity.title,
-													avatar: headerIdentity.avatar,
-													username: "",
-												},
-												isVideo: false,
-												isGroup: true,
-											})
-										}
-									>
-										<Phone className="w-5 h-5" />
-									</motion.button>
-									<span aria-hidden className="hidden h-5 w-px bg-hairline md:block" />
-									<motion.button
-										{...press}
-										type="button"
-										aria-label="Start group video call"
-										className="hidden md:flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/10 hover:text-primary"
-										onClick={() =>
-											startCall({
-												conversationId: activeConversation._id,
-												peer: {
-													id: activeConversation._id,
-													name: headerIdentity.title,
-													avatar: headerIdentity.avatar,
-													username: "",
-												},
-												isVideo: true,
-												isGroup: true,
-											})
-										}
-									>
-										<Video className="w-5 h-5" />
-									</motion.button>
-								</>
-							)}
-							{!isGroupThread && (
-							<>
-							<motion.button
-								{...press}
+						{unreadElsewhere > 0 && !threadAtBottom && (
+							<button
 								type="button"
-								aria-label="Start voice call"
-								className="flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/10 hover:text-primary"
-								onClick={() =>
-									startCall({
-										conversationId: activeConversation._id,
-										peer: {
-                                id:
-                                  activeConversation.otherParticipant?._id ||
-                                  "",
-											name:
-												`${activeConversation.otherParticipant?.firstName || ""} ${activeConversation.otherParticipant?.lastName || ""}`.trim() ||
-                                  activeConversation.otherParticipant
-                                    ?.username ||
-                                  "",
-                                avatar:
-                                  activeConversation.otherParticipant?.avatar ||
-												"",
-											username:
-                                  activeConversation.otherParticipant
-                                    ?.username || "",
-										},
-										isVideo: false,
-									})
-								}
+								onClick={() => closeThreadShallow()}
+								className="flex h-7 cursor-pointer items-center gap-1.5 rounded-pill bg-brand/15 px-2.5 font-sans text-[calc(11.5px*var(--ws-fs))] font-bold text-brand md:hidden"
 							>
-								<Phone className="w-5 h-5" />
-							</motion.button>
-							<span aria-hidden className="hidden h-5 w-px bg-hairline md:block" />
-							<motion.button
-								{...press}
-								type="button"
-								aria-label="Start video call"
-								className="hidden md:flex h-10 w-12 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-primary/10 hover:text-primary"
-								onClick={() =>
-									startCall({
-										conversationId: activeConversation._id,
-										peer: {
-                                id:
-                                  activeConversation.otherParticipant?._id ||
-                                  "",
-											name:
-												`${activeConversation.otherParticipant?.firstName || ""} ${activeConversation.otherParticipant?.lastName || ""}`.trim() ||
-                                  activeConversation.otherParticipant
-                                    ?.username ||
-                                  "",
-                                avatar:
-                                  activeConversation.otherParticipant?.avatar ||
-												"",
-											username:
-                                  activeConversation.otherParticipant
-                                    ?.username || "",
-										},
-										isVideo: true,
-									})
-								}
-							>
-								<Video className="w-5 h-5" />
-							</motion.button>
-							</>
+								<span aria-hidden className="h-1.5 w-1.5 rounded-pill bg-brand" />
+								{unreadElsewhere} unread
+							</button>
+						)}
+						<motion.button
+							ref={callMenu.ref}
+							{...press}
+							type="button"
+							onClick={callMenu.toggle}
+							aria-haspopup="menu"
+							aria-expanded={callMenu.open}
+							// Ghost buttons split by hairlines, no fills or borders
+							// (owner 2026-10-16). The brand stays on the glyph.
+							className={clsx(
+								"flex h-10 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-primary/[0.07]",
+								callMenu.open && "bg-primary/[0.08]",
 							)}
-						</div>
-					<motion.button
+						>
+							<Phone className="h-4 w-4 text-brand" strokeWidth={2.4} />
+							Call
+							<PhCaretDown size={12} weight="bold" className={clsx("text-subtle transition-transform", callMenu.open && "rotate-180")} />
+						</motion.button>
+						<span aria-hidden className="hidden h-5 w-px bg-primary/15 md:block" />
+						<span className="hidden md:inline-flex">
+						<GlassTip label="Search in chat">
+						<motion.button
 							{...press}
 							type="button"
 							onClick={() => setSearchOpen(true)}
 							aria-label="Search this chat"
-							title="Search this chat"
-							className="hidden md:flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
+							className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-primary transition-colors hover:bg-primary/[0.07]"
 						>
-							<RiSearchLine size={20} />
+							<RiSearchLine size={18} />
 						</motion.button>
+						</GlassTip>
+						</span>
+						<span aria-hidden className="h-5 w-px bg-primary/15" />
 						<motion.button
+							ref={moreMenu.ref}
 							{...press}
 							type="button"
-							onClick={() => setThemeSheet("gallery")}
-							aria-label="Chat theme"
-							title="Chat theme"
-							className="hidden md:flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
-						>
-							<RiPaletteLine size={20} />
-						</motion.button>
-						{/* A phone keeps one call button and this; the rest of the
-						    toolbar lives in the sheet it opens (owner 2026-09-25). */}
-						<motion.button
-							{...press}
-							type="button"
-							onClick={() => setMoreOpen(true)}
+							onClick={() => (isPhone() ? setMoreOpen(true) : moreMenu.toggle())}
 							aria-label="More"
-							className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary md:hidden"
+							aria-haspopup="menu"
+							aria-expanded={moreMenu.open}
+							className={clsx(
+								"flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill text-primary transition-colors hover:bg-primary/[0.07]",
+								moreMenu.open && "bg-primary/[0.08]",
+							)}
 						>
-							<RiMore2Fill size={20} />
+							<RiMore2Fill size={18} />
 						</motion.button>
 					</div>
 					</div>
+
+					{/* Halo popovers (owner pick, round 3): who you're reaching first,
+					    then the actions as round chips. */}
+					<Popover anchor={callMenu.ref} open={callMenu.open} onClose={callMenu.close} label="Call" width={272}>
+						<div className="flex flex-col items-center gap-4 px-3 pb-3 pt-4">
+							{threadIdentity}
+							<HaloChips>
+								<HaloChip
+									icon={<Phone className="h-5 w-5" />}
+									label="Voice call"
+									onClick={() => {
+										callMenu.close();
+										startThreadCall(false);
+									}}
+								/>
+								<HaloChip
+									icon={<Video className="h-5 w-5" />}
+									label="Video call"
+									tone="brand"
+									onClick={() => {
+										callMenu.close();
+										startThreadCall(true);
+									}}
+								/>
+							</HaloChips>
+						</div>
+					</Popover>
+
+					<Popover
+						anchor={moreMenu.ref}
+						open={moreMenu.open}
+						onClose={() => {
+							moreMenu.close();
+							setMuteOpen(false);
+						}}
+						label="More"
+						width={280}
+					>
+						{moreBody(() => moreMenu.close())}
+					</Popover>
+
+					{!isGroupThread && (
+						<Popover anchor={nameCard.ref} open={nameCard.open} onClose={nameCard.close} label="Profile card" align="start" width={320}>
+							<div className="flex flex-col items-center gap-4 px-3 pb-3 pt-4">
+								{threadIdentity}
+								<HaloChips>
+									<HaloChip
+										icon={<PhUserCircle size={20} />}
+										label="Profile"
+										onClick={() => {
+											nameCard.close();
+											router.push(`/profile/${activeConversation.otherParticipant?.username ?? ""}`);
+										}}
+									/>
+									<HaloChip
+										icon={<Phone className="h-5 w-5" />}
+										label="Call"
+										onClick={() => {
+											nameCard.close();
+											startThreadCall(false);
+										}}
+									/>
+									<HaloChip
+										icon={<PhWallet size={20} weight="bold" />}
+										label="Pay"
+										tone="brand"
+										onClick={() => {
+											nameCard.close();
+											setShowSendMoney(true);
+										}}
+									/>
+								</HaloChips>
+							</div>
+						</Popover>
+					)}
+
+					{/* The switcher (phones, owner pick 2026-10-07): faces of the
+					    chats you are likely to jump to, under the header. Tap only,
+					    never swipe: a sideways swipe would fight the iOS back
+					    gesture and swipe-to-reply. It folds away while you read
+					    back through history and returns at the newest message;
+					    the header's unread chip stands in for it meanwhile. */}
+					<AnimatePresence initial={false}>
+						{switcherFaces.length >= 2 && threadAtBottom && (
+							<motion.div key="switcher" {...collapse} className="relative z-10 shrink-0 overflow-hidden md:hidden">
+								<div className="chat-chrome flex items-center gap-2.5 border-b border-hairline px-3.5 pb-2.5 pt-2">
+									<span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-pill ring-2 ring-brand">
+										<span className="relative h-8 w-8 overflow-hidden rounded-pill bg-raised">
+											<SafeAvatar src={headerIdentity.avatar} />
+										</span>
+									</span>
+									{switcherFaces.map((c) => {
+										const id = conversationIdentity(c as never);
+										return (
+											<button
+												key={c._id}
+												type="button"
+												onClick={() => openFromRail(c)}
+												aria-label={id.title}
+												className="relative flex h-[38px] w-[38px] shrink-0 cursor-pointer items-center justify-center rounded-pill"
+											>
+												<span className="relative h-8 w-8 overflow-hidden rounded-pill bg-raised">
+													{id.avatar ? <SafeAvatar src={id.avatar} /> : <Users className="m-2 h-4 w-4 text-muted" />}
+												</span>
+												{c.unreadCount > 0 && (
+													<span className="absolute right-0 top-0 h-2.5 w-2.5 rounded-pill bg-brand ring-2 ring-page" />
+												)}
+											</button>
+										);
+									})}
+									<button
+										type="button"
+										onClick={() => closeThreadShallow()}
+										className="ml-auto flex h-[30px] shrink-0 cursor-pointer items-center rounded-pill bg-primary/5 px-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-muted transition-colors hover:text-primary"
+									>
+										All
+									</button>
+								</div>
+							</motion.div>
+						)}
+					</AnimatePresence>
 
 					<div
 						ref={threadPaneRef}
@@ -3793,7 +4289,7 @@ export const MessageBox = ({
 					    be squeezed out, and it sits on the iOS home indicator. */}
 					<div
 						className={clsx(
-							"relative z-10 shrink-0 px-3 pb-safe pt-2 sm:px-4",
+							"relative z-10 shrink-0 px-3 pb-safe pt-2 sm:px-4 md:mx-auto md:w-full md:max-w-[44rem]",
 							// No band of page colour behind this any more: every bar in
 							// the zone carries the theme's own near-opaque chrome fill.
 							hasPicture && "pb-3",
@@ -4156,27 +4652,47 @@ export const MessageBox = ({
 						{/* Blocked on first load by the presence above (the route's own
 						    rise covers that); it plays when a closed or deleted
 						    thread hands the pane back. */}
-						<motion.div
-							{...reveal()}
-							className="flex max-w-sm flex-col items-center rounded-xl bg-page/75 px-8 py-7 text-center"
-						>
-						<div className="space-y-2">
-							<h3 className="font-display text-lg font-semibold text-primary">
-								{t("messages.selectTitle")}
-							</h3>
-							<p className="text-sm text-muted">
-								{t("messages.selectCaption")}
-							</p>
-						</div>
-						<motion.button
-							{...press}
-							type="button"
-							onClick={() => setShowNewConversationModal(true)}
-							className="mt-6 flex h-10 cursor-pointer items-center gap-2 rounded-pill bg-brand px-5 font-semibold text-brand-on transition-colors hover:bg-brand-active"
-						>
-							<RiChatNewLine size={20} />
-							{t("messages.newChat")}
-						</motion.button>
+						{/* Command (owner pick 2026-10-07): compose-first, like a
+						    launcher. One field that finds anyone, and the people
+						    you talk to most underneath. */}
+						<motion.div {...reveal()} className="flex w-full max-w-[520px] flex-col items-center gap-6">
+							<motion.button
+								{...press}
+								type="button"
+								onClick={() => setShowNewConversationModal(true)}
+								className="flex h-14 w-full cursor-pointer items-center gap-3 rounded-pill border border-brand/40 bg-surface pl-5 pr-3 text-left shadow-[0_0_28px_color-mix(in_srgb,var(--ws-brand-primary)_16%,transparent)] transition-colors hover:border-brand/70"
+							>
+								<PhMagnifyingGlass size={19} className="shrink-0 text-brand" />
+								<span className="flex-1 truncate font-sans text-[calc(16px*var(--ws-fs))] text-subtle">
+									Message someone…
+								</span>
+								<span className="flex h-8 shrink-0 items-center gap-1.5 rounded-pill bg-brand px-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-bold text-brand-on">
+									<RiChatNewLine size={15} />
+									{t("messages.newChat")}
+								</span>
+							</motion.button>
+							{inboxConversations.length > 0 && (
+								<div className="flex flex-wrap justify-center gap-5">
+									{inboxConversations.slice(0, 5).map((c) => {
+										const id = conversationIdentity(c as never);
+										return (
+											<button
+												key={c._id}
+												type="button"
+												onClick={() => openFromRail(c)}
+												className="group/face flex w-14 cursor-pointer flex-col items-center gap-1.5"
+											>
+												<span className="relative h-12 w-12 overflow-hidden rounded-pill bg-raised ring-2 ring-transparent transition-shadow group-hover/face:ring-brand/60">
+													{id.avatar ? <SafeAvatar src={id.avatar} /> : <Users className="m-3.5 h-5 w-5 text-muted" />}
+												</span>
+												<span className="w-full truncate text-center font-sans text-[calc(12px*var(--ws-fs))] text-muted">
+													{id.title.split(" ")[0]}
+												</span>
+											</button>
+										);
+									})}
+								</div>
+							)}
 					</motion.div>
 					</div>
 				</div>
@@ -4283,6 +4799,28 @@ export const MessageBox = ({
 					onChanged={() => void fetchConversations()}
 				/>
 			)}
+			{reportOpen && activeConversation?.otherParticipant?._id && (
+				<ReportSheet
+					targetType="user"
+					targetId={activeConversation.otherParticipant._id}
+					subject={`@${activeConversation.otherParticipant.username}`}
+					canBlock
+					onBlock={() => void blockPeer()}
+					onClose={() => setReportOpen(false)}
+				/>
+			)}
+			<ConfirmModal
+				isOpen={blockConfirmOpen}
+				onClose={() => setBlockConfirmOpen(false)}
+				onConfirm={() => {
+					setBlockConfirmOpen(false);
+					void blockPeer();
+				}}
+				title={`Block @${activeConversation?.otherParticipant?.username ?? ""}?`}
+				message="They won't be able to message you or see your posts."
+				confirmText="Block"
+				isDestructive
+			/>
 			{activeConversation && (
 				<SendMoneySheet
 					open={showSendMoney}
@@ -4466,7 +5004,7 @@ export const MessageBox = ({
 								    and would snap on at the end. */}
 								<motion.div
 									{...fade}
-									className="absolute inset-0 bg-scrim backdrop-blur-[2px]"
+									className="absolute inset-0 bg-[#04060a]/45 backdrop-blur-[6px]"
 								/>
 								{msgMenu.lift && (
 									// No entrance of its own. It sits exactly on the bubble
@@ -4495,7 +5033,7 @@ export const MessageBox = ({
 											left: barLeft,
 											top: barTop,
 										}}
-										className="absolute flex items-center gap-0.5 rounded-pill chat-chrome-solid px-1.5 py-1"
+										className="absolute flex items-center gap-0.5 rounded-pill bg-raised/75 [html[data-ws-theme=platform-light]_&]:bg-surface/90 p-1.5 shadow-pop backdrop-blur-2xl backdrop-saturate-150"
 										onClick={(e) => e.stopPropagation()}
 									>
 										{QUICK_REACTIONS.map((emoji) => (
@@ -4509,7 +5047,7 @@ export const MessageBox = ({
 													setMsgMenu(null);
 												}}
 												aria-label={`React ${emoji}`}
-												className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-[calc(20px*var(--ws-fs))] transition-colors hover:bg-primary/5"
+												className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill text-[calc(21px*var(--ws-fs))] transition-colors hover:bg-primary/[0.08]"
 											>
 												{emoji}
 											</motion.button>
@@ -4522,7 +5060,7 @@ export const MessageBox = ({
 											onClick={() => setMenuPicker((v) => !v)}
 											aria-label="More reactions"
 											aria-expanded={menuPicker}
-											className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/5 hover:text-primary"
+											className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-pill text-muted transition-colors hover:bg-primary/[0.06] hover:text-primary"
 										>
 											<Plus className="h-4 w-4" />
 										</motion.button>
@@ -4540,7 +5078,7 @@ export const MessageBox = ({
 									<motion.div
 										role="menu"
 										{...actionMenu}
-										className="w-[190px] overflow-hidden rounded-xl chat-chrome-solid"
+										className="w-[230px] overflow-hidden rounded-[22px] bg-raised/75 [html[data-ws-theme=platform-light]_&]:bg-surface/90 shadow-pop backdrop-blur-2xl backdrop-saturate-150"
 										onClick={(e) => e.stopPropagation()}
 									>
 										{/* The picker used to snap 320px open and shove the
@@ -4554,6 +5092,8 @@ export const MessageBox = ({
 												>
 													<div className="border-b border-hairline p-1 ws-emoji-picker">
 														<EmojiPicker
+															skinTonesDisabled
+															previewConfig={{ showPreview: false }}
 															theme={
 																resolvedTheme === "light"
 																	? ("light" as Theme)
@@ -4573,7 +5113,7 @@ export const MessageBox = ({
 										</AnimatePresence>
 										{/* A plain wrapper: variants pass through DOM, so the
 										    rows still follow the menu's cascade. */}
-										<div className="py-1">
+										<div className="p-1.5">
 											<motion.button
 												variants={staggerItem}
 												type="button"
@@ -4582,7 +5122,7 @@ export const MessageBox = ({
 													setReplyTarget(msgMenu.message);
 													setMsgMenu(null);
 												}}
-												className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/5"
+												className="flex h-11 w-full cursor-pointer items-center gap-3 rounded-pill px-3 text-left font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/[0.06]"
 											>
 												<RiReplyLine size={16} />
 												Reply
@@ -4599,7 +5139,7 @@ export const MessageBox = ({
 														setMsgMenu(null);
 														toast.success("Copied");
 													}}
-													className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/5"
+													className="flex h-11 w-full cursor-pointer items-center gap-3 rounded-pill px-3 text-left font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/[0.06]"
 												>
 													<RiFileCopyLine size={16} />
 													Copy text
@@ -4614,7 +5154,7 @@ export const MessageBox = ({
 												const pinned = (activeConversation?.pins ?? []).includes(msgMenu.message._id);
 												const temp = msgMenu.message._id.startsWith("temp-");
 												const item =
-													"flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/5";
+													"flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-left font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-primary/[0.06]";
 												const dangerItem = item.replace("text-primary", "text-danger");
 												const editable =
 													mine &&
@@ -4730,44 +5270,17 @@ export const MessageBox = ({
 			{activeConversation && (
 				<ThreadMoreSheet
 					open={moreOpen}
-					onClose={() => setMoreOpen(false)}
+					onClose={() => {
+						setMoreOpen(false);
+						setMuteOpen(false);
+					}}
 					title={headerIdentity.title}
-					items={[
-						{
-							icon: <Video className="h-4 w-4" />,
-							label: "Video call",
-							onClick: () =>
-								startCall(
-									isGroupThread
-										? {
-												conversationId: activeConversation._id,
-												peer: { id: activeConversation._id, name: headerIdentity.title, avatar: headerIdentity.avatar, username: "" },
-												isVideo: true,
-												isGroup: true,
-											}
-										: {
-												conversationId: activeConversation._id,
-												peer: {
-													id: activeConversation.otherParticipant?._id || "",
-													name: headerIdentity.title,
-													avatar: activeConversation.otherParticipant?.avatar || "",
-													username: activeConversation.otherParticipant?.username || "",
-												},
-												isVideo: true,
-											},
-								),
-						},
-						{ icon: <RiSearchLine size={16} />, label: "Search this chat", onClick: () => setSearchOpen(true) },
-						{ icon: <RiPaletteLine size={16} />, label: "Chat theme", hint: "Wallpaper, bubbles, colours", onClick: () => setThemeSheet("gallery") },
-						isGroupThread
-							? { icon: <Users className="h-4 w-4" />, label: "Group details", onClick: () => !iLeftGroup && setGroupSheetOpen(true) }
-							: {
-									icon: <Info className="h-4 w-4" />,
-									label: "View profile",
-									onClick: () => router.push(`/profile/${activeConversation.otherParticipant?.username ?? ""}`),
-								},
-					]}
-				/>
+				>
+					{moreBody(() => {
+						setMoreOpen(false);
+						setMuteOpen(false);
+					})}
+				</ThreadMoreSheet>
 			)}
 			<SeenBySheet open={seenByFor !== null} onClose={() => setSeenByFor(null)} messageId={seenByFor} />
 			{activeConversation && (

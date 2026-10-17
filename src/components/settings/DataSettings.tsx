@@ -80,6 +80,12 @@ export function ContentSettings() {
 	return (
 		<div className="flex flex-col">
 			<Toggle
+				label="Stories at the top of Home"
+				hint="The row of stories above your timeline. Off folds it away until you turn it back on."
+				checked={c.showStories}
+				onChange={(v) => setPrefs({ content: { showStories: v } })}
+			/>
+			<Toggle
 				label="Show long posts in full"
 				hint="Long posts open at their full length instead of stopping at a See more link."
 				checked={c.expandLongPosts}

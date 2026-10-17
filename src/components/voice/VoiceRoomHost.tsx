@@ -304,7 +304,7 @@ export default function VoiceRoomHost() {
                   >
                     <div className="flex flex-col items-center gap-3 px-6 pb-6 pt-7 text-center">
                       <span className="mb-1 flex h-24 w-24 items-center justify-center rounded-pill bg-brand/10">
-                        <span className="block h-[72px] w-[72px] overflow-hidden rounded-pill bg-raised ring-2 ring-brand/30">
+                        <span className="relative block h-[72px] w-[72px] overflow-hidden rounded-pill bg-raised ring-2 ring-brand/30">
                           <SafeAvatar src={session?.row.host.avatar} />
                         </span>
                       </span>
@@ -496,18 +496,22 @@ export default function VoiceRoomHost() {
         <motion.div
           initial={swap.initial}
           animate={swap.animate}
-          className="fixed inset-x-3 bottom-nav z-toast sm:inset-x-auto sm:right-4 md:bottom-4"
+          // On a phone the room docks ONTO the bottom nav (owner
+          // 2026-10-16, the third rail's mobile form): full width, flush to
+          // the bar, rounded only on top, like a mini player. From md up it
+          // is the floating pill where no rail is showing.
+          className="fixed inset-x-0 bottom-nav z-sticky md:inset-x-auto md:right-4 md:bottom-4 md:z-toast"
         >
           {/* The live bar (owner pick, Space Voice on a phone): faces of who's
               in the room, the title and count, and the two controls that
               matter while you're elsewhere in the app. */}
           <div
-            className="ws-on-dark relative overflow-hidden rounded-pill shadow-pop sm:w-[360px]"
+            className="ws-on-dark relative overflow-hidden rounded-t-[22px] md:w-[360px] md:rounded-pill md:shadow-pop"
             style={{ background: spaceBackground(row) }}
           >
           {/* The room's cover under a deep wash, frosted (owner 2026-10-13):
               the collapsed room keeps the room's colour, dark in both themes. */}
-          <div className="flex items-center gap-2.5 bg-[#04060a]/80 py-1.5 pl-1.5 pr-1.5 backdrop-blur-2xl backdrop-saturate-150">
+          <div className="flex items-center gap-2.5 bg-[#04060a]/80 py-2 pl-3 pr-2 backdrop-blur-2xl backdrop-saturate-150 md:py-1.5 md:pl-1.5 md:pr-1.5">
             <button
               type="button"
               onClick={() => setSession({ row, minimized: false })}

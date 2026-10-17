@@ -59,8 +59,8 @@ export function EditMessageSheet({
 					<OverlayPanel
 						dragClose={onClose}
 						variant="sheet"
-						ground="none"
-						className="bg-surface sm:w-[min(520px,94vw)]"
+						ground="solid"
+						className="sm:w-[min(520px,94vw)]"
 						label="Edit message"
 					>
 						<OverlayHeader title="Edit message" onClose={onClose} />

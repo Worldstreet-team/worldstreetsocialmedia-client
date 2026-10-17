@@ -1,6 +1,6 @@
 "use client";
 
-import { formatCompact } from "@/lib/utils";
+import { formatCompact, formatTimeAgo } from "@/lib/utils";
 import { useBackWithFallback } from "@/lib/nav";
 import {
 	BookmarkSimple,
@@ -14,6 +14,11 @@ import {
 	SpeakerSimpleHigh,
 	SpeakerSimpleX,
 	X,
+	CaretDown,
+	CaretUp,
+	MusicNotesSimple,
+	SealCheck,
+	UsersThree,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { syncUrlIfStillOn } from "@/lib/url-sync";
@@ -37,6 +42,7 @@ import {
 	subscribeMentions,
 } from "@/lib/mentionCache";
 import { LiveChatPanel } from "@/components/live/LiveChatPanel";
+import { LeftSidebar } from "@/components/layout/LeftSidebar";
 import { LiveSlidePlayer } from "@/components/live/LiveSlidePlayer";
 import { LiveAdBanner } from "@/components/live/LiveAdBanner";
 import { useToast } from "@/components/ui/Toast/ToastContext";
@@ -77,6 +83,12 @@ interface Slide {
 	/** Server truth for whether the viewer already follows this author. */
 	authorIsFollowing?: boolean;
 	username: string;
+	/** Display name; the handle when they have none. */
+	name?: string;
+	verified?: boolean;
+	createdAt?: string;
+	/** The community it was posted in, as a chip over the caption. */
+	community?: { name: string; slug: string };
 	avatar: string;
 	content: string;
 	videoUrl?: string;
@@ -111,6 +123,147 @@ function Roll({ value, className }: { value: string; className?: string }) {
 				</motion.span>
 			</AnimatePresence>
 		</span>
+	);
+}
+
+/**
+ * The clip's own light behind it (owner 2026-10-16): the playing video,
+ * copied into a tiny canvas a few times a second and blown up under a heavy
+ * blur, so the space around the stage (and the letterbox on a phone) glows
+ * with whatever is on screen. A cross-origin video only taints the canvas,
+ * which still displays; nothing reads its pixels back. Active slide only.
+ */
+function AmbientGlow({ video, active }: { video: () => HTMLVideoElement | undefined; active: boolean }) {
+	const ref = useRef<HTMLCanvasElement>(null);
+	const [on, setOn] = useState(false);
+	useEffect(() => {
+		if (!active) {
+			setOn(false);
+			return;
+		}
+		const canvas = ref.current;
+		const ctx = canvas?.getContext("2d");
+		if (!canvas || !ctx) return;
+		let id = 0;
+		const draw = () => {
+			const v = video();
+			if (v && v.readyState >= 2 && document.visibilityState !== "hidden") {
+				try {
+					ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+					setOn(true);
+				} catch {
+					/* not decodable yet */
+				}
+			}
+		};
+		draw();
+		id = window.setInterval(draw, 120);
+		return () => window.clearInterval(id);
+	}, [active, video]);
+	return (
+		<span aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+			<canvas
+				ref={ref}
+				width={36}
+				height={64}
+				className={clsx(
+					"absolute inset-0 h-full w-full scale-125 object-cover blur-[60px] saturate-[1.7] transition-opacity duration-700",
+					on ? "opacity-90" : "opacity-0",
+				)}
+			/>
+			{/* Keeps the chrome and the captions readable over a bright clip. */}
+			<span className="absolute inset-0 bg-black/30" />
+		</span>
+	);
+}
+
+/**
+ * The hairline progress bar at the foot of a clip (Space v2, TikTok's
+ * grammar). Reads the video it is given every frame while it is the one
+ * playing; a bar on a neighbour would only ever sit at zero.
+ */
+function ProgressLine({ video, active }: { video: () => HTMLVideoElement | undefined; active: boolean }) {
+	const bar = useRef<HTMLSpanElement>(null);
+	useEffect(() => {
+		if (!active) return;
+		let raf = 0;
+		const tick = () => {
+			const v = video();
+			if (v && bar.current && v.duration > 0) {
+				bar.current.style.transform = `scaleX(${v.currentTime / v.duration})`;
+			}
+			raf = requestAnimationFrame(tick);
+		};
+		raf = requestAnimationFrame(tick);
+		return () => cancelAnimationFrame(raf);
+	}, [active, video]);
+	return (
+		<span aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-[2px] bg-white/15">
+			<span ref={bar} className="block h-full origin-left scale-x-0 bg-white/90" />
+		</span>
+	);
+}
+
+/**
+ * The sound line under a caption: a note and the sound's name drifting
+ * across, the way TikTok shows what you are hearing. Clips have no named
+ * sounds yet, so it is the creator's original. Still while not playing.
+ */
+function SoundLine({ username, active }: { username: string; active: boolean }) {
+	const text = `Original sound · @${username}`;
+	return (
+		<div className="mt-2.5 flex max-w-[260px] items-center gap-2 text-white">
+			<MusicNotesSimple size={13} weight="bold" className="shrink-0" />
+			<span className="relative min-w-0 flex-1 overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_8%,#000_85%,transparent)]">
+				<motion.span
+					className="flex w-max gap-10 whitespace-nowrap font-sans text-[calc(12.5px*var(--ws-fs))]"
+					animate={active ? { x: ["0%", "-50%"] } : { x: "0%" }}
+					transition={active ? { duration: 9, ease: "linear", repeat: Infinity } : { duration: 0.3 }}
+				>
+					<span>{text}</span>
+					<span aria-hidden>{text}</span>
+				</motion.span>
+			</span>
+		</div>
+	);
+}
+
+/**
+ * The sound disc at the foot of the rail: the creator's face on a record,
+ * turning while the clip plays (TikTok's grammar, Space v2).
+ */
+function SoundDisc({ avatar, active }: { avatar: string; active: boolean }) {
+	return (
+		<motion.span
+			aria-hidden
+			animate={active ? { rotate: 360 } : { rotate: 0 }}
+			transition={active ? { duration: 6, ease: "linear", repeat: Infinity } : { duration: 0.4 }}
+			className="mt-1 flex h-11 w-11 items-center justify-center rounded-pill bg-[#1b1b1b] [background-image:repeating-radial-gradient(circle,#262626_0_1px,#161616_1px_3px)]"
+		>
+			<span className="relative block h-6 w-6 overflow-hidden rounded-pill">
+				<SafeAvatar src={avatar} className="object-cover" />
+			</span>
+		</motion.span>
+	);
+}
+
+/** A caption that opens in place on a tap, the way a post's "more" does. */
+function Caption({ text }: { text: string }) {
+	const [open, setOpen] = useState(false);
+	const long = text.length > 90;
+	return (
+		<button
+			type="button"
+			onClick={() => long && setOpen((o) => !o)}
+			className={clsx(
+				"block w-full text-left font-sans text-[calc(14px*var(--ws-fs))] leading-snug text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.5)]",
+				long ? "cursor-pointer" : "cursor-default",
+				!open && "line-clamp-2",
+			)}
+		>
+			{text}
+			{long && open && <span className="ml-1 font-semibold text-white/70">less</span>}
+		</button>
 	);
 }
 
@@ -155,6 +308,17 @@ function VerticalSurface() {
 	 * was never told to play.
 	 */
 	const videoEls = useRef<Map<string, HTMLVideoElement>>(new Map());
+	// One stable getter per slide, so ProgressLine's effect doesn't restart
+	// on every render.
+	const getters = useRef<Map<string, () => HTMLVideoElement | undefined>>(new Map());
+	const videoGetter = (key: string) => {
+		let g = getters.current.get(key);
+		if (!g) {
+			g = () => videoEls.current.get(key);
+			getters.current.set(key, g);
+		}
+		return g;
+	};
 	const markBuffering = useCallback(
 		(key: string, value: boolean) =>
 			setBuffering((prev) =>
@@ -181,6 +345,13 @@ function VerticalSurface() {
 		authorId: p.author?._id,
 		authorIsFollowing: Boolean(p.author?.isFollowing),
 		username: p.author?.username ?? "",
+		name:
+			[p.author?.firstName, p.author?.lastName].filter(Boolean).join(" ") ||
+			p.author?.username ||
+			"",
+		verified: Boolean(p.author?.isVerified),
+		createdAt: p.createdAt,
+		community: p.community?.name ? { name: p.community.name, slug: p.community.slug } : undefined,
 		avatar: p.author?.avatar || DEFAULT_AVATAR,
 		content: p.content ?? "",
 		videoUrl: p.videos?.[0],
@@ -775,7 +946,13 @@ function VerticalSurface() {
 	};
 
 	const railBtn =
-		"flex h-12 w-12 items-center justify-center rounded-pill bg-white/[0.09] backdrop-blur-md backdrop-saturate-150 transition-colors cursor-pointer hover:bg-white/[0.18]";
+		// Bare glyphs over the video on phones, the way TikTok does it (owner
+		// 2026-10-16); round glass buttons beside the stage on desktop.
+		// Bare on desktop too (owner 2026-10-16, "less borders"): a plain
+		// glyph that gets a soft disc under the pointer.
+		// Desktop: solid soft discs so they read as live buttons beside the
+		// stage, not faint glyphs (owner 2026-10-16, "looks disabled").
+		"flex h-12 w-12 items-center justify-center rounded-pill transition-colors cursor-pointer [filter:drop-shadow(0_1px_3px_rgb(0_0_0/0.45))] lg:[filter:none] lg:bg-white/[0.14] lg:hover:bg-white/[0.22]";
 
 	// `commentsFor` is a snapshot taken when the panel opened. Read the live
 	// slide so the header count moves when a comment lands.
@@ -787,10 +964,15 @@ function VerticalSurface() {
 	return (
 		<div
 			ref={containerRef}
-			className="fixed inset-0 z-dropdown bg-black overflow-y-auto snap-y snap-mandatory [scrollbar-width:none]"
+			className="fixed inset-x-0 top-0 bottom-[calc(56px+var(--ws-safe-bottom))] md:bottom-0 lg:left-[264px] z-dropdown bg-black overflow-y-auto snap-y snap-mandatory [scrollbar-width:none]"
 		>
+			{/* The app's own sidebar stays on desktop (owner 2026-10-16): The
+			    Space is a place in WorldSpace, not a separate app. */}
+			<div className="fixed inset-y-0 left-0 z-modal hidden w-[264px] bg-page lg:block">
+				<LeftSidebar />
+			</div>
 			{/* ── top chrome ── */}
-			<div className="fixed top-0 inset-x-0 z-modal flex items-center px-4 h-16 pt-safe box-content bg-gradient-to-b from-black/70 to-transparent pointer-events-none">
+			<div className="fixed top-0 inset-x-0 lg:left-[264px] z-modal flex items-center px-4 h-16 pt-safe box-content bg-gradient-to-b from-black/70 to-transparent pointer-events-none">
 				{/* Back, not home: entering from Explore, a live-now row or a
 				    deep link, the X used to dump you at "/" and stack a ghost
 				    history entry. Fallback home only when there is no in-app
@@ -799,13 +981,15 @@ function VerticalSurface() {
 					type="button"
 					onClick={() => goBack("/")}
 					aria-label="Close"
-					className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-pill bg-white/[0.09] backdrop-blur-md text-white hover:bg-white/[0.18] transition-colors cursor-pointer"
+					className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-pill text-white [filter:drop-shadow(0_1px_3px_rgb(0_0_0/0.45))] hover:bg-white/[0.08] transition-colors cursor-pointer lg:invisible"
 				>
-					<X size={17} />
+					<X size={20} />
 				</button>
 
+				{/* Tabs as words with a short bar under the one you're on, the
+				    way TikTok does it (owner 2026-10-16). */}
 				<div className="flex-1 flex justify-center pointer-events-auto">
-					<div className="flex items-center gap-1 rounded-pill bg-white/[0.09] backdrop-blur-md p-1">
+					<div className="flex items-center gap-6">
 						{[
 							{ key: "street" as Tab, label: t("vertical.tabStreet") },
 							{ key: "live" as Tab, label: t("vertical.tabLive") },
@@ -815,21 +999,11 @@ function VerticalSurface() {
 								type="button"
 								onClick={() => setTab(key)}
 								className={clsx(
-									"relative h-8 px-4 rounded-pill font-sans text-[calc(13px*var(--ws-fs))] font-semibold transition-colors cursor-pointer",
-									tab === key ? "text-black" : "text-white/70 hover:text-white",
+									"relative flex h-10 flex-col items-center justify-center font-sans text-[calc(16px*var(--ws-fs))] transition-colors cursor-pointer [text-shadow:0_1px_3px_rgb(0_0_0/0.4)]",
+									tab === key ? "font-bold text-white" : "font-semibold text-white/75 hover:text-white",
 								)}
 							>
-								{tab === key && (
-									<motion.span
-										layoutId="street-tab"
-										transition={{
-											duration: 0.2,
-											ease: [0.2, 0, 0, 1],
-										}}
-										className="absolute inset-0 rounded-pill bg-white"
-									/>
-								)}
-								<span className="relative flex items-center gap-1.5">
+								<span className="flex items-center gap-1.5">
 									{key === "live" && (
 										<span className="relative flex h-1.5 w-1.5">
 											<span
@@ -843,6 +1017,13 @@ function VerticalSurface() {
 									)}
 									{label}
 								</span>
+								{tab === key && (
+									<motion.span
+										layoutId="street-tab"
+										transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+										className="absolute -bottom-0.5 h-[3px] w-6 rounded-pill bg-white"
+									/>
+								)}
 							</button>
 						))}
 					</div>
@@ -857,7 +1038,7 @@ function VerticalSurface() {
 					type="button"
 					onClick={() => setMuted((m) => !m)}
 					aria-label={t("vertical.unmute")}
-					className="pointer-events-auto relative flex h-10 w-10 items-center justify-center rounded-pill bg-white/[0.09] backdrop-blur-md text-white hover:bg-white/[0.18] transition-colors cursor-pointer"
+					className="pointer-events-auto relative flex h-10 w-10 items-center justify-center rounded-pill text-white [filter:drop-shadow(0_1px_3px_rgb(0_0_0/0.45))] hover:bg-white/[0.08] transition-colors cursor-pointer"
 				>
 					<AnimatePresence mode="popLayout" initial={false}>
 						<motion.span
@@ -866,17 +1047,43 @@ function VerticalSurface() {
 							className="flex"
 						>
 							{muted ? (
-								<SpeakerSimpleX size={17} />
+								<SpeakerSimpleX size={20} />
 							) : (
-								<SpeakerSimpleHigh size={17} />
+								<SpeakerSimpleHigh size={20} />
 							)}
 						</motion.span>
 					</AnimatePresence>
 				</button>
 			</div>
 
+			{/* Up and down, in the middle of the right edge (desktop): the
+			    wheel works, but a pointer wants something to press. */}
+			{slides.length > 1 && (
+				<div className="fixed right-6 top-1/2 z-modal hidden -translate-y-1/2 flex-col gap-3 lg:flex">
+					{[
+						{ dir: -1, Icon: CaretUp, label: "Previous", off: active === 0 },
+						{ dir: 1, Icon: CaretDown, label: "Next", off: active >= slides.length - 1 },
+					].map(({ dir, Icon, label, off }) => (
+						<motion.button
+							key={label}
+							type="button"
+							{...press}
+							disabled={off}
+							aria-label={label}
+							onClick={() => {
+								const el = containerRef.current;
+								if (el) el.scrollBy({ top: dir * el.clientHeight, behavior: "smooth" });
+							}}
+							className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-pill bg-white/[0.08] text-white transition-colors hover:bg-white/[0.16] disabled:cursor-default disabled:opacity-30 disabled:hover:bg-white/[0.08]"
+						>
+							<Icon size={18} weight="bold" />
+						</motion.button>
+					))}
+				</div>
+			)}
+
 			{loading && (
-				<div className="h-dvh flex items-center justify-center lg:px-6">
+				<div className="h-[calc(100dvh-56px-var(--ws-safe-bottom))] md:h-dvh flex items-center justify-center lg:px-6">
 					<div className="h-full w-full lg:h-[min(calc(100dvh-56px),960px)] lg:w-auto lg:aspect-[9/16] lg:rounded-2xl skeleton" />
 				</div>
 			)}
@@ -884,7 +1091,7 @@ function VerticalSurface() {
 			{!loading && slides.length === 0 && (
 				<motion.div
 					{...reveal()}
-					className="h-dvh flex flex-col items-center justify-center gap-3 px-8"
+					className="h-[calc(100dvh-56px-var(--ws-safe-bottom))] md:h-dvh flex flex-col items-center justify-center gap-3 px-8"
 				>
 					<span className="flex h-16 w-16 items-center justify-center rounded-pill bg-white/[0.07] text-white/60">
 						<Broadcast size={26} weight="light" />
@@ -938,11 +1145,14 @@ function VerticalSurface() {
 					<section
 						key={slide.key}
 						data-index={idx}
-						className="relative h-dvh snap-start overflow-hidden flex items-end lg:items-center justify-center lg:gap-5 lg:px-6"
+						className="relative h-[calc(100dvh-56px-var(--ws-safe-bottom))] md:h-dvh snap-start overflow-hidden flex items-end lg:items-center justify-center lg:gap-5 lg:px-6"
 					>
+						{!slide.streamId && slide.videoUrl && (
+							<AmbientGlow video={videoGetter(slide.key)} active={isActive} />
+						)}
 						{/* The stage: full-bleed on phones, a floating 9:16 plate on
 						    desktop — the same object grammar as the Story Studio. */}
-						<div className="relative h-full w-full lg:h-[min(calc(100dvh-56px),960px)] lg:w-auto lg:aspect-[9/16] lg:shrink-0 lg:overflow-hidden lg:rounded-2xl lg:glass-stage bg-[#0a0a0a]">
+						<div className="relative h-full w-full lg:h-[min(calc(100dvh-56px),960px)] lg:w-auto lg:aspect-[9/16] lg:shrink-0 lg:overflow-hidden lg:rounded-[22px] lg:bg-[#0a0a0a]">
 							{/* media */}
 							{near && slide.streamId ? (
 								<LiveSlidePlayer
@@ -1041,54 +1251,83 @@ function VerticalSurface() {
 							)}
 
 							{/* bottom info */}
-							<div className="absolute bottom-0 inset-x-0 pt-24 pb-6 px-4 bg-gradient-to-t from-black/85 via-black/35 to-transparent pointer-events-none">
-								<div className="pointer-events-auto max-w-[560px] pr-20">
-									<div className="flex items-center gap-2.5 mb-2">
+							{/* Who, where and what (Space v2): the community it came
+							    from, the person by name with their tick and when, then
+							    the caption. A person, not a handle. */}
+							<div className="absolute bottom-0 inset-x-0 pt-28 pb-5 px-4 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none lg:pb-6">
+								<div className="pointer-events-auto max-w-[560px] pr-20 lg:pr-4">
+									{slide.community && (
+										<Link
+											href={`/communities/${slide.community.slug}`}
+											className="mb-2.5 inline-flex h-7 max-w-full items-center gap-1.5 rounded-pill bg-black/35 px-2.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-white backdrop-blur-md transition-colors hover:bg-black/50"
+										>
+											<UsersThree size={13} weight="bold" className="shrink-0" />
+											<span className="truncate">{slide.community.name}</span>
+										</Link>
+									)}
+									<div className="mb-1.5 flex min-w-0 items-center gap-1.5 [text-shadow:0_1px_2px_rgb(0_0_0/0.5)]">
 										<Link
 											href={`/profile/${slide.username}`}
-											className="relative w-9 h-9 rounded-pill overflow-hidden shrink-0 bg-white/10"
+											className="truncate font-sans text-[calc(15.5px*var(--ws-fs))] font-bold text-white hover:underline"
 										>
-											<SafeAvatar src={slide.avatar} className="object-cover" alt={slide.username} />
+											{slide.name || slide.username}
 										</Link>
-										<Link
-											href={`/profile/${slide.username}`}
-											className="text-[calc(15px*var(--ws-fs))] font-semibold text-white font-sans truncate hover:underline"
-										>
-											@{slide.username}
-										</Link>
-										{/* initial={false}: a pill that is there when the slide
-										    paints stays still. One that resolves a beat late
-										    pops in, and following pops it out. */}
-										<AnimatePresence initial={false}>
-											{!isSelf && !followed && alignable && (
-												<motion.button
-													key="follow"
-													type="button"
-													{...pop}
-													{...press}
-													onClick={() => follow(slide)}
-													className="h-7 px-3 rounded-pill bg-white text-black font-sans text-[calc(12px*var(--ws-fs))] font-bold hover:bg-white/85 transition-colors cursor-pointer shrink-0"
-												>
-													{t("rail.follow")}
-												</motion.button>
-											)}
-										</AnimatePresence>
+										{slide.verified && (
+											<SealCheck size={15} weight="fill" className="shrink-0 text-brand" aria-label="Verified" />
+										)}
+										{slide.createdAt && (
+											<span className="shrink-0 font-sans text-[calc(13px*var(--ws-fs))] text-white/75">
+												· {formatTimeAgo(slide.createdAt)}
+											</span>
+										)}
 									</div>
 									{slide.streamId && slide.liveTitle ? (
-										<p className="text-[calc(16px*var(--ws-fs))] font-semibold text-white font-sans leading-snug line-clamp-2">
+										<p className="text-[calc(16px*var(--ws-fs))] font-semibold text-white font-sans leading-snug line-clamp-2 [text-shadow:0_1px_2px_rgb(0_0_0/0.5)]">
 											{slide.liveTitle}
 										</p>
 									) : (
-										<p className="text-[calc(13.5px*var(--ws-fs))] text-white/85 font-sans leading-snug line-clamp-2">
-											{slide.content}
-										</p>
+										slide.content && <Caption text={slide.content} />
+									)}
+									{!slide.streamId && slide.videoUrl && (
+										<SoundLine username={slide.username} active={isActive} />
 									)}
 								</div>
 							</div>
+							{!slide.streamId && slide.videoUrl && (
+								<ProgressLine video={videoGetter(slide.key)} active={isActive} />
+							)}
 						</div>
 
 						{/* action rail — overlaid on phones, beside the stage on desktop */}
-						<div className="absolute right-3 bottom-8 z-10 flex flex-col items-center gap-3.5 text-white lg:static lg:z-auto lg:self-end lg:pb-10">
+						{/* lg:relative z-10, never static: the ambient glow is a positioned
+						    layer, and a static rail painted UNDER its wash and read
+						    as disabled (owner 2026-10-16). */}
+						<div className="absolute right-3 bottom-8 z-10 flex flex-col items-center gap-4 text-white lg:relative lg:self-end lg:pb-10">
+							{/* The creator's face heads the rail with a + to follow,
+							    TikTok's grammar; the + leaves once you follow. */}
+							<div className="relative mb-2.5">
+								<Link
+									href={`/profile/${slide.username}`}
+									aria-label={`@${slide.username}`}
+									className="relative block h-12 w-12 overflow-hidden rounded-pill bg-white/10 ring-2 ring-white"
+								>
+									<SafeAvatar src={slide.avatar} className="object-cover" alt={slide.username} />
+								</Link>
+								<AnimatePresence initial={false}>
+									{!isSelf && !followed && alignable && (
+										<motion.button
+											key="follow"
+											type="button"
+											{...pop}
+											onClick={() => follow(slide)}
+											aria-label={t("rail.follow")}
+											className="absolute -bottom-2.5 left-1/2 flex h-5 w-5 -translate-x-1/2 cursor-pointer items-center justify-center rounded-pill bg-brand text-brand-on"
+										>
+											<Plus size={12} weight="bold" />
+										</motion.button>
+									)}
+								</AnimatePresence>
+							</div>
 							{/* The heart is NOT gated on `postId`. `toggleLike` has
 							    always known how to like a stream — it calls Xstream's
 							    own like endpoint so the count is shared with Xstream —
@@ -1105,11 +1344,11 @@ function VerticalSurface() {
 									transition={{ duration: 0.25, ease: [0.2, 0, 0, 1] }}
 									className={clsx(railBtn, slide.isLiked && "text-danger")}
 								>
-									<Heart size={22} weight={slide.isLiked ? "fill" : "regular"} />
+									<Heart size={28} weight={slide.isLiked ? "fill" : "regular"} />
 								</motion.span>
 								<Roll
 									value={fmt(slide.likes)}
-									className="text-[calc(11.5px*var(--ws-fs))] font-semibold font-sans tabular-nums text-white/85"
+									className="text-[calc(12.5px*var(--ws-fs))] font-bold font-sans tabular-nums text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.5)]"
 								/>
 							</button>
 
@@ -1122,11 +1361,11 @@ function VerticalSurface() {
 										className="flex flex-col items-center gap-1 cursor-pointer"
 									>
 										<span className={railBtn}>
-											<ChatCircle size={22} />
+											<ChatCircle size={28} />
 										</span>
 										<Roll
 											value={fmt(slide.replies)}
-											className="text-[calc(11.5px*var(--ws-fs))] font-semibold font-sans tabular-nums text-white/85"
+											className="text-[calc(12.5px*var(--ws-fs))] font-bold font-sans tabular-nums text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.5)]"
 										/>
 									</button>
 
@@ -1152,7 +1391,7 @@ function VerticalSurface() {
 													className="flex"
 												>
 													<BookmarkSimple
-														size={22}
+														size={28}
 														weight={slide.isBookmarked ? "fill" : "regular"}
 													/>
 												</motion.span>
@@ -1170,7 +1409,7 @@ function VerticalSurface() {
 									className="flex flex-col items-center gap-1 cursor-pointer"
 								>
 									<span className={railBtn}>
-										<ChatsCircle size={22} />
+										<ChatsCircle size={28} />
 									</span>
 								</button>
 							)}
@@ -1182,9 +1421,10 @@ function VerticalSurface() {
 								className="flex flex-col items-center gap-1 cursor-pointer"
 							>
 								<span className={railBtn}>
-									<PaperPlaneTilt size={22} />
+									<PaperPlaneTilt size={28} />
 								</span>
 							</button>
+							{!slide.streamId && slide.videoUrl && <SoundDisc avatar={slide.avatar} active={isActive} />}
 						</div>
 					</section>
 				);

@@ -42,6 +42,12 @@ import { useAppPathname } from "@/i18n/useAppPathname";
 /** Posts open in the layer, oldest first; the last one is on screen. */
 const postLayerStackAtom = atom<string[]>([]);
 
+/** True while a post is open in the layer: the phone's bottom bar and the
+ *  create button step aside for it (owner 2026-10-16). */
+export function usePostLayerOpen() {
+	return useAtomValue(postLayerStackAtom).length > 0;
+}
+
 /** True inside MainShell, where the layer exists. */
 export const PostLayerContext = createContext(false);
 

@@ -401,13 +401,14 @@ export function GoLiveSheet({
 	return createPortal(
 		<AnimatePresence>
 			<OverlayScrim
+				blur
 				key="golive-scrim"
 				onClose={close}
 				label={t("common.close")}
 			/>
 			<OverlayPanel
 				key="golive-panel"
-				dragClose={close} variant="sheet"
+				dragClose={close} variant="sheet" ground="solid"
 				label={obsInfo ? t("golive.obs.title") : t("golive.title")}
 				className={clsx(
 					obsInfo

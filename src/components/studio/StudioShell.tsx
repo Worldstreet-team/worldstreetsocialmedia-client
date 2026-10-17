@@ -71,19 +71,23 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 	const current = allItems.find((i) => isActive(i.href)) ?? allItems[0];
 
 	return (
-		<div className="min-h-dvh bg-[#0F0E0D] text-[#fafaf9]">
+		// ws-chrome maps the studio's ink classes onto the theme tokens, so the
+		// whole hub follows dark and light like the rest of the app (it was
+		// hard-coded warm stone before, owner 2026-10-16: "clean these up at
+		// code level").
+		<div className="ws-chrome min-h-dvh bg-page text-primary">
 			<div className="flex min-h-dvh">
 				{/* ── rail ─────────────────────────────────────────────────── */}
 				{/* layoutRoot: the rail is sticky, so the sliding pill is measured
 				    against the rail and not against a page that may have scrolled. */}
 				<motion.aside
 					layoutRoot
-					className="sticky top-0 hidden h-dvh w-[240px] shrink-0 flex-col bg-[#141312] px-4 pb-4 pt-5 md:flex"
+					className="sticky top-0 hidden h-dvh w-[248px] shrink-0 flex-col bg-page px-3 pb-4 pt-5 md:flex"
 				>
 					<Link
 						href="/"
 						onClick={(e) => { e.preventDefault(); goBack("/"); }}
-						className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 glass-ink-faint transition-colors hover:glass-ink hover:bg-[#fafaf9]/[0.05]"
+						className="flex h-9 w-fit items-center gap-2 rounded-pill pl-3 pr-4 text-muted transition-colors hover:bg-primary/[0.06] hover:text-primary"
 					>
 						<ArrowLeft size={14} />
 						<span className="font-sans text-[calc(12.5px*var(--ws-fs))] font-medium">
@@ -91,19 +95,19 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 						</span>
 					</Link>
 
-					<div className="mt-5 flex items-center gap-2.5 px-2.5">
-						<span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[var(--ws-brand-primary)] text-brand-on">
-							<Faders size={16} weight="bold" />
+					<div className="mt-6 flex items-center gap-3 px-3">
+						<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-pill bg-brand text-brand-on">
+							<Faders size={17} weight="bold" />
 						</span>
-						<span className="font-display text-[calc(15px*var(--ws-fs))] font-semibold tracking-tight">
+						<span className="font-display text-[calc(17px*var(--ws-fs))] font-semibold tracking-tight">
 							{t("studio.title")}
 						</span>
 					</div>
 
-					<nav className="no-scrollbar mt-6 flex-1 overflow-y-auto">
+					<nav className="no-scrollbar mt-7 flex-1 overflow-y-auto">
 						{GROUPS.map((group) => (
 							<div key={group.labelKey} className="mb-5">
-								<p className="glass-eyebrow select-none px-2.5 pb-2 font-sans">
+								<p className="glass-eyebrow select-none px-3 pb-2 font-sans">
 									{t(group.labelKey)}
 								</p>
 								<div className="flex flex-col gap-0.5">
@@ -117,10 +121,10 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 												key={href}
 												href={href}
 												className={clsx(
-													"relative flex h-10 items-center gap-3 rounded-xl px-3 font-sans text-[calc(13.5px*var(--ws-fs))] transition-colors",
+													"relative flex h-11 items-center gap-3 rounded-pill px-4 font-sans text-[calc(14.5px*var(--ws-fs))] transition-colors",
 													active
 														? "font-semibold text-brand-on"
-														: "glass-ink-dim font-medium hover:glass-ink hover:bg-[#fafaf9]/[0.05]",
+														: "font-medium text-muted hover:bg-primary/[0.05] hover:text-primary",
 												)}
 											>
 												{/* The one filled pill on screen: a page singleton,
@@ -129,11 +133,11 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 													<motion.span
 														layoutId="studio-rail-thumb"
 														transition={thumbSpring}
-														className="absolute inset-0 rounded-xl bg-[var(--ws-brand-primary)]"
+														className="absolute inset-0 rounded-pill bg-brand"
 													/>
 												)}
 												<Icon
-													size={16}
+													size={19}
 													weight={active ? "fill" : "regular"}
 													className="relative shrink-0"
 												/>
@@ -144,7 +148,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 															"relative ml-auto shrink-0 rounded-pill px-1.5 py-0.5 font-sans text-[calc(9.5px*var(--ws-fs))] font-bold uppercase tracking-[0.06em]",
 															active
 																? "bg-brand-on/15 text-brand-on"
-																: "bg-[#fafaf9]/[0.08] glass-ink-faint",
+																: "bg-primary/[0.08] glass-ink-faint",
 														)}
 													>
 														{t(badgeKey)}
@@ -160,7 +164,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 
 					{/* identity */}
 					{mounted && user && (
-					<motion.div {...reveal()} className="rounded-xl bg-[#171614] p-3">
+					<motion.div {...reveal()} className="rounded-[20px] bg-primary/[0.04] p-3">
 						<div className="flex items-center gap-2.5">
 							{/* No guard: SafeAvatar owns the missing-picture case, and
 							    hiding the circle left the name floating alone. */}
@@ -174,7 +178,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 										.join(" ") ||
 										(user?.username ? `@${user.username}` : "")}
 								</span>
-								<span className="mt-0.5 inline-flex rounded-pill bg-[var(--ws-brand-primary)]/12 px-1.5 py-px font-sans text-[calc(10px*var(--ws-fs))] font-bold uppercase tracking-[0.08em] text-[var(--ws-brand-primary)]">
+								<span className="mt-0.5 inline-flex rounded-pill bg-brand/[0.12] px-1.5 py-px font-sans text-[calc(10px*var(--ws-fs))] font-bold uppercase tracking-[0.08em] text-brand">
 									{t("studio.creatorBadge")}
 								</span>
 							</span>
@@ -188,14 +192,14 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 					{/* Mobile bar: back + title + section chips. */}
 					<motion.header
 						layoutRoot
-						className="sticky top-0 z-sticky bg-[#0F0E0D] px-3 pb-2 pt-3 md:hidden"
+						className="sticky top-0 z-sticky bg-page/75 px-3 pb-2 pt-3 backdrop-blur-xl backdrop-saturate-150 md:hidden"
 					>
 						<div className="flex items-center gap-2">
 							<Link
 								href="/"
 						onClick={(e) => { e.preventDefault(); goBack("/"); }}
 								aria-label={t("studio.back")}
-								className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#fafaf9]/[0.06] glass-ink"
+								className="flex h-10 w-10 items-center justify-center rounded-pill bg-primary/[0.06] text-primary"
 							>
 								<ArrowLeft size={15} weight="bold" />
 							</Link>
@@ -225,14 +229,14 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 										"relative flex h-8 shrink-0 items-center gap-1.5 rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
 										isActive(href)
 											? "text-brand-on"
-											: "bg-[#fafaf9]/[0.06] glass-ink-dim",
+											: "bg-primary/[0.06] glass-ink-dim",
 									)}
 								>
 									{isActive(href) && (
 										<motion.span
 											layoutId="studio-chip-thumb"
 											transition={thumbSpring}
-											className="absolute inset-0 rounded-pill bg-[var(--ws-brand-primary)]"
+											className="absolute inset-0 rounded-pill bg-brand"
 										/>
 									)}
 									<Icon
@@ -246,7 +250,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
 						</motion.div>
 					</motion.header>
 
-					<main className="flex-1 px-3 pb-8 pt-3 md:px-6 md:pt-6">
+					<main className="flex-1 px-4 pb-10 pt-3 md:px-10 md:pt-8">
 						<div className="mx-auto w-full max-w-[1200px] animate-rise">
 							{children}
 						</div>

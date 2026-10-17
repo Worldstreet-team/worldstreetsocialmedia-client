@@ -5,15 +5,15 @@ import type { Preferences } from "@/lib/preferences";
 import { Choice, Toggle } from "./SettingRows";
 
 /**
- * Privacy. Three of these are deliberately reciprocal: the app will not
- * sell you other people's presence while hiding your own, and saying so in
- * the hint is the honest thing rather than letting someone discover it.
+ * Visibility: what other people can see about you outside a chat. The chat
+ * side of privacy (who can message you, read receipts, typing) lives in
+ * Messages since the regroup (owner 2026-10-07).
  *
  * Every one is enforced on the gateway as well as here - a privacy setting
  * the server does not enforce is worse than none, because it reads as a
  * promise the app is not keeping.
  */
-export function PrivacySettings() {
+export function VisibilitySettings() {
 	const { prefs, setPrefs } = usePreferences();
 	const p = prefs.privacy;
 	return (
@@ -21,46 +21,9 @@ export function PrivacySettings() {
 			<Toggle
 				label="Show when I'm online"
 				hint="Your green dot and the last-seen line in a chat. Turning it off hides other people's from you too."
+				tag="both"
 				checked={p.showActivity}
 				onChange={(v) => setPrefs({ privacy: { showActivity: v } })}
-			/>
-			<Toggle
-				label="Show when I'm typing"
-				hint="Whether people see “typing…” and “recording…” from you. Off both ways: you stop seeing theirs."
-				checked={p.typingIndicators}
-				onChange={(v) => setPrefs({ privacy: { typingIndicators: v } })}
-			/>
-			<Toggle
-				label="Send read receipts"
-				hint="The Seen mark under a message you have opened. Off both ways. Your own unread count still clears."
-				checked={p.readReceipts}
-				onChange={(v) => setPrefs({ privacy: { readReceipts: v } })}
-			/>
-			<Choice
-				label="Who can start a chat with you"
-				hint="Anyone can open a chat today, and a stranger's first message waits on your Requests shelf. Allies only turns it away at the door."
-				value={p.dmFrom}
-				options={[
-					["everyone", "Anyone"],
-					["allies", "Allies only"],
-				]}
-				onPick={(v) =>
-					setPrefs({ privacy: { dmFrom: v as Preferences["privacy"]["dmFrom"] } })
-				}
-			/>
-			<Choice
-				label="Who can add you to groups"
-				hint="Anyone outside this sends you an invite instead, which waits on your Requests shelf for three days."
-				value={p.groupAdd}
-				options={[
-					["everyone", "Anyone"],
-					["following", "People you follow"],
-					["allies", "Allies only"],
-					["nobody", "Nobody, always ask"],
-				]}
-				onPick={(v) =>
-					setPrefs({ privacy: { groupAdd: v as Preferences["privacy"]["groupAdd"] } })
-				}
 			/>
 			<Toggle
 				label="Show my likes on my profile"
@@ -72,18 +35,13 @@ export function PrivacySettings() {
 	);
 }
 
-/** Notification behaviour that lives on the preferences layer. */
+/** Notification behaviour that lives on the preferences layer. Message
+ *  pop-ups moved to Messages, where people look for them. */
 export function NotificationBehaviour() {
 	const { prefs, setPrefs } = usePreferences();
 	const n = prefs.notifications;
 	return (
 		<div className="flex flex-col">
-			<Toggle
-				label="Pop-ups for new messages"
-				hint="A short banner when a message arrives while you are elsewhere in the app. The unread count still counts it either way."
-				checked={n.messageAlerts}
-				onChange={(v) => setPrefs({ notifications: { messageAlerts: v } })}
-			/>
 			<Choice
 				label="Open notifications on"
 				hint="The tab the notifications screen starts on. You can still switch once you are there."

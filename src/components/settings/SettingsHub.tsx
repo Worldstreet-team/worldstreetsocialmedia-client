@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
-import { SECTIONS, type SectionId } from "@/components/settings/sections";
+import { CATEGORIES, SECTIONS, type SectionId } from "@/components/settings/sections";
 import { LOCALE_COOKIE } from "@/i18n/config";
 import { useT } from "@/i18n/client";
 import { normalizeCategoryIds } from "@/lib/categories";
@@ -49,11 +49,6 @@ const LANGUAGE: Record<string, string> = {
 
 const NOTIFY_KEYS = ["like", "reply", "repost", "mention", "follow", "live"] as const;
 
-const GROUPS: { label: string; ids: SectionId[] }[] = [
-	{ label: "App", ids: ["notifications", "safety", "display", "data", "topics"] },
-	{ label: "Account", ids: ["account", "premium"] },
-];
-
 type TileKey = "theme" | "text" | "saver" | "dm";
 
 export function SettingsHub() {
@@ -76,7 +71,7 @@ export function SettingsHub() {
 	const textScale = prefs.a11y.textScale;
 	const textLabel = textScale === "auto" ? "Device" : `${textScale}%`;
 	const saverLabel = { auto: "Automatic", on: "On", off: "Off" }[prefs.data.saver];
-	const dmLabel = prefs.privacy.dmFrom === "everyone" ? "Everyone" : "People you follow";
+	const dmLabel = prefs.privacy.dmFrom === "everyone" ? "Anyone" : "Allies only";
 
 	// What each section is set to, in a few words. A row that answers the
 	// question is a visit that ends here.
@@ -89,10 +84,13 @@ export function SettingsHub() {
 			notifyOn === NOTIFY_KEYS.length
 				? "All on"
 				: `${notifyOn} of ${NOTIFY_KEYS.length} on`,
-		safety: prefs.privacy.dmFrom === "everyone" ? "Anyone can message" : "Follows can message",
+		messages: prefs.privacy.dmFrom === "everyone" ? "Anyone can message" : "Allies only",
+		privacy: prefs.privacy.showActivity ? "Online status shown" : "Online status hidden",
+		muted: "",
+		blocked: "",
 		display: `${mode === "light" ? "Light" : "Dark"} · ${textLabel} · ${LANGUAGE[locale] ?? locale}`,
 		data: `Data saver ${saverLabel.toLowerCase()}`,
-		topics: topics ? `${topics} chosen` : "None chosen",
+		feed: topics ? `${topics} topics` : "No topics chosen",
 		account: user?.username ? `@${user.username}` : "",
 		premium: user?.isVerified ? "Verified" : "Not verified",
 	};
@@ -131,7 +129,7 @@ export function SettingsHub() {
 				))}
 			</motion.div>
 
-			{GROUPS.map((group) => (
+			{CATEGORIES.map((group) => (
 				<motion.nav
 					key={group.label}
 					variants={staggerItem}
@@ -225,8 +223,8 @@ export function SettingsHub() {
 				title="Who can start a chat with you"
 				value={prefs.privacy.dmFrom}
 				options={[
-					["everyone", "Everyone"],
-					["allies", "People you follow"],
+					["everyone", "Anyone"],
+					["allies", "Allies only"],
 				]}
 				onPick={(v) =>
 					setPrefs({ privacy: { dmFrom: v as Preferences["privacy"]["dmFrom"] } })

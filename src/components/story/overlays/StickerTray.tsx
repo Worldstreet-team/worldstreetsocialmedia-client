@@ -11,52 +11,45 @@ import dynamic from "next/dynamic";
 const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
   ssr: false,
 });
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import { useEffect, useId, useState } from "react";
 import { UserBadges } from "@/components/ui/UserBadges";
 import type { MentionUser } from "@/components/feed/MentionAutocomplete";
 
-import { CASHTAG_COLORS, MENTION_COLORS } from "@/lib/editor/overlays";
-import { menu, pop, thumbSpring } from "@/lib/motion-presets";
+import { MENTION_COLORS } from "@/lib/editor/overlays";
+import { menu, thumbSpring } from "@/lib/motion-presets";
 import { searchUsersAction } from "@/lib/user.actions";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 interface StickerTrayProps {
-  onAddCashtag: (symbol: string) => void;
   onAddEmoji: (emoji: string) => void;
   onAddMention: (user: MentionUser) => void;
   onClose: () => void;
 }
 
-type Tab = "tag" | "cashtag" | "emoji";
+// The ticker tab is gone (owner 2026-10-12: "remove those tickers").
+type Tab = "tag" | "emoji";
 const TABS: { id: Tab; label: string }[] = [
   { id: "tag", label: "Tag" },
-  { id: "cashtag", label: "Ticker" },
   { id: "emoji", label: "Emoji" },
 ];
 
-const SYMBOL_RE = /^[A-Za-z]{1,6}$/;
-
 /**
- * The sticker tray — the brand-unique cashtag chip (any $SYMBOL, styled
- * like RichText's convert chips, no market API needed) plus the emoji
- * picker the composer already ships.
+ * The sticker tray: tag a person, or drop an emoji from the same picker
+ * the composer ships.
  */
 export default function StickerTray({
-  onAddCashtag,
   onAddEmoji,
   onAddMention,
   onClose,
 }: StickerTrayProps) {
   const [tab, setTab] = useState<Tab>("tag");
-  const [symbol, setSymbol] = useState("");
   const [query, setQuery] = useState("");
   const [people, setPeople] = useState<MentionUser[]>([]);
   const [searching, setSearching] = useState(false);
   const { resolvedTheme } = useTheme();
   const thumbId = useId();
-  const valid = SYMBOL_RE.test(symbol);
 
   // Debounced people search — the gateway 400s on an empty query, so a blank
   // box simply shows nothing rather than firing a doomed request.
@@ -83,11 +76,6 @@ export default function StickerTray({
     };
   }, [query]);
 
-  const submitCashtag = () => {
-    if (!valid) return;
-    onAddCashtag(symbol.toUpperCase());
-    setSymbol("");
-  };
 
   return (
     // Unfolds from the stage's bottom edge; the host's AnimatePresence gives
@@ -204,61 +192,6 @@ export default function StickerTray({
               </button>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Cashtag chip builder */}
-      {tab === "cashtag" && (
-        <div className="shrink-0 px-3 pb-3">
-          <div className="flex items-center gap-2">
-            <div className="flex-1 flex items-center h-10 rounded-pill glass-input transition-colors px-4 gap-1">
-              <span className="text-gold font-semibold font-sans">$</span>
-              <input
-                type="text"
-                value={symbol}
-                onChange={(e) =>
-                  setSymbol(
-                    e.target.value.replace(/[^A-Za-z]/g, "").slice(0, 6),
-                  )
-                }
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") submitCashtag();
-                }}
-                placeholder="XAU"
-                aria-label="Cashtag symbol"
-                className="flex-1 bg-transparent outline-none text-base sm:text-sm font-sans uppercase glass-ink placeholder:glass-ink-faint tabular-nums"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={submitCashtag}
-              disabled={!valid}
-              className="shrink-0 h-10 px-5 rounded-pill font-semibold text-sm font-sans glass-cta transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-            >
-              Add
-            </button>
-          </div>
-          {/* Lands once, on the first valid letter; later letters retype
-              it in place. */}
-          <AnimatePresence initial={false}>
-          {symbol && valid && (
-            <div key="chip-preview" className="mt-3 flex justify-center">
-              <motion.span
-                {...pop}
-                className="rounded-pill px-3 py-1 text-sm font-semibold tabular-nums"
-                style={{
-                  color: CASHTAG_COLORS.text,
-                  background: CASHTAG_COLORS.pill,
-                  border: `1.5px solid ${CASHTAG_COLORS.border}`,
-                  fontFamily:
-                    'ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace',
-                }}
-              >
-                ${symbol.toUpperCase()}
-              </motion.span>
-            </div>
-          )}
-          </AnimatePresence>
         </div>
       )}
 

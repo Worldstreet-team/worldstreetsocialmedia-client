@@ -99,7 +99,7 @@ export function GifPicker({
 			{open && (
 				<>
 					<OverlayScrim onClose={onClose} dim={false} />
-					<OverlayPanel dragClose={onClose} variant="anchored" label="GIFs">
+					<OverlayPanel ground="solid" dragClose={onClose} variant="anchored" label="GIFs">
 						<OverlayHeader onClose={onClose}>
 							<input
 								// biome-ignore lint/a11y/noAutofocus: search is the whole point of opening it

@@ -59,8 +59,8 @@ export default function StudioPosts() {
 		<div>
 			<PageHead title={t("studio.nav.posts")} />
 
-			<div className="rounded-2xl bg-[#171614] overflow-hidden">
-				<div className="hidden sm:grid grid-cols-[1fr_repeat(4,72px)_28px] gap-2 px-4 py-2.5 border-b border-[#fafaf9]/[0.05] glass-eyebrow font-sans">
+			<div className="rounded-2xl bg-primary/[0.04] overflow-hidden">
+				<div className="hidden sm:grid grid-cols-[1fr_repeat(4,72px)_28px] gap-2 px-4 py-2.5 glass-eyebrow font-sans">
 					<span>{t("studio.col.post")}</span>
 					<span className="text-right">{t("studio.impressions")}</span>
 					<span className="text-right">{t("post.like")}</span>
@@ -71,7 +71,7 @@ export default function StudioPosts() {
 				{loading ? (
 					<div className="p-4 space-y-3">
 						{[1, 2, 3].map((i) => (
-							<div key={i} className="h-10 rounded-lg bg-[#fafaf9]/[0.05] animate-pulse" />
+							<div key={i} className="h-10 rounded-lg bg-primary/[0.05] animate-pulse" />
 						))}
 					</div>
 				) : rows.length === 0 ? (
@@ -92,7 +92,7 @@ export default function StudioPosts() {
 								key={row.id}
 								variants={i < 8 ? staggerItem : undefined}
 								onClick={() => setOpenId(row.id)}
-								className="grid w-full grid-cols-[1fr_28px] sm:grid-cols-[1fr_repeat(4,72px)_28px] items-center gap-2 px-4 py-3 border-b border-[#fafaf9]/[0.05] last:border-0 hover:bg-[#fafaf9]/[0.06] transition-colors text-left cursor-pointer"
+								className="grid w-full grid-cols-[1fr_28px] sm:grid-cols-[1fr_repeat(4,72px)_28px] items-center gap-2 px-4 py-3 hover:bg-primary/[0.06] transition-colors text-left cursor-pointer"
 							>
 								<span className="min-w-0">
 									<span className="block font-sans text-[calc(14px*var(--ws-fs))] glass-ink truncate">
@@ -149,7 +149,7 @@ export default function StudioPosts() {
 							   dark cards on a white sheet in light mode, so this one
 							   owns its ground. */
 							ground="none"
-							className="border border-hairline bg-[#171614] shadow-nav sm:w-[min(880px,94vw)]"
+							className="border border-hairline bg-primary/[0.04] shadow-nav sm:w-[min(880px,94vw)]"
 						>
 							<OverlayHeader
 								title={
@@ -172,7 +172,7 @@ export default function StudioPosts() {
 					type="button"
 					{...press}
 					onClick={() => load(cursor)}
-					className="mt-4 h-9 px-4 rounded-pill bg-[#fafaf9]/[0.06] glass-ink-dim hover:glass-ink hover:bg-[#fafaf9]/[0.1] font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors cursor-pointer"
+					className="mt-4 h-9 px-4 rounded-pill bg-primary/[0.06] glass-ink-dim hover:glass-ink hover:bg-primary/[0.1] font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors cursor-pointer"
 				>
 					{t("rail.showMore")}
 				</motion.button>

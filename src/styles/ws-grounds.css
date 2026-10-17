@@ -1,0 +1,77 @@
+/*
+ * App grounds: the surface family of the whole app, chosen in Settings >
+ * Appearance (owner 2026-10-09). Registry and reasoning: src/data/grounds.ts.
+ *
+ * RULES (the palette file's, for the same reasons):
+ * 1. A ground declares ONLY the bg-* steps, --ws-text-primary and
+ *    --ws-text-muted. Subtle ink and the hairline derive from these in
+ *    globals.css, so High contrast still wins under every ground.
+ * 2. Always the two-attribute form, one block per mode.
+ * 3. Lagoon, the default, has no block: it is the base in globals.css.
+ */
+
+/* Midnight: the true-black ladder WorldSpace shipped until 2026-10-09. */
+html[data-ws-ground="midnight"][data-ws-theme="platform"] {
+	--ws-bg-page: #000000;
+	--ws-bg-sunken: #0a0a0a;
+	--ws-bg-surface: #0d0d0d;
+	--ws-bg-raised: #1a1a1a;
+	--ws-bg-chip: #1a1a1a;
+	--ws-bg-track: #0a0a0a;
+	--ws-text-primary: #ffffff;
+	--ws-text-muted: rgba(255, 255, 255, 0.62);
+}
+html[data-ws-ground="midnight"][data-ws-theme="platform-light"] {
+	--ws-bg-page: #ffffff;
+	--ws-bg-sunken: #fafaf9;
+	--ws-bg-surface: #ffffff;
+	--ws-bg-raised: #f5f5f4;
+	--ws-bg-chip: #f5f5f4;
+	--ws-bg-track: #fafaf9;
+	--ws-text-primary: #0c0a09;
+	--ws-text-muted: #6b625c;
+}
+
+/* Graphite: neutral grey, no tint. */
+html[data-ws-ground="graphite"][data-ws-theme="platform"] {
+	--ws-bg-page: #111113;
+	--ws-bg-sunken: #0c0c0e;
+	--ws-bg-surface: #18181b;
+	--ws-bg-raised: #232327;
+	--ws-bg-chip: #232327;
+	--ws-bg-track: #0c0c0e;
+	--ws-text-primary: #fafafa;
+	--ws-text-muted: #a1a1aa;
+}
+html[data-ws-ground="graphite"][data-ws-theme="platform-light"] {
+	--ws-bg-page: #f4f4f5;
+	--ws-bg-sunken: #ececee;
+	--ws-bg-surface: #ffffff;
+	--ws-bg-raised: #ececee;
+	--ws-bg-chip: #e4e4e7;
+	--ws-bg-track: #ececee;
+	--ws-text-primary: #18181b;
+	--ws-text-muted: #52525b;
+}
+
+/* Dune: warm sand and stone. */
+html[data-ws-ground="dune"][data-ws-theme="platform"] {
+	--ws-bg-page: #12100e;
+	--ws-bg-sunken: #0d0b0a;
+	--ws-bg-surface: #1a1714;
+	--ws-bg-raised: #26211c;
+	--ws-bg-chip: #26211c;
+	--ws-bg-track: #0d0b0a;
+	--ws-text-primary: #faf6f0;
+	--ws-text-muted: #b8ae9f;
+}
+html[data-ws-ground="dune"][data-ws-theme="platform-light"] {
+	--ws-bg-page: #f7f3ec;
+	--ws-bg-sunken: #efe9df;
+	--ws-bg-surface: #fffdf9;
+	--ws-bg-raised: #efe8dc;
+	--ws-bg-chip: #e8dfd0;
+	--ws-bg-track: #efe9df;
+	--ws-text-primary: #1f1a14;
+	--ws-text-muted: #6b5f50;
+}

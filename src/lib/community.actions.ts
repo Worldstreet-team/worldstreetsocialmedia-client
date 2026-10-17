@@ -198,6 +198,9 @@ export async function getCommunityHomeAction(cursor: string | null = null) {
 		});
 		return {
 			success: true,
+			// True when they're in none yet: the posts are from the biggest
+			// communities, not their own.
+			popular: Boolean(res.data?.popular),
 			posts: res.data?.posts ?? [],
 			communities: res.data?.communities ?? [],
 			nextCursor: res.data?.nextCursor ?? null,

@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "../styles/ws-tokens.css";
 @import "../styles/ws-palettes.css";
+@import "../styles/ws-grounds.css";
 @import "../styles/chat-chrome.css";
 
 /* Map the WorldStreet design tokens onto Tailwind utilities.
@@ -43,41 +44,59 @@
     monospace;
 }
 
-/* Dark is BLACK (owner 2026-09-15), not the stone ladder the token file
-   ships. Each step is a white wash over black, stored as its opaque
-   equivalent: surface = white/5, raised/chip = white/10. Opaque on purpose,
-   because bg-surface paints every modal, sheet and menu and a translucent
-   panel would show the page through it. The two live washes for chrome are
-   bg-primary/5 (resting: search wells, icon pills, hover) and bg-primary/10
-   (active) - on black the ink IS white, and on paper they flip to black
-   washes, which a literal bg-white/5 never would. Text greys keep the stone
-   values by owner choice. Lives here, not in the vendored token file, so it
-   survives the next re-sync; light mode is untouched. The selector is
-   html[...] on purpose: a bare [data-ws-theme="platform"] block was folded
-   away by the CSS optimiser because the token file already carries that
-   selector in a group, and the html prefix also outranks it. */
+/* The ground is LAGOON (owner 2026-10-09, design system 01 on the canvas),
+   replacing the true-black ladder of 2026-09-15, which lives on as the
+   "Midnight" ground (src/styles/ws-grounds.css, src/data/grounds.ts).
+   Soft blue-slate steps, opaque on purpose: bg-surface paints every modal,
+   sheet and menu, and a translucent panel would show the page through it.
+
+   Subtle ink and the hairline are DERIVED from the ground, so every ground
+   gets them right with no values of its own, and so High contrast (which
+   overrides exactly these two, later in this file at the same specificity)
+   still wins. The hairline is deliberately faint: depth comes from the
+   surface steps and soft shadows, not outlines (owner 2026-10-09: "use
+   less of borders"). 62% subtle on the Lagoon page is about 4.6:1.
+
+   The selector is html[...] on purpose: a bare [data-ws-theme="platform"]
+   block was folded away by the CSS optimiser because the token file
+   already carries that selector in a group, and the html prefix also
+   outranks it. */
 html[data-ws-theme="platform"] {
-  --ws-bg-page: #000000;
-  --ws-bg-sunken: #0a0a0a;
-  --ws-bg-surface: #0d0d0d;
-  --ws-bg-raised: #1a1a1a;
-  --ws-bg-chip: #1a1a1a;
-  /* Ink is WHITE and its variations (owner 2026-09-15, revising the earlier
-     "keep the stone greys"): primary pure white, secondary white at 62%,
-     tertiary white at 42%. Alpha, not solid greys, so the same ink reads
-     right over the black page, a white/5 surface and a white/10 chip
-     alike, and so bg-primary/5 and bg-primary/10 are exactly white/5 and
-     white/10. 62% on black is 9.6:1, 42% is 4.6:1 (subtle is decorative
-     only, never under 13px). */
-  --ws-text-primary: #ffffff;
-  --ws-text-muted: rgba(255, 255, 255, 0.62);
-  --ws-text-subtle: rgba(255, 255, 255, 0.42);
+  --ws-bg-page: #0b0f14;
+  --ws-bg-sunken: #080b0f;
+  --ws-bg-surface: #121821;
+  --ws-bg-raised: #1c2533;
+  --ws-bg-chip: #1c2533;
+  --ws-bg-track: #080b0f;
+  --ws-text-primary: #f3f7fb;
+  --ws-text-muted: #b4c0cf;
+  --ws-text-subtle: color-mix(in srgb, var(--ws-text-muted) 62%, var(--ws-bg-page));
+  --ws-border-hairline: color-mix(in srgb, var(--ws-text-primary) 7%, transparent);
+}
+html[data-ws-theme="platform-light"] {
+  --ws-bg-page: #f3f6f9;
+  --ws-bg-sunken: #eaf0f5;
+  --ws-bg-surface: #ffffff;
+  --ws-bg-raised: #eaf0f5;
+  --ws-bg-chip: #e6edf4;
+  --ws-bg-track: #eaf0f5;
+  --ws-text-primary: #0e1722;
+  --ws-text-muted: #4a5a6d;
+  --ws-text-subtle: color-mix(in srgb, var(--ws-text-muted) 80%, var(--ws-bg-page));
+  --ws-border-hairline: color-mix(in srgb, var(--ws-text-primary) 8%, transparent);
 }
 
-/* Softer elevation on paper (referenced from @theme inline below). */
+/* Elevation and corners, Lagoon (owner 2026-10-09): diffuse shadows that
+   lift a surface without an outline, and softer corners across the
+   ladder (6 / 8 / 10 / 14, cards 24). Referenced from @theme inline. */
 :root {
-  --ws-shadow-nav: 0 3px 8px rgb(0 0 0 / 0.45);
-  --ws-shadow-sheet: 0 -2px 12px rgb(0 0 0 / 0.35);
+  --radius: 0.625rem;
+  --radius-2xl: 24px;
+  --ws-shadow-nav: 0 4px 14px rgb(0 0 0 / 0.4);
+  --ws-shadow-sheet: 0 -8px 40px rgb(0 0 0 / 0.45);
+  /* A card resting on the page; a menu or popover floating over it. */
+  --ws-shadow-card: 0 4px 14px rgb(0 0 0 / 0.35);
+  --ws-shadow-pop: 0 12px 32px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.3);
 
   /* Mobile chrome geometry. MobileBottomNav is a 64px bar plus the iOS home
        indicator, and it's `fixed`, so it covers the tail of every scrolling
@@ -99,8 +118,10 @@ html[data-ws-theme="platform"] {
   );
 }
 [data-ws-theme="platform-light"] {
-  --ws-shadow-nav: 0 3px 8px rgb(0 0 0 / 0.12);
-  --ws-shadow-sheet: 0 -2px 12px rgb(0 0 0 / 0.1);
+  --ws-shadow-nav: 0 4px 14px rgb(26 43 66 / 0.08);
+  --ws-shadow-sheet: 0 -8px 40px rgb(26 43 66 / 0.14);
+  --ws-shadow-card: 0 4px 14px rgb(26 43 66 / 0.08);
+  --ws-shadow-pop: 0 12px 32px rgb(26 43 66 / 0.16), 0 2px 6px rgb(26 43 66 / 0.06);
 }
 
 /* One extra breakpoint below Tailwind's `sm`. Small-phone territory (320-399px)
@@ -167,10 +188,14 @@ html[data-ws-theme="platform"] {
   --font-script: var(--ws-font-script);
   --font-mono: var(--ws-font-mono);
 
-  /* The only two sanctioned elevation styles (01-foundations, "Elevation").
+  /* The sanctioned elevation styles: nav and sheet (01-foundations), plus
+     card and pop from Lagoon (2026-10-09) for resting cards and floating
+     menus, which now lift on shadow instead of an outline.
        Everything else gets depth from the surface ladder, not shadow. */
   --shadow-nav: var(--ws-shadow-nav);
   --shadow-sheet: var(--ws-shadow-sheet);
+  --shadow-card: var(--ws-shadow-card);
+  --shadow-pop: var(--ws-shadow-pop);
 }
 
 /* WorldSpace house wallpaper: the default thread and the no-thread state.
@@ -332,12 +357,24 @@ html {
 /* emoji-picker-react ships its own palette; re-point its CSS variables at the
    token vocabulary so the popover sits on the surface ladder like every other
    dropdown. Wrapped class set by the composers' popover container. */
-.ws-emoji-picker .EmojiPickerReact {
-  --epr-bg-color: var(--ws-bg-surface);
-  --epr-category-label-bg-color: var(--ws-bg-surface);
+/* Doubled class + the theme classes: the library's .epr-dark-theme /
+   .epr-light-theme set the same vars at higher specificity and were winning,
+   which painted a black search box with a cyan ring (owner 2026-10-16,
+   "the pop ups aren't showing up properly"). Transparent ground so the
+   picker sits on the composer's glass. */
+.ws-emoji-picker .EmojiPickerReact.EmojiPickerReact,
+.ws-emoji-picker .EmojiPickerReact.epr-dark-theme,
+.ws-emoji-picker .EmojiPickerReact.epr-light-theme,
+.ws-emoji-picker .EmojiPickerReact.epr-auto-theme {
+  --epr-bg-color: transparent;
+  --epr-category-label-bg-color: transparent;
+  --epr-search-input-bg-color-active: var(--ws-bg-raised);
+  --epr-search-border-color-active: transparent;
+  --epr-category-navigation-button-size: 28px;
+  border: none;
   --epr-picker-border-color: var(--ws-border-hairline);
-  --epr-search-input-bg-color: var(--ws-bg-sunken);
-  --epr-search-border-color: var(--ws-border-hairline);
+  --epr-search-input-bg-color: color-mix(in srgb, var(--ws-text-primary) 7%, transparent);
+  --epr-search-border-color: transparent;
   --epr-text-color: var(--ws-text-primary);
   --epr-search-input-text-color: var(--ws-text-primary);
   --epr-search-input-placeholder-color: var(--ws-text-subtle);
@@ -348,8 +385,11 @@ html {
   --epr-emoji-hover-color: var(--ws-bg-raised);
   --epr-active-skin-tone-indicator-border-color: var(--ws-brand-primary);
   border-radius: var(--ws-radius-xl);
-  box-shadow: var(--ws-shadow-nav);
+  box-shadow: none;
   font-family: var(--ws-font-ui);
+}
+.ws-emoji-picker .EmojiPickerReact .epr-search-container input.epr-search {
+  border-radius: 999px;
 }
 
 /* ── Editor glass chrome (owner ruling 2026-08-25) ─────────────────────────
@@ -520,6 +560,56 @@ html {
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+}
+
+/* ── Creator chrome follows the theme (owner 2026-10-11: "make the theme
+   dark or what the user chose") ─────────────────────────────────────────
+   The glass family above is fixed-dark with white ink, which is right ON a
+   picture and wrong for the panels around it. Anything inside `.ws-chrome`
+   (the studio's header and dock, the create sheets) maps the same class
+   names onto the theme's tokens, so one wrapper re-themes a whole surface
+   and the controls that float over the photo keep their dark glass. */
+.ws-chrome .glass-ink { color: var(--ws-text-primary); }
+.ws-chrome .glass-ink-dim { color: var(--ws-text-muted); }
+.ws-chrome .glass-ink-faint,
+.ws-chrome .glass-eyebrow { color: var(--ws-text-subtle); }
+.ws-chrome .glass-input {
+  background: var(--ws-bg-raised);
+  color: var(--ws-text-primary);
+}
+.ws-chrome .glass-input::placeholder { color: var(--ws-text-subtle); }
+.ws-chrome .glass-input:focus,
+.ws-chrome .glass-input:focus-within {
+  background: color-mix(in srgb, var(--ws-text-primary) 8%, var(--ws-bg-raised));
+}
+.ws-chrome .glass-chip,
+.ws-chrome .glass-card {
+  background: var(--ws-bg-raised);
+  color: var(--ws-text-primary);
+}
+.ws-chrome .glass-chip-active {
+  background: var(--ws-text-primary);
+  color: var(--ws-bg-page);
+}
+.ws-chrome .glass-cta {
+  background: var(--ws-brand-primary);
+  color: var(--ws-brand-on-primary);
+}
+.ws-chrome .glass-divider { border-color: var(--ws-border-hairline); }
+
+/* ── On a dark overlay, in either theme (owner 2026-10-13: "a dark overlay
+   for the backgrounds on dark mode and light mode so the blurs are darker").
+   Surfaces that sit on a room's blurred cover under a deep wash read as
+   dark everywhere, so their ink is pinned light here. The theme tokens are
+   wired @theme inline, so re-pointing them on a subtree is enough. */
+.ws-on-dark {
+  --ws-text-primary: #eef2f6;
+  --ws-text-muted: #8c97a6;
+  --ws-text-subtle: #5d6878;
+  --ws-bg-surface: #0b0f15;
+  --ws-bg-raised: #1c2533;
+  --ws-border-hairline: rgb(255 255 255 / 0.08);
+  color: var(--ws-text-primary);
 }
 
 /* react-easy-crop ships neutral chrome; re-skin it for the glass editor —
@@ -1795,20 +1885,21 @@ html[data-ws-saver] video[autoplay] {
    Class rules, not tokens, because the glass fills are literals by design
    (a frost is a fill plus an alpha, not a surface step). html[...] to
    outrank the bare class, and last in the file so nothing folds it away. */
-html[data-ws-theme="platform"] .glass-frost {
-  background: rgb(20 20 20 / 0.82);
+/* Since Lagoon and the grounds (2026-10-09) the glass is mixed FROM the
+   ground's own steps, so a frosted panel is always a step of whichever
+   ground is chosen, never a fixed grey over a blue or warm page. Light
+   mode follows too. The track lives in the ground blocks now. */
+html[data-ws-theme="platform"] .glass-frost,
+html[data-ws-theme="platform-light"] .glass-frost {
+  background: color-mix(in srgb, var(--ws-bg-surface) 86%, transparent);
 }
-html[data-ws-theme="platform"] .glass-nav {
-  background: rgb(22 22 22 / 0.72);
+html[data-ws-theme="platform"] .glass-nav,
+html[data-ws-theme="platform-light"] .glass-nav {
+  background: color-mix(in srgb, var(--ws-bg-surface) 76%, transparent);
 }
-html[data-ws-theme="platform"] .glass-toast {
-  background: rgb(38 38 38 / 0.72);
-}
-/* The segmented-control track was the last stone in the ladder: #141110
-   from the vendored token file, which the 2026-09-15 black override never
-   listed. It sits under every Tabs thumb. */
-html[data-ws-theme="platform"] {
-  --ws-bg-track: #111111;
+html[data-ws-theme="platform"] .glass-toast,
+html[data-ws-theme="platform-light"] .glass-toast {
+  background: color-mix(in srgb, var(--ws-bg-raised) 80%, transparent);
 }
 
 /* ── The house wallpaper wears the palette (owner 2026-09-20) ───────────

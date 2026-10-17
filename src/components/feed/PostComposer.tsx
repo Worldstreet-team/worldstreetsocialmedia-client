@@ -12,6 +12,7 @@ import Image from "next/image";
 import {
 	CaretDown as PhCaretDown,
 	Check as PhCheck,
+	CurrencyCircleDollar as PhCurrencyCircleDollar,
 	FileText as PhFileText,
 	Image as PhImage,
 	Link as PhLink,
@@ -19,7 +20,6 @@ import {
 	Lock as PhLock,
 	Microphone as PhMicrophone,
 	MusicNotes as PhMusicNotes,
-	PaperPlaneRight as PhPaperPlaneRight,
 	PencilSimple as PhPencilSimple,
 	Plus as PhPlus,
 	Smiley as PhSmiley,
@@ -1009,7 +1009,7 @@ export const PostComposer = ({
 			/>
 			<div className="flex gap-2.5 sm:gap-4">
 				<div className="shrink-0">
-					<div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-pill overflow-hidden border border-hairline bg-raised">
+					<div className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-pill overflow-hidden bg-raised">
 						<SafeAvatar
 							src={(profileUser as any)?.avatar || user?.imageUrl}
 							alt={(profileUser as any)?.username || "You"}
@@ -1018,12 +1018,27 @@ export const PostComposer = ({
 					</div>
 				</div>
 				<div className="flex-1 w-full min-w-0">
+					{/* Who sees it sits above the words (post flow, state 01), so
+					    the audience is settled before the first keystroke. */}
+					{(community || myCommunities.length > 0) && (
+						<div className="mb-2 flex items-center">
+							{community ? (
+								<AudienceLock community={community} />
+							) : (
+								<AudiencePicker
+									communities={myCommunities}
+									value={audience}
+									onChange={setAudience}
+								/>
+							)}
+						</div>
+					)}
 					<div className="relative">
 					{!content && (
 						<span className="pointer-events-none absolute left-0 top-0 h-8 w-full">
 							<VanishingPlaceholder
 								texts={PROMPTS.map((k) => t(k))}
-								font="600 18px 'Public Sans', sans-serif"
+								font="500 19px 'Public Sans', sans-serif"
 							/>
 						</span>
 					)}
@@ -1034,7 +1049,7 @@ export const PostComposer = ({
 						onChange={setContent}
 						onQueryChange={setMention}
 						onPaste={handlePaste}
-						className="w-full bg-transparent text-lg text-primary outline-none min-h-[42px] sm:min-h-[60px] font-medium leading-relaxed font-sans whitespace-pre-wrap break-words"
+						className="w-full bg-transparent text-[calc(19px*var(--ws-fs))] text-primary outline-none min-h-[42px] sm:min-h-[72px] leading-relaxed font-sans whitespace-pre-wrap break-words"
 					/>
 					{mention && (
 						<MentionAutocomplete
@@ -1061,7 +1076,7 @@ export const PostComposer = ({
 								// mb-1 sm:mb-0, not mb-2: the clipping wrapper stops this
 								// margin collapsing into the next row's mt, so the old
 								// mb-2 would now stack on it and add 8px under the grid.
-								"grid gap-2 mt-3 mb-1 sm:mb-0 rounded-xl overflow-hidden relative",
+								"grid gap-1.5 mt-3 mb-1 sm:mb-0 rounded-[18px] overflow-hidden relative",
 								// Photos always get the 2-up grid so the add-more
 								// tile can ride alongside; only a lone video goes
 								// full-width.
@@ -1079,7 +1094,7 @@ export const PostComposer = ({
 									animate="show"
 									exit="exit"
 									className={clsx(
-										"relative bg-surface border border-hairline",
+										"relative bg-raised",
 										item.type === "video" &&
 											mediaItems.length === 1
 											? "aspect-video"
@@ -1152,7 +1167,7 @@ export const PostComposer = ({
 													? "Edit video"
 													: "Edit image"
 											}
-											className="flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors"
+											className="flex h-9 w-9 items-center justify-center bg-page/70 backdrop-blur-md hover:bg-page/85 rounded-pill text-primary transition-colors"
 										>
 											<PhPencilSimple size={16} />
 										</button>
@@ -1160,7 +1175,7 @@ export const PostComposer = ({
 											type="button"
 											onClick={() => removeMedia(index)}
 											aria-label="Remove attachment"
-											className="flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-colors"
+											className="flex h-9 w-9 items-center justify-center bg-page/70 backdrop-blur-md hover:bg-page/85 rounded-pill text-primary transition-colors"
 										>
 											<PhX size={24} className="w-4 h-4" />
 										</button>
@@ -1179,7 +1194,7 @@ export const PostComposer = ({
 										}
 										disabled={isPosting}
 										aria-label="Add more photos"
-										className="relative aspect-square border border-dashed border-hairline bg-sunken/30 hover:bg-raised/50 flex flex-col items-center justify-center gap-1.5 text-muted hover:text-primary transition-colors cursor-pointer"
+										className="relative aspect-square bg-raised hover:bg-primary/10 flex flex-col items-center justify-center gap-1.5 text-muted hover:text-primary transition-colors cursor-pointer"
 									>
 										<PhPlus size={24} className="w-6 h-6" />
 										<span className="text-[calc(12px*var(--ws-fs))] font-sans font-medium tabular-nums">
@@ -1203,19 +1218,19 @@ export const PostComposer = ({
 							{...collapse}
 							className="overflow-hidden"
 						>
-						<div className="mt-3 mb-1 sm:mb-0 rounded-xl border border-hairline overflow-hidden bg-surface/50 relative group">
+						<div className="mt-3 mb-1 sm:mb-0 rounded-[18px] overflow-hidden bg-raised relative group">
 							{/* Reveal-on-hover is unreachable on touch there is no
 							    hover state to enter. Always visible below sm. */}
 							<button
 								type="button"
 								onClick={removeLinkPreview}
 								aria-label="Remove link preview"
-								className="absolute top-1.5 right-1.5 flex h-10 w-10 items-center justify-center bg-page/60 hover:bg-page/80 rounded-pill text-primary transition-opacity z-10 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+								className="absolute top-2 right-2 flex h-9 w-9 items-center justify-center bg-page/70 backdrop-blur-md hover:bg-page/85 rounded-pill text-primary transition-colors z-10"
 							>
 								<PhX size={24} className="w-4 h-4" />
 							</button>
 							{linkPreview.image && (
-								<div className="aspect-video relative w-full bg-surface border-b border-hairline/50">
+								<div className="aspect-video relative w-full bg-sunken">
 									<img
 										src={linkPreview.image}
 										alt={linkPreview.title}
@@ -1251,7 +1266,7 @@ export const PostComposer = ({
 							{...collapse}
 							className="overflow-hidden"
 						>
-						<div className="mt-3 mb-1 sm:mb-0 p-4 rounded-xl border border-hairline bg-surface/10 flex items-center justify-center gap-2 text-muted font-sans text-[calc(13px*var(--ws-fs))]">
+						<div className="mt-3 mb-1 sm:mb-0 p-4 rounded-[18px] bg-raised flex items-center justify-center gap-2 text-muted font-sans text-[calc(13px*var(--ws-fs))]">
 							<div className="w-3 h-3 border-2 border-subtle/30 border-t-subtle rounded-full animate-spin" />
 							Fetching preview...
 						</div>
@@ -1259,19 +1274,6 @@ export const PostComposer = ({
 					)}
 					</AnimatePresence>
 
-					{(community || myCommunities.length > 0) && (
-						<div className="mt-2 flex items-center">
-							{community ? (
-								<AudienceLock community={community} />
-							) : (
-								<AudiencePicker
-									communities={myCommunities}
-									value={audience}
-									onChange={setAudience}
-								/>
-							)}
-						</div>
-					)}
 
 					{/* Topics, derived from the draft. Removable — dismissing one
 					    records it in removedTopics so re-typing can't bring it
@@ -1299,7 +1301,7 @@ export const PostComposer = ({
 								<motion.span
 									key={topic.id}
 									{...pop}
-									className="inline-flex h-7 items-center gap-1 rounded-pill bg-raised/60 pl-2.5 pr-1 font-sans text-[calc(12px*var(--ws-fs))] text-muted"
+									className="inline-flex h-7 items-center gap-1 rounded-pill bg-raised pl-2.5 pr-1 font-sans text-[calc(12px*var(--ws-fs))] text-muted"
 								>
 									{topic.label}
 									<button
@@ -1323,37 +1325,28 @@ export const PostComposer = ({
 					{/* Sell this post: a quiet row until armed, then the price field
 					    appears inline with the split spelled out — the 60/40 is shown
 					    to the SELLER here, never to the buyer on the paywall. */}
-					{canSell && (
-					<div className="mt-2 flex flex-wrap items-center gap-2">
-						<motion.button
-							{...press}
-							type="button"
-							onClick={() => setSelling((v) => !v)}
-							aria-pressed={selling}
-							className={clsx(
-								// Bigger on phones (owner: the sell entry was easy to miss on
-								// mobile); desktop keeps the quieter row.
-								"flex h-10 items-center gap-2 rounded-pill px-4 font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold transition-colors cursor-pointer sm:h-9 sm:gap-1.5 sm:px-3 sm:text-[calc(12.5px*var(--ws-fs))]",
-								// Money wears money/credit green, never the brand
-								// accent (owner ruling 2026-08-31).
-								selling
-									? "bg-credit/[0.14] text-credit"
-									: "bg-raised/50 text-muted hover:bg-raised hover:text-primary",
-							)}
-						>
-							{/* Lock and label change hands as one piece; the button
-							    stays mounted so focus survives the toggle. */}
-							<AnimatePresence mode="wait" initial={false}>
-								<motion.span
-									key={selling ? "on" : "off"}
-									{...swap}
-									className="flex items-center gap-2 sm:gap-1.5"
-								>
-									{selling ? <PhLock weight="fill" size={15} /> : <PhLock size={15} />}
-									{selling ? t("composer.sellingOn") : t("composer.sellPost")}
-								</motion.span>
-							</AnimatePresence>
-						</motion.button>
+					{/* Selling is one calm panel under the words (post flow, state 05);
+					    the switch lives in the toolbar as the dollar chip. */}
+					<AnimatePresence initial={false}>
+					{canSell && selling && (
+					<motion.div key="sell-panel" {...collapse} className="overflow-hidden">
+					<div className="mt-3 flex flex-wrap items-center gap-2 rounded-[20px] bg-raised p-3">
+						<div className="flex w-full basis-full items-center gap-2 pb-0.5">
+							<span className="flex h-7 w-7 items-center justify-center rounded-pill bg-credit/[0.14] text-credit">
+								<PhLock weight="fill" size={13} />
+							</span>
+							<span className="min-w-0 flex-1 truncate font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold text-primary">
+								{t("composer.sellingOn")}
+							</span>
+							<button
+								type="button"
+								onClick={() => setSelling(false)}
+								aria-label={t("common.close")}
+								className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-surface text-muted transition-colors hover:text-primary"
+							>
+								<PhX size={14} />
+							</button>
+						</div>
 						{/* The fields are flex siblings of the toggle, so a clipping
 						    `collapse` wrapper would change how the row wraps. They
 						    cascade instead: `contents` keeps this parent out of the
@@ -1381,7 +1374,7 @@ export const PostComposer = ({
 									// state is announced, and the hint below says so.
 									aria-invalid={Boolean(saleTitleMissing && salePrice)}
 									className={clsx(
-										"h-9 w-full min-w-0 flex-1 basis-full rounded-pill border bg-sunken px-3.5 font-sans text-[calc(13px*var(--ws-fs))] text-primary outline-none transition-colors placeholder:text-subtle sm:basis-auto",
+										"h-10 w-full min-w-0 flex-1 basis-full rounded-pill border bg-surface px-4 font-sans text-[calc(13px*var(--ws-fs))] text-primary outline-none transition-colors placeholder:text-subtle sm:basis-auto",
 										saleTitleMissing && salePrice
 											? "border-danger/50"
 											: "border-hairline focus:border-credit/60",
@@ -1389,7 +1382,7 @@ export const PostComposer = ({
 								/>
 								<motion.label
 									variants={staggerItem}
-									className="flex h-9 items-center gap-1 rounded-pill bg-sunken border border-hairline px-3 font-sans text-[calc(13px*var(--ws-fs))] text-primary focus-within:border-credit/60 transition-colors"
+									className="flex h-10 items-center gap-1 rounded-pill bg-surface border border-hairline px-3.5 font-sans text-[calc(13px*var(--ws-fs))] text-primary focus-within:border-credit/60 transition-colors"
 								>
 									<span className="text-muted">$</span>
 									<input
@@ -1433,7 +1426,7 @@ export const PostComposer = ({
 										"flex h-9 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-medium transition-colors",
 										saleHidePreview
 											? "bg-credit/[0.14] text-credit"
-											: "bg-sunken text-muted hover:bg-raised",
+											: "bg-surface text-muted hover:text-primary",
 									)}
 								>
 									{saleHidePreview ? <PhLock weight="fill" size={12} /> : <PhLock size={12} />}
@@ -1443,7 +1436,9 @@ export const PostComposer = ({
 						)}
 						</AnimatePresence>
 					</div>
+					</motion.div>
 					)}
+					</AnimatePresence>
 
 					{/* Poll editor (owner-ratified): 2-4 outline-pill option inputs,
 					    a duration select, one remove affordance. Lives where media
@@ -1451,7 +1446,7 @@ export const PostComposer = ({
 					<AnimatePresence initial={false}>
 					{poll && (
 						<motion.div key="poll-editor" {...collapseUnclipped}>
-						<div className="mt-3 rounded-xl border border-hairline p-3">
+						<div className="mt-3 rounded-[20px] bg-raised p-3">
 							<div className="flex flex-col gap-2">
 								{poll.options.map((opt, i) => (
 									<motion.div
@@ -1484,7 +1479,7 @@ export const PostComposer = ({
 												)
 											}
 											placeholder={`${t("poll.option")} ${i + 1}${i >= 2 ? ` (${t("poll.optional")})` : ""}`}
-											className="h-10 min-w-0 flex-1 rounded-pill border border-hairline bg-transparent px-4 font-sans text-[calc(14px*var(--ws-fs))] text-primary outline-none transition-colors placeholder:text-subtle focus:border-primary/40"
+											className="h-11 min-w-0 flex-1 rounded-pill border border-transparent bg-surface px-4 font-sans text-[calc(14px*var(--ws-fs))] text-primary outline-none transition-colors placeholder:text-subtle focus:border-brand/50"
 										/>
 										{i >= 2 && (
 											<button
@@ -1521,7 +1516,7 @@ export const PostComposer = ({
 													: p,
 											)
 										}
-										className="flex h-8 cursor-pointer items-center gap-1 rounded-pill px-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium text-gold transition-colors hover:bg-raised"
+										className="flex h-8 cursor-pointer items-center gap-1 rounded-pill px-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-brand transition-colors hover:bg-surface"
 									>
 										<PhPlus size={15} />
 										{t("poll.addOption")}
@@ -1543,8 +1538,8 @@ export const PostComposer = ({
 											className={clsx(
 												"flex h-8 cursor-pointer items-center gap-1 rounded-pill px-3 font-sans text-[calc(12.5px*var(--ws-fs))] font-medium transition-colors",
 												pollDurOpen
-													? "bg-raised text-primary"
-													: "bg-raised/70 text-primary hover:bg-raised",
+												? "bg-surface text-primary ring-1 ring-brand/40"
+												: "bg-surface text-primary hover:bg-primary/10",
 											)}
 										>
 											{POLL_DURATIONS.find(
@@ -1580,7 +1575,7 @@ export const PostComposer = ({
 													role="listbox"
 													aria-label={t("poll.duration")}
 													{...menuStagger("bottom-right")}
-													className="absolute bottom-full right-0 z-dropdown mb-1.5 w-36 overflow-hidden rounded-xl card-depth py-1"
+													className="absolute bottom-full right-0 z-dropdown mb-2 w-44 overflow-hidden rounded-[22px] border border-hairline bg-surface p-1.5 shadow-pop"
 												>
 													{POLL_DURATIONS.map((d) => (
 														<motion.button
@@ -1605,7 +1600,7 @@ export const PostComposer = ({
 																setPollDurOpen(false);
 															}}
 															className={clsx(
-																"flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left font-sans text-[calc(13px*var(--ws-fs))] transition-colors hover:bg-raised",
+																"flex h-10 w-full cursor-pointer items-center justify-between rounded-pill px-3.5 text-left font-sans text-[calc(13px*var(--ws-fs))] transition-colors hover:bg-raised",
 																poll.durationHours ===
 																	d.hours
 																	? "font-semibold text-primary"
@@ -1617,7 +1612,7 @@ export const PostComposer = ({
 																d.hours && (
 																<PhCheck
 																	size={14}
-																	className="text-gold"
+																	className="text-brand"
 																/>
 															)}
 														</motion.button>
@@ -1658,8 +1653,8 @@ export const PostComposer = ({
 								className={clsx(
 									"flex h-10 w-10 items-center justify-center rounded-pill transition-colors",
 									linkPreview || poll
-										? "bg-raised/40 text-subtle cursor-not-allowed"
-										: "bg-raised/50 text-muted hover:bg-raised hover:text-primary cursor-pointer",
+										? "text-subtle opacity-50 cursor-not-allowed"
+										: "text-brand hover:bg-raised cursor-pointer",
 								)}
 							>
 								<PhImage size={24} className="h-[18px] w-[18px] shrink-0" />
@@ -1674,8 +1669,8 @@ export const PostComposer = ({
 								className={clsx(
 									"flex h-10 w-10 items-center justify-center rounded-pill transition-colors",
 									linkPreview || poll
-										? "bg-raised/40 text-subtle cursor-not-allowed"
-										: "bg-raised/50 text-muted hover:bg-raised hover:text-primary cursor-pointer",
+										? "text-subtle opacity-50 cursor-not-allowed"
+										: "text-brand hover:bg-raised cursor-pointer",
 								)}
 							>
 								<PhMicrophone className="h-[18px] w-[18px] shrink-0" size={18} />
@@ -1698,10 +1693,10 @@ export const PostComposer = ({
 								className={clsx(
 									"flex h-10 w-10 items-center justify-center rounded-pill transition-colors",
 									mediaItems.length > 0 || selling
-										? "bg-raised/40 text-subtle cursor-not-allowed"
+										? "text-subtle opacity-50 cursor-not-allowed"
 										: poll
-											? "bg-raised text-gold cursor-pointer"
-											: "bg-raised/50 text-muted hover:bg-raised hover:text-primary cursor-pointer",
+											? "bg-brand/15 text-brand cursor-pointer"
+											: "text-brand hover:bg-raised cursor-pointer",
 								)}
 							>
 								<PhListChecks size={24} className="h-[18px] w-[18px] shrink-0" />
@@ -1723,25 +1718,37 @@ export const PostComposer = ({
 								aria-label={t("composer.emoji")}
 								title={t("composer.emoji")}
 								className={clsx(
-									"flex h-10 w-10 justify-center sm:h-9 sm:w-auto sm:justify-start sm:px-3.5 items-center gap-2 rounded-pill font-sans text-[calc(13px*var(--ws-fs))] font-medium transition-colors cursor-pointer",
+									"flex h-10 w-10 items-center justify-center rounded-pill transition-colors cursor-pointer",
 									showEmojiPicker
-										? "bg-raised text-primary"
-										: "bg-raised/50 text-muted hover:bg-raised hover:text-primary",
+										? "bg-brand/15 text-brand"
+										: "text-brand hover:bg-raised",
 								)}
 							>
 								<PhSmiley size={24} className="h-[18px] w-[18px] shrink-0" />
 							</motion.button>
 
-							{content.trim() && (
-								<button
+							{canSell && (
+								<motion.button
+									{...press}
 									type="button"
-									onClick={saveDraft}
-									aria-label={t("composer.saveDraft")}
-									title={t("composer.saveDraft")}
-									className="flex h-10 w-10 items-center justify-center rounded-pill bg-raised/50 text-muted hover:bg-raised hover:text-primary transition-colors cursor-pointer"
+									onClick={() => !poll && setSelling((v) => !v)}
+									disabled={!!poll}
+									aria-pressed={selling}
+									aria-label={t("composer.sellPost")}
+									title={t("composer.sellPost")}
+									className={clsx(
+										"flex h-10 w-10 items-center justify-center rounded-pill transition-colors",
+										poll
+											? "text-subtle opacity-50 cursor-not-allowed"
+											: selling
+												// Money wears credit green, never the brand
+												// accent (owner ruling 2026-08-31).
+												? "bg-credit/[0.14] text-credit cursor-pointer"
+												: "text-brand hover:bg-raised cursor-pointer",
+									)}
 								>
-									<PhFileText size={24} className="h-[18px] w-[18px] shrink-0" />
-								</button>
+									<PhCurrencyCircleDollar size={20} className="shrink-0" />
+								</motion.button>
 							)}
 
 							{/* Drafts stay reachable here the FAB only appears once you
@@ -1751,7 +1758,7 @@ export const PostComposer = ({
 									type="button"
 									onClick={() => setDraftsOpen(true)}
 									aria-label={t("drafts.title")}
-									className="flex h-10 items-center gap-1.5 rounded-pill px-3 bg-raised/50 text-muted hover:bg-raised hover:text-primary font-sans text-[calc(12.5px*var(--ws-fs))] font-medium transition-colors cursor-pointer"
+									className="flex h-10 items-center gap-1.5 rounded-pill px-3 text-muted hover:bg-raised hover:text-primary font-sans text-[calc(12.5px*var(--ws-fs))] font-medium transition-colors cursor-pointer"
 								>
 									<PhFileText size={24} className="h-[18px] w-[18px] shrink-0" />
 									<span className="tabular-nums">{drafts.length}</span>
@@ -1789,8 +1796,17 @@ export const PostComposer = ({
 							</AnimatePresence>
 						</div>
 
-						<div className="flex items-center gap-3">
+						<div className="flex items-center gap-2 sm:gap-3">
 							<CharacterRing length={content.length} budget={charBudget} />
+							{content.trim() && (
+								<button
+									type="button"
+									onClick={saveDraft}
+									className="hidden h-10 shrink-0 cursor-pointer items-center rounded-pill px-3 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-muted transition-colors hover:bg-raised hover:text-primary sm:flex"
+								>
+									{t("composer.saveDraft")}
+								</button>
+							)}
 							<motion.button
 							{...press}
 							onClick={handleSubmit}
@@ -1805,14 +1821,14 @@ export const PostComposer = ({
 							type="button"
 							className={clsx(
 								// h-11 on touch (44px target), the DS's 36px pill from sm up.
-								"px-4 sm:px-[18px] h-10 sm:h-9 shrink-0 rounded-pill font-semibold text-[calc(13px*var(--ws-fs))] font-sans transition-colors flex items-center gap-2 cursor-pointer",
+								"px-5 h-10 shrink-0 rounded-pill font-semibold text-[calc(14px*var(--ws-fs))] font-sans transition-colors flex items-center gap-2 cursor-pointer",
 								(!content.trim() && mediaItems.length === 0 && !pollReady) ||
 									isPosting ||
 									isOverLimit ||
 									pollBlocking ||
 									saleInvalid ||
 									saleTitleMissing
-									? "bg-raised text-subtle cursor-not-allowed opacity-50"
+									? "bg-raised text-subtle cursor-not-allowed"
 									: "bg-brand text-brand-on hover:bg-brand-active",
 							)}
 						>
@@ -1826,10 +1842,7 @@ export const PostComposer = ({
 									{isPosting ? (
 										<div className="w-4 h-4 border-2 border-brand-on/30 border-t-brand-on rounded-full animate-spin" />
 									) : (
-										<>
-											<span className="uppercase">{t("composer.post")}</span>
-											<PhPaperPlaneRight size={24} weight="fill" className="w-3 h-3" />
-										</>
+										<span>{t("composer.post")}</span>
 									)}
 								</motion.span>
 							</AnimatePresence>

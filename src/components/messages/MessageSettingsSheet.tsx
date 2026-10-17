@@ -46,8 +46,8 @@ export function MessageSettingsSheet({
 					<OverlayPanel
 						key="msg-settings-panel"
 						variant="sheet"
-						ground="none"
-						className="bg-surface sm:w-[min(560px,94vw)] sm:max-h-[84vh]"
+						ground="solid"
+						className="sm:w-[min(560px,94vw)] sm:max-h-[84vh]"
 						label="Message settings"
 						dragClose={onClose}
 					>

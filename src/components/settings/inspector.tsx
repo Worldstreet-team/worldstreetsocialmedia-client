@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowsLeftRight, DeviceMobile } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, ChevronDown } from "@/components/ui/icons";
@@ -23,28 +24,28 @@ import {
 	staggerParentFast,
 	staggerPop,
 	swap,
+	thumbSpring,
 } from "@/lib/motion-presets";
 
 /**
- * The settings grammar (owner 2026-09-20, second pass: "the make over we
- * gave the messages, do it the same for the settings, custom components
- * like select, nice use of icons and headers").
+ * The settings grammar (owner 2026-10-07, replacing the frosted blocks of
+ * 2026-09-20).
  *
- * So it is the Messages architecture: every group is a frosted block
- * (`glass-frost`, 16px radius, the same fill as the inbox blocks) with a
- * real header, an icon in a wash chip, a display title and its caption, and
- * the rows inside ruled with hairlines. A row keeps the inspector shape the
- * owner picked first: name, what it does, the control at the right edge;
- * on a phone the explanation drops under the name.
+ * A group is flat: a small uppercase heading, its caption, then the rows
+ * ruled with hairlines. No block, no icon; the page title and the rail
+ * already say where you are, and a block around every group made the page
+ * read as a stack of cards. A row keeps the inspector shape: name, what it
+ * does, the control at the right edge; on a phone the explanation drops
+ * under the name.
  *
- * A choice is `Select`, a designed dropdown, not a native one: a pill
- * trigger in the rest wash showing the current value, and a menu that
- * unfolds from it with the chosen option ticked.
+ * A choice is `Select`, a designed dropdown, or on a desktop a `Segmented`
+ * control when there are three or fewer short options (`segmented="auto"`).
+ * A phone always gets the dropdown and its bottom sheet: a row is too
+ * narrow for buttons beside the name.
  */
 
 export function SettingGroup({
 	id,
-	icon: Icon,
 	title,
 	caption,
 	tone,
@@ -52,55 +53,60 @@ export function SettingGroup({
 }: {
 	/** Matches a GROUPS entry; the sub-nav scrolls to `group-<id>`. */
 	id: string;
-	icon?: React.ComponentType<{ className?: string; strokeWidth?: number }>;
 	title: string;
 	caption?: string;
 	tone?: "danger";
 	children: React.ReactNode;
 }) {
 	return (
-		// scroll-mt clears the sticky header pill (and the chip strip on a
-		// phone). No overflow-hidden: nothing in a block may clip, and the
-		// Select menu is portalled out anyway.
+		// scroll-mt clears the sticky header. The negative margin gives the
+		// search ring room around the rows without moving them.
 		<section
 			id={`group-${id}`}
 			data-group={id}
-			className={clsx(
-				"scroll-mt-[128px] rounded-2xl px-4 pb-1.5 pt-4 glass-frost backdrop-blur-xl lg:scroll-mt-[88px] lg:px-5",
-				tone === "danger" && "ring-1 ring-danger/20",
-			)}
+			className="-mx-3 scroll-mt-[128px] rounded-2xl px-3 pb-1 pt-3 transition-shadow lg:scroll-mt-[88px]"
 		>
-			<div className="flex items-start gap-3 pb-3">
-				{/* A bare glyph, never a chip (owner 2026-09-20: "i don't want the
-				    background in the icons just clean icons"). Optically aligned
-				    to the title's cap height rather than its line box. */}
-				{Icon && (
-					<Icon
-						className={clsx(
-							"mt-[3px] h-[19px] w-[19px] shrink-0",
-							tone === "danger" ? "text-danger" : "text-primary",
-						)}
-						strokeWidth={2}
-					/>
-				)}
-				<div className="min-w-0 pt-px">
-					<h3
-						className={clsx(
-							"font-display text-[calc(17px*var(--ws-fs))] font-semibold leading-tight tracking-tight",
-							tone === "danger" ? "text-danger" : "text-primary",
-						)}
-					>
-						{title}
-					</h3>
-					{caption && (
-						<p className="mt-1 max-w-[68ch] font-sans text-[calc(13px*var(--ws-fs))] leading-snug text-muted max-w-[60ch]">
-							{caption}
-						</p>
+			<div className="pb-2.5">
+				<h3
+					className={clsx(
+						"font-sans text-[calc(12px*var(--ws-fs))] font-semibold uppercase tracking-[0.1em]",
+						tone === "danger" ? "text-danger" : "text-subtle",
 					)}
-				</div>
+				>
+					{title}
+				</h3>
+				{caption && (
+					<p className="mt-1 max-w-[62ch] font-sans text-[calc(13.5px*var(--ws-fs))] leading-snug text-muted">
+						{caption}
+					</p>
+				)}
 			</div>
 			<div className="flex flex-col [&>*:last-child]:border-b-0">{children}</div>
 		</section>
+	);
+}
+
+/**
+ * Where a setting takes effect, said on its row so the save status above
+ * never over-promises. `device`: stays on this device, never synced (Theme,
+ * Language). `both`: turning yours off hides theirs from you too.
+ */
+export type RowTag = "device" | "both";
+
+function ScopeTag({ tag }: { tag: RowTag }) {
+	const Glyph = tag === "device" ? DeviceMobile : ArrowsLeftRight;
+	return (
+		<span
+			title={
+				tag === "device"
+					? "Stays on this device. It does not follow your account."
+					: "Works both ways: off hides other people's from you too."
+			}
+			className="inline-flex h-5 shrink-0 items-center gap-1 rounded-pill bg-primary/5 px-1.5 font-sans text-[calc(11px*var(--ws-fs))] font-medium text-subtle"
+		>
+			<Glyph size={11} weight="bold" aria-hidden />
+			{tag === "device" ? "This device" : "Both ways"}
+		</span>
 	);
 }
 
@@ -115,11 +121,13 @@ export function SettingGroup({
 export function SettingRow({
 	label,
 	hint,
+	tag,
 	disabled,
 	children,
 }: {
 	label: React.ReactNode;
 	hint?: React.ReactNode;
+	tag?: RowTag;
 	disabled?: boolean;
 	children?: React.ReactNode;
 }) {
@@ -141,6 +149,7 @@ export function SettingRow({
 					className="flex min-h-[40px] cursor-pointer items-center gap-1.5 text-left font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary lg:pointer-events-none lg:min-h-0 lg:cursor-default"
 				>
 					{label}
+					{tag && <ScopeTag tag={tag} />}
 					<ChevronDown
 						aria-hidden
 						className={clsx(
@@ -151,8 +160,9 @@ export function SettingRow({
 					/>
 				</button>
 			) : (
-				<span className="font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary">
+				<span className="flex items-center gap-1.5 font-sans text-[calc(14px*var(--ws-fs))] font-medium text-primary">
 					{label}
+					{tag && <ScopeTag tag={tag} />}
 				</span>
 			)}
 			{hint && (
@@ -505,31 +515,142 @@ export function Select<V extends string | number>({
 	);
 }
 
-/** A choice, as a dropdown row that shows the current value. */
-export function SelectRow<V extends string | number>({
+/** Three or fewer options, each short enough to sit side by side. */
+export const fitsSegmented = (options: readonly (readonly [unknown, string])[]) =>
+	options.length <= 3 && options.every(([, l]) => l.length <= 12);
+
+/**
+ * Every option in view, one tap to change (owner 2026-10-07). A radio
+ * group: arrows move and pick, only the chosen option is in the tab order,
+ * and the pressed wash slides between options.
+ */
+export function Segmented<V extends string | number>({
 	label,
-	hint,
 	value,
 	options,
 	onPick,
 	disabled,
 }: {
 	label: string;
-	hint?: string;
 	value: V;
 	options: readonly (readonly [V, string])[];
 	onPick: (v: V) => void;
 	disabled?: boolean;
 }) {
+	const thumbId = useId();
+	const refs = useRef<(HTMLButtonElement | null)[]>([]);
+	const index = Math.max(
+		0,
+		options.findIndex(([v]) => v === value),
+	);
+	const go = (i: number) => {
+		const n = (i + options.length) % options.length;
+		onPick(options[n][0]);
+		refs.current[n]?.focus();
+	};
 	return (
-		<SettingRow label={label} hint={hint} disabled={disabled}>
-			<Select
-				label={label}
-				value={value}
-				options={options}
-				onPick={onPick}
-				disabled={disabled}
-			/>
+		<div
+			role="radiogroup"
+			aria-label={label}
+			className="flex h-10 items-center gap-0.5 rounded-pill bg-primary/5 p-[3px]"
+		>
+			{options.map(([v, l], i) => {
+				const on = i === index;
+				return (
+					<button
+						key={String(v)}
+						ref={(el) => {
+							refs.current[i] = el;
+						}}
+						type="button"
+						role="radio"
+						aria-checked={on}
+						tabIndex={on ? 0 : -1}
+						disabled={disabled}
+						onClick={() => onPick(v)}
+						onKeyDown={(e) => {
+							if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+								e.preventDefault();
+								go(i + 1);
+							} else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+								e.preventDefault();
+								go(i - 1);
+							}
+						}}
+						className={clsx(
+							"relative h-full cursor-pointer whitespace-nowrap rounded-pill px-3.5 font-sans text-[calc(13px*var(--ws-fs))] transition-colors disabled:cursor-default",
+							on ? "font-semibold text-primary" : "font-medium text-muted hover:text-primary",
+						)}
+					>
+						{on && (
+							<motion.span
+								aria-hidden
+								layoutId={`segmented-${thumbId}`}
+								transition={thumbSpring}
+								className="absolute inset-0 rounded-pill bg-primary/10"
+							/>
+						)}
+						<span className="relative">{l}</span>
+					</button>
+				);
+			})}
+		</div>
+	);
+}
+
+/**
+ * A choice row that shows the current value. `segmented` puts the options
+ * side by side on a desktop: `true` always, `"auto"` when `fitsSegmented`.
+ * Off by default, because the row is shared with Messages sheets that
+ * have no room for it.
+ */
+export function SelectRow<V extends string | number>({
+	label,
+	hint,
+	tag,
+	value,
+	options,
+	onPick,
+	disabled,
+	segmented = false,
+}: {
+	label: string;
+	hint?: string;
+	tag?: RowTag;
+	value: V;
+	options: readonly (readonly [V, string])[];
+	onPick: (v: V) => void;
+	disabled?: boolean;
+	segmented?: boolean | "auto";
+}) {
+	const select = (
+		<Select
+			label={label}
+			value={value}
+			options={options}
+			onPick={onPick}
+			disabled={disabled}
+		/>
+	);
+	const seg = segmented === true || (segmented === "auto" && fitsSegmented(options));
+	return (
+		<SettingRow label={label} hint={hint} tag={tag} disabled={disabled}>
+			{seg ? (
+				<>
+					<span className="hidden lg:flex">
+						<Segmented
+							label={label}
+							value={value}
+							options={options}
+							onPick={onPick}
+							disabled={disabled}
+						/>
+					</span>
+					<span className="flex lg:hidden">{select}</span>
+				</>
+			) : (
+				select
+			)}
 		</SettingRow>
 	);
 }
@@ -537,18 +658,20 @@ export function SelectRow<V extends string | number>({
 export function ToggleRow({
 	label,
 	hint,
+	tag,
 	checked,
 	disabled,
 	onChange,
 }: {
 	label: string;
 	hint?: string;
+	tag?: RowTag;
 	checked: boolean;
 	disabled?: boolean;
 	onChange: (v: boolean) => void;
 }) {
 	return (
-		<SettingRow label={label} hint={hint} disabled={disabled}>
+		<SettingRow label={label} hint={hint} tag={tag} disabled={disabled}>
 			<Switch
 				checked={checked}
 				disabled={disabled}

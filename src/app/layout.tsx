@@ -31,6 +31,7 @@ import { CreateFab } from "@/components/ui/CreateFab";
 import VoiceRoomHost from "@/components/voice/VoiceRoomHost";
 import { LiveDock } from "@/components/live/LiveDock";
 import { NotificationCountSync } from "@/components/providers/NotificationCountSync";
+import { NotificationIsland } from "@/components/notifications/NotificationIsland";
 import { PwaSync } from "@/components/providers/PwaSync";
 import { ThemeColorSync } from "@/components/providers/ThemeColorSync";
 import { NavHistoryTracker } from "@/lib/nav";
@@ -271,6 +272,7 @@ export default async function RootLayout({
                                     </Suspense>
                                         <GlobalMessageListener />
                                         <NotificationCountSync />
+                                        <NotificationIsland />
                                         <PwaSync />
                                         <ThemeColorSync />
                                         <NavHistoryTracker />

@@ -65,7 +65,8 @@ export function renderRichText(
           key={key}
           href={`/explore?q=${encodeURIComponent(cashtag.slice(1))}`}
           onClick={stop}
-          className="relative z-10 pointer-events-auto rounded-sm bg-convert/[0.13] px-1.5 py-px text-[calc(13px*var(--ws-fs))] font-semibold tracking-tight text-gold hover:bg-convert/20 transition-colors break-words"
+          // A plain link like the others, not a ticker chip (owner 2026-10-12).
+          className="relative z-10 pointer-events-auto font-semibold text-gold hover:underline break-words"
         >
           {cashtag}
         </Link>,

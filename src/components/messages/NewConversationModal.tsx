@@ -170,7 +170,7 @@ export default function NewConversationModal({
 			{isOpen && (
 				<>
 					<OverlayScrim onClose={onClose} />
-					<OverlayPanel dragClose={onClose} variant="sheet" label="New conversation">
+					<OverlayPanel ground="solid" dragClose={onClose} variant="sheet" label="New conversation">
 						<OverlayHeader title="New conversation" onClose={onClose} />
 
 						{/* Search */}

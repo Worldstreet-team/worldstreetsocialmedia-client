@@ -40,6 +40,8 @@ export interface RailStory {
 	seen: boolean;
 	/** The uploader allowed downloads on this story. */
 	allowSave?: boolean;
+	/** Saves are free: the server already reports these as unlocked. */
+	saveFree?: boolean;
 	/** This viewer has already paid the unlock (or owns the story). */
 	unlocked?: boolean;
 }

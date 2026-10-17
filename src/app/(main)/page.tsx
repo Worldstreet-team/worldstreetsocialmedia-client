@@ -3,7 +3,6 @@ import { headers } from "next/headers";
 import Feed, { type FeedSeed } from "@/components/feed/Feed";
 import { FeedFallback } from "@/components/feed/FeedFallback";
 import { FeedTabs } from "@/components/feed/FeedTabs";
-import { FeedHeaderActions } from "@/components/feed/FeedHeaderActions";
 import { getFeedAction } from "@/lib/feed.actions";
 import { mapApiPost } from "@/lib/post-mapper";
 
@@ -83,15 +82,16 @@ export default function Home() {
 			{/* Sticky inside the group scroller: the tabs pin under the fixed
 			    rail while posts scroll beneath them. */}
 			<header
-				className="sticky top-0 z-sticky h-14 border-b border-hairline bg-page animate-rise"
+				className="sticky top-0 z-sticky h-12 border-b border-hairline bg-page/75 backdrop-blur-xl backdrop-saturate-150 animate-rise"
 				style={{ animationDelay: "70ms" }}
 			>
 				<h1 className="sr-only">Home</h1>
 				<div className="flex items-center h-full">
+					{/* Go Live left the feed bar (owner 2026-10-16): it lives in
+					    the create menu now. */}
 					<div className="flex-1 h-full min-w-0">
 						<FeedTabs />
 					</div>
-					<FeedHeaderActions />
 				</div>
 			</header>
 			{/* The shell streams immediately; the feed fills in when the

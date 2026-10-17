@@ -1,6 +1,6 @@
 "use client";
 
-import { ImageSquare, Microphone, TextAa } from "@phosphor-icons/react";
+import { CaretRight, Clock, ImageSquare, Microphone, TextAa } from "@phosphor-icons/react";
 import { motion, useReducedMotionConfig } from "framer-motion";
 import ConfirmModalPortal from "@/components/ui/ConfirmModalPortal";
 import {
@@ -28,24 +28,28 @@ const LANES: Array<{
   kind: StoryKind;
   label: string;
   hint: string;
+  tags: string[];
   icon: typeof ImageSquare;
 }> = [
   {
     kind: "media",
     label: "Media",
-    hint: "Photos and clips, with edits",
+    hint: "Photos and clips, with filters, text and stickers",
+    tags: ["Photos", "Clips", "Slides"],
     icon: ImageSquare,
   },
   {
     kind: "text",
     label: "Text",
-    hint: "Type on designed canvases",
+    hint: "Type on designed canvases. Good for a quick take.",
+    tags: ["Styles", "Canvases"],
     icon: TextAa,
   },
   {
     kind: "voice",
     label: "Voice",
-    hint: "Share an audio update",
+    hint: "Record a short audio update over a canvas",
+    tags: ["Up to 60s"],
     icon: Microphone,
   },
 ];
@@ -59,8 +63,8 @@ function LanePreview({ kind }: { kind: StoryKind }) {
         className="flex h-full w-full items-center justify-center"
         style={{ background: storyCanvasCss(STORY_BACKGROUNDS[1]) }}
       >
-        <span className="font-editorial text-[calc(19px*var(--ws-fs))] leading-none text-[#fafaf9]">
-          Aa
+        <span className="px-1.5 text-center font-editorial text-[calc(15px*var(--ws-fs))] leading-[1.05] text-[#fafaf9]">
+          Patience pays.
         </span>
       </span>
     );
@@ -106,22 +110,30 @@ export default function StoryCreateSheet({
 
   return (
     <ConfirmModalPortal>
-      <OverlayScrim onClose={onClose} />
-      <OverlayPanel dragClose={onClose} variant="sheet" label="Create a story">
+      <OverlayScrim blur onClose={onClose} />
+      {/* A solid Halo sheet (owner 2026-10-11): theme ground, no glass. */}
+      <OverlayPanel
+        dragClose={onClose}
+        variant="sheet"
+        ground="solid"
+        label="Create a story"
+      >
         <OverlayHeader onClose={onClose}>
-          <div className="min-w-0 flex-1">
-            <span className="block font-sans text-[calc(10px*var(--ws-fs))] font-bold uppercase tracking-[0.14em] text-subtle">
-              New
-            </span>
-            <h2 className="truncate font-sans text-[calc(14px*var(--ws-fs))] font-semibold leading-tight text-primary">
-              Create a story
+          <div className="min-w-0 flex-1 pt-1">
+            <h2 className="truncate font-display text-[calc(18px*var(--ws-fs))] font-semibold leading-tight text-primary">
+              New story
             </h2>
+            <p className="truncate font-sans text-[calc(12.5px*var(--ws-fs))] text-muted">
+              Pick a lane. You can switch later.
+            </p>
           </div>
         </OverlayHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(20px+var(--ws-safe-bottom))]">
-          <div className="grid grid-cols-3 gap-2">
-            {LANES.map(({ kind, label, hint, icon: Icon }, i) => (
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-3 pb-[calc(20px+var(--ws-safe-bottom))]">
+          {/* Lanes, stacked: each shows a small version of what it makes,
+              so the choice is by looking, not by reading (story flow, 2). */}
+          <div className="flex flex-col gap-2.5">
+            {LANES.map(({ kind, label, hint, tags }, i) => (
               <motion.button
                 key={kind}
                 type="button"
@@ -136,26 +148,38 @@ export default function StoryCreateSheet({
                 // Carries its own transition so the press never inherits
                 // the entrance delay above.
                 whileTap={{ ...press.whileTap, transition: press.transition }}
-                // Flat by request: a plain wash, no sheen, no chrome.
-                className="flex cursor-pointer flex-col items-center gap-2.5 rounded-xl bg-chip px-3 pt-4 pb-3.5 text-center transition-colors hover:bg-raised"
+                className="group flex cursor-pointer items-center gap-4 rounded-[22px] bg-primary/[0.06] p-3 pr-4 text-left transition-colors hover:bg-primary/[0.1]"
               >
-                <span className="relative flex h-16 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px]">
+                <span className="relative flex h-24 w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-[14px]">
                   <LanePreview kind={kind} />
                 </span>
-                <span className="flex items-center gap-1.5">
-                  <Icon size={13} weight="bold" className="text-muted" />
-                  <span className="font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">
+                <span className="min-w-0 flex-1">
+                  <span className="block font-display text-[calc(16px*var(--ws-fs))] font-semibold text-primary">
                     {label}
                   </span>
+                  <span className="mt-0.5 block font-sans text-[calc(12.5px*var(--ws-fs))] leading-snug text-muted">
+                    {hint}
+                  </span>
+                  <span className="mt-2 flex flex-wrap gap-1.5">
+                    {tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-pill bg-surface px-2.5 py-0.5 font-sans text-[calc(11px*var(--ws-fs))] font-semibold text-muted"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </span>
                 </span>
-                <span className="block font-sans text-[calc(11px*var(--ws-fs))] leading-snug text-muted">
-                  {hint}
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-pill bg-surface text-muted transition-colors group-hover:bg-brand group-hover:text-brand-on">
+                  <CaretRight size={14} weight="bold" />
                 </span>
               </motion.button>
             ))}
           </div>
 
-          <p className="mt-4 text-center font-sans text-[calc(11px*var(--ws-fs))] text-subtle">
+          <p className="mt-4 flex items-center justify-center gap-1.5 font-sans text-[calc(11.5px*var(--ws-fs))] text-subtle">
+            <Clock size={13} weight="bold" />
             Stories disappear after 24 hours
           </p>
         </div>

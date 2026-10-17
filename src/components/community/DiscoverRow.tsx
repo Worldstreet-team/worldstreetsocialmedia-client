@@ -37,13 +37,13 @@ export function DiscoverRow({
   const faces = row.memberSample ?? [];
 
   return (
-    <div className="flex items-center gap-3.5 px-4 py-3 transition-colors hover:bg-surface/50">
+    <div className="flex items-center gap-3.5 px-4 py-2.5 transition-colors hover:bg-primary/[0.04]">
       <Link
         href={`/communities/${row.slug}`}
-        className="relative h-[68px] w-[68px] shrink-0 overflow-hidden rounded-xl bg-raised"
+        className="relative h-14 w-14 shrink-0 overflow-hidden rounded-[16px] bg-raised"
       >
         {row.avatar ? (
-          <SafeAvatar src={row.avatar} className="object-cover" sizes="68px" />
+          <SafeAvatar src={row.avatar} className="object-cover" sizes="56px" />
         ) : (
           <span className="flex h-full w-full items-center justify-center font-display text-2xl font-semibold text-gold">
             {row.name.charAt(0).toUpperCase()}
@@ -58,7 +58,7 @@ export function DiscoverRow({
         >
           {row.name}
         </Link>
-        <span className="font-sans text-[calc(13px*var(--ws-fs))] text-muted">
+        <span className="truncate font-sans text-[calc(13px*var(--ws-fs))] text-muted">
           {/* Rolls with the optimistic join or leave; still on first paint. */}
           <span className="relative inline-flex overflow-hidden align-bottom font-semibold tabular-nums text-primary">
             <AnimatePresence mode="popLayout" initial={false}>
@@ -68,9 +68,8 @@ export function DiscoverRow({
             </AnimatePresence>
           </span>{" "}
           {t("community.members")}
-        </span>
-        <span className="truncate font-sans text-[calc(12.5px*var(--ws-fs))] text-subtle">
-          {resolveCategoryLabel(row.category) || row.category}
+          {/* One line, as designed: members · topic. */}
+          {row.category && <> · {resolveCategoryLabel(row.category) || row.category}</>}
         </span>
 
         {faces.length > 0 && (
@@ -96,8 +95,8 @@ export function DiscoverRow({
         className={clsx(
           "h-8 shrink-0 cursor-pointer self-center rounded-pill px-3.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
           row.joined
-            ? "bg-raised text-muted hover:text-danger"
-            : "bg-primary text-page hover:bg-muted",
+            ? "bg-transparent text-muted hover:text-danger"
+            : "bg-primary/[0.09] text-primary hover:bg-primary/[0.15]",
         )}
       >
         <AnimatePresence mode="wait" initial={false}>

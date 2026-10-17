@@ -3,9 +3,9 @@
 import clsx from "clsx";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { useAtom } from "jotai";
-import { Clock, Sparkle, Users, UsersThree } from "@phosphor-icons/react";
+import { Plus } from "@phosphor-icons/react";
 import { feedTabAtom } from "@/store/ui.atom";
 import { getCommunitiesAction } from "@/lib/community.actions";
 import { useT } from "@/i18n/client";
@@ -61,119 +61,94 @@ export function FeedTabs() {
 		if (myCommunities.length > 0) chipsIntroPlayed = true;
 	}, [myCommunities.length]);
 
-	const chip =
-		"relative flex items-center gap-2 h-11 px-4 rounded-pill font-sans text-[calc(15.5px*var(--ws-fs))] whitespace-nowrap transition-colors shrink-0";
-	const idle = "font-medium text-muted hover:text-primary hover:bg-raised/50";
-
 	// The three timelines, in the order they are offered: ranked, then the
-	// people you chose, then raw chronological. "Newest" is the escape hatch —
-	// somewhere to go when the ranked feed feels stale, without it having to
-	// re-rank For You into a recency list.
+	// people you chose, then raw chronological.
 	const TABS = [
-		{ key: "foryou" as const, label: t("feed.tab.foryou"), Icon: Sparkle },
-		{ key: "following" as const, label: t("feed.tab.following"), Icon: Users },
-		{ key: "newest" as const, label: t("feed.tab.newest"), Icon: Clock },
+		{ key: "foryou" as const, label: t("feed.tab.foryou") },
+		{ key: "following" as const, label: t("feed.tab.following") },
+		{ key: "newest" as const, label: t("feed.tab.newest") },
 	];
-	const active = TABS.find((x) => x.key === tab) ?? TABS[0];
-	const rest = TABS.filter((x) => x.key !== active.key);
+
+	// X's grammar (owner 2026-10-16): plain words, the active one bold with a
+	// short brand bar under it, a hairline under the row. After the
+	// timelines come the communities you have JOINED, by name and picture,
+	// and a small + at the end to go and find more.
+	const tabCls =
+		"relative flex h-full shrink-0 items-center gap-2 px-4 font-sans text-[calc(15px*var(--ws-fs))] whitespace-nowrap transition-colors";
+	const bar = (
+		<motion.span
+			layoutId="feed-tab-bar"
+			transition={{ type: "spring", stiffness: 520, damping: 42 }}
+			aria-hidden
+			className="absolute inset-x-0 bottom-0 mx-auto h-[3px] w-7 rounded-pill bg-brand"
+		/>
+	);
 
 	return (
-		<div
-			role="tablist"
-			aria-label="Timeline"
-			className="flex h-full w-full items-center gap-2 pl-3 pr-1"
-		>
-			{/* Pinned the tab you are on is always in reach. */}
-			<button
-				type="button"
-				role="tab"
-				aria-selected="true"
-				className={clsx(chip, "bg-raised font-semibold text-primary")}
+		<div className="flex h-full w-full items-stretch">
+			<div
+				role="tablist"
+				aria-label="Timeline"
+				className="flex min-w-0 flex-1 items-stretch overflow-x-auto pl-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 			>
-				<AnimatePresence mode="wait" initial={false}>
-					<motion.span
-						key={active.key}
-						initial={{ opacity: 0, y: 4 }}
-						animate={{ opacity: 1, y: 0 }}
-						exit={{ opacity: 0, transition: { duration: 0.12 } }}
-						transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-						className="flex items-center gap-1.5"
-					>
-						<active.Icon size={15} weight="fill" className="text-gold" />
-						{active.label}
-					</motion.span>
-				</AnimatePresence>
-			</button>
+				{TABS.map((x) => {
+					const on = tab === x.key;
+					return (
+						<button
+							key={x.key}
+							type="button"
+							role="tab"
+							aria-selected={on}
+							onClick={() => setTab(x.key)}
+							className={clsx(
+								tabCls,
+								on ? "font-bold text-primary" : "cursor-pointer font-medium text-muted hover:text-primary",
+							)}
+						>
+							{x.label}
+							{on && bar}
+						</button>
+					);
+				})}
 
-			<span className="h-5 w-px shrink-0 bg-hairline" />
-
- {/* Scroller masked on the right so it reads as "more this way". */}
-			<div className="flex-1 min-w-0 flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent)]">
-				{rest.map((x) => (
-					<button
-						key={x.key}
-						type="button"
-						role="tab"
-						aria-selected="false"
-						onClick={() => setTab(x.key)}
-						className={clsx(chip, idle, "cursor-pointer")}
-					>
-						<x.Icon size={15} weight="duotone" />
-						{x.label}
-					</button>
-				))}
-				{/* The Street (/live) and Space (/voice) used to sit here. They
-				    are destinations, not timelines — mixing them into the
-				    timeline row made every tab press feel like it might navigate
-				    away. Both still live in the nav rails. */}
-
-				{/* YOUR communities, by name. The generic link only appears when
-				    you haven't joined any yet. */}
-				{myCommunities.length > 0 ? (
-					// `contents`: the wrapper only carries the cascade, the chips
-					// stay direct flex children of the scroller.
-					<motion.div
-						variants={staggerParentFast}
-						initial={chipsIntroPlayed ? false : "hidden"}
-						animate="show"
-						className="contents"
-					>
-						{myCommunities.map((c) => (
-							<motion.div
-								key={c.id}
-								variants={staggerItem}
-								className="flex shrink-0"
+				<motion.div
+					variants={staggerParentFast}
+					initial={chipsIntroPlayed ? false : "hidden"}
+					animate="show"
+					className="contents"
+				>
+					{myCommunities.map((c) => (
+						<motion.div key={c.id} variants={staggerItem} className="flex shrink-0">
+							<Link
+								href={`/communities/${c.slug}`}
+								className={clsx(tabCls, "font-medium text-muted hover:text-primary")}
 							>
-								<Link
-									href={`/communities/${c.slug}`}
-									className={clsx(chip, idle)}
-								>
-									<span className="relative w-[18px] h-[18px] rounded-pill overflow-hidden bg-raised shrink-0 flex items-center justify-center">
-										{c.avatar ? (
-											<SafeAvatar src={c.avatar} className="object-cover" />
-										) : (
-											<span className="text-[calc(10px*var(--ws-fs))] font-bold text-subtle font-sans uppercase">
-												{c.name.slice(0, 1)}
-											</span>
-										)}
-									</span>
-									{c.name}
-								</Link>
-							</motion.div>
-						))}
-					</motion.div>
-				) : (
-					<Link href="/communities" className={clsx(chip, idle)}>
-						<UsersThree size={14} weight="duotone" />
-						{t("nav.communities")}
-					</Link>
-				)}
+								<span className="relative flex h-[18px] w-[18px] shrink-0 items-center justify-center overflow-hidden rounded-[6px] bg-raised">
+									{c.avatar ? (
+										<SafeAvatar src={c.avatar} className="object-cover" />
+									) : (
+										<span className="font-sans text-[calc(10px*var(--ws-fs))] font-bold uppercase text-subtle">
+											{c.name.slice(0, 1)}
+										</span>
+									)}
+								</span>
+								{c.name}
+							</Link>
+						</motion.div>
+					))}
+				</motion.div>
+			</div>
 
-				{/* Interest-category chips used to trail the communities here.
-				    They made the row long enough to always need scrolling and
-				    pushed the communities — the thing people actually navigate
-				    to — out of sight. Browsing by topic still lives on Explore,
-				    where it belongs. */}
+			{/* Pin another feed: for now, find a community to join; joined
+			    ones appear in the row above. */}
+			<div className="flex shrink-0 items-center px-2">
+				<Link
+					href="/communities?tab=explore"
+					aria-label={t("nav.communities")}
+					className="flex h-7 w-7 items-center justify-center rounded-pill bg-primary/[0.07] text-muted transition-colors hover:bg-primary/[0.12] hover:text-primary"
+				>
+					<Plus size={14} weight="bold" />
+				</Link>
 			</div>
 		</div>
 	);

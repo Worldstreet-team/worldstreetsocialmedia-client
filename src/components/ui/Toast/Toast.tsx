@@ -43,22 +43,22 @@ const ORIGIN: Record<ToastPosition, Parameters<typeof menuStagger>[0]> = {
  */
 const icons = {
 	success: (
-		<span className="flex h-7 w-7 items-center justify-center rounded-pill bg-success/20 ring-1 ring-success/25">
+		<span className="flex h-9 w-9 items-center justify-center rounded-pill bg-success/20 ring-1 ring-success/25">
 			<Check className="h-[15px] w-[15px] text-success" strokeWidth={2.6} />
 		</span>
 	),
 	error: (
-		<span className="flex h-7 w-7 items-center justify-center rounded-pill bg-danger/20 ring-1 ring-danger/25">
+		<span className="flex h-9 w-9 items-center justify-center rounded-pill bg-danger/20 ring-1 ring-danger/25">
 			<X className="h-[15px] w-[15px] text-danger" strokeWidth={2.6} />
 		</span>
 	),
 	warning: (
-		<span className="flex h-7 w-7 items-center justify-center rounded-pill bg-warning/20 ring-1 ring-warning/25">
+		<span className="flex h-9 w-9 items-center justify-center rounded-pill bg-warning/20 ring-1 ring-warning/25">
 			<AlertTriangle className="h-[15px] w-[15px] text-warning" strokeWidth={2.4} />
 		</span>
 	),
 	info: (
-		<span className="flex h-7 w-7 items-center justify-center rounded-pill bg-primary/15 ring-1 ring-primary/20">
+		<span className="flex h-9 w-9 items-center justify-center rounded-pill bg-primary/15 ring-1 ring-primary/20">
 			<Bell className="h-[15px] w-[15px] text-primary" strokeWidth={2.2} />
 		</span>
 	),
@@ -90,7 +90,8 @@ export const ToastItem = ({ toast, removeToast, ref }: ToastProps) => {
 				// at the usage site, per the one-blur-per-stack rule. No
 				// border: the frost IS the surface; shadow-nav keeps it lifted
 				// off whatever it floats over.
-				"flex items-center gap-3 px-3.5 py-3 w-full sm:w-auto sm:min-w-[280px] max-w-full sm:max-w-md rounded-[18px] glass-toast backdrop-blur-2xl backdrop-saturate-150 pointer-events-auto cursor-pointer"
+				// The island shape (owner pick 2026-10-12, "Toasts · islands").
+				"flex items-center gap-3 pl-2.5 pr-4 py-2.5 min-h-14 w-full sm:w-auto sm:min-w-[300px] max-w-full sm:max-w-md rounded-[28px] glass-toast backdrop-blur-2xl backdrop-saturate-150 pointer-events-auto cursor-pointer"
 			}
 			onClick={handleDismiss}
 			role={isDanger ? "alert" : "status"}

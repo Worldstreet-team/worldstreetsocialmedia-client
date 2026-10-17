@@ -29,7 +29,6 @@ import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast/ToastContext";
 import { formatTimeAgo } from "@/lib/utils";
-import { Tabs } from "@/components/ui/Tabs";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import {
 	OverlayHeader,
@@ -149,16 +148,27 @@ function dayLabel(iso: string): string {
 	});
 }
 
-/** Status → chip treatment. Semantic tokens only; gold marks "your move". */
-const STATUS_CHIP: Record<BmBooking["status"], string> = {
-	requested: "bg-gold/10 text-gold",
-	accepted: "bg-raised text-primary",
-	live: "bg-success/10 text-success",
-	paused: "bg-danger/10 text-danger",
-	completed: "bg-raised text-muted",
-	declined: "bg-raised text-subtle",
-	expired: "bg-raised text-subtle",
-	cancelled: "bg-raised text-subtle",
+/** Status as a coloured word with a dot (owner 2026-10-16: no uppercase
+ *  chips). Gold is "your move", green is running, red is stopped. */
+const STATUS_TEXT: Record<BmBooking["status"], string> = {
+	requested: "text-gold",
+	accepted: "text-muted",
+	live: "text-success",
+	paused: "text-danger",
+	completed: "text-subtle",
+	declined: "text-subtle",
+	expired: "text-subtle",
+	cancelled: "text-subtle",
+};
+const STATUS_DOT: Record<BmBooking["status"], string> = {
+	requested: "bg-gold",
+	accepted: "bg-muted",
+	live: "bg-success",
+	paused: "bg-danger",
+	completed: "bg-subtle",
+	declined: "bg-subtle",
+	expired: "bg-subtle",
+	cancelled: "bg-subtle",
 };
 
 /**
@@ -516,42 +526,66 @@ export default function BmPage() {
 			{/* ── thread list ─────────────────────────────────────────── */}
 			<aside
 				className={clsx(
-					"flex w-full flex-col md:w-[380px] md:shrink-0 md:border-r md:border-hairline",
+					"flex w-full flex-col md:w-[392px] md:shrink-0",
 					activeId && "hidden md:flex",
 				)}
 			>
-				<header className="flex h-16 shrink-0 items-center justify-between px-5">
-					<h1 className="font-display text-[calc(20px*var(--ws-fs))] font-semibold tracking-[-0.01em]">
+				<header className="flex h-16 shrink-0 items-center justify-between px-5 pt-2">
+					<h1 className="font-display text-[calc(22px*var(--ws-fs))] font-semibold tracking-[-0.01em]">
 						Business
 					</h1>
 					<motion.button
 						{...press}
 						type="button"
 						onClick={() => setComposerOpen(true)}
-						className="flex h-9 items-center gap-1.5 rounded-pill bg-brand px-3.5 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:opacity-90 cursor-pointer"
+						className="flex h-[38px] items-center gap-1.5 rounded-pill bg-brand px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active cursor-pointer"
 					>
 						<Plus size={14} weight="bold" />
 						New booking
 					</motion.button>
 				</header>
 
-				<div className="px-4 pb-2">
-					<Tabs
-						ariaLabel="Business sections"
-						value={pane}
-						onChange={setPane}
-						items={[
-							{ key: "deals", label: "Deals" },
-							{
-								key: "requests",
-								label: "Requests",
-								badge: requests.length || undefined,
-							},
-						]}
-					/>
+				{/* Deals | Requests as one segmented switch with a solid active
+				    side (Business v2). */}
+				<div className="flex flex-col gap-3 px-4 pb-3">
+					<div role="tablist" aria-label="Business sections" className="flex h-10 gap-1 rounded-pill bg-primary/[0.05] p-1">
+						{(
+							[
+								["deals", "Deals", 0],
+								["requests", "Requests", requests.length],
+							] as const
+						).map(([key, label, count]) => (
+							<button
+								key={key}
+								type="button"
+								role="tab"
+								aria-selected={pane === key}
+								onClick={() => setPane(key)}
+								className={clsx(
+									"relative flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-pill font-sans text-[calc(13.5px*var(--ws-fs))] font-semibold transition-colors",
+									pane === key ? "text-brand-on" : "text-muted hover:text-primary",
+								)}
+							>
+								{pane === key && (
+									<motion.span
+										layoutId="bm-seg"
+										transition={thumbSpring}
+										aria-hidden
+										className="absolute inset-0 rounded-pill bg-brand"
+									/>
+								)}
+								<span className="relative">{label}</span>
+								{count > 0 && (
+									<span className="relative rounded-pill bg-gold px-1.5 font-sans text-[calc(11px*var(--ws-fs))] font-bold tabular-nums text-[#2A1E05]">
+										{count}
+									</span>
+								)}
+							</button>
+						))}
+					</div>
 				</div>
 
-				<div className="min-h-0 flex-1 overflow-y-auto">
+				<div className="min-h-0 flex-1 overflow-y-auto px-2">
 					{pane === "requests" ? (
 						<>
 							<RequestQueue
@@ -616,8 +650,8 @@ export default function BmPage() {
 										onClick={() => setActiveId(t._id)}
 										aria-current={active ? "true" : undefined}
 										className={clsx(
-											"group relative flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors",
-											active ? "bg-raised" : "hover:bg-surface",
+											"group relative mb-0.5 flex w-full cursor-pointer items-center gap-3 rounded-[18px] px-3 py-2.5 text-left transition-colors",
+											active ? "bg-primary/[0.08]" : "hover:bg-primary/[0.04]",
 										)}
 									>
 										{/* Active marker is a rail, same as Messages: a
@@ -626,14 +660,7 @@ export default function BmPage() {
 										    (the page is a singleton, so a fixed id is safe).
 										    Centred with auto margins, not a translate class:
 										    framer owns this element's transform. */}
-										{active && (
-											<motion.span
-												aria-hidden
-												layoutId="bm-thread-rail"
-												transition={thumbSpring}
-												className="absolute inset-y-0 left-0 my-auto h-8 w-[3px] rounded-r-pill bg-brand"
-											/>
-										)}
+
 										<span className="relative block h-12 w-12 shrink-0 overflow-hidden rounded-pill bg-raised">
 											<SafeAvatar src={other?.avatar} />
 										</span>
@@ -683,12 +710,8 @@ export default function BmPage() {
 											</span>
 										</span>
 										{b && (
-											<span
-												className={clsx(
-													"shrink-0 rounded-pill px-2 py-0.5 font-sans text-[calc(10.5px*var(--ws-fs))] font-semibold uppercase tracking-wide",
-													STATUS_CHIP[b.status],
-												)}
-											>
+											<span className={clsx("flex shrink-0 items-center gap-1.5 font-sans text-[calc(12px*var(--ws-fs))] font-semibold capitalize", STATUS_TEXT[b.status])}>
+												<span aria-hidden className={clsx("h-1.5 w-1.5 rounded-pill", STATUS_DOT[b.status])} />
 												{b.status}
 											</span>
 										)}
@@ -1102,6 +1125,9 @@ function ThreadView({
 	const myTurn = b.status === "requested" && b.awaitingActionFrom === role;
 	const cancellable = ["accepted", "live", "paused"].includes(b.status);
 	const [counterOpen, setCounterOpen] = useState(false);
+	// On a phone the card is a summary; the ad, money chips and receipts
+	// open under "Details" so the conversation keeps the screen.
+	const [detailsOpen, setDetailsOpen] = useState(false);
 	// Analytics live behind an info button for BOTH parties — the deal card
 	// stays a contract, the numbers get their own room.
 	const [statsOpen, setStatsOpen] = useState(false);
@@ -1134,19 +1160,19 @@ function ThreadView({
 	return (
 		<>
 			{/* header: who you are dealing with — same bar Messages wears */}
-			<div className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-hairline bg-page px-2 md:px-6">
+			<div className="mx-2 mt-[max(8px,var(--ws-safe-top))] flex h-14 shrink-0 items-center justify-between gap-1 rounded-pill bg-primary/[0.05] px-1.5 md:mx-6 md:mt-4 md:h-16 md:gap-2 md:px-3">
 				<div className="flex min-w-0 items-center gap-2 md:gap-3">
 					<button
 						type="button"
 						onClick={onBack}
-						className="md:hidden flex h-11 w-11 shrink-0 items-center justify-center rounded-pill text-muted transition-colors hover:bg-raised hover:text-primary cursor-pointer"
+						className="md:hidden flex h-10 w-10 shrink-0 items-center justify-center rounded-pill text-primary transition-colors hover:bg-primary/[0.06] cursor-pointer"
 						aria-label="Back to deals"
 					>
 						<CaretLeft size={20} />
 					</button>
 					<Link
 						href={`/profile/${other?.username}`}
-						className="flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 transition-colors hover:bg-raised md:gap-3"
+						className="flex min-w-0 items-center gap-2 rounded-pill py-1 pl-1 pr-3 transition-colors hover:bg-primary/[0.05] md:gap-3"
 					>
 						<span className="relative block h-10 w-10 shrink-0 overflow-hidden rounded-pill bg-raised">
 							<SafeAvatar src={other?.avatar} />
@@ -1169,8 +1195,8 @@ function ThreadView({
 						id={b.status}
 						wait
 						className={clsx(
-							"rounded-pill px-2.5 py-1 font-sans text-[calc(11px*var(--ws-fs))] font-semibold uppercase tracking-wide",
-							STATUS_CHIP[b.status],
+							"px-2 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold capitalize",
+							STATUS_TEXT[b.status],
 						)}
 					>
 						{b.status}
@@ -1180,16 +1206,16 @@ function ThreadView({
 
 			{/* the deal card: the contract floats above the talk as its own
 			    object, instead of a wall of grey rows welded to the header */}
-			<div className="shrink-0 px-3 pt-3 md:px-6 md:pt-4">
+			<div className="shrink-0 px-2 pt-2 md:px-6 md:pt-4">
 				{/* Keyed by room, so the card rises when a deal opens and a poll
 				    replays nothing. */}
 				<motion.div
 					key={thread._id}
 					{...reveal(0)}
-					className="rounded-xl bg-surface px-4 py-3.5"
+					className="rounded-[24px] bg-primary/[0.05] p-3.5 md:rounded-[26px] md:p-5"
 				>
 				<div className="flex items-center gap-3">
-					<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gold/10 text-gold">
+					<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill bg-brand/[0.12] text-brand md:h-11 md:w-11">
 						{b.format === "video" ? (
 							<VideoCamera size={18} weight="fill" />
 						) : b.format === "audio" ? (
@@ -1199,7 +1225,7 @@ function ThreadView({
 						)}
 					</span>
 					<div className="min-w-0 flex-1">
-						<p className="font-sans text-[calc(14px*var(--ws-fs))] font-semibold capitalize text-primary">
+						<p className="font-sans text-[calc(15px*var(--ws-fs))] font-semibold capitalize text-primary md:text-[calc(16px*var(--ws-fs))]">
 							{b.format} campaign
 						</p>
 						<p className="font-sans text-[calc(12.5px*var(--ws-fs))] text-muted tabular-nums">
@@ -1210,7 +1236,7 @@ function ThreadView({
 							})}
 						</p>
 					</div>
-					<span className="shrink-0 font-display text-[calc(20px*var(--ws-fs))] font-semibold text-primary tabular-nums">
+					<span className="shrink-0 font-display text-[calc(22px*var(--ws-fs))] font-semibold text-primary tabular-nums md:text-[calc(26px*var(--ws-fs))]">
 						{/* A counter-offer moves the price: the other side's
 						    action, so the number rolls. */}
 						<Roll id={b.agreedUsdMinor}>{usd(b.agreedUsdMinor)}</Roll>
@@ -1221,13 +1247,34 @@ function ThreadView({
 							aria-label="Campaign analytics"
 							title="Campaign analytics"
 							onClick={() => setStatsOpen(true)}
-							className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-raised text-muted transition-colors hover:bg-chip hover:text-primary"
+							className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-primary/[0.08] text-primary transition-colors hover:bg-primary/[0.13]"
 						>
 							<ChartBar size={15} weight="fill" />
 						</button>
 					)}
 				</div>
 
+				{/* Days served, as a bar under the terms (Business v2). */}
+				{["accepted", "live", "paused", "completed"].includes(b.status) && b.durationDays > 0 && (
+					<div className="mt-4">
+						<div className="mb-1.5 flex justify-between font-sans text-[calc(12px*var(--ws-fs))] tabular-nums text-muted">
+							<span>
+								Day {b.daysServed} of {b.durationDays}
+							</span>
+							<span>{usd(b.settledUsdMinor)} settled</span>
+						</div>
+						<div className="h-1 overflow-hidden rounded-pill bg-primary/[0.08]">
+							<motion.div
+								className="h-full rounded-pill bg-brand"
+								initial={{ width: 0 }}
+								animate={{ width: `${Math.min(100, (b.daysServed / b.durationDays) * 100)}%` }}
+								transition={{ duration: 0.6, ease: [0.2, 0, 0, 1] }}
+							/>
+						</div>
+					</div>
+				)}
+
+				<div className={clsx(!detailsOpen && "max-md:hidden")}>
 				{/* THE AD ITSELF. The creator is approving a creative — showing
 				    them terms without the thing those terms buy was the missing
 				    half of the story. Same renderer the profile serves. */}
@@ -1249,18 +1296,6 @@ function ThreadView({
 						animate="show"
 						className="mt-2.5 flex flex-wrap items-center gap-1.5 font-sans text-[calc(11.5px*var(--ws-fs))] tabular-nums"
 					>
-						<motion.span
-							variants={staggerPop}
-							className="rounded-pill bg-raised px-2 py-0.5 text-muted"
-						>
-							{b.daysServed}/{b.durationDays} days
-						</motion.span>
-						<motion.span
-							variants={staggerPop}
-							className="rounded-pill bg-raised px-2 py-0.5 text-muted"
-						>
-							{usd(b.settledUsdMinor)} settled
-						</motion.span>
 						{role === "creator" && (
 							<motion.span
 								variants={staggerPop}
@@ -1272,7 +1307,7 @@ function ThreadView({
 						{(b.impressions ?? 0) > 0 && (
 							<motion.span
 								variants={staggerPop}
-								className="rounded-pill bg-raised px-2 py-0.5 text-muted"
+								className="rounded-pill bg-primary/[0.06] px-2 py-0.5 text-muted"
 							>
 								{(b.impressions ?? 0).toLocaleString()} views ·{" "}
 								{(b.clicks ?? 0).toLocaleString()} clicks
@@ -1286,6 +1321,7 @@ function ThreadView({
 					</motion.div>
 				)}
 
+				</div>
 				{/* The cascade rides a wrapper, never the button: framer leaves
 				    opacity inline, which would outrank disabled:opacity-50 and
 				    hover:opacity-90 for good. The button keeps the press. */}
@@ -1294,17 +1330,17 @@ function ThreadView({
 						variants={staggerParent}
 						initial="hidden"
 						animate="show"
-						className="mt-2.5 flex items-center gap-2"
+						className="mt-3.5 flex flex-wrap items-center gap-2 md:mt-4"
 					>
 						{myTurn && (
 							<>
-								<motion.span variants={staggerItem} className="flex">
+								<motion.span variants={staggerItem} className="flex min-w-0 flex-1">
 									<motion.button
 										{...press}
 										type="button"
 										disabled={busy}
 										onClick={() => onAct(b._id, "accept")}
-										className="h-9 rounded-pill bg-brand px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:opacity-90 disabled:opacity-50 cursor-pointer"
+										className="h-11 w-full rounded-pill bg-brand px-5 font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-brand-on transition-colors hover:bg-brand-active disabled:opacity-50 cursor-pointer"
 									>
 										Accept · {usd(b.agreedUsdMinor)}
 									</motion.button>
@@ -1315,7 +1351,7 @@ function ThreadView({
 										type="button"
 										disabled={busy}
 										onClick={() => onAct(b._id, "decline")}
-										className="h-9 rounded-pill bg-raised px-4 font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-chip disabled:opacity-50 cursor-pointer"
+										className="h-11 rounded-pill px-4 font-sans text-[calc(14px*var(--ws-fs))] font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-50 cursor-pointer"
 									>
 										Decline
 									</motion.button>
@@ -1329,7 +1365,7 @@ function ThreadView({
 									type="button"
 									disabled={busy}
 									onClick={() => setCounterOpen((v) => !v)}
-									className="h-9 rounded-pill bg-raised px-4 font-sans text-[calc(13px*var(--ws-fs))] font-medium text-primary transition-colors hover:bg-chip disabled:opacity-50 cursor-pointer"
+									className="h-11 rounded-pill bg-primary/[0.08] px-5 font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-primary transition-colors hover:bg-primary/[0.13] disabled:opacity-50 cursor-pointer"
 								>
 									Counter
 								</motion.button>
@@ -1417,6 +1453,7 @@ function ThreadView({
 					)}
 				</AnimatePresence>
 
+				<div className={clsx(!detailsOpen && "max-md:hidden")}>
 				{/* The receipt: what actually happened to the money, tranche by
 				    tranche. Both sides read the same rows — the creator sees
 				    their cut, the advertiser sees what came back. */}
@@ -1425,11 +1462,11 @@ function ThreadView({
 				    with the card, when the room changes. */}
 				{settledPeriods.length > 0 && (
 					<motion.div {...collapse} className="overflow-hidden">
-						<div className="mt-2.5 overflow-hidden rounded-lg bg-sunken/60">
+						<div className="mt-3 overflow-hidden rounded-[16px] bg-primary/[0.04] py-1">
 							{settledPeriods.map((per) => (
 								<div
 									key={per.index}
-									className="flex items-center justify-between gap-3 border-b border-hairline/60 px-3.5 py-2 font-sans text-[calc(12.5px*var(--ws-fs))] last:border-b-0"
+									className="flex items-center justify-between gap-3 px-3.5 py-2 font-sans text-[calc(12.5px*var(--ws-fs))]"
 								>
 									<span className="text-muted">
 										{new Date(per.startAt).toISOString().slice(5, 10)} –{" "}
@@ -1458,6 +1495,18 @@ function ThreadView({
 						period
 					</p>
 				)}
+				</div>
+				{(b.creative?.url || settledPeriods.length > 0 || heldPeriod || b.settledUsdMinor > 0 || cancellable) && (
+					<button
+						type="button"
+						onClick={() => setDetailsOpen((v) => !v)}
+						aria-expanded={detailsOpen}
+						className="mt-3 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-pill py-1.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-muted transition-colors hover:text-primary md:hidden"
+					>
+						{detailsOpen ? "Hide details" : "Details"}
+						<CaretLeft size={12} weight="bold" className={clsx("transition-transform", detailsOpen ? "rotate-90" : "-rotate-90")} />
+					</button>
+				)}
 				</motion.div>
 			</div>
 
@@ -1474,7 +1523,7 @@ function ThreadView({
 			)}
 
 			{/* messages */}
-			<div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 md:px-6">
+			<div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 md:px-6">
 				{messages.map((m, i) => {
 					const prev = messages[i - 1];
 					const newDay =
@@ -1483,7 +1532,7 @@ function ThreadView({
 							new Date(m.createdAt).toDateString();
 					const divider = newDay ? (
 						<div className="flex justify-center py-2">
-							<span className="rounded-pill bg-raised px-3 py-1 font-sans text-[calc(11px*var(--ws-fs))] font-semibold text-muted">
+							<span className="rounded-pill bg-primary/[0.05] px-3 py-1 font-sans text-[calc(11px*var(--ws-fs))] font-semibold text-muted">
 								{dayLabel(m.createdAt)}
 							</span>
 						</div>
@@ -1502,7 +1551,7 @@ function ThreadView({
 									animate={reveal(0).animate}
 									className="my-2 flex justify-center"
 								>
-									<span className="max-w-[85%] rounded-lg bg-raised px-3.5 py-2 text-center font-sans text-[calc(12px*var(--ws-fs))] leading-relaxed text-muted">
+									<span className="max-w-[85%] rounded-[16px] bg-primary/[0.05] px-3.5 py-2 text-center font-sans text-[calc(12px*var(--ws-fs))] leading-relaxed text-muted">
 										{m.content}
 									</span>
 								</motion.div>
@@ -1526,10 +1575,11 @@ function ThreadView({
 							>
 								<span
 									className={clsx(
-										"max-w-[78%] rounded-xl px-3.5 py-2 font-sans text-[calc(14px*var(--ws-fs))] leading-relaxed",
+										"max-w-[78%] rounded-[20px] px-3.5 py-2 font-sans text-[calc(14.5px*var(--ws-fs))] leading-relaxed",
+										// The sender bubble is solid tide, as in Messages.
 										mine
-											? "bg-brand text-brand-on"
-											: "bg-raised text-primary",
+											? "bg-[#087A94] text-white"
+											: "bg-primary/[0.08] text-primary",
 									)}
 								>
 									{m.content}
@@ -1543,8 +1593,8 @@ function ThreadView({
 
 			{/* composer: ONE pill with the send inside — a row of loose parts
 			    reads as a toolbar; a composer is one object (Messages rule). */}
-			<div className="shrink-0 p-3 md:px-6">
-				<div className="flex min-w-0 items-end gap-1 rounded-2xl bg-sunken py-1.5 pl-4 pr-1.5 transition-colors focus-within:bg-raised">
+			<div className="shrink-0 px-2 pt-2 pb-[max(10px,var(--ws-safe-bottom))] md:px-6 md:pb-4">
+				<div className="flex min-w-0 items-end gap-1 rounded-[26px] bg-primary/[0.05] py-1.5 pl-4 pr-1.5 transition-colors focus-within:bg-primary/[0.08]">
 					<textarea
 						value={draft}
 						onChange={(e) => setDraft(e.target.value)}
@@ -1566,7 +1616,7 @@ function ThreadView({
 						onClick={onSend}
 						disabled={!draft.trim()}
 						aria-label="Send"
-						className="mb-0.5 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-brand text-brand-on transition-colors hover:bg-brand-active disabled:opacity-40"
+						className="mb-0.5 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-brand text-brand-on transition-colors hover:bg-brand-active disabled:opacity-40"
 					>
 						<PaperPlaneRight size={16} weight="fill" />
 					</motion.button>

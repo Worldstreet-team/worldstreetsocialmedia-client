@@ -1,6 +1,6 @@
 "use client";
 
-import { useAtomValue, useSetAtom } from "jotai";
+import { useAtomValue } from "jotai";
 import { userAtom } from "@/store/user.atom";
 import { useClerk } from "@clerk/nextjs";
 import { useAppPathname } from "@/i18n/useAppPathname";
@@ -16,10 +16,10 @@ import {
 import {
 	ArrowUpRight,
 	CaretDown,
-	MagnifyingGlass,
 	Moon,
 	SignOut,
 	Sun,
+	X,
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { sidebarList } from "@/data/sidebar";
@@ -34,17 +34,14 @@ import { BrandRitual } from "@/components/layout/BrandRitual";
 import { ProductsWheel } from "@/components/layout/products/ProductsWheel";
 import { SidebarWallet } from "@/components/layout/SidebarWallet";
 import {
-	OverlayHeader,
-	overlayPanelClass,
 	OverlayScrim,
 	useOverlayDismiss,
 } from "@/components/ui/Overlay";
 import { NotificationsPopover } from "@/components/layout/NotificationsPopover";
-import { FeedHeaderActions } from "@/components/feed/FeedHeaderActions";
+import { VividOrb } from "@/components/vivid/VividOrb";
 import { unreadMessagesCountAtom } from "@/store/messageCache";
 import {
 	badgeForNavKey,
-	searchOpenAtom,
 	unreadBmCountAtom,
 	unreadNotificationsCountAtom,
 } from "@/store/ui.atom";
@@ -66,7 +63,6 @@ export function MobileNavigation() {
 	// The Products row: where the wheel's blur spreads from.
 	const productsRow = useRef<HTMLButtonElement>(null);
 	const closeProducts = useCallback(() => setProductsOpen(false), []);
-	const setSearchOpen = useSetAtom(searchOpenAtom);
 	useEffect(() => setMounted(true), []);
 	const isLight = mounted && resolvedTheme === "light";
 
@@ -94,7 +90,9 @@ export function MobileNavigation() {
 			    (absolutely, so it stays centred no matter how wide the actions
 			    grow), and the actions that used to eat the feed bar's width —
 			    search, which had NO touch entry point at all, and Go Live. */}
-			<header className="fixed top-0 left-0 right-0 pt-safe bg-page border-b border-hairline z-sticky md:hidden">
+			{/* Frosted, no rule under it (owner 2026-10-16): the bar, the stories
+			    and the tabs read as one glass top, cleanly. */}
+			<header className="fixed top-0 left-0 right-0 pt-safe bg-page/75 backdrop-blur-xl backdrop-saturate-150 z-sticky md:hidden">
 				<div className="relative h-14 flex items-center justify-between px-2">
 					{/* 44x44 target, small glyph — the tappable box doesn't shrink
 					    to match the mark.
@@ -125,16 +123,10 @@ export function MobileNavigation() {
 								/>
 							</svg>
 						</button>
-						{/* The magnifier rides beside the menu (owner 2026-09-03):
-						    opens the same SearchWindow the desktop rail opens. */}
-						<button
-							type="button"
-							onClick={() => setSearchOpen(true)}
-							aria-label={t("rail.search")}
-							className="flex h-11 w-11 items-center justify-center rounded-pill text-muted active:bg-primary/10 transition-colors"
-						>
-							<MagnifyingGlass size={23} />
-						</button>
+						{/* Search left the bar (owner 2026-10-16, top bar A): it
+						    lives on Explore, one tap away in the bottom bar, and
+						    the menu side stays as light as the actions side. */}
+						<span className="h-11 w-11" aria-hidden />
 					</div>
 
 					{/* The animated lockup, centred (owner 2026-09-03: back to the
@@ -148,15 +140,20 @@ export function MobileNavigation() {
 						<BrandRitual size={36} wordSize={18} />
 					</Link>
 
-					{/* Bell + live in identical 44px cells on one axis. */}
+					{/* Vivid + bell in identical 44px cells on one axis. Go Live
+					    left the bar (owner 2026-10-16): it lives in the + drawer
+					    now, and Vivid's turning orb takes its place. */}
 					<div className="flex items-center shrink-0">
+						<Link
+							href="/vivid"
+							aria-label="Vivid"
+							className="flex h-11 w-11 items-center justify-center rounded-pill active:bg-primary/10 transition-colors"
+						>
+							<VividOrb size={26} />
+						</Link>
 						{/* Notifications moved UP out of the bottom bar: it is
-						    something you check, not somewhere you navigate, and it
-						    was holding a permanent tab slot for a glance. */}
+						    something you check, not somewhere you navigate. */}
 						<NotificationsPopover compact />
-						<span className="flex h-11 w-11 items-center justify-center">
-							<FeedHeaderActions compact />
-						</span>
 					</div>
 				</div>
 			</header>
@@ -193,23 +190,48 @@ export function MobileNavigation() {
 						// A SIDE sheet (owner 2026-09-03): slides in from the left
 						// like a hamburger menu should, not up from the bottom.
 						// Same frost ground as every overlay panel.
-						className={clsx(
-							overlayPanelClass,
-							"fixed inset-y-0 left-0 z-modal w-[88%] max-w-[380px] rounded-r-2xl md:hidden",
-						)}
+						// A very strong blur, clean (owner 2026-10-16): the
+						// page goes to soft colour behind it, no frost texture,
+						// no rules inside.
+						className="fixed inset-y-0 left-0 z-modal flex w-[86%] max-w-[360px] flex-col overflow-hidden rounded-r-[28px] bg-raised/55 shadow-pop backdrop-blur-[48px] backdrop-saturate-[1.8] md:hidden [html[data-ws-theme=platform-light]_&]:bg-surface/70"
 					>
 						{/* The brand leads the sheet (owner 2026-09-03): the lockup
 						    up top with real breathing room — clear of the status
 						    bar — and the profile moved down to the footer. */}
+						{/* Whose menu this is leads the sheet. One row on the rows'
+						    own grid (owner 2026-10-16, "align it very well"): the
+						    avatar's edge sits on the icons' edge below, and the
+						    close button is centred on the avatar. */}
 						<div className="pt-safe shrink-0">
-							<OverlayHeader
-								onClose={closeDrawer}
-								closeLabel="Close navigation menu"
-							>
-								<div className="flex min-w-0 flex-1 items-center pt-1 pb-0.5">
-									<BrandRitual size={34} wordSize={17} />
-								</div>
-							</OverlayHeader>
+							<div className="flex items-center gap-2 px-3 pb-3 pt-5">
+								{/* A clean border, no fill (owner 2026-10-16). */}
+								<Link
+									href={user.username ? `/profile/${user.username}` : "/profile"}
+									onClick={closeDrawer}
+									className="flex min-w-0 flex-1 items-center gap-3 rounded-pill border border-primary/[0.12] py-1.5 pl-1.5 pr-4 transition-colors hover:border-primary/25"
+								>
+									<span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-pill">
+										<SafeAvatar src={user.avatar} className="object-cover" alt={user.username || "User"} />
+									</span>
+									<span className="flex min-w-0 flex-col gap-0.5">
+										<span className="truncate font-sans text-[calc(16px*var(--ws-fs))] font-bold leading-tight text-primary">
+											{fullName}
+										</span>
+										<span className="truncate font-sans text-[calc(13px*var(--ws-fs))] leading-tight text-muted">
+											@{user.username}
+										</span>
+									</span>
+								</Link>
+								<motion.button
+									type="button"
+									onClick={closeDrawer}
+									aria-label="Close navigation menu"
+									whileTap={{ scale: 0.92 }}
+									className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-primary/[0.08] text-primary transition-colors hover:bg-primary/[0.14]"
+								>
+									<X size={16} weight="bold" />
+								</motion.button>
+							</div>
 						</div>
 
 						{/* One scroll column owns everything between the identity
@@ -249,6 +271,7 @@ export function MobileNavigation() {
 											"nav.explore",
 											"nav.messages",
 											"nav.profile",
+											"nav.videos",
 										].includes(item.labelKey),
 								)
 								.map((item) => {
@@ -257,9 +280,11 @@ export function MobileNavigation() {
 										// Same row language as the desktop rail:
 										// pill rows, active = bg/chip + semibold.
 										"flex items-center gap-3.5 px-4 py-3.5 rounded-pill transition-colors font-sans text-[calc(16.5px*var(--ws-fs))] relative",
+										// Active is bold and nothing else (owner 2026-10-16,
+										// matching the desktop rail): no fill behind it.
 										isActive
-											? "bg-primary/10 text-primary font-semibold"
-											: "text-muted hover:text-primary hover:bg-primary/5",
+											? "text-primary font-bold"
+											: "text-muted hover:text-primary",
 									);
 
 								// The Products entry opens the wheel of apps (owner
@@ -317,34 +342,7 @@ export function MobileNavigation() {
 						{/* Footer Actions. The bottom edge is the phone's, so the
 						    home indicator gets its clearance here rather than on a
 						    wrapper the panel no longer has. */}
-						<div className="shrink-0 border-t border-hairline px-3 pt-2 pb-[calc(8px+var(--ws-safe-bottom))]">
-							{/* Whose menu this is, at the bottom now (owner
-							    2026-09-03) — a tap goes to the profile. */}
-							<Link
-								href={
-									user.username
-										? `/profile/${user.username}`
-										: "/profile"
-								}
-								onClick={closeDrawer}
-								className="flex items-center gap-3 rounded-pill px-4 py-3 transition-colors hover:bg-primary/5"
-							>
-								<div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full border border-hairline">
-									<SafeAvatar
-										src={user.avatar}
-										className="object-cover"
-										alt={user.username || "User"}
-									/>
-								</div>
-								<div className="flex min-w-0 flex-col">
-									<span className="truncate font-sans text-[calc(15px*var(--ws-fs))] font-bold leading-tight text-primary">
-										{fullName}
-									</span>
-									<span className="truncate font-sans text-[calc(12.5px*var(--ws-fs))] leading-tight text-subtle">
-										@{user.username}
-									</span>
-								</div>
-							</Link>
+						<div className="shrink-0 px-3 pt-2 pb-[calc(8px+var(--ws-safe-bottom))]">
 							<button
 								type="button"
 								onClick={() =>

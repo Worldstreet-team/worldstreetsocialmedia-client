@@ -35,6 +35,7 @@ import { VividOrb } from "@/components/vivid/VividOrb";
 import { vividDmDraftAtom } from "@/store/ui.atom";
 import { press, staggerItem } from "@/lib/motion-presets";
 import { MINE_FILL, MINE_INK } from "./MessageBubble";
+import { ComposerLinkPreview, firstPreviewableUrl } from "./LinkPreview";
 
 /** A touch screen, where the on-screen keyboard and the emoji panel compete. */
 const isTouch = () =>
@@ -125,6 +126,8 @@ export const ComposerInput = forwardRef<
 		setValue(vividDraft.text);
 		setVividDraft(null);
 	}, [vividDraft, setVividDraft]);
+	const draftUrl = firstPreviewableUrl(value);
+	const [hiddenUrl, setHiddenUrl] = useState<string | null>(null);
 	const [showEmoji, setShowEmoji] = useState(false);
 	const [mentionQuery, setMentionQuery] = useState<{
 		query: string;
@@ -183,6 +186,22 @@ export const ComposerInput = forwardRef<
 
 	return (
 		<div className="flex min-w-0 flex-1 flex-col gap-2">
+		{/* The link in the draft, previewed before it is sent (owner
+		    2026-10-08). Hidden once dismissed for THIS link. */}
+		<AnimatePresence initial={false}>
+			{draftUrl && draftUrl !== hiddenUrl && (
+				<motion.div
+					key={draftUrl}
+					initial={{ opacity: 0, height: 0 }}
+					animate={{ opacity: 1, height: "auto" }}
+					exit={{ opacity: 0, height: 0 }}
+					transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+					className="overflow-hidden"
+				>
+					<ComposerLinkPreview url={draftUrl} onDismiss={() => setHiddenUrl(draftUrl)} />
+				</motion.div>
+			)}
+		</AnimatePresence>
 		{/* @mention rail (owner pick: horizontal chips, not a dropdown) —
 		    avatar chips above the pill, one tap each. */}
 		{mentionQuery && mentionMatches.length > 0 && (
@@ -383,9 +402,11 @@ export const ComposerInput = forwardRef<
 				initial="hidden"
 				animate="show"
 				exit="exit"
-				className="overflow-hidden rounded-xl bg-surface ws-emoji-picker"
+				className="overflow-hidden rounded-[22px] bg-surface/80 shadow-pop backdrop-blur-2xl backdrop-saturate-150 ws-emoji-picker"
 			>
 				<EmojiPicker
+					skinTonesDisabled
+					previewConfig={{ showPreview: false }}
 					theme={resolvedTheme === "light" ? ("light" as Theme) : ("dark" as Theme)}
 					width="100%"
 					height={300}

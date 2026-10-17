@@ -81,9 +81,22 @@ import {
   staggerParentFast,
   swap,
 } from "@/lib/motion-presets";
-import { postFormDirect } from "@/lib/upload-direct";
+import { sendFormProgress } from "@/lib/upload-direct";
+import { useSetAtom } from "jotai";
+import { type StoryUpload, storyUploadAtom } from "@/store/storyUpload.atom";
 
 type ToolMode = "none" | "text" | "sticker" | "draw";
+
+/** What a background story job reports back to the rail's ring. */
+type StoryReport = {
+  pct: (v: number) => void;
+  slide: (n: number) => void;
+  thumb: (f: File) => void;
+};
+type StoryJob = (signal: AbortSignal, report: StoryReport) => Promise<void>;
+
+/** Ids for background jobs, so a stale one never writes over a newer one. */
+let uploadSeq = 0;
 
 const STORY_W = 1080;
 const STORY_H = 1920;
@@ -179,8 +192,8 @@ interface StoryStudioProps {
  *
  * Portalled to <body> (template.tsx's transient transform traps fixed UI).
  *
- * Phase 4 layers the decoration tools on top: text (Display/Clean/Ticker
- * styles), cashtag + emoji stickers, and a draw layer — all stored in
+ * Phase 4 layers the decoration tools on top: text styles, people tags
+ * and emoji stickers, and a draw layer — all stored in
  * normalized stage coordinates and composited into the export by
  * lib/editor/overlays.ts, so the posted file matches the preview.
  */
@@ -199,7 +212,6 @@ export default function StoryStudio({
   // switching snapshots it into the deck.
   const [slides, setSlides] = useState<Slide[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [postLabel, setPostLabel] = useState<string | null>(null);
   const [sourceUrl, setSourceUrl] = useState<string | null>(null);
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -208,10 +220,12 @@ export default function StoryStudio({
   const [croppedPx, setCroppedPx] = useState<Area | null>(null);
   const [caption, setCaption] = useState("");
   // The uploader's call: whether viewers can pay to download this story.
-  const [allowSave, setAllowSave] = useState(false);
+  // Saves on and free, watermark off, by default (owner 2026-10-14).
+  const [allowSave, setAllowSave] = useState(true);
+  const [saveFree, setSaveFree] = useState(true);
   // Attribution watermark: ON by default (the norm), the author may switch
   // it off or reword it — brand handles, campaign tags. Empty = their @handle.
-  const [watermarkOn, setWatermarkOn] = useState(true);
+  const [watermarkOn, setWatermarkOn] = useState(false);
   const [watermarkText, setWatermarkText] = useState("");
   const [posting, setPosting] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -219,7 +233,6 @@ export default function StoryStudio({
   // Voice lane: the recorded audio take. The video is only rendered on Share,
   // which is what lets the canvas stay editable after recording.
   const [take, setTake] = useState<VoiceTake | null>(null);
-  const [renderPct, setRenderPct] = useState(0);
   const isVideo = !!file && file.type.startsWith("video/");
 
   // Phase 4 decoration state. A text story drops straight into the type
@@ -551,23 +564,19 @@ export default function StoryStudio({
     setMode("none");
   };
 
-  const finishPost = (count: number) => {
-    onPosted();
-    toast(count > 1 ? `${count} slides posted!` : "Story posted!", {
-      type: "success",
-    });
-    onClose();
-  };
+  const setUpload = useSetAtom(storyUploadAtom);
 
-  const postFile = async (
+  const postFile = (
     media: File,
     slideCaption: string,
     tagged: Overlay[] = [],
+    opts: { onProgress?: (frac: number) => void; signal?: AbortSignal } = {},
   ) => {
     const formData = new FormData();
     formData.append("media", media);
     if (slideCaption.trim()) formData.append("caption", slideCaption.trim());
-    if (allowSave) formData.append("allowSave", "true");
+    formData.append("allowSave", allowSave ? "true" : "false");
+    formData.append("saveFree", saveFree ? "true" : "false");
     formData.append("watermark", watermarkOn ? "true" : "false");
     if (watermarkOn && watermarkText.trim())
       formData.append("watermarkText", watermarkText.trim().slice(0, 40));
@@ -584,10 +593,70 @@ export default function StoryStudio({
     if (mentions.length > 0) {
       formData.append("mentions", JSON.stringify(mentions));
     }
-    return postFormDirect("/api/stories", formData);
+    return sendFormProgress("/api/stories", formData, opts);
   };
 
-  const handleShare = async () => {
+  /**
+   * Share hands the story to a background job and closes the studio at once
+   * (owner pick 2026-10-11, "Ring on Your story"): the rail's own circle
+   * fills as it uploads. Everything the job reads is captured when Share is
+   * pressed, so the studio unmounting under it changes nothing; setters
+   * called after unmount are no-ops.
+   */
+  const startBackground = (job: StoryJob, total: number) => {
+    const id = ++uploadSeq;
+    let thumb: string | null = null;
+    const clear = () => {
+      setUpload((cur) => (cur && cur.id === id ? null : cur));
+      if (thumb) URL.revokeObjectURL(thumb);
+    };
+    const patch = (p: Partial<StoryUpload>) =>
+      setUpload((cur) => (cur && cur.id === id ? { ...cur, ...p } : cur));
+    const run = () => {
+      const ctrl = new AbortController();
+      setUpload({
+        id,
+        status: "working",
+        slide: 1,
+        total,
+        pct: 0.02,
+        thumb,
+        cancel: () => {
+          ctrl.abort();
+          clear();
+        },
+      });
+      const report: StoryReport = {
+        pct: (v) => patch({ pct: Math.max(0.02, Math.min(1, v)) }),
+        slide: (n) => patch({ slide: n }),
+        thumb: (f) => {
+          if (thumb || !f.type.startsWith("image/")) return;
+          thumb = URL.createObjectURL(f);
+          patch({ thumb });
+        },
+      };
+      job(ctrl.signal, report)
+        .then(() => {
+          if (ctrl.signal.aborted) return;
+          patch({ status: "done", pct: 1, cancel: undefined });
+          onPosted();
+          window.setTimeout(clear, 2600);
+        })
+        .catch((err: unknown) => {
+          if (ctrl.signal.aborted) return;
+          const message =
+            err instanceof Error && err.message
+              ? err.message
+              : "Something went wrong";
+          patch({ status: "failed", message, retry: run, cancel: clear });
+          toast(message, { type: "error" });
+        });
+    };
+    run();
+    onClose();
+  };
+
+  const handleShare = () => {
     if (posting) return;
 
     if (kind === "text") {
@@ -596,7 +665,8 @@ export default function StoryStudio({
       // stage shows.
       if (overlays.length === 0 && strokes.length === 0) return;
       setPosting(true);
-      try {
+      const snap = { overlays, strokes, bg, caption };
+      startBackground(async (signal, report) => {
         await document.fonts.ready;
         const bgCanvas = document.createElement("canvas");
         bgCanvas.width = STORY_W;
@@ -604,13 +674,9 @@ export default function StoryStudio({
         const bgCtx = bgCanvas.getContext("2d");
         if (!bgCtx) throw new Error("Canvas 2D unavailable");
         try {
-          await paintStoryCanvas(bgCtx, STORY_W, STORY_H, bg);
+          await paintStoryCanvas(bgCtx, STORY_W, STORY_H, snap.bg);
         } catch {
-          toast("That backdrop didn't load — try another canvas", {
-            type: "error",
-          });
-          setPosting(false);
-          return;
+          throw new Error("That backdrop didn't load. Try another canvas.");
         }
         const outFile = await exportCroppedFile(
           bgCanvas,
@@ -618,61 +684,55 @@ export default function StoryStudio({
           "text-story",
           {
             target: { w: STORY_W, h: STORY_H },
-            decorations: { overlays, strokes, fonts },
+            decorations: { overlays: snap.overlays, strokes: snap.strokes, fonts },
           },
         );
-        const result = await postFile(outFile, caption, overlays);
-        if (result.success) {
-          finishPost(1);
-        } else {
-          toast(result.message || "Failed to post story", { type: "error" });
-          setPosting(false);
+        report.thumb(outFile);
+        report.pct(0.2);
+        const result = await postFile(outFile, snap.caption, snap.overlays, {
+          signal,
+          onProgress: (f) => report.pct(0.2 + 0.8 * f),
+        });
+        if (!result.success) {
+          throw new Error(result.message || "Failed to post story");
         }
-      } catch {
-        toast("Something went wrong", { type: "error" });
-        setPosting(false);
-      }
+      }, 1);
       return;
     }
 
     if (kind === "voice") {
       if (!take) return;
       setPosting(true);
-      setRenderPct(0);
-      try {
+      const snap = { take, bg, caption };
+      startBackground(async (signal, report) => {
         // The picture is composed now, from the take plus whatever canvas is
         // selected — which is why the backdrop stayed changeable until here.
         const photo =
-          bg.kind === "photo"
-            ? await loadBackdropImage(bg.url).catch(() => null)
+          snap.bg.kind === "photo"
+            ? await loadBackdropImage(snap.bg.url).catch(() => null)
             : null;
-        if (bg.kind === "photo" && !photo) {
-          toast("That backdrop didn't load — try another canvas", {
-            type: "error",
+        if (snap.bg.kind === "photo" && !photo) {
+          throw new Error("That backdrop didn't load. Try another canvas.");
+        }
+        let video: File;
+        try {
+          video = await renderVoiceVideo({
+            take: snap.take,
+            canvas: snap.bg,
+            photo,
+            onProgress: (v) => report.pct(0.6 * v),
           });
-          setPosting(false);
-          return;
+        } catch {
+          throw new Error("Couldn't put your voice note together");
         }
-        const video = await renderVoiceVideo({
-          take,
-          canvas: bg,
-          photo,
-          onProgress: setRenderPct,
+        const result = await postFile(video, snap.caption, [], {
+          signal,
+          onProgress: (f) => report.pct(0.6 + 0.4 * f),
         });
-        setPostLabel("Posting");
-        const result = await postFile(video, caption);
-        if (result.success) {
-          finishPost(1);
-        } else {
-          toast(result.message || "Failed to post story", { type: "error" });
-          setPosting(false);
-          setPostLabel(null);
+        if (!result.success) {
+          throw new Error(result.message || "Failed to post story");
         }
-      } catch {
-        toast("Couldn't put your voice note together", { type: "error" });
-        setPosting(false);
-        setPostLabel(null);
-      }
+      }, 1);
       return;
     }
 
@@ -681,13 +741,15 @@ export default function StoryStudio({
     const deck = snapshotAll();
     if (deck.length === 0) return;
     setPosting(true);
-    try {
+    const active = activeId;
+    const oriented = orientedRef.current;
+    startBackground(async (signal, report) => {
       // Canvas text uses the same hashed next/font faces the preview shows —
       // make sure they're loaded before measuring/drawing.
       await document.fonts.ready;
       for (let i = 0; i < deck.length; i++) {
         const slide = deck[i];
-        if (deck.length > 1) setPostLabel(`Posting ${i + 1} of ${deck.length}`);
+        report.slide(i + 1);
         let out: File;
         if (slide.file.type.startsWith("video/")) {
           // Videos post as-is (or as trimmed) — the canvas pipeline is
@@ -695,8 +757,8 @@ export default function StoryStudio({
           out = slide.file;
         } else {
           let canvas: HTMLCanvasElement;
-          if (slide.id === activeId && orientedRef.current) {
-            canvas = orientedRef.current;
+          if (slide.id === active && oriented) {
+            canvas = oriented;
           } else {
             const bitmap = await loadOrientedBitmap(slide.file);
             canvas = orientCanvas(bitmap, 0, false);
@@ -717,25 +779,20 @@ export default function StoryStudio({
             },
           );
         }
-        const result = await postFile(out, slide.caption, slide.overlays);
+        report.thumb(out);
+        const result = await postFile(out, slide.caption, slide.overlays, {
+          signal,
+          onProgress: (f) => report.pct((i + 0.15 + 0.85 * f) / deck.length),
+        });
         if (!result.success) {
-          toast(
+          throw new Error(
             deck.length > 1
               ? `Slide ${i + 1}: ${result.message || "failed to post"}`
               : result.message || "Failed to post story",
-            { type: "error" },
           );
-          setPosting(false);
-          setPostLabel(null);
-          return;
         }
       }
-      finishPost(deck.length);
-    } catch {
-      toast("Something went wrong", { type: "error" });
-      setPosting(false);
-      setPostLabel(null);
-    }
+    }, deck.length);
   };
 
   // Shared between the media and text stages, so the two can't drift.
@@ -859,18 +916,6 @@ export default function StoryStudio({
   const stickerTrayEl = (
     <StickerTray
       key="sticker-tray"
-      onAddCashtag={(symbol) => {
-        addOverlay({
-          kind: "cashtag",
-          id: newOverlayId(),
-          x: 0.5,
-          y: 0.6,
-          scale: 1,
-          rotation: 0,
-          symbol,
-        });
-        setMode("none");
-      }}
       onAddEmoji={(emoji) => {
         addOverlay({
           kind: "emoji",
@@ -1241,14 +1286,14 @@ export default function StoryStudio({
               : "Caption"
           }
         >
-          <div className="rounded-xl glass-input px-3 py-2.5">
+          <div className="rounded-[18px] glass-input px-3.5 py-3">
             <textarea
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               maxLength={CAPTION_MAX}
               rows={2}
               placeholder="Say something about it…"
-              className="w-full bg-transparent outline-none resize-none font-sans text-[calc(13px*var(--ws-fs))] leading-relaxed placeholder:text-[#fafaf9]/32"
+              className="w-full bg-transparent outline-none resize-none font-sans text-[calc(13px*var(--ws-fs))] leading-relaxed placeholder:text-subtle"
             />
             <div className="flex justify-end">
               <span
@@ -1264,18 +1309,18 @@ export default function StoryStudio({
               </span>
             </div>
           </div>
-          {/* Saves are the uploader's call. Off by default: a story is
-              ephemeral unless its owner decides otherwise. */}
+          {/* Saves are the uploader's call: on and free by default, or $1
+              a save, or off. */}
           <button
             type="button"
             onClick={() => setAllowSave((v) => !v)}
             aria-pressed={allowSave}
-            className="mt-2 flex w-full cursor-pointer items-center gap-2.5 rounded-xl glass-input px-3 py-2.5 text-left transition-colors"
+            className="mt-2 flex w-full cursor-pointer items-center gap-3 rounded-[18px] glass-input px-3.5 py-3 text-left transition-colors"
           >
             <span
               className={clsx(
                 "relative h-5 w-9 shrink-0 rounded-pill transition-colors",
-                allowSave ? "bg-brand" : "bg-[#fafaf9]/20",
+                allowSave ? "bg-brand" : "bg-primary/15",
               )}
             >
               {/* Slides on a transform, not on `left`. */}
@@ -1283,7 +1328,7 @@ export default function StoryStudio({
                 initial={false}
                 animate={{ x: allowSave ? 16 : 0 }}
                 transition={snappySpring}
-                className="absolute top-0.5 left-0.5 h-4 w-4 rounded-pill bg-[#fafaf9]"
+                className="absolute top-0.5 left-0.5 h-4 w-4 rounded-pill bg-white shadow-sm"
               />
             </span>
             <span className="min-w-0">
@@ -1291,23 +1336,50 @@ export default function StoryStudio({
                 Allow saves
               </span>
               <span className="block font-sans text-[calc(11px*var(--ws-fs))] glass-ink-faint">
-                People can download this story for $1.
+                {saveFree
+                  ? "Anyone who can see it can download it, free."
+                  : "People pay $1 to download it; 60c comes to you."}
               </span>
             </span>
           </button>
+          <AnimatePresence initial={false}>
+            {allowSave && (
+              <motion.div key="save-price" {...collapse} className="overflow-hidden">
+                <div className="mt-2 grid grid-cols-2 gap-1 rounded-pill glass-input p-1">
+                  {([
+                    [true, "Free"],
+                    [false, "$1 per save"],
+                  ] as const).map(([free, label]) => (
+                    <button
+                      key={label}
+                      type="button"
+                      aria-pressed={saveFree === free}
+                      onClick={() => setSaveFree(free)}
+                      className={clsx(
+                        "h-9 cursor-pointer rounded-pill font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold transition-colors",
+                        saveFree === free ? "bg-primary text-page" : "glass-ink-faint hover:text-primary",
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          {/* The screenshot-attribution mark. On by default; the text field
+          {/* The screenshot-attribution mark. Off by default; the text field
               only appears while it is on — an off mark needs no wording. */}
           <button
             type="button"
             onClick={() => setWatermarkOn((v) => !v)}
             aria-pressed={watermarkOn}
-            className="mt-2 flex w-full cursor-pointer items-center gap-2.5 rounded-xl glass-input px-3 py-2.5 text-left transition-colors"
+            className="mt-2 flex w-full cursor-pointer items-center gap-3 rounded-[18px] glass-input px-3.5 py-3 text-left transition-colors"
           >
             <span
               className={clsx(
                 "relative h-5 w-9 shrink-0 rounded-pill transition-colors",
-                watermarkOn ? "bg-brand" : "bg-[#fafaf9]/20",
+                watermarkOn ? "bg-brand" : "bg-primary/15",
               )}
             >
               {/* Slides on a transform, not on `left`. */}
@@ -1315,7 +1387,7 @@ export default function StoryStudio({
                 initial={false}
                 animate={{ x: watermarkOn ? 16 : 0 }}
                 transition={snappySpring}
-                className="absolute top-0.5 left-0.5 h-4 w-4 rounded-pill bg-[#fafaf9]"
+                className="absolute top-0.5 left-0.5 h-4 w-4 rounded-pill bg-white shadow-sm"
               />
             </span>
             <span className="min-w-0">
@@ -1340,7 +1412,7 @@ export default function StoryStudio({
                     setWatermarkText(e.target.value.slice(0, 40))
                   }
                   placeholder="Watermark text (default: your @handle)"
-                  className="mt-2 h-10 w-full rounded-xl glass-input px-3 font-sans text-[calc(12.5px*var(--ws-fs))] outline-none placeholder:glass-ink-faint"
+                  className="mt-2 h-11 w-full rounded-pill glass-input px-4 font-sans text-[calc(12.5px*var(--ws-fs))] outline-none placeholder:glass-ink-faint"
                 />
               </motion.div>
             )}
@@ -1355,7 +1427,7 @@ export default function StoryStudio({
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            className="flex w-full h-12 items-center justify-center gap-2 rounded-pill glass-cta font-sans font-semibold text-[calc(14px*var(--ws-fs))] transition-colors cursor-pointer active:brightness-95"
+            className="flex w-full h-12 items-center justify-center gap-2 rounded-pill glass-cta shadow-nav font-sans font-semibold text-[calc(14px*var(--ws-fs))] transition-colors cursor-pointer active:brightness-95"
           >
             <Images size={16} weight="bold" />
             Choose media
@@ -1365,55 +1437,33 @@ export default function StoryStudio({
             type="button"
             onClick={handleShare}
             disabled={posting || !canShare}
-            className="flex w-full h-12 items-center justify-center gap-2 rounded-pill glass-cta font-sans font-semibold text-[calc(14px*var(--ws-fs))] transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer active:brightness-95"
+            className="flex w-full h-12 items-center justify-center gap-2 rounded-pill glass-cta shadow-nav font-sans font-semibold text-[calc(14px*var(--ws-fs))] transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer active:brightness-95"
           >
-            {posting ? (
-              <span className="w-4 h-4 border-2 border-[#0c0a09]/25 border-t-[#0c0a09] rounded-pill animate-spin" />
-            ) : (
-              <PaperPlaneTilt size={16} weight="bold" />
-            )}
-            {/* Keyed by phase, never by the percent: the number ticks in
-                place and only a change of state swaps the label. */}
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.span
-                key={
-                  posting && kind === "voice" && !postLabel
-                    ? "composing"
-                    : posting && postLabel
-                      ? "posting"
-                      : "share"
-                }
-                {...swap}
-                className="tabular-nums"
-              >
-                {posting && kind === "voice" && !postLabel
-                  ? `Composing ${Math.round(renderPct * 100)}%`
-                  : posting && postLabel
-                    ? postLabel
-                    : kind === "media" && slides.length > 1
-                      ? `Share ${slides.length} slides`
-                      : "Share to your story"}
-              </motion.span>
-            </AnimatePresence>
+            <PaperPlaneTilt size={16} weight="bold" />
+            <span className="tabular-nums">
+              {kind === "media" && slides.length > 1
+                ? `Share ${slides.length} slides`
+                : "Share to your story"}
+            </span>
           </button>
         )}
+        {/* The button's small print repeats the choices above it, so
+            nothing goes out by surprise (story flow, step 7). */}
         <AnimatePresence mode="wait" initial={false}>
           <motion.p
-            key={
-              kind === "voice" && !take
-                ? "record"
-                : kind === "voice" && posting
-                  ? "composing"
-                  : "expiry"
-            }
+            key={kind === "voice" && !take ? "record" : "summary"}
             {...swap}
             className="text-center font-sans text-[calc(11px*var(--ws-fs))] glass-ink-faint"
           >
             {kind === "voice" && !take
               ? "Record a note to continue"
-              : kind === "voice" && posting
-                ? "Composing your voice note in real time"
-                : "Disappears after 24 hours"}
+              : [
+                  "Gone in 24 hours",
+                  allowSave ? (saveFree ? "free saves" : "$1 saves") : "no saves",
+                  watermarkOn ? "watermarked" : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
           </motion.p>
         </AnimatePresence>
       </div>
@@ -1429,7 +1479,10 @@ export default function StoryStudio({
         transition={{ duration: 0.2, ease: EASE }}
         className={clsx(
           storyFontsClassName,
-          "fixed inset-0 z-modal glass-veil backdrop-blur-lg backdrop-saturate-150 glass-ink flex flex-col",
+          // Solid ground in the user's theme (owner 2026-10-11). The stage
+          // keeps the white glass ink it is designed around; the header and
+          // dock opt into the theme with `ws-chrome`.
+          "fixed inset-0 z-modal bg-page glass-ink flex flex-col",
         )}
         // The studio-only faces and their tokens live on this element; see
         // story-fonts.ts for why the tokens must be redeclared here.
@@ -1438,7 +1491,21 @@ export default function StoryStudio({
         aria-modal="true"
         aria-label={TITLES[kind]}
       >
-        <header className="shrink-0 flex items-center gap-3 px-4 sm:px-6 h-14 sm:h-16">
+        {/* The picked photo, softly blurred, fills the studio around the
+            frame (owner 2026-10-12), so the editor takes on its colours.
+            A wash of the page keeps the chrome legible in either theme. */}
+        {kind === "media" && (thumbUrl || sourceUrl) && (
+          <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={(thumbUrl || sourceUrl) as string}
+              alt=""
+              className="absolute inset-0 h-full w-full scale-125 object-cover opacity-90 blur-3xl"
+            />
+            <div className="absolute inset-0 bg-page/60" />
+          </div>
+        )}
+        <header className="ws-chrome text-primary relative shrink-0 flex items-center gap-3 px-4 sm:px-6 h-14 sm:h-16">
           <button
             type="button"
             onClick={onClose}
@@ -1457,7 +1524,7 @@ export default function StoryStudio({
           </div>
         </header>
 
-        <div className="flex-1 min-h-0 w-full max-w-[1140px] mx-auto px-4 sm:px-6 pb-4 sm:pb-6 flex flex-col lg:flex-row lg:items-stretch gap-4 lg:gap-8">
+        <div className="relative flex-1 min-h-0 w-full max-w-[1140px] mx-auto px-4 sm:px-6 pb-4 sm:pb-6 flex flex-col lg:flex-row lg:items-stretch gap-4 lg:gap-8">
           <motion.div
             initial={
               reduce ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.99 }
@@ -1484,7 +1551,7 @@ export default function StoryStudio({
             // Baseline-aligned to the stage rather than stretched: the dock
             // hugs its sections and its CTA lands on the stage's bottom edge,
             // so a two-section text story doesn't leave a void down the panel.
-            className="shrink-0 w-full max-h-[46vh] lg:max-h-full lg:w-[336px] lg:self-end glass-dock backdrop-blur-xl backdrop-saturate-150 rounded-2xl p-4 sm:p-5 flex flex-col gap-5 overflow-y-auto [scrollbar-width:none]"
+            className="ws-chrome text-primary shrink-0 w-full max-h-[46vh] lg:max-h-full lg:w-[336px] lg:self-end bg-surface/75 backdrop-blur-2xl backdrop-saturate-150 border border-hairline shadow-pop rounded-[28px] p-4 sm:p-5 flex flex-col gap-5 overflow-y-auto [scrollbar-width:none]"
           >
             {dock}
           </motion.aside>

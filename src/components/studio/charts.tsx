@@ -238,15 +238,15 @@ export function TrendChart({
 							cy={y(hovered.impressions)}
 							r={4}
 							fill="var(--ws-brand-primary)"
-							stroke="#131211"
+							stroke="var(--ws-bg-page)"
 							strokeWidth={2}
 						/>
 						<circle
 							cx={x(hover)}
 							cy={y(hovered.engagements)}
 							r={3.5}
-							fill="#fafaf9"
-							stroke="#131211"
+							fill="var(--ws-text-primary)"
+							stroke="var(--ws-bg-page)"
 							strokeWidth={2}
 						/>
 					</g>
@@ -255,18 +255,18 @@ export function TrendChart({
 
 			{hover !== null && hovered && (
 				<div
-					className="pointer-events-none absolute top-1 -translate-x-1/2 rounded-lg bg-[#232120] px-3 py-2 font-sans whitespace-nowrap shadow-nav"
+					className="pointer-events-none absolute top-1 -translate-x-1/2 rounded-lg bg-primary/[0.08] px-3 py-2 font-sans whitespace-nowrap shadow-nav"
 					style={{ left: tipLeft }}
 				>
 					<p className="text-[calc(11px*var(--ws-fs))] glass-ink-faint mb-0.5">
 						{dateLabel(hovered.date)}
 					</p>
 					<p className="text-[calc(12px*var(--ws-fs))] glass-ink tabular-nums">
-						<span className="mr-1.5 inline-block h-2 w-2 rounded-[2px] bg-[var(--ws-brand-primary)]" />
+						<span className="mr-1.5 inline-block h-2 w-2 rounded-[2px] bg-brand" />
 						{fmt(hovered.impressions)} {impressionsLabel.toLowerCase()}
 					</p>
 					<p className="text-[calc(12px*var(--ws-fs))] glass-ink tabular-nums">
-						<span className="mr-1.5 inline-block h-2 w-2 rounded-[2px] bg-[#fafaf9]/40" />
+						<span className="mr-1.5 inline-block h-2 w-2 rounded-[2px] bg-primary/40" />
 						{fmt(hovered.engagements)} {engagementsLabel.toLowerCase()}
 					</p>
 				</div>
@@ -274,11 +274,11 @@ export function TrendChart({
 
 			<div className="mt-2 flex items-center gap-4">
 				<span className="flex items-center gap-1.5 font-sans text-[calc(12px*var(--ws-fs))] glass-ink-dim">
-					<span className="h-2 w-2 rounded-pill bg-[var(--ws-brand-primary)]" />
+					<span className="h-2 w-2 rounded-pill bg-brand" />
 					{impressionsLabel}
 				</span>
 				<span className="flex items-center gap-1.5 font-sans text-[calc(12px*var(--ws-fs))] glass-ink-dim">
-					<span className="h-2 w-2 rounded-pill bg-[#fafaf9]/40" />
+					<span className="h-2 w-2 rounded-pill bg-primary/40" />
 					{engagementsLabel}
 				</span>
 			</div>
@@ -510,14 +510,14 @@ export function BarList({
 								</span>
 							</span>
 						</div>
-						<div className="h-1.5 overflow-hidden rounded-pill bg-[#fafaf9]/[0.07]">
+						<div className="h-1.5 overflow-hidden rounded-pill bg-primary/[0.07]">
 							{/* Keyed rows persist across a window change, so the bar
 							    grows once and later widths simply update. */}
 							<motion.div
 								initial={{ scaleX: 0 }}
 								animate={{ scaleX: 1 }}
 								transition={GROW}
-								className="h-full rounded-pill bg-[var(--ws-brand-primary)]"
+								className="h-full rounded-pill bg-brand"
 								style={{ width: `${Math.max(2, pct)}%`, originX: 0 }}
 							/>
 						</div>

@@ -54,7 +54,6 @@ const VOICES: { id: TextStyle; label: string; specimen: string }[] = [
   { id: "poster", label: "Poster", specimen: "Ag" },
   { id: "condensed", label: "Condensed", specimen: "Ag" },
   { id: "script", label: "Script", specimen: "Ag" },
-  { id: "ticker", label: "Ticker", specimen: "$Ag" },
 ];
 
 const PILLS: { id: PillStyle; label: string }[] = [

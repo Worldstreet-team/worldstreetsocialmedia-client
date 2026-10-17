@@ -10,13 +10,14 @@ import { pop, swap, thumbSpring } from "@/lib/motion-presets";
  * The Studio's kit — flat professional dark, benchmarked against
  * reference-grade analytics dashboards (owner review 2026-08-26):
  *
- *  - **No borders.** Depth comes from fill contrast alone: page `#0F0E0D`,
- *    card one step lighter. A hairline on every card is where dashboards go
+ *  - **No borders.** Depth comes from fill contrast alone: the page token,
+ *    card one soft step lighter. A hairline on every card is where dashboards go
  *    to look like wireframes.
  *  - **No gradients, no ambient decoration.** The data is the visual.
  *  - Every count that can carry an honest comparison carries a DeltaChip;
  *    a number without context is trivia.
- *  - Fixed inks (`glass-ink*`) because this surface is dark in both themes.
+ *  - Theme tokens throughout (2026-10-16): the shell's `ws-chrome` maps the
+ *    `glass-ink*` classes onto the text tokens, so light mode works too.
  */
 
 export const fmt = (n: number) => {
@@ -27,7 +28,7 @@ export const fmt = (n: number) => {
 };
 
 /** The card fill. One string so every surface stays on the same step. */
-export const CARD = "rounded-2xl bg-[#171614]";
+export const CARD = "rounded-[24px] bg-primary/[0.04]";
 
 /** A bento cell on the overview's 12-col grid; spans apply at xl only. */
 export function Cell({
@@ -145,15 +146,15 @@ export function StatCard({
 	sub?: string;
 }) {
 	return (
-		<div className="flex h-full flex-col px-5 py-4">
+		<div className="flex h-full flex-col px-5 py-5">
 			<div className="flex items-center gap-2.5">
-				<span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[#fafaf9]/[0.06] text-[var(--ws-brand-primary)]">
+				<span className="flex h-9 w-9 items-center justify-center rounded-pill bg-brand/[0.12] text-brand">
 					<Icon size={15} weight="bold" />
 				</span>
 				<span className="glass-eyebrow font-sans">{label}</span>
 			</div>
 			<div className="mt-3 flex items-end justify-between gap-3">
-				<span className="relative font-display text-[calc(30px*var(--ws-fs))] font-semibold leading-none tracking-tight glass-ink tabular-nums">
+				<span className="relative font-display text-[calc(32px*var(--ws-fs))] font-semibold leading-none tracking-tight glass-ink tabular-nums">
 					{/* The number rolls when the window changes; initial={false}
 					    keeps first paint still. */}
 					<AnimatePresence mode="popLayout" initial={false}>
@@ -191,7 +192,7 @@ export function MetricRow({
 	hint?: string;
 }) {
 	return (
-		<div className="flex items-baseline justify-between gap-3 border-b border-[#fafaf9]/[0.05] py-2.5 last:border-0">
+		<div className="flex items-baseline justify-between gap-3 py-2.5 last:border-0">
 			<span className="min-w-0">
 				<span className="block font-sans text-[calc(13px*var(--ws-fs))] glass-ink-dim">
 					{label}
@@ -224,7 +225,7 @@ export function WindowSwitch({
 	// Per instance: the overview and a post drilldown can both be on screen.
 	const thumbId = useId();
 	return (
-		<div className="flex items-center gap-0.5 rounded-pill bg-[#fafaf9]/[0.05] p-0.5">
+		<div className="flex items-center gap-0.5 rounded-pill bg-primary/[0.05] p-1">
 			{[7, 28, 90].map((d) => (
 				<button
 					key={d}
@@ -232,15 +233,15 @@ export function WindowSwitch({
 					onClick={() => onChange(d)}
 					aria-pressed={value === d}
 					className={clsx(
-						"relative h-7 rounded-pill px-3 font-sans text-[calc(11.5px*var(--ws-fs))] font-semibold tabular-nums transition-colors cursor-pointer",
-						value === d ? "text-[#0c0a09]" : "glass-ink-faint hover:glass-ink",
+						"relative h-8 rounded-pill px-3.5 font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold tabular-nums transition-colors cursor-pointer",
+						value === d ? "text-brand-on" : "glass-ink-dim hover:glass-ink",
 					)}
 				>
 					{value === d && (
 						<motion.span
 							layoutId={`${thumbId}-window`}
 							transition={thumbSpring}
-							className="absolute inset-0 rounded-pill bg-[#fafaf9]"
+							className="absolute inset-0 rounded-pill bg-brand"
 						/>
 					)}
 					<span className="relative">{d}d</span>

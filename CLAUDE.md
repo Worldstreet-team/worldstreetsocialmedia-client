@@ -412,6 +412,59 @@ Three independent colour axes, and they must stay independent:
   the card selected. The gallery is three shelves: Colour, Artwork,
   Photographs.
 
+## Settings regroup and flat redesign (owner 2026-10-07)
+
+Supersedes the parts of the 2026-09-20 section below that it contradicts
+(frosted blocks, "never a row of option chips", every rail section open
+with carets, the section list, the header pill). Designed on the pen.dev
+canvas first, then wired as designed.
+
+- **Sections are grouped by what someone came to do**, not by where the
+  code keeps them (`CATEGORIES` in `sections.tsx`): Activity
+  (Notifications, Messages), Privacy (Visibility `privacy`, Blocked
+  accounts `blocked`), Content (Feed & topics `feed`), App (Display &
+  accessibility `display`, Data usage `data`), Account (Account, Premium).
+  Chat used to be split across Safety, Data & feed, Notifications and
+  Display; every chat preference is in **Messages** now (who can reach
+  you, what they see, in a chat, voice notes). `MessageSettingsSheet`
+  still carries the same rows, so a new messaging preference gets a row in
+  both places. Old ids redirect via `LEGACY_SECTIONS` (`safety` → `privacy`,
+  `topics` → `feed`), keeping the `#group-` hash.
+- **Groups are flat**: `SettingGroup` is a small uppercase heading, its
+  caption, then hairline rows. No block, no icon. The section page opens
+  with a 30px display title and the section's `caption` (on `SectionDef`).
+- **Short choices are segmented on a desktop.** `SelectRow segmented`
+  (`true`, or `"auto"` = `fitsSegmented`: three or fewer options of 12
+  characters or less) renders `Segmented`, a radio group with a sliding
+  wash. A phone always gets the dropdown and its `PickerSheet`. `Choice`
+  in `SettingRows.tsx` uses `"auto"`. It is OPT-IN on `SelectRow` because
+  the row is shared with `GroupSheet`, `PollComposer` and the messages sheet.
+- **The rail is flat and only the open section folds out its groups.**
+  Overview, then the five labels, bare glyph + name, the open one on the
+  sliding wash with a cyan glyph. `prefs.advanced.collapsedSettings` is no
+  longer read. Messages wears a New badge until the "chat settings moved
+  here" notice (`MESSAGES_MOVED_KEY`, via `useTourSeen`) is dismissed.
+- **The header is a plain sticky bar**: breadcrumb on the left,
+  `SaveStatus` on the right. `SaveStatus` replaces the permanent green
+  "Synced to your account" pill, which claimed synced before anything had
+  happened. It reads `saveState` from `PreferencesProvider` (`idle` →
+  `saving` → `saved` for 2s → `idle`, or `error` with Retry). A failed
+  PATCH now goes back into `pending` instead of being dropped.
+- **Scope is said on the row**: `tag="device"` on settings that never leave
+  this device (Theme, Language); `tag="both"` on reciprocal privacy (read
+  receipts, typing, online status). The save receipt never over-promises.
+- `content.showStories` finally has a row (Feed & topics → Timeline,
+  "Stories at the top of Home"); `StoriesRail` already obeyed it.
+- **Mute** (owner 2026-10-07), Settings → Privacy → Muted. One-way and
+  silent: a muted account's posts leave your feeds and its actions stop
+  notifying you; it can still see you and message you, and is never told.
+  Entry points: "Mute @x" in the post menu (above Block) and Mute/Unmute in
+  the profile menu (`isMutedByYou` from the gateway). Muted words are whole
+  word, any case ("eth" never hides "method"); scripts without spaces
+  (Chinese, Japanese, Thai) match anywhere. Actions in `lib/mute.actions.ts`;
+  the list is saved whole (`PUT /users/me/muted-words`). Neither list rides
+  `x-user-data`: the header is an allow-list.
+
 ## Settings wears the Messages makeover (owner 2026-09-20)
 
 Two rounds the same day. First the owner rejected the pill-chip, card-on-card
@@ -921,6 +974,72 @@ media, and a viewer wants black behind it, not a 50% wash.
   colour until something else forced a re-bake.
 - The ten drawn wallpapers stay their own colour on purpose: a theme
   chosen for its colour should not change colour underneath the person.
+
+## Messages: Focus (owner pick 2026-10-07)
+
+Designed on the pen.dev canvas (boards "Focus — final picks"), then wired.
+Supersedes the floating header pill (2026-09-20), the segmented call pill
+(2026-09-06), the 52rem reading column and the separate Archived row.
+
+- **Desktop rail.** With a chat open the inbox folds into an 84px
+  `<nav aria-label="Chats">` of faces (expand, compose, search back to the
+  full inbox, up to 14 chats, Requests badge). Nothing open: the full inbox.
+  The fold is animated (2026-10-08): a slot animates its WIDTH 372 to 84
+  while the inbox keeps `md:min-w-[372px]` inside it and fades, so the list
+  is clipped, never squeezed and reflowed; the rail rides absolutely in the
+  slot and fades in after. The rail's top button pins the inbox open beside
+  the chat, and a button beside the inbox gear folds it back. Saved on the
+  account as `prefs.advanced.messagesInboxPinned`.
+- **Rail hover cards** (`RailFace.tsx`): hover or focus a face for a card
+  with name, time (members for groups), "N new" and the last line. Portalled
+  and fixed to the face; 140ms delay, none when sweeping face to face; hides
+  on scroll; mouse only (a tap just opens the chat).
+- **Link previews** (`thread/LinkPreview.tsx`): the first link in a text
+  message gets a card under it (picture, domain, title, summary) from the
+  gateway's `/api/util/link-preview` via `getLinkPreviewAction`. Cached on
+  the device (`localStorage` "ws-link-meta-v1": 7 days for a preview, 1 day
+  for none, refreshed quietly after a day) and on the gateway (24h hit,
+  10 min miss), so a link seen once renders on the first frame; a first
+  fetch shows a placeholder with the domain read from the URL. The card takes the bubble's ink (`currentColor` mixes),
+  so it reads on either fill. WorldSpace post links are skipped (the post is
+  embedded), and so is a page with no title. While a link is in the draft,
+  `ComposerLinkPreview` shows the same thing above the composer (250ms
+  debounce, none when cached, dismissible per URL). ThreadList re-pins to the bottom on
+  `totalListHeightChanged` when the reader was at the bottom, so a card
+  landing late never lifts the newest message off the floor.
+- **Reading column is `max-w-[44rem]`** (ThreadList, MessageBubble, and the
+  composer on md+). Bubbles, wallpaper and chat themes are unchanged.
+- **Title header** is a hairline bar (`chat-chrome … border-b`), not a
+  floating pill. The DM name opens a name card (View profile, Pay). Actions:
+  a labelled brand **Call** with a chevron that opens Voice / Video, search,
+  and ⋯. On desktop ⋯ is a popover: profile or group details, search, theme,
+  Mute (inline 8h / 1w / forever, `PATCH /api/messages/conversations/:id/mute`,
+  `muted` on the conversation), Archive, Report (ReportSheet), Block (with
+  ConfirmModal), Delete. On a phone ⋯ still opens ThreadMoreSheet.
+- **Popovers** live in `ThreadHeaderMenus.tsx` and are portalled, fixed to
+  the trigger rect: the header sits in a transformed, themed pane, and
+  `.chat-chrome` re-points ink tokens, so an in-place menu would be
+  mispositioned and painted in the theme's chrome ink. Rows that open later
+  (the Mute options) pass `nested` so they skip the stagger variants.
+- **Phone switcher** under the header: tap only (a sideways swipe fights
+  iOS back and swipe-to-reply), shown only when two or more other chats are
+  unread or active in the last day, ranked ONCE per opened chat so faces
+  never reshuffle, and folded while you read back through history
+  (`threadAtBottom` from `handleAtBottom`); the header shows an "N unread"
+  chip meanwhile.
+- **Phone inbox:** a Faces row under search (up to 6, brand ring = unread)
+  replaces the stories rail on phones while it shows; Requests and Archived
+  share one split row at the top of the list (both shelves, every width).
+- **Empty state is "Command":** one "Message someone…" field (opens the new
+  conversation modal) and the five most recent faces. No ⌘K binding: the
+  global CommandPalette owns it.
+- **Payments are receipt tickets** (`PaymentBubble`): the bubble's own fill,
+  a dashed tear with notches cut in `--chat-ground`, tap for the receipt.
+  `ReceiptSheet` ("Statement") is portalled (bubbles live in transformed rows)
+  and takes the ticket's computed fill as its hero, because `--chat-*` does
+  not reach a portal. Every step shows complete, but only Sent carries a time:
+  that is the only time the message records. Reference = `WS-` + the last 8
+  of the message id. Save PDF prints a plain receipt page.
 
 ## The inbox has no filter rows (owner pick 2026-09-20)
 

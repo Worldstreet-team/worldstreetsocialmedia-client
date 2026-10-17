@@ -79,9 +79,9 @@ export function ContactPicker({
 						key="contact-panel"
 						variant="sheet"
 						label="Share a contact"
-						ground="none"
+						ground="solid"
 						dragClose={onClose}
-						className="bg-surface sm:w-[min(480px,94vw)]"
+						className="sm:w-[min(480px,94vw)]"
 					>
 						<OverlayHeader title="Share a contact" onClose={onClose} />
 						<div className="px-4 pb-2">

@@ -238,8 +238,8 @@ export function RecordVoiceSheet({
 		<AnimatePresence>
 			{open && (
 				<>
-					<OverlayScrim onClose={onClose} />
-					<OverlayPanel dragClose={onClose} variant="sheet" label="Record a voice note">
+					<OverlayScrim blur onClose={onClose} />
+					<OverlayPanel dragClose={onClose} variant="sheet" ground="solid" label="Record a voice note">
 						<OverlayHeader title="Voice note" onClose={onClose} />
 						<div className="flex flex-col items-center gap-5 px-5 pb-6 pt-1">
 							{/* live meter while recording; in review the REAL card

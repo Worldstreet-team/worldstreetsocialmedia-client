@@ -392,8 +392,8 @@ export function GroupSheet({
 					<OverlayPanel
 						dragClose={onClose}
 						variant="sheet"
-						ground="none"
-						className="bg-surface sm:w-[min(560px,94vw)] sm:max-h-[86vh]"
+						ground="solid"
+						className="sm:w-[min(560px,94vw)] sm:max-h-[86vh]"
 						label="Group details"
 					>
 						<OverlayHeader title={title} onClose={onClose}>

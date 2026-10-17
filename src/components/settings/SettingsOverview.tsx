@@ -2,7 +2,7 @@
 
 import { useClerk } from "@clerk/nextjs";
 import { useAtomValue } from "jotai";
-import { Bell, LogOut, UserCircle, Zap } from "@/components/ui/icons";
+import { Bell, LogOut } from "@/components/ui/icons";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
@@ -57,7 +57,6 @@ export function SettingsOverview({ variant = "page" }: { variant?: "page" | "hub
 			{variant === "page" && (
 				<SettingGroup
 					id="you"
-					icon={UserCircle}
 					title="You"
 					caption="The account every setting on this screen belongs to. Your password, email address and sign-in methods are managed by your WorldStreet account."
 				>
@@ -99,8 +98,7 @@ export function SettingsOverview({ variant = "page" }: { variant?: "page" | "hub
 
 			<SettingGroup
 				id="quick"
-				icon={Zap}
-				title="The ones people change most"
+				title="Quick controls"
 				caption="Everything else is in the list beside this one, or through the search above it."
 			>
 				{/* Notifications lead: "stop telling me things" is the reason
@@ -117,7 +115,9 @@ export function SettingsOverview({ variant = "page" }: { variant?: "page" | "hub
 				</SettingRow>
 				<SelectRow
 					label="Theme"
-					hint="Dark or light. Stays on this device."
+					hint="Dark or light."
+					tag="device"
+					segmented
 					value={mounted && resolvedTheme === "light" ? "light" : "dark"}
 					options={[
 						["dark", "Dark"],
@@ -145,11 +145,12 @@ export function SettingsOverview({ variant = "page" }: { variant?: "page" | "hub
 				/>
 				<SelectRow
 					label="Who can start a chat with you"
+					segmented="auto"
 					hint="Anyone else has to send a request first."
 					value={prefs.privacy.dmFrom}
 					options={[
-						["everyone", "Everyone"],
-						["allies", "People you follow"],
+						["everyone", "Anyone"],
+						["allies", "Allies only"],
 					]}
 					onPick={(v) =>
 						setPrefs({ privacy: { dmFrom: v as Preferences["privacy"]["dmFrom"] } })
@@ -157,6 +158,7 @@ export function SettingsOverview({ variant = "page" }: { variant?: "page" | "hub
 				/>
 				<SelectRow
 					label="Data saver"
+					segmented="auto"
 					hint="Cuts what the app downloads. Automatic follows your phone's own setting."
 					value={prefs.data.saver}
 					options={[

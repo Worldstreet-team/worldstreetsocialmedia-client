@@ -38,22 +38,6 @@ export function AccessibilitySettings() {
 			/>
 			<Preview />
 			<Choice
-				label="Message text size"
-				hint="Chat is read one-handed at arm's length, so it can run larger than the rest of the app."
-				value={a.chatTextScale}
-				options={[
-					["match", "Match app size"],
-					[100, "100%"],
-					[115, "115%"],
-					[130, "130%"],
-					[150, "150%"],
-					[175, "175%"],
-				]}
-				onPick={(v) =>
-					setPrefs({ a11y: { chatTextScale: v as Preferences["a11y"]["chatTextScale"] } })
-				}
-			/>
-			<Choice
 				label="Colour vision"
 				hint="Retints money, status and presence off the hue axis that is hard to separate, and turns on symbols alongside colour."
 				value={a.colorVision}

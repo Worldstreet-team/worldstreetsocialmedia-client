@@ -4,23 +4,23 @@ import Link from "next/link";
 import { usePressPrefetch } from "@/hooks/usePressPrefetch";
 import { Fragment, useEffect, useState } from "react";
 import { useAppPathname } from "@/i18n/useAppPathname";
-import { EcosystemSheet } from "@/components/layout/EcosystemSheet";
-import { BrandMark } from "@/components/layout/BrandRitual";
 // Nav uses Phosphor with weight="fill" on the active tab, matching the rail.
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import {
 	ChatCircleDots,
 	House,
 	Binoculars,
+	MonitorPlay,
 	UserCircle,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { motion } from "framer-motion";
+import { motion, useReducedMotionConfig } from "framer-motion";
 import { BadgedIcon } from "@/components/ui/Badge";
 import { useAtomValue } from "jotai";
 import { unreadMessagesCountAtom } from "@/store/messageCache";
 import { userAtom } from "@/store/user.atom";
 import { useT } from "@/i18n/client";
+import { usePostLayerOpen } from "@/components/feed/PostLayer";
 // Aliased: `press` in this file is already the prefetch-on-pointer-down hook.
 import { press as pressTap } from "@/lib/motion-presets";
 
@@ -36,12 +36,11 @@ const GLYPH_TAP = { tap: pressTap.whileTap } as const;
 const navIcon = (Icon: PhosphorIcon) => {
 	const NavIcon = ({ isActive }: { isActive?: boolean }) => (
 		<Icon
-			// Icon-only bar (owner ruling 2026-09-02): the glyph carries the
-			// tab alone. Third sizing round, owner each time: 32 -> 36 -> 50
-			// ("increase it by 40%"). These are THE controls on a phone; they
-			// get billboard treatment.
-			size={29}
-			weight={isActive ? "fill" : "duotone"}
+			// Line glyphs in the rail's own style, filled when active (owner
+			// 2026-10-16: the big duotone set "looks disgusting"; keep the
+			// Explore glyph's style). Five even cells, no labels: clean.
+			size={26}
+			weight={isActive ? "fill" : "regular"}
 			aria-hidden="true"
 		/>
 	);
@@ -49,14 +48,14 @@ const navIcon = (Icon: PhosphorIcon) => {
 	return NavIcon;
 };
 
-/** The brand mark sits mid-row: two tabs, the mark, two tabs. */
-const CENTER_SLOT = 2;
-
 const HomeIcon = navIcon(House);
 // Binoculars matches the rail's Explore glyph (owner rulings 2026-08-28 +
 // 2026-09-03: the tab is the explore ROUTE, wearing the explore glyph).
 const SearchIcon = navIcon(Binoculars);
 const MessageIcon = navIcon(ChatCircleDots);
+// The W left the middle (owner 2026-10-16): The Space takes it, in the
+// rail's own glyph. The ecosystem is in the drawer's Products.
+const SpaceIcon = navIcon(MonitorPlay);
 
 
 /**
@@ -68,7 +67,7 @@ const MessageIcon = navIcon(ChatCircleDots);
  * the client — the whole reason this component had to defer its first paint.
  */
 const ProfileIcon = ({ isActive }: { isActive?: boolean }) => (
-	<UserCircle size={29} weight={isActive ? "fill" : "duotone"} aria-hidden />
+	<UserCircle size={26} weight={isActive ? "fill" : "regular"} aria-hidden />
 );
 ProfileIcon.displayName = "ProfileIcon";
 
@@ -76,7 +75,6 @@ export const MobileBottomNav = () => {
 	const t = useT();
 	const pathname = useAppPathname();
 	const press = usePressPrefetch();
-	const [ecosystemOpen, setEcosystemOpen] = useState(false);
 	const unreadMessages = useAtomValue(unreadMessagesCountAtom);
 	const storedUser = useAtomValue(userAtom);
 	/**
@@ -92,6 +90,12 @@ export const MobileBottomNav = () => {
 	const [hydrated, setHydrated] = useState(false);
 	useEffect(() => setHydrated(true), []);
 	const user = hydrated ? storedUser : null;
+	// Reading a post, the bar slides down out of the way and comes back up
+	// when you leave it (owner 2026-10-16): the layer over the feed, or the
+	// post's own page.
+	const postOpen = usePostLayerOpen();
+	const reduced = useReducedMotionConfig();
+	const tucked = postOpen || pathname.startsWith("/post/");
 
 	const navItems = [
 		{
@@ -105,6 +109,12 @@ export const MobileBottomNav = () => {
 			icon: SearchIcon,
 			label: t("nav.explore"),
 			active: pathname.startsWith("/explore"),
+		},
+		{
+			href: "/live",
+			icon: SpaceIcon,
+			label: t("nav.videos"),
+			active: pathname === "/live" || pathname.startsWith("/live/"),
 		},
 		{
 			href: "/messages",
@@ -137,16 +147,10 @@ export const MobileBottomNav = () => {
 		return null;
 	}
 
-	// Hide on post detail screens and the full-screen vertical surface.
-	// Exact-match /live (plus real subroutes): a bare startsWith("/live")
-	// also swallowed /live-now and left that page with no navigation at all.
-	if (
-		pathname.startsWith("/post/") ||
-		pathname === "/live" ||
-		pathname.startsWith("/live/")
-	) {
-		return null;
-	}
+	// The Space keeps the bar, TikTok-style (owner 2026-10-16), on solid
+	// black under the video. Exact-match /live (plus real subroutes): a bare
+	// startsWith("/live") would also catch /live-now.
+	const onSpace = pathname === "/live" || pathname.startsWith("/live/");
 
 	return (
 		<>
@@ -159,48 +163,29 @@ export const MobileBottomNav = () => {
 			    this and the media editors remain the sanctioned exceptions to
 			    the ecosystem no-backdrop-blur rule. The feed still scrolls
 			    under it, so `pb-nav`/`bottom-nav` clearance still applies. */}
-			<div className="fixed inset-x-0 bottom-0 z-sticky md:hidden border-t border-hairline glass-nav backdrop-blur-xl backdrop-saturate-150">
+			<motion.div
+				initial={false}
+				animate={{ y: tucked ? "110%" : 0 }}
+				transition={reduced ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 40 }}
+				aria-hidden={tucked || undefined}
+				inert={tucked || undefined}
+				// On The Space the bar wears the dark tokens in either theme, so
+				// its glyphs read on the black under the video.
+				data-ws-theme={onSpace ? "platform" : undefined}
+				className={clsx(
+					"fixed inset-x-0 bottom-0 md:hidden",
+					onSpace
+						? "z-modal bg-black"
+						: "z-sticky bg-page/70 backdrop-blur-[40px] backdrop-saturate-[1.8]",
+				)}
+			>
 				{/* Docked means the bar now sits UNDER the home indicator, so it
 				    owns the safe-area inset again (a floating bar cleared it via
 				    its own `bottom` offset instead). */}
 				<div style={{ paddingBottom: "var(--ws-safe-bottom)" }}>
-				<div className="flex justify-between items-center h-[56px] px-1">
-					{navItems.map((item, index) => (
+				<div className="flex justify-between items-center h-[56px] px-2">
+					{navItems.map((item) => (
 						<Fragment key={item.href}>
-							{/* The centre slot is the brand, not a destination. It used
-							    to be The Space, which is still one tap away in the rail
-							    and the FAB — the ecosystem had no mobile entry at all. */}
-							{index === CENTER_SLOT && (
-								<motion.button
-									type="button"
-									onClick={() => setEcosystemOpen(true)}
-									aria-haspopup="dialog"
-									aria-expanded={ecosystemOpen}
-									aria-label="WorldStreet"
-									whileTap="tap"
-									className="flex h-full w-full min-w-0 items-center justify-center transition-colors active:bg-primary/10"
-								>
-									{/* The real animated mark, not the flat PNG: it draws
-									    itself on the same 5.2s ritual as the rail's lockup
-									    and strokes in the brand token, so it follows the
-									    palette. Its own reduced-motion rule in globals.css
-									    resolves it to the finished W. */}
-									<motion.span
-										variants={GLYPH_TAP}
-										transition={pressTap.transition}
-										className={clsx(
-											"flex h-[36px] w-[36px] items-center justify-center rounded-[10px] transition-colors",
-											ecosystemOpen && "bg-primary/10",
-										)}
-									>
-										{/* Bigger than the Phosphor glyphs beside it on
-										    purpose: the W is a thin two-stroke outline, so at
-										    a matched size it reads lighter than the solid
-										    duotone icons it sits between. */}
-										<BrandMark size={31} />
-									</motion.span>
-								</motion.button>
-							)}
 						<MotionLink
 							href={item.href}
 							{...press(item.href)}
@@ -211,8 +196,8 @@ export const MobileBottomNav = () => {
 								// glyphs a size up. The name lives on as the aria-label
 								// and the badge label. `.glass-nav` follows the theme,
 								// so the ink is the normal token pair.
-								"flex items-center justify-center w-full h-full min-w-0 active:bg-primary/10 transition-colors",
-								item.active ? "text-gold" : "text-muted",
+								"flex h-full w-full min-w-0 items-center justify-center transition-colors",
+								item.active ? "text-primary" : "text-muted",
 							)}
 						>
 							<motion.span
@@ -220,7 +205,7 @@ export const MobileBottomNav = () => {
 								transition={pressTap.transition}
 								className="flex"
 							>
-								<BadgedIcon count={item.badge} label={item.label} size={29}>
+								<BadgedIcon count={item.badge} label={item.label} size={26}>
 									<item.icon isActive={item.active} />
 								</BadgedIcon>
 							</motion.span>
@@ -229,12 +214,8 @@ export const MobileBottomNav = () => {
 					))}
 					</div>
 				</div>
-			</div>
+			</motion.div>
 
-			<EcosystemSheet
-				open={ecosystemOpen}
-				onClose={() => setEcosystemOpen(false)}
-			/>
 		</>
 	);
 };

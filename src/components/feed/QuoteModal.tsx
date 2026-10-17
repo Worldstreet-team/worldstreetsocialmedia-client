@@ -133,8 +133,8 @@ export function QuoteModal({
 
 	return createPortal(
 		<AnimatePresence>
-			<OverlayScrim key="quote-scrim" onClose={onClose} label={t("common.close")} />
-			<OverlayPanel key="quote-panel" dragClose={onClose} variant="sheet" label={t("post.quote")}>
+			<OverlayScrim blur key="quote-scrim" onClose={onClose} label={t("common.close")} />
+			<OverlayPanel key="quote-panel" dragClose={onClose} variant="sheet" ground="solid" label={t("post.quote")}>
 				<OverlayHeader
 					title={t("post.quote")}
 					onClose={onClose}

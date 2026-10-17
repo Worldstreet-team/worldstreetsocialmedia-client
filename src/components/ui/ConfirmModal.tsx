@@ -48,6 +48,7 @@ export default function ConfirmModal({
 					<OverlayPanel
 						key="confirm-panel"
 						variant="center"
+						ground="solid"
 						label={title}
 						className="max-w-[420px]"
 					
@@ -65,7 +66,7 @@ export default function ConfirmModal({
 								type="button"
 								onClick={onClose}
 								{...press}
-								className="flex-1 h-11 rounded-pill font-sans font-semibold text-[calc(15px*var(--ws-fs))] border border-hairline text-primary hover:bg-raised transition-colors cursor-pointer"
+								className="flex-1 h-11 rounded-pill font-sans font-semibold text-[calc(15px*var(--ws-fs))] bg-primary/5 text-primary hover:bg-primary/10 transition-colors cursor-pointer"
 							>
 								{cancelText}
 							</motion.button>

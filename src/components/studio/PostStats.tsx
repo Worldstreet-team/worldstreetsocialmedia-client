@@ -40,7 +40,7 @@ function dwellLabel(ms: number) {
 /** The drilldown's four-up header tile: eyebrow + number, nothing else. */
 function StatTileCell({ label, value }: { label: string; value: string }) {
 	return (
-		<div className="rounded-2xl bg-[#171614] px-5 py-4">
+		<div className="rounded-2xl bg-primary/[0.04] px-5 py-4">
 			<span className="glass-eyebrow font-sans">{label}</span>
 			<span className="relative mt-2 block font-display text-[calc(26px*var(--ws-fs))] font-semibold leading-none tracking-tight glass-ink tabular-nums">
 				{/* Rolls when the window changes; still on first paint. */}
@@ -102,7 +102,7 @@ export function PostStats({
 					{[1, 2, 3, 4].map((i) => (
 						<div
 							key={i}
-							className="h-[96px] animate-pulse rounded-2xl bg-[#fafaf9]/[0.04]"
+							className="h-[96px] animate-pulse rounded-[24px] bg-primary/[0.04]"
 						/>
 					))}
 				</div>
@@ -130,7 +130,7 @@ export function PostStats({
 					</div>
 
 					<div className="mt-3 grid gap-3 md:grid-cols-2">
-						<section className="rounded-2xl bg-[#171614] p-4">
+						<section className="rounded-2xl bg-primary/[0.04] p-4">
 							<h2 className="glass-eyebrow mb-4 font-sans">
 								{t("studio.daily")}
 							</h2>
@@ -148,7 +148,7 @@ export function PostStats({
 						</section>
 
 						<div className="flex flex-col gap-3">
-							<section className="rounded-2xl bg-[#171614] p-4">
+							<section className="rounded-2xl bg-primary/[0.04] p-4">
 								<h2 className="glass-eyebrow mb-3 font-sans">
 									{t("studio.byAction")}
 								</h2>
@@ -171,7 +171,7 @@ export function PostStats({
 								</div>
 							</section>
 
-							<section className="rounded-2xl bg-[#171614] p-4">
+							<section className="rounded-2xl bg-primary/[0.04] p-4">
 								<h2 className="glass-eyebrow mb-3 font-sans">
 									{t("studio.bySurface")}
 								</h2>
@@ -190,7 +190,7 @@ export function PostStats({
 								)}
 							</section>
 
-							<section className="rounded-2xl bg-[#171614] p-4">
+							<section className="rounded-2xl bg-primary/[0.04] p-4">
 								<h2 className="glass-eyebrow mb-3 font-sans">
 									{t("studio.topCountries")}
 								</h2>

@@ -142,7 +142,7 @@ export default function StudioLive() {
 			/>
 
 			{/* composer */}
-			<section className="rounded-2xl bg-[#171614] p-4">
+			<section className="rounded-2xl bg-primary/[0.04] p-4">
 				<h2 className="glass-eyebrow mb-3 font-sans">{t("studio.live.new")}</h2>
 
 				<div className="grid gap-2.5 md:grid-cols-[1.2fr_1fr_1fr]">
@@ -151,7 +151,7 @@ export default function StudioLive() {
 						onChange={(e) => setName(e.target.value)}
 						placeholder={t("studio.live.name")}
 						maxLength={60}
-						className="h-10 rounded-lg bg-[#fafaf9]/[0.06] px-3.5 font-sans text-base outline-none glass-ink placeholder:text-[#fafaf9]/35 focus:bg-[#fafaf9]/[0.1] sm:text-sm"
+						className="h-10 rounded-lg bg-primary/[0.06] px-3.5 font-sans text-base outline-none glass-ink placeholder:text-primary/35 focus:bg-primary/[0.1] sm:text-sm"
 					/>
 					<GlassSelect
 						label={t("studio.live.vertical")}
@@ -169,7 +169,7 @@ export default function StudioLive() {
 
 				<div className="mt-3 flex flex-wrap items-center gap-3">
 					{/* capture source */}
-					<div className="flex items-center gap-0.5 rounded-pill bg-[#fafaf9]/[0.05] p-0.5">
+					<div className="flex items-center gap-0.5 rounded-pill bg-primary/[0.05] p-0.5">
 						{SOURCES.map(({ id, label, Icon }) => (
 							<button
 								key={id}
@@ -179,7 +179,7 @@ export default function StudioLive() {
 								className={clsx(
 									"relative flex h-8 cursor-pointer items-center rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
 									source === id
-										? "text-[#0c0a09]"
+										? "text-page"
 										: "glass-ink-faint hover:glass-ink",
 								)}
 							>
@@ -189,7 +189,7 @@ export default function StudioLive() {
 									<motion.span
 										layoutId="studio-live-source"
 										transition={thumbSpring}
-										className="absolute inset-0 rounded-pill bg-[#fafaf9]"
+										className="absolute inset-0 rounded-pill bg-primary"
 									/>
 								)}
 								<span className="relative flex items-center gap-1.5">
@@ -209,8 +209,8 @@ export default function StudioLive() {
 						className={clsx(
 							"flex h-8 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-sans text-[calc(12px*var(--ws-fs))] font-semibold transition-colors",
 							notify
-								? "bg-[var(--ws-brand-primary)]/15 text-[var(--ws-brand-primary)]"
-								: "bg-[#fafaf9]/[0.05] glass-ink-faint hover:glass-ink",
+								? "bg-brand/15 text-brand"
+								: "bg-primary/[0.05] glass-ink-faint hover:glass-ink",
 						)}
 					>
 						{/* Their own toggle, so the glyph may land with a pop. */}
@@ -233,7 +233,7 @@ export default function StudioLive() {
 						type="button"
 						onClick={create}
 						disabled={!name.trim() || saving}
-						className="ml-auto h-9 cursor-pointer rounded-pill bg-[#fafaf9] px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-[#0c0a09] transition-colors hover:bg-white disabled:opacity-40"
+						className="ml-auto h-9 cursor-pointer rounded-pill bg-primary px-4 font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-page transition-colors hover:bg-primary/90 disabled:opacity-40"
 					>
 						{t("studio.live.save")}
 					</motion.button>
@@ -246,16 +246,16 @@ export default function StudioLive() {
 					{[1, 2].map((i) => (
 						<div
 							key={i}
-							className="h-[68px] animate-pulse rounded-2xl bg-[#fafaf9]/[0.04]"
+							className="h-[68px] animate-pulse rounded-[24px] bg-primary/[0.04]"
 						/>
 					))}
 				</div>
 			) : presets.length === 0 ? (
 				<motion.div
 					{...reveal(0)}
-					className="mt-3 rounded-2xl bg-[#171614] p-10 text-center"
+					className="mt-3 rounded-2xl bg-primary/[0.04] p-10 text-center"
 				>
-					<span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-pill bg-[#fafaf9]/[0.07] glass-ink-faint">
+					<span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-pill bg-primary/[0.07] glass-ink-faint">
 						<Broadcast size={22} />
 					</span>
 					<p className="font-sans text-sm glass-ink-dim">
@@ -283,14 +283,14 @@ export default function StudioLive() {
 								// A short list, so the rows below may glide up on delete.
 								layout="position"
 								transition={{ layout: snappySpring }}
-								className="flex items-center gap-3 rounded-2xl bg-[#171614] px-4 py-3.5"
+								className="flex items-center gap-3 rounded-2xl bg-primary/[0.04] px-4 py-3.5"
 							>
 								<span
 									className={clsx(
 										"flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
 										p.isDefault
-											? "bg-[var(--ws-brand-primary)] text-[#0c0a09]"
-											: "bg-[#fafaf9]/[0.06] glass-ink-dim",
+											? "bg-brand text-page"
+											: "bg-primary/[0.06] glass-ink-dim",
 									)}
 								>
 									{p.source === "obs" ? (
@@ -310,7 +310,7 @@ export default function StudioLive() {
 												<motion.span
 													key="default"
 													{...pop}
-													className="shrink-0 rounded-pill bg-[var(--ws-brand-primary)]/15 px-2 py-0.5 text-[calc(10px*var(--ws-fs))] font-bold uppercase tracking-[0.06em] text-[var(--ws-brand-primary)]"
+													className="shrink-0 rounded-pill bg-brand/15 px-2 py-0.5 text-[calc(10px*var(--ws-fs))] font-bold uppercase tracking-[0.06em] text-brand"
 												>
 													{t("studio.live.default")}
 												</motion.span>
@@ -350,7 +350,7 @@ export default function StudioLive() {
 										}}
 										aria-label={t("studio.live.makeDefault")}
 										title={t("studio.live.makeDefault")}
-										className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill glass-ink-faint transition-colors hover:bg-[var(--ws-brand-primary)]/10 hover:text-[var(--ws-brand-primary)]"
+										className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-pill glass-ink-faint transition-colors hover:bg-brand/10 hover:text-brand"
 									>
 										<Star size={17} />
 									</motion.button>

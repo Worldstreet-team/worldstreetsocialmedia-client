@@ -17,10 +17,14 @@ import {
 } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { press, swap } from "@/lib/motion-presets";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useAtom, useAtomValue, useSetAtom, useStore } from "jotai";
 import { feedAtom } from "@/store/feed.atom";
 import { type FeedTab, feedTabAtom } from "@/store/ui.atom";
-import { autoTranslateAtom, translationsAtom } from "@/store/translate.atom";
+import {
+	autoTranslateAtom,
+	translationsAtom,
+	type TranslationEntry,
+} from "@/store/translate.atom";
 import { prefetchTranslations } from "@/lib/translate.prefetch";
 import {
 	hasRenderableBody,
@@ -157,11 +161,11 @@ export default function Feed({
 	const tab = useAtomValue(feedTabAtom);
 	const setFeedTab = useSetAtom(feedTabAtom);
 	const autoTranslate = useAtomValue(autoTranslateAtom);
-	const [translations, setTranslations] = useAtom(translationsAtom);
-	// Read through a ref inside the prefetch so a page landing mid-flight
-	// doesn't re-translate what an earlier page already resolved.
-	const translationsRef = useRef(translations);
-	translationsRef.current = translations;
+	// Written, never subscribed: the feed re-rendering (and with it every
+	// card) once per arriving translation was the scroll hitch when a page
+	// landed. Reads go straight to the store; each card watches its own entry.
+	const setTranslations = useSetAtom(translationsAtom);
+	const store = useStore();
 	// Seeded from the atom as well as SSR data: a soft navigation back to
 	// home carries no initialData, but the timeline is still sitting in
 	// feedAtom — opening with skeletons over posts we already hold was the
@@ -357,15 +361,32 @@ export default function Feed({
 	// known and what's already in flight.
 	useEffect(() => {
 		if (!autoTranslate || feedState.posts.length === 0) return;
+		// Results batch into one write per frame, not one per post.
+		let pending: Record<string, TranslationEntry> = {};
+		let raf = 0;
+		const flush = () => {
+			raf = 0;
+			const batch = pending;
+			pending = {};
+			setTranslations((prev) => {
+				let next: Record<string, TranslationEntry> | null = null;
+				for (const id in batch) {
+					if (prev[id]) continue;
+					next ??= { ...prev };
+					next[id] = batch[id];
+				}
+				return next ?? prev;
+			});
+		};
 		void prefetchTranslations(
 			feedState.posts,
-			(id) => Boolean(translationsRef.current[id]),
-			(id, entry) =>
-				setTranslations((prev) =>
-					prev[id] ? prev : { ...prev, [id]: entry },
-				),
+			(id) => Boolean(store.get(translationsAtom)[id] || pending[id]),
+			(id, entry) => {
+				pending[id] = entry;
+				if (!raf) raf = requestAnimationFrame(flush);
+			},
 		);
-	}, [autoTranslate, feedState.posts, setTranslations]);
+	}, [autoTranslate, feedState.posts, setTranslations, store]);
 
 	// Persist the top of the For-You timeline as the next session's first
 	// paint — but OFF the interaction path. localStorage.setItem is

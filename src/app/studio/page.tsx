@@ -200,7 +200,7 @@ export default function StudioOverview() {
 		return (
 			<motion.div {...reveal()} className="mx-auto mt-14 max-w-md">
 				<div className={`${CARD} p-8 text-center`}>
-					<span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-pill bg-[var(--ws-brand-primary)] text-[#0c0a09]">
+					<span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-pill bg-brand text-page">
 						<Faders size={24} weight="bold" />
 					</span>
 					<h2 className="mb-2 font-display text-[calc(20px*var(--ws-fs))] font-semibold glass-ink">
@@ -214,7 +214,7 @@ export default function StudioOverview() {
 						{...press}
 						onClick={activate}
 						disabled={busy}
-						className="h-11 cursor-pointer rounded-pill bg-[#fafaf9] px-6 font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-[#0c0a09] transition-colors hover:bg-white disabled:opacity-50"
+						className="h-11 cursor-pointer rounded-pill bg-primary px-6 font-sans text-[calc(14px*var(--ws-fs))] font-semibold text-page transition-colors hover:bg-primary/90 disabled:opacity-50"
 					>
 						{t("studio.become.cta")}
 					</motion.button>
@@ -225,15 +225,15 @@ export default function StudioOverview() {
 
 	if (loading && !stats) {
 		return (
-			<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-12">
+			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-12">
 				{[3, 3, 3, 3].map((n, i) => (
 					<div
 						key={`a${i}`}
-						className="h-[132px] animate-pulse rounded-2xl bg-[#fafaf9]/[0.04] xl:col-span-3"
+						className="h-[132px] animate-pulse rounded-[24px] bg-primary/[0.04] xl:col-span-3"
 					/>
 				))}
-				<div className="h-[330px] animate-pulse rounded-2xl bg-[#fafaf9]/[0.04] sm:col-span-2 xl:col-span-8" />
-				<div className="h-[330px] animate-pulse rounded-2xl bg-[#fafaf9]/[0.04] xl:col-span-4" />
+				<div className="h-[330px] animate-pulse rounded-[24px] bg-primary/[0.04] sm:col-span-2 xl:col-span-8" />
+				<div className="h-[330px] animate-pulse rounded-[24px] bg-primary/[0.04] xl:col-span-4" />
 			</div>
 		);
 	}
@@ -250,15 +250,15 @@ export default function StudioOverview() {
 	return (
 		<div>
 			{/* header */}
-			<div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+			<div className="mb-7 flex flex-wrap items-end justify-between gap-4">
 				<div className="min-w-0">
-					<h1 className="font-display text-[calc(22px*var(--ws-fs))] font-semibold tracking-tight glass-ink">
+					<h1 className="font-display text-[calc(28px*var(--ws-fs))] font-semibold tracking-tight glass-ink">
 						{t("studio.welcome").replace(
 							"{name}",
 							user?.firstName || user?.username || "",
 						)}
 					</h1>
-					<p className="mt-1 font-sans text-[calc(13px*var(--ws-fs))] glass-ink-dim">
+					<p className="mt-1.5 font-sans text-[calc(14px*var(--ws-fs))] glass-ink-dim">
 						{t("studio.welcomeSub").replace("{d}", String(days))}
 					</p>
 				</div>
@@ -269,7 +269,7 @@ export default function StudioOverview() {
 			    swaps the data in place and does not replay it. */}
 			<motion.div
 				{...reveal()}
-				className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-12"
+				className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-12"
 			>
 				<Cell span={3}>
 					<StatCard
@@ -354,7 +354,7 @@ export default function StudioOverview() {
 								href={app.href}
 								target="_blank"
 								rel="noreferrer"
-								className="group flex items-center gap-2.5 rounded-xl px-3 py-2 transition-colors hover:bg-[#fafaf9]/[0.05]"
+								className="group flex items-center gap-2.5 rounded-[16px] px-3 py-2.5 transition-colors hover:bg-primary/[0.05]"
 							>
 								<span className="font-sans text-[calc(13px*var(--ws-fs))] font-medium glass-ink-dim group-hover:glass-ink">
 									{app.name}
@@ -374,7 +374,7 @@ export default function StudioOverview() {
 						action={
 							<Link
 								href="/studio/posts"
-								className="flex items-center gap-1 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-[var(--ws-brand-primary)] hover:underline"
+								className="flex items-center gap-1 font-sans text-[calc(12px*var(--ws-fs))] font-semibold text-brand hover:underline"
 							>
 								{t("rail.seeAll")}
 								<CaretRight size={11} weight="bold" />
@@ -386,7 +386,7 @@ export default function StudioOverview() {
 							{[1, 2, 3, 4].map((i) => (
 								<div
 									key={i}
-									className="h-11 animate-pulse rounded-lg bg-[#fafaf9]/[0.04]"
+									className="h-11 animate-pulse rounded-lg bg-primary/[0.04]"
 								/>
 							))}
 						</div>
@@ -422,7 +422,7 @@ export default function StudioOverview() {
 								<motion.div key={p.id} variants={staggerItem}>
 									<Link
 										href={`/studio/posts/${p.id}`}
-										className="grid grid-cols-[24px_1fr_64px_56px_56px] items-center gap-2 rounded-xl px-3 py-2.5 transition-colors hover:bg-[#fafaf9]/[0.05]"
+										className="grid grid-cols-[24px_1fr_64px_56px_56px] items-center gap-2 rounded-[16px] px-3 py-2.5 transition-colors hover:bg-primary/[0.05]"
 									>
 										<span className="text-center font-display text-[calc(13px*var(--ws-fs))] font-semibold glass-ink-faint tabular-nums">
 											{i + 1}
