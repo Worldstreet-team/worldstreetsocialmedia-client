@@ -21,6 +21,7 @@ import {
 	shrinkImage,
 } from "@/components/vivid/vivid-files";
 import { VividOrb } from "@/components/vivid/VividOrb";
+import { MAX_WIDGETS, VividWidget } from "@/components/vivid/widgets/VividWidget";
 import { intentKind, useVividIntent } from "@/components/vivid/vivid-actions";
 import * as I from "@/components/vivid/vivid-icons";
 import { DUR, EASE, EASE_OUT_EXPO, press, snappySpring, staggerItem, staggerParent, swap } from "@/lib/motion-presets";
@@ -91,6 +92,8 @@ interface Turn {
 	askPost?: VividPostRef;
 	/** Files sent with this message; pictures keep a local preview while the page is open. */
 	files?: (VividFile & { preview?: string })[];
+	/** Follow-up questions the gateway suggested; shown under the latest answer only. */
+	suggestions?: string[];
 }
 
 /** What Vivid is asked when files arrive with nothing typed. */
@@ -209,6 +212,7 @@ function fromStored(m: VividStoredMessage, ask?: string): Turn {
 		ask,
 		past: true,
 		cards: (m.blocks ?? []).map((b) => ({ kind: b.kind, ...b.data }) as unknown as LiveCard),
+		suggestions: m.suggestions,
 	};
 }
 
@@ -329,6 +333,7 @@ export function useVividChat(opts: {
 					} else if (e.type === "card") patch((x) => ({ ...x, cards: [...(x.cards ?? []), { ...e.card, live: true }] }));
 					else if (e.type === "access") setPlan({ entitled: e.entitled, url: e.subscribeUrl });
 					else if (e.type === "done") patch((x) => ({ ...x, messageId: e.messageId }));
+					else if (e.type === "suggest") patch((x) => ({ ...x, suggestions: e.items.filter((q) => typeof q === "string" && q.trim()).slice(0, 4) }));
 					else if (e.type === "error") patch((x) => ({ ...x, error: { message: e.message, code: e.code } }));
 				},
 			});
@@ -455,6 +460,12 @@ const isReading = (next?: Turn) => !!next && next.role === "vivid" && !!next.str
 
 /** The conversation itself: questions and Vivid's answers, as a column. */
 export function VividTurns({ chat, className }: { chat: VividChatState; className?: string }) {
+	let last = -1;
+	for (let i = chat.turns.length - 1; i >= 0; i--)
+		if (chat.turns[i].role === "vivid") {
+			last = i;
+			break;
+		}
 	return (
 		<div className={className}>
 			{chat.turns.map((t, i) =>
@@ -467,6 +478,7 @@ export function VividTurns({ chat, className }: { chat: VividChatState; classNam
 						subscribeUrl={chat.plan.entitled === false ? chat.plan.url : undefined}
 						onRetry={t.ask && !chat.busy ? () => void chat.send(t.ask as string, { post: t.askPost }) : undefined}
 						onFeedback={(v) => chat.rate(t, v)}
+						onFollowUp={i === last && !chat.busy ? (q) => void chat.send(q) : undefined}
 					/>
 				),
 			)}
@@ -979,16 +991,22 @@ export function VividAnswer({
 	turn,
 	onRetry,
 	onFeedback,
+	onFollowUp,
 	subscribeUrl,
 }: {
 	turn: Turn;
 	onRetry?: () => void;
 	onFeedback: (v: "up" | "down" | null) => void;
+	/** Set on the latest answer only: its follow-up chips ask the next question. */
+	onFollowUp?: (q: string) => void;
 	/** Set while the person has no plan: a preview limit offers Subscribe. */
 	subscribeUrl?: string;
 }) {
 	const [copied, setCopied] = useState(false);
 	const working = turn.streaming && !turn.text && !turn.cards?.length;
+	// Drawing a widget is a tool call, but the widget itself says what happened.
+	const steps = turn.steps?.filter((s) => s.name !== "show");
+	let widgets = 0;
 	const speak = () => {
 		if (!("speechSynthesis" in window)) return;
 		window.speechSynthesis.cancel();
@@ -996,7 +1014,7 @@ export function VividAnswer({
 	};
 	return (
 		<div className="flex flex-col gap-3">
-			{turn.steps && turn.steps.length > 0 && <Steps steps={turn.steps} running={!!turn.streaming} />}
+			{steps && steps.length > 0 && <Steps steps={steps} running={!!turn.streaming} />}
 			{working ? (
 				<VividThinking className="h-[40px] w-[52px]" />
 			) : (
@@ -1007,10 +1025,15 @@ export function VividAnswer({
 					/>
 				)
 			)}
-			{turn.cards?.map((c, i) => (
+			{turn.cards?.map((c, i) => {
+				if (c.kind === "ui") {
+					if (++widgets > MAX_WIDGETS) return null;
+					// biome-ignore lint/suspicious/noArrayIndexKey: cards arrive in order and never reorder
+					return <VividWidget key={i} widget={c.widget} title={c.title} data={c.data} live={c.live} />;
+				}
 				// biome-ignore lint/suspicious/noArrayIndexKey: cards arrive in order and never reorder
-				<CardView key={i} card={c} past={turn.past} streaming={turn.streaming} />
-			))}
+				return <CardView key={i} card={c} past={turn.past} streaming={turn.streaming} />;
+			})}
 			{turn.error && <ErrorNote error={turn.error} onRetry={onRetry} subscribeUrl={subscribeUrl} />}
 			{!turn.streaming && turn.text && (
 				<div className="-ml-2.5 flex items-center text-muted">
@@ -1052,7 +1075,35 @@ export function VividAnswer({
 					)}
 				</div>
 			)}
+			{onFollowUp && !turn.streaming && turn.suggestions && turn.suggestions.length > 0 && (
+				<FollowUps items={turn.suggestions} onAsk={onFollowUp} />
+			)}
 		</div>
+	);
+}
+
+/**
+ * What a curious person would ask next about this answer, from the gateway
+ * (docs/vivid-widgets.md, section 4). Under the latest answer only; a tap
+ * asks it as typed text. They arrive a beat after the answer, so they rise in.
+ */
+function FollowUps({ items, onAsk }: { items: string[]; onAsk: (q: string) => void }) {
+	return (
+		<motion.ul variants={staggerParent} initial="hidden" animate="show" aria-label="Ask next" className="-mt-1 flex flex-col">
+			{items.map((q) => (
+				<motion.li key={q} variants={staggerItem} className="border-hairline border-t first:border-t-0">
+					<button
+						type="button"
+						onClick={() => onAsk(q)}
+						className="group flex min-h-[44px] w-full cursor-pointer items-center gap-3 py-2.5 text-left font-sans text-[calc(14.5px*var(--ws-fs))] text-muted transition-colors hover:text-primary"
+					>
+						<I.IconFollowUp size={17} className="shrink-0 text-subtle transition-colors group-hover:text-gold" />
+						<span className="min-w-0 flex-1">{q}</span>
+						<I.IconPlus size={16} className="shrink-0 text-subtle opacity-0 transition-opacity group-hover:opacity-100" />
+					</button>
+				</motion.li>
+			))}
+		</motion.ul>
 	);
 }
 

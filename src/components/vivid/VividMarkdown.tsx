@@ -323,8 +323,16 @@ export function VividMarkdown({ text, className }: { text: string; className?: s
 	);
 }
 
+/**
+ * A short string with the answer's inline grammar (maths, bold, code, links),
+ * no blocks: the text fields inside a widget (components/vivid/widgets).
+ */
+export function VividInline({ text }: { text: string }) {
+	return <>{inline(text, "w")}</>;
+}
+
 /** One piece of math, rendered by KaTeX once it has loaded; the source shows until then. */
-function TeX({ tex, display }: { tex: string; display: boolean }) {
+export function TeX({ tex, display }: { tex: string; display: boolean }) {
 	const [html, setHtml] = useState<string | null>(null);
 	useEffect(() => {
 		let alive = true;

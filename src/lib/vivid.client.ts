@@ -31,7 +31,9 @@ export type VividCard =
 			expiresAt?: string;
 	  }
 	| { kind: "open"; tool: string; summary: string; intent: VividIntent }
-	| { kind: "meeting"; meeting: VividMeeting };
+	| { kind: "meeting"; meeting: VividMeeting }
+	/** A widget (gateway docs/vivid-widgets.md), drawn by components/vivid/widgets. */
+	| { kind: "ui"; widget: string; title?: string; data: Record<string, unknown> };
 
 /** A WorldMeet recap (gateway tools.ts meetingCard). */
 export type VividMeeting = {
@@ -103,6 +105,8 @@ export type VividEvent =
 	/** Whether this turn has the WorldStreet Vivid plan ($100, billed on the hub). */
 	| { type: "access"; entitled: boolean; subscribeUrl: string }
 	| { type: "done"; threadId: string; messageId: string | null }
+	/** Follow-up questions; may arrive after `done`, so read the stream to its end. */
+	| { type: "suggest"; items: string[] }
 	| { type: "error"; message: string; code?: string };
 
 async function token() {
@@ -223,6 +227,8 @@ export type VividStoredMessage = {
 	content: string;
 	blocks?: { kind: string; data: Record<string, unknown> }[];
 	feedback?: "up" | "down" | null;
+	/** Follow-up questions, absent when there are none. */
+	suggestions?: string[];
 	createdAt?: string;
 };
 /** The window's plan state. `entitled` is null when the hub couldn't be read. */

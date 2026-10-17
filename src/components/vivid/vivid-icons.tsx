@@ -492,3 +492,16 @@ export const IconBriefcase = icon(
 	),
 	"IconBriefcase",
 );
+
+/** Ask next: a line that turns down and on, the way a follow-up carries on. */
+export const IconFollowUp = icon(
+	() => (
+		<>
+			<path d="M6 5v6.5a3 3 0 0 0 3 3h9" />
+			<path d="M14.5 11 18 14.5 14.5 18" />
+		</>
+	),
+	"IconFollowUp",
+);
+
+export const IconPlus = icon(() => <path d="M12 6.5v11M6.5 12h11" />, "IconPlus");
