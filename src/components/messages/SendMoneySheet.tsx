@@ -62,6 +62,8 @@ export function SendMoneySheet({
 	balanceMinor,
 	members,
 	onSent,
+	initialAmountMinor,
+	initialNote,
 }: {
 	open: boolean;
 	onClose: () => void;
@@ -74,6 +76,9 @@ export function SendMoneySheet({
 	 *  opens on a "who's it for" step and the transfer names its target. */
 	members?: MoneyMember[];
 	onSent?: (message: any) => void;
+	/** Opened from Vivid's "Review in Send": start filled in. Every limit and the confirm step still apply. */
+	initialAmountMinor?: number;
+	initialNote?: string;
 }) {
 	const { getToken } = useAuth();
 	const { toast } = useToast();
@@ -96,6 +101,12 @@ export function SendMoneySheet({
 			setRecipient(null);
 		}
 	}, [open]);
+
+	useEffect(() => {
+		if (!open) return;
+		if (initialAmountMinor && initialAmountMinor > 0) setRaw(String(Math.round(initialAmountMinor)));
+		if (initialNote) setNote(initialNote);
+	}, [open, initialAmountMinor, initialNote]);
 
 	// Digits only, read as cents — the field fills right-to-left like an ATM,
 	// so there is no way to type a malformed amount and no decimal point to

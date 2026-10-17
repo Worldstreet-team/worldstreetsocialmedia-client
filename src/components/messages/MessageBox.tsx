@@ -164,7 +164,7 @@ import { BACKEND_ORIGIN } from "@/const";
 const API_URL = BACKEND_ORIGIN;
 import { useAtom, useSetAtom } from "jotai";
 import { useAtomValue } from "jotai";
-import { browserChromeAtom, onlineIdsAtom } from "@/store/ui.atom";
+import { browserChromeAtom, onlineIdsAtom, vividPayDraftAtom } from "@/store/ui.atom";
 import { resolveCssColor } from "@/components/providers/ThemeColorSync";
 import { userAtom } from "@/store/user.atom";
 import { activeConversationIdAtom, messageCacheAtom, unreadMessagesCountAtom, type Message as CachedMessage } from "@/store/messageCache";
@@ -700,6 +700,17 @@ export const MessageBox = ({
 	const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 	const [showGifPicker, setShowGifPicker] = useState(false);
 	const [showSendMoney, setShowSendMoney] = useState(false);
+	// "Review in Send" from Vivid (a send-preview card): this thread's Send
+	// sheet opens filled in. The member checks and confirms there; nothing
+	// is ever sent for them.
+	const [vividPay, setVividPay] = useAtom(vividPayDraftAtom);
+	const [sendPrefill, setSendPrefill] = useState<{ amountMinor: number; note: string } | null>(null);
+	useEffect(() => {
+		if (!vividPay || activeConversation?._id !== vividPay.conversationId) return;
+		setSendPrefill({ amountMinor: vividPay.amountMinor, note: vividPay.note });
+		setShowSendMoney(true);
+		setVividPay(null);
+	}, [vividPay, activeConversation?._id, setVividPay]);
 	// Picker follows the app theme instead of hardcoding dark.
 	const { resolvedTheme } = useTheme();
 	const { prefs } = usePreferences();
@@ -4275,7 +4286,12 @@ export const MessageBox = ({
 			{activeConversation && (
 				<SendMoneySheet
 					open={showSendMoney}
-					onClose={() => setShowSendMoney(false)}
+					onClose={() => {
+						setShowSendMoney(false);
+						setSendPrefill(null);
+					}}
+					initialAmountMinor={sendPrefill?.amountMinor}
+					initialNote={sendPrefill?.note}
 					conversationId={activeConversation._id}
 					peerName={
 						activeConversation.otherParticipant?.firstName ||

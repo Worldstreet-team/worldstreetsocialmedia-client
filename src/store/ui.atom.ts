@@ -147,6 +147,11 @@ export const vividSpaceDraftAtom = atom<{ title?: string } | null>(null);
 /** A draft for one conversation; that thread's composer takes it once. */
 export const vividDmDraftAtom = atom<{ conversationId: string; text: string } | null>(null);
 /**
+ * Vivid's "Review in Send" (a send-preview card): that thread's Send sheet
+ * opens filled in, once. The member confirms there; Vivid never sends.
+ */
+export const vividPayDraftAtom = atom<{ conversationId: string; amountMinor: number; note: string } | null>(null);
+/**
  * A post sent to Vivid from its menu ("Ask Vivid", owner 2026-10-16): Vivid's
  * chat in Messages takes it once as it opens, sends it, and scans it while
  * it reads. Carries what the card draws so it shows before the server answers.

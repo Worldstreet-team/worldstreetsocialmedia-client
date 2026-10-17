@@ -22,7 +22,9 @@ import {
 	shrinkImage,
 } from "@/components/vivid/vivid-files";
 import { VividOrb } from "@/components/vivid/VividOrb";
-import { ActionsContext, AskContext, type WidgetActions } from "@/components/vivid/widgets/parts";
+import { ActionsContext, AskContext, CiteContext, type CiteState, type WidgetActions } from "@/components/vivid/widgets/parts";
+import { startConversationAction } from "@/lib/conversation.actions";
+import { useRouter } from "next/navigation";
 import { MAX_WIDGETS, VividWidget, WidgetSkeleton } from "@/components/vivid/widgets/VividWidget";
 import { intentKind, useVividIntent } from "@/components/vivid/vivid-actions";
 import * as I from "@/components/vivid/vivid-icons";
@@ -42,7 +44,7 @@ import {
 	type VividThreadRow,
 } from "@/lib/vivid.client";
 import { pendingDraftAtom } from "@/store/drafts.atom";
-import { composeOpenAtom, vividDmDraftAtom } from "@/store/ui.atom";
+import { composeOpenAtom, vividDmDraftAtom, vividPayDraftAtom } from "@/store/ui.atom";
 import { userAtom } from "@/store/user.atom";
 
 /**
@@ -480,6 +482,7 @@ const isReading = (next?: Turn) => !!next && next.role === "vivid" && !!next.str
 function useWidgetActions(surface: VividChatState["surface"]): WidgetActions {
 	const { toast } = useToast();
 	const run = useVividIntent();
+	const router = useRouter();
 	return useMemo(
 		() => ({
 			insert: (text: string) => {
@@ -497,8 +500,20 @@ function useWidgetActions(surface: VividChatState["surface"]): WidgetActions {
 				}
 			},
 			insertPost: (text: string) => void run({ type: "compose", text }),
+			// 8.1 pay: the chat with them, its Send sheet filled in. The sheet's own
+			// limits, balance check and confirm step decide; nothing is sent here.
+			pay: async ({ profileId, handle, amountMinor, note }) => {
+				const r = await startConversationAction(profileId);
+				const id = r?.success ? String(r.data?._id ?? r._id ?? "") : "";
+				if (!id) {
+					router.push(`/profile/${encodeURIComponent(handle)}`);
+					return;
+				}
+				getDefaultStore().set(vividPayDraftAtom, { conversationId: id, amountMinor, note });
+				router.push(`/messages/${id}`);
+			},
 		}),
-		[surface, toast, run],
+		[surface, toast, run, router],
 	);
 }
 
@@ -1064,12 +1079,15 @@ export function VividAnswer({
 	let widgets = 0;
 	// A widget is being drawn: hold its place with its shape (the show step is hidden).
 	const drawing = turn.streaming && turn.steps?.some((s) => s.name === "show" && s.status === "start");
+	const cite = useAnswerCites(turn.cards);
+	const hidden = coveredLegacy(turn.cards);
 	const speak = () => {
 		if (!("speechSynthesis" in window)) return;
 		window.speechSynthesis.cancel();
 		window.speechSynthesis.speak(new SpeechSynthesisUtterance(speakable(turn.text)));
 	};
 	return (
+		<CiteContext.Provider value={cite}>
 		<div className="flex flex-col gap-3">
 			{steps && steps.length > 0 && <Steps steps={steps} running={!!turn.streaming} />}
 			{working ? (
@@ -1089,6 +1107,7 @@ export function VividAnswer({
 						// biome-ignore lint/suspicious/noArrayIndexKey: cards arrive in order and never reorder
 						return <VividWidget key={i} widget={c.widget} title={c.title} data={c.data} live={c.live} />;
 					}
+					if (hidden.has(c.kind)) return null;
 					// biome-ignore lint/suspicious/noArrayIndexKey: cards arrive in order and never reorder
 					return <CardView key={i} card={c} past={turn.past} streaming={turn.streaming} />;
 				})}
@@ -1141,6 +1160,7 @@ export function VividAnswer({
 				)}
 			</AnimatePresence>
 		</div>
+		</CiteContext.Provider>
 	);
 }
 
@@ -1180,6 +1200,47 @@ function FollowUps({ items, onAsk }: { items: string[]; onAsk: (q: string) => vo
 			</ul>
 		</motion.div>
 	);
+}
+
+/**
+ * The answer's citations (gateway docs/vivid-widgets.md 8.2): which numbers
+ * its sources widget holds, and the latest [n] tapped in the prose, which
+ * that widget answers by opening the chip.
+ */
+function useAnswerCites(cards: LiveCard[] | undefined): CiteState | null {
+	const [asked, setAsked] = useState<CiteState["asked"]>(null);
+	const has = useMemo(() => {
+		const out = new Set<number>();
+		for (const c of cards ?? [])
+			if (c.kind === "ui" && c.widget === "sources")
+				for (const x of Array.isArray(c.data.sources) ? c.data.sources : []) {
+					const n = Number((x as { n?: unknown }).n);
+					if (Number.isFinite(n)) out.add(n);
+				}
+		return out;
+	}, [cards]);
+	const ask = useCallback((n: number) => setAsked({ n, at: Date.now() }), []);
+	return useMemo(() => (has.size ? { has, ask, asked } : null), [has, ask, asked]);
+}
+
+/**
+ * Legacy cards a wave-3 widget in the same answer already draws (8.2, last
+ * rule): people all covered by profile-cards, posts all covered by
+ * post-embeds, trends by trending, sources by the sources widget.
+ */
+function coveredLegacy(cards: LiveCard[] | undefined): Set<string> {
+	const out = new Set<string>();
+	const ui = (cards ?? []).filter((c): c is LiveCard & { kind: "ui" } => c.kind === "ui");
+	const ids = (widget: string, key: string) => new Set(ui.filter((c) => c.widget === widget).map((c) => String(c.data[key] ?? "")));
+	const profiles = ids("profile-card", "profileId");
+	const posts = ids("post-embed", "postId");
+	for (const c of cards ?? []) {
+		if (c.kind === "people" && c.people.length && c.people.every((p) => profiles.has(p.id))) out.add("people");
+		if (c.kind === "posts" && c.posts.length && c.posts.every((p) => posts.has(p.id))) out.add("posts");
+	}
+	if (ui.some((c) => c.widget === "trending")) out.add("trends");
+	if (ui.some((c) => c.widget === "sources")) out.add("sources");
+	return out;
 }
 
 /** What Vivid did, folded into one line; open it for each step. */

@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useContext, useEffect, useState } from "react";
 import { renderRichText } from "@/components/ui/RichText";
+import { CiteContext } from "@/components/vivid/widgets/parts";
 
 /**
  * Vivid's answers as formatted text: paragraphs, bold and italics, lists,
@@ -89,9 +90,38 @@ function plain(text: string, key: string): ReactNode[] {
 	const out: ReactNode[] = [];
 	lines.forEach((line, n) => {
 		if (n > 0) out.push(<br key={`${key}b${n}`} />);
-		if (line) out.push(<span key={`${key}t${n}`}>{renderRichText(line)}</span>);
+		if (!line) return;
+		// [n] cites the answer's sources (gateway docs/vivid-widgets.md 8.2).
+		const parts = line.split(/(\[\d{1,3}\])/);
+		parts.forEach((part, j) => {
+			if (!part) return;
+			const cite = /^\[(\d{1,3})\]$/.exec(part);
+			out.push(
+				cite ? (
+					<Cite key={`${key}c${n}.${j}`} n={Number(cite[1])} />
+				) : (
+					<span key={`${key}t${n}.${j}`}>{renderRichText(part)}</span>
+				),
+			);
+		});
 	});
 	return out;
+}
+
+/** A citation marker. With a source behind it, a small numbered button that opens its chip; otherwise plain "[n]". */
+function Cite({ n }: { n: number }) {
+	const cite = useContext(CiteContext);
+	if (!cite?.has.has(n)) return <>[{n}]</>;
+	return (
+		<button
+			type="button"
+			onClick={() => cite.ask(n)}
+			aria-label={`Source ${n}`}
+			className="mx-0.5 inline-flex h-[18px] min-w-[18px] -translate-y-px cursor-pointer items-center justify-center rounded-pill bg-primary/[0.08] px-1 align-middle font-sans text-[11px] font-semibold text-muted tabular-nums transition-colors hover:bg-primary/15 hover:text-primary"
+		>
+			{n}
+		</button>
+	);
 }
 
 type Block =

@@ -8,6 +8,7 @@ import * as F from "./life";
 import * as LV from "./live";
 import * as P from "./plot";
 import * as W2 from "./wave2";
+import * as W3 from "./wave3";
 import { css, type Props } from "./parts";
 
 /**
@@ -67,6 +68,20 @@ const REGISTRY: Record<string, ComponentType<Props<any>>> = {
 	// Wave 2 LIVE (7.3): the tool's own payload, by ref.
 	weather: LV.WeatherWidget,
 	"fx-rate": LV.FxRateWidget,
+	// Wave 3 (8): WorldSpace's own world by ref, the member's wallet read only, two calculators.
+	"profile-card": W3.ProfileCardWidget,
+	"post-embed": W3.PostEmbedWidget,
+	trending: W3.TrendingWidget,
+	"live-now": W3.LiveNowWidget,
+	"space-card": W3.SpaceCardWidget,
+	"chat-summary": W3.ChatSummaryWidget,
+	"link-summary": W3.LinkSummaryWidget,
+	sources: W3.SourcesWidget,
+	"wallet-balance": W3.WalletBalanceWidget,
+	transactions: W3.TransactionsWidget,
+	"send-preview": W3.SendPreviewWidget,
+	"trade-plan": W3.TradePlanWidget,
+	"position-size": W3.PositionSizeWidget,
 };
 
 /** The gateway's cap; a stored thread from before it is held to it too. */

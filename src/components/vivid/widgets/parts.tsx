@@ -43,7 +43,21 @@ export const useAsk = () => useContext(AskContext);
  * sends. `insertPost` opens the post composer filled in. Null outside an
  * answer (a preview), and the buttons then copy.
  */
-export type WidgetActions = { insert: (text: string) => void; insertPost: (text: string) => void };
+export type PayDraft = { profileId: string; handle: string; amountMinor: number; note: string };
+export type WidgetActions = {
+	insert: (text: string) => void;
+	insertPost: (text: string) => void;
+	/** 8.1 pay: open the real Send sheet in the chat with this person, filled in. Never sends. */
+	pay?: (draft: PayDraft) => void;
+};
+
+/**
+ * Citations (8.2 sources): which numbers this answer's sources widget holds,
+ * a way for `[n]` in the prose to ask for one, and the latest ask, which the
+ * widget answers by opening that chip.
+ */
+export type CiteState = { has: Set<number>; ask: (n: number) => void; asked: { n: number; at: number } | null };
+export const CiteContext = createContext<CiteState | null>(null);
 export const ActionsContext = createContext<WidgetActions | null>(null);
 export function useActions(): WidgetActions {
 	const a = useContext(ActionsContext);
