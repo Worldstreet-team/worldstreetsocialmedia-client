@@ -118,8 +118,12 @@ export function VividChat({
 	}, [chat.threadId]);
 
 	return (
-		<div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-none backdrop-blur-xl [background:var(--chat-card-bg,var(--chat-frost))] md:rounded-2xl">
-			<header className="flex h-16 shrink-0 items-center gap-1 border-hairline border-b px-2 md:px-3">
+		// Solid, never see-through (owner 2026-10-16, "color riot" on a
+		// phone): the pane covers the inbox there, and a frost let the
+		// avatars behind it bleed through as coloured blobs. Glass is for
+		// popups and sheets only.
+		<div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-none bg-page md:rounded-2xl md:bg-surface">
+			<header className="flex h-16 shrink-0 items-center gap-1 px-2 md:px-3">
 				{onBack && (
 					<IconButton label="Back" onClick={onBack} className="md:hidden">
 						<ArrowLeft size={20} />
