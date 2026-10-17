@@ -5,6 +5,7 @@ import { ChartBar, ChartLine, ChartPie, Check, Gauge, Minus, Palette, Plus, Scal
 import { motion } from "framer-motion";
 import { type PointerEvent, useEffect, useRef, useState } from "react";
 import { EASE_OUT_EXPO } from "@/lib/motion-presets";
+import { LiveFoot } from "./live";
 import {
 	arr,
 	CopyBtn,
@@ -748,6 +749,7 @@ export function MarketWidget({ data, title, live }: Props<R>) {
 						{fmt(Math.abs(change))}
 					</span>
 					<Delta value={pct} />
+					{str(data.period) && <span className={T.label}>{str(data.period) === "24h" ? "past 24 hours" : str(data.period)}</span>}
 				</span>
 			</div>
 			{line.length > 1 && (
@@ -766,6 +768,14 @@ export function MarketWidget({ data, title, live }: Props<R>) {
 						/>
 					</svg>
 				</div>
+			)}
+			{str(data.source) && str(data.asOf) && (
+				<LiveFoot
+					source={str(data.source)}
+					asOf={str(data.asOf)}
+					stale={(Date.now() - Date.parse(str(data.asOf))) / 3_600_000 > 1}
+					refresh={`What's the ${str(data.name) || str(data.symbol)} price now?`}
+				/>
 			)}
 		</Frame>
 	);

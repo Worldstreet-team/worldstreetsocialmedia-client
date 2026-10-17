@@ -5,6 +5,7 @@ import { Component, type ComponentType, type ReactNode } from "react";
 import * as D from "./data";
 import * as L from "./learn";
 import * as F from "./life";
+import * as LV from "./live";
 import * as P from "./plot";
 import * as W2 from "./wave2";
 import { css, type Props } from "./parts";
@@ -63,6 +64,9 @@ const REGISTRY: Record<string, ComponentType<Props<any>>> = {
 	diagram: P.DiagramWidget,
 	timer: W2.TimerWidget,
 	reminder: W2.ReminderWidget,
+	// Wave 2 LIVE (7.3): the tool's own payload, by ref.
+	weather: LV.WeatherWidget,
+	"fx-rate": LV.FxRateWidget,
 };
 
 /** The gateway's cap; a stored thread from before it is held to it too. */
