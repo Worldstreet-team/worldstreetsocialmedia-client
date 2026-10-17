@@ -37,6 +37,24 @@ export type Props<T> = { data: T; title?: string; live?: boolean };
 export const AskContext = createContext<((q: string) => void) | null>(null);
 export const useAsk = () => useContext(AskContext);
 
+/**
+ * What wave-2 widgets do when tapped (docs/vivid-widgets.md 7.1). `insert`
+ * puts text into the composer Vivid was opened over, or copies it; it never
+ * sends. `insertPost` opens the post composer filled in. Null outside an
+ * answer (a preview), and the buttons then copy.
+ */
+export type WidgetActions = { insert: (text: string) => void; insertPost: (text: string) => void };
+export const ActionsContext = createContext<WidgetActions | null>(null);
+export function useActions(): WidgetActions {
+	const a = useContext(ActionsContext);
+	return (
+		a ?? {
+			insert: (t) => void navigator.clipboard?.writeText(t).catch(() => {}),
+			insertPost: (t) => void navigator.clipboard?.writeText(t).catch(() => {}),
+		}
+	);
+}
+
 /** Whether to skip drawing in: reduced motion (both triggers) or an answer loaded from history. */
 export function useStill(live?: boolean) {
 	const reduce = useReducedMotionConfig();

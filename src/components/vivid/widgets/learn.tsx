@@ -59,7 +59,7 @@ function say(text: string) {
 }
 
 /** The "Show more" row under a fold. */
-function More({ open, onClick, children }: { open: boolean; onClick: () => void; children: string }) {
+export function More({ open, onClick, children }: { open: boolean; onClick: () => void; children: string }) {
 	return (
 		<button
 			type="button"

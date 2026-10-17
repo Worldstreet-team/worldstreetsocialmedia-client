@@ -5,6 +5,8 @@ import { Component, type ComponentType, type ReactNode } from "react";
 import * as D from "./data";
 import * as L from "./learn";
 import * as F from "./life";
+import * as P from "./plot";
+import * as W2 from "./wave2";
 import { css, type Props } from "./parts";
 
 /**
@@ -46,6 +48,21 @@ const REGISTRY: Record<string, ComponentType<Props<any>>> = {
 	glossary: L.GlossaryWidget,
 	countdown: F.CountdownWidget,
 	market: D.MarketWidget,
+	// Wave 2, no live data (docs/vivid-widgets.md 7.2).
+	"reply-ideas": W2.ReplyIdeasWidget,
+	rewrite: W2.RewriteWidget,
+	clarify: W2.ClarifyWidget,
+	"answer-hero": W2.AnswerHeroWidget,
+	"knowledge-panel": W2.KnowledgePanelWidget,
+	"graph-plot": P.GraphPlotWidget,
+	"practice-problem": W2.PracticeProblemWidget,
+	"scam-check": W2.ScamCheckWidget,
+	"secret-warning": W2.SecretWarningWidget,
+	"doc-summary": W2.DocSummaryWidget,
+	"caption-options": W2.CaptionOptionsWidget,
+	diagram: P.DiagramWidget,
+	timer: W2.TimerWidget,
+	reminder: W2.ReminderWidget,
 };
 
 /** The gateway's cap; a stored thread from before it is held to it too. */

@@ -16,6 +16,8 @@
 	--vivid-brand-wash: color-mix(in srgb, var(--ws-brand-primary) 12%, transparent);
 	--vivid-credit-wash: color-mix(in srgb, var(--ws-money-credit) 13%, transparent);
 	--vivid-debit-wash: color-mix(in srgb, var(--ws-money-debit) 13%, transparent);
+	--vivid-danger-wash: color-mix(in srgb, var(--ws-status-danger) 13%, transparent);
+	--vivid-warning-wash: color-mix(in srgb, var(--ws-status-warning) 15%, transparent);
 	border-radius: var(--vivid-radius);
 	background: var(--vivid-card);
 }

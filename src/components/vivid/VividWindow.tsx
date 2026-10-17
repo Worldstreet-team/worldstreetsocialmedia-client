@@ -3,11 +3,12 @@
 import clsx from "clsx";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { useAtomValue } from "jotai";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
+import { getDefaultStore, useAtomValue } from "jotai";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react";
 import VerifiedIcon from "@/assets/icons/VerifiedIcon";
 import { OverlayHeader, OverlayPanel, OverlayScrim, useOverlayDismiss } from "@/components/ui/Overlay";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import { useToast } from "@/components/ui/Toast/ToastContext";
 import { VividIntro, VividThinking } from "@/components/vivid/VividHello";
 import { VividMarkdown } from "@/components/vivid/VividMarkdown";
 import { PostScanCard, ScanOverlay } from "@/components/vivid/PostScanCard";
@@ -21,7 +22,7 @@ import {
 	shrinkImage,
 } from "@/components/vivid/vivid-files";
 import { VividOrb } from "@/components/vivid/VividOrb";
-import { AskContext } from "@/components/vivid/widgets/parts";
+import { ActionsContext, AskContext, type WidgetActions } from "@/components/vivid/widgets/parts";
 import { MAX_WIDGETS, VividWidget, WidgetSkeleton } from "@/components/vivid/widgets/VividWidget";
 import { intentKind, useVividIntent } from "@/components/vivid/vivid-actions";
 import * as I from "@/components/vivid/vivid-icons";
@@ -40,6 +41,8 @@ import {
 	type VividPostRef,
 	type VividThreadRow,
 } from "@/lib/vivid.client";
+import { pendingDraftAtom } from "@/store/drafts.atom";
+import { composeOpenAtom, vividDmDraftAtom } from "@/store/ui.atom";
 import { userAtom } from "@/store/user.atom";
 
 /**
@@ -197,6 +200,16 @@ const speakable = (s: string) =>
 const scroller = () => document.getElementById("ws-main-scroll");
 
 /** A stored message back into a turn (history). */
+/** The member's time zone, sent with every turn so "today", timers and reminders mean their day. */
+function timeZone(): { tz?: string } {
+	try {
+		const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+		return tz ? { tz } : {};
+	} catch {
+		return {};
+	}
+}
+
 function fromStored(m: VividStoredMessage, ask?: string): Turn {
 	if (m.role === "user") {
 		const post = m.blocks?.find((b) => b.kind === "post")?.data as VividPostRef | undefined;
@@ -308,14 +321,12 @@ export function useVividChat(opts: {
 				threadId,
 				surface: opts.surface,
 				attachments: sent.map((f) => f.id),
-				context:
-					web || extra.post || opts.context?.dealId
-						? {
-								...(web ? { web: true } : {}),
-								...(extra.post ? { postId: extra.post.id } : {}),
-								...(opts.context?.dealId ? { dealId: opts.context.dealId } : {}),
-							}
-						: null,
+				context: {
+					...(web ? { web: true } : {}),
+					...(extra.post ? { postId: extra.post.id } : {}),
+					...(opts.context?.dealId ? { dealId: opts.context.dealId } : {}),
+					...timeZone(),
+				},
 				signal: ac.signal,
 				onEvent: (e: VividEvent) => {
 					if (e.type === "thread") setThreadId(e.threadId);
@@ -433,6 +444,7 @@ export function useVividChat(opts: {
 	}, []);
 
 	return {
+		surface: opts.surface,
 		turns,
 		input,
 		setInput,
@@ -459,8 +471,40 @@ export type VividChatState = ReturnType<typeof useVividChat>;
 /** Vivid is still reading what it was sent: no words or cards yet. */
 const isReading = (next?: Turn) => !!next && next.role === "vivid" && !!next.streaming && !next.text && !next.cards?.length;
 
+/**
+ * What a wave-2 widget's buttons do (docs/vivid-widgets.md 7.1). insert puts
+ * text in the composer Vivid floats over (a DM thread's, or the open post
+ * composer), never sending it; with no composer in reach it copies, and says
+ * so. insertPost opens the post composer filled in.
+ */
+function useWidgetActions(surface: VividChatState["surface"]): WidgetActions {
+	const { toast } = useToast();
+	const run = useVividIntent();
+	return useMemo(
+		() => ({
+			insert: (text: string) => {
+				const store = getDefaultStore();
+				const thread = surface === "window" ? window.location.pathname.match(/^\/messages\/([^/?#]+)/) : null;
+				if (thread) {
+					store.set(vividDmDraftAtom, { conversationId: thread[1], text });
+					toast("Added to your message. Edit it, then send.");
+				} else if (store.get(composeOpenAtom)) {
+					store.set(pendingDraftAtom, text);
+					toast("Added to your post.");
+				} else {
+					void navigator.clipboard?.writeText(text).catch(() => {});
+					toast("Copied. Paste it where you want it.");
+				}
+			},
+			insertPost: (text: string) => void run({ type: "compose", text }),
+		}),
+		[surface, toast, run],
+	);
+}
+
 /** The conversation itself: questions and Vivid's answers, as a column. */
 export function VividTurns({ chat, className }: { chat: VividChatState; className?: string }) {
+	const actions = useWidgetActions(chat.surface);
 	let last = -1;
 	for (let i = chat.turns.length - 1; i >= 0; i--)
 		if (chat.turns[i].role === "vivid") {
@@ -468,6 +512,7 @@ export function VividTurns({ chat, className }: { chat: VividChatState; classNam
 			break;
 		}
 	return (
+		<ActionsContext.Provider value={actions}>
 		<div className={className}>
 			{chat.turns.map((t, i) =>
 				t.role === "user" ? (
@@ -486,6 +531,7 @@ export function VividTurns({ chat, className }: { chat: VividChatState; classNam
 				),
 			)}
 		</div>
+		</ActionsContext.Provider>
 	);
 }
 
