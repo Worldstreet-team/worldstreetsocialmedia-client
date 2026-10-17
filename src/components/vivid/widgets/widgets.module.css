@@ -1,0 +1,51 @@
+/*
+ * Vivid widgets (docs/vivid-widgets-design.md in the gateway). The card is a
+ * flat wash of the ink, not an opaque surface: Vivid sits on the page on a
+ * phone and on bg-surface on a desktop, and a wash reads one step up from
+ * whichever is behind it, in both modes, with no border. Wells inside step
+ * up again the same way. Only the shell uses the 20px radius (owner ask for
+ * Vivid); everything inside stays on the 13 / 10 / 7 / pill ladder.
+ */
+
+.root {
+	--vivid-radius: 20px;
+	--vivid-card: color-mix(in srgb, var(--ws-text-primary) 6%, transparent);
+	--vivid-well: color-mix(in srgb, var(--ws-text-primary) 5%, transparent);
+	--vivid-well-press: color-mix(in srgb, var(--ws-text-primary) 9%, transparent);
+	--vivid-track: color-mix(in srgb, var(--ws-text-primary) 9%, transparent);
+	--vivid-brand-wash: color-mix(in srgb, var(--ws-brand-primary) 12%, transparent);
+	--vivid-credit-wash: color-mix(in srgb, var(--ws-money-credit) 13%, transparent);
+	--vivid-debit-wash: color-mix(in srgb, var(--ws-money-debit) 13%, transparent);
+	border-radius: var(--vivid-radius);
+	background: var(--vivid-card);
+}
+
+html[data-ws-theme="platform-light"] .root {
+	--vivid-card: color-mix(in srgb, var(--ws-text-primary) 4%, transparent);
+	--vivid-well: color-mix(in srgb, var(--ws-text-primary) 4.5%, transparent);
+	--vivid-well-press: color-mix(in srgb, var(--ws-text-primary) 8%, transparent);
+	--vivid-track: color-mix(in srgb, var(--ws-text-primary) 8%, transparent);
+	--vivid-brand-wash: color-mix(in srgb, var(--ws-brand-primary) 11%, transparent);
+}
+
+/* A sideways strip shows that it continues: the far edge fades out. */
+.edge {
+	-webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+	mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+}
+.edge[data-end="true"] {
+	-webkit-mask-image: none;
+	mask-image: none;
+}
+
+/* The flashcard's back face. */
+.flip {
+	transform-style: preserve-3d;
+}
+.face {
+	backface-visibility: hidden;
+	-webkit-backface-visibility: hidden;
+}
+.back {
+	transform: rotateY(180deg);
+}

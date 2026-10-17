@@ -503,5 +503,3 @@ export const IconFollowUp = icon(
 	),
 	"IconFollowUp",
 );
-
-export const IconPlus = icon(() => <path d="M12 6.5v11M6.5 12h11" />, "IconPlus");

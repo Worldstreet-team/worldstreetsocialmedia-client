@@ -1,10 +1,11 @@
 "use client";
 
+import clsx from "clsx";
 import { Component, type ComponentType, type ReactNode } from "react";
 import * as D from "./data";
 import * as L from "./learn";
 import * as F from "./life";
-import type { Props } from "./parts";
+import { css, type Props } from "./parts";
 
 /**
  * Vivid's widgets: one `ui` card (gateway docs/vivid-widgets.md, protocol v1)
@@ -72,6 +73,28 @@ export function VividWidget({
 		<Contain>
 			<W data={data} title={title || undefined} live={live} />
 		</Contain>
+	);
+}
+
+/**
+ * The place a widget is about to land, while Vivid draws it: the card's own
+ * shell, a header line and three rows, so the widget arrives where its shape
+ * was ("anything that loads shows its shape"). It pulses with the house
+ * skeleton, which stops under reduced motion.
+ */
+export function WidgetSkeleton() {
+	return (
+		<div aria-hidden className={clsx(css.root, "flex flex-col gap-4 px-4 pt-4 pb-5 sm:px-5")}>
+			<div className="flex items-center gap-2.5">
+				<span className="skeleton size-[18px] rounded-full" />
+				<span className="skeleton h-3.5 w-32 rounded-pill" />
+			</div>
+			<span className="skeleton h-16 w-full rounded-[13px]" />
+			<div className="flex flex-col gap-2.5">
+				<span className="skeleton h-3 w-[86%] rounded-pill" />
+				<span className="skeleton h-3 w-[64%] rounded-pill" />
+			</div>
+		</div>
 	);
 }
 

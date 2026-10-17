@@ -13,6 +13,7 @@ import {
 	ListChecks,
 	MapPin,
 	Minus,
+	NavigationArrow,
 	Path,
 	Phone,
 	Plus,
@@ -20,48 +21,55 @@ import {
 	User,
 	Users,
 } from "@phosphor-icons/react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
-import { DUR, EASE } from "@/lib/motion-presets";
-import { arr, body, fmt, Frame, label, num, Pill, type Props, rec, small, str, Txt } from "./parts";
+import { DUR, EASE, swap } from "@/lib/motion-presets";
+import { arr, Btn, Frame, fmt, num, type Props, rec, str, T, Txt, well } from "./parts";
 
 /* Plans and places: timeline, checklist, recipe, itinerary, place, event,
    person, countdown. */
 
 type R = Record<string, unknown>;
 
-export function TimelineWidget({ data, title }: Props<R>) {
+export function TimelineWidget({ data, title, live }: Props<R>) {
 	const events = arr<R>(data.events);
 	return (
-		<Frame title={title || "Timeline"} icon={<Path />}>
+		<Frame title={title || "Timeline"} icon={<Path />} live={live}>
 			<ol className="flex flex-col">
-				{events.map((e, i) => (
-					// biome-ignore lint/suspicious/noArrayIndexKey: events in order
-					<li key={i} className="relative flex gap-3.5 pb-4 last:pb-0">
-						{i < events.length - 1 && <span aria-hidden className="absolute top-4 bottom-0 left-[5px] w-px bg-hairline" />}
-						<span
-							aria-hidden
-							className={clsx("relative mt-[5px] size-[11px] shrink-0 rounded-full ring-[3px] ring-surface", i === events.length - 1 ? "bg-brand" : "bg-primary/30")}
-						/>
-						<div className="flex min-w-0 flex-col gap-0.5">
-							<span className="font-sans text-[12.5px] font-semibold text-gold tabular-nums">{str(e.date)}</span>
-							<span className={label}>
-								<Txt text={e.title} />
+				{events.map((e, i) => {
+					const last = i === events.length - 1;
+					return (
+						// biome-ignore lint/suspicious/noArrayIndexKey: events in order
+						<li key={i} className="relative grid grid-cols-[72px_14px_1fr] gap-x-3 pb-5 last:pb-0">
+							<span className="pt-px text-right font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-muted tabular-nums">
+								{str(e.date)}
 							</span>
-							{str(e.body) && (
-								<span className={small}>
-									<Txt text={e.body} />
+							<span className="relative flex justify-center">
+								{!last && <span aria-hidden className="absolute top-4 -bottom-5 w-px bg-hairline" />}
+								<span
+									aria-hidden
+									className={clsx("relative mt-[5px] size-2.5 rounded-full", last ? "bg-brand" : "bg-primary/35")}
+								/>
+							</span>
+							<div className="flex min-w-0 flex-col gap-1">
+								<span className={T.strong}>
+									<Txt text={e.title} />
 								</span>
-							)}
-						</div>
-					</li>
-				))}
+								{str(e.body) && (
+									<span className={clsx(T.body, "text-muted")}>
+										<Txt text={e.body} />
+									</span>
+								)}
+							</div>
+						</li>
+					);
+				})}
 			</ol>
 		</Frame>
 	);
 }
 
-export function ChecklistWidget({ data, title }: Props<R>) {
+export function ChecklistWidget({ data, title, live }: Props<R>) {
 	const items = arr<R>(data.items);
 	const [done, setDone] = useState<boolean[]>(() => items.map((it) => it.done === true));
 	const count = done.filter(Boolean).length;
@@ -69,21 +77,19 @@ export function ChecklistWidget({ data, title }: Props<R>) {
 		<Frame
 			title={title || "Checklist"}
 			icon={<ListChecks />}
-			action={
-				<span className="font-sans text-[13px] text-muted tabular-nums">
-					{count}/{items.length}
-				</span>
-			}
+			action={<span className={clsx(T.label, "pr-2.5 tabular-nums")}>{`${count} of ${items.length}`}</span>}
+			live={live}
 			flush
 		>
-			<div className="mx-4 mb-1 h-1 overflow-hidden rounded-pill bg-primary/[0.07]">
+			<div className="mx-4 mb-2 h-1 overflow-hidden rounded-pill bg-[var(--vivid-track)] sm:mx-5">
 				<motion.div
 					className="h-full rounded-pill bg-brand"
+					initial={false}
 					animate={{ width: `${items.length ? (count / items.length) * 100 : 0}%` }}
 					transition={{ duration: DUR.slow, ease: EASE }}
 				/>
 			</div>
-			<ul className="flex flex-col pb-1.5">
+			<ul className="flex flex-col pb-2">
 				{items.map((it, i) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: items in order
 					<li key={i}>
@@ -92,20 +98,23 @@ export function ChecklistWidget({ data, title }: Props<R>) {
 							role="checkbox"
 							aria-checked={done[i]}
 							onClick={() => setDone((d) => d.map((x, j) => (j === i ? !x : x)))}
-							className="flex min-h-[44px] w-full cursor-pointer items-start gap-3 px-4 py-2.5 text-left transition-colors hover:bg-primary/[0.03]"
+							className="flex min-h-[48px] w-full cursor-pointer items-center gap-3.5 px-4 py-2.5 text-left transition-colors hover:bg-[var(--vivid-well)] sm:px-5"
 						>
-							<motion.span
-								initial={false}
-								animate={{ scale: done[i] ? [1, 0.86, 1] : 1 }}
-								transition={{ duration: DUR.base, ease: EASE }}
+							<span
 								className={clsx(
-									"mt-px flex size-5 shrink-0 items-center justify-center rounded-[6px] transition-colors",
-									done[i] ? "bg-brand text-brand-on" : "ring-[1.5px] ring-primary/25",
+									"flex size-[22px] shrink-0 items-center justify-center rounded-[7px] transition-colors",
+									done[i] ? "bg-brand text-brand-on" : "ring-[1.5px] ring-primary/30 ring-inset",
 								)}
 							>
-								{done[i] && <Check weight="bold" className="size-3" />}
-							</motion.span>
-							<span className={clsx(body, "min-w-0 transition-colors", done[i] && "text-subtle line-through decoration-primary/30")}>
+								<AnimatePresence initial={false}>
+									{done[i] && (
+										<motion.span key="t" {...swap} className="flex">
+											<Check weight="bold" className="size-3.5" />
+										</motion.span>
+									)}
+								</AnimatePresence>
+							</span>
+							<span className={clsx(T.body, "min-w-0 transition-colors", done[i] && "text-muted line-through decoration-primary/30")}>
 								<Txt text={it.text} />
 							</span>
 						</button>
@@ -120,9 +129,9 @@ export function ChecklistWidget({ data, title }: Props<R>) {
 const FRACTIONS: Record<string, number> = { "¼": 0.25, "½": 0.5, "¾": 0.75, "⅓": 1 / 3, "⅔": 2 / 3, "⅛": 0.125 };
 const AMOUNT = /^(\d+(?:\.\d+)?(?:\s+\d+\/\d+)?|\d+\/\d+|[¼½¾⅓⅔⅛]|\d+[¼½¾⅓⅔⅛])(?:\s*[-–]\s*(\d+(?:\.\d+)?))?/;
 
-function parseAmount(s: string): number {
+function parseAmount(v: string): number {
 	let n = 0;
-	for (const part of s.trim().split(/\s+/)) {
+	for (const part of v.trim().split(/\s+/)) {
 		const uni = part.match(/^(\d*)([¼½¾⅓⅔⅛])$/);
 		if (uni) n += Number(uni[1] || 0) + FRACTIONS[uni[2]];
 		else if (part.includes("/")) {
@@ -136,14 +145,16 @@ function parseAmount(s: string): number {
 function niceAmount(n: number) {
 	const whole = Math.floor(n);
 	const rest = n - whole;
-	const frac = [
-		[0.125, "⅛"],
-		[0.25, "¼"],
-		[1 / 3, "⅓"],
-		[0.5, "½"],
-		[2 / 3, "⅔"],
-		[0.75, "¾"],
-	].find(([v]) => Math.abs(rest - (v as number)) < 0.04);
+	const frac = (
+		[
+			[0.125, "⅛"],
+			[0.25, "¼"],
+			[1 / 3, "⅓"],
+			[0.5, "½"],
+			[2 / 3, "⅔"],
+			[0.75, "¾"],
+		] as const
+	).find(([v]) => Math.abs(rest - v) < 0.04);
 	if (rest < 0.04) return String(whole);
 	if (rest > 0.96) return String(whole + 1);
 	if (frac) return `${whole || ""}${frac[1]}`;
@@ -159,7 +170,17 @@ function scaleLine(line: string, k: number) {
 	return a + b + line.slice(m[0].length);
 }
 
-export function RecipeWidget({ data, title }: Props<R>) {
+/** A small fact in a recipe or place header: a glyph and a word. */
+function Meta({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+	return (
+		<span className={clsx(T.label, "flex items-center gap-1.5 [&>svg]:size-4")}>
+			{icon}
+			{children}
+		</span>
+	);
+}
+
+export function RecipeWidget({ data, title, live }: Props<R>) {
 	const base = Number.parseInt(str(data.servings), 10);
 	const scalable = Number.isFinite(base) && base > 0;
 	const [serves, setServes] = useState(scalable ? base : 0);
@@ -168,53 +189,38 @@ export function RecipeWidget({ data, title }: Props<R>) {
 	const [got, setGot] = useState<Set<number>>(() => new Set());
 	const k = scalable ? serves / base : 1;
 	return (
-		<Frame title={title || str(data.name) || "Recipe"} icon={<CookingPot />}>
-			<div className="flex flex-wrap items-center gap-2">
-				{title && str(data.name) && <span className={clsx(label, "mr-auto")}>{str(data.name)}</span>}
-				{str(data.time) && (
-					<span className="flex items-center gap-1.5 rounded-pill bg-primary/5 px-2.5 py-1 font-sans text-[12.5px] text-muted">
-						<Clock className="size-3.5" /> {str(data.time)}
-					</span>
-				)}
-				{scalable ? (
-					<span className="flex items-center gap-1 rounded-pill bg-primary/5 p-0.5 font-sans text-[12.5px] text-muted">
-						<button
-							type="button"
-							aria-label="Fewer servings"
-							disabled={serves <= 1}
-							onClick={() => setServes((s) => Math.max(1, s - 1))}
-							className="flex size-7 cursor-pointer items-center justify-center rounded-full hover:bg-primary/10 disabled:opacity-40"
-						>
-							<Minus className="size-3.5" />
-						</button>
-						<span className="min-w-[64px] text-center tabular-nums">
-							Serves <span className="font-semibold text-primary">{serves}</span>
-						</span>
-						<button
-							type="button"
-							aria-label="More servings"
-							disabled={serves >= 99}
-							onClick={() => setServes((s) => Math.min(99, s + 1))}
-							className="flex size-7 cursor-pointer items-center justify-center rounded-full hover:bg-primary/10 disabled:opacity-40"
-						>
-							<Plus className="size-3.5" />
-						</button>
-					</span>
-				) : (
-					str(data.servings) && (
-						<span className="flex items-center gap-1.5 rounded-pill bg-primary/5 px-2.5 py-1 font-sans text-[12.5px] text-muted">
-							<Users className="size-3.5" /> {str(data.servings)}
-						</span>
-					)
-				)}
+		<Frame title={title || "Recipe"} icon={<CookingPot />} live={live}>
+			<div className="flex flex-col gap-2">
+				<span className={T.display}>{str(data.name)}</span>
+				<div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+					{str(data.time) && <Meta icon={<Clock />}>{str(data.time)}</Meta>}
+					{!scalable && str(data.servings) && <Meta icon={<Users />}>{str(data.servings)}</Meta>}
+				</div>
 			</div>
-			<h4 className={clsx(label, "mt-4 mb-1.5")}>Ingredients</h4>
-			<ul className="grid gap-x-4 sm:grid-cols-2">
+			{scalable && (
+				<div className={clsx(well, "mt-4 flex items-center justify-between py-1 pr-1 pl-4")}>
+					<span className={T.body}>
+						Serves <span className="font-semibold tabular-nums">{serves}</span>
+					</span>
+					<span className="flex items-center">
+						<Btn label="Fewer servings" tone="ghost" icon disabled={serves <= 1} onClick={() => setServes((x) => Math.max(1, x - 1))}>
+							<Minus weight="bold" />
+						</Btn>
+						<Btn label="More servings" tone="ghost" icon disabled={serves >= 99} onClick={() => setServes((x) => Math.min(99, x + 1))}>
+							<Plus weight="bold" />
+						</Btn>
+					</span>
+				</div>
+			)}
+			<h4 className={clsx(T.head, "mt-5 mb-1")}>Ingredients</h4>
+			<ul className="flex flex-col">
 				{ingredients.map((ing, i) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: ingredients in order
-					<li key={i}>
+					<li key={i} className="border-hairline border-t first:border-t-0">
 						<button
 							type="button"
+							role="checkbox"
+							aria-checked={got.has(i)}
 							onClick={() =>
 								setGot((g) => {
 									const n = new Set(g);
@@ -222,31 +228,31 @@ export function RecipeWidget({ data, title }: Props<R>) {
 									return n;
 								})
 							}
-							className={clsx(small, "flex w-full cursor-pointer items-start gap-2.5 py-1.5 text-left text-primary", got.has(i) && "text-subtle line-through")}
+							className={clsx(T.body, "flex min-h-[44px] w-full cursor-pointer items-center gap-3 py-2 text-left", got.has(i) && "text-muted line-through decoration-primary/30")}
 						>
 							<span
 								className={clsx(
-									"mt-[3px] flex size-4 shrink-0 items-center justify-center rounded-full transition-colors",
-									got.has(i) ? "bg-brand text-brand-on" : "ring-[1.5px] ring-primary/25",
+									"flex size-5 shrink-0 items-center justify-center rounded-full transition-colors",
+									got.has(i) ? "bg-brand text-brand-on" : "ring-[1.5px] ring-primary/30 ring-inset",
 								)}
 							>
-								{got.has(i) && <Check weight="bold" className="size-2.5" />}
+								{got.has(i) && <Check weight="bold" className="size-3" />}
 							</span>
 							<span className="min-w-0 tabular-nums">{scaleLine(ing, k)}</span>
 						</button>
 					</li>
 				))}
 			</ul>
-			<h4 className={clsx(label, "mt-4 mb-2")}>Method</h4>
-			<ol className="flex flex-col gap-2.5">
-				{steps.map((s, i) => (
+			<h4 className={clsx(T.head, "mt-5 mb-3")}>Method</h4>
+			<ol className="flex flex-col gap-3.5">
+				{steps.map((st, i) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: steps in order
-					<li key={i} className="flex gap-3">
-						<span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/5 font-sans text-[12px] font-semibold text-primary tabular-nums">
+					<li key={i} className="flex gap-3.5">
+						<span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--vivid-well)] font-sans text-[calc(12.5px*var(--ws-fs))] font-semibold text-primary tabular-nums">
 							{i + 1}
 						</span>
-						<p className={clsx(body, "min-w-0 pt-px")}>
-							<Txt text={s} />
+						<p className={clsx(T.body, "min-w-0 pt-[3px]")}>
+							<Txt text={st} />
 						</p>
 					</li>
 				))}
@@ -255,14 +261,14 @@ export function RecipeWidget({ data, title }: Props<R>) {
 	);
 }
 
-export function ItineraryWidget({ data, title }: Props<R>) {
+export function ItineraryWidget({ data, title, live }: Props<R>) {
 	const days = arr<R>(data.days);
 	const [at, setAt] = useState(0);
 	const day = days[at];
 	return (
-		<Frame title={title || "Itinerary"} icon={<CalendarBlank />}>
+		<Frame title={title || "Itinerary"} icon={<CalendarBlank />} live={live}>
 			{days.length > 1 && (
-				<div role="tablist" className="-mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+				<div role="tablist" aria-label="Days" className="-mx-1 mb-4 flex gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 					{days.map((d, i) => (
 						<button
 							// biome-ignore lint/suspicious/noArrayIndexKey: days in order
@@ -272,83 +278,82 @@ export function ItineraryWidget({ data, title }: Props<R>) {
 							aria-selected={at === i}
 							onClick={() => setAt(i)}
 							className={clsx(
-								"h-8 shrink-0 cursor-pointer rounded-pill px-3 font-sans text-[13px] font-medium whitespace-nowrap transition-colors",
-								at === i ? "bg-primary/10 text-primary" : "bg-primary/[0.04] text-muted hover:text-primary",
+								"relative h-10 shrink-0 cursor-pointer rounded-pill px-4 font-sans text-[calc(13.5px*var(--ws-fs))] font-medium whitespace-nowrap transition-colors",
+								at === i ? "text-primary" : "text-muted hover:text-primary",
 							)}
 						>
-							{str(d.label) || `Day ${i + 1}`}
+							{at === i && (
+								<motion.span layoutId={`it-day-${title ?? ""}-${days.length}`} className="absolute inset-0 rounded-pill bg-[var(--vivid-well-press)]" />
+							)}
+							<span className="relative">{str(d.label) || `Day ${i + 1}`}</span>
 						</button>
 					))}
 				</div>
 			)}
 			{day && (
-				<motion.ol key={at} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: DUR.base, ease: EASE }} className="flex flex-col">
-					{days.length === 1 && <li className={clsx(label, "mb-2")}>{str(day.label)}</li>}
-					{arr<R>(day.items).map((it, i, all) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: items in order
-						<li key={i} className="relative flex gap-3 pb-3.5 last:pb-0">
-							{i < all.length - 1 && <span aria-hidden className="absolute top-5 bottom-0 left-[46px] w-px bg-hairline" />}
-							<span className="w-[40px] shrink-0 pt-px text-right font-sans text-[12.5px] text-muted tabular-nums">{str(it.time)}</span>
-							<span aria-hidden className="relative mt-[6px] size-[9px] shrink-0 rounded-full bg-brand ring-[3px] ring-surface" />
-							<div className="flex min-w-0 flex-col gap-0.5">
-								<span className={label}>
-									<Txt text={it.title} />
+				<AnimatePresence mode="wait" initial={false}>
+					<motion.ol key={at} {...swap} role={days.length > 1 ? "tabpanel" : undefined} className="flex flex-col">
+						{days.length === 1 && <li className={clsx(T.head, "mb-3")}>{str(day.label)}</li>}
+						{arr<R>(day.items).map((it, i, all) => (
+							// biome-ignore lint/suspicious/noArrayIndexKey: items in order
+							<li key={i} className="relative grid grid-cols-[52px_14px_1fr] gap-x-3 pb-4 last:pb-0">
+								<span className="pt-px text-right font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-muted tabular-nums">{str(it.time)}</span>
+								<span className="relative flex justify-center">
+									{i < all.length - 1 && <span aria-hidden className="absolute top-4 -bottom-4 w-px bg-hairline" />}
+									<span aria-hidden className="relative mt-[5px] size-2.5 rounded-full bg-brand" />
 								</span>
-								{str(it.note) && (
-									<span className={small}>
-										<Txt text={it.note} />
+								<div className="flex min-w-0 flex-col gap-0.5">
+									<span className={T.strong}>
+										<Txt text={it.title} />
 									</span>
-								)}
-							</div>
-						</li>
-					))}
-				</motion.ol>
+									{str(it.note) && (
+										<span className={clsx(T.body, "text-muted")}>
+											<Txt text={it.note} />
+										</span>
+									)}
+								</div>
+							</li>
+						))}
+					</motion.ol>
+				</AnimatePresence>
 			)}
 		</Frame>
 	);
 }
 
-export function PlaceWidget({ data, title }: Props<R>) {
+export function PlaceWidget({ data, title, live }: Props<R>) {
 	const name = str(data.name);
 	const address = str(data.address);
 	const rating = num(data.rating);
 	const maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([name, address].filter(Boolean).join(", "))}`;
 	return (
-		<Frame title={title}>
-			<div className="flex gap-3">
-				<span className="flex size-11 shrink-0 items-center justify-center rounded-[13px] bg-brand/10 text-gold">
-					<MapPin weight="fill" className="size-5" />
-				</span>
-				<div className="flex min-w-0 flex-col gap-0.5">
-					<span className="font-sans text-[calc(16px*var(--ws-fs))] font-semibold text-primary">{name}</span>
-					{address && <span className={small}>{address}</span>}
+		<Frame title={title || "Place"} icon={<MapPin />} live={live}>
+			<div className="flex flex-col gap-1.5">
+				<span className={T.display}>{name}</span>
+				{address && <span className={clsx(T.body, "text-muted")}>{address}</span>}
+				<div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
 					{rating !== null && (
-						<span className="mt-0.5 flex items-center gap-1 font-sans text-[13px] text-muted">
-							<Star weight="fill" className="size-3.5 text-gold" />
-							<span className="font-medium text-primary tabular-nums">{fmt(rating, 1)}</span>
-							{rating <= 5 && <span className="text-subtle">/ 5</span>}
-						</span>
+						<Meta icon={<Star weight="fill" className="text-gold" />}>
+							<span className="font-semibold text-primary tabular-nums">{fmt(rating, 1)}</span>
+							{rating <= 5 && <span>out of 5</span>}
+						</Meta>
 					)}
-					{str(data.hours) && (
-						<span className={clsx(small, "mt-0.5 flex items-center gap-1.5")}>
-							<Clock className="size-3.5 shrink-0" /> {str(data.hours)}
-						</span>
-					)}
+					{str(data.hours) && <Meta icon={<Clock />}>{str(data.hours)}</Meta>}
 				</div>
 			</div>
-			<div className="mt-3 flex flex-wrap gap-2">
-				<Pill label="Open in Maps" href={maps} active>
-					<MapPin /> Directions
-				</Pill>
+			<div className="mt-4 flex flex-wrap gap-2">
+				<Btn label="Directions" href={maps} tone="primary">
+					<NavigationArrow weight="fill" /> Directions
+				</Btn>
 				{str(data.phone) && (
-					<Pill label={`Call ${str(data.phone)}`} href={`tel:${str(data.phone).replace(/[^\d+]/g, "")}`}>
-						<Phone /> {str(data.phone)}
-					</Pill>
+					<Btn label={`Call ${str(data.phone)}`} href={`tel:${str(data.phone).replace(/[^\d+]/g, "")}`}>
+						<Phone /> Call
+					</Btn>
 				)}
 				{/^https?:\/\//.test(str(data.url)) && (
-					<Pill label="Website" href={str(data.url)}>
+					<Btn label="Website" href={str(data.url)}>
 						<Globe /> Website
-					</Pill>
+					</Btn>
 				)}
 			</div>
 		</Frame>
@@ -357,9 +362,9 @@ export function PlaceWidget({ data, title }: Props<R>) {
 
 /** ISO to the compact UTC form calendars take: 20261017T090000Z. */
 const calStamp = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-const icsText = (s: string) => s.replace(/[\\,;]/g, (m) => `\\${m}`).replace(/\n/g, "\\n");
+const icsText = (v: string) => v.replace(/[\\,;]/g, (m) => `\\${m}`).replace(/\n/g, "\\n");
 
-export function EventWidget({ data, title }: Props<R>) {
+export function EventWidget({ data, title, live }: Props<R>) {
 	const start = new Date(str(data.start));
 	if (Number.isNaN(start.getTime())) return null;
 	const endRaw = new Date(str(data.end));
@@ -368,6 +373,7 @@ export function EventWidget({ data, title }: Props<R>) {
 	const where = str(data.location);
 	const note = str(data.note);
 	const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(str(data.start));
+	const time = (d: Date) => d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 	const google = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(name)}&dates=${calStamp(start)}/${calStamp(end)}${
 		where ? `&location=${encodeURIComponent(where)}` : ""
 	}${note ? `&details=${encodeURIComponent(note)}` : ""}`;
@@ -397,46 +403,43 @@ export function EventWidget({ data, title }: Props<R>) {
 		setTimeout(() => URL.revokeObjectURL(url), 1000);
 	};
 	return (
-		<Frame title={title}>
-			<div className="flex gap-3.5">
-				<div className="flex w-[52px] shrink-0 flex-col items-center overflow-hidden rounded-[13px] bg-primary/5">
-					<span className="w-full bg-brand py-0.5 text-center font-sans text-[11px] font-semibold text-brand-on uppercase">
+		<Frame title={title || "Event"} icon={<CalendarBlank />} live={live}>
+			<div className="flex gap-4">
+				<div className={clsx(well, "flex w-[60px] shrink-0 flex-col items-center overflow-hidden")}>
+					<span className="w-full bg-brand py-1 text-center font-sans text-[12px] font-semibold text-brand-on">
 						{start.toLocaleDateString(undefined, { month: "short" })}
 					</span>
-					<span className="py-1 font-display text-[22px] leading-tight font-semibold text-primary tabular-nums">{start.getDate()}</span>
-				</div>
-				<div className="flex min-w-0 flex-col gap-0.5">
-					<span className="font-sans text-[calc(16px*var(--ws-fs))] font-semibold text-primary">{name}</span>
-					<span className={clsx(small, "tabular-nums")}>
-						{start.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}
-						{!dateOnly && ` · ${start.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`}
-						{!dateOnly && str(data.end) && ` to ${end.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`}
+					<span className="py-1.5 font-display text-[calc(24px*var(--ws-fs))] leading-tight font-semibold text-primary tabular-nums">
+						{start.getDate()}
 					</span>
-					{where && (
-						<span className={clsx(small, "flex items-center gap-1")}>
-							<MapPin className="size-3.5 shrink-0" /> {where}
-						</span>
-					)}
-					{note && (
-						<p className={clsx(small, "mt-1")}>
-							<Txt text={note} />
-						</p>
-					)}
+				</div>
+				<div className="flex min-w-0 flex-col gap-1">
+					<span className={clsx(T.display, "text-[calc(19px*var(--ws-fs))]")}>{name}</span>
+					<span className={clsx(T.body, "text-muted tabular-nums")}>
+						{start.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}
+						{!dateOnly && `, ${time(start)}${str(data.end) ? ` to ${time(end)}` : ""}`}
+					</span>
+					{where && <Meta icon={<MapPin />}>{where}</Meta>}
 				</div>
 			</div>
-			<div className="mt-3 flex flex-wrap gap-2">
-				<Pill label="Add to Google Calendar" href={google} active>
+			{note && (
+				<p className={clsx(T.body, "mt-4 border-hairline border-t pt-4 text-muted")}>
+					<Txt text={note} />
+				</p>
+			)}
+			<div className="mt-4 flex flex-wrap gap-2">
+				<Btn label="Add to Google Calendar" href={google} tone="primary">
 					<CalendarPlus /> Add to calendar
-				</Pill>
-				<Pill label="Download .ics" onClick={saveIcs}>
-					<DownloadSimple /> .ics
-				</Pill>
+				</Btn>
+				<Btn label="Download .ics" onClick={saveIcs}>
+					<DownloadSimple /> .ics file
+				</Btn>
 			</div>
 		</Frame>
 	);
 }
 
-export function PersonWidget({ data, title }: Props<R>) {
+export function PersonWidget({ data, title, live }: Props<R>) {
 	const facts = Object.entries(rec(data.facts));
 	const name = str(data.name);
 	const initials = name
@@ -447,22 +450,22 @@ export function PersonWidget({ data, title }: Props<R>) {
 		.join("")
 		.toUpperCase();
 	return (
-		<Frame title={title}>
-			<div className="flex items-center gap-3">
-				<span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary/5 font-display text-[17px] font-semibold text-primary">
-					{initials || <User className="size-5" />}
+		<Frame title={title || "Person"} icon={<User />} live={live}>
+			<div className="flex items-center gap-4">
+				<span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-[var(--vivid-well-press)] font-display text-[19px] font-semibold text-primary">
+					{initials || <User className="size-6" />}
 				</span>
-				<div className="flex min-w-0 flex-col">
-					<span className="font-sans text-[calc(17px*var(--ws-fs))] font-semibold text-primary">{name}</span>
-					{str(data.role) && <span className={small}>{str(data.role)}</span>}
+				<div className="flex min-w-0 flex-col gap-0.5">
+					<span className={T.display}>{name}</span>
+					{str(data.role) && <span className={clsx(T.body, "text-muted")}>{str(data.role)}</span>}
 				</div>
 			</div>
 			{facts.length > 0 && (
-				<dl className="mt-3 divide-y divide-hairline border-t border-hairline">
+				<dl className="mt-4 flex flex-col">
 					{facts.map(([k, v]) => (
-						<div key={k} className="flex gap-4 py-2">
-							<dt className="w-[34%] shrink-0 font-sans text-[13px] text-muted">{k}</dt>
-							<dd className="min-w-0 font-sans text-[calc(13.5px*var(--ws-fs))] text-primary">
+						<div key={k} className="flex gap-4 border-hairline border-t py-3">
+							<dt className={clsx(T.label, "w-[36%] shrink-0 pt-px")}>{k.replace(/_/g, " ")}</dt>
+							<dd className={clsx(T.body, "min-w-0")}>
 								<Txt text={v} />
 							</dd>
 						</div>
@@ -473,40 +476,43 @@ export function PersonWidget({ data, title }: Props<R>) {
 	);
 }
 
-export function CountdownWidget({ data, title }: Props<R>) {
+export function CountdownWidget({ data, title, live }: Props<R>) {
 	const to = useMemo(() => new Date(str(data.to)).getTime(), [data.to]);
-	const [now, setNow] = useState(() => Date.now());
+	// The clock starts on the client: a server render would disagree with it by a second.
+	const [now, setNow] = useState<number | null>(null);
 	useEffect(() => {
+		setNow(Date.now());
 		if (!Number.isFinite(to) || to <= Date.now()) return;
 		const t = setInterval(() => setNow(Date.now()), 1000);
 		return () => clearInterval(t);
 	}, [to]);
 	if (!Number.isFinite(to)) return null;
-	const left = Math.max(0, to - now);
+	const left = now === null ? 1 : Math.max(0, to - now);
+	const span = now === null ? 0 : left;
 	const parts = [
-		["days", Math.floor(left / 86_400_000)],
-		["hours", Math.floor(left / 3_600_000) % 24],
-		["min", Math.floor(left / 60_000) % 60],
-		["sec", Math.floor(left / 1000) % 60],
+		["days", Math.floor(span / 86_400_000)],
+		["hours", Math.floor(span / 3_600_000) % 24],
+		["minutes", Math.floor(span / 60_000) % 60],
+		["seconds", Math.floor(span / 1000) % 60],
 	] as const;
 	return (
-		<Frame title={str(data.title) || title || "Countdown"} icon={<ClockCountdown />}>
+		<Frame title={str(data.title) || title || "Countdown"} icon={<ClockCountdown />} live={live}>
 			{left === 0 ? (
-				<p className={clsx(body, "font-medium")}>It's here.</p>
+				<p className={T.display}>It's here.</p>
 			) : (
-				<div className="grid grid-cols-4 gap-1.5">
+				<div className="grid grid-cols-4 gap-2" role="timer" aria-label={`${parts[0][1]} days, ${parts[1][1]} hours left`}>
 					{parts.map(([unit, v]) => (
-						<div key={unit} className="flex flex-col items-center rounded-[13px] bg-primary/[0.04] py-2.5">
-							<span className="font-display text-[calc(26px*var(--ws-fs))] leading-tight font-semibold text-primary tabular-nums">
-								{String(v).padStart(2, "0")}
+						<div key={unit} className={clsx(well, "flex flex-col items-center gap-0.5 py-3")}>
+							<span className="font-display text-[calc(30px*var(--ws-fs))] leading-tight font-semibold text-primary tabular-nums">
+								{now === null ? "––" : String(v).padStart(2, "0")}
 							</span>
-							<span className="font-sans text-[12px] text-muted">{unit}</span>
+							<span className={T.label}>{unit}</span>
 						</div>
 					))}
 				</div>
 			)}
-			<p className="mt-2.5 font-sans text-[13px] text-subtle">
-				{new Date(to).toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" })}
+			<p className={clsx(T.label, "mt-3")}>
+				{new Date(to).toLocaleString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "numeric", minute: "2-digit" })}
 			</p>
 		</Frame>
 	);

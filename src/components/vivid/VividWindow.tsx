@@ -21,7 +21,8 @@ import {
 	shrinkImage,
 } from "@/components/vivid/vivid-files";
 import { VividOrb } from "@/components/vivid/VividOrb";
-import { MAX_WIDGETS, VividWidget } from "@/components/vivid/widgets/VividWidget";
+import { AskContext } from "@/components/vivid/widgets/parts";
+import { MAX_WIDGETS, VividWidget, WidgetSkeleton } from "@/components/vivid/widgets/VividWidget";
 import { intentKind, useVividIntent } from "@/components/vivid/vivid-actions";
 import * as I from "@/components/vivid/vivid-icons";
 import { DUR, EASE, EASE_OUT_EXPO, press, snappySpring, staggerItem, staggerParent, swap } from "@/lib/motion-presets";
@@ -479,6 +480,8 @@ export function VividTurns({ chat, className }: { chat: VividChatState; classNam
 						onRetry={t.ask && !chat.busy ? () => void chat.send(t.ask as string, { post: t.askPost }) : undefined}
 						onFeedback={(v) => chat.rate(t, v)}
 						onFollowUp={i === last && !chat.busy ? (q) => void chat.send(q) : undefined}
+						onAsk={!chat.busy ? (q) => void chat.send(q) : undefined}
+						typing={chat.input.trim() !== ""}
 					/>
 				),
 			)}
@@ -992,6 +995,8 @@ export function VividAnswer({
 	onRetry,
 	onFeedback,
 	onFollowUp,
+	onAsk,
+	typing,
 	subscribeUrl,
 }: {
 	turn: Turn;
@@ -999,6 +1004,10 @@ export function VividAnswer({
 	onFeedback: (v: "up" | "down" | null) => void;
 	/** Set on the latest answer only: its follow-up chips ask the next question. */
 	onFollowUp?: (q: string) => void;
+	/** Parts of a widget that ask about themselves (a synonym, a term); off while Vivid is busy. */
+	onAsk?: (q: string) => void;
+	/** The composer has text: the follow-ups step aside until it is cleared. */
+	typing?: boolean;
 	/** Set while the person has no plan: a preview limit offers Subscribe. */
 	subscribeUrl?: string;
 }) {
@@ -1007,6 +1016,8 @@ export function VividAnswer({
 	// Drawing a widget is a tool call, but the widget itself says what happened.
 	const steps = turn.steps?.filter((s) => s.name !== "show");
 	let widgets = 0;
+	// A widget is being drawn: hold its place with its shape (the show step is hidden).
+	const drawing = turn.streaming && turn.steps?.some((s) => s.name === "show" && s.status === "start");
 	const speak = () => {
 		if (!("speechSynthesis" in window)) return;
 		window.speechSynthesis.cancel();
@@ -1025,15 +1036,18 @@ export function VividAnswer({
 					/>
 				)
 			)}
-			{turn.cards?.map((c, i) => {
-				if (c.kind === "ui") {
-					if (++widgets > MAX_WIDGETS) return null;
+			<AskContext.Provider value={onAsk ?? null}>
+				{turn.cards?.map((c, i) => {
+					if (c.kind === "ui") {
+						if (++widgets > MAX_WIDGETS) return null;
+						// biome-ignore lint/suspicious/noArrayIndexKey: cards arrive in order and never reorder
+						return <VividWidget key={i} widget={c.widget} title={c.title} data={c.data} live={c.live} />;
+					}
 					// biome-ignore lint/suspicious/noArrayIndexKey: cards arrive in order and never reorder
-					return <VividWidget key={i} widget={c.widget} title={c.title} data={c.data} live={c.live} />;
-				}
-				// biome-ignore lint/suspicious/noArrayIndexKey: cards arrive in order and never reorder
-				return <CardView key={i} card={c} past={turn.past} streaming={turn.streaming} />;
-			})}
+					return <CardView key={i} card={c} past={turn.past} streaming={turn.streaming} />;
+				})}
+			</AskContext.Provider>
+			{drawing && widgets < MAX_WIDGETS && <WidgetSkeleton />}
 			{turn.error && <ErrorNote error={turn.error} onRetry={onRetry} subscribeUrl={subscribeUrl} />}
 			{!turn.streaming && turn.text && (
 				<div className="-ml-2.5 flex items-center text-muted">
@@ -1075,9 +1089,11 @@ export function VividAnswer({
 					)}
 				</div>
 			)}
-			{onFollowUp && !turn.streaming && turn.suggestions && turn.suggestions.length > 0 && (
-				<FollowUps items={turn.suggestions} onAsk={onFollowUp} />
-			)}
+			<AnimatePresence initial={false}>
+				{onFollowUp && !turn.streaming && !typing && turn.suggestions && turn.suggestions.length > 0 && (
+					<FollowUps key="f" items={turn.suggestions} onAsk={onFollowUp} />
+				)}
+			</AnimatePresence>
 		</div>
 	);
 }
@@ -1085,25 +1101,38 @@ export function VividAnswer({
 /**
  * What a curious person would ask next about this answer, from the gateway
  * (docs/vivid-widgets.md, section 4). Under the latest answer only; a tap
- * asks it as typed text. They arrive a beat after the answer, so they rise in.
+ * asks it as typed text. Pills on the rest wash: they wrap on a desktop and
+ * run sideways on a phone, cascade in once when they arrive, and step aside
+ * while the person is typing their own question.
  */
 function FollowUps({ items, onAsk }: { items: string[]; onAsk: (q: string) => void }) {
 	return (
-		<motion.ul variants={staggerParent} initial="hidden" animate="show" aria-label="Ask next" className="-mt-1 flex flex-col">
-			{items.map((q) => (
-				<motion.li key={q} variants={staggerItem} className="border-hairline border-t first:border-t-0">
-					<button
-						type="button"
-						onClick={() => onAsk(q)}
-						className="group flex min-h-[44px] w-full cursor-pointer items-center gap-3 py-2.5 text-left font-sans text-[calc(14.5px*var(--ws-fs))] text-muted transition-colors hover:text-primary"
-					>
-						<I.IconFollowUp size={17} className="shrink-0 text-subtle transition-colors group-hover:text-gold" />
-						<span className="min-w-0 flex-1">{q}</span>
-						<I.IconPlus size={16} className="shrink-0 text-subtle opacity-0 transition-opacity group-hover:opacity-100" />
-					</button>
-				</motion.li>
-			))}
-		</motion.ul>
+		<motion.div
+			variants={staggerParent}
+			initial="hidden"
+			animate="show"
+			exit={{ opacity: 0, transition: { duration: DUR.fast } }}
+			className="flex flex-col gap-2"
+		>
+			<span className="font-sans text-[calc(13px*var(--ws-fs))] font-semibold text-primary">Ask next</span>
+			<ul
+				aria-label="Ask next"
+				className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden"
+			>
+				{items.map((q) => (
+					<motion.li key={q} variants={staggerItem} className="shrink-0 sm:shrink">
+						<button
+							type="button"
+							onClick={() => onAsk(q)}
+							className="flex min-h-[40px] max-w-[78vw] cursor-pointer items-center gap-2 rounded-pill bg-primary/5 py-2 pr-4 pl-3 text-left font-sans text-[calc(14px*var(--ws-fs))] leading-snug text-primary transition-colors hover:bg-primary/10 active:bg-primary/10 sm:max-w-full"
+						>
+							<I.IconFollowUp size={16} className="shrink-0 text-muted" />
+							<span className="min-w-0 truncate sm:whitespace-normal">{q}</span>
+						</button>
+					</motion.li>
+				))}
+			</ul>
+		</motion.div>
 	);
 }
 
